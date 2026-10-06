@@ -1,0 +1,84 @@
+{
+  "captured_at": "2026-10-06T01:04:36.055886+00:00",
+  "proof": {
+    "verdify-mcp-794dd7c47-mvncf": {
+      "uid": "ca31d5f9-afb2-4e72-9f39-2143cae02f81",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a",
+      "exit_code": 0,
+      "proof": {
+        "ordinary_tcp_attested": true,
+        "profile": {
+          "current_user": "verdify_mcp_runtime_login",
+          "session_user": "verdify_mcp_runtime_login",
+          "search_path": "pg_catalog, public, pg_temp",
+          "raw_select": false,
+          "raw_insert": false,
+          "producer_execute": false
+        },
+        "physical_reader": {
+          "2026-10-05": {
+            "day": "2026-10-05",
+            "served_at": "2026-10-06T01:04:34.292904+00:00",
+            "diagnostic": null,
+            "recorded_at": null,
+            "revision_id": null,
+            "greenhouse_id": "vallery",
+            "unavailable_reason": "publication_not_qualified",
+            "reader_contract_version": 1
+          },
+          "2026-09-29": {
+            "day": "2026-09-29",
+            "served_at": "2026-10-06T01:04:34.295921+00:00",
+            "diagnostic": null,
+            "recorded_at": null,
+            "revision_id": null,
+            "greenhouse_id": "vallery",
+            "unavailable_reason": "publication_not_qualified",
+            "reader_contract_version": 1
+          }
+        },
+        "startup_sql_sha256": "20391854ebac87b7761b80c2779cee85503bb352b33ad535b47dd917062624ef"
+      }
+    },
+    "verdify-mcp-794dd7c47-sfwzj": {
+      "uid": "5cff8555-9d54-4902-892f-37bc86d35e4c",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a",
+      "exit_code": 0,
+      "proof": {
+        "ordinary_tcp_attested": true,
+        "profile": {
+          "current_user": "verdify_mcp_runtime_login",
+          "session_user": "verdify_mcp_runtime_login",
+          "search_path": "pg_catalog, public, pg_temp",
+          "raw_select": false,
+          "raw_insert": false,
+          "producer_execute": false
+        },
+        "physical_reader": {
+          "2026-10-05": {
+            "day": "2026-10-05",
+            "served_at": "2026-10-06T01:04:35.918345+00:00",
+            "diagnostic": null,
+            "recorded_at": null,
+            "revision_id": null,
+            "greenhouse_id": "vallery",
+            "unavailable_reason": "publication_not_qualified",
+            "reader_contract_version": 1
+          },
+          "2026-09-29": {
+            "day": "2026-09-29",
+            "served_at": "2026-10-06T01:04:35.921568+00:00",
+            "diagnostic": null,
+            "recorded_at": null,
+            "revision_id": null,
+            "greenhouse_id": "vallery",
+            "unavailable_reason": "publication_not_qualified",
+            "reader_contract_version": 1
+          }
+        },
+        "startup_sql_sha256": "20391854ebac87b7761b80c2779cee85503bb352b33ad535b47dd917062624ef"
+      }
+    }
+  },
+  "limitation": "Existing old pods during normal rolling update, not a rollback rollout; retained source325 bootstrap/migrate/ledger274 required."
+}

@@ -1,0 +1,25 @@
+{
+  "old_source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+  "new_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "startup_sql": {
+    "api/main.py": {
+      "_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL": {
+        "identical": true,
+        "sql_sha256": "e0f992a1773c37b9960ec6b510a50f890ee3a1740a168d2ab79bed3845742a8d"
+      },
+      "_EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL": {
+        "identical": true,
+        "sql_sha256": "7af73f751ae9b6453b4e4cdfa41bfea93d7b23d50b81298f5e311e1c88cccc5f"
+      }
+    },
+    "mcp/server.py": {
+      "_MCP_RUNTIME_DB_ATTESTATION_SQL": {
+        "identical": true,
+        "sql_sha256": "20391854ebac87b7761b80c2779cee85503bb352b33ad535b47dd917062624ef"
+      }
+    }
+  },
+  "retained_migrate_digest": "sha256:548c40acb0b77bdb3f129ce36e7fbd3e5a8b8189fad59a04fa0cb4ea9e232585",
+  "rollback_scope": "API and MCP pins only, retaining source325 C0/bootstrap and ledger274",
+  "limit": "source equality and prior catalog rehearsal are not actual rolled-back image TCP startup proof"
+}

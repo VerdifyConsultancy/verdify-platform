@@ -1,0 +1,123 @@
+"""Read-only operator capture; never publishes physical data or runs a plan."""
+import ast, asyncio, datetime, hashlib, importlib.util, json, pathlib, subprocess, sys
+
+ROOT = pathlib.Path('/Users/jason/repos/verdify-s1-physical-reader-20261006')
+OUT = pathlib.Path('/Users/jason/maintenance/verdify-s1-20261005')
+REV = '9b4f8023839ffda05b9d0fd1a70fe63e62c6d9b4'
+EXPECTED = {'api':'sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778',
+            'mcp':'sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93'}
+PHYS = 'physical_crop_band_evidence'
+def run(args, **kw):
+    return subprocess.run(args, capture_output=True, text=True, check=True, timeout=50, **kw).stdout
+def kube(*args): return ['kubectl','--context','vallery',*args]
+def save(name, value):
+    f=OUT/name; f.write_text(json.dumps(value,indent=2,default=str)+'\n');f.chmod(0o600)
+def dbsql(sql):
+    return json.loads(run([str(ROOT/'scripts/verdify-db.sh'),'prod','-X','-q','-t','-A','-c',"SET statement_timeout='3s'; "+sql]))
+def physical(day):
+    return dbsql("SELECT to_jsonb(r) FROM public.fn_physical_crop_band_evidence('"+day+"'::date,'vallery') r;")
+def normalize(v):
+    v=dict(v);v.pop('served_at',None)
+    v.setdefault('availability','available' if v.get('diagnostic') is not None else 'unavailable')
+    return v
+def load(name,path):
+    s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+
+TCP_CODE = r'''
+import ast,asyncio,json,os,pathlib,sys,urllib.parse,hmac
+import asyncpg
+kind=sys.argv[1]; days=sys.argv[2:]
+path=pathlib.Path('/app/main.py' if kind=='api' else '/app/mcp/server.py')
+if not path.exists(): path=pathlib.Path('main.py' if kind=='api' else 'mcp/server.py')
+tree=ast.parse(path.read_text());ns={'os':os,'hmac':hmac,'urllib':__import__('urllib')}
+needed={'API_RUNTIME_DB_ROLE_REQUIRED_ENV','API_RUNTIME_DB_LOGIN','_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL','_MCP_RUNTIME_DB_ATTESTATION_SQL'}
+for n in tree.body:
+ if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in needed for t in n.targets): exec(compile(ast.Module(body=[n],type_ignores=[]),str(path),'exec'),ns)
+for n in tree.body:
+ if isinstance(n,ast.FunctionDef) and n.name in {'_api_runtime_db_role_required','get_db_dsn'}:exec(compile(ast.Module(body=[n],type_ignores=[]),str(path),'exec'),ns)
+dsn=ns['get_db_dsn']() if kind=='api' else os.environ['DB_DSN']
+sql=ns['_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL' if kind=='api' else '_MCP_RUNTIME_DB_ATTESTATION_SQL']
+async def main():
+ c=await asyncpg.connect(dsn,timeout=10,command_timeout=4)
+ try:
+  await c.execute("SET statement_timeout='3s'")
+  attested=await c.fetchval(sql)
+  profile=dict(await c.fetchrow("SELECT current_user AS current_user,session_user AS session_user,current_setting('search_path') AS search_path,has_table_privilege(current_user,'public.physical_crop_band_revisions','SELECT') AS raw_select,has_table_privilege(current_user,'public.physical_crop_band_revisions','INSERT') AS raw_insert,has_function_privilege(current_user,'public.fn_publish_physical_crop_band_evidence(jsonb,jsonb)','EXECUTE') AS producer_execute"))
+  values={d:json.loads(await c.fetchval("SELECT to_jsonb(r)::text FROM public.fn_physical_crop_band_evidence($1::date,'vallery') r",datetime.date.fromisoformat(d))) for d in days}
+  print(json.dumps({'ordinary_tcp_attested':attested,'profile':profile,'physical_reader':values,'startup_sql_sha256':hashlib.sha256(sql.encode()).hexdigest()}))
+ finally: await c.close()
+import datetime,hashlib
+asyncio.run(main())
+'''
+
+IRIS_CODE = r'''
+import json,os,sys,urllib.request
+headers={'accept':'application/json, text/event-stream','content-type':'application/json','authorization':'Bearer '+os.environ['VERDIFY_MCP_TOKEN']}
+def rpc(method,params,ident):
+ request=urllib.request.Request('http://verdify-mcp.verdify-prod.svc:8000/mcp',json.dumps({'jsonrpc':'2.0','id':ident,'method':method,'params':params}).encode(),headers=headers)
+ with urllib.request.urlopen(request,timeout=20) as response:
+  raw=response.read(2097153);assert len(raw)<=2097152
+  if response.headers.get('content-type','').startswith('text/event-stream'):raw=next(line[6:] for line in raw.splitlines() if line.startswith(b'data: '))
+  return json.loads(raw)
+rpc('initialize',{'protocolVersion':'2025-11-25','capabilities':{},'clientInfo':{'name':'scorecard-acceptance-readonly','version':'1'}},1)
+headers['mcp-protocol-version']='2025-11-25'
+tools=rpc('tools/list',{},2);names=sorted(t['name'] for t in tools['result']['tools']);assert 'scorecard' in names
+values={}
+for i,d in enumerate(sys.argv[1:]):
+ result=rpc('tools/call',{'name':'scorecard','arguments':{'target_date':d}},i+3)['result'];assert not result.get('isError')
+ values[d]=json.loads(next(x['text'] for x in result['content'] if x['type']=='text'))
+print(json.dumps({'registered_tool_names':names,'days':values,'audience':'existing Hermes Iris','transport':'actual in-cluster registered MCP JSON-RPC','operation':'read-only registered scorecard call; no model or plan'}))
+'''
+
+app=json.loads(run(kube('-n','argocd','get','application','verdify-prod-dark','-o','json')))
+assert app['status']['sync']['revision']==REV and app['status']['sync']['status']=='Synced'
+assert app['status']['health']['status']=='Healthy' and app['status']['operationState']['phase']=='Succeeded'
+assert app['status']['operationState']['syncResult']['revision']==REV
+assert not app['status']['operationState']['operation']['sync'].get('resources')
+save('371-274-app-qualified.json',app)
+inventory={}
+for kind in EXPECTED:
+ pods=json.loads(run(kube('-n','verdify-prod','get','pods','-l','app.kubernetes.io/component='+kind,'-o','json')))['items']
+ ready=[p for p in pods if any(c['type']=='Ready' and c['status']=='True' for c in p['status'].get('conditions',[])) and not p['metadata'].get('deletionTimestamp')]
+ assert ready
+ for p in ready:
+  statuses=[s for s in p['status']['containerStatuses'] if s['name']==kind];assert len(statuses)==1 and statuses[0]['imageID'].endswith(EXPECTED[kind])
+ inventory[kind]=[{'pod':p['metadata']['name'],'uid':p['metadata']['uid'],'imageID':next(s['imageID'] for s in p['status']['containerStatuses'] if s['name']==kind)} for p in ready]
+now=datetime.datetime.now(datetime.timezone.utc)
+from zoneinfo import ZoneInfo
+days=[now.astimezone(ZoneInfo('America/Denver')).date().isoformat(),'2026-09-29']
+owner_before=dbsql("SELECT json_build_object('physical_rows',(SELECT count(*) FROM public.physical_crop_band_revisions),'ledger274',(SELECT row_to_json(x) FROM (SELECT seq,filename,sha256,stamp_method FROM public.schema_migrations WHERE source='db/migrations' AND seq=274)x));")
+assert owner_before['physical_rows']==0 and owner_before['ledger274']['sha256']=='0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f'
+a=load('acceptance',ROOT/'scripts/scorecard-consumer-acceptance.py');original=a.db
+def db(day):
+ v=original(day);v[PHYS]=physical(day);return v
+a.db=db
+captured=a.capture(days)
+save('371-274-consumer-capture-intermediate.json',captured)
+tcp={}
+for kind, pods in inventory.items():
+ for p in pods:
+  tcp[p['pod']]=json.loads(run(kube('-n','verdify-prod','exec','-i',p['pod'],'-c',kind,'--','python','-',kind,*days),input=TCP_CODE))
+  t=tcp[p['pod']];assert t['ordinary_tcp_attested'] is True
+  assert t['profile']['current_user']==t['profile']['session_user']=='verdify_'+kind+'_runtime_login'
+  assert not any(t['profile'][k] for k in ('raw_select','raw_insert','producer_execute'))
+iris_pods=json.loads(run(kube('-n','verdify-prod','get','pods','-l','app.kubernetes.io/component=hermes-iris','-o','json')))['items'];assert len(iris_pods)==1
+ip=iris_pods[0]
+iris=json.loads(run(kube('-n','verdify-prod','exec','-i',ip['metadata']['name'],'-c','hermes-iris','--','python3','-',*days),input=IRIS_CODE))
+iris['pod']=ip['metadata']['name'];iris['uid']=ip['metadata']['uid']
+comparisons={}
+for row in captured['days']:
+ d=row['date'];base=normalize(row['sql_before']['value'][PHYS]);assert base==normalize(row['sql_after']['value'][PHYS])
+ consumers={'api':row['api']['value'][PHYS],**{name:v['value'][PHYS] for name,v in row['mcp'].items()},'actual_iris':iris['days'][d][PHYS],**{name:v['physical_reader'][d] for name,v in tcp.items()}}
+ comparisons[d]={name:normalize(v)==base for name,v in consumers.items()}
+ assert all(comparisons[d].values())
+ assert base['diagnostic'] is None and base['revision_id'] is None and base['unavailable_reason']=='publication_not_qualified'
+public_base=normalize(captured['public_sql_before']['value'][PHYS])
+assert public_base==normalize(captured['public_sql_after']['value'][PHYS])
+comparisons['public_current']={'public_snapshot':normalize(captured['public_snapshot']['value']['planning_quality'][PHYS])==public_base}
+assert all(comparisons['public_current'].values())
+owner_after=dbsql("SELECT json_build_object('physical_rows',(SELECT count(*) FROM public.physical_crop_band_revisions));")
+assert owner_after['physical_rows']==0
+result={'captured_at':now.isoformat(),'promoted_revision':REV,'build_source':'325558d4d8f730b0c42afff0de87e08eda3b5aa1','inventory':inventory,'sql_owner_before':owner_before,'sql_owner_after':owner_after,'consumer_capture':captured,'ordinary_tcp':tcp,'actual_iris_registered_context':iris,'physical_parity':comparisons,'operator_capture_sha256':hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest(),'limitations':['Production physical commissioning remains unavailable; no synthetic data or publication inserted.','Current summaries can change during SQL brackets; metric/native comparisons explicitly retain any resulting mismatch.','Source renderer output is distinct from natural served Lab generation, captured separately.','Byte-identical oldc8 startup SQL plus current TCP success supports forward-safe API/MCP rollback; actual old-image rollout is unperformed.']}
+save('371-274-live-sql-api-mcp-iris-private.json',result)
+print(json.dumps({'output':str(OUT/'371-274-live-sql-api-mcp-iris-private.json'),'physical_rows':0,'physical_parity':comparisons,'ordinary_tcp_all':True}))

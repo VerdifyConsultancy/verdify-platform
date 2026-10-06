@@ -1,0 +1,142 @@
+{
+  "captured_at": "2026-10-06T01:06:28.555597+00:00",
+  "page_url": "https://lab.verdify.ai/data/planning-quality",
+  "page_sha256": "dec4ca62332af6d9ebc8dfaec1d5eeced9ad7079796a00ce0e2b50f1f627dab0",
+  "publication_status": {
+    "last_attempt": {
+      "at_utc": "2026-10-06T01:01:50Z",
+      "failure_class": null,
+      "outcome": "running"
+    },
+    "last_contention_at_utc": "2026-10-06T00:13:24Z",
+    "last_success": {
+      "at_utc": "2026-10-06T00:56:53Z",
+      "content_sha256": "sha256:337e347e4d4287940c21c29dfa211dd6fadee7030ad30f0b010075adb1232682",
+      "fresh_until_utc": "2026-10-06T01:16:53Z",
+      "public_sha256": "sha256:8b9a48d15efe3a2141e4a4fdedaeb03372320772d321c68bf4f666d070ec98c1",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:8b9a48d15efe3a2141e4a4fdedaeb03372320772d321c68bf4f666d070ec98c1"
+  },
+  "public_api_generated_at": "2026-10-06T01:06:20.511086+00:00",
+  "public_api_physical": {
+    "reader_contract_version": 1,
+    "availability": "unavailable",
+    "unavailable_reason": "publication_not_qualified",
+    "day": "2026-10-05",
+    "greenhouse_id": "vallery",
+    "served_at": "2026-10-06T01:06:20.533503Z",
+    "revision_id": null,
+    "recorded_at": null,
+    "diagnostic": null
+  },
+  "actual_physical_rows": [
+    [
+      "Physical crop-band compliance",
+      "Unavailable",
+      "No qualified fixed-panel crop result for this day. Legacy house averages, controller credit and the Sep 4 counterfactual cannot fill this value."
+    ]
+  ],
+  "expected_physical_rows": [
+    [
+      "Physical crop-band compliance",
+      "Unavailable",
+      "No qualified fixed-panel crop result for this day. Legacy house averages, controller credit and the Sep 4 counterfactual cannot fill this value."
+    ]
+  ],
+  "physical_render_equal": true,
+  "actual_native_route_rows": [
+    [
+      "Native route measurement scope",
+      "Partial window \u00b7 observational",
+      "Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. Prospective target native-route-2026-10-05-2300Z; target revision 3; source binding 2. Controller credit remains separate. Physical proof and experiment eligibility are false."
+    ],
+    [
+      "Native route temperature",
+      "0.0% \u00b7 5/72 eligible bins",
+      "Mean outside distance 2.953\u00b0F; high/low misses 5/0; high/low mean distance 2.953\u00b0F/0.000\u00b0F; worst measured source route east; 67 unavailable bins ({\"not_elapsed\": 21, \"outside_prospective_target\": 44, \"source_discontinuity\": 2})."
+    ],
+    [
+      "Native route VPD",
+      "100.0% \u00b7 5/72 eligible bins",
+      "Mean outside distance 0.000 kPa; high/low misses 0/0; high/low mean distance 0.000 kPa/0.000 kPa; worst measured source route east; 67 unavailable bins ({\"not_elapsed\": 21, \"outside_prospective_target\": 44, \"source_discontinuity\": 2})."
+    ],
+    [
+      "Native route joint",
+      "0.0% \u00b7 0/5 in band; 5/72 eligible",
+      "Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins."
+    ]
+  ],
+  "publisher_inventory": [
+    {
+      "pod": "verdify-lab-publisher-29847480-zjpqm",
+      "uid": "731d6ef7-f1a0-41cf-beee-773cada9f5b1",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29847490-xslcc",
+      "uid": "5691cae1-2523-41e5-bd6b-3b312f803f38",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29847500-2wk7p",
+      "uid": "050d81ad-513b-49f3-81ac-e76667b92691",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29847510-4tvlx",
+      "uid": "f97e82fd-54f7-4f3d-beb8-da3c06528de8",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29854090-2xcqb",
+      "uid": "3147ea18-1adb-43ff-bc2d-c20d58651dc2",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29854110-5dgvw",
+      "uid": "b1d63011-d630-4cb8-a96d-045049fdba42",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29854120-5g98g",
+      "uid": "139cf1f3-fc6c-477a-b8e8-950ece0ae83c",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29854130-nx8xw",
+      "uid": "d37fa8b5-77bc-4a4f-8fc5-cfef2c45afb9",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      ]
+    },
+    {
+      "pod": "verdify-lab-publisher-29854140-7z45p",
+      "uid": "fc1471c6-d52a-4495-98bf-4962226d03da",
+      "imageIDs": [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      ]
+    }
+  ],
+  "renderer_sha256": "3f4dddf486adda19e1a531a00ea53c11cb5a8e546ac7a9ce377e04be420a1b42",
+  "limitations": [
+    "Natural static publication has its own as-of generation; native current-now bins can be newer.",
+    "Physical unavailable projection matches genuine new public API evidence; no hardware commissioning or synthetic publication asserted."
+  ]
+}

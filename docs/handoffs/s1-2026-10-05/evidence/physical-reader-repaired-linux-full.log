@@ -1,0 +1,418 @@
+time=2026-10-06T00:13:48.423Z level=INFO msg="waiting for signals" argo=true signalPath=/var/run/argo/ctr/main/signal
+
+[notice] A new release of pip is available: 26.1.2 -> 26.2.1
+[notice] To update, run: /workspace/repo/.venv/bin/python -m pip install --upgrade pip
+
+== ruff lint ==
+All checks passed!
+
+== ruff format ==
+537 files already formatted
+
+== schema suites (incl. drift guards + producer payload round-trips) ==
+........................................................................ [  9%]
+........................................................................ [ 18%]
+........................................................................ [ 28%]
+...........s...........sssssssssssssssssssssssssssssssssssssssssssssssss [ 37%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 47%]
+sssssssssssssssssss........................................s............ [ 56%]
+........................................................................ [ 66%]
+..................................sssssssssss........................... [ 75%]
+........................................................................ [ 85%]
+........................................................................ [ 94%]
+......ssss..................sssssssssss                                  [100%]
+
+== ClimateIntent controller contract audit ==
+climate_intent_fields=15
+climate_actions=11
+materialized_tier1=39
+runtime_shadow_surfaces=0
+single_path_policy_files=8
+OK
+
+== confirmed-component v2 selector/randomization/design contracts ==
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+.........................................                                [100%]
+/workspace/repo/research/planner-efficacy/baseline/planner-switchback-v2-profiles.json
+/workspace/repo/research/planner-efficacy/protocols/planner-switchback-v2-power.json
+/workspace/repo/research/planner-efficacy/protocols/blinded-schedule-v2.golden.json
+/workspace/repo/research/planner-efficacy/protocols/analyzer-interface-v2.golden.json
+
+== device write gate ==
+..........................................ss...                          [100%]
+
+== pure-logic / contract tests ==
+........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................s............................... [  8%]
+..........................................................sss........... [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 18%]
+........................................................................ [ 21%]
+..............................s....ssssssssssssssssss...............s... [ 23%]
+..............................s...................................s..... [ 25%]
+..........................................ssssssssssss.....s......ssssss [ 27%]
+.sssss.....sssss.sss..........ssssssssssssssss..s......................s [ 29%]
+ssssssssssss........................sssssssssssssssssss......sssssssssss [ 31%]
+ss..........................sss....................ssssssss.....ssssssss [ 33%]
+ssssssssssss....ss...................................................... [ 35%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................sss............................................. [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 82%]
+...................................s.................................... [ 84%]
+........................................................................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 94%]
+........................................................................ [ 96%]
+........................................................................ [ 98%]
+......................................                                   [100%]
+
+== migration rollback safety classification ==
+safe-to-wrap                 : 000-fresh-schema-hypertable-repair.sql
+safe-to-wrap                 : 002-derived-metrics.sql
+safe-to-wrap                 : 003-create-crops.sql
+safe-to-wrap                 : 004-create-crop-events.sql
+safe-to-wrap                 : 005-create-observations.sql
+safe-to-wrap                 : 006-create-treatments.sql
+safe-to-wrap                 : 007-create-harvests.sql
+safe-to-wrap                 : 008-create-energy.sql
+safe-to-wrap                 : 009-create-weather-forecast.sql
+safe-to-wrap                 : 010-create-equipment-assets.sql
+safe-to-wrap                 : 011-create-nutrient-recipes.sql
+safe-to-wrap                 : 012-create-lab-results.sql
+safe-to-wrap                 : 013-alter-climate-new-columns.sql
+safe-to-wrap                 : 014-alter-daily-summary.sql
+safe-to-wrap                 : 015-create-views.sql
+safe-to-wrap                 : 016-create-functions.sql
+safe-to-wrap                 : 017-ha-sensors.sql
+safe-to-wrap                 : 018-coverage-gaps.sql
+safe-to-wrap                 : 020-runtime-costs.sql
+safe-to-wrap                 : 021-sensor-registry.sql
+safe-to-wrap                 : 022-esp32-logs.sql
+safe-to-wrap                 : 023-sensor-registry-enhance.sql
+safe-to-wrap                 : 024-sensor-staleness-view.sql
+safe-to-wrap                 : 025-alert-log.sql
+safe-to-wrap                 : 026-registry-solar-staleness.sql
+safe-to-wrap                 : 027-rename-outdoor-ppfd.sql
+safe-to-wrap                 : 028-weather-station-table.sql
+safe-to-wrap                 : 029-alert-log-upgrade.sql
+safe-to-wrap                 : 030-utility-cost-consumables.sql
+safe-to-wrap                 : 031-setpoint-plan.sql
+safe-to-wrap                 : 031-setpoint-schedule.sql
+safe-to-wrap                 : 032-irrigation-tables.sql
+safe-to-wrap                 : 033-forecast-expand.sql
+safe-to-wrap                 : 034-forecast-accumulate.sql
+SELF-COMMITTING (do NOT wrap): 035-setpoint-rename.sql  [top-level COMMIT]
+safe-to-wrap                 : 036-merge-orphan-outdoor.sql
+safe-to-wrap                 : 037-setpoint-compliance.sql
+safe-to-wrap                 : 038-legacy-param-cleanup.sql
+safe-to-wrap                 : 039-staleness-health-rebuild.sql
+safe-to-wrap                 : 040-daily-summary-climate-cols.sql
+safe-to-wrap                 : 041-planning-architecture.sql
+safe-to-wrap                 : 042-weekly-monthly-summary.sql
+safe-to-wrap                 : 043-water-fix-correlation.sql
+safe-to-wrap                 : 044-water-cap.sql
+safe-to-wrap                 : 045-daily-checklist.sql
+safe-to-wrap                 : 046-checklist-completion.sql
+safe-to-wrap                 : 047-matview-refresh-cron.sql
+safe-to-wrap                 : 048-relay-stuck-exclude-config.sql
+safe-to-wrap                 : 049-operator-views.sql
+safe-to-wrap                 : 050-operator-improvements.sql
+safe-to-wrap                 : 051-estimated-plant-dli.sql
+safe-to-wrap                 : 052-cost-views-gas-fix.sql
+safe-to-wrap                 : 053-relay-stuck-exclude-more.sql
+safe-to-wrap                 : 054-planner-learning-loop.sql
+safe-to-wrap                 : 055-realtime-sync.sql
+safe-to-wrap                 : 056-soil-sensor-rename.sql
+safe-to-wrap                 : 057-plan-supersession-fix.sql
+safe-to-wrap                 : 058-canonical-param-names.sql
+safe-to-wrap                 : 059-controller-dashboard-views.sql
+safe-to-wrap                 : 060-complete-state-sync.sql
+safe-to-wrap                 : 060-setpoint-forward-view.sql
+safe-to-wrap                 : 061-equipment-runtime-view.sql
+safe-to-wrap                 : 062-cleanup-stale-plans.sql
+safe-to-wrap                 : 063-forecast-action-engine.sql
+safe-to-wrap                 : 064-soil-observability.sql
+safe-to-wrap                 : 065-succession-planning.sql
+safe-to-wrap                 : 066-openclaw-observability.sql
+safe-to-wrap                 : 068-atomic-plan-replacement.sql
+safe-to-wrap                 : 069-forecast-deviation.sql
+safe-to-wrap                 : 070-plan-accuracy-72h.sql
+safe-to-wrap                 : 070-plan-accuracy-by-day.sql
+SELF-COMMITTING (do NOT wrap): 071-forecast-accuracy.sql  [top-level COMMIT]
+safe-to-wrap                 : 071-plan-comparison.sql
+safe-to-wrap                 : 072-image-observations.sql
+safe-to-wrap                 : 072-seed-nutrient-recipes.sql
+safe-to-wrap                 : 073-backfill-utility-cost.sql
+safe-to-wrap                 : 073-observations-link.sql
+safe-to-wrap                 : 074-fn-operational-health.sql
+safe-to-wrap                 : 074-pgvector-embeddings.sql
+safe-to-wrap                 : 075-greenhouses-registry.sql
+safe-to-wrap                 : 076-planner-performance-score.sql
+safe-to-wrap                 : 077-dew-point-margin.sql
+safe-to-wrap                 : 078-fix-compliance-formula.sql
+safe-to-wrap                 : 078-unified-greenhouse-state.sql
+SELF-COMMITTING (do NOT wrap): 079-heating-observability.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 080-observability-override-events-and-clamps.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 081-active-probe-count.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 082-obs3-relief-cycle-state.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 083-fw2-oscillation-metrics.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 084-unified-schema.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 085-topology-tables.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 086-topology-fks.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 087-topology-views.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 088-crop-history.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 089-crop-history-views.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 090-saas-greenhouse-id-gaps.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 091-fairness-counter.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 092-plan-delivery-log.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 093-planner-instance-audit.sql  [top-level COMMIT]
+safe-to-wrap                 : 094-v2-control-diagnostics.sql
+safe-to-wrap                 : 095-stress-hours-time-weighted.sql
+safe-to-wrap                 : 095a-daily-summary-compliance-columns.sql
+safe-to-wrap                 : 096-scorecard-live-resync.sql
+safe-to-wrap                 : 097-zone-cycle-counters.sql
+safe-to-wrap                 : 098-greenhouse-state-refresh.sql
+safe-to-wrap                 : 099-backfill-readback-confirmations.sql
+safe-to-wrap                 : 100-setpoint-notify-source.sql
+safe-to-wrap                 : 101-data-trust-and-outcome-views.sql
+safe-to-wrap                 : 102-data-backlog-completion.sql
+SELF-COMMITTING (do NOT wrap): 103-greenhouse-id-default-audit.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 104-daily-summary-measured-energy-refresh.sql  [top-level COMMIT]
+safe-to-wrap                 : 105-heap-fragmentation-diagnostics.sql
+SELF-COMMITTING (do NOT wrap): 106-public-health-ledger-calibration.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 107-public-contact-submissions.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 108-public-contact-notification-status.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 109-planner-trigger-ledger.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 110-planner-health-recovery-calibration.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 111-plan-execution-intervals.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 112-embeddings-unified.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 113-event-taxonomy-update.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 114-plan-delivery-hermes-run-id.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 115-shadow-tables.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 116-hermes-audit-horizon-embeddings.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 117-gpu-power-telemetry.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 118-inference-infra-telemetry.sql  [top-level COMMIT]
+safe-to-wrap                 : 119-band-traceability.sql
+SELF-COMMITTING (do NOT wrap): 120-plan-transition-guardrail-audit.sql  [top-level COMMIT]
+safe-to-wrap                 : 121-lighting-policy.sql
+safe-to-wrap                 : 122-lighting-lux-threshold-recommendation.sql
+safe-to-wrap                 : 123-lighting-per-circuit-state-machines.sql
+safe-to-wrap                 : 124-lighting-timeline-performance.sql
+safe-to-wrap                 : 125-lighting-live-fixes.sql
+safe-to-wrap                 : 126-lighting-qualified-minutes.sql
+safe-to-wrap                 : 127-lighting-timeline-qualified-minutes.sql
+safe-to-wrap                 : 128-lighting-traceability-confirmed-state.sql
+safe-to-wrap                 : 129-exact-time-text-epochs.sql
+safe-to-wrap                 : 130-setpoint-at-expiry-compat.sql
+safe-to-wrap                 : 131-water-meter-quality-filter.sql
+SELF-COMMITTING (do NOT wrap): 132-runtime-electric-cost.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 133-runtime-power-bucket-function.sql  [top-level COMMIT]
+safe-to-wrap                 : 134-irrigation-fertigation-canonical.sql
+safe-to-wrap                 : 135-lighting-occupancy-task-demand.sql
+safe-to-wrap                 : 136-band-heat-target-lower-quartile.sql
+safe-to-wrap                 : 137-firmware-audit-views.sql
+safe-to-wrap                 : 138-effective-control-diagnostics-and-plan-view.sql
+safe-to-wrap                 : 139-climate-intent-plan-journal.sql
+SELF-COMMITTING (do NOT wrap): 140-retire-shadow-controller-tables.sql  [top-level COMMIT]
+safe-to-wrap                 : 141-greenhouse-state-target-deltas.sql
+safe-to-wrap                 : 142-climate-action-log.sql
+safe-to-wrap                 : 143-slack-ops.sql
+safe-to-wrap                 : 144-slack-ops-completion.sql
+safe-to-wrap                 : 145-vanda-band-and-join-fix.sql
+safe-to-wrap                 : 146-compliance-rearchitecture.sql
+safe-to-wrap                 : 147-reward-swap-and-ladder-reanchor.sql
+SELF-COMMITTING (do NOT wrap): 148-plan-accuracy-repoint-plan-journal.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 149-compress-snapshot-open-alerts-zone-kpis.sql  [top-level COMMIT]
+SELF-COMMITTING (do NOT wrap): 150-vanda-nutrient-recipe.sql  [top-level COMMIT]
+safe-to-wrap                 : 151-backfill-suppressed-sensor-offline-resolved-at.sql
+safe-to-wrap                 : 152-kwh-coalesce-sanity-gate.sql
+safe-to-wrap                 : 153-pipeline-health-weather-station-dark-sources.sql
+safe-to-wrap                 : 154-consolidate-oscillation-views.sql
+safe-to-wrap                 : 155-twin-observability-tables.sql
+safe-to-wrap                 : 156-prune-active-planner-lessons.sql
+safe-to-wrap                 : 157-hypertable-parity-repair.sql
+safe-to-wrap                 : 158-compression-retention-policies.sql
+safe-to-wrap                 : 159-band-season-resolver-guard.sql
+SELF-COMMITTING (do NOT wrap): 160-orchid-vpd-band-realign-PROPOSAL.sql  [top-level COMMIT]
+safe-to-wrap                 : 161-crop-band-anchors.sql
+safe-to-wrap                 : 162-activate-cannabis-lime-crops.sql
+safe-to-wrap                 : 163-setpoint-zone-audit-columns.sql
+safe-to-wrap                 : 164-zone-vpd-targets-solar-repoint.sql
+safe-to-wrap                 : 165-band-solar-noon-repoint.sql
+safe-to-wrap                 : 166-firmware-v2-telemetry-columns.sql
+safe-to-wrap                 : 167-band-curve-matview-cache.sql
+safe-to-wrap                 : 168-orchid-dry-night-band-curve.sql
+safe-to-wrap                 : 169-mister-duty-true-ontime.sql
+safe-to-wrap                 : 170-band-harmonic-smooth-curve.sql
+safe-to-wrap                 : 171-align-served-band-to-device-harmonic.sql
+safe-to-wrap                 : 172-smooth-solar-phase.sql
+safe-to-wrap                 : 173-temp-band-parallel-equal-width.sql
+safe-to-wrap                 : 174-retune-house-bands-new-architecture.sql
+safe-to-wrap                 : 175-orchid-night-vpd-lift-dehum-trigger.sql
+safe-to-wrap                 : 176-lighting-minutes-policy-lux-single-source.sql
+safe-to-wrap                 : 177-band-defaults-from-canonical-seed.sql
+safe-to-wrap                 : 178-band-device-vs-db-divergence.sql
+safe-to-wrap                 : 179-lighting-minutes-policy-planner-over-device.sql
+safe-to-wrap                 : 180-drop-orphaned-band-functions.sql
+safe-to-wrap                 : 181-serve-band-target-one-source.sql
+safe-to-wrap                 : 182-divergence-audit-target.sql
+safe-to-wrap                 : 183-grade-credit-peak-at-target-and-deviation-rollup.sql
+safe-to-wrap                 : 184-agent-ro-role.sql
+safe-to-wrap                 : 185-per-circuit-lighting-crop-policy.sql
+safe-to-wrap                 : 186-noaa-solar-phase-parity.sql
+safe-to-wrap                 : 187-moisture-estimator-telemetry.sql
+safe-to-wrap                 : 188-night-anchor-dry-roots.sql
+safe-to-wrap                 : 189-served-vpd-divergence-parity.sql
+safe-to-wrap                 : 190-transition-derived-equipment-runtime.sql
+safe-to-wrap                 : 191-realized-solar-night-dryout-episodes.sql
+safe-to-wrap                 : 192-replay-outdoor-freshness-provenance.sql
+safe-to-wrap                 : 193-canonical-resource-coefficients.sql
+safe-to-wrap                 : 194-scope-aware-resource-accounting.sql
+safe-to-wrap                 : 195-dli-availability-provenance.sql
+safe-to-wrap                 : 196-planner-terminal-lifecycle.sql
+safe-to-wrap                 : 197-band-source-aware-divergence.sql
+safe-to-wrap                 : 198-dynamic-sensor-staleness.sql
+safe-to-wrap                 : 199-bounded-equipment-runtime-view.sql
+safe-to-wrap                 : 200-materialized-equipment-runtime.sql
+safe-to-wrap                 : 201-snapshot-runtime-energy-model.sql
+safe-to-wrap                 : 202-climate-action-scorecard-date-pushdown.sql
+safe-to-wrap                 : 203-materialized-daily-kpi-scorecard.sql
+SELF-COMMITTING (do NOT wrap): 204-ungated-modeled-cost-columns.sql  [top-level COMMIT]
+safe-to-wrap                 : 205-setpoint-velocity-parallel-safe.sql
+SELF-COMMITTING (do NOT wrap): 206-water-est-completed-day-guard.sql  [top-level COMMIT]
+safe-to-wrap                 : 207-controlled-policy-experiment.sql
+safe-to-wrap                 : 208-policy-arbiter-lane-c.sql
+safe-to-wrap                 : 209-wire-schema-v2-field-count.sql
+safe-to-wrap                 : 210-iris-experiment-context.sql
+safe-to-wrap                 : 211-twin-asof-input.sql
+safe-to-wrap                 : 212-qualification-scheduler.sql
+safe-to-wrap                 : 213-experiment-result-binding.sql
+safe-to-wrap                 : 214-confirmed-component-experiment-v2.sql
+safe-to-wrap                 : 215-experiment-v2-ops-observability.sql
+safe-to-wrap                 : 216-equipment-counter-source-ledger.sql
+safe-to-wrap                 : 217-runtime-role-boundary.sql
+safe-to-wrap                 : 218-planner-required-failure-history.sql
+safe-to-wrap                 : 219-selector-context-bounded-sampling.sql
+safe-to-wrap                 : 220-experiment-v2-direct-randomized-launch.sql
+safe-to-wrap                 : 221-experiment-v2-state-replay.sql
+safe-to-wrap                 : 222-experiment-v2-direct-physical-proof.sql
+safe-to-wrap                 : 223-experiment-v2-direct-proof-work-binding.sql
+safe-to-wrap                 : 224-experiment-v2-direct-launch-runtime.sql
+safe-to-wrap                 : 225-experiment-v2-direct-proof-retry.sql
+safe-to-wrap                 : 226-experiment-v2-direct-proof-attempt-status.sql
+safe-to-wrap                 : 227-experiment-v2-emergency-recovery-retry.sql
+safe-to-wrap                 : 228-experiment-v2-recovery-generation-guard.sql
+safe-to-wrap                 : 229-experiment-v2-recovery-failure-boundary.sql
+safe-to-wrap                 : 230-experiment-v2-observation-window-bundle-join.sql
+safe-to-wrap                 : 231-experiment-v2-emergency-recovery-zero-exposure.sql
+safe-to-wrap                 : 232-experiment-v2-observation-pair-recovery-retry.sql
+safe-to-wrap                 : 233-experiment-v2-direct-proof-zero-exposure-seal.sql
+safe-to-wrap                 : 234-experiment-v2-direct-proof-startup-rollover.sql
+safe-to-wrap                 : 235-experiment-v2-direct-proof-raw-reset-rollover.sql
+safe-to-wrap                 : 236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql
+safe-to-wrap                 : 237-experiment-v2-direct-proof-recovery-range-rollover.sql
+safe-to-wrap                 : 238-experiment-v2-separate-day1-authorization.sql
+safe-to-wrap                 : 239-experiment-v2-orphaned-preclaim-recovery.sql
+safe-to-wrap                 : 240-experiment-v2-readiness-reader-grants.sql
+safe-to-wrap                 : 241-scorecard-binary-semantics.sql
+safe-to-wrap                 : 242-outdoor-forecast-verification.sql
+safe-to-wrap                 : 243-public-band-lineage.sql
+safe-to-wrap                 : 244-daily-climate-metric-revisions.sql
+safe-to-wrap                 : 245-observed-minute-diagnostics.sql
+safe-to-wrap                 : 246-observed-minute-reader.sql
+safe-to-wrap                 : 247-inline-climate-capture-payload.sql
+safe-to-wrap                 : 248-shelly-source-interval-accounting.sql
+safe-to-wrap                 : 249-observed-minute-runtime-write-grant.sql
+safe-to-wrap                 : 250-band-divergence-provenance.sql
+safe-to-wrap                 : 251-experiment-v2-legacy-expired-recovery-terminalization.sql
+safe-to-wrap                 : 252-fixed-panel-source-history.sql
+safe-to-wrap                 : 253-gate-p-sealed-recovery-target.sql
+safe-to-wrap                 : 254-post-253-ordinary-login-attestation.sql
+safe-to-wrap                 : 255-fixed-panel-crop-assignment-lineage.sql
+safe-to-wrap                 : 256-experiment-v2-end-study-recovery-completion.sql
+safe-to-wrap                 : 257-route-only-crop-band-publication.sql
+safe-to-wrap                 : 258-mcp-runtime-inert-roles.sql
+safe-to-wrap                 : 259-mcp-ordinary-runtime-boundary.sql
+safe-to-wrap                 : 260-restore-climate-action-daily-scorecard.sql
+safe-to-wrap                 : 261-outcome-kpi-ordinary-acl.sql
+safe-to-wrap                 : 262-fixed-panel-native-callback-ledger.sql
+safe-to-wrap                 : 263-mcp-timescale-chunk-boundary-digest.sql
+safe-to-wrap                 : 264-facility-safe-closure-startup-handoff.sql
+safe-to-wrap                 : 265-idempotent-climate-source-events.sql
+safe-to-wrap                 : 266-climate-integral-json-insertion.sql
+safe-to-wrap                 : 267-idempotent-observational-source-events.sql
+safe-to-wrap                 : 268-six-runtime-workload-role-boundaries.sql
+safe-to-wrap                 : 269-lab-crop-zone-topology-projections.sql
+safe-to-wrap                 : 270-facility-safe-ops-projection.sql
+safe-to-wrap                 : 271-legacy-band-trace-deprecation.sql
+safe-to-wrap                 : 272-current-climate-scorecard-snapshot.sql
+safe-to-wrap                 : 273-native-route-measurement-reader.sql
+safe-to-wrap                 : 274-qualified-physical-crop-band-publication.sql
+
+== grafana dashboard CMs match JSON sources (#392) ==
+check OK: 4 ConfigMap(s) match dashboard sources
+
+== solar site constants SSOT guard (#393) ==
+solar site constants agree across 3 surfaces (19 occurrences): latitude=40.167, longitude=-105.102, zenith=90.833
+
+== config-revision annotations match verdify-config sources (#587) ==
+config-revision OK (913430b974ab)
+
+== policy consumer manifest drift (Lane E, #586) ==
+policy consumer manifest up to date (gate enforcing): 162/194 reads migrated (+32 allowlisted), 63/63 control reads, 48/48 fields clean
+
+== firmware policy engine native tests + §8.10 recovery-image proof (#586) ==
+cd firmware && g++ -std=c++17 -I lib -o test/test_policy_engine test/test_policy_engine.cpp && ./test/test_policy_engine
+test_policy_engine: all 251 checks passed
+cd firmware && g++ -std=c++17 -I lib -o test/test_policy_engine test/test_policy_engine.cpp
+cd firmware && g++ -std=c++17 -DPOLICY_ENGINE_RECOVERY -I lib -o test/test_policy_recovery test/test_policy_recovery.cpp
+./firmware/test/test_policy_engine --emit-recovery-fixture /tmp/verdify-policy-recovery-journal
+wrote recovery fixture /tmp/verdify-policy-recovery-journal.copy{0,1} (active gen=1, manifest armed)
+./firmware/test/test_policy_recovery /tmp/verdify-policy-recovery-journal
+test_policy_recovery: all 30 checks passed
+
+== twin follower source compiles (the twin image's exact build, #587) ==
+
+== prod overlay renders ==
+
+== Prometheus rule-file delivery guard (#563) ==
+
+== no-new-fire-and-forget (rule 6, num_* + sw_*) vs 81d76a4c3d35a925ebd2438d89099d1f657b3f8f ==
+
+== service-restart drift guard (rule 7, schema -> runtime) vs 81d76a4c3d35a925ebd2438d89099d1f657b3f8f ==
+Schema-touching files changed:
+  mcp/server.py
+OK: restart documentation names a known bounceable service
+
+== firmware replay-diff trigger check vs 81d76a4c3d35a925ebd2438d89099d1f657b3f8f ==
+no firmware-logic diff; replay gates not required
+
+ALL GATES GREEN
+time=2026-10-06T00:23:49.874Z level=INFO msg="sub-process exited" argo=true error=<nil>
+time=2026-10-06T00:23:49.874Z level=INFO msg="file signal handler exiting due to context cancellation" argo=true

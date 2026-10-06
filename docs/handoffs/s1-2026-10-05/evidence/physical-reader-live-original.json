@@ -1,0 +1,2997 @@
+{
+  "captured_at": "2026-10-06T01:07:18.171258+00:00",
+  "promoted_revision": "9b4f8023839ffda05b9d0fd1a70fe63e62c6d9b4",
+  "build_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "inventory": {
+    "api": [
+      {
+        "pod": "verdify-api-64d768b666-8pjhm",
+        "uid": "8538fc30-9037-419d-9613-253d4232b276",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      {
+        "pod": "verdify-api-64d768b666-rhmph",
+        "uid": "59303fd5-09eb-4e0f-a8f3-dd0ae168a436",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      }
+    ],
+    "mcp": [
+      {
+        "pod": "verdify-mcp-6c447bcf6c-m6cfs",
+        "uid": "d32e3b0d-3d28-401d-9763-836d9e2fb5a9",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      {
+        "pod": "verdify-mcp-6c447bcf6c-q9brp",
+        "uid": "1ffb2764-dd9c-4ad5-9c96-beaf37443f12",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      }
+    ]
+  },
+  "sql_owner_before": {
+    "physical_rows": 0,
+    "ledger274": {
+      "seq": 274,
+      "filename": "db/migrations/274-qualified-physical-crop-band-publication.sql",
+      "sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+      "stamp_method": "runner"
+    }
+  },
+  "sql_owner_after": {
+    "physical_rows": 0
+  },
+  "consumer_capture": {
+    "public_sql_before": {
+      "availability": "captured",
+      "value": {
+        "scorecard_contract_version": 2,
+        "compliance_pct": 2.2,
+        "temp_compliance_pct": 27.1,
+        "vpd_compliance_pct": 61.4,
+        "total_stress_h": 20.29,
+        "heat_stress_h": 2.37,
+        "cold_stress_h": 10.9,
+        "vpd_high_stress_h": 7.02,
+        "vpd_low_stress_h": 0.0,
+        "compliance_v2_raw_pct": 70.7,
+        "compliance_v2_attributable_pct": 74.1,
+        "compliance_v2_unachievable_frac": 0.062,
+        "graded_temp_compliance_pct": 64.4,
+        "graded_vpd_compliance_pct": 79,
+        "native_fixed_panel_route_evidence": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:28.905618+00:00",
+          "diagnostic": {
+            "vpd": {
+              "in_band_pct": 100.0,
+              "in_band_bins": 5,
+              "eligible_bins": 5,
+              "low_miss_bins": 0,
+              "high_miss_bins": 0,
+              "mean_low_distance": 0,
+              "mean_high_distance": 0,
+              "worst_measured_zone": "east",
+              "mean_outside_distance": 0
+            },
+            "temp": {
+              "in_band_pct": 0.0,
+              "in_band_bins": 0,
+              "eligible_bins": 5,
+              "low_miss_bins": 0,
+              "high_miss_bins": 5,
+              "mean_low_distance": 0,
+              "mean_high_distance": 2.95279998779296,
+              "worst_measured_zone": "east",
+              "mean_outside_distance": 2.95279998779296
+            },
+            "joint": {
+              "in_band_pct": 0.0,
+              "in_band_bins": 0,
+              "eligible_bins": 5
+            },
+            "definition": "fixed-panel-native-route-measurement-v1",
+            "window_end": "2026-10-06T06:00:00+00:00",
+            "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+            "target_basis": "prospective_frozen_panel_mean_crop_reference",
+            "window_start": "2026-10-05T12:00:00+00:00",
+            "expected_bins": 72,
+            "partial_window": true,
+            "target_version": "native-route-2026-10-05-2300Z",
+            "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+            "completed_bin_count": 52,
+            "target_effective_to": "2026-10-06T06:00:00+00:00",
+            "target_effective_from": "2026-10-05T23:00:00+00:00",
+            "causal_effect_estimate": false,
+            "crop_placement_verified": false,
+            "physical_proof_eligible": false,
+            "vpd_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "temp_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+            "experiment_endpoint_eligible": false,
+            "per_probe_poll_time_verified": false,
+            "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+            "physical_hardware_identity_verified": false
+          },
+          "availability": "route_measurement",
+          "eligible_bins": 5,
+          "greenhouse_id": "vallery",
+          "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+          "source_binding_id": 2,
+          "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+          "joint_in_band_bins": 0,
+          "target_revision_id": 3,
+          "unavailable_reason": null,
+          "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+          "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+          "contributor_revision_ids": [
+            8,
+            7,
+            9
+          ]
+        },
+        "physical_crop_band_evidence": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:29.523443+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      }
+    },
+    "public_sql_after": {
+      "availability": "captured",
+      "value": {
+        "scorecard_contract_version": 2,
+        "compliance_pct": 2.2,
+        "temp_compliance_pct": 27.1,
+        "vpd_compliance_pct": 61.4,
+        "total_stress_h": 20.29,
+        "heat_stress_h": 2.37,
+        "cold_stress_h": 10.9,
+        "vpd_high_stress_h": 7.02,
+        "vpd_low_stress_h": 0.0,
+        "compliance_v2_raw_pct": 70.7,
+        "compliance_v2_attributable_pct": 74.1,
+        "compliance_v2_unachievable_frac": 0.062,
+        "graded_temp_compliance_pct": 64.4,
+        "graded_vpd_compliance_pct": 79,
+        "native_fixed_panel_route_evidence": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:38.401064+00:00",
+          "diagnostic": {
+            "vpd": {
+              "in_band_pct": 100.0,
+              "in_band_bins": 5,
+              "eligible_bins": 5,
+              "low_miss_bins": 0,
+              "high_miss_bins": 0,
+              "mean_low_distance": 0,
+              "mean_high_distance": 0,
+              "worst_measured_zone": "east",
+              "mean_outside_distance": 0
+            },
+            "temp": {
+              "in_band_pct": 0.0,
+              "in_band_bins": 0,
+              "eligible_bins": 5,
+              "low_miss_bins": 0,
+              "high_miss_bins": 5,
+              "mean_low_distance": 0,
+              "mean_high_distance": 2.95279998779296,
+              "worst_measured_zone": "east",
+              "mean_outside_distance": 2.95279998779296
+            },
+            "joint": {
+              "in_band_pct": 0.0,
+              "in_band_bins": 0,
+              "eligible_bins": 5
+            },
+            "definition": "fixed-panel-native-route-measurement-v1",
+            "window_end": "2026-10-06T06:00:00+00:00",
+            "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+            "target_basis": "prospective_frozen_panel_mean_crop_reference",
+            "window_start": "2026-10-05T12:00:00+00:00",
+            "expected_bins": 72,
+            "partial_window": true,
+            "target_version": "native-route-2026-10-05-2300Z",
+            "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+            "completed_bin_count": 52,
+            "target_effective_to": "2026-10-06T06:00:00+00:00",
+            "target_effective_from": "2026-10-05T23:00:00+00:00",
+            "causal_effect_estimate": false,
+            "crop_placement_verified": false,
+            "physical_proof_eligible": false,
+            "vpd_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "temp_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+            "experiment_endpoint_eligible": false,
+            "per_probe_poll_time_verified": false,
+            "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+            "physical_hardware_identity_verified": false
+          },
+          "availability": "route_measurement",
+          "eligible_bins": 5,
+          "greenhouse_id": "vallery",
+          "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+          "source_binding_id": 2,
+          "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+          "joint_in_band_bins": 0,
+          "target_revision_id": 3,
+          "unavailable_reason": null,
+          "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+          "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+          "contributor_revision_ids": [
+            8,
+            7,
+            9
+          ]
+        },
+        "physical_crop_band_evidence": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:38.696062+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      }
+    },
+    "public_comparison": {
+      "agreement_proven": true,
+      "metric_mismatches": [],
+      "native_route": {
+        "sql_bracket_stable": true,
+        "agreement_proven": true,
+        "consumer_mismatches": [],
+        "physical_publication_qualified": false
+      }
+    },
+    "schema": "verdify-scorecard-consumer-acceptance-v1",
+    "captured_at": "2026-10-06T01:07:38.724646+00:00",
+    "source_git_sha": "fb7256d87fa0d326fb9b01a144f0da8c7331b424",
+    "tool_sha256": "b02010a9a33b68673652de92a68f869b8c52b6195101941b359163673ef472ae",
+    "mcp_inventory": [
+      {
+        "pod": "verdify-mcp-6c447bcf6c-m6cfs",
+        "imageIDs": [
+          "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+        ]
+      },
+      {
+        "pod": "verdify-mcp-6c447bcf6c-q9brp",
+        "imageIDs": [
+          "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+        ]
+      }
+    ],
+    "days": [
+      {
+        "date": "2026-10-05",
+        "sql_before": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2,
+            "compliance_pct": 2.2,
+            "temp_compliance_pct": 27.1,
+            "vpd_compliance_pct": 61.4,
+            "total_stress_h": 20.29,
+            "heat_stress_h": 2.37,
+            "cold_stress_h": 10.9,
+            "vpd_high_stress_h": 7.02,
+            "vpd_low_stress_h": 0.0,
+            "compliance_v2_raw_pct": 70.7,
+            "compliance_v2_attributable_pct": 74.1,
+            "compliance_v2_unachievable_frac": 0.062,
+            "graded_temp_compliance_pct": 64.4,
+            "graded_vpd_compliance_pct": 79,
+            "native_fixed_panel_route_evidence": {
+              "day": "2026-10-05",
+              "served_at": "2026-10-06T01:07:19.229361+00:00",
+              "diagnostic": {
+                "vpd": {
+                  "in_band_pct": 100.0,
+                  "in_band_bins": 5,
+                  "eligible_bins": 5,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 0,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0,
+                  "worst_measured_zone": "east",
+                  "mean_outside_distance": 0
+                },
+                "temp": {
+                  "in_band_pct": 0.0,
+                  "in_band_bins": 0,
+                  "eligible_bins": 5,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 5,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 2.95279998779296,
+                  "worst_measured_zone": "east",
+                  "mean_outside_distance": 2.95279998779296
+                },
+                "joint": {
+                  "in_band_pct": 0.0,
+                  "in_band_bins": 0,
+                  "eligible_bins": 5
+                },
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_end": "2026-10-06T06:00:00+00:00",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "window_start": "2026-10-05T12:00:00+00:00",
+                "expected_bins": 72,
+                "partial_window": true,
+                "target_version": "native-route-2026-10-05-2300Z",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "completed_bin_count": 52,
+                "target_effective_to": "2026-10-06T06:00:00+00:00",
+                "target_effective_from": "2026-10-05T23:00:00+00:00",
+                "causal_effect_estimate": false,
+                "crop_placement_verified": false,
+                "physical_proof_eligible": false,
+                "vpd_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "temp_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "experiment_endpoint_eligible": false,
+                "per_probe_poll_time_verified": false,
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "physical_hardware_identity_verified": false
+              },
+              "availability": "route_measurement",
+              "eligible_bins": 5,
+              "greenhouse_id": "vallery",
+              "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+              "source_binding_id": 2,
+              "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+              "joint_in_band_bins": 0,
+              "target_revision_id": 3,
+              "unavailable_reason": null,
+              "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "contributor_revision_ids": [
+                8,
+                7,
+                9
+              ]
+            },
+            "physical_crop_band_evidence": {
+              "day": "2026-10-05",
+              "served_at": "2026-10-06T01:07:19.5414+00:00",
+              "diagnostic": null,
+              "recorded_at": null,
+              "revision_id": null,
+              "greenhouse_id": "vallery",
+              "unavailable_reason": "publication_not_qualified",
+              "reader_contract_version": 1
+            }
+          }
+        },
+        "sql_after": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2,
+            "compliance_pct": 2.2,
+            "temp_compliance_pct": 27.1,
+            "vpd_compliance_pct": 61.4,
+            "total_stress_h": 20.29,
+            "heat_stress_h": 2.37,
+            "cold_stress_h": 10.9,
+            "vpd_high_stress_h": 7.02,
+            "vpd_low_stress_h": 0.0,
+            "compliance_v2_raw_pct": 70.7,
+            "compliance_v2_attributable_pct": 74.1,
+            "compliance_v2_unachievable_frac": 0.062,
+            "graded_temp_compliance_pct": 64.4,
+            "graded_vpd_compliance_pct": 79,
+            "native_fixed_panel_route_evidence": {
+              "day": "2026-10-05",
+              "served_at": "2026-10-06T01:07:22.564385+00:00",
+              "diagnostic": {
+                "vpd": {
+                  "in_band_pct": 100.0,
+                  "in_band_bins": 5,
+                  "eligible_bins": 5,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 0,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0,
+                  "worst_measured_zone": "east",
+                  "mean_outside_distance": 0
+                },
+                "temp": {
+                  "in_band_pct": 0.0,
+                  "in_band_bins": 0,
+                  "eligible_bins": 5,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 5,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 2.95279998779296,
+                  "worst_measured_zone": "east",
+                  "mean_outside_distance": 2.95279998779296
+                },
+                "joint": {
+                  "in_band_pct": 0.0,
+                  "in_band_bins": 0,
+                  "eligible_bins": 5
+                },
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_end": "2026-10-06T06:00:00+00:00",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "window_start": "2026-10-05T12:00:00+00:00",
+                "expected_bins": 72,
+                "partial_window": true,
+                "target_version": "native-route-2026-10-05-2300Z",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "completed_bin_count": 52,
+                "target_effective_to": "2026-10-06T06:00:00+00:00",
+                "target_effective_from": "2026-10-05T23:00:00+00:00",
+                "causal_effect_estimate": false,
+                "crop_placement_verified": false,
+                "physical_proof_eligible": false,
+                "vpd_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "temp_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "experiment_endpoint_eligible": false,
+                "per_probe_poll_time_verified": false,
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "physical_hardware_identity_verified": false
+              },
+              "availability": "route_measurement",
+              "eligible_bins": 5,
+              "greenhouse_id": "vallery",
+              "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+              "source_binding_id": 2,
+              "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+              "joint_in_band_bins": 0,
+              "target_revision_id": 3,
+              "unavailable_reason": null,
+              "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "contributor_revision_ids": [
+                8,
+                7,
+                9
+              ]
+            },
+            "physical_crop_band_evidence": {
+              "day": "2026-10-05",
+              "served_at": "2026-10-06T01:07:22.870791+00:00",
+              "diagnostic": null,
+              "recorded_at": null,
+              "revision_id": null,
+              "greenhouse_id": "vallery",
+              "unavailable_reason": "publication_not_qualified",
+              "reader_contract_version": 1
+            }
+          }
+        },
+        "api": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2.0,
+            "compliance_pct": 2.2,
+            "temp_compliance_pct": 27.1,
+            "vpd_compliance_pct": 61.4,
+            "compliance_v2_raw_pct": 70.7,
+            "compliance_v2_attributable_pct": 74.1,
+            "compliance_v2_unachievable_frac": 0.062,
+            "graded_temp_compliance_pct": 64.4,
+            "graded_vpd_compliance_pct": 79.0,
+            "total_stress_h": 20.29,
+            "heat_stress_h": 2.37,
+            "cold_stress_h": 10.9,
+            "vpd_high_stress_h": 7.02,
+            "vpd_low_stress_h": 0.0,
+            "metric_semantics": {
+              "contract_version": 2.0,
+              "binary_fields_verified": true,
+              "binary_basis": "legacy_house_average_scored_reading_fraction",
+              "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+              "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+              "graded_basis": "legacy_controller_credit_not_physical_compliance",
+              "coverage_status": "unverified",
+              "historical_missing_evidence_may_be_zero": true,
+              "fixed_sensor_panel": false,
+              "center_probe_measured": false,
+              "duration_weighted": false,
+              "crop_outcome_eligible": false
+            },
+            "observed_minute_evidence": {
+              "reader_contract_version": 1,
+              "availability": "available",
+              "unavailable_reason": null,
+              "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+              "day": "2026-10-05",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:19.603563Z",
+              "revision_id": 3224,
+              "recorded_at": "2026-10-06T00:49:21.516724Z",
+              "capture_schema": "daily-summary-capture-v2",
+              "diagnostic": {
+                "definition": "house-average-observed-minute-v1",
+                "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                "input_sha256": "6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9",
+                "greenhouse_id": "vallery",
+                "window_start": "2026-10-05T06:00:00Z",
+                "window_end": "2026-10-06T00:49:00Z",
+                "input_rows": 1092,
+                "ignored_rows": 0,
+                "expected_minutes": 1129,
+                "observed_minutes": 1091,
+                "axes": {
+                  "temp": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1129,
+                    "unit": "degF",
+                    "low_miss_observed_minutes": 0,
+                    "high_miss_observed_minutes": 0,
+                    "mean_low_distance": null,
+                    "mean_high_distance": null,
+                    "mean_outside_distance": null,
+                    "ineligible_minutes": {
+                      "conflicting_timestamp": 0,
+                      "missing_value": 38,
+                      "missing_or_invalid_bounds": 1091
+                    }
+                  },
+                  "vpd": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1129,
+                    "unit": "kPa",
+                    "low_miss_observed_minutes": 0,
+                    "high_miss_observed_minutes": 0,
+                    "mean_low_distance": null,
+                    "mean_high_distance": null,
+                    "mean_outside_distance": null,
+                    "ineligible_minutes": {
+                      "conflicting_timestamp": 0,
+                      "missing_value": 38,
+                      "missing_or_invalid_bounds": 1091
+                    }
+                  }
+                },
+                "joint": {
+                  "eligible_minutes": 0,
+                  "in_band_minutes": 0,
+                  "in_band_pct": null,
+                  "coverage_fraction": 0.0,
+                  "longest_ineligible_run_minutes": 1129
+                },
+                "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                "fixed_sensor_panel": false,
+                "duration_weighted": false,
+                "physical_proof_eligible": false,
+                "crop_outcome_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "worst_measured_zone": null
+              }
+            },
+            "physical_crop_band_evidence": {
+              "reader_contract_version": 1,
+              "availability": "unavailable",
+              "unavailable_reason": "publication_not_qualified",
+              "day": "2026-10-05",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:19.610370Z",
+              "revision_id": null,
+              "recorded_at": null,
+              "diagnostic": null
+            },
+            "route_only_crop_band_evidence": {
+              "reader_contract_version": 1,
+              "availability": "unavailable",
+              "unavailable_reason": "not_published",
+              "day": "2026-10-05",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:19.614326Z",
+              "revision_id": null,
+              "recorded_at": null,
+              "diagnostic": null
+            },
+            "native_fixed_panel_route_evidence": {
+              "reader_contract_version": 1,
+              "availability": "route_measurement",
+              "unavailable_reason": null,
+              "day": "2026-10-05",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:19.619159Z",
+              "receipt_id": null,
+              "frozen_at": null,
+              "projection_sha256": null,
+              "target_revision_id": 3,
+              "contributor_revision_ids": [
+                8,
+                7,
+                9
+              ],
+              "source_binding_id": 2,
+              "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+              "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+              "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "source_callback_count": null,
+              "source_continuity_verified": null,
+              "eligible_bins": 5,
+              "joint_in_band_bins": 0,
+              "diagnostic": {
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_start": "2026-10-05T12:00:00Z",
+                "window_end": "2026-10-06T06:00:00Z",
+                "expected_bins": 72,
+                "target_version": "native-route-2026-10-05-2300Z",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "target_effective_from": "2026-10-05T23:00:00Z",
+                "target_effective_to": "2026-10-06T06:00:00Z",
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "temp": {
+                  "eligible_bins": 5,
+                  "in_band_bins": 0,
+                  "in_band_pct": 0.0,
+                  "high_miss_bins": 5,
+                  "low_miss_bins": 0,
+                  "mean_high_distance": 2.95279998779296,
+                  "mean_low_distance": 0.0,
+                  "mean_outside_distance": 2.95279998779296,
+                  "worst_measured_zone": "east"
+                },
+                "vpd": {
+                  "eligible_bins": 5,
+                  "in_band_bins": 5,
+                  "in_band_pct": 100.0,
+                  "high_miss_bins": 0,
+                  "low_miss_bins": 0,
+                  "mean_high_distance": 0.0,
+                  "mean_low_distance": 0.0,
+                  "mean_outside_distance": 0.0,
+                  "worst_measured_zone": "east"
+                },
+                "joint": {
+                  "eligible_bins": 5,
+                  "in_band_bins": 0,
+                  "in_band_pct": 0.0
+                },
+                "temp_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "vpd_unavailable_reasons": {
+                  "not_elapsed": 20,
+                  "source_discontinuity": 3,
+                  "outside_prospective_target": 44
+                },
+                "partial_window": true,
+                "completed_bin_count": 52,
+                "physical_hardware_identity_verified": false,
+                "crop_placement_verified": false,
+                "per_probe_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              },
+              "route_18h_available": false,
+              "physical_serial_verified": false,
+              "modbus_poll_time_verified": false,
+              "physical_proof_eligible": false,
+              "experiment_endpoint_eligible": false,
+              "causal_effect_estimate": false
+            }
+          }
+        },
+        "mcp": {
+          "verdify-mcp-6c447bcf6c-m6cfs": {
+            "availability": "captured",
+            "value": {
+              "scorecard_contract_version": 2.0,
+              "compliance_pct": 2.2,
+              "temp_compliance_pct": 27.1,
+              "vpd_compliance_pct": 61.4,
+              "compliance_v2_raw_pct": 70.7,
+              "compliance_v2_attributable_pct": 74.1,
+              "compliance_v2_unachievable_frac": 0.062,
+              "graded_temp_compliance_pct": 64.4,
+              "graded_vpd_compliance_pct": 79.0,
+              "total_stress_h": 20.29,
+              "heat_stress_h": 2.37,
+              "cold_stress_h": 10.9,
+              "vpd_high_stress_h": 7.02,
+              "vpd_low_stress_h": 0.0,
+              "metric_semantics": {
+                "contract_version": 2.0,
+                "binary_fields_verified": true,
+                "binary_basis": "legacy_house_average_scored_reading_fraction",
+                "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+                "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+                "graded_basis": "legacy_controller_credit_not_physical_compliance",
+                "coverage_status": "unverified",
+                "historical_missing_evidence_may_be_zero": true,
+                "fixed_sensor_panel": false,
+                "center_probe_measured": false,
+                "duration_weighted": false,
+                "crop_outcome_eligible": false
+              },
+              "observed_minute_evidence": {
+                "reader_contract_version": 1,
+                "availability": "available",
+                "unavailable_reason": null,
+                "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:20.857380Z",
+                "revision_id": 3224,
+                "recorded_at": "2026-10-06T00:49:21.516724Z",
+                "capture_schema": "daily-summary-capture-v2",
+                "diagnostic": {
+                  "definition": "house-average-observed-minute-v1",
+                  "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                  "input_sha256": "6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9",
+                  "greenhouse_id": "vallery",
+                  "window_start": "2026-10-05T06:00:00Z",
+                  "window_end": "2026-10-06T00:49:00Z",
+                  "input_rows": 1092,
+                  "ignored_rows": 0,
+                  "expected_minutes": 1129,
+                  "observed_minutes": 1091,
+                  "axes": {
+                    "temp": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1129,
+                      "unit": "degF",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 38,
+                        "missing_or_invalid_bounds": 1091
+                      }
+                    },
+                    "vpd": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1129,
+                      "unit": "kPa",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 38,
+                        "missing_or_invalid_bounds": 1091
+                      }
+                    }
+                  },
+                  "joint": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1129
+                  },
+                  "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                  "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                  "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                  "fixed_sensor_panel": false,
+                  "duration_weighted": false,
+                  "physical_proof_eligible": false,
+                  "crop_outcome_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "worst_measured_zone": null
+                }
+              },
+              "physical_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "publication_not_qualified",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:20.863126Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "route_only_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "not_published",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:20.866930Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "native_fixed_panel_route_evidence": {
+                "reader_contract_version": 1,
+                "availability": "route_measurement",
+                "unavailable_reason": null,
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:20.871359Z",
+                "receipt_id": null,
+                "frozen_at": null,
+                "projection_sha256": null,
+                "target_revision_id": 3,
+                "contributor_revision_ids": [
+                  8,
+                  7,
+                  9
+                ],
+                "source_binding_id": 2,
+                "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+                "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+                "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+                "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "source_callback_count": null,
+                "source_continuity_verified": null,
+                "eligible_bins": 5,
+                "joint_in_band_bins": 0,
+                "diagnostic": {
+                  "definition": "fixed-panel-native-route-measurement-v1",
+                  "window_start": "2026-10-05T12:00:00Z",
+                  "window_end": "2026-10-06T06:00:00Z",
+                  "expected_bins": 72,
+                  "target_version": "native-route-2026-10-05-2300Z",
+                  "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                  "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                  "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                  "target_effective_from": "2026-10-05T23:00:00Z",
+                  "target_effective_to": "2026-10-06T06:00:00Z",
+                  "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                  "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                  "temp": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 0,
+                    "in_band_pct": 0.0,
+                    "high_miss_bins": 5,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 2.95279998779296,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 2.95279998779296,
+                    "worst_measured_zone": "east"
+                  },
+                  "vpd": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 5,
+                    "in_band_pct": 100.0,
+                    "high_miss_bins": 0,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.0,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.0,
+                    "worst_measured_zone": "east"
+                  },
+                  "joint": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 0,
+                    "in_band_pct": 0.0
+                  },
+                  "temp_unavailable_reasons": {
+                    "not_elapsed": 20,
+                    "source_discontinuity": 3,
+                    "outside_prospective_target": 44
+                  },
+                  "vpd_unavailable_reasons": {
+                    "not_elapsed": 20,
+                    "source_discontinuity": 3,
+                    "outside_prospective_target": 44
+                  },
+                  "partial_window": true,
+                  "completed_bin_count": 52,
+                  "physical_hardware_identity_verified": false,
+                  "crop_placement_verified": false,
+                  "per_probe_poll_time_verified": false,
+                  "physical_proof_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "causal_effect_estimate": false
+                },
+                "route_18h_available": false,
+                "physical_serial_verified": false,
+                "modbus_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              }
+            }
+          },
+          "verdify-mcp-6c447bcf6c-q9brp": {
+            "availability": "captured",
+            "value": {
+              "scorecard_contract_version": 2.0,
+              "compliance_pct": 2.2,
+              "temp_compliance_pct": 27.1,
+              "vpd_compliance_pct": 61.4,
+              "compliance_v2_raw_pct": 70.7,
+              "compliance_v2_attributable_pct": 74.1,
+              "compliance_v2_unachievable_frac": 0.062,
+              "graded_temp_compliance_pct": 64.4,
+              "graded_vpd_compliance_pct": 79.0,
+              "total_stress_h": 20.29,
+              "heat_stress_h": 2.37,
+              "cold_stress_h": 10.9,
+              "vpd_high_stress_h": 7.02,
+              "vpd_low_stress_h": 0.0,
+              "metric_semantics": {
+                "contract_version": 2.0,
+                "binary_fields_verified": true,
+                "binary_basis": "legacy_house_average_scored_reading_fraction",
+                "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+                "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+                "graded_basis": "legacy_controller_credit_not_physical_compliance",
+                "coverage_status": "unverified",
+                "historical_missing_evidence_may_be_zero": true,
+                "fixed_sensor_panel": false,
+                "center_probe_measured": false,
+                "duration_weighted": false,
+                "crop_outcome_eligible": false
+              },
+              "observed_minute_evidence": {
+                "reader_contract_version": 1,
+                "availability": "available",
+                "unavailable_reason": null,
+                "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:22.042000Z",
+                "revision_id": 3224,
+                "recorded_at": "2026-10-06T00:49:21.516724Z",
+                "capture_schema": "daily-summary-capture-v2",
+                "diagnostic": {
+                  "definition": "house-average-observed-minute-v1",
+                  "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                  "input_sha256": "6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9",
+                  "greenhouse_id": "vallery",
+                  "window_start": "2026-10-05T06:00:00Z",
+                  "window_end": "2026-10-06T00:49:00Z",
+                  "input_rows": 1092,
+                  "ignored_rows": 0,
+                  "expected_minutes": 1129,
+                  "observed_minutes": 1091,
+                  "axes": {
+                    "temp": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1129,
+                      "unit": "degF",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 38,
+                        "missing_or_invalid_bounds": 1091
+                      }
+                    },
+                    "vpd": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1129,
+                      "unit": "kPa",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 38,
+                        "missing_or_invalid_bounds": 1091
+                      }
+                    }
+                  },
+                  "joint": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1129
+                  },
+                  "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                  "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                  "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                  "fixed_sensor_panel": false,
+                  "duration_weighted": false,
+                  "physical_proof_eligible": false,
+                  "crop_outcome_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "worst_measured_zone": null
+                }
+              },
+              "physical_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "publication_not_qualified",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:22.050725Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "route_only_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "not_published",
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:22.056740Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "native_fixed_panel_route_evidence": {
+                "reader_contract_version": 1,
+                "availability": "route_measurement",
+                "unavailable_reason": null,
+                "day": "2026-10-05",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:22.065499Z",
+                "receipt_id": null,
+                "frozen_at": null,
+                "projection_sha256": null,
+                "target_revision_id": 3,
+                "contributor_revision_ids": [
+                  8,
+                  7,
+                  9
+                ],
+                "source_binding_id": 2,
+                "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+                "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+                "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+                "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "source_callback_count": null,
+                "source_continuity_verified": null,
+                "eligible_bins": 5,
+                "joint_in_band_bins": 0,
+                "diagnostic": {
+                  "definition": "fixed-panel-native-route-measurement-v1",
+                  "window_start": "2026-10-05T12:00:00Z",
+                  "window_end": "2026-10-06T06:00:00Z",
+                  "expected_bins": 72,
+                  "target_version": "native-route-2026-10-05-2300Z",
+                  "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                  "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                  "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                  "target_effective_from": "2026-10-05T23:00:00Z",
+                  "target_effective_to": "2026-10-06T06:00:00Z",
+                  "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                  "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                  "temp": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 0,
+                    "in_band_pct": 0.0,
+                    "high_miss_bins": 5,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 2.95279998779296,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 2.95279998779296,
+                    "worst_measured_zone": "east"
+                  },
+                  "vpd": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 5,
+                    "in_band_pct": 100.0,
+                    "high_miss_bins": 0,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.0,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.0,
+                    "worst_measured_zone": "east"
+                  },
+                  "joint": {
+                    "eligible_bins": 5,
+                    "in_band_bins": 0,
+                    "in_band_pct": 0.0
+                  },
+                  "temp_unavailable_reasons": {
+                    "not_elapsed": 20,
+                    "source_discontinuity": 3,
+                    "outside_prospective_target": 44
+                  },
+                  "vpd_unavailable_reasons": {
+                    "not_elapsed": 20,
+                    "source_discontinuity": 3,
+                    "outside_prospective_target": 44
+                  },
+                  "partial_window": true,
+                  "completed_bin_count": 52,
+                  "physical_hardware_identity_verified": false,
+                  "crop_placement_verified": false,
+                  "per_probe_poll_time_verified": false,
+                  "physical_proof_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "causal_effect_estimate": false
+                },
+                "route_18h_available": false,
+                "physical_serial_verified": false,
+                "modbus_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              }
+            }
+          }
+        },
+        "comparison": {
+          "sql_bracket_stable": true,
+          "metric_mismatches": [],
+          "agreement_proven": true,
+          "physical_publication_qualified": false,
+          "native_route": {
+            "sql_bracket_stable": true,
+            "agreement_proven": true,
+            "consumer_mismatches": [],
+            "physical_publication_qualified": false
+          }
+        },
+        "source_renderer_probe": {
+          "input_basis": "live typed API metrics; no plan/lesson narrative supplied",
+          "renderer_sha256": "3f4dddf486adda19e1a531a00ea53c11cb5a8e546ac7a9ce377e04be420a1b42",
+          "rendered_sha256": "e4bfc2be69b425cddb12f4f07ca1a295ccadd2af869402626f56e55552811609",
+          "rendered_metric_projection": "Static public API snapshot: **2026-10-05 12:00 MDT**. Source: [evidence snapshot JSON](https://api.verdify.ai/api/v1/public/evidence-snapshot) and [scorecard API](https://api.verdify.ai/api/v1/scorecard?date=2026-10-05). These values are crawler-friendly receipts; use the live dashboard link above for continuously refreshed panels.\n\n<div class=\"metric-grid\">\n  <div class=\"metric-card\"><strong>No data</strong><p>Today's planner score</p></div>\n  <div class=\"metric-card\"><strong>2.2%</strong><p>Both-axis compliance (binary reading fraction, house average)</p></div>\n  <div class=\"metric-card\"><strong>74.1%</strong><p>Graded controller credit (diagnostic, not binary compliance)</p></div>\n  <div class=\"metric-card\"><strong>27.1%</strong><p>Temperature binary reading fraction</p></div>\n  <div class=\"metric-card\"><strong>61.4%</strong><p>VPD binary reading fraction</p></div>\n  <div class=\"metric-card\"><strong>20.29h</strong><p>Nominal binary stress-axis hours</p></div>\n  <div class=\"metric-card\"><strong>No validated plan</strong><p>Last validated plan</p></div>\n</div>\n\n<div class=\"data-table\">\n  <div class=\"data-row\"><strong>Observed-minute diagnostic</strong><span>Temperature: No data in band; 0/0 eligible slots in band; 0/1129 evaluated slots eligible \u00b7 VPD: No data in band; 0/0 eligible slots in band; 0/1129 evaluated slots eligible \u00b7 Both axes: No data in band; 0/0 eligible slots in band; 0/1129 evaluated slots eligible</span><p>House-average UTC-minute slots against provenance-unqualified setpoint-log events. Not continuous exposure, fixed-panel crop compliance, physical proof or an experiment endpoint. Evaluated 2026-10-05T06:00:00+00:00 to 2026-10-06T00:49:00+00:00; captured revision 3224 at 2026-10-06T00:49:21.516724+00:00. Snapshot freshness is not assessed; coverage refers only to this evaluated window. Definition house-average-observed-minute-v1; calculation SHA-256 fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8; input SHA-256 6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9.</p></div>\n  <div class=\"data-row\"><strong>Physical crop-band compliance</strong><span>Unavailable</span><p>No qualified fixed-panel crop result for this day. Legacy house averages, controller credit and the Sep 4 counterfactual cannot fill this value.</p></div>\n  \n  <div class=\"data-row\"><strong>Native route measurement scope</strong><span>Partial window \u00b7 observational</span><p>Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. Prospective target native-route-2026-10-05-2300Z; target revision 3; source binding 2. Controller credit remains separate. Physical proof and experiment eligibility are false.</p></div><div class=\"data-row\"><strong>Native route temperature</strong><span>0.0% \u00b7 5/72 eligible bins</span><p>Mean outside distance 2.953\u00b0F; high/low misses 5/0; high/low mean distance 2.953\u00b0F/0.000\u00b0F; worst measured source route east; 67 unavailable bins ({&quot;not_elapsed&quot;: 20, &quot;outside_prospective_target&quot;: 44, &quot;source_discontinuity&quot;: 3}).</p></div><div class=\"data-row\"><strong>Native route VPD</strong><span>100.0% \u00b7 5/72 eligible bins</span><p>Mean outside distance 0.000 kPa; high/low misses 0/0; high/low mean distance 0.000 kPa/0.000 kPa; worst measured source route east; 67 unavailable bins ({&quot;not_elapsed&quot;: 20, &quot;outside_prospective_target&quot;: 44, &quot;source_discontinuity&quot;: 3}).</p></div><div class=\"data-row\"><strong>Native route joint</strong><span>0.0% \u00b7 0/5 in band; 5/72 eligible</span><p>Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins.</p></div>\n  <div class=\"data-row\"><strong>Measurement basis</strong><span>Contract 2</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>\n  <div class=\"data-row\"><strong>Last validated plan</strong><span>No validated plan</span><p>Validated unknown time.</p></div>\n  <div class=\"data-row\"><strong>Latest plan status</strong><span>No active plan \u00b7 unknown status</span><p>Written unknown time; age No data at snapshot time.</p></div>\n  <div class=\"data-row\"><strong>Stress breakdown</strong><span>heat No data \u00b7 cold No data \u00b7 VPD-high No data \u00b7 VPD-low No data</span><p>Total stress-axis hours can exceed wall-clock hours because temperature and VPD are independent stress axes.</p></div>\n  <div class=\"data-row\"><strong>Latest lesson</strong><span>No validated lesson in snapshot</span><p>No latest lesson was present in the public evidence snapshot.</p></div>\n</div>",
+          "live_lab_adoption_proven": false
+        }
+      },
+      {
+        "date": "2026-09-29",
+        "sql_before": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2,
+            "compliance_pct": 11.8,
+            "temp_compliance_pct": 36.0,
+            "vpd_compliance_pct": 66.9,
+            "total_stress_h": 22.87,
+            "heat_stress_h": 1.87,
+            "cold_stress_h": 13.2,
+            "vpd_high_stress_h": 7.8,
+            "vpd_low_stress_h": 0.0,
+            "compliance_v2_raw_pct": 76.3,
+            "compliance_v2_attributable_pct": 77.5,
+            "compliance_v2_unachievable_frac": 0.0255,
+            "graded_temp_compliance_pct": 72.4,
+            "graded_vpd_compliance_pct": 82.1,
+            "native_fixed_panel_route_evidence": {
+              "day": "2026-09-29",
+              "served_at": "2026-10-06T01:07:23.27992+00:00",
+              "diagnostic": {
+                "vpd": {
+                  "in_band_pct": 100.0,
+                  "in_band_bins": 72,
+                  "eligible_bins": 72,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 0,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0,
+                  "worst_measured_zone": "north",
+                  "mean_outside_distance": 0
+                },
+                "temp": {
+                  "in_band_pct": 65.27777777777777,
+                  "in_band_bins": 47,
+                  "eligible_bins": 72,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 25,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0.574444700170445,
+                  "worst_measured_zone": "north",
+                  "mean_outside_distance": 0.574444700170445
+                },
+                "joint": {
+                  "in_band_pct": 65.27777777777777,
+                  "in_band_bins": 47,
+                  "eligible_bins": 72
+                },
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_end": "2026-09-30T06:00:00+00:00",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "window_start": "2026-09-29T12:00:00+00:00",
+                "expected_bins": 72,
+                "partial_window": false,
+                "target_version": "native-route-2026-09-29",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "completed_bin_count": 72,
+                "target_effective_to": "2026-09-30T06:00:00+00:00",
+                "target_effective_from": "2026-09-29T12:00:00+00:00",
+                "causal_effect_estimate": false,
+                "crop_placement_verified": false,
+                "physical_proof_eligible": false,
+                "vpd_unavailable_reasons": {},
+                "temp_unavailable_reasons": {},
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "experiment_endpoint_eligible": false,
+                "per_probe_poll_time_verified": false,
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "physical_hardware_identity_verified": false
+              },
+              "availability": "route_measurement",
+              "eligible_bins": 72,
+              "greenhouse_id": "vallery",
+              "firmware_revision": "2026.7.10.1500.09ee886",
+              "source_binding_id": 1,
+              "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+              "joint_in_band_bins": 47,
+              "target_revision_id": 2,
+              "unavailable_reason": null,
+              "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "contributor_revision_ids": [
+                5,
+                4,
+                6
+              ]
+            },
+            "physical_crop_band_evidence": {
+              "day": "2026-09-29",
+              "served_at": "2026-10-06T01:07:23.727987+00:00",
+              "diagnostic": null,
+              "recorded_at": null,
+              "revision_id": null,
+              "greenhouse_id": "vallery",
+              "unavailable_reason": "publication_not_qualified",
+              "reader_contract_version": 1
+            }
+          }
+        },
+        "sql_after": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2,
+            "compliance_pct": 11.8,
+            "temp_compliance_pct": 36.0,
+            "vpd_compliance_pct": 66.9,
+            "total_stress_h": 22.87,
+            "heat_stress_h": 1.87,
+            "cold_stress_h": 13.2,
+            "vpd_high_stress_h": 7.8,
+            "vpd_low_stress_h": 0.0,
+            "compliance_v2_raw_pct": 76.3,
+            "compliance_v2_attributable_pct": 77.5,
+            "compliance_v2_unachievable_frac": 0.0255,
+            "graded_temp_compliance_pct": 72.4,
+            "graded_vpd_compliance_pct": 82.1,
+            "native_fixed_panel_route_evidence": {
+              "day": "2026-09-29",
+              "served_at": "2026-10-06T01:07:27.560413+00:00",
+              "diagnostic": {
+                "vpd": {
+                  "in_band_pct": 100.0,
+                  "in_band_bins": 72,
+                  "eligible_bins": 72,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 0,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0,
+                  "worst_measured_zone": "north",
+                  "mean_outside_distance": 0
+                },
+                "temp": {
+                  "in_band_pct": 65.27777777777777,
+                  "in_band_bins": 47,
+                  "eligible_bins": 72,
+                  "low_miss_bins": 0,
+                  "high_miss_bins": 25,
+                  "mean_low_distance": 0,
+                  "mean_high_distance": 0.574444700170445,
+                  "worst_measured_zone": "north",
+                  "mean_outside_distance": 0.574444700170445
+                },
+                "joint": {
+                  "in_band_pct": 65.27777777777777,
+                  "in_band_bins": 47,
+                  "eligible_bins": 72
+                },
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_end": "2026-09-30T06:00:00+00:00",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "window_start": "2026-09-29T12:00:00+00:00",
+                "expected_bins": 72,
+                "partial_window": false,
+                "target_version": "native-route-2026-09-29",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "completed_bin_count": 72,
+                "target_effective_to": "2026-09-30T06:00:00+00:00",
+                "target_effective_from": "2026-09-29T12:00:00+00:00",
+                "causal_effect_estimate": false,
+                "crop_placement_verified": false,
+                "physical_proof_eligible": false,
+                "vpd_unavailable_reasons": {},
+                "temp_unavailable_reasons": {},
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "experiment_endpoint_eligible": false,
+                "per_probe_poll_time_verified": false,
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "physical_hardware_identity_verified": false
+              },
+              "availability": "route_measurement",
+              "eligible_bins": 72,
+              "greenhouse_id": "vallery",
+              "firmware_revision": "2026.7.10.1500.09ee886",
+              "source_binding_id": 1,
+              "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+              "joint_in_band_bins": 47,
+              "target_revision_id": 2,
+              "unavailable_reason": null,
+              "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "contributor_revision_ids": [
+                5,
+                4,
+                6
+              ]
+            },
+            "physical_crop_band_evidence": {
+              "day": "2026-09-29",
+              "served_at": "2026-10-06T01:07:28.16871+00:00",
+              "diagnostic": null,
+              "recorded_at": null,
+              "revision_id": null,
+              "greenhouse_id": "vallery",
+              "unavailable_reason": "publication_not_qualified",
+              "reader_contract_version": 1
+            }
+          }
+        },
+        "api": {
+          "availability": "captured",
+          "value": {
+            "scorecard_contract_version": 2.0,
+            "compliance_pct": 11.8,
+            "temp_compliance_pct": 36.0,
+            "vpd_compliance_pct": 66.9,
+            "compliance_v2_raw_pct": 76.3,
+            "compliance_v2_attributable_pct": 77.5,
+            "compliance_v2_unachievable_frac": 0.0255,
+            "graded_temp_compliance_pct": 72.4,
+            "graded_vpd_compliance_pct": 82.1,
+            "total_stress_h": 22.87,
+            "heat_stress_h": 1.87,
+            "cold_stress_h": 13.2,
+            "vpd_high_stress_h": 7.8,
+            "vpd_low_stress_h": 0.0,
+            "metric_semantics": {
+              "contract_version": 2.0,
+              "binary_fields_verified": true,
+              "binary_basis": "legacy_house_average_scored_reading_fraction",
+              "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+              "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+              "graded_basis": "legacy_controller_credit_not_physical_compliance",
+              "coverage_status": "unverified",
+              "historical_missing_evidence_may_be_zero": true,
+              "fixed_sensor_panel": false,
+              "center_probe_measured": false,
+              "duration_weighted": false,
+              "crop_outcome_eligible": false
+            },
+            "observed_minute_evidence": {
+              "reader_contract_version": 1,
+              "availability": "available",
+              "unavailable_reason": null,
+              "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+              "day": "2026-09-29",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:23.773311Z",
+              "revision_id": 1436,
+              "recorded_at": "2026-09-30T06:16:03.293299Z",
+              "capture_schema": "daily-summary-capture-v2",
+              "diagnostic": {
+                "definition": "house-average-observed-minute-v1",
+                "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                "input_sha256": "8f3f19fdf5e58671ae9c909be2eda0a297d8c861756b8d6d8d4be19d37863f41",
+                "greenhouse_id": "vallery",
+                "window_start": "2026-09-29T06:00:00Z",
+                "window_end": "2026-09-30T06:00:00Z",
+                "input_rows": 1412,
+                "ignored_rows": 0,
+                "expected_minutes": 1440,
+                "observed_minutes": 1412,
+                "axes": {
+                  "temp": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1440,
+                    "unit": "degF",
+                    "low_miss_observed_minutes": 0,
+                    "high_miss_observed_minutes": 0,
+                    "mean_low_distance": null,
+                    "mean_high_distance": null,
+                    "mean_outside_distance": null,
+                    "ineligible_minutes": {
+                      "conflicting_timestamp": 0,
+                      "missing_value": 28,
+                      "missing_or_invalid_bounds": 1412
+                    }
+                  },
+                  "vpd": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1440,
+                    "unit": "kPa",
+                    "low_miss_observed_minutes": 0,
+                    "high_miss_observed_minutes": 0,
+                    "mean_low_distance": null,
+                    "mean_high_distance": null,
+                    "mean_outside_distance": null,
+                    "ineligible_minutes": {
+                      "conflicting_timestamp": 0,
+                      "missing_value": 28,
+                      "missing_or_invalid_bounds": 1412
+                    }
+                  }
+                },
+                "joint": {
+                  "eligible_minutes": 0,
+                  "in_band_minutes": 0,
+                  "in_band_pct": null,
+                  "coverage_fraction": 0.0,
+                  "longest_ineligible_run_minutes": 1440
+                },
+                "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                "fixed_sensor_panel": false,
+                "duration_weighted": false,
+                "physical_proof_eligible": false,
+                "crop_outcome_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "worst_measured_zone": null
+              }
+            },
+            "physical_crop_band_evidence": {
+              "reader_contract_version": 1,
+              "availability": "unavailable",
+              "unavailable_reason": "publication_not_qualified",
+              "day": "2026-09-29",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:23.776275Z",
+              "revision_id": null,
+              "recorded_at": null,
+              "diagnostic": null
+            },
+            "route_only_crop_band_evidence": {
+              "reader_contract_version": 1,
+              "availability": "unavailable",
+              "unavailable_reason": "not_published",
+              "day": "2026-09-29",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:23.777925Z",
+              "revision_id": null,
+              "recorded_at": null,
+              "diagnostic": null
+            },
+            "native_fixed_panel_route_evidence": {
+              "reader_contract_version": 1,
+              "availability": "route_measurement",
+              "unavailable_reason": null,
+              "day": "2026-09-29",
+              "greenhouse_id": "vallery",
+              "served_at": "2026-10-06T01:07:23.779396Z",
+              "receipt_id": null,
+              "frozen_at": null,
+              "projection_sha256": null,
+              "target_revision_id": 2,
+              "contributor_revision_ids": [
+                5,
+                4,
+                6
+              ],
+              "source_binding_id": 1,
+              "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+              "firmware_revision": "2026.7.10.1500.09ee886",
+              "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+              "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+              "source_callback_count": null,
+              "source_continuity_verified": null,
+              "eligible_bins": 72,
+              "joint_in_band_bins": 47,
+              "diagnostic": {
+                "definition": "fixed-panel-native-route-measurement-v1",
+                "window_start": "2026-09-29T12:00:00Z",
+                "window_end": "2026-09-30T06:00:00Z",
+                "expected_bins": 72,
+                "target_version": "native-route-2026-09-29",
+                "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "target_effective_from": "2026-09-29T12:00:00Z",
+                "target_effective_to": "2026-09-30T06:00:00Z",
+                "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "temp": {
+                  "eligible_bins": 72,
+                  "in_band_bins": 47,
+                  "in_band_pct": 65.27777777777777,
+                  "high_miss_bins": 25,
+                  "low_miss_bins": 0,
+                  "mean_high_distance": 0.574444700170445,
+                  "mean_low_distance": 0.0,
+                  "mean_outside_distance": 0.574444700170445,
+                  "worst_measured_zone": "north"
+                },
+                "vpd": {
+                  "eligible_bins": 72,
+                  "in_band_bins": 72,
+                  "in_band_pct": 100.0,
+                  "high_miss_bins": 0,
+                  "low_miss_bins": 0,
+                  "mean_high_distance": 0.0,
+                  "mean_low_distance": 0.0,
+                  "mean_outside_distance": 0.0,
+                  "worst_measured_zone": "north"
+                },
+                "joint": {
+                  "eligible_bins": 72,
+                  "in_band_bins": 47,
+                  "in_band_pct": 65.27777777777777
+                },
+                "temp_unavailable_reasons": {},
+                "vpd_unavailable_reasons": {},
+                "partial_window": false,
+                "completed_bin_count": 72,
+                "physical_hardware_identity_verified": false,
+                "crop_placement_verified": false,
+                "per_probe_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              },
+              "route_18h_available": false,
+              "physical_serial_verified": false,
+              "modbus_poll_time_verified": false,
+              "physical_proof_eligible": false,
+              "experiment_endpoint_eligible": false,
+              "causal_effect_estimate": false
+            }
+          }
+        },
+        "mcp": {
+          "verdify-mcp-6c447bcf6c-m6cfs": {
+            "availability": "captured",
+            "value": {
+              "scorecard_contract_version": 2.0,
+              "compliance_pct": 11.8,
+              "temp_compliance_pct": 36.0,
+              "vpd_compliance_pct": 66.9,
+              "compliance_v2_raw_pct": 76.3,
+              "compliance_v2_attributable_pct": 77.5,
+              "compliance_v2_unachievable_frac": 0.0255,
+              "graded_temp_compliance_pct": 72.4,
+              "graded_vpd_compliance_pct": 82.1,
+              "total_stress_h": 22.87,
+              "heat_stress_h": 1.87,
+              "cold_stress_h": 13.2,
+              "vpd_high_stress_h": 7.8,
+              "vpd_low_stress_h": 0.0,
+              "metric_semantics": {
+                "contract_version": 2.0,
+                "binary_fields_verified": true,
+                "binary_basis": "legacy_house_average_scored_reading_fraction",
+                "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+                "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+                "graded_basis": "legacy_controller_credit_not_physical_compliance",
+                "coverage_status": "unverified",
+                "historical_missing_evidence_may_be_zero": true,
+                "fixed_sensor_panel": false,
+                "center_probe_measured": false,
+                "duration_weighted": false,
+                "crop_outcome_eligible": false
+              },
+              "observed_minute_evidence": {
+                "reader_contract_version": 1,
+                "availability": "available",
+                "unavailable_reason": null,
+                "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:24.924916Z",
+                "revision_id": 1436,
+                "recorded_at": "2026-09-30T06:16:03.293299Z",
+                "capture_schema": "daily-summary-capture-v2",
+                "diagnostic": {
+                  "definition": "house-average-observed-minute-v1",
+                  "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                  "input_sha256": "8f3f19fdf5e58671ae9c909be2eda0a297d8c861756b8d6d8d4be19d37863f41",
+                  "greenhouse_id": "vallery",
+                  "window_start": "2026-09-29T06:00:00Z",
+                  "window_end": "2026-09-30T06:00:00Z",
+                  "input_rows": 1412,
+                  "ignored_rows": 0,
+                  "expected_minutes": 1440,
+                  "observed_minutes": 1412,
+                  "axes": {
+                    "temp": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1440,
+                      "unit": "degF",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 28,
+                        "missing_or_invalid_bounds": 1412
+                      }
+                    },
+                    "vpd": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1440,
+                      "unit": "kPa",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 28,
+                        "missing_or_invalid_bounds": 1412
+                      }
+                    }
+                  },
+                  "joint": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1440
+                  },
+                  "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                  "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                  "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                  "fixed_sensor_panel": false,
+                  "duration_weighted": false,
+                  "physical_proof_eligible": false,
+                  "crop_outcome_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "worst_measured_zone": null
+                }
+              },
+              "physical_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "publication_not_qualified",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:24.932155Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "route_only_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "not_published",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:24.935400Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "native_fixed_panel_route_evidence": {
+                "reader_contract_version": 1,
+                "availability": "route_measurement",
+                "unavailable_reason": null,
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:24.939116Z",
+                "receipt_id": null,
+                "frozen_at": null,
+                "projection_sha256": null,
+                "target_revision_id": 2,
+                "contributor_revision_ids": [
+                  5,
+                  4,
+                  6
+                ],
+                "source_binding_id": 1,
+                "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+                "firmware_revision": "2026.7.10.1500.09ee886",
+                "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+                "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "source_callback_count": null,
+                "source_continuity_verified": null,
+                "eligible_bins": 72,
+                "joint_in_band_bins": 47,
+                "diagnostic": {
+                  "definition": "fixed-panel-native-route-measurement-v1",
+                  "window_start": "2026-09-29T12:00:00Z",
+                  "window_end": "2026-09-30T06:00:00Z",
+                  "expected_bins": 72,
+                  "target_version": "native-route-2026-09-29",
+                  "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                  "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                  "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                  "target_effective_from": "2026-09-29T12:00:00Z",
+                  "target_effective_to": "2026-09-30T06:00:00Z",
+                  "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                  "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                  "temp": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 47,
+                    "in_band_pct": 65.27777777777777,
+                    "high_miss_bins": 25,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.574444700170445,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.574444700170445,
+                    "worst_measured_zone": "north"
+                  },
+                  "vpd": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 72,
+                    "in_band_pct": 100.0,
+                    "high_miss_bins": 0,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.0,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.0,
+                    "worst_measured_zone": "north"
+                  },
+                  "joint": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 47,
+                    "in_band_pct": 65.27777777777777
+                  },
+                  "temp_unavailable_reasons": {},
+                  "vpd_unavailable_reasons": {},
+                  "partial_window": false,
+                  "completed_bin_count": 72,
+                  "physical_hardware_identity_verified": false,
+                  "crop_placement_verified": false,
+                  "per_probe_poll_time_verified": false,
+                  "physical_proof_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "causal_effect_estimate": false
+                },
+                "route_18h_available": false,
+                "physical_serial_verified": false,
+                "modbus_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              }
+            }
+          },
+          "verdify-mcp-6c447bcf6c-q9brp": {
+            "availability": "captured",
+            "value": {
+              "scorecard_contract_version": 2.0,
+              "compliance_pct": 11.8,
+              "temp_compliance_pct": 36.0,
+              "vpd_compliance_pct": 66.9,
+              "compliance_v2_raw_pct": 76.3,
+              "compliance_v2_attributable_pct": 77.5,
+              "compliance_v2_unachievable_frac": 0.0255,
+              "graded_temp_compliance_pct": 72.4,
+              "graded_vpd_compliance_pct": 82.1,
+              "total_stress_h": 22.87,
+              "heat_stress_h": 1.87,
+              "cold_stress_h": 13.2,
+              "vpd_high_stress_h": 7.8,
+              "vpd_low_stress_h": 0.0,
+              "metric_semantics": {
+                "contract_version": 2.0,
+                "binary_fields_verified": true,
+                "binary_basis": "legacy_house_average_scored_reading_fraction",
+                "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+                "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+                "graded_basis": "legacy_controller_credit_not_physical_compliance",
+                "coverage_status": "unverified",
+                "historical_missing_evidence_may_be_zero": true,
+                "fixed_sensor_panel": false,
+                "center_probe_measured": false,
+                "duration_weighted": false,
+                "crop_outcome_eligible": false
+              },
+              "observed_minute_evidence": {
+                "reader_contract_version": 1,
+                "availability": "available",
+                "unavailable_reason": null,
+                "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:26.752259Z",
+                "revision_id": 1436,
+                "recorded_at": "2026-09-30T06:16:03.293299Z",
+                "capture_schema": "daily-summary-capture-v2",
+                "diagnostic": {
+                  "definition": "house-average-observed-minute-v1",
+                  "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+                  "input_sha256": "8f3f19fdf5e58671ae9c909be2eda0a297d8c861756b8d6d8d4be19d37863f41",
+                  "greenhouse_id": "vallery",
+                  "window_start": "2026-09-29T06:00:00Z",
+                  "window_end": "2026-09-30T06:00:00Z",
+                  "input_rows": 1412,
+                  "ignored_rows": 0,
+                  "expected_minutes": 1440,
+                  "observed_minutes": 1412,
+                  "axes": {
+                    "temp": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1440,
+                      "unit": "degF",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 28,
+                        "missing_or_invalid_bounds": 1412
+                      }
+                    },
+                    "vpd": {
+                      "eligible_minutes": 0,
+                      "in_band_minutes": 0,
+                      "in_band_pct": null,
+                      "coverage_fraction": 0.0,
+                      "longest_ineligible_run_minutes": 1440,
+                      "unit": "kPa",
+                      "low_miss_observed_minutes": 0,
+                      "high_miss_observed_minutes": 0,
+                      "mean_low_distance": null,
+                      "mean_high_distance": null,
+                      "mean_outside_distance": null,
+                      "ineligible_minutes": {
+                        "conflicting_timestamp": 0,
+                        "missing_value": 28,
+                        "missing_or_invalid_bounds": 1412
+                      }
+                    }
+                  },
+                  "joint": {
+                    "eligible_minutes": 0,
+                    "in_band_minutes": 0,
+                    "in_band_pct": null,
+                    "coverage_fraction": 0.0,
+                    "longest_ineligible_run_minutes": 1440
+                  },
+                  "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+                  "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+                  "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+                  "fixed_sensor_panel": false,
+                  "duration_weighted": false,
+                  "physical_proof_eligible": false,
+                  "crop_outcome_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "worst_measured_zone": null
+                }
+              },
+              "physical_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "publication_not_qualified",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:26.762525Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "route_only_crop_band_evidence": {
+                "reader_contract_version": 1,
+                "availability": "unavailable",
+                "unavailable_reason": "not_published",
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:26.769891Z",
+                "revision_id": null,
+                "recorded_at": null,
+                "diagnostic": null
+              },
+              "native_fixed_panel_route_evidence": {
+                "reader_contract_version": 1,
+                "availability": "route_measurement",
+                "unavailable_reason": null,
+                "day": "2026-09-29",
+                "greenhouse_id": "vallery",
+                "served_at": "2026-10-06T01:07:26.778665Z",
+                "receipt_id": null,
+                "frozen_at": null,
+                "projection_sha256": null,
+                "target_revision_id": 2,
+                "contributor_revision_ids": [
+                  5,
+                  4,
+                  6
+                ],
+                "source_binding_id": 1,
+                "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+                "firmware_revision": "2026.7.10.1500.09ee886",
+                "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+                "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "source_callback_count": null,
+                "source_continuity_verified": null,
+                "eligible_bins": 72,
+                "joint_in_band_bins": 47,
+                "diagnostic": {
+                  "definition": "fixed-panel-native-route-measurement-v1",
+                  "window_start": "2026-09-29T12:00:00Z",
+                  "window_end": "2026-09-30T06:00:00Z",
+                  "expected_bins": 72,
+                  "target_version": "native-route-2026-09-29",
+                  "target_basis": "prospective_frozen_panel_mean_crop_reference",
+                  "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+                  "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                  "target_effective_from": "2026-09-29T12:00:00Z",
+                  "target_effective_to": "2026-09-30T06:00:00Z",
+                  "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                  "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                  "temp": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 47,
+                    "in_band_pct": 65.27777777777777,
+                    "high_miss_bins": 25,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.574444700170445,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.574444700170445,
+                    "worst_measured_zone": "north"
+                  },
+                  "vpd": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 72,
+                    "in_band_pct": 100.0,
+                    "high_miss_bins": 0,
+                    "low_miss_bins": 0,
+                    "mean_high_distance": 0.0,
+                    "mean_low_distance": 0.0,
+                    "mean_outside_distance": 0.0,
+                    "worst_measured_zone": "north"
+                  },
+                  "joint": {
+                    "eligible_bins": 72,
+                    "in_band_bins": 47,
+                    "in_band_pct": 65.27777777777777
+                  },
+                  "temp_unavailable_reasons": {},
+                  "vpd_unavailable_reasons": {},
+                  "partial_window": false,
+                  "completed_bin_count": 72,
+                  "physical_hardware_identity_verified": false,
+                  "crop_placement_verified": false,
+                  "per_probe_poll_time_verified": false,
+                  "physical_proof_eligible": false,
+                  "experiment_endpoint_eligible": false,
+                  "causal_effect_estimate": false
+                },
+                "route_18h_available": false,
+                "physical_serial_verified": false,
+                "modbus_poll_time_verified": false,
+                "physical_proof_eligible": false,
+                "experiment_endpoint_eligible": false,
+                "causal_effect_estimate": false
+              }
+            }
+          }
+        },
+        "comparison": {
+          "sql_bracket_stable": true,
+          "metric_mismatches": [],
+          "agreement_proven": true,
+          "physical_publication_qualified": false,
+          "native_route": {
+            "sql_bracket_stable": true,
+            "agreement_proven": true,
+            "consumer_mismatches": [],
+            "physical_publication_qualified": false
+          }
+        },
+        "source_renderer_probe": {
+          "input_basis": "live typed API metrics; no plan/lesson narrative supplied",
+          "renderer_sha256": "3f4dddf486adda19e1a531a00ea53c11cb5a8e546ac7a9ce377e04be420a1b42",
+          "rendered_sha256": "ba4b441697e49e5eef67ab11bef3ed0a78e6a93c4a02aaa0a018415de52f43e6",
+          "rendered_metric_projection": "Static public API snapshot: **2026-09-29 12:00 MDT**. Source: [evidence snapshot JSON](https://api.verdify.ai/api/v1/public/evidence-snapshot) and [scorecard API](https://api.verdify.ai/api/v1/scorecard?date=2026-09-29). These values are crawler-friendly receipts; use the live dashboard link above for continuously refreshed panels.\n\n<div class=\"metric-grid\">\n  <div class=\"metric-card\"><strong>No data</strong><p>Today's planner score</p></div>\n  <div class=\"metric-card\"><strong>11.8%</strong><p>Both-axis compliance (binary reading fraction, house average)</p></div>\n  <div class=\"metric-card\"><strong>77.5%</strong><p>Graded controller credit (diagnostic, not binary compliance)</p></div>\n  <div class=\"metric-card\"><strong>36.0%</strong><p>Temperature binary reading fraction</p></div>\n  <div class=\"metric-card\"><strong>66.9%</strong><p>VPD binary reading fraction</p></div>\n  <div class=\"metric-card\"><strong>22.87h</strong><p>Nominal binary stress-axis hours</p></div>\n  <div class=\"metric-card\"><strong>No validated plan</strong><p>Last validated plan</p></div>\n</div>\n\n<div class=\"data-table\">\n  <div class=\"data-row\"><strong>Observed-minute diagnostic</strong><span>Temperature: No data in band; 0/0 eligible slots in band; 0/1440 evaluated slots eligible \u00b7 VPD: No data in band; 0/0 eligible slots in band; 0/1440 evaluated slots eligible \u00b7 Both axes: No data in band; 0/0 eligible slots in band; 0/1440 evaluated slots eligible</span><p>House-average UTC-minute slots against provenance-unqualified setpoint-log events. Not continuous exposure, fixed-panel crop compliance, physical proof or an experiment endpoint. Evaluated 2026-09-29T06:00:00+00:00 to 2026-09-30T06:00:00+00:00; captured revision 1436 at 2026-09-30T06:16:03.293299+00:00. Snapshot freshness is not assessed; coverage refers only to this evaluated window. Definition house-average-observed-minute-v1; calculation SHA-256 fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8; input SHA-256 8f3f19fdf5e58671ae9c909be2eda0a297d8c861756b8d6d8d4be19d37863f41.</p></div>\n  <div class=\"data-row\"><strong>Physical crop-band compliance</strong><span>Unavailable</span><p>No qualified fixed-panel crop result for this day. Legacy house averages, controller credit and the Sep 4 counterfactual cannot fill this value.</p></div>\n  \n  <div class=\"data-row\"><strong>Native route measurement scope</strong><span>Completed window \u00b7 observational</span><p>Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. Prospective target native-route-2026-09-29; target revision 2; source binding 1. Controller credit remains separate. Physical proof and experiment eligibility are false.</p></div><div class=\"data-row\"><strong>Native route temperature</strong><span>65.3% \u00b7 72/72 eligible bins</span><p>Mean outside distance 0.574\u00b0F; high/low misses 25/0; high/low mean distance 0.574\u00b0F/0.000\u00b0F; worst measured source route north; 0 unavailable bins ({}).</p></div><div class=\"data-row\"><strong>Native route VPD</strong><span>100.0% \u00b7 72/72 eligible bins</span><p>Mean outside distance 0.000 kPa; high/low misses 0/0; high/low mean distance 0.000 kPa/0.000 kPa; worst measured source route north; 0 unavailable bins ({}).</p></div><div class=\"data-row\"><strong>Native route joint</strong><span>65.3% \u00b7 47/72 in band; 72/72 eligible</span><p>Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins.</p></div>\n  <div class=\"data-row\"><strong>Measurement basis</strong><span>Contract 2</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>\n  <div class=\"data-row\"><strong>Last validated plan</strong><span>No validated plan</span><p>Validated unknown time.</p></div>\n  <div class=\"data-row\"><strong>Latest plan status</strong><span>No active plan \u00b7 unknown status</span><p>Written unknown time; age No data at snapshot time.</p></div>\n  <div class=\"data-row\"><strong>Stress breakdown</strong><span>heat No data \u00b7 cold No data \u00b7 VPD-high No data \u00b7 VPD-low No data</span><p>Total stress-axis hours can exceed wall-clock hours because temperature and VPD are independent stress axes.</p></div>\n  <div class=\"data-row\"><strong>Latest lesson</strong><span>No validated lesson in snapshot</span><p>No latest lesson was present in the public evidence snapshot.</p></div>\n</div>",
+          "live_lab_adoption_proven": false
+        }
+      }
+    ],
+    "public_snapshot": {
+      "availability": "captured",
+      "value": {
+        "generated_at": "2026-10-06T01:07:29.559550+00:00",
+        "score_date": "2026-10-05",
+        "planning_quality": {
+          "both_axis_compliance_pct": 2.2,
+          "stress_axis_hours": 20.29,
+          "graded_compliance_raw_pct": 70.7,
+          "graded_compliance_attributable_pct": 74.1,
+          "temp_compliance_pct": 27.1,
+          "vpd_compliance_pct": 61.4,
+          "metric_semantics": {
+            "contract_version": 2.0,
+            "binary_fields_verified": true,
+            "binary_basis": "legacy_house_average_scored_reading_fraction",
+            "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+            "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+            "graded_basis": "legacy_controller_credit_not_physical_compliance",
+            "coverage_status": "unverified",
+            "historical_missing_evidence_may_be_zero": true,
+            "fixed_sensor_panel": false,
+            "center_probe_measured": false,
+            "duration_weighted": false,
+            "crop_outcome_eligible": false
+          },
+          "observed_minute_evidence": {
+            "reader_contract_version": 1,
+            "availability": "available",
+            "unavailable_reason": null,
+            "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+            "day": "2026-10-05",
+            "greenhouse_id": "vallery",
+            "served_at": "2026-10-06T01:07:29.580209Z",
+            "revision_id": 3224,
+            "recorded_at": "2026-10-06T00:49:21.516724Z",
+            "capture_schema": "daily-summary-capture-v2",
+            "diagnostic": {
+              "definition": "house-average-observed-minute-v1",
+              "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+              "input_sha256": "6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9",
+              "greenhouse_id": "vallery",
+              "window_start": "2026-10-05T06:00:00Z",
+              "window_end": "2026-10-06T00:49:00Z",
+              "input_rows": 1092,
+              "ignored_rows": 0,
+              "expected_minutes": 1129,
+              "observed_minutes": 1091,
+              "axes": {
+                "temp": {
+                  "eligible_minutes": 0,
+                  "in_band_minutes": 0,
+                  "in_band_pct": null,
+                  "coverage_fraction": 0.0,
+                  "longest_ineligible_run_minutes": 1129,
+                  "unit": "degF",
+                  "low_miss_observed_minutes": 0,
+                  "high_miss_observed_minutes": 0,
+                  "mean_low_distance": null,
+                  "mean_high_distance": null,
+                  "mean_outside_distance": null,
+                  "ineligible_minutes": {
+                    "conflicting_timestamp": 0,
+                    "missing_value": 38,
+                    "missing_or_invalid_bounds": 1091
+                  }
+                },
+                "vpd": {
+                  "eligible_minutes": 0,
+                  "in_band_minutes": 0,
+                  "in_band_pct": null,
+                  "coverage_fraction": 0.0,
+                  "longest_ineligible_run_minutes": 1129,
+                  "unit": "kPa",
+                  "low_miss_observed_minutes": 0,
+                  "high_miss_observed_minutes": 0,
+                  "mean_low_distance": null,
+                  "mean_high_distance": null,
+                  "mean_outside_distance": null,
+                  "ineligible_minutes": {
+                    "conflicting_timestamp": 0,
+                    "missing_value": 38,
+                    "missing_or_invalid_bounds": 1091
+                  }
+                }
+              },
+              "joint": {
+                "eligible_minutes": 0,
+                "in_band_minutes": 0,
+                "in_band_pct": null,
+                "coverage_fraction": 0.0,
+                "longest_ineligible_run_minutes": 1129
+              },
+              "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+              "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+              "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+              "fixed_sensor_panel": false,
+              "duration_weighted": false,
+              "physical_proof_eligible": false,
+              "crop_outcome_eligible": false,
+              "experiment_endpoint_eligible": false,
+              "worst_measured_zone": null
+            }
+          },
+          "physical_crop_band_evidence": {
+            "reader_contract_version": 1,
+            "availability": "unavailable",
+            "unavailable_reason": "publication_not_qualified",
+            "day": "2026-10-05",
+            "greenhouse_id": "vallery",
+            "served_at": "2026-10-06T01:07:29.588652Z",
+            "revision_id": null,
+            "recorded_at": null,
+            "diagnostic": null
+          },
+          "route_only_crop_band_evidence": {
+            "reader_contract_version": 1,
+            "availability": "unavailable",
+            "unavailable_reason": "not_published",
+            "day": "2026-10-05",
+            "greenhouse_id": "vallery",
+            "served_at": "2026-10-06T01:07:29.595085Z",
+            "revision_id": null,
+            "recorded_at": null,
+            "diagnostic": null
+          },
+          "native_fixed_panel_route_evidence": {
+            "reader_contract_version": 1,
+            "availability": "route_measurement",
+            "unavailable_reason": null,
+            "day": "2026-10-05",
+            "greenhouse_id": "vallery",
+            "served_at": "2026-10-06T01:07:29.602472Z",
+            "receipt_id": null,
+            "frozen_at": null,
+            "projection_sha256": null,
+            "target_revision_id": 3,
+            "contributor_revision_ids": [
+              8,
+              7,
+              9
+            ],
+            "source_binding_id": 2,
+            "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+            "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+            "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+            "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+            "source_callback_count": null,
+            "source_continuity_verified": null,
+            "eligible_bins": 5,
+            "joint_in_band_bins": 0,
+            "diagnostic": {
+              "definition": "fixed-panel-native-route-measurement-v1",
+              "window_start": "2026-10-05T12:00:00Z",
+              "window_end": "2026-10-06T06:00:00Z",
+              "expected_bins": 72,
+              "target_version": "native-route-2026-10-05-2300Z",
+              "target_basis": "prospective_frozen_panel_mean_crop_reference",
+              "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+              "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+              "target_effective_from": "2026-10-05T23:00:00Z",
+              "target_effective_to": "2026-10-06T06:00:00Z",
+              "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+              "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+              "temp": {
+                "eligible_bins": 5,
+                "in_band_bins": 0,
+                "in_band_pct": 0.0,
+                "high_miss_bins": 5,
+                "low_miss_bins": 0,
+                "mean_high_distance": 2.95279998779296,
+                "mean_low_distance": 0.0,
+                "mean_outside_distance": 2.95279998779296,
+                "worst_measured_zone": "east"
+              },
+              "vpd": {
+                "eligible_bins": 5,
+                "in_band_bins": 5,
+                "in_band_pct": 100.0,
+                "high_miss_bins": 0,
+                "low_miss_bins": 0,
+                "mean_high_distance": 0.0,
+                "mean_low_distance": 0.0,
+                "mean_outside_distance": 0.0,
+                "worst_measured_zone": "east"
+              },
+              "joint": {
+                "eligible_bins": 5,
+                "in_band_bins": 0,
+                "in_band_pct": 0.0
+              },
+              "temp_unavailable_reasons": {
+                "not_elapsed": 20,
+                "source_discontinuity": 3,
+                "outside_prospective_target": 44
+              },
+              "vpd_unavailable_reasons": {
+                "not_elapsed": 20,
+                "source_discontinuity": 3,
+                "outside_prospective_target": 44
+              },
+              "partial_window": true,
+              "completed_bin_count": 52,
+              "physical_hardware_identity_verified": false,
+              "crop_placement_verified": false,
+              "per_probe_poll_time_verified": false,
+              "physical_proof_eligible": false,
+              "experiment_endpoint_eligible": false,
+              "causal_effect_estimate": false
+            },
+            "route_18h_available": false,
+            "physical_serial_verified": false,
+            "modbus_poll_time_verified": false,
+            "physical_proof_eligible": false,
+            "experiment_endpoint_eligible": false,
+            "causal_effect_estimate": false
+          }
+        }
+      }
+    },
+    "limitations": [
+      "currentday agreement requires stable SQL bracket; summaries may update during capture",
+      "agreement is not physical crop-publication qualification",
+      "historical revisions must preserve earlier receipts, definitions and source lineage",
+      "public static Lab rendering and natural publisher adoption require separate capture"
+    ]
+  },
+  "ordinary_tcp": {
+    "verdify-api-64d768b666-8pjhm": {
+      "ordinary_tcp_attested": true,
+      "profile": {
+        "current_user": "verdify_api_runtime_login",
+        "session_user": "verdify_api_runtime_login",
+        "search_path": "pg_catalog, public, pg_temp",
+        "raw_select": false,
+        "raw_insert": false,
+        "producer_execute": false
+      },
+      "physical_reader": {
+        "2026-10-05": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:40.397365+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        },
+        "2026-09-29": {
+          "day": "2026-09-29",
+          "served_at": "2026-10-06T01:07:40.401596+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      },
+      "startup_sql_sha256": "e0f992a1773c37b9960ec6b510a50f890ee3a1740a168d2ab79bed3845742a8d"
+    },
+    "verdify-api-64d768b666-rhmph": {
+      "ordinary_tcp_attested": true,
+      "profile": {
+        "current_user": "verdify_api_runtime_login",
+        "session_user": "verdify_api_runtime_login",
+        "search_path": "pg_catalog, public, pg_temp",
+        "raw_select": false,
+        "raw_insert": false,
+        "producer_execute": false
+      },
+      "physical_reader": {
+        "2026-10-05": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:42.130131+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        },
+        "2026-09-29": {
+          "day": "2026-09-29",
+          "served_at": "2026-10-06T01:07:42.131954+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      },
+      "startup_sql_sha256": "e0f992a1773c37b9960ec6b510a50f890ee3a1740a168d2ab79bed3845742a8d"
+    },
+    "verdify-mcp-6c447bcf6c-m6cfs": {
+      "ordinary_tcp_attested": true,
+      "profile": {
+        "current_user": "verdify_mcp_runtime_login",
+        "session_user": "verdify_mcp_runtime_login",
+        "search_path": "pg_catalog, public, pg_temp",
+        "raw_select": false,
+        "raw_insert": false,
+        "producer_execute": false
+      },
+      "physical_reader": {
+        "2026-10-05": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:43.590248+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        },
+        "2026-09-29": {
+          "day": "2026-09-29",
+          "served_at": "2026-10-06T01:07:43.592664+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      },
+      "startup_sql_sha256": "20391854ebac87b7761b80c2779cee85503bb352b33ad535b47dd917062624ef"
+    },
+    "verdify-mcp-6c447bcf6c-q9brp": {
+      "ordinary_tcp_attested": true,
+      "profile": {
+        "current_user": "verdify_mcp_runtime_login",
+        "session_user": "verdify_mcp_runtime_login",
+        "search_path": "pg_catalog, public, pg_temp",
+        "raw_select": false,
+        "raw_insert": false,
+        "producer_execute": false
+      },
+      "physical_reader": {
+        "2026-10-05": {
+          "day": "2026-10-05",
+          "served_at": "2026-10-06T01:07:45.132679+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        },
+        "2026-09-29": {
+          "day": "2026-09-29",
+          "served_at": "2026-10-06T01:07:45.135629+00:00",
+          "diagnostic": null,
+          "recorded_at": null,
+          "revision_id": null,
+          "greenhouse_id": "vallery",
+          "unavailable_reason": "publication_not_qualified",
+          "reader_contract_version": 1
+        }
+      },
+      "startup_sql_sha256": "20391854ebac87b7761b80c2779cee85503bb352b33ad535b47dd917062624ef"
+    }
+  },
+  "actual_iris_registered_context": {
+    "registered_tool_names": [
+      "acknowledge_trigger",
+      "alerts",
+      "climate",
+      "crop_history",
+      "crop_lifecycle",
+      "crops",
+      "equipment_state",
+      "forecast",
+      "get_setpoints",
+      "history",
+      "knowledge_search",
+      "lessons",
+      "lessons_manage",
+      "lessons_search",
+      "observations",
+      "plan_evaluate",
+      "plan_status",
+      "position_current",
+      "scorecard",
+      "set_plan",
+      "set_tunable",
+      "slack_ops",
+      "topology"
+    ],
+    "days": {
+      "2026-10-05": {
+        "observed_minute_evidence": {
+          "reader_contract_version": 1,
+          "availability": "available",
+          "unavailable_reason": null,
+          "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+          "day": "2026-10-05",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:45.962513Z",
+          "revision_id": 3224,
+          "recorded_at": "2026-10-06T00:49:21.516724Z",
+          "capture_schema": "daily-summary-capture-v2",
+          "diagnostic": {
+            "definition": "house-average-observed-minute-v1",
+            "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+            "input_sha256": "6f00ccb5ddccbe3a0c493789a8d204f0ff67899684c605c75862799f893a3fd9",
+            "greenhouse_id": "vallery",
+            "window_start": "2026-10-05T06:00:00Z",
+            "window_end": "2026-10-06T00:49:00Z",
+            "input_rows": 1092,
+            "ignored_rows": 0,
+            "expected_minutes": 1129,
+            "observed_minutes": 1091,
+            "axes": {
+              "temp": {
+                "eligible_minutes": 0,
+                "in_band_minutes": 0,
+                "in_band_pct": null,
+                "coverage_fraction": 0.0,
+                "longest_ineligible_run_minutes": 1129,
+                "unit": "degF",
+                "low_miss_observed_minutes": 0,
+                "high_miss_observed_minutes": 0,
+                "mean_low_distance": null,
+                "mean_high_distance": null,
+                "mean_outside_distance": null,
+                "ineligible_minutes": {
+                  "conflicting_timestamp": 0,
+                  "missing_value": 38,
+                  "missing_or_invalid_bounds": 1091
+                }
+              },
+              "vpd": {
+                "eligible_minutes": 0,
+                "in_band_minutes": 0,
+                "in_band_pct": null,
+                "coverage_fraction": 0.0,
+                "longest_ineligible_run_minutes": 1129,
+                "unit": "kPa",
+                "low_miss_observed_minutes": 0,
+                "high_miss_observed_minutes": 0,
+                "mean_low_distance": null,
+                "mean_high_distance": null,
+                "mean_outside_distance": null,
+                "ineligible_minutes": {
+                  "conflicting_timestamp": 0,
+                  "missing_value": 38,
+                  "missing_or_invalid_bounds": 1091
+                }
+              }
+            },
+            "joint": {
+              "eligible_minutes": 0,
+              "in_band_minutes": 0,
+              "in_band_pct": null,
+              "coverage_fraction": 0.0,
+              "longest_ineligible_run_minutes": 1129
+            },
+            "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+            "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+            "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+            "fixed_sensor_panel": false,
+            "duration_weighted": false,
+            "physical_proof_eligible": false,
+            "crop_outcome_eligible": false,
+            "experiment_endpoint_eligible": false,
+            "worst_measured_zone": null
+          }
+        },
+        "physical_crop_band_evidence": {
+          "reader_contract_version": 1,
+          "availability": "unavailable",
+          "unavailable_reason": "publication_not_qualified",
+          "day": "2026-10-05",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:45.968555Z",
+          "revision_id": null,
+          "recorded_at": null,
+          "diagnostic": null
+        },
+        "route_only_crop_band_evidence": {
+          "reader_contract_version": 1,
+          "availability": "unavailable",
+          "unavailable_reason": "not_published",
+          "day": "2026-10-05",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:45.971701Z",
+          "revision_id": null,
+          "recorded_at": null,
+          "diagnostic": null
+        },
+        "native_fixed_panel_route_evidence": {
+          "reader_contract_version": 1,
+          "availability": "route_measurement",
+          "unavailable_reason": null,
+          "day": "2026-10-05",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:45.975649Z",
+          "receipt_id": null,
+          "frozen_at": null,
+          "projection_sha256": null,
+          "target_revision_id": 3,
+          "contributor_revision_ids": [
+            8,
+            7,
+            9
+          ],
+          "source_binding_id": 2,
+          "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+          "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+          "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+          "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+          "source_callback_count": null,
+          "source_continuity_verified": null,
+          "eligible_bins": 5,
+          "joint_in_band_bins": 0,
+          "diagnostic": {
+            "definition": "fixed-panel-native-route-measurement-v1",
+            "window_start": "2026-10-05T12:00:00Z",
+            "window_end": "2026-10-06T06:00:00Z",
+            "expected_bins": 72,
+            "target_version": "native-route-2026-10-05-2300Z",
+            "target_basis": "prospective_frozen_panel_mean_crop_reference",
+            "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+            "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+            "target_effective_from": "2026-10-05T23:00:00Z",
+            "target_effective_to": "2026-10-06T06:00:00Z",
+            "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+            "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+            "temp": {
+              "eligible_bins": 5,
+              "in_band_bins": 0,
+              "in_band_pct": 0.0,
+              "high_miss_bins": 5,
+              "low_miss_bins": 0,
+              "mean_high_distance": 2.95279998779296,
+              "mean_low_distance": 0.0,
+              "mean_outside_distance": 2.95279998779296,
+              "worst_measured_zone": "east"
+            },
+            "vpd": {
+              "eligible_bins": 5,
+              "in_band_bins": 5,
+              "in_band_pct": 100.0,
+              "high_miss_bins": 0,
+              "low_miss_bins": 0,
+              "mean_high_distance": 0.0,
+              "mean_low_distance": 0.0,
+              "mean_outside_distance": 0.0,
+              "worst_measured_zone": "east"
+            },
+            "joint": {
+              "eligible_bins": 5,
+              "in_band_bins": 0,
+              "in_band_pct": 0.0
+            },
+            "temp_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "vpd_unavailable_reasons": {
+              "not_elapsed": 20,
+              "source_discontinuity": 3,
+              "outside_prospective_target": 44
+            },
+            "partial_window": true,
+            "completed_bin_count": 52,
+            "physical_hardware_identity_verified": false,
+            "crop_placement_verified": false,
+            "per_probe_poll_time_verified": false,
+            "physical_proof_eligible": false,
+            "experiment_endpoint_eligible": false,
+            "causal_effect_estimate": false
+          },
+          "route_18h_available": false,
+          "physical_serial_verified": false,
+          "modbus_poll_time_verified": false,
+          "physical_proof_eligible": false,
+          "experiment_endpoint_eligible": false,
+          "causal_effect_estimate": false
+        },
+        "scorecard_contract_version": 2.0,
+        "planner_score": 74.1,
+        "planner_score_resource_weight_pct": 0.0,
+        "resource_terms_available": 0.0,
+        "compliance_pct": 2.2,
+        "temp_compliance_pct": 27.1,
+        "vpd_compliance_pct": 61.4,
+        "compliance_v2_raw_pct": 70.7,
+        "compliance_v2_attributable_pct": 74.1,
+        "compliance_v2_unachievable_frac": 0.062,
+        "graded_temp_compliance_pct": 64.4,
+        "graded_vpd_compliance_pct": 79.0,
+        "outcome_score_composite": null,
+        "outcome_time_in_band": null,
+        "outcome_dli_grade": null,
+        "outcome_dif_grade": null,
+        "outcome_wet_dry_completion": null,
+        "outcome_cost_cycling_penalty": null,
+        "total_stress_h": 20.29,
+        "heat_stress_h": 2.37,
+        "cold_stress_h": 10.9,
+        "vpd_high_stress_h": 7.02,
+        "vpd_low_stress_h": 0.0,
+        "graded_heat_stress_h": 3.45,
+        "graded_cold_stress_h": 0.0,
+        "graded_vpd_high_stress_h": 0.64,
+        "graded_vpd_low_stress_h": 0.0,
+        "kwh": null,
+        "therms": null,
+        "water_gal": null,
+        "mister_water_gal": null,
+        "cost_electric": null,
+        "cost_gas": null,
+        "cost_water": null,
+        "cost_total": null,
+        "dp_margin_min_f": 8.4,
+        "dp_risk_hours": 0.0,
+        "7d_avg_score": 75.3,
+        "7d_avg_compliance": 7.8,
+        "7d_avg_cost": null,
+        "7d_avg_kwh": null,
+        "7d_avg_therms": null,
+        "7d_avg_water_gal": 73.0,
+        "7d_avg_stress": null,
+        "7d_avg_dp_risk": null,
+        "metric_semantics": {
+          "contract_version": 2.0,
+          "binary_fields_verified": true,
+          "binary_basis": "legacy_house_average_scored_reading_fraction",
+          "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+          "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+          "graded_basis": "legacy_controller_credit_not_physical_compliance",
+          "coverage_status": "unverified",
+          "historical_missing_evidence_may_be_zero": true,
+          "fixed_sensor_panel": false,
+          "center_probe_measured": false,
+          "duration_weighted": false,
+          "crop_outcome_eligible": false
+        }
+      },
+      "2026-09-29": {
+        "observed_minute_evidence": {
+          "reader_contract_version": 1,
+          "availability": "available",
+          "unavailable_reason": null,
+          "currentness": "captured_snapshot_not_live_freshness_not_assessed",
+          "day": "2026-09-29",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:46.365619Z",
+          "revision_id": 1436,
+          "recorded_at": "2026-09-30T06:16:03.293299Z",
+          "capture_schema": "daily-summary-capture-v2",
+          "diagnostic": {
+            "definition": "house-average-observed-minute-v1",
+            "calculation_source_sha256": "fd90a32f4545537b8f1711879e0b7d32b741e214bd26ec137741dec869713dc8",
+            "input_sha256": "8f3f19fdf5e58671ae9c909be2eda0a297d8c861756b8d6d8d4be19d37863f41",
+            "greenhouse_id": "vallery",
+            "window_start": "2026-09-29T06:00:00Z",
+            "window_end": "2026-09-30T06:00:00Z",
+            "input_rows": 1412,
+            "ignored_rows": 0,
+            "expected_minutes": 1440,
+            "observed_minutes": 1412,
+            "axes": {
+              "temp": {
+                "eligible_minutes": 0,
+                "in_band_minutes": 0,
+                "in_band_pct": null,
+                "coverage_fraction": 0.0,
+                "longest_ineligible_run_minutes": 1440,
+                "unit": "degF",
+                "low_miss_observed_minutes": 0,
+                "high_miss_observed_minutes": 0,
+                "mean_low_distance": null,
+                "mean_high_distance": null,
+                "mean_outside_distance": null,
+                "ineligible_minutes": {
+                  "conflicting_timestamp": 0,
+                  "missing_value": 28,
+                  "missing_or_invalid_bounds": 1412
+                }
+              },
+              "vpd": {
+                "eligible_minutes": 0,
+                "in_band_minutes": 0,
+                "in_band_pct": null,
+                "coverage_fraction": 0.0,
+                "longest_ineligible_run_minutes": 1440,
+                "unit": "kPa",
+                "low_miss_observed_minutes": 0,
+                "high_miss_observed_minutes": 0,
+                "mean_low_distance": null,
+                "mean_high_distance": null,
+                "mean_outside_distance": null,
+                "ineligible_minutes": {
+                  "conflicting_timestamp": 0,
+                  "missing_value": 28,
+                  "missing_or_invalid_bounds": 1412
+                }
+              }
+            },
+            "joint": {
+              "eligible_minutes": 0,
+              "in_band_minutes": 0,
+              "in_band_pct": null,
+              "coverage_fraction": 0.0,
+              "longest_ineligible_run_minutes": 1440
+            },
+            "target_basis": "latest_setpoint_log_event_as_of_minute_start_provenance_unqualified_not_frozen_crop_targets",
+            "sample_basis": "mean_of_finite_unique_timestamp_house_averages_per_UTC_minute",
+            "duration_basis": "observed_minute_slots_not_continuous_physical_exposure",
+            "fixed_sensor_panel": false,
+            "duration_weighted": false,
+            "physical_proof_eligible": false,
+            "crop_outcome_eligible": false,
+            "experiment_endpoint_eligible": false,
+            "worst_measured_zone": null
+          }
+        },
+        "physical_crop_band_evidence": {
+          "reader_contract_version": 1,
+          "availability": "unavailable",
+          "unavailable_reason": "publication_not_qualified",
+          "day": "2026-09-29",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:46.372108Z",
+          "revision_id": null,
+          "recorded_at": null,
+          "diagnostic": null
+        },
+        "route_only_crop_band_evidence": {
+          "reader_contract_version": 1,
+          "availability": "unavailable",
+          "unavailable_reason": "not_published",
+          "day": "2026-09-29",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:46.375725Z",
+          "revision_id": null,
+          "recorded_at": null,
+          "diagnostic": null
+        },
+        "native_fixed_panel_route_evidence": {
+          "reader_contract_version": 1,
+          "availability": "route_measurement",
+          "unavailable_reason": null,
+          "day": "2026-09-29",
+          "greenhouse_id": "vallery",
+          "served_at": "2026-10-06T01:07:46.380029Z",
+          "receipt_id": null,
+          "frozen_at": null,
+          "projection_sha256": null,
+          "target_revision_id": 2,
+          "contributor_revision_ids": [
+            5,
+            4,
+            6
+          ],
+          "source_binding_id": 1,
+          "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+          "firmware_revision": "2026.7.10.1500.09ee886",
+          "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+          "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+          "source_callback_count": null,
+          "source_continuity_verified": null,
+          "eligible_bins": 72,
+          "joint_in_band_bins": 47,
+          "diagnostic": {
+            "definition": "fixed-panel-native-route-measurement-v1",
+            "window_start": "2026-09-29T12:00:00Z",
+            "window_end": "2026-09-30T06:00:00Z",
+            "expected_bins": 72,
+            "target_version": "native-route-2026-09-29",
+            "target_basis": "prospective_frozen_panel_mean_crop_reference",
+            "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+            "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+            "target_effective_from": "2026-09-29T12:00:00Z",
+            "target_effective_to": "2026-09-30T06:00:00Z",
+            "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+            "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+            "temp": {
+              "eligible_bins": 72,
+              "in_band_bins": 47,
+              "in_band_pct": 65.27777777777777,
+              "high_miss_bins": 25,
+              "low_miss_bins": 0,
+              "mean_high_distance": 0.574444700170445,
+              "mean_low_distance": 0.0,
+              "mean_outside_distance": 0.574444700170445,
+              "worst_measured_zone": "north"
+            },
+            "vpd": {
+              "eligible_bins": 72,
+              "in_band_bins": 72,
+              "in_band_pct": 100.0,
+              "high_miss_bins": 0,
+              "low_miss_bins": 0,
+              "mean_high_distance": 0.0,
+              "mean_low_distance": 0.0,
+              "mean_outside_distance": 0.0,
+              "worst_measured_zone": "north"
+            },
+            "joint": {
+              "eligible_bins": 72,
+              "in_band_bins": 47,
+              "in_band_pct": 65.27777777777777
+            },
+            "temp_unavailable_reasons": {},
+            "vpd_unavailable_reasons": {},
+            "partial_window": false,
+            "completed_bin_count": 72,
+            "physical_hardware_identity_verified": false,
+            "crop_placement_verified": false,
+            "per_probe_poll_time_verified": false,
+            "physical_proof_eligible": false,
+            "experiment_endpoint_eligible": false,
+            "causal_effect_estimate": false
+          },
+          "route_18h_available": false,
+          "physical_serial_verified": false,
+          "modbus_poll_time_verified": false,
+          "physical_proof_eligible": false,
+          "experiment_endpoint_eligible": false,
+          "causal_effect_estimate": false
+        },
+        "scorecard_contract_version": 2.0,
+        "planner_score": 77.5,
+        "planner_score_resource_weight_pct": 0.0,
+        "resource_terms_available": 0.0,
+        "compliance_pct": 11.8,
+        "temp_compliance_pct": 36.0,
+        "vpd_compliance_pct": 66.9,
+        "compliance_v2_raw_pct": 76.3,
+        "compliance_v2_attributable_pct": 77.5,
+        "compliance_v2_unachievable_frac": 0.0255,
+        "graded_temp_compliance_pct": 72.4,
+        "graded_vpd_compliance_pct": 82.1,
+        "outcome_score_composite": null,
+        "outcome_time_in_band": null,
+        "outcome_dli_grade": null,
+        "outcome_dif_grade": null,
+        "outcome_wet_dry_completion": null,
+        "outcome_cost_cycling_penalty": null,
+        "total_stress_h": 22.87,
+        "heat_stress_h": 1.87,
+        "cold_stress_h": 13.2,
+        "vpd_high_stress_h": 7.8,
+        "vpd_low_stress_h": 0.0,
+        "graded_heat_stress_h": 3.41,
+        "graded_cold_stress_h": 0.0,
+        "graded_vpd_high_stress_h": 0.3,
+        "graded_vpd_low_stress_h": 0.0,
+        "kwh": null,
+        "therms": null,
+        "water_gal": 64.0,
+        "mister_water_gal": 14.0,
+        "cost_electric": null,
+        "cost_gas": null,
+        "cost_water": 0.31,
+        "cost_total": null,
+        "dp_margin_min_f": 7.8,
+        "dp_risk_hours": 0.0,
+        "7d_avg_score": 75.9,
+        "7d_avg_compliance": 12.7,
+        "7d_avg_cost": null,
+        "7d_avg_kwh": null,
+        "7d_avg_therms": null,
+        "7d_avg_water_gal": 88.0,
+        "7d_avg_stress": null,
+        "7d_avg_dp_risk": null,
+        "metric_semantics": {
+          "contract_version": 2.0,
+          "binary_fields_verified": true,
+          "binary_basis": "legacy_house_average_scored_reading_fraction",
+          "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+          "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+          "graded_basis": "legacy_controller_credit_not_physical_compliance",
+          "coverage_status": "unverified",
+          "historical_missing_evidence_may_be_zero": true,
+          "fixed_sensor_panel": false,
+          "center_probe_measured": false,
+          "duration_weighted": false,
+          "crop_outcome_eligible": false
+        }
+      }
+    },
+    "audience": "existing Hermes Iris",
+    "transport": "actual in-cluster registered MCP JSON-RPC",
+    "operation": "read-only registered scorecard call; no model or plan",
+    "pod": "verdify-hermes-iris-56fc9b6c95-zkrdn",
+    "uid": "f82f6550-816e-443f-8cd8-d1c6f0e06f50"
+  },
+  "physical_parity": {
+    "2026-10-05": {
+      "api": true,
+      "verdify-mcp-6c447bcf6c-m6cfs": true,
+      "verdify-mcp-6c447bcf6c-q9brp": true,
+      "actual_iris": true,
+      "verdify-api-64d768b666-8pjhm": true,
+      "verdify-api-64d768b666-rhmph": true
+    },
+    "2026-09-29": {
+      "api": true,
+      "verdify-mcp-6c447bcf6c-m6cfs": true,
+      "verdify-mcp-6c447bcf6c-q9brp": true,
+      "actual_iris": true,
+      "verdify-api-64d768b666-8pjhm": true,
+      "verdify-api-64d768b666-rhmph": true
+    },
+    "public_current": {
+      "public_snapshot": true
+    }
+  },
+  "operator_capture_sha256": "14602078cf7a86c3e57ed9282c3d3e34a24df116409e3d4967e28df5533e556b",
+  "limitations": [
+    "Production physical commissioning remains unavailable; no synthetic data or publication inserted.",
+    "Current summaries can change during SQL brackets; metric/native comparisons explicitly retain any resulting mismatch.",
+    "Source renderer output is distinct from natural served Lab generation, captured separately.",
+    "Byte-identical oldc8 startup SQL plus current TCP success supports forward-safe API/MCP rollback; actual old-image rollout is unperformed."
+  ]
+}

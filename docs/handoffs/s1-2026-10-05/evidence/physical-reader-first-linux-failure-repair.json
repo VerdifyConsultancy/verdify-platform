@@ -1,0 +1,27 @@
+{
+  "failed_source": "5a3939d32e1e6ef4fac56f086f7621d23020bf12",
+  "failed_workflow": "verdify-platform-pr-ci-nd8dj",
+  "workflow_uid": "0a1ccf49-5dfa-4e55-9b2c-ef7ac8678982",
+  "validation_pod_uid": "0445be17-9083-44f3-98eb-eb13a2bec470",
+  "failure": "tests/test_api_public_output_policy.py::test_public_get_queries_do_not_use_wildcard_projection",
+  "linux_validation_stdout": {
+    "path": "/Users/jason/maintenance/verdify-s1-20261005/955-validation-full.log",
+    "bytes": 7486,
+    "sha256": "eaea37b8fc5f9b406efc2a98b6762c1a593969a073d7bcfd1b20531457660b55"
+  },
+  "failed_workflow_receipt": {
+    "path": "/Users/jason/maintenance/verdify-s1-20261005/955-pr-ci-failed-head-workflow.json",
+    "bytes": 58838,
+    "sha256": "5b461c8d1ede446bb3f6b9d18826e2a6368d66a4f0fb1c4c8970e7991871f024"
+  },
+  "repair_source": "fb7256d87fa0d326fb9b01a144f0da8c7331b424",
+  "repair": "Explicit exact eight reader columns in API/MCP, unchanged SQL 274 and all schemas/ingestor sources.",
+  "focused_postrepair_tests": 103,
+  "focused_postrepair_log": {
+    "path": "/Users/jason/maintenance/verdify-s1-20261005/955-explicit-reader-projection-focused.log",
+    "bytes": 160,
+    "sha256": "51e313688c5e7bfd380316362ed54e7261ec924e6081d9f79446a3f8b94c6120"
+  },
+  "sql_274_sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+  "repaired_linux_ci": "pending_normal_registered_workflow"
+}

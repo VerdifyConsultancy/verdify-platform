@@ -1,0 +1,85 @@
+{
+  "schema": "physical-reader371-durable-artifacts-v1",
+  "artifacts": {
+    "physical-reader-live-qualified.json": {
+      "sha256": "df84a3cb11ed64fca0dbc909d6b5d9c9509d5e6325d9a3290cd6eee2257adc17",
+      "bytes": 144434,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/371-274-live-sql-api-mcp-iris-qualified.json"
+    },
+    "physical-reader-live-original.json": {
+      "sha256": "0fcd5c30e4f5c8267edc77b825725844442d450dac4415badcfde3bed4c23577",
+      "bytes": 142232,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/371-274-live-sql-api-mcp-iris-private.json"
+    },
+    "physical-reader-natural-public-render.json": {
+      "sha256": "9b6f8487cacb94c4499c256db32fb8314ec93b10b2b8503f518725ae7fa96059",
+      "bytes": 6429,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/371-274-natural-public-physical-render.json"
+    },
+    "physical-reader-iris-operator-sdk-unavailable.json": {
+      "sha256": "6326050d2ec88267d6f575c90c70a04cedeff1d6351a05013e00a905e2b0ad5c",
+      "bytes": 132,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/371-274-iris-first-error-sanitized.json",
+      "original_local_sha256": "cf4bea151b34bf7d2f1e70990239bedbe552829b33df6be79eb1e63a5ab410ac",
+      "original_local_bytes": 131,
+      "copy_normalization": "One terminal newline added to JSON copy; original local bytes retained."
+    },
+    "physical-reader-forward-rollback-source.json": {
+      "sha256": "e089a888d46161ff4e0a4ad58c6ddafea8bb99c0147051507fe564b80926783f",
+      "bytes": 1030,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-forward-safe-rollback-source-compatibility.json",
+      "original_local_sha256": "d6f80a61a833f2644bb474c3bb9d8f659452900d63afab4d3e4d1f97036a1ffd",
+      "original_local_bytes": 1029,
+      "copy_normalization": "One terminal newline added to JSON copy; original local bytes retained."
+    },
+    "physical-reader-old-mcp-tcp-after274.json": {
+      "sha256": "363cb6f516635f57c4e5f33a293f48c4e49782f9a6c039c49aae1a6b1aab0f10",
+      "bytes": 3239,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-forward-safe-rollback-old-pod-tcp.json",
+      "original_local_sha256": "fd432942ebb3d03f48279d91806c131a8c8ecc9c94afa4843f24e8792aab4e7d",
+      "original_local_bytes": 3238,
+      "copy_normalization": "One terminal newline added to JSON copy; original local bytes retained."
+    },
+    "physical-reader-first-linux-failure-repair.json": {
+      "sha256": "c6324279e8fb7c13b9bfd1dc41b15855d978972edc798d804f3e2b86c8f8883b",
+      "bytes": 1404,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-first-linux-failure-and-projection-repair.json"
+    },
+    "physical-reader-repaired-pr-linux-ci.json": {
+      "sha256": "644c85e951a42fb045489bc954eb3059e48d7aedd6f1e86de79a0e18df4db841",
+      "bytes": 1852,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-fb-linux-ci-qualified-receipt.json"
+    },
+    "physical-reader-private-postgres-focused.log": {
+      "sha256": "cc04481442ecdbeb5d5ed7d893dfdab1c99c1a42b8937094a2927f3a5c979f0b",
+      "bytes": 160,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/371-physical-reader-focused-private-postgres.log"
+    },
+    "physical-reader-repaired-focused.log": {
+      "sha256": "51e313688c5e7bfd380316362ed54e7261ec924e6081d9f79446a3f8b94c6120",
+      "bytes": 160,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-explicit-reader-projection-focused.log"
+    },
+    "physical-reader-first-failed-linux-full.log": {
+      "sha256": "eaea37b8fc5f9b406efc2a98b6762c1a593969a073d7bcfd1b20531457660b55",
+      "bytes": 7486,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-validation-full.log"
+    },
+    "physical-reader-repaired-linux-full.log": {
+      "sha256": "cdc9daf665af79e7800db13198fd3c2b49d0fc468eb69ba30c8bf3d2a9d80e8b",
+      "bytes": 27722,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-fb-validation-full.log"
+    },
+    "physical-reader-main325-linux-full.log": {
+      "sha256": "979dcbb860eddd9ff45b29cd960e3c1ca6444157f66dffac3805d8969fec6e13",
+      "bytes": 27276,
+      "original_local_path": "/Users/jason/maintenance/verdify-s1-20261005/955-main-325-validation-full.log"
+    },
+    "physical-reader-live-capture.py.txt": {
+      "sha256": "14602078cf7a86c3e57ed9282c3d3e34a24df116409e3d4967e28df5533e556b",
+      "bytes": 10092,
+      "basis": "Exact operator code used for original live capture, before distinct transport-label derivation."
+    }
+  },
+  "scope": "Fixture, failed/repaired CI and genuine live zero-publication acceptance; physical commissioning remains unavailable."
+}
