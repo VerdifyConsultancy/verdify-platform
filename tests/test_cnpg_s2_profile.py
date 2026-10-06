@@ -88,3 +88,18 @@ def test_s2_recovery_count_time_keeps_full_inventory_and_exact_session_guard():
     with pytest.raises(ValueError, match="unsupported closed current274"):
         m.emit_sql(observation, "verdify-prod")
     assert load("cnpg-physical-runtime-transition").pitr.SOURCE == "verdify-cnpg-rehearsal"
+
+
+def test_s2_recovery_catalog_readback_preserves_complete_readonly_witness():
+    m = load("cnpg-s2-recovery-readback")
+    original = m.c0.emit_sql(target=True, bootstrap_grantor_profile=True, cluster_name="verdify-cnpg-s2")
+    for target in m.TARGETS:
+        sql = m.emit_sql(target)
+        assert sql == original.replace(
+            "OR current_setting('cluster_name') <> 'verdify-cnpg-s2'",
+            f"OR current_setting('cluster_name') <> '{target}'",
+        )
+        assert "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;" in sql
+    for target in ("verdify-prod", "verdify-cnpg-s2", "verdify-cnpg-pitr-a"):
+        with pytest.raises(ValueError, match="unsupported closed S2 physical readback"):
+            m.emit_sql(target)
