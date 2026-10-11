@@ -1,0 +1,270 @@
+[
+  {
+    "version": "PostgreSQL 16.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit",
+    "timescaledb": "2.25.2"
+  },
+  {
+    "role": "verdify_api_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_api_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_blinded_analyst",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_component_executor",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_equipment_source_collector",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_lifecycle",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_outcome_freezer",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_randomizer",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_shadow_scheduler",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_v2_component_executor_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_v2_equipment_source_collector_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_v2_lifecycle_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_v2_outcome_freezer_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_v2_owner",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_experiment_v2_randomizer_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_experiment_v2_shadow_scheduler_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_grafana_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_grafana_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_ha_backfill_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_ha_backfill_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_ingestor_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_ingestor_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_lab_publisher_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_lab_publisher_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_mcp_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_mcp_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_planner_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_planner_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_setpoint_server_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_setpoint_server_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  },
+  {
+    "role": "verdify_twin_ro",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_vision_runtime",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": false
+  },
+  {
+    "role": "verdify_vision_runtime_login",
+    "superuser": false,
+    "bypassrls": false,
+    "createdb": false,
+    "createrole": false,
+    "login": true
+  }
+]

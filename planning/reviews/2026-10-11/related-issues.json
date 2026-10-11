@@ -1,0 +1,1093 @@
+{
+  "updated_owner_issues": [
+    {
+      "repository": "jvallery/agents",
+      "number": 3173,
+      "url": "https://github.com/jvallery/agents/issues/3173",
+      "state": "open",
+      "body_sha256": "4685f87bbaa19d3dd4a13802aa8ee06b88a8b2be327a2c26313e5f17c332f892",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "4685f87bbaa19d3dd4a13802aa8ee06b88a8b2be327a2c26313e5f17c332f892",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:05Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4014,
+      "url": "https://github.com/jvallery/agents/issues/4014",
+      "state": "open",
+      "body_sha256": "81361f5ee8ca905867608ebf0c8956fc7c23347e58cb35bf9686b86e0fda8cc9",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "ade38205c7bc557818cca3480af7d85744fba86948a2e6accd84fde4e9bdc88e",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:00Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4451,
+      "url": "https://github.com/jvallery/agents/issues/4451",
+      "state": "open",
+      "body_sha256": "6ca4c608fb0168d5acb251fef288248f16bebfa3d65a2c5548b84608ff9d0956",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "6ca4c608fb0168d5acb251fef288248f16bebfa3d65a2c5548b84608ff9d0956",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:08Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4456,
+      "url": "https://github.com/jvallery/agents/issues/4456",
+      "state": "open",
+      "body_sha256": "efcc243630295c5a4ade83366474b91325ee9bdd39e8610b511c6ad04aca9ce0",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "efcc243630295c5a4ade83366474b91325ee9bdd39e8610b511c6ad04aca9ce0",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:10Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4457,
+      "url": "https://github.com/jvallery/agents/issues/4457",
+      "state": "open",
+      "body_sha256": "0090d09fb0a4c041869111c644b76b5ee7336c747890c9d1b5b094c1cf0b31ab",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "0090d09fb0a4c041869111c644b76b5ee7336c747890c9d1b5b094c1cf0b31ab",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:34Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4461,
+      "url": "https://github.com/jvallery/agents/issues/4461",
+      "state": "open",
+      "body_sha256": "fcadf377fa2e12b1b0bca9f30692de9cd8714a2372a26c55c1d3fe244b3f6359",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "fcadf377fa2e12b1b0bca9f30692de9cd8714a2372a26c55c1d3fe244b3f6359",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:13Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4468,
+      "url": "https://github.com/jvallery/agents/issues/4468",
+      "state": "open",
+      "body_sha256": "62252f58cbfe4cfa34f5f6453520551f92140365d377c4b4ad41f82c9d7d7404",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "62252f58cbfe4cfa34f5f6453520551f92140365d377c4b4ad41f82c9d7d7404",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:15Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4470,
+      "url": "https://github.com/jvallery/agents/issues/4470",
+      "state": "open",
+      "body_sha256": "9915db65efb39f541bb1f496d7063174279be7d47a8a2c0714636b2edec3c98c",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "b80b0db26d2c2f4f6b1afc0d13cc00b0ad09b7e3f8da06f88e7acefa30defb01",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:57Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4476,
+      "url": "https://github.com/jvallery/agents/issues/4476",
+      "state": "open",
+      "body_sha256": "37ee8713c4c57e66fbe9d7c2f334871cb8231781edbf165c828ad769864cb045",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "37ee8713c4c57e66fbe9d7c2f334871cb8231781edbf165c828ad769864cb045",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:18Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4491,
+      "url": "https://github.com/jvallery/agents/issues/4491",
+      "state": "open",
+      "body_sha256": "653e4849bf3666b70e7f8c1f2a8ab21361aaebf38bcd59330ecbbe6724a13711",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "653e4849bf3666b70e7f8c1f2a8ab21361aaebf38bcd59330ecbbe6724a13711",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:20Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4666,
+      "url": "https://github.com/jvallery/agents/issues/4666",
+      "state": "open",
+      "body_sha256": "21fa518e750534f002a776ad4f4e539f31ae27b1d04f84e8df68431bcd9df9bb",
+      "milestone": 43,
+      "readback_equal": true,
+      "body_sha256_final": "21fa518e750534f002a776ad4f4e539f31ae27b1d04f84e8df68431bcd9df9bb",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:21Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 627,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/627",
+      "state": "open",
+      "body_sha256": "05b3ec4cb7e854d34c9710467581b5a449eb83779eda4485ee7726eafc863004",
+      "milestone": 12,
+      "readback_equal": true,
+      "body_sha256_final": "ad1be602e10f8d9fba2396d869f6093ff103295e471b129b54b895110e65ab75",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:27Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 807,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/807",
+      "state": "open",
+      "body_sha256": "8211e2b87b403932e860c394f536ecf6e131517ff112cd5a6e8424a884e78006",
+      "milestone": 17,
+      "readback_equal": true,
+      "body_sha256_final": "8211e2b87b403932e860c394f536ecf6e131517ff112cd5a6e8424a884e78006",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:24Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 891,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/891",
+      "state": "closed",
+      "body_sha256": "89b48975ebb91875ed3c30a0e83728c049c5c6202f67a83b84f25944196eda5c",
+      "milestone": 19,
+      "readback_equal": true,
+      "body_sha256_final": "89b48975ebb91875ed3c30a0e83728c049c5c6202f67a83b84f25944196eda5c",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:26Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 42,
+      "url": "https://github.com/jvallery/network-infra/issues/42",
+      "state": "open",
+      "body_sha256": "15924b7db89cd3ceb7686b68c4e862ef6cdf8283cc6655291065aaaff105c5ae",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "15924b7db89cd3ceb7686b68c4e862ef6cdf8283cc6655291065aaaff105c5ae",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:28Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 43,
+      "url": "https://github.com/jvallery/network-infra/issues/43",
+      "state": "open",
+      "body_sha256": "f7e811cbceb3acd3f646aa0372889f15635193aa69baada2db92b2bb0ea0f693",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "f7e811cbceb3acd3f646aa0372889f15635193aa69baada2db92b2bb0ea0f693",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:29Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 212,
+      "url": "https://github.com/jvallery/network-infra/issues/212",
+      "state": "open",
+      "body_sha256": "594d04086058d4ffba78241571db9f14e45218d2580a63fcbe23e3eefce0e569",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "594d04086058d4ffba78241571db9f14e45218d2580a63fcbe23e3eefce0e569",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:31Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 318,
+      "url": "https://github.com/jvallery/network-infra/issues/318",
+      "state": "open",
+      "body_sha256": "3a934f8130b7701ab4248ef805a9c13700d3d49adf9be78614d24bc21c558f1d",
+      "milestone": 49,
+      "readback_equal": true,
+      "body_sha256_final": "3a934f8130b7701ab4248ef805a9c13700d3d49adf9be78614d24bc21c558f1d",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:32Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 599,
+      "url": "https://github.com/jvallery/network-infra/issues/599",
+      "state": "open",
+      "body_sha256": "45a70036fee0868b8de1a459de2e5b621cd156e55bbedb825e5fda9935a2d26a",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "45a70036fee0868b8de1a459de2e5b621cd156e55bbedb825e5fda9935a2d26a",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:34Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 600,
+      "url": "https://github.com/jvallery/network-infra/issues/600",
+      "state": "open",
+      "body_sha256": "7102c4ad7f867162a4f26cbeda421fdfae98099a5a2e7ee6af4cbe3fd72d6f42",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "7102c4ad7f867162a4f26cbeda421fdfae98099a5a2e7ee6af4cbe3fd72d6f42",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:35Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 602,
+      "url": "https://github.com/jvallery/network-infra/issues/602",
+      "state": "open",
+      "body_sha256": "d58573ab684f9a27a97e19e2a8d1be159c3056c3ef6ec4c1e5e3c9affa3be6d1",
+      "milestone": 50,
+      "readback_equal": true,
+      "body_sha256_final": "11b6e2f2c671c7c3b5ea82970ab0f2f6549fd775c7d71afe869f16b53d549b92",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:35Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 195,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/195",
+      "state": "open",
+      "body_sha256": "58a5c908eb864d47970abf8364151010ec56a45f87b8f4803f535daccf82d50a",
+      "milestone": 1,
+      "readback_equal": true,
+      "body_sha256_final": "80e7a1f9ef237bd8244f835bceed43dea620e15eead1594d96f20854bc0f2b56",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:13Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 339,
+      "url": "https://github.com/jvallery/storage-infra/issues/339",
+      "state": "open",
+      "body_sha256": "8a85602818cefbac22fc4c8b6523a2d352f56e4e5c0bddcd2c3b027298f73960",
+      "milestone": 19,
+      "readback_equal": true,
+      "body_sha256_final": "8a85602818cefbac22fc4c8b6523a2d352f56e4e5c0bddcd2c3b027298f73960",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:04:40Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 574,
+      "url": "https://github.com/jvallery/storage-infra/issues/574",
+      "state": "open",
+      "body_sha256": "7a9a84fe479c3e88c6fd337a8398bd42f878f4cf6305b236bf201510a5d16b83",
+      "milestone": 19,
+      "readback_equal": true,
+      "body_sha256_final": "b37b00aa32f78f125c6727d76b23828361342bd2a799542ae26ca9fb364c86b5",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:27Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/orbit",
+      "number": 207,
+      "url": "https://github.com/jvallery/orbit/issues/207",
+      "state": "open",
+      "body_sha256": "c7c8210edd9f8daab43886564ea8a57f55ecb1a885e2b710558c6aa7f7c94805",
+      "readback_equal": true,
+      "concurrent_body_preserved": true,
+      "body_sha256_final": "c7c8210edd9f8daab43886564ea8a57f55ecb1a885e2b710558c6aa7f7c94805",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:05:21Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 628,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/628",
+      "state": "open",
+      "body_sha256": "7dcf9f393f1ec64e6c82b9ad98c06d7964de7cdc4e355b45ed4db90bfd5f86c0",
+      "readback_equal": true,
+      "concurrent_body_preserved": true,
+      "body_sha256_final": "470b9a9b373e3c5c344c8883d5a6a8e1b3ca66148e8bb86c2ffbfbc7c49e4dcb",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:28Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3576,
+      "url": "https://github.com/jvallery/agents/issues/3576",
+      "state": "open",
+      "body_sha256": "e98a0bb0c4318d5543137796e613a5006d559947186f27eb1b435cb8a9ea6a3a",
+      "readback_equal": true,
+      "concurrent_body_preserved": true,
+      "body_sha256_final": "e98a0bb0c4318d5543137796e613a5006d559947186f27eb1b435cb8a9ea6a3a",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:05:24Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4493,
+      "url": "https://github.com/jvallery/agents/issues/4493",
+      "state": "open",
+      "body_sha256": "df6c683d7d39be65867e444a570e6ad71c027a1e96263e36c89f86ca0b1ba572",
+      "readback_equal": true,
+      "concurrent_body_preserved": true,
+      "body_sha256_final": "df6c683d7d39be65867e444a570e6ad71c027a1e96263e36c89f86ca0b1ba572",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:21Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 629,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/629",
+      "state": "open",
+      "body_sha256": "6c716812505e948f9047514606b11b35ba52dc3ca6b4522c706e1fea911f6edd",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "5ac4850b95cb183fbdb3630115d57f614cb743bc40b02bf3ae5396c5fb726be5",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:29Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 591,
+      "url": "https://github.com/jvallery/storage-infra/issues/591",
+      "state": "open",
+      "body_sha256": "62368f4093ad2e31765c8ff33dc0d391f320ffd04a51a710f4775c6d7b433f7a",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "75c733902eacba7428c8a51b3d07ab4ec1189525b391a5c4a0b647d243bf810d",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:23Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4487,
+      "url": "https://github.com/jvallery/agents/issues/4487",
+      "state": "open",
+      "body_sha256": "510f99263e7af4bcb5d26cc04292a04326ef11409a1c57888675cd939dcd8f52",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "510f99263e7af4bcb5d26cc04292a04326ef11409a1c57888675cd939dcd8f52",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:26Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3049,
+      "url": "https://github.com/jvallery/agents/issues/3049",
+      "state": "open",
+      "body_sha256": "245ec52604b2a43b534fa72fb784e9605452ddd642b72fc82647b7713a0f3afe",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "245ec52604b2a43b534fa72fb784e9605452ddd642b72fc82647b7713a0f3afe",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:28Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3500,
+      "url": "https://github.com/jvallery/agents/issues/3500",
+      "state": "open",
+      "body_sha256": "5177a5c375c78359e236bdbb3a67046097da132d8d1b177b91d63a4374950176",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "5177a5c375c78359e236bdbb3a67046097da132d8d1b177b91d63a4374950176",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:30Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4015,
+      "url": "https://github.com/jvallery/agents/issues/4015",
+      "state": "open",
+      "body_sha256": "75fcaa7babe9ae57ced5af43e65ab8c3d596a63b9f75d27834323604e52a0340",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "75fcaa7babe9ae57ced5af43e65ab8c3d596a63b9f75d27834323604e52a0340",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:31Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/homeassistant",
+      "number": 784,
+      "url": "https://github.com/jvallery/homeassistant/issues/784",
+      "state": "open",
+      "body_sha256": "bef8559fb3f4733813602895b31c6a81818bba9e9a0cf9e567e39d31a0fc0e48",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "bef8559fb3f4733813602895b31c6a81818bba9e9a0cf9e567e39d31a0fc0e48",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:33Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 336,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/336",
+      "state": "open",
+      "body_sha256": "477dcf598fe832f1d7404de06e9ff4ecd08b0dd4691016655cc08ceb29a21d32",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "773ae389aacc66d94577319d83a114f7f5349d4f7b6b030769ddefc3847feaaf",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:07:02Z",
+      "concurrent_after_publication": true
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 97,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/97",
+      "state": "open",
+      "body_sha256": "74b10d178902eea56b5ffc8692d8a83473165e4216e22c216f782607a165f736",
+      "readback_equal": true,
+      "concurrent_body_preserved": true,
+      "body_sha256_final": "74b10d178902eea56b5ffc8692d8a83473165e4216e22c216f782607a165f736",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:37Z",
+      "concurrent_after_publication": false
+    },
+    {
+      "repository": "jvallery/backups",
+      "number": 87,
+      "url": "https://github.com/jvallery/backups/issues/87",
+      "state": "open",
+      "body_sha256": "b644f60a58c43d380ddd291041490d91259c8f01340811e84124345cff665098",
+      "readback_equal": true,
+      "concurrent_body_preserved": false,
+      "body_sha256_final": "b644f60a58c43d380ddd291041490d91259c8f01340811e84124345cff665098",
+      "final_audit_marker_verified": true,
+      "updated_at": "2026-10-11T14:06:38Z",
+      "concurrent_after_publication": false
+    }
+  ],
+  "search_scope": [
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 891,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/891",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/orbit",
+      "number": 207,
+      "url": "https://github.com/jvallery/orbit/issues/207",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4476,
+      "url": "https://github.com/jvallery/agents/issues/4476",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4491,
+      "url": "https://github.com/jvallery/agents/issues/4491",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4468,
+      "url": "https://github.com/jvallery/agents/issues/4468",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4461,
+      "url": "https://github.com/jvallery/agents/issues/4461",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 627,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/627",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4457,
+      "url": "https://github.com/jvallery/agents/issues/4457",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4666,
+      "url": "https://github.com/jvallery/agents/issues/4666",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4470,
+      "url": "https://github.com/jvallery/agents/issues/4470",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 607,
+      "url": "https://github.com/jvallery/network-infra/issues/607",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3173,
+      "url": "https://github.com/jvallery/agents/issues/3173",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4475,
+      "url": "https://github.com/jvallery/agents/issues/4475",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 574,
+      "url": "https://github.com/jvallery/storage-infra/issues/574",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 573,
+      "url": "https://github.com/jvallery/storage-infra/issues/573",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 628,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/628",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3576,
+      "url": "https://github.com/jvallery/agents/issues/3576",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 600,
+      "url": "https://github.com/jvallery/network-infra/issues/600",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 43,
+      "url": "https://github.com/jvallery/network-infra/issues/43",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4460,
+      "url": "https://github.com/jvallery/agents/issues/4460",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4493,
+      "url": "https://github.com/jvallery/agents/issues/4493",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 2840,
+      "url": "https://github.com/jvallery/agents/issues/2840",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4452,
+      "url": "https://github.com/jvallery/agents/issues/4452",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 629,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/629",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 591,
+      "url": "https://github.com/jvallery/storage-infra/issues/591",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4743,
+      "url": "https://github.com/jvallery/agents/issues/4743",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 42,
+      "url": "https://github.com/jvallery/network-infra/issues/42",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4103,
+      "url": "https://github.com/jvallery/agents/issues/4103",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 605,
+      "url": "https://github.com/jvallery/network-infra/issues/605",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 2337,
+      "url": "https://github.com/jvallery/agents/issues/2337",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4487,
+      "url": "https://github.com/jvallery/agents/issues/4487",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4456,
+      "url": "https://github.com/jvallery/agents/issues/4456",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4458,
+      "url": "https://github.com/jvallery/agents/issues/4458",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3049,
+      "url": "https://github.com/jvallery/agents/issues/3049",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 200,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/200",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3500,
+      "url": "https://github.com/jvallery/agents/issues/3500",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4451,
+      "url": "https://github.com/jvallery/agents/issues/4451",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/storage-infra",
+      "number": 572,
+      "url": "https://github.com/jvallery/storage-infra/issues/572",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 602,
+      "url": "https://github.com/jvallery/network-infra/issues/602",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4489,
+      "url": "https://github.com/jvallery/agents/issues/4489",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4015,
+      "url": "https://github.com/jvallery/agents/issues/4015",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/homeassistant",
+      "number": 784,
+      "url": "https://github.com/jvallery/homeassistant/issues/784",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/backups",
+      "number": 87,
+      "url": "https://github.com/jvallery/backups/issues/87",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3338,
+      "url": "https://github.com/jvallery/agents/issues/3338",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3082,
+      "url": "https://github.com/jvallery/agents/issues/3082",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4455,
+      "url": "https://github.com/jvallery/agents/issues/4455",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 501,
+      "url": "https://github.com/jvallery/network-infra/issues/501",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 336,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/336",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3254,
+      "url": "https://github.com/jvallery/agents/issues/3254",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4488,
+      "url": "https://github.com/jvallery/agents/issues/4488",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 807,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/807",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 300,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/300",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 301,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/301",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "number": 599,
+      "url": "https://github.com/jvallery/network-infra/issues/599",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 3061,
+      "url": "https://github.com/jvallery/agents/issues/3061",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/monitoring-stack",
+      "number": 832,
+      "url": "https://github.com/jvallery/monitoring-stack/issues/832",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/proxmox-infrastructure",
+      "number": 97,
+      "url": "https://github.com/jvallery/proxmox-infrastructure/issues/97",
+      "query_file": "related-expanded.json",
+      "disposition": "direct_product_or_owner_interface_updated",
+      "reason": "Concrete current Verdify acceptance, safety, delivery, recovery or owner interface."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4484,
+      "url": "https://github.com/jvallery/agents/issues/4484",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4485,
+      "url": "https://github.com/jvallery/agents/issues/4485",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4469,
+      "url": "https://github.com/jvallery/agents/issues/4469",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4481,
+      "url": "https://github.com/jvallery/agents/issues/4481",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4535,
+      "url": "https://github.com/jvallery/agents/issues/4535",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4477,
+      "url": "https://github.com/jvallery/agents/issues/4477",
+      "query_file": "related-expanded.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-www",
+      "number": 39,
+      "url": "https://github.com/VerdifyConsultancy/verdify-www/issues/39",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/crm",
+      "number": 103,
+      "url": "https://github.com/VerdifyConsultancy/crm/issues/103",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/crm",
+      "number": 1,
+      "url": "https://github.com/VerdifyConsultancy/crm/issues/1",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/crm",
+      "number": 2,
+      "url": "https://github.com/VerdifyConsultancy/crm/issues/2",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/crm",
+      "number": 80,
+      "url": "https://github.com/VerdifyConsultancy/crm/issues/80",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-gravity",
+      "number": 1,
+      "url": "https://github.com/VerdifyConsultancy/verdify-gravity/issues/1",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-gravity",
+      "number": 92,
+      "url": "https://github.com/VerdifyConsultancy/verdify-gravity/issues/92",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-gravity",
+      "number": 94,
+      "url": "https://github.com/VerdifyConsultancy/verdify-gravity/issues/94",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/crm",
+      "number": 82,
+      "url": "https://github.com/VerdifyConsultancy/crm/issues/82",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/.github",
+      "number": 2,
+      "url": "https://github.com/VerdifyConsultancy/.github/issues/2",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    },
+    {
+      "repository": "VerdifyConsultancy/agents",
+      "number": 18,
+      "url": "https://github.com/VerdifyConsultancy/agents/issues/18",
+      "query_file": "related-org.json",
+      "disposition": "incidental_history_or_other_product_not_changed",
+      "reason": "Search mention is fleet inventory, historical example/comment or a different product; not an additional Verdify completion requirement. Its own owner work is preserved."
+    }
+  ],
+  "selection": "All platform open issues; original campaign/native parent and blocker graph; AGENTS ownership references; direct product/title and current acceptance interfaces across jvallery and VerdifyConsultancy. Search bodies/comments alone do not authorize unrelated owner-program changes."
+}

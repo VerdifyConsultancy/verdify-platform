@@ -1,0 +1,82 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "endpoint_probe_auth_evidence_http_status_code",
+          "auth_mode": "anonymous",
+          "configured_host": "graphs.verdify.ai",
+          "endpoint": "graphs-verdify-ai",
+          "host": "graphs.verdify.ai",
+          "instance": "endpoint-prober:9120",
+          "job": "endpoint-prober-local",
+          "namespace": "unknown",
+          "service": "verdify-grafana",
+          "vantage": "local"
+        },
+        "value": [
+          1791726973.982,
+          "401"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "endpoint_probe_auth_evidence_http_status_code",
+          "auth_mode": "authenticated",
+          "configured_host": "graphs.verdify.ai",
+          "endpoint": "graphs-verdify-ai",
+          "host": "graphs.verdify.ai",
+          "instance": "endpoint-prober:9120",
+          "job": "endpoint-prober-local",
+          "namespace": "unknown",
+          "service": "verdify-grafana",
+          "vantage": "local"
+        },
+        "value": [
+          1791726973.982,
+          "200"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "endpoint_probe_auth_evidence_http_status_code",
+          "auth_mode": "anonymous",
+          "configured_host": "graphs.verdify.ai",
+          "endpoint": "graphs-verdify-ai",
+          "host": "graphs.verdify.ai",
+          "instance": "synthetics.vallery.net:443",
+          "job": "endpoint-prober-external",
+          "namespace": "unknown",
+          "service": "verdify-grafana",
+          "shard": "14",
+          "vantage": "external-cloudflare"
+        },
+        "value": [
+          1791726973.982,
+          "401"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "endpoint_probe_auth_evidence_http_status_code",
+          "auth_mode": "authenticated",
+          "configured_host": "graphs.verdify.ai",
+          "endpoint": "graphs-verdify-ai",
+          "host": "graphs.verdify.ai",
+          "instance": "synthetics.vallery.net:443",
+          "job": "endpoint-prober-external",
+          "namespace": "unknown",
+          "service": "verdify-grafana",
+          "shard": "14",
+          "vantage": "external-cloudflare"
+        },
+        "value": [
+          1791726973.982,
+          "200"
+        ]
+      }
+    ]
+  }
+}

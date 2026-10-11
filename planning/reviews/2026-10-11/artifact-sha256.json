@@ -1,0 +1,21 @@
+{
+  "RELATED-ISSUES.md": "2e1ab42da5d4257e13d324321d6022e187a6340d44ab5be6ef8c0c945e31f9ef",
+  "publication-receipt.json": "1d651584a2a3c083c34c5592e34cdbd117f737b7c2771bd7f9a01ecd37b58665",
+  "image-comparison.json": "fe360149dfe2c3488901c3ce24c6fc3562b12aea3c490cedfbe2d733aed267d6",
+  "health-summary.json": "3f1345d119cf41ed9105a70f9b9ea269318f6d70aae59adfbb36caaf2c200f0f",
+  "49-readback.json": "643efbdcff19b8a88c267a8b59c588bd9f21cf76878e408358944d9aef7658e6",
+  "grafana-auth-probes.json": "7078d974e890869c6eeb13a3423a6eb86f1352d0ec99df9666cf57d2837d2395",
+  "ISSUE-TRIAGE.md": "90af7bcdd6033befac1789b2437f76e342c10bfcb1a4abfaee3a90a881205d8b",
+  "role-flags.json": "70e1e2e8667a95e7d9b864f77e8344ce9034d84230016e956f31bb1b7bcbb331",
+  "issue-triage.json": "80085049d0f782943135e6a8261bbbc76c7a636b9464f54a5039c94720bc0095",
+  "STATUS.md": "5ad4254237eabb30621bd1349b2ed37382701f454975f8821b0584b8211727a9",
+  "GOAL.md": "ded60f8e2f9380255ce1ddf7e67bfad85c33f1f26f808c9672c1c8cc226d8d8d",
+  "related-issues.json": "f257592dc52bee663ca2e0f38527cb92b43f4ef91b11962526ba8bb89426b983",
+  "source-review.json": "6869000b2fb7c9e08a51e12067e07bee2302542275b14bef6655f20f2fd13929",
+  "device-monitor.txt": "b3b8bfae48e1b7bf49450cce400d929cfd585355d99b21c69f94fabb7eb84f70",
+  "iris-inventory.json": "ae831875d2d904b6555dbba95367c6bc190b562701baf3c53adb48b26a28fbcc",
+  "native-graph.json": "0a3950ed96f532a2c1e06a77a0c54e5aaa61f7a1748dcbd9543469b6fcc8ec66",
+  "NATIVE-DEPENDENCIES.md": "62d962fe01961a1edb877c460cd93388fa51d7b4706f27e8ec3e91b05cb96f14",
+  "NEXT-SPRINT.md": "74db5ecc8e4eb440c986a4760816a15bb647b3e6b7a2fbc062e79ecbd7337a73",
+  "running-images.json": "a3fe0228cb10a4ccab343dd752b7225b2bb698f9262a9e5f420fd0239197051c"
+}

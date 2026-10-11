@@ -1,0 +1,734 @@
+{
+  "captured_at": "2026-10-11T13:53:20.648695+00:00",
+  "source_sha": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+  "argo": {
+    "sync": "OutOfSync",
+    "health": "Degraded",
+    "revision": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+    "operation_phase": "Failed",
+    "finished_at": "2026-10-06T10:24:47Z"
+  },
+  "render_objects": 128,
+  "rendered_secrets": 0,
+  "workload_image_specs": 26,
+  "equal_image_specs": 25,
+  "diagnostics": [
+    {
+      "ts": "2026-10-11T13:52:26.452979+00:00",
+      "wifi_rssi": -67,
+      "heap_bytes": 63.078125,
+      "uptime_s": 777613.625,
+      "probe_health": "OK",
+      "reset_reason": "Software reset",
+      "greenhouse_id": "vallery",
+      "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+      "active_probe_count": 4,
+      "relief_cycle_count": 0,
+      "vent_latch_timer_s": 0,
+      "sealed_timer_s": 0,
+      "vpd_watch_timer_s": 0,
+      "mist_backoff_timer_s": 0,
+      "vent_mist_assist_active": 0,
+      "heap_min_free_kb": 2.3359375,
+      "heap_largest_free_block_kb": 56,
+      "controller_time_epoch": 1791726699,
+      "controller_local_hour": 7,
+      "sntp_valid": 1,
+      "sntp_miss_count": 0,
+      "last_sntp_sync_age_s": 45,
+      "effective_heat_target_f": 53.75,
+      "effective_cool_stage2_delta_f": 1.7725000381469727,
+      "effective_vpd_hysteresis_kpa": 0.1875,
+      "effective_dehum_aggressive_kpa": 0.29999998211860657,
+      "zone_wet_granted": null,
+      "band_source": "onchip_curve"
+    }
+  ],
+  "latest_climate": [
+    {
+      "ts": "2026-10-11T13:52:33.980305+00:00",
+      "temp_avg": 67.94000244140625,
+      "vpd_avg": 0.7565690875053406,
+      "temp_north": 67.27999877929688,
+      "temp_south": null,
+      "temp_east": 71.05999755859375,
+      "temp_west": 65.66000366210938,
+      "rh_north": 64.0999984741211,
+      "rh_south": null,
+      "rh_east": 64.0999984741211,
+      "rh_west": 75.5999984741211,
+      "hydro_ph": null,
+      "ph_input": null,
+      "dli_par_today": null
+    }
+  ],
+  "climate_daily": [
+    {
+      "sample_day": "2026-10-04T00:00:00",
+      "samples": 939,
+      "temp_min": 65.95999908447266,
+      "temp_max": 85.45999908447266,
+      "temp_avg": 75.97348323086707,
+      "vpd_min": 0.6254884600639343,
+      "vpd_max": 1.8530772924423218,
+      "vpd_avg": 0.9775493773408591,
+      "north": 939,
+      "south": 0,
+      "east": 939,
+      "west": 939,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 939,
+      "dli": 0,
+      "soil1": 939,
+      "soil2": 939,
+      "soilwest": 881,
+      "water_min": 177,
+      "water_max": 234,
+      "mist_max": 30.787883758544922
+    },
+    {
+      "sample_day": "2026-10-05T00:00:00",
+      "samples": 1393,
+      "temp_min": 62.2400016784668,
+      "temp_max": 85.70000457763672,
+      "temp_avg": 72.5420395576603,
+      "vpd_min": 0.5837122797966003,
+      "vpd_max": 2.2927472591400146,
+      "vpd_avg": 0.901931969621416,
+      "north": 1393,
+      "south": 0,
+      "east": 1393,
+      "west": 1393,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1393,
+      "dli": 0,
+      "soil1": 1393,
+      "soil2": 1393,
+      "soilwest": 1282,
+      "water_min": 234,
+      "water_max": 338,
+      "mist_max": 61.83641815185547
+    },
+    {
+      "sample_day": "2026-10-06T00:00:00",
+      "samples": 1398,
+      "temp_min": 63.55999755859375,
+      "temp_max": 85.6399917602539,
+      "temp_avg": 73.92493613356343,
+      "vpd_min": 0.5807064175605774,
+      "vpd_max": 1.8884745836257935,
+      "vpd_avg": 0.9294454328321421,
+      "north": 1398,
+      "south": 0,
+      "east": 1398,
+      "west": 1398,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1398,
+      "dli": 0,
+      "soil1": 1398,
+      "soil2": 1303,
+      "soilwest": 1018,
+      "water_min": 338,
+      "water_max": 433,
+      "mist_max": 56.46185302734375
+    },
+    {
+      "sample_day": "2026-10-07T00:00:00",
+      "samples": 1397,
+      "temp_min": 63.20000076293945,
+      "temp_max": 85.45999908447266,
+      "temp_avg": 73.04588462321692,
+      "vpd_min": 0.5876404643058777,
+      "vpd_max": 1.9899272918701172,
+      "vpd_avg": 0.9217493137292718,
+      "north": 1397,
+      "south": 0,
+      "east": 1397,
+      "west": 1397,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1397,
+      "dli": 0,
+      "soil1": 1397,
+      "soil2": 636,
+      "soilwest": 0,
+      "water_min": 433,
+      "water_max": 481,
+      "mist_max": 15.84150505065918
+    },
+    {
+      "sample_day": "2026-10-08T00:00:00",
+      "samples": 1395,
+      "temp_min": 62.42000198364258,
+      "temp_max": 85.45999908447266,
+      "temp_avg": 72.8929469228218,
+      "vpd_min": 0.5756706595420837,
+      "vpd_max": 1.9192403554916382,
+      "vpd_avg": 0.8993812810135572,
+      "north": 1395,
+      "south": 0,
+      "east": 1395,
+      "west": 1395,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1395,
+      "dli": 0,
+      "soil1": 1245,
+      "soil2": 350,
+      "soilwest": 0,
+      "water_min": 481,
+      "water_max": 552,
+      "mist_max": 34.93130111694336
+    },
+    {
+      "sample_day": "2026-10-09T00:00:00",
+      "samples": 1394,
+      "temp_min": 63.1400032043457,
+      "temp_max": 85.70000457763672,
+      "temp_avg": 73.54905386805706,
+      "vpd_min": 0.5858995914459229,
+      "vpd_max": 2.022876024246216,
+      "vpd_avg": 0.9275356918958202,
+      "north": 1394,
+      "south": 0,
+      "east": 1394,
+      "west": 1394,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1394,
+      "dli": 0,
+      "soil1": 963,
+      "soil2": 201,
+      "soilwest": 0,
+      "water_min": 552,
+      "water_max": 614,
+      "mist_max": 34.93130111694336
+    },
+    {
+      "sample_day": "2026-10-10T00:00:00",
+      "samples": 1393,
+      "temp_min": 63.679996490478516,
+      "temp_max": 85.2800064086914,
+      "temp_avg": 73.59072574470339,
+      "vpd_min": 0.5843567252159119,
+      "vpd_max": 1.9636160135269165,
+      "vpd_avg": 0.9101147578931591,
+      "north": 1393,
+      "south": 0,
+      "east": 1393,
+      "west": 1393,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 1393,
+      "dli": 0,
+      "soil1": 763,
+      "soil2": 105,
+      "soilwest": 0,
+      "water_min": 614,
+      "water_max": 642,
+      "mist_max": 10.038050651550293
+    },
+    {
+      "sample_day": "2026-10-11T00:00:00",
+      "samples": 457,
+      "temp_min": 66.32000732421875,
+      "temp_max": 70.22000885009766,
+      "temp_avg": 67.57015393547208,
+      "vpd_min": 0.629650890827179,
+      "vpd_max": 0.758007287979126,
+      "vpd_avg": 0.6682409923238358,
+      "north": 457,
+      "south": 0,
+      "east": 457,
+      "west": 457,
+      "hydro_ph": 0,
+      "ph_input": 0,
+      "co2": 457,
+      "dli": 0,
+      "soil1": 195,
+      "soil2": 0,
+      "soilwest": 0,
+      "water_min": 642,
+      "water_max": 642,
+      "mist_max": 0
+    }
+  ],
+  "open_alerts": [
+    {
+      "id": 4574,
+      "ts": "2026-06-01T02:40:36.359006+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "equipment.sntp_status",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7183,
+      "ts": "2026-06-25T01:07:16.173752+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "state.lead_fan",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7362,
+      "ts": "2026-06-26T14:12:44.904634+00:00",
+      "alert_type": "forecast_deviation",
+      "severity": "warning",
+      "sensor_id": "forecast.deviation",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7428,
+      "ts": "2026-06-29T20:12:28.836387+00:00",
+      "alert_type": "forecast_deviation",
+      "severity": "warning",
+      "sensor_id": "forecast.deviation",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7694,
+      "ts": "2026-07-07T19:02:38.260191+00:00",
+      "alert_type": "forecast_deviation",
+      "severity": "warning",
+      "sensor_id": "forecast.deviation",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7700,
+      "ts": "2026-07-07T22:59:38.308835+00:00",
+      "alert_type": "forecast_deviation",
+      "severity": "warning",
+      "sensor_id": "forecast.deviation",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7720,
+      "ts": "2026-07-08T23:23:01.451106+00:00",
+      "alert_type": "forecast_deviation",
+      "severity": "warning",
+      "sensor_id": "forecast.deviation",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7950,
+      "ts": "2026-07-15T18:37:14.584724+00:00",
+      "alert_type": "irrigation_feedback_gap",
+      "severity": "warning",
+      "sensor_id": "irrigation.feedback.south_soil_probe_1",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7991,
+      "ts": "2026-07-17T21:06:23.088925+00:00",
+      "alert_type": "tunable_zero_variance",
+      "severity": "warning",
+      "sensor_id": "setpoint.temp_high",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 7992,
+      "ts": "2026-07-17T21:06:23.106627+00:00",
+      "alert_type": "tunable_zero_variance",
+      "severity": "warning",
+      "sensor_id": "setpoint.temp_low",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8130,
+      "ts": "2026-07-24T22:09:31.446143+00:00",
+      "alert_type": "esp32_push_failed",
+      "severity": "warning",
+      "sensor_id": null,
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8222,
+      "ts": "2026-08-02T22:09:27.373052+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.vpd_delta_south",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8224,
+      "ts": "2026-08-02T23:09:30.706998+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.rh_south",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8225,
+      "ts": "2026-08-02T23:09:30.727011+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.temp_south",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8226,
+      "ts": "2026-08-02T23:09:30.740675+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.vpd_south",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8239,
+      "ts": "2026-08-05T09:07:54.853652+00:00",
+      "alert_type": "esp32_push_failed",
+      "severity": "warning",
+      "sensor_id": null,
+      "disposition": "open"
+    },
+    {
+      "id": 8315,
+      "ts": "2026-08-05T10:41:04.209085+00:00",
+      "alert_type": "esp32_push_failed",
+      "severity": "warning",
+      "sensor_id": "setpoint.sw_cool_all_fans_at_high_enabled",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 8316,
+      "ts": "2026-08-05T10:41:04.220962+00:00",
+      "alert_type": "esp32_push_failed",
+      "severity": "warning",
+      "sensor_id": "setpoint.cool_stage2_over_high_f",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11570,
+      "ts": "2026-09-08T18:11:21.962663+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_orp_mv",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11572,
+      "ts": "2026-09-08T18:11:22.005028+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_battery_pct",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11574,
+      "ts": "2026-09-08T19:01:24.664113+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_water_temp_f",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11753,
+      "ts": "2026-09-23T04:31:48.528868+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_ec_us_cm",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11754,
+      "ts": "2026-09-23T04:31:48.539364+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_ph",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 11824,
+      "ts": "2026-09-29T00:44:27.758554+00:00",
+      "alert_type": "site_content_stale",
+      "severity": "warning",
+      "sensor_id": "site_content",
+      "disposition": "open"
+    },
+    {
+      "id": 12210,
+      "ts": "2026-10-01T13:48:12.190277+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.hydro_tds_ppm",
+      "disposition": "open"
+    },
+    {
+      "id": 12585,
+      "ts": "2026-10-07T01:35:38.63554+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.soil_moisture_west",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12586,
+      "ts": "2026-10-07T01:35:38.642181+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.soil_temp_west",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12875,
+      "ts": "2026-10-10T12:23:36.107515+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.soil_temp_south_2",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12876,
+      "ts": "2026-10-10T12:23:36.116178+00:00",
+      "alert_type": "sensor_offline",
+      "severity": "warning",
+      "sensor_id": "climate.soil_moisture_south_2",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12912,
+      "ts": "2026-10-11T04:34:32.205133+00:00",
+      "alert_type": "heap_pressure_warning",
+      "severity": "warning",
+      "sensor_id": "equipment.heap_pressure_warning",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12940,
+      "ts": "2026-10-11T12:04:47.980772+00:00",
+      "alert_type": "soil_sensor_offline",
+      "severity": "warning",
+      "sensor_id": "soil.south_2.soil_moisture_south_2",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12941,
+      "ts": "2026-10-11T12:04:47.991448+00:00",
+      "alert_type": "soil_sensor_offline",
+      "severity": "warning",
+      "sensor_id": "soil.south_2.soil_temp_south_2",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12942,
+      "ts": "2026-10-11T12:04:47.997538+00:00",
+      "alert_type": "soil_sensor_offline",
+      "severity": "warning",
+      "sensor_id": "soil.west.soil_moisture_west",
+      "disposition": "acknowledged"
+    },
+    {
+      "id": 12943,
+      "ts": "2026-10-11T12:04:48.004258+00:00",
+      "alert_type": "soil_sensor_offline",
+      "severity": "warning",
+      "sensor_id": "soil.west.soil_temp_west",
+      "disposition": "acknowledged"
+    }
+  ],
+  "experiment": {
+    "kind": "experiment_counts",
+    "randomization": 0,
+    "assignments": 0,
+    "freezes": 0,
+    "exports": 0,
+    "proof_receipts": 0,
+    "open_exposures": 0
+  },
+  "migration": {
+    "filename": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql",
+    "seq": 275,
+    "sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+    "applied_at": "2026-10-06T09:58:38.256618+00:00",
+    "stamp_method": "runner"
+  },
+  "setpoint_24h": [
+    {
+      "delivery_status": "observed",
+      "n": 3,
+      "latest": "2026-10-11T04:32:38.773527+00:00"
+    }
+  ],
+  "api_health": {
+    "status": "ok",
+    "checks": {
+      "climate_age_seconds": 58,
+      "climate_action_log_age_seconds": 58,
+      "climate_action_log_proof_missing": "",
+      "compliance_pct": 0,
+      "planner_score": 83.7,
+      "active_alerts_1h": 6,
+      "last_setpoint_change_seconds": 33717,
+      "greenhouse_mode": "IDLE",
+      "service_ingestor": "ok",
+      "service_climate_action_log": "ok"
+    }
+  },
+  "publication": {
+    "last_attempt": {
+      "at_utc": "2026-10-06T07:16:53Z",
+      "failure_class": null,
+      "outcome": "succeeded"
+    },
+    "last_contention_at_utc": "2026-10-06T00:13:24Z",
+    "last_success": {
+      "at_utc": "2026-10-06T07:16:53Z",
+      "content_sha256": "sha256:b79c4d911bd5bad511ab3979b4ee6e5cf2377c52bedf3822e50041ba77720574",
+      "fresh_until_utc": "2026-10-06T07:36:53Z",
+      "public_sha256": "sha256:949f0c2d7bfe4c138315508f2a69ce9310d422a2d0c6cb18b4547f1c768aed8a",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:949f0c2d7bfe4c138315508f2a69ce9310d422a2d0c6cb18b4547f1c768aed8a"
+  },
+  "iris": {
+    "home": "/opt/data",
+    "missing": [],
+    "plan_success": "not established by inventory; requires actual trigger/plan ledger",
+    "qualified": true,
+    "schema": "verdify-iris-runtime-inventory-v1",
+    "skill_index_count": 88,
+    "skill_index_sha256": "b7f7f899b5874a105f5ab1943e4733b331e7bd69b9155c075de7ecdf7a5e68b3",
+    "skill_name": "greenhouse-planning-mcp"
+  },
+  "grafana_auth_probes": [
+    {
+      "metric": {
+        "__name__": "endpoint_probe_auth_evidence_http_status_code",
+        "auth_mode": "anonymous",
+        "configured_host": "graphs.verdify.ai",
+        "endpoint": "graphs-verdify-ai",
+        "host": "graphs.verdify.ai",
+        "instance": "endpoint-prober:9120",
+        "job": "endpoint-prober-local",
+        "namespace": "unknown",
+        "service": "verdify-grafana",
+        "vantage": "local"
+      },
+      "value": [
+        1791726973.982,
+        "401"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "endpoint_probe_auth_evidence_http_status_code",
+        "auth_mode": "authenticated",
+        "configured_host": "graphs.verdify.ai",
+        "endpoint": "graphs-verdify-ai",
+        "host": "graphs.verdify.ai",
+        "instance": "endpoint-prober:9120",
+        "job": "endpoint-prober-local",
+        "namespace": "unknown",
+        "service": "verdify-grafana",
+        "vantage": "local"
+      },
+      "value": [
+        1791726973.982,
+        "200"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "endpoint_probe_auth_evidence_http_status_code",
+        "auth_mode": "anonymous",
+        "configured_host": "graphs.verdify.ai",
+        "endpoint": "graphs-verdify-ai",
+        "host": "graphs.verdify.ai",
+        "instance": "synthetics.vallery.net:443",
+        "job": "endpoint-prober-external",
+        "namespace": "unknown",
+        "service": "verdify-grafana",
+        "shard": "14",
+        "vantage": "external-cloudflare"
+      },
+      "value": [
+        1791726973.982,
+        "401"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "endpoint_probe_auth_evidence_http_status_code",
+        "auth_mode": "authenticated",
+        "configured_host": "graphs.verdify.ai",
+        "endpoint": "graphs-verdify-ai",
+        "host": "graphs.verdify.ai",
+        "instance": "synthetics.vallery.net:443",
+        "job": "endpoint-prober-external",
+        "namespace": "unknown",
+        "service": "verdify-grafana",
+        "shard": "14",
+        "vantage": "external-cloudflare"
+      },
+      "value": [
+        1791726973.982,
+        "200"
+      ]
+    }
+  ],
+  "device_monitor": "UNKNOWN: one observed socket, one transient unobservable watchdog pod; retained full failure",
+  "cnpg": [
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-pitr-a",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-pitr-a-2"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-pitr-b",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-pitr-b-2"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-rehearsal",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-rehearsal-1"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-s2-1"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-pitr-a",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-s2-pitr-a-3"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-pitr-a-frozen",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-s2-pitr-a-frozen-2"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-pitr-b",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-s2-pitr-b-3"
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-pitr-b-frozen",
+      "phase": "Cluster in healthy state",
+      "ready": 3,
+      "primary": "verdify-cnpg-s2-pitr-b-frozen-3"
+    }
+  ]
+}

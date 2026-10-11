@@ -36,7 +36,7 @@ flowchart LR
   C --> X[One-way reveal and decision report]
 ```
 
-The [complete graph](DEPENDENCIES.md) includes all 85 campaign nodes and every native blocked-by edge. Parent/sub-issue relationships are ownership, not prerequisites. A task closes on its bounded evidence, so executor qualification does not wait for randomized day 1 while day 1 waits for the executor. Physical conditions, exact authority and external fleet/monitoring interfaces remain explicit issue requirements, not fabricated dependency nodes.
+The [complete graph](DEPENDENCIES.md) includes all 88 campaign nodes and every campaign native blocked-by edge. The October 11 review also retains independent #317/#801/#802 and current external owner prerequisites. Parent/sub-issue relationships are ownership, not prerequisites. A task closes on its bounded evidence, so executor qualification does not wait for randomized day 1 while day 1 waits for the executor. Physical conditions, exact authority and external fleet/monitoring interfaces remain explicit issue requirements, not fabricated dependency nodes.
 
 | Bundle | Implementation boundary | Exit evidence |
 |---|---|---|
@@ -52,7 +52,7 @@ Use one PR per coherent release boundary, not one PR or image build per issue. C
 
 ## First pull order
 
-Current execution pull set and acceptance dispositions are in [the October 5 review](reviews/2026-10-05/NEXT-SPRINT.md). #949–#953 capture newly observed reliability gaps; #949 additionally precedes #749. #835 is accepted/closed. The sequence below describes campaign stages, not a claim that their historical baselines remain current.
+Current execution pull set and acceptance dispositions are in [the October 11 review](reviews/2026-10-11/NEXT-SPRINT.md). Finish seven-issue S2: #964 production recovery, reopened #949 current policy convergence, then remaining #644/#396/#382/#643/#953 qualification. #49 is accepted; #963/#965 capture additional C4 source defects outside this finite pull set. #949 additionally precedes #749, and #964 precedes #644's final live adoption. #835 is accepted/closed. The sequence below describes campaign stages, not a claim that their historical baselines remain current.
 
 1. Rebaseline current source, desired/running digests, applied migration ledger, writer generation, backup artifact and actual Argo state through the authorized evidence path. September 5 public health and a successful scheduled backup are useful observations, not a current private-ledger or Synced/Healthy proof. Preserve PR #776 and draft #774; review/rebase only relevant hunks during implementation, never merge stale runtime pins wholesale.
 2. Pull independent C0 work: #371 metric semantics, #424 band lineage, September 4 incident timeline, outdoor forecast truth and resource eligibility. Fixed-panel historical reanalysis follows the truthful metric definition. The scientific-design issue consumes those empirical outputs.

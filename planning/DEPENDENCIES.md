@@ -56,6 +56,9 @@ flowchart TD
     i953["#953 Reconcile Iris planning skill lookup and required referenc"]
     i835["#835 Fix reconnect equipment snapshot provenance and stale rela"]
     i862["#862 Lab publisher: warm-cache init rescans the public tree for"]
+    i964["#964 Recover failed production promotion and schedulable Lab/ba"]
+    i965["#965 Separate API grow-light command intent from observed equip"]
+    i963["#963 Bound moisture-exchange state and preserve structured cons"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 Durability program: recoverable backups, measured RPO/RTO "]
@@ -129,6 +132,7 @@ flowchart TD
   i642 --> i640
   i640 --> i784
   i784 --> i785
+  i964 --> i644
   i304 --> i303
   i322 --> i303
   i303 --> i390
@@ -210,6 +214,7 @@ flowchart TD
 | [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) | [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640) |
 | [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640) | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784) |
 | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784) | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
+| [#964](https://github.com/VerdifyConsultancy/verdify-platform/issues/964) | [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
 | [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) |
 | [#322](https://github.com/VerdifyConsultancy/verdify-platform/issues/322) | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) |
 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) |

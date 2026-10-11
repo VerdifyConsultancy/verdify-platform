@@ -1,0 +1,67 @@
+{
+  "source_main": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+  "input_git_objects": {
+    "firmware": "3499f4530acdd4d999226d5544cba275741aa8ab",
+    "ingestor": "474149c8ed8e4f81fcef04efc9595055f33a8bb5",
+    "db": "41dff20f93983e4040b33d32debf3d09106c8b1a",
+    "verdify_schemas": "1cac9b0ce7a5d38928243a9ced30c5df39d38dd7",
+    "api": "641e6e4c1812a8716ac993ff4071821daa550eb9",
+    "mcp": "365594c2b136a2c65a6277e10aea456e83d4836c",
+    "planner_graph": "da477459e33f42c6eeaf0261e31519f288094d93",
+    "hermes/iris": "3b36951a1790be33267928363c5ee8a407b0605a",
+    "experiment_orchestrator": "a2221a34a37ef985fb5904672375768cc624d965",
+    "site": "22aa5a84296a6cf3d80afa81171107848f138346",
+    "grafana": "345fab0ccfa2006202494507b7b913f03b14573a",
+    "deploy/k8s": "2b39f8fde233ee628f418dfdec00f4b1809cd8a1",
+    ".agent-fleet/ci.yaml": "e532694ea8730808ae96baf54b4e3d357625e12e"
+  },
+  "running_api": {
+    "source_env": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+    "main_sha256": "2f474fb578cbb1472ef8a5b9d17340be83a05040d2fc45fd82b9f19a0df1cd2c",
+    "light_function_sha256": "7cb68b4b79cb843588addd6253c7686864275f3f34edda4f46560f4ffe72fd0a",
+    "light_intent_writes_observed_history": true,
+    "light_function_has_publisher": false
+  },
+  "bounded_writer_state": {
+    "status": "halted",
+    "run_id": "76d18133852b490680bce2639e6d8397",
+    "generation": 13
+  },
+  "firmware_state_max_contract": {
+    "current_controls_buffer_bytes": 384,
+    "ha_state_limit": 255,
+    "observed_native_payload_lengths": [
+      298,
+      298,
+      299,
+      299,
+      299,
+      299,
+      299,
+      299,
+      299,
+      298,
+      298,
+      299,
+      298,
+      298,
+      298,
+      299,
+      299,
+      299,
+      299,
+      299,
+      299,
+      298,
+      298,
+      298,
+      298,
+      298,
+      298,
+      298,
+      299,
+      298
+    ]
+  },
+  "proof_limits": "No active API light command, OTA, deployment or physical fault drill; source fingerprints bind review only."
+}

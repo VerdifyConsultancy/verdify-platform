@@ -79,49 +79,49 @@
       "title": "Measurement and incident truth",
       "exit": "A trustworthy fixed-panel climate/resource contract and a safely classified September 4 wetting interruption.",
       "owner": "Evidence/data lead",
-      "estimate": "3\u20135 engineering days; raw-ledger access is the main uncertainty."
+      "estimate": "3–5 engineering days; raw-ledger access is the main uncertainty."
     },
     {
       "id": "C1",
       "title": "Recovery and integrated physical qualification",
       "exit": "Fresh restore-backed vertical evidence and one separately authorized, sealed physical proof; finish baseline-confirmed and off.",
       "owner": "Runtime/release lead",
-      "estimate": "3\u20135 engineering days, overlapping C0; physical window is not a promised date."
+      "estimate": "3–5 engineering days, overlapping C0; physical window is not a promised date."
     },
     {
       "id": "C2",
       "title": "Seasonal design lock and randomized start",
       "exit": "A declared exploratory pilot or justified revised study, one immutable draw, and separately authorized day 1.",
       "owner": "Research/release lead",
-      "estimate": "2\u20133 engineering days after C0/C1 evidence, plus the eligible seasonal start window."
+      "estimate": "2–3 engineering days after C0/C1 evidence, plus the eligible seasonal start window."
     },
     {
       "id": "C3",
       "title": "Complete pilot and decision report",
       "exit": "All assigned days retained, blinded exports frozen, one-way reveal and a reproducible decision with bounded claims.",
       "owner": "Research lead",
-      "estimate": "60 local days if the accepted 30-pair pilot is retained; 2\u20133 days for final analysis."
+      "estimate": "60 local days if the accepted 30-pair pilot is retained; 2–3 days for final analysis."
     },
     {
       "id": "C4",
       "title": "Delivery and runtime reliability",
       "exit": "Exact-source delivery, truthful planner/writer/alert health, real compile and device-safe release checks.",
       "owner": "Platform lead",
-      "estimate": "5\u20138 engineering days in coherent bundles; may run alongside C0\u2013C3 without changing locked trial identity."
+      "estimate": "5–8 engineering days in coherent bundles; may run alongside C0–C3 without changing locked trial identity."
     },
     {
       "id": "C5",
       "title": "Durability and least privilege",
       "exit": "Role-complete recoverable backups, durable ingest state, measured RPO/RTO and a rehearsed HA cutover option.",
       "owner": "Data/platform lead",
-      "estimate": "5\u20138 engineering days; any production DB cutover is a separately bounded release."
+      "estimate": "5–8 engineering days; any production DB cutover is a separately bounded release."
     },
     {
       "id": "C6",
       "title": "Evidence-led control and irrigation",
       "exit": "Safe behavior-preserving firmware simplification, grounded control decisions and commissioned irrigation feedback.",
       "owner": "Control lead",
-      "estimate": "2\u20133 implementation sprints after evidence; no treatment-affecting changes during a locked study."
+      "estimate": "2–3 implementation sprints after evidence; no treatment-affecting changes during a locked study."
     },
     {
       "id": "C7",
@@ -142,7 +142,7 @@
     {
       "key": "775",
       "issue_number": 775,
-      "title": "Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "title": "Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
       "stage": "C0",
       "kind": "epic",
       "priority": "P0",
@@ -154,7 +154,7 @@
       "why": "Starting a randomized day does not establish climate or resource benefit. The prior launch-first roadmap left semantic defects, low power, season mismatch and post-trial decisions unowned.",
       "how": [
         "Maintain planning/backlog.yaml as the machine-readable source, rendered issue bodies and native blocked-by edges; keep parentage separate from blocking dependencies.",
-        "Execute C0 and C1 in parallel where safe, then C2 lock/start and C3 run/readout. Pull C4/C5 reliability work in bounded bundles; defer C6\u2013C8 behavioral changes until the frozen study permits them.",
+        "Execute C0 and C1 in parallel where safe, then C2 lock/start and C3 run/readout. Pull C4/C5 reliability work in bounded bundles; defer C6–C8 behavioral changes until the frozen study permits them.",
         "Review evidence weekly, serialize shared migrations/writer changes, record scope changes and publish each stage exit. Keep old closed issues and the September 5 issue snapshot as history."
       ],
       "acceptance": [
@@ -170,7 +170,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "October 6 review at a847e8f1: All 63 currently open issues and their literal acceptance clauses are reviewed; 85 campaign dependency/parent sets match the 88-node native acyclic graphs. S1 is closed 8/8 and S2 is carved out separately. Physical readiness, scientific lock, genuine pilot and reproducible final readout remain incomplete.",
+      "baseline": "October11 review: ROOT INCOMPLETE: C0 source/measurement repairs and historical S1 acceptances exist; current operational regressions#949/#964 prevent fresh qualification. Zero direct proof receipts, draws, assigned outcomes, freezes, exports or open exposures. Seven-issue S2 completion sprint is the next delivery boundary; C1–C3 and C4–C8 remaining goals are explicitly retained.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -186,10 +186,10 @@
       "owner_role": "Evidence/data lead",
       "parent": "775",
       "depends_on": [],
-      "what": "Produce a joined, source-stamped causal timeline for 2026-09-04 14:30\u201318:45 America/Denver and a bounded remediation or safe unresolved disposition.",
-      "why": "At 15:30 the public house average reached 100.48\u00b0F and 5.395 kPa. Fog, center mist and recorded flow were zero during 15:00\u201318:00 while fans/vent ran. The cause is unknown and matters before another wetting proof.",
+      "what": "Produce a joined, source-stamped causal timeline for 2026-09-04 14:30–18:45 America/Denver and a bounded remediation or safe unresolved disposition.",
+      "why": "At 15:30 the public house average reached 100.48°F and 5.395 kPa. Fog, center mist and recorded flow were zero during 15:00–18:00 while fans/vent ran. The cause is unknown and matters before another wetting proof.",
       "how": [
-        "Join raw climate, forecast vintage, commanded/actual equipment, requested\u2192sent\u2192confirmed plans, occupancy/manual actions, wetting admission/block reasons, water limits and counter reset epochs on UTC event time.",
+        "Join raw climate, forecast vintage, commanded/actual equipment, requested→sent→confirmed plans, occupancy/manual actions, wetting admission/block reasons, water limits and counter reset epochs on UTC event time.",
         "Test occupancy, leak, irrigation/fertilizer conflict, invalid time, hard-volume, soft-budget and vent-compatibility hypotheses against actual firmware guards; distinguish absence of telemetry from refusal to actuate.",
         "Reconstruct start/stop and recovery around 18:00; implement only the smallest demonstrated defect in a follow-up change under this issue, with a replayed regression. Do not raise a cap to explain a flat counter."
       ],
@@ -229,7 +229,7 @@
         "Update public generators, planner/MCP context and dashboards together; unavailable DLI, center sensing, gas and resource cost remain unavailable. Preserve old API fields only with explicit deprecation semantics."
       ],
       "acceptance": [
-        "A fixture with high attributable credit and low physical compliance stays distinct through SQL\u2192API\u2192public/planner rendering; no COALESCE renames one metric into the other.",
+        "A fixture with high attributable credit and low physical compliance stays distinct through SQL→API→public/planner rendering; no COALESCE renames one metric into the other.",
         "Hand-calculated band/distance and missing-sensor cases pass; true crop targets versus historical dispatched bands are identified, not assumed equal.",
         "Current-day and historical sample probes agree across consumers with versioned definitions; historical score changes are published as revisions, not silent rewrites."
       ],
@@ -262,7 +262,7 @@
       "how": [
         "Audit fn_band_trace in migration 119, band resolvers, registry entity slugs, units/grids and actual firmware consumers; separate desired from confirmed and bound observation freshness/generation.",
         "Add forward-compatible lineage fields and fixtures for pending/failed writes, stale snapshots, quantization, wrong units and real same-semantic drift.",
-        "Collect passive exact-source 48-field evidence for #749. If a consumed value cannot be observed, say unobservable and stop the proof; any diagnostic write belongs only to #641\u2019s bounded authorized work."
+        "Collect passive exact-source 48-field evidence for #749. If a consumed value cannot be observed, say unobservable and stop the proof; any diagnostic write belongs only to #641’s bounded authorized work."
       ],
       "acceptance": [
         "All relevant low/high/target series have documented source, unit, grid, timestamps and consumed/readback relationship.",
@@ -295,7 +295,7 @@
         "371"
       ],
       "what": "Reproduce the August stale/fresh comparison using exact 15-minute data with north/east/west fixed throughout, and quantify sensor, target, weather and delivery confounding.",
-      "why": "South disappears after August 2, before the August 6\u20139 stale-policy window. Omitting wetter south increases earlier mean VPD by 0.091 kPa overall and 0.190 at midday; this is not a correction to the nonlinear matched effect.",
+      "why": "South disappears after August 2, before the August 6–9 stale-policy window. Omitting wetter south increases earlier mean VPD by 0.091 kPa overall and 0.190 at midday; this is not a correction to the nonlinear matched effect.",
       "how": [
         "Freeze raw exports and input hashes; rebuild unique-minute bins, fixed-panel aggregates and crop-band distance on the original matched and eligible population.",
         "Repeat weather/time matching with common support diagnostics; stratify sensor composition, firmware, plan delivery and target versions, reporting unmatched/missing rows.",
@@ -311,7 +311,7 @@
         "research/planner-efficacy/tests",
         "docs/research"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -328,7 +328,7 @@
       "parent": "775",
       "depends_on": [],
       "what": "Repair forecast verification and downstream bias priors using the issued-at vintage, valid time, lead and observed outdoor temperature/RH-derived VPD.",
-      "why": "Migration 101 compares outdoor forecast VPD to indoor greenhouse VPD. Historical 0\u20136h bias was +1.453 kPa with that wrong reference versus +0.539 outdoors, contaminating planning priors.",
+      "why": "Migration 101 compares outdoor forecast VPD to indoor greenhouse VPD. Historical 0–6h bias was +1.453 kPa with that wrong reference versus +0.539 outdoors, contaminating planning priors.",
       "how": [
         "Trace forecast ingestion, accuracy views and gather-plan-context consumers; define as-of selection with no post-decision vintage leakage and unit-consistent outdoor truth.",
         "Ship a new migration and update bias/context consumers; model indoor response as a separate labeled outcome, never provider forecast error.",
@@ -345,7 +345,7 @@
         "scripts/gather-plan-context.sh",
         "research/planner-efficacy"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -362,7 +362,7 @@
       "parent": "775",
       "depends_on": [],
       "what": "Version the measured resource scope, attribution, uncertainty and eligibility required for any efficiency claim; keep heterogeneous runtime as a separate burden diagnostic.",
-      "why": "August 14\u2013September 4 water includes 68.7% ambiguous gallons and only 13/22 eligible days. Two-channel electricity is partial; modeled whole-equipment energy and gas/cost are not eligible. Score resource weight is zero.",
+      "why": "August 14–September 4 water includes 68.7% ambiguous gallons and only 13/22 eligible days. Two-channel electricity is partial; modeled whole-equipment energy and gas/cost are not eligible. Score resource weight is zero.",
       "how": [
         "Map each meter/counter/circuit to units, reset epochs, sampling boundary, attribution class and calibration. Separate climate wetting, irrigation/fertigation, manual use and unallocated flow.",
         "Reconcile accepted gallons = attributed + ambiguous + manual/unattributed; define commissioned per-stream and aggregate eligibility without filling gaps from model estimates.",
@@ -380,7 +380,7 @@
         "research/planner-efficacy/switchback/v2_outcomes.py",
         "scripts"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -414,7 +414,7 @@
         "docs/runbooks/experiment-rollout.md",
         "planning"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Live experiment counts:0 draws,0 assignment outcomes,0 freezes,0 exports,0 proof receipts,0 open exposures. Full physical qualification/design/readout program remains unfinished. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero random draws/assigned outcomes; prospective scientific choice, qualified proof, immutable lock and exactly one draw/launch remain incomplete. No launch authority follows from this review. Retained October6 assessment, not new execution: Live experiment counts:0 draws,0 assignment outcomes,0 freezes,0 exports,0 proof receipts,0 open exposures. Full physical qualification/design/readout program remains unfinished.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -435,7 +435,7 @@
       "how": [
         "Read current applied migration ledger, desired/running digests, writer generation, orphan attempt and Argo status through authorized evidence paths; do not apply historical known-good pins blindly.",
         "Reuse merged readiness/recovery/proof implementation and only relevant reviewed hunks from PR #776 and draft #774. Build an image only when its source context actually changes.",
-        "Run current packet \u2192 already-authorized bounded Gate R if needed \u2192 retire recovery authority \u2192 separate attended Gate P \u2192 retire proof authority. Preserve all failed attempt evidence."
+        "Run current packet → already-authorized bounded Gate R if needed → retire recovery authority → separate attended Gate P → retire proof authority. Preserve all failed attempt evidence."
       ],
       "acceptance": [
         "Fresh source/Argo/runtime/backup receipts replace old point-in-time assertions and identify any remaining mismatch.",
@@ -448,7 +448,7 @@
         "experiment_orchestrator/readiness.py",
         "experiment_orchestrator/launch_control.py"
       ],
-      "baseline": "October 6 review at a847e8f1: Production is Synced/Healthy, 26 workload image specifications match, all 16 long-running workloads Ready, smoke 9/9 and pinned fleet census exactly one writer. These restore service evidence, not complete integrated physical qualification; #749/#641 remain open.",
+      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Production is Synced/Healthy, 26 workload image specifications match, all 16 long-running workloads Ready, smoke 9/9 and pinned fleet census exactly one writer. These restore service evidence, not complete integrated physical qualification; #749/#641 remain open.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -481,7 +481,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -519,7 +519,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Native predecessors #424/#778/#949 are closed, but fresh south temperature/RH/VPD is absent while diagnostics still report four healthy probes. Physical/contributor/consumed-policy qualification remains incomplete. No Gate P receipt is claimed from a dependency graph.",
+      "baseline": "October11 review: INCOMPLETE: north/east/west raw telemetry is fresh; south is null while diagnostics say active_probe_count4/probe_healthOK. Current writer is halted and Argo degraded. Reopened#949 is a real native predecessor. Preserve honest three-probe degraded-pass semantics and actual safety/contributor/source-bound packet.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -540,12 +540,12 @@
         "639",
         "587"
       ],
-      "what": "Resolve retained orphan work without proof credit, then seal exactly one new baseline\u2192aggressive\u2192baseline physical proof under a fresh bounded Gate P decision.",
+      "what": "Resolve retained orphan work without proof credit, then seal exactly one new baseline→aggressive→baseline physical proof under a fresh bounded Gate P decision.",
       "why": "Merged recovery migrations and unit tests cannot establish actual sequential setter safety or two-epoch physical confirmation. Reusing an expired attempt would invalidate both safety and evidence.",
       "how": [
         "Inspect current ledger first; use the append-only forward recovery path for the exact orphan and retire Gate R authority immediately afterward.",
         "After fresh #749 proof readiness obtain the separate Gate P window, supervisor and rescue owner; perform only immutable typed commissioning work with exclusive writer and no generalized vector/OTA.",
-        "At every boundary require two distinct complete ingestion-owned full-48 epochs \u226530 seconds apart with strictly newer component timestamps, current generations and no rescue/override/cache mixing. Seal once and return safely off."
+        "At every boundary require two distinct complete ingestion-owned full-48 epochs ≥30 seconds apart with strictly newer component timestamps, current generations and no rescue/override/cache mixing. Seal once and return safely off."
       ],
       "acceptance": [
         "Recovery retains predecessor failures, creates no nonbaseline exposure and earns no proof credit.",
@@ -559,7 +559,7 @@
         "deploy/k8s",
         "docs/runbooks/attended-convergence.md"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Live proof receipt count0. Retained controller recovery/C1 restoration is not a sealed baseline\u2192aggressive\u2192baseline GateP proof. Draft#855 remains unmerged; physical readiness and separate exact authority stay unfulfilled. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Live proof receipt count0. Retained controller recovery/C1 restoration is not a sealed baseline→aggressive→baseline GateP proof. Draft#855 remains unmerged; physical readiness and separate exact authority stay unfulfilled.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Gate R was already authorized, subject to exact current bounded recovery binding. Gate P requires a separate fresh attended authorization; neither grants randomization or day-1 launch."
@@ -595,7 +595,7 @@
         "tests",
         "research/planner-efficacy"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Retained C1 original callback/full48 evidence is not full lifecycle/executor failure/recovery/restored randomized qualification. Current proof receipts0; no execution/fault matrix was rerun. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Retained C1 original callback/full48 evidence is not full lifecycle/executor failure/recovery/restored randomized qualification. Current proof receipts0; no execution/fault matrix was rerun.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -630,7 +630,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Experiment services are Ready but all live draw/outcome/freeze/export/proof/exposure counts remain zero. Disabled deployment does not prove complete fault, kill/disable, recovery, alert routing and rollback qualification.",
+      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Experiment services are Ready but all live draw/outcome/freeze/export/proof/exposure counts remain zero. Disabled deployment does not prove complete fault, kill/disable, recovery, alert routing and rollback qualification.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -652,17 +652,17 @@
         "resource_contract"
       ],
       "what": "Reconcile the accepted underpowered pilot with the measured endpoint, fixed sensor/target panel, actual 18-hour outcome window and an appropriate pre-draw season/calendar.",
-      "why": "The current basis starts November 2 for cooling/wetting treatments. Modeled joint advance power is 0.13776; the model scales 22 hours while outcomes use 06:00\u201324:00, assumes admission/completeness and lacks actual selector replay.",
+      "why": "The current basis starts November 2 for cooling/wetting treatments. Modeled joint advance power is 0.13776; the model scales 22 hours while outcomes use 06:00–24:00, assumes admission/completeness and lacks actual selector replay.",
       "how": [
-        "Default to the already accepted 30-pair/60-local-day exploratory pilot unless a separately justified redesign is chosen before lock. Explicitly distinguish climate noninferiority (+0.05 kPa/+0.50\u00b0F current margins) from improvement and runtime burden from metered savings.",
+        "Default to the already accepted 30-pair/60-local-day exploratory pilot unless a separately justified redesign is chosen before lock. Explicitly distinguish climate noninferiority (+0.05 kPa/+0.50°F current margins) from improvement and runtime burden from metered savings.",
         "Replay the exact frozen selector context/profile choices on eligible pretrial fixed-panel days; estimate admission/fallback, 18-hour endpoint variance/covariance, carryover, pair completeness and joint power across prespecified effect sizes.",
         "Choose a defensible future seasonal window before draw, with explicit timezone/DST handling, or document a narrow winter pilot question. Update source/template/basis/analyzer goldens coherently; never silently bypass the current date guard or mutate a locked design.",
         "Preregister all assigned-day ITT, null/bounds/inconclusive rules, outcome windows, resource scope, target/sensor revisions, safety thresholds, stopping and one-way reveal. Keep 150-pair/300-day projections illustrative, not a season-mixing recommendation."
       ],
       "acceptance": [
         "An explicit decision document chooses pilot versus confirmatory scope and states exactly which claim can be tested with current meters.",
-        "Power replay is reproducible; include .99^30 \u2248 .740 and .95^30 \u2248 .215 all-pairs retention sensitivities rather than assuming .9995 reliability.",
-        "Calendar is future and seasonally justified; 06:00\u201324:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.",
+        "Power replay is reproducible; include .99^30 ≈ .740 and .95^30 ≈ .215 all-pairs retention sensitivities rather than assuming .9995 reliability.",
+        "Calendar is future and seasonally justified; 06:00–24:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.",
         "No draw has occurred before design approval/qualification; model is current source-pinned Luna/medium, not stale Sol issue prose."
       ],
       "paths": [
@@ -672,7 +672,7 @@
         "research/planner-efficacy/switchback/v2_analysis.py",
         "research/planner-efficacy/switchback/v2_selector.py"
       ],
-      "baseline": "October 6 review at a847e8f1: Closed #371/#779/#780/#781 clear recorded predecessors. Warm June 1\u2013July 30, 2027, 30-pair/60-day pre-draw contract is preparation, not design lock. Physical target/contributor qualification, empirical covariance and joint power remain absent. Historical v1 candidate is superseded by v2, not a current date conflict.",
+      "baseline": "October11 review: INCOMPLETE: data-truth predecessors have historical accepted receipts, but qualified physical targets/contributors, empirical covariance/joint power, exact endpoint window and prospective seasonal choice remain unaccepted. No draw/assignment exists; choose the justified season/question before lock.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -680,7 +680,7 @@
     {
       "key": "integration",
       "issue_number": 783,
-      "title": "Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
+      "title": "Prove restore → selector → setter schema → receipt → frozen outcome end to end",
       "stage": "C1",
       "kind": "task",
       "priority": "P0",
@@ -712,7 +712,7 @@
         "db/migrations/tests",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Synthetic fixture reproducibility is separate from genuine current-login whole-path freezer/export acceptance. #782/#639/#587 remain open. Do not mutate the clocks of genuine SOURCE/A/B rehearsals or substitute fixture bytes for real qualification.",
+      "baseline": "October11 review: INCOMPLETE: real current restored-DB selector→setter schema→receipt→freezer→export→analyzer qualification still lacks an accepted whole-path receipt. Fixtures and separate reseals do not substitute; retain #782/#639/#587 native predecessors.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -750,7 +750,7 @@
         "research/planner-efficacy/switchback/v2_randomization.py",
         "research/planner-efficacy/protocols"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Live randomization count0. No current scientific lock/draw is complete;#782/#783/#641 remain open. Do not finalize or recreate a draw from preparation. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero random draws/assigned outcomes; prospective scientific choice, qualified proof, immutable lock and exactly one draw/launch remain incomplete. No launch authority follows from this review. Retained October6 assessment, not new execution: Live randomization count0. No current scientific lock/draw is complete;#782/#783/#641 remain open. Do not finalize or recreate a draw from preparation.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -786,7 +786,7 @@
         "ingestor/tasks/component_experiment.py",
         "docs/runbooks/experiment-rollout.md"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No locked draw or live randomized assignment. Exact launch/observed physical target/exposure/freezer/rollback acceptance remains downstream; no launch performed. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero random draws/assigned outcomes; prospective scientific choice, qualified proof, immutable lock and exactly one draw/launch remain incomplete. No launch authority follows from this review. Retained October6 assessment, not new execution: No locked draw or live randomized assignment. Exact launch/observed physical target/exposure/freezer/rollback acceptance remains downstream; no launch performed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "One separate exact randomized-launch authorization after lock/draw. No authority is inferred from planning approval, issue state, a merge or the physical-proof window."
@@ -807,8 +807,8 @@
       "what": "Verify real post-start daily materialization and export integrity without reveal, using the scientific contract qualified before lock.",
       "why": "This is a post-start acceptance task, not a circular launch dependency. Exposure-conditioned filtering or silently dropping a failed day would bias the causal comparison.",
       "how": [
-        "Emit one row for every assigned local 06:00\u201324:00 day including fallback/rescue/failure/zero-exposure/null; keep exposure union strictly a fidelity/per-protocol diagnostic.",
-        "Apply the locked unique-minute\u219215-minute climate rule (current 12/15 slots, 66/72 bins and max 30-minute gap unless prospectively revised), fixed panel/targets and per-stream resource definitions.",
+        "Emit one row for every assigned local 06:00–24:00 day including fallback/rescue/failure/zero-exposure/null; keep exposure union strictly a fidelity/per-protocol diagnostic.",
+        "Apply the locked unique-minute→15-minute climate rule (current 12/15 slots, 66/72 bins and max 30-minute gap unless prospectively revised), fixed panel/targets and per-stream resource definitions.",
         "Validate at-or-before-06:00 state seed and counter segment/reset boundaries; integrate counters over their exact sample interval, not a different full outcome window. Freeze blinded export with relational revision/work lineage."
       ],
       "acceptance": [
@@ -823,7 +823,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Live assigned outcomes/freezes/exports are0. No first randomized assigned day exists to freeze; synthetic source fixtures are not observed ITT outcomes. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero assignments/freezes/exports. Every genuine assigned day must survive ITT, including null/failure/rescue. Full retained pilot takes60 local days; final blinded freeze/reveal/reproduction cannot fit a short engineering sprint. Retained October6 assessment, not new execution: Live assigned outcomes/freezes/exports are0. No first randomized assigned day exists to freeze; synthetic source fixtures are not observed ITT outcomes.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -859,7 +859,7 @@
         "docs/runbooks/experiment-rollout.md",
         "research/planner-efficacy/switchback/v2_day1_export.py"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): 0 live assignment outcomes/freezes/exports. No genuine blinded60-day pilot can be operated/accounted for yet; every eventual failed/null/fallback day must remain assigned. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero assignments/freezes/exports. Every genuine assigned day must survive ITT, including null/failure/rescue. Full retained pilot takes60 local days; final blinded freeze/reveal/reproduction cannot fit a short engineering sprint. Retained October6 assessment, not new execution: 0 live assignment outcomes/freezes/exports. No genuine blinded60-day pilot can be operated/accounted for yet; every eventual failed/null/fallback day must remain assigned.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -895,7 +895,7 @@
         "docs/research",
         "site"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No genuine pilot export/reveal/readout exists. A reproducible final adverse/no-benefit/inconclusive decision remains downstream; source fixtures are not efficacy. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Zero assignments/freezes/exports. Every genuine assigned day must survive ITT, including null/failure/rescue. Full retained pilot takes60 local days; final blinded freeze/reveal/reproduction cannot fit a short engineering sprint. Retained October6 assessment, not new execution: No genuine pilot export/reveal/readout exists. A reproducible final adverse/no-benefit/inconclusive decision remains downstream; source fixtures are not efficacy.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -910,12 +910,14 @@
       "effort": "L",
       "owner_role": "Platform lead",
       "parent": "775",
-      "depends_on": [],
+      "depends_on": [
+        "964"
+      ],
       "what": "Make Verdify validation, affected-image production, pin promotion and final Argo/runtime adoption diagnosable and immutable without duplicating fleet primitives.",
       "why": "Older CI receipts were absent/opaque and builders/promoters were not cleanly separated. Docs, tests and activation-only changes should not rebuild every application image.",
       "how": [
         "Rebaseline the owning jvallery/agents#4014 contract and the eight generated image profiles; implement common changes in their owning registry, not the managed .agent-fleet/ci.yaml mirror.",
-        "Classify actual COPY/runtime inputs: top-level planning/docs and tests/pins validate without application rebuilds, but docs/ is an ingestor RAG/playbook input and site/docs is publisher input. Build only affected profiles through Kaniko/Zot and bind source\u2192digest\u2192promotion\u2192Argo\u2192running image; metadata-only Git SHA changes do not require rebuilding every image.",
+        "Classify actual COPY/runtime inputs: top-level planning/docs and tests/pins validate without application rebuilds, but docs/ is an ingestor RAG/playbook input and site/docs is publisher input. Build only affected profiles through Kaniko/Zot and bind source→digest→promotion→Argo→running image; metadata-only Git SHA changes do not require rebuilding every image.",
         "Exercise success, source failure, infrastructure failure, cancel, missing receipt, retry and concurrent promotion. Add required checks/review protection only after the stable status producer passes its reliability matrix."
       ],
       "acceptance": [
@@ -929,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October 6 review at a847e8f1: Source-only promotion receipts exist. Whole path-impact, exact-SHA staging/build/promotion, authority separation, retry and durable runtime identity matrix remain open. Coordinate the bounded Verdify integration in agents#4014; do not make this sprint require closing the entire fleet umbrella.",
+      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -963,7 +965,7 @@
         "Makefile",
         ".agent-fleet/ci.yaml"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -997,7 +999,7 @@
         "Makefile",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Tools and generated CI contract exist; current portable toolchain, clean real compile and least-authority delivery matrix remain unqualified. No generated fleet contract was hand-edited.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Tools and generated CI contract exist; current portable toolchain, clean real compile and least-authority delivery matrix remain unqualified. No generated fleet contract was hand-edited.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1034,7 +1036,7 @@
         "tests",
         ".agent-fleet/ci.yaml"
       ],
-      "baseline": "October 6 review at a847e8f1: Declared fleet compile/negative-fixture steps exist, and firmware input tree is unchanged from the previously reviewed source. A declaration and green native C++ tests are not executed ESPHome evidence: retained CI output lacks the full secretless compile receipt. Keep portable positive/negative acceptance open.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Declared fleet compile/negative-fixture steps exist, and firmware input tree is unchanged from the previously reviewed source. A declaration and green native C++ tests are not executed ESPHome evidence: retained CI output lacks the full secretless compile receipt. Keep portable positive/negative acceptance open.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1072,7 +1074,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Controller is2026.10.2.0637.620a218a-wifi-bound with fresh diagnostic/runtime data. Exact accepted binary floor and the whole negative release/runtime/recovery matrix are not proved by this scan or prior compile; no last-good promotion/OTA. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Controller is2026.10.2.0637.620a218a-wifi-bound with fresh diagnostic/runtime data. Exact accepted binary floor and the whole negative release/runtime/recovery matrix are not proved by this scan or prior compile; no last-good promotion/OTA.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1098,7 +1100,7 @@
       "acceptance": [
         "Requested/queued/sent/failed/cancelled/superseded/confirmed states match physical completion, never cache intent.",
         "Periodic work is not later than twice its intended cadence during writes; no repeated broad restore storm occurs.",
-        "Experiment qualification consumes the narrow #639/#749 evidence without waiting for unrelated firmware simplification; full closure requires this issue\u2019s broader receipt."
+        "Experiment qualification consumes the narrow #639/#749 evidence without waiting for unrelated firmware simplification; full closure requires this issue’s broader receipt."
       ],
       "paths": [
         "ingestor",
@@ -1106,7 +1108,7 @@
         "tests",
         "docs/reviews/firmware-simplification-proposal-2026-07-06.md"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1124,7 +1126,7 @@
       "depends_on": [
         "433"
       ],
-      "what": "Finish fault recovery, terminal required-plan accounting and effective-plan validity for the operational Hermes\u2192MCP path, without adding a second planner writer.",
+      "what": "Finish fault recovery, terminal required-plan accounting and effective-plan validity for the operational Hermes→MCP path, without adding a second planner writer.",
       "why": "September 5 routine planner health is good; older permanent-outage claims are stale. The remaining risk is green transport probes hiding unusable tools, dead workers or a trigger ending in acknowledgement instead of a full plan.",
       "how": [
         "Exercise missing MCP tools, DNS/refusal/prolonged outage and recovery with bounded backoff; record terminal action/status/time/correlation before SLA evaluation.",
@@ -1144,7 +1146,7 @@
         "tests",
         "deploy/k8s/components/planner"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1178,7 +1180,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: S1 closed eight bounded children. Both authenticated Grafana probes are now up; source-to-live and one-writer receipts pass. Six missing Iris skill lookups remain. Monitoring umbrella still requires its broader fault/delivery acceptance.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: S1 closed eight bounded children. Both authenticated Grafana probes are now up; source-to-live and one-writer receipts pass. Six missing Iris skill lookups remain. Monitoring umbrella still requires its broader fault/delivery acceptance.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1194,7 +1196,7 @@
       "owner_role": "Platform lead",
       "parent": "75",
       "depends_on": [],
-      "what": "Document and guard the estate\u2019s actual rule-loading mechanism so a green render cannot silently ship inert alerts.",
+      "what": "Document and guard the estate’s actual rule-loading mechanism so a green render cannot silently ship inert alerts.",
       "why": "Prometheus loads rule files from observability/prometheus-rules; a PrometheusRule CR in Verdify overlays is not selected by the current monitoring stack.",
       "how": [
         "Verify current owning monitoring configuration before implementation and link the source contract, not a historical assumption.",
@@ -1212,7 +1214,7 @@
         "scripts",
         "docs"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1248,7 +1250,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1285,7 +1287,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1319,7 +1321,7 @@
         "deploy/k8s",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1353,7 +1355,7 @@
         "tests",
         "deploy/k8s"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1387,7 +1389,7 @@
         "firmware/test",
         "Makefile"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Retained handoff reports real outdoor replay corpus still lacksHUMIDIFY coverage. Live outdoor/forecast values are fresh but do not prove corpus fresh/stale branches, no future leakage and known-good replay qualification. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Retained handoff reports real outdoor replay corpus still lacksHUMIDIFY coverage. Live outdoor/forecast values are fresh but do not prove corpus fresh/stale branches, no future leakage and known-good replay qualification.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1423,7 +1425,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Current lights reportOFF in latest equipment events. Historical exact outside-window source receipt remains partial; no eligible solar transition/minimum-on timing is forced or proved. Interior PAR/DLI remains absent. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Current lights reportOFF in latest equipment events. Historical exact outside-window source receipt remains partial; no eligible solar transition/minimum-on timing is forced or proved. Interior PAR/DLI remains absent.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1457,7 +1459,7 @@
         "docs/runbooks",
         "scripts"
       ],
-      "baseline": "October 6 review at a847e8f1: Latest paired backup succeeded, but current rehearsal ledgers stop at 270 versus production 274. Source/A/B whole-policy parity remains unqualified after the retained 120.554741-second timeout. S2 targets recovery, durable ingest and runtime-role proof; no production database cutover.",
+      "baseline": "October11 review: Current backups and healthy CNPG replicas do not establish full restore/PITR/failover/parity, buffer survival or role rollback. Production remains original StatefulSet; no cutover occurred. Retained October6 assessment, not new execution: Latest paired backup succeeded, but current rehearsal ledgers stop at 270 versus production 274. Source/A/B whole-policy parity remains unqualified after the retained 120.554741-second timeout. S2 targets recovery, durable ingest and runtime-role proof; no production database cutover.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1477,7 +1479,7 @@
       "why": "pg_dump alone omits cluster globals; the current rehearsal seeds roles in-script and can pass without proving the actual disaster-recovery artifact is sufficient.",
       "how": [
         "Choose a declarative role manifest or password-free globals export (for example --no-role-passwords) with database ownership and memberships; never publish password hashes or Secret annotations.",
-        "Store versioned checksums/metadata alongside the dump, and make rehearsal consume those real artifacts in cluster\u2192roles\u2192database owner\u2192restore\u2192migrations order.",
+        "Store versioned checksums/metadata alongside the dump, and make rehearsal consume those real artifacts in cluster→roles→database owner→restore→migrations order.",
         "Assert intended bounded grants after restore and document runtime credentials are re-established separately through the authorized mechanism, not from dumped secrets."
       ],
       "acceptance": [
@@ -1491,7 +1493,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1527,7 +1529,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1561,7 +1563,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 6 review at a847e8f1: Production retains the ingestor state PVC and existing buffered-event implementation. Full accepted-event restart/node-loss, capacity, backlog, format and recovery-time matrix remains unproved. S2 will qualify and fix the implementation rather than rebuild working storage.",
+      "baseline": "October11 review: PARTIAL: durable spool source, historical3000-event restart/node-loss witness, format/capacity tests and actual warning/clear receipts are published. Final-image committed seven-phase replay/crash/conflict, exact inverse and full data/sequence/study reseal remain unaccepted. Running ingestor differs from desired pin; qualify exact adopted source without fabricated confirmation.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1597,7 +1599,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October 6 review at a847e8f1: Three CNPG clusters are 3/3 Ready on digest-pinned TimescaleDB and current Longhorn storage. Actual verdify_rehearsal ledgers max at migration 270 while production is 274. Historical PITR is retained; complete current restore/parity/PITR/failover/rollback packet is missing. Full parity query was not rerun or weakened.",
+      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1633,7 +1635,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October 6 review at a847e8f1: Production remains verdify-db-0. All three rehearsal clusters are healthy but at migration 270, four behind production. Complete parity, writer fencing, cutover packet and post-cutover bake are unproved. S2 does not authorize a cutover.",
+      "baseline": "October11 review: Current backups and healthy CNPG replicas do not establish full restore/PITR/failover/parity, buffer survival or role rollback. Production remains original StatefulSet; no cutover occurred. Retained October6 assessment, not new execution: Production remains verdify-db-0. All three rehearsal clusters are healthy but at migration 270, four behind production. Complete parity, writer fencing, cutover packet and post-cutover bake are unproved. S2 does not authorize a cutover.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Separate exact live DB cutover/retirement window after #396 parity and recovery evidence; no imperative scale/host flip inferred from this plan."
@@ -1651,7 +1653,7 @@
       "depends_on": [
         "670"
       ],
-      "what": "Remove schema-owner credentials from normal workloads and prove narrowly bounded runtime roles without weakening the study\u2019s minimum integrity contract.",
+      "what": "Remove schema-owner credentials from normal workloads and prove narrowly bounded runtime roles without weakening the study’s minimum integrity contract.",
       "why": "Randomizer/lifecycle/executor/freezer/blinded-analyst separation is already a launch requirement in #integration; broader platform role separation remains useful but must not become a duplicate launch gate.",
       "how": [
         "Inventory real workload duties and grants using metadata-only authorized evidence; design migration, API, ingestor, planner/context, MCP and optional twin roles.",
@@ -1669,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Role implementation is landed. Metadata confirms nine ordinary runtime group/login pairs without superuser, bypassrls, createdb or createrole. Prior API/MCP/ingestor TCP receipts are bounded; all actual current runtime login allow/deny cases and rollback remain unproved. Do not infer from Ready pods.",
+      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1703,7 +1705,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Current exact-ID query: 61 historical suppressed sensor_offline rows remain unresolved. Require original ID list, narrow cleanup, idempotency and reversal; raw/canonical counts are not acceptance.",
+      "baseline": "October11 review: ACCEPTED bounded cleanup: all 61 reviewed IDs remain suppressed sensor_offline, resolved by s2_49_historical_suppressed; resolution hashes unchanged. Published apply/second-run/reversal and active-membership receipts satisfy all three clauses. No runtime deployment belongs to this maintenance-only completion. Unrelated Argo failure is #964.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1737,7 +1739,7 @@
         "research/planner-efficacy",
         "planning"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Current API separates legacy binary diagnostics from credit but physically qualified target evidence is unavailable. No tuning/AI safety delegation is justified by this audit. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Current API separates legacy binary diagnostics from credit but physically qualified target evidence is unavailable. No tuning/AI safety delegation is justified by this audit.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1753,8 +1755,8 @@
       "owner_role": "Control lead",
       "parent": "359",
       "depends_on": [],
-      "what": "Reduce on-chip entity/churn/heap load in independently reversible, behavior-preserving tiers without destroying the current experiment\u2019s raw readback contract.",
-      "why": "Historical 612 entities, constant tunable echoes and 3\u20138 KB heap motivate simplification, but projected 38\u201344 KB recovery is not a verified result. Replacing all readbacks with one hash now would break full-48 confirmation.",
+      "what": "Reduce on-chip entity/churn/heap load in independently reversible, behavior-preserving tiers without destroying the current experiment’s raw readback contract.",
+      "why": "Historical 612 entities, constant tunable echoes and 3–8 KB heap motivate simplification, but projected 38–44 KB recovery is not a verified result. Replacing all readbacks with one hash now would break full-48 confirmation.",
       "how": [
         "Measure current entity/publish/write volume and heap after #433 before choosing further tiers.",
         "Use #369 to remove truly unused/static surface only after consumer inventory; preserve deterministic FSM, NVS/reboot safety, guardrails and all required current observation fields.",
@@ -1771,7 +1773,7 @@
         "ingestor",
         "verdify_schemas"
       ],
-      "baseline": "October 6 review at a847e8f1: Closed #433 and #949 keep their scoped acceptance. Current bounded ingestor log has zero broad-restore holds; this does not prove broad firmware simplification savings or all tier reductions.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Closed #433 and #949 keep their scoped acceptance. Current bounded ingestor log has zero broad-restore holds; this does not prove broad firmware simplification savings or all tier reductions.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1807,7 +1809,7 @@
         "docs/reviews",
         "scripts"
       ],
-      "baseline": "October 6 review at a847e8f1: Current uptime is 307929 seconds and heap is about 61.21 KiB (published heap_bytes column contains KiB). Retained minimum 2.336 KiB is historical. Full worst-load, fragmentation and accepted rollback-floor qualification remains incomplete; no reset cause inferred.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Current uptime is 307929 seconds and heap is about 61.21 KiB (published heap_bytes column contains KiB). Retained minimum 2.336 KiB is historical. Full worst-load, fragmentation and accepted rollback-floor qualification remains incomplete; no reset cause inferred.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1843,7 +1845,7 @@
         "verdify_schemas",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Fresh raw north/east/west have values while south is missing; diagnostics report4/OK. This contradiction remains real. Shared validity/jump/flatline semantics and firmware-qualified consumer behavior are incomplete. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Fresh raw north/east/west have values while south is missing; diagnostics report4/OK. This contradiction remains real. Shared validity/jump/flatline semantics and firmware-qualified consumer behavior are incomplete.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1878,7 +1880,7 @@
         "firmware/test",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No unified dwell release, observed parity/chatter/starvation receipt or current OTA acceptance exists. Prior comments deferred this broad consolidation; preserve existing safety floors. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: No unified dwell release, observed parity/chatter/starvation receipt or current OTA acceptance exists. Prior comments deferred this broad consolidation; preserve existing safety floors.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1915,7 +1917,7 @@
         "firmware/greenhouse",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Pure conflict/origin arbitration preparation is not exhaustive real relay/reset/partial-delivery and current firmware-release proof. No control rewrite was made. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Pure conflict/origin arbitration preparation is not exhaustive real relay/reset/partial-delivery and current firmware-release proof. No control rewrite was made.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1937,7 +1939,7 @@
       "what": "Consolidate the surviving cleanup from closed #300/#326 into one evidence-backed purge with net-negative unused surface.",
       "why": "Stale registry entries and static echoed entities cost memory and traffic, but deleting fields still used for current receipt or safety contracts would be a regression.",
       "how": [
-        "Build a registry\u2192dispatcher\u2192wire\u2192firmware consumer\u2192readback\u2192public/twin/experiment matrix and classify unused/static/dynamic/locked fields.",
+        "Build a registry→dispatcher→wire→firmware consumer→readback→public/twin/experiment matrix and classify unused/static/dynamic/locked fields.",
         "Remove only proven dead paths or compile-time-static fields with compatible schema/deprecation handling and generated drift tests.",
         "Measure LOC/entity/heap/publish changes; preserve full-48 observation requirements until an independently qualified successor protocol replaces them."
       ],
@@ -1953,7 +1955,7 @@
         "scripts",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No verified complete live-consumer removal inventory or measured code/entity reduction is established. Defer removals until exact consumer and release evidence. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: No verified complete live-consumer removal inventory or measured code/entity reduction is established. Defer removals until exact consumer and release evidence.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1991,7 +1993,7 @@
         "api",
         "firmware"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Compatible zonal/source fields are preparation. Complete per-zone/legacy round-trip, drift guards and separate future consumer decision remain unverified; absent center sensing stays unavailable. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Compatible zonal/source fields are preparation. Complete per-zone/legacy round-trip, drift guards and separate future consumer decision remain unverified; absent center sensing stays unavailable.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2015,11 +2017,11 @@
       "why": "Projected gain, a fixed clock window and a few favorable nights cannot establish reliable greenhouse-wide dry-out or justify a Vanda watering program.",
       "how": [
         "Verify current DB/device/Python solar parity, then join sunset-to-sunrise eligibility, outdoor absolute-humidity advantage, admission/stop reasons, indoor response and vent/fan/heat duty.",
-        "Compute realized 10\u201320-minute response with completeness/confounder flags, minimum temperature and local safety evidence.",
+        "Compute realized 10–20-minute response with completeness/confounder flags, minimum temperature and local safety evidence.",
         "Keep heat2 forbidden and existing wind/dwell/temperature safeguards; any response change becomes a separately scoped evidence-led firmware proposal."
       ],
       "acceptance": [
-        "Episodes use device solar semantics, never fixed 02:00\u201306:00, and incomplete/confounded episodes cannot be PASS.",
+        "Episodes use device solar semantics, never fixed 02:00–06:00, and incomplete/confounded episodes cannot be PASS.",
         "Solar-day held-temperature admission is zero while ordinary daytime dehumidification remains correctly distinguished.",
         "Planner/MCP sees realized validity-bearing outcomes and explicit disposition, not a universal VPD target or a crop-safety claim without sensing."
       ],
@@ -2030,7 +2032,7 @@
         "mcp",
         "scripts"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Latest24h actions includeHEAT,IDLE,DEHUM_VENT and wet assists. This aggregation does not prove solar-night episodes, response and zero solar-day held-temperature admission; retain realized-episode acceptance rather than fixed-clock/night PASS. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Latest24h actions includeHEAT,IDLE,DEHUM_VENT and wet assists. This aggregation does not prove solar-night episodes, response and zero solar-day held-temperature admission; retain realized-episode acceptance rather than fixed-clock/night PASS.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2067,7 +2069,7 @@
         "verdify_schemas",
         "firmware"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No completed pilot/readout exists and physical target evidence is unqualified. Keep corridor-width decisions dependent on fixed-target realized evidence, with no retrospective endpoint retune. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: No completed pilot/readout exists and physical target evidence is unqualified. Keep corridor-width decisions dependent on fixed-target realized evidence, with no retrospective endpoint retune.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2104,7 +2106,7 @@
         "research/planner-efficacy",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No anchor retune performed. Band/solar lineage and measured corridor/readout predecessors remain open; future bounded safety/readback/rollback acceptance remains deferred. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: No anchor retune performed. Band/solar lineage and measured corridor/readout predecessors remain open; future bounded safety/readback/rollback acceptance remains deferred.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2112,7 +2114,7 @@
     {
       "key": "214",
       "issue_number": 214,
-      "title": "Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
+      "title": "Prove crop-deviation trigger → valid plan on the sole operational planner path",
       "stage": "C6",
       "kind": "task",
       "priority": "P1",
@@ -2127,7 +2129,7 @@
       "why": "Historical trigger detection existed while gather_context/action delivery failed. A green planner or acknowledged trigger does not prove a new effective full plan.",
       "how": [
         "Rebaseline current deviation detection and active Hermes/MCP context gather; remove any remaining active Docker-shell failure reporting.",
-        "Inject bounded non-actuating deviation fixtures and then observe an eligible real deviation through correlated context\u2192full plan/fallback\u2192effective validity\u2192ingestor evidence.",
+        "Inject bounded non-actuating deviation fixtures and then observe an eligible real deviation through correlated context→full plan/fallback→effective validity→ingestor evidence.",
         "Keep deterministic forecast actions and AI proposals distinct; ordinary proposals remain shadow-only when the experiment owns fields."
       ],
       "acceptance": [
@@ -2142,7 +2144,7 @@
         "mcp",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2177,7 +2179,7 @@
         "db",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Irrigation physical/chemistry feedback remains uncommissioned. Center-only climate/wall-only fertilizer/source stop safety are distinct from physical delivery and accepted crop/substrate protection. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Irrigation physical/chemistry feedback remains uncommissioned. Center-only climate/wall-only fertilizer/source stop safety are distinct from physical delivery and accepted crop/substrate protection.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2215,7 +2217,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No current all-origin reverse-conflict/plumbing/calibration/duplicate-dose physical release acceptance exists. Missing chemistry/soil calibration blocks feed; no center non-climate or non-wall fertilization is authorized. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: No current all-origin reverse-conflict/plumbing/calibration/duplicate-dose physical release acceptance exists. Missing chemistry/soil calibration blocks feed; no center non-climate or non-wall fertilization is authorized.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2250,7 +2252,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Existing center re-fire protection is preserved; current routing/reset/re-fire preservation and release receipt are not proved by this telemetry scan. Historical live protection is not a current topology release qualification. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Existing center re-fire protection is preserved; current routing/reset/re-fire preservation and release receipt are not proved by this telemetry scan. Historical live protection is not a current topology release qualification.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2278,7 +2280,7 @@
       ],
       "acceptance": [
         "Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.",
-        "One eligible saturated zone\u2019s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
+        "One eligible saturated zone’s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
         "No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement."
       ],
       "paths": [
@@ -2287,7 +2289,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Fresh soil target rows remain Canna Lily/Canna Lily/Unknown with saturation80/80/75. Alert-only preparation is separate from commissioned persistence/hysteresis and actual eligible skipped drip. No threshold/actuation change. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Fresh soil target rows remain Canna Lily/Canna Lily/Unknown with saturation80/80/75. Alert-only preparation is separate from commissioned persistence/hysteresis and actual eligible skipped drip. No threshold/actuation change.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2324,7 +2326,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Feedback inputs are uncommissioned and south channels zero. Existing source/preparation does not justify firmware feedback enablement; a measured no-build or independently qualified implementation decision remains open. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: No control tuning, irrigation actuation or OTA was performed. Source/native/replay/compile and physical topology/cycle/crop evidence named by each clause remain required; do not infer safety/resource benefit from a connected controller. Retained October6 assessment, not new execution: Feedback inputs are uncommissioned and south channels zero. Existing source/preparation does not justify firmware feedback enablement; a measured no-build or independently qualified implementation decision remains open.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2358,7 +2360,7 @@
         "docs",
         "planning"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Physical inventory/commissioning remains deferred. Missing south, hydro, interior-light and chemistry channels remain unavailable; no installation/physical acceptance was performed. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Physical inventory/commissioning remains deferred. Missing south, hydro, interior-light and chemistry channels remain unavailable; no installation/physical acceptance was performed.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2392,7 +2394,7 @@
         "ingestor",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Seven-day south temperature/RH/VPD coverage is zero; hydro chemistry is not fresh, and south soil moisture/EC stay zero. Firmware diagnostics still report four/OK. Replacement, reference calibration and truthful contributor repair remain incomplete.",
+      "baseline": "October11 review: PHYSICAL GAP: south climate triplet remains null; hydro chemistry and interior PAR/DLI are unavailable. No replacement, calibrated physical test or independent plumbing observation was performed. Firmware four/OK is not physical acceptance.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2411,7 +2413,7 @@
       "what": "Create an operator-verified per-position map for lime tree, cannabis, hydro pot and unassigned SEN0600, replacing stale crop/probe assumptions.",
       "why": "The old topology and soil thresholds were two generations stale; a historical stuck-zero diagnosis may not describe a probe now moved into different media.",
       "how": [
-        "Observe actual positions and plumbing, verify sensor IDs/live series and ask for the unassigned probe\u2019s intended location only when the physical target remains genuinely unknown.",
+        "Observe actual positions and plumbing, verify sensor IDs/live series and ask for the unassigned probe’s intended location only when the physical target remains genuinely unknown.",
         "Extend the zone import contract to per-position records and version sensor_registry/zones/seed provenance with a forward migration.",
         "Document hydro/substrate-specific calibration and re-diagnose south soil probe contact separately from the failed south air probe in #751."
       ],
@@ -2426,7 +2428,7 @@
         "db/migrations",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Live soil seeds still retain Canna Lily/Unknown names and remote telemetry cannot establish physical crop/substrate/probe positions. Actual operator inventory remains the predecessor for threshold commissioning. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Live soil seeds still retain Canna Lily/Unknown names and remote telemetry cannot establish physical crop/substrate/probe positions. Actual operator inventory remains the predecessor for threshold commissioning.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2462,7 +2464,7 @@
         "scripts",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Fresh database retains original three target seeds80/80/75 and Canna Lily/Canna Lily/Unknown. No commissioned crop/substrate replacement, before/after/reversal receipt exists; never activate seeds as calibration truth. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Fresh database retains original three target seeds80/80/75 and Canna Lily/Canna Lily/Unknown. No commissioned crop/substrate replacement, before/after/reversal receipt exists; never activate seeds as calibration truth.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2499,7 +2501,7 @@
         "config",
         "Makefile"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Seven-day audit: no input/runoff pH/EC; south soil channels are entirely zero. Calibration and topology remain uncommissioned. Nonzero west moisture does not establish validity. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Seven-day audit: no input/runoff pH/EC; south soil channels are entirely zero. Calibration and topology remain uncommissioned. Nonzero west moisture does not establish validity.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2532,7 +2534,7 @@
         "firmware/greenhouse/globals.yaml",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Current CO2 is about 3067 ppm. Reference-pair calibration and tolerance evidence are absent; preserve uncalibrated status.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Current CO2 is about 3067 ppm. Reference-pair calibration and tolerance evidence are absent; preserve uncalibrated status.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2549,7 +2551,7 @@
       "parent": "16",
       "depends_on": [],
       "what": "Evaluate whether actual orchid species and observed stage warrant a dormancy flag, lighting clamp or dry-down governance this season.",
-      "why": "A generic dormant-orchid row and universal 11\u201313-hour clamp can be wrong for the crop; old planning assumptions were explicitly conditional on empirical observations.",
+      "why": "A generic dormant-orchid row and universal 11–13-hour clamp can be wrong for the crop; old planning assumptions were explicitly conditional on empirical observations.",
       "how": [
         "Record actual species/stage, growth/root/leaf observations and current light/moisture evidence with operator input.",
         "If justified, design typed stage/validity/provenance and bounded species-specific lighting/dry-down policy with missing-data fallback.",
@@ -2566,7 +2568,7 @@
         "firmware",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Species/crop observations and a supported seasonal care decision are unavailable to this remote review. No change is made; keep seasonal decision deferred. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: Species/crop observations and a supported seasonal care decision are unavailable to this remote review. No change is made; keep seasonal decision deferred.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2599,7 +2601,7 @@
         "config",
         "planning"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): No measured seasonal door-screen trigger or physical closure observation is available. Reminder/calendar prose is not completion; keep operator seasonal decision deferred. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Actual crop/substrate/probe/plumbing/calibration and seasonal observations remain unavailable where uncommissioned. No guessed calibration, automatic hardware purchase or physical acceptance. Retained October6 assessment, not new execution: No measured seasonal door-screen trigger or physical closure observation is available. Reminder/calendar prose is not completion; keep operator seasonal decision deferred.",
       "delivery": "Prepare software and a commissioning worksheet without purchasing or changing hardware. Execute the named physical action only in the actual operator window; record location, calibration, source revision, resulting telemetry and safe enablement. Use GitOps for any service/config change.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2632,7 +2634,7 @@
         "docs",
         "config"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2666,7 +2668,7 @@
         "firmware/test",
         "deploy/k8s/components/firmware-twin"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Future device-denied twin remains deferred. Current source/build/output/coverage and negative oracle receipts are not a full current physical-parity proof. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Future device-denied twin remains deferred. Current source/build/output/coverage and negative oracle receipts are not a full current physical-parity proof.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2700,7 +2702,7 @@
         "twin",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Generated consumer/oracle source does not establish live input coverage, meaningful nondefault divergence or current read-only twin output. Do not reuse the old absent-table claim as current evidence. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Generated consumer/oracle source does not establish live input coverage, meaningful nondefault divergence or current read-only twin output. Do not reuse the old absent-table claim as current evidence.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2734,7 +2736,7 @@
         "deploy/k8s/components/firmware-twin",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Twin fleet profile remains upstream-owned and must be delivered there. This repository mirror was not edited; no new profile acceptance is claimed. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Twin fleet profile remains upstream-owned and must be delivered there. This repository mirror was not edited; no new profile acceptance is claimed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2769,7 +2771,7 @@
         "ingestor",
         "tests"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Future wire schema/content identity remains offline/deferred. No all-consumer future protocol acceptance is established and no vector authority is enabled. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Future wire schema/content identity remains offline/deferred. No all-consumer future protocol acceptance is established and no vector authority is enabled.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2790,11 +2792,11 @@
         "readout"
       ],
       "what": "Implement and physically qualify any future atomic policy engine only after a demonstrated need beyond the current confirmed-component study.",
-      "why": "Sequential setters and full-state observations are the accepted pilot transport. A new ROM catalog/journal/OTA platform is not an appropriate workaround for today\u2019s proof or science gaps.",
+      "why": "Sequential setters and full-state observations are the accepted pilot transport. A new ROM catalog/journal/OTA platform is not an appropriate workaround for today’s proof or science gaps.",
       "how": [
-        "Use #638\u2019s generated contract and approved operational full-48 baseline, immutable slots and one-control-tick snapshot for every consumer.",
+        "Use #638’s generated contract and approved operational full-48 baseline, immutable slots and one-control-tick snapshot for every consumer.",
         "Implement bounded memory, validity/assignment fencing, two-copy crash-safe journal and conservative reset/water-budget fallback; prevent legacy armed-field mutation.",
-        "Run native/replay/HIL and every stage/journal power-loss/corruption case, then separately qualify pinned experiment/recovery binaries under #390 and the declared \u226548-hour device bake."
+        "Run native/replay/HIL and every stage/journal power-loss/corruption case, then separately qualify pinned experiment/recovery binaries under #390 and the declared ≥48-hour device bake."
       ],
       "acceptance": [
         "Every consumer reads one atomic per-tick policy and invalid/corrupt/expired state returns to approved safe baseline.",
@@ -2808,7 +2810,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Future atomic firmware policy engine remains device-denied/deferred. No complete per-tick/recovery/worst-load heap proof or separate current OTA/protocol acceptance. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Future atomic firmware policy engine remains device-denied/deferred. No complete per-tick/recovery/worst-load heap proof or separate current OTA/protocol acceptance.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2844,7 +2846,7 @@
         "experiment_orchestrator",
         "docs/research"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Merged deterministic forecast comparator preparation is unregistered. Final go/no-go depends on#785; real training/covariance/power and future separate lock/authority remain unavailable. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Merged deterministic forecast comparator preparation is unregistered. Final go/no-go depends on#785; real training/covariance/power and future separate lock/authority remain unavailable.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2865,7 +2867,7 @@
         "371"
       ],
       "what": "Explore actuator-aware identification only after simpler bounded control comparisons and trustworthy data demonstrate a useful question.",
-      "why": "Both previous closed-loop response models failed validation; open-loop PID requested 64\u2013138% more runtime on the factual trajectory but cannot establish counterfactual climate or savings.",
+      "why": "Both previous closed-loop response models failed validation; open-loop PID requested 64–138% more runtime on the factual trajectory but cannot establish counterfactual climate or savings.",
       "how": [
         "Build as-of actuator/state/forecast datasets with fixed sensor/target versions and explicit excitation/support constraints.",
         "Validate response models on held-out seasons/events against persistence and simpler deterministic baselines, including uncertainty and safety-envelope violations.",
@@ -2881,7 +2883,7 @@
         "firmware",
         "docs/research"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Forecast/MPC model coverage and held-out response/calibration gates are not established. No new PID/MPC arm or unmeasured efficacy claim is admitted. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Forecast/MPC model coverage and held-out response/calibration gates are not established. No new PID/MPC arm or unmeasured efficacy claim is admitted.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2901,7 +2903,7 @@
         "resource_contract",
         "410"
       ],
-      "what": "Close the gap to the full objective\u2014less measured gas/electricity/water with better climate\u2014through season-specific instrumentation and a separately powered study.",
+      "what": "Close the gap to the full objective—less measured gas/electricity/water with better climate—through season-specific instrumentation and a separately powered study.",
       "why": "Cooling/wetting-only profiles, partial electricity, ambiguous water, no eligible gas contrast and shared virtual inference cannot support whole-greenhouse economic or heating claims.",
       "how": [
         "Define calibrated meter/circuit/flow/gas boundaries, tariffs and uncertainty, including vent travel versus open time and compute cost only where it differs between policies.",
@@ -2919,7 +2921,7 @@
         "config",
         "docs/research"
       ],
-      "baseline": "October 6 review at a847e8f1: Retained October 5 assessment (historical, not a fresh acceptance receipt): Whole-resource/overnight specification is preparation. Current partial meters, ambiguous shared water, absent gas/interiorDLI/calibration/cost do not support whole-resource or profit claims. October 6 review added no physical commissioning, control release or fault rehearsal that would satisfy these remaining clauses; current telemetry availability is in telemetry-columns.json.",
+      "baseline": "October11 review: Comparator, twin, atomic transport, MPC and whole-resource economics remain future owned requirements with explicit limitations. No whole gas/electricity/water, crop yield or AI superiority claim is supported by this review. Retained October6 assessment, not new execution: Whole-resource/overnight specification is preparation. Current partial meters, ambiguous shared water, absent gas/interiorDLI/calibration/cost do not support whole-resource or profit claims.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2951,7 +2953,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "October 6 UTC S1 acceptance: source81 writer completed a genuine eight-field Iris plan transition with bounded confirmed commands and explicit guardrail exceptions. The original exact-source interval passed 7,209.36 seconds, 118 samples and zero errors; all 59 interval requests confirmed. Seven snapshot-lag holds have safe dispositions. Cap 12, terminal failure history and single Recreate writer remain intact. The fresh eight-host census found exactly one expected ESP32 connection. Closed at 02:44:31 UTC. See docs/handoffs/s1-2026-10-05/ordinary-policy-949-acceptance.md.",
+      "baseline": "October11 review: REGRESSION: current stage state is halted (run 76d18133852b490680bce2639e6d8397), generation13. Six repeated blocked_stage messages in 30 minutes and 17 drift warnings per pass. No new confirmed setpoints in the captured24h (three observed rows). Preserve the prior two-hour acceptance as history, reopen for bounded recovery/current plan convergence; do not erase state, replay approval or raise cap.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3078,7 +3080,7 @@
       "paths": [
         "hermes/iris"
       ],
-      "baseline": "October 6 review at a847e8f1: The bounded four-hour Hermes log contains six missing greenhouse-planning-mcp lookups. Actual plans still complete; current nonterminal overdue count is zero. This is degraded lookup behavior, not a planner outage. Require full skill/reference inventory and next natural-cycle proof without extra model calls.",
+      "baseline": "October11 review: PARTIAL: actual worker inventory passes102/102 references,88 indexed skills, zero missing paths. Natural SUNRISE and MIDNIGHT ledger rows are plan_written. Bounded24h worker log still includes skill_manage errors (including empty-name lookup); exact first post-rollout trigger→Hermes session→plan validation and zero required-reference retry evidence remains unsealed. Inventory alone cannot close the issue.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 4 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3110,7 +3112,7 @@
         "ingestor/ingestor.py",
         "tests/test_ingestor_gap_snapshot.py"
       ],
-      "baseline": "Complete bounded acceptance: deployedingestor.py bytehash matchesmain,15 focusedtests pass; complete/incomplete gaps are truthful; all11 cited alerts11537\u201311547 auto-resolved(system). Closed with exact source/digest/socket/readback receipt; unrelated vision degradation stays#951.",
+      "baseline": "Complete bounded acceptance: deployedingestor.py bytehash matchesmain,15 focusedtests pass; complete/incomplete gaps are truthful; all11 cited alerts11537–11547 auto-resolved(system). Closed with exact source/digest/socket/readback receipt; unrelated vision degradation stays#951.",
       "delivery": "Bounded exact-source live receipt; see October5 acceptance matrix. CLOSED.",
       "rollback": "Preserve snapshots, source/digests, alerts and publication receipts; do not remove evidence to fabricate health.",
       "decision": "Read-only triage performs no production deployment or device action."
@@ -3146,6 +3148,109 @@
       "delivery": "Bounded exact-source live receipt; see October5 acceptance matrix. Estimate:12 engineering hours.",
       "rollback": "Preserve snapshots, source/digests, alerts and publication receipts; do not remove evidence to fabricate health.",
       "decision": "Read-only triage performs no production deployment or device action."
+    },
+    {
+      "key": "964",
+      "issue_number": 964,
+      "title": "Recover failed production promotion and schedulable Lab/band refresh",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P0",
+      "effort": "L",
+      "owner_role": "Platform lead",
+      "parent": "75",
+      "depends_on": [],
+      "what": "Recover failed production promotion and schedulable Lab/band refresh",
+      "why": "Observed acceptance gap requires a bounded owner and executable completion criteria.",
+      "how": [
+        "Refresh exact source/live evidence and preserve failures.",
+        "Implement the smallest complete correction in its owning lane.",
+        "Verify every acceptance clause and recovery boundary."
+      ],
+      "acceptance": [
+        "Exact intended revision/render and running image specifications agree; full operation Succeeded and Argo Synced/Healthy; required migrations/bootstrap/readiness hooks have explicit results.",
+        "Replacement Lab pods become ready using supported storage placement; existing public tree and recovery data survive. At least three natural publisher runs complete on the declared cadence with current fresh_until and served/success generation agreement.",
+        "Band-refresh Jobs schedule and complete at natural cadence, with fresh downstream rows and no hidden backlog/deadline failure.",
+        "Singleton writer, fresh telemetry and authenticated API/MCP behavior remain proven. Any socket-monitor UNKNOWN remains unaccepted until a complete observable census succeeds.",
+        "Exact prior pins/specs/cache/PVC recovery coordinates and owner decisions are published; no DB/PVC pruning or unrelated estate mutation."
+      ],
+      "paths": [
+        "deploy/k8s",
+        "scripts",
+        "docs"
+      ],
+      "baseline": "October11 review: OPEN P0: full promotion Failed October6; Lab replacement/publisher/band refresh are unschedulable against node7 affinity. Last published success October6 07:16:53Z, expired07:36:53Z. Recover supported placement and full exact-source adoption, then three natural publisher runs and band-refresh completion; no force detach or uncoordinated node/NFS action.",
+      "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
+      "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
+      "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
+    },
+    {
+      "key": "965",
+      "issue_number": 965,
+      "title": "Separate API grow-light command intent from observed equipment history",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P1",
+      "effort": "L",
+      "owner_role": "Platform lead",
+      "parent": "75",
+      "depends_on": [],
+      "what": "Separate API grow-light command intent from observed equipment history",
+      "why": "Observed acceptance gap requires a bounded owner and executable completion criteria.",
+      "how": [
+        "Refresh exact source/live evidence and preserve failures.",
+        "Implement the smallest complete correction in its owning lane.",
+        "Verify every acceptance clause and recovery boundary."
+      ],
+      "acceptance": [
+        "Either return an explicit unsupported/disabled result without writing observed history, or deliver a typed command through the existing owning HA/setpoint writer with authorization, idempotency and terminal failure semantics. Do not introduce a second device writer.",
+        "Only authentic source-bound readback writes observed equipment state. A requested on command while real state remains off cannot fabricate an on interval or resource credit.",
+        "Focused positive and rejected/failed/timeout tests distinguish intent, delivery and observation; ordinary auth and greenhouse/circuit boundaries hold.",
+        "Exact source/digest/config adoption and read-only live contract verification are published. Any physical command test has a bounded operator-safe scope and actual observation; no live command is sent merely for triage.",
+        "Existing affected history is audited for provenance and explicitly bounded; no broad rewrite of historical outcomes, assigned-day denominators or resource claims."
+      ],
+      "paths": [
+        "api/main.py",
+        "tests",
+        "ingestor/tasks/ha.py"
+      ],
+      "baseline": "October11 review: OPEN SOURCE/RUNTIME-CONFIRMED BUG: running API light endpoint writes requested on/off into observed equipment history without invoking a writer. No live POST executed. Separate command intent from authentic observations, prevent false runtime/resource credit, and audit affected provenance.",
+      "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
+      "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
+      "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
+    },
+    {
+      "key": "963",
+      "issue_number": 963,
+      "title": "Bound moisture-exchange state and preserve structured consumer detail",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "S",
+      "owner_role": "Platform lead",
+      "parent": "75",
+      "depends_on": [],
+      "what": "Deliver a HA-compatible moisture-exchange state without losing native ingestor diagnostic detail.",
+      "why": "The current overlength text state is rejected by HA and creates repeated errors.",
+      "how": [
+        "Inventory actual native and HA consumers and required detail.",
+        "Design bounded state and structured detail; preserve schemas/readbacks.",
+        "Run native/replay/invariant/compile and bounded OTA acceptance before physical closure."
+      ],
+      "acceptance": [
+        "Every possible published state fits the HA255-character contract; diagnostic detail is preserved through an explicit tested consumer schema.",
+        "Native ingestor/planner/Grafana consumers remain compatible; actual HA state is available without repeated overlength errors.",
+        "Exact binary/source and firmware release/rollback evidence exist; no OTA occurs solely for triage."
+      ],
+      "paths": [
+        "firmware/greenhouse/hardware.yaml",
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py"
+      ],
+      "baseline": "October11 review: OPEN SOURCE-CONFIRMED BUG: firmware publishes moisture-exchange JSON as text state; current native ingestor log contains >255-character payload. HA source report records unknown/error. Qualify a short-state/structured-detail consumer contract offline; OTA remains separately bounded. Not hidden inside S2.",
+      "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
+      "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
+      "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
     }
   ]
 }

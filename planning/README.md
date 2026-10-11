@@ -2,7 +2,9 @@
 
 Start with [CAMPAIGN.md](CAMPAIGN.md) for implementation strategy and [the roadmap](../PROJECT_BOARD.md) for the complete issue index. [EVIDENCE.md](EVIDENCE.md) explains the review findings and their limits.
 
-The [October 6 platform review and S2 pull set](reviews/2026-10-06/NEXT-SPRINT.md) is the latest full acceptance review. S1 is closed; S2 selects six issues with 68 engineering hours.
+The [October 11 acceptance review and S2 completion sprint](reviews/2026-10-11/NEXT-SPRINT.md) is the latest full review. It supersedes the October 6 runtime snapshot: production promotion ultimately failed, #949 has regressed, #49 is accepted, and seven open sprint issues have 46–88 remaining engineering hours. [Status against every original stage](reviews/2026-10-11/STATUS.md), [complete clause matrix](reviews/2026-10-11/ISSUE-TRIAGE.md), and [fresh-session goal](reviews/2026-10-11/GOAL.md) retain the full C0–C8 scope. S1's historical acceptances remain dated evidence; the reopened convergence issue must be qualified again.
+
+The [October 6 review](reviews/2026-10-06/NEXT-SPRINT.md) remains historical evidence of the earlier healthy snapshot, not current deployment acceptance.
 
 The historical [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) records the previous S1 pull set and its dated full-issue acceptance, health and native graph receipts.
 

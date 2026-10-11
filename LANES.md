@@ -51,7 +51,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 
 | Issue | Outcome | Blocking predecessors | Effort |
 |---|---|---|---|
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Integrate exact-SHA, path-aware and device-safe delivery receipts | None; see concrete issue conditions | L |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Integrate exact-SHA, path-aware and device-safe delivery receipts | [#964](https://github.com/VerdifyConsultancy/verdify-platform/issues/964) | L |
 | [#322](https://github.com/VerdifyConsultancy/verdify-platform/issues/322) | Replace remaining VM-era tests with current k3s delivery contracts | None; see concrete issue conditions | M |
 | [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | Provide reproducible least-authority firmware and database diagnostic tooling | None; see concrete issue conditions | S |
 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | Run real portable ESPHome compilation for declared firmware targets | [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#322](https://github.com/VerdifyConsultancy/verdify-platform/issues/322) | L |
@@ -73,6 +73,9 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#953](https://github.com/VerdifyConsultancy/verdify-platform/issues/953) | Reconcile Iris planning skill lookup and required reference inventory | None; see concrete issue conditions | S |
 | [#835](https://github.com/VerdifyConsultancy/verdify-platform/issues/835) | Fix reconnect equipment snapshot provenance and stale relay alerts | None; see concrete issue conditions | M |
 | [#862](https://github.com/VerdifyConsultancy/verdify-platform/issues/862) | Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window | None; see concrete issue conditions | M |
+| [#964](https://github.com/VerdifyConsultancy/verdify-platform/issues/964) | Recover failed production promotion and schedulable Lab/band refresh | None; see concrete issue conditions | L |
+| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Separate API grow-light command intent from observed equipment history | None; see concrete issue conditions | L |
+| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Bound moisture-exchange state and preserve structured consumer detail | None; see concrete issue conditions | S |
 
 ## C5 — Data/platform lead
 

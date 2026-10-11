@@ -1,0 +1,31 @@
+=== k3s device-route monitor (2026-10-11 07:56:11) — namespace=verdify-prod ===
+(READ-ONLY: inspects pods' own sockets; asserts EXACTLY ONE writer to 192.168.10.111:6053.)
+
+  ..    pod experiment-v2-freezer-755b4f45ff-n588z: 0 established ESP32 socket(s)
+  ..    pod experiment-v2-lifecycle-556f9779c5-4pb2z: 0 established ESP32 socket(s)
+  ..    pod experiment-v2-selector-6fdd654c78-4ktmd: 0 established ESP32 socket(s)
+  ..    pod verdify-api-64d768b666-8pjhm: 0 established ESP32 socket(s)
+  ..    pod verdify-api-64d768b666-rhmph: 0 established ESP32 socket(s)
+  ..    pod verdify-db-0: 0 established ESP32 socket(s)
+  ..    pod verdify-db-backup-exporter-5bfd5d6f47-5xkfb: 0 established ESP32 socket(s)
+  ..    pod verdify-db-watchdog-29862116-9rq8s: socket table unavailable (UNKNOWN)
+  ..    pod verdify-grafana-bdf4f5fcb-478bk: 0 established ESP32 socket(s)
+  ..    pod verdify-grafana-render-cache-b4dd5d8fd-t6xzv: 0 established ESP32 socket(s)
+  ..    pod verdify-grafana-render-cache-b4dd5d8fd-ws52n: 0 established ESP32 socket(s)
+  ..    pod verdify-hermes-iris-fcfb7dd98-7skpf: 0 established ESP32 socket(s)
+  ..    pod verdify-ingestor-6d95d5fc9f-cscxw: 1 established ESP32 socket(s)
+  ..    pod verdify-lab-6887cf7c7d-6wc4q: 0 established ESP32 socket(s)
+  ..    pod verdify-lab-6887cf7c7d-dx66k: 0 established ESP32 socket(s)
+  ..    pod verdify-mcp-6c447bcf6c-m6cfs: 0 established ESP32 socket(s)
+  ..    pod verdify-mcp-6c447bcf6c-q9brp: 0 established ESP32 socket(s)
+  ..    pod verdify-mqtt-569d94cb4d-hzqtk: 0 established ESP32 socket(s)
+  ..    pod verdify-planner-7fd8478586-6drvt: 0 established ESP32 socket(s)
+  ..    pod verdify-setpoint-server-766bb85dc-2v7d8: 0 established ESP32 socket(s)
+  ..    pod verdify-traefik-56b8dbd695-58nzk: 0 established ESP32 socket(s)
+  ..    pod verdify-traefik-56b8dbd695-7sfvp: 0 established ESP32 socket(s)
+  ..    pod verdify-writer-watchdog-29862116-lrmdk: appeared and departed during socket scan
+  FAIL  device-monitor: 1 pod(s) unobservable; 1 socket(s) observed (writer count UNKNOWN)
+
+── summary (verdify-prod) ─────────────────────────────────
+  passed=0 failed=1
+  RESULT: NOT GREEN — review the FAIL lines above.
