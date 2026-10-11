@@ -931,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary.",
+      "baseline": "October11 execution:964 recovered production and953 natural Iris acceptance is sealed. Owner bounded PR agents#4763 ports Verdify-only delivery changes onto current main; original mixed4747 preserved.273 focused tests/736 subtests pass, generated artifacts/render pass. Native owner checks, deployed-consumer adoption/rollback and full fault/cancel/retry/concurrency matrix remain; l2lfz preserves genuine infrastructure failure before build. See S2-PROGRESS.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1599,7 +1599,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover.",
+      "baseline": "October11 execution: fresh frozen A/B each seal952 objects/9,699,553 rows,77 sequences and42 study tables exactly. Before fixture DML, active S2 native witness/COPY failed due changed/removed physical chunks; backgroundworkers16 versus frozen0. Drifted clone unchanged/excluded. Fresh contained recovery target/admission plus integrated client/recovery/reseal acceptance remain; these seals are not fresh restore/RTO proof. See S2-PROGRESS.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1671,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof.",
+      "baseline": "October11 execution: nine ordinary runtime roles pass actual bounded TCP login/read/deny/transaction-rollback/pool-close probes across11 consumers. Intended allowed DML, endpoint A-B-A, whole-service rollback and final952/77/42 reseals remain open. Exact new ingestor probe awaits image adoption. See runtime-643-login-progress.json and S2-PROGRESS.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2953,7 +2953,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "October11 review: REGRESSION: current stage state is halted (run 76d18133852b490680bce2639e6d8397), generation13. Six repeated blocked_stage messages in 30 minutes and 17 drift warnings per pass. No new confirmed setpoints in the captured24h (three observed rows). Preserve the prior two-hour acceptance as history, reopen for bounded recovery/current plan convergence; do not erase state, replay approval or raise cap.",
+      "baseline": "October11 execution: confirmed historical halt custody source fix merged as d8068b7c after102 focused tests and native Linux gate. Main build l2lfz failed genuine registry signal preflight before Kaniko; no image/pin published or source promoted. Old halt/approval and all12 native confirmations preserved; local archive candidate expired and was never installed. Exact source adoption, fresh archive/admission, policy transition and two steady hours remain. See planning/execution/2026-10-11/S2-PROGRESS.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3179,10 +3179,10 @@
         "scripts",
         "docs"
       ],
-      "baseline": "October11 review: OPEN P0: full promotion Failed October6; Lab replacement/publisher/band refresh are unschedulable against node7 affinity. Last published success October6 07:16:53Z, expired07:36:53Z. Recover supported placement and full exact-source adoption, then three natural publisher runs and band-refresh completion; no force detach or uncoordinated node/NFS action.",
+      "baseline": "October11 execution acceptance: full exact-revision no-prune sync Succeeded with128 resource results, six fresh hook Jobs and all283 ledger hashes matching. Current Argo d8068b7c Synced/Healthy and26 workload specs/37 container images match live. Normal CSI relocation preserved the exact Lab PVC/volume and original788-file tree; three consecutive natural publisher runs and three post-fix band runs succeeded, with fresh served/status generation agreement. Singleton writer,9/9 authenticated smoke and zero schema failures in five minutes verified. See planning/execution/2026-10-11/RECOVERY-964.md. Separate949/644/recovery acceptance remains open.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
-      "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
+      "decision": "Executed within the explicitly authorized S2 recovery scope; physical, OTA, launch and production DB-cutover decisions remain separate."
     },
     {
       "key": "965",

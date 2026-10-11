@@ -1,0 +1,30 @@
+{
+  "broker_observation": {
+    "acceptance": "unmet; native terminal result independently retained",
+    "by_durable_handle": "HTTP404",
+    "by_workflow": "HTTP404"
+  },
+  "checks_executed": 0,
+  "compile_accepted": false,
+  "existing_automatic_checks_canceled": false,
+  "finished_at": "2026-10-11T16:05:55Z",
+  "historical_prepare_node": [
+    {
+      "id": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d-871067697",
+      "phase": "Succeeded"
+    }
+  ],
+  "live_owned_pods_at_after_readback": [],
+  "reason": "Storage owner requested no new submissions during active NAS lock recurrence; park the owned extra validation",
+  "recorded_at_utc": "2026-10-11T16:09:26.357258+00:00",
+  "registered_check_count": 5,
+  "request_guard": "exact Workflow UID, resourceVersion and source SHA JSON-Patch tests",
+  "schema": "verdify-owned-validation-cancellation-v1",
+  "shutdown": "Terminate",
+  "source_sha": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
+  "terminal_message": "Stopped with strategy 'Terminate'",
+  "terminal_phase": "Failed",
+  "workflow": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+  "workflow_deleted": false,
+  "workflow_uid": "d7119bc5-1c88-4265-ab73-007efb8cdfe0"
+}

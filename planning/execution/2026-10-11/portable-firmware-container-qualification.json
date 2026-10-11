@@ -1,0 +1,354 @@
+{
+  "authority": {
+    "cap_drop": [
+      "ALL"
+    ],
+    "credential_probe": {
+      "compile_tools": {
+        "esphome": true,
+        "git": true
+      },
+      "config_volume_empty": true,
+      "credential_environment_present": {
+        "ANTHROPIC_API_KEY": false,
+        "AWS_ACCESS_KEY_ID": false,
+        "AWS_SECRET_ACCESS_KEY": false,
+        "B2_APPLICATION_KEY": false,
+        "GH_TOKEN": false,
+        "GITHUB_TOKEN": false,
+        "KUBECONFIG": false,
+        "OPENAI_API_KEY": false,
+        "VERDIFY_OTA_PASSWORD": false
+      },
+      "docker_socket_present": false,
+      "service_account_mount_present": false,
+      "uid": 1000
+    },
+    "devices": [],
+    "mounts": [
+      {
+        "Destination": "/tmp",
+        "Driver": "local",
+        "Mode": "z",
+        "Name": "vfy-fw-compile-scratch",
+        "Propagation": "",
+        "RW": true,
+        "Source": "/var/lib/docker/volumes/vfy-fw-compile-scratch/_data",
+        "Type": "volume"
+      },
+      {
+        "Destination": "/tmp/repo",
+        "Mode": "",
+        "Propagation": "rprivate",
+        "RW": false,
+        "Source": "/Volumes/Work/vfy-toolchain1011/input/repo",
+        "Type": "bind"
+      },
+      {
+        "Destination": "/input/command.sh",
+        "Mode": "",
+        "Propagation": "rprivate",
+        "RW": false,
+        "Source": "/Volumes/Work/vfy-toolchain1011/input/command.sh",
+        "Type": "bind"
+      },
+      {
+        "Destination": "/config",
+        "Driver": "local",
+        "Mode": "",
+        "Name": "f481bdc96d8f0f2211c551c909e7f324d5202a9ca3ce33e68778ce72f5c416db",
+        "Propagation": "",
+        "RW": true,
+        "Source": "/var/lib/docker/volumes/f481bdc96d8f0f2211c551c909e7f324d5202a9ca3ce33e68778ce72f5c416db/_data",
+        "Type": "volume"
+      }
+    ],
+    "network": "private Docker bridge; compilation downloads only",
+    "operator_preflight_limitation": "Expected three mounts; official image VOLUME /config created a fourth empty local anonymous volume. Container was started before resolving assertion; post-start audit explicitly verified the fourth mount and all authority boundaries.",
+    "privileged": false,
+    "root_filesystem_readonly": true,
+    "security_options": [
+      "no-new-privileges"
+    ],
+    "uid": 1000
+  },
+  "captured_at": "2026-10-11T16:52:43.827153+00:00",
+  "comparison_with_prior_mac_run": {
+    "binary_hashes_equal": [
+      false,
+      false
+    ],
+    "limit": "Success reproduced across Mac and pinned Linux ARM64 environment; cross-host bit-for-bit binary reproducibility is not claimed.",
+    "same_config_and_platformio_ini": true,
+    "same_source_manifest": true
+  },
+  "custody": {
+    "compiler_metadata_sha256": "643148b7899613d336611ec6f27aaa79d08b4f2c614cebc13a9ff84ccbaa62dc",
+    "existing_docker_context": "default",
+    "existing_profiles_stayed_stopped": true,
+    "full_compile_log_sha256": "0aa05eebab5bc6afeb83571be42ec5ace93049657b3e5c05c86c57469cb126c9",
+    "local_vm_state_preserved": "/Volumes/Work/vfy-toolchain1011/colima",
+    "task_vm_stopped": true,
+    "terminal_container_metadata_sha256": "bb968e073794d83ae9ea7c15de0b7b9dacffd971f0df422e43ef974212b8519f"
+  },
+  "diagnostic_tooling": {
+    "authority": "Existing Jason ROOT kube identity and in-pod DB authentication; no tool install or RBAC change grants authority. Compile container has no cluster/database credentials.",
+    "authorized_database_psql": "16.11",
+    "authorized_database_readonly_metadata": {
+      "database": "verdify",
+      "role": "verdify",
+      "server_version": "16.11",
+      "transaction_read_only": "on"
+    },
+    "database_transaction_end": "ROLLBACK",
+    "kube_api_server": "v1.35.5+k3s1-lifecycle",
+    "kubectl_skew_policy": "https://kubernetes.io/releases/version-skew-policy/#kubectl",
+    "repo_agent_uid": 1001,
+    "repo_client_kubectl": "v1.36.3 linux/amd64",
+    "repo_client_psql": "15.18",
+    "repo_pod_image": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:6ddeb3672758f231318aa12bb67302a09ac8a53dddb32f1891003d630cebbfba",
+    "repo_pod_uid": "30ccac0c-b5d1-4674-b07f-37f0baad56f0",
+    "task_local_kubectl": {
+      "existing_repo_client": "v1.36.3 linux/amd64",
+      "existing_shared_client": "v1.33.3 unchanged",
+      "official_binary_url": "https://dl.k8s.io/release/v1.35.5/bin/darwin/arm64/kubectl",
+      "official_checksum_url": "https://dl.k8s.io/release/v1.35.5/bin/darwin/arm64/kubectl.sha256",
+      "platform": "darwin/arm64",
+      "schema": "verdify-task-local-kubectl-qualification/v1",
+      "scope": "Private task binary only; existing kube credentials and RBAC unchanged; no global install or context switch",
+      "server_observed": "v1.35.5+k3s1-lifecycle",
+      "sha256": "4d79aa4ca3015d6c70ac593d8c387efe09f4000b5ff1098f42610e6030a8ccb3",
+      "version": "v1.35.5"
+    }
+  },
+  "execution": {
+    "actual_selected_manifest": {
+      "digest": "sha256:551b3b56e9c355f55f669996cb90d22b2cd12df4a3493ad83b319705a826dca9",
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux"
+      },
+      "size": 3917
+    },
+    "actual_tool_environment": {
+      "esphome": "2026.6.5",
+      "git": "git version 2.47.3",
+      "platform": "Linux-6.8.0-64-generic-aarch64-with-glibc2.41",
+      "platformio": "6.1.19",
+      "python": "3.13.14"
+    },
+    "clean_shallow_checkout": true,
+    "cluster_ci_job_submitted": false,
+    "command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
+    "container_id": "97d4568d74ad8b96aa7be5618f14a5be2e2f5ccece363857b61b4fe4616faf86",
+    "credentials": "fixed public dummy compile inputs only",
+    "elapsed_seconds": 267.854,
+    "exit_code": 0,
+    "finished_at": "2026-10-11T16:48:40.157340825Z",
+    "fresh_private_home_and_platformio_core": true,
+    "mode": "isolated local Linux ARM64 Docker container in a task-specific Colima VM",
+    "network_device_or_ota_action": false,
+    "oom_killed": false,
+    "owner_registry_generated_mapping_agrees": true,
+    "positive_compile_seconds": [
+      148.81,
+      94.38
+    ],
+    "requested_oci_index": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+    "selected_child_config_digest": "sha256:4525f983be0457dcc58d3a815c78d5293bff2323713ee5bdd34ff6f904a15812",
+    "started_at": "2026-10-11T16:44:12.30347031Z"
+  },
+  "proof_limits": [
+    "Actual registered in-cluster Linux amd64 CI execution and owner-lane deployed delivery/consumer matrix remain unqualified during the storage/host hold.",
+    "Dummy firmware outputs are nondeployable; no OTA, last-good promotion, physical recovery, commissioning or experiment qualification is implied.",
+    "Firmware source PR971 remains unmerged; #303/#304/#644 original remaining acceptance and dependencies are retained."
+  ],
+  "qualification": {
+    "generated_cpp_negative": {
+      "exit_code": 1,
+      "result": "expected_compile_failure"
+    },
+    "package_and_compiler_hashes": [
+      {
+        "compiler_binaries": [],
+        "name": "contrib-piohome",
+        "package_manifest_sha256": "895d814d31330f12b120ad32cb4ec29c28dfedeb64d1ba497a235b0ab476fd1d",
+        "version": "3.4.4"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "framework-espidf",
+        "package_manifest_sha256": "b140a22728d866707b3deac19db25cad3bb72ebe31fc4630f83e100087466127",
+        "version": "3.50504"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-cmake",
+        "package_manifest_sha256": "248bf8bb0ba33719b6bac894c8fbe51248cbd6c461930651420edc4be8a3e1c7",
+        "version": "4.0.3"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esp-rom-elfs",
+        "package_manifest_sha256": "cc1f89ca612a22a8ccaef261a5cfeda8dc5a4f162a429fec831065a6502b7ef1",
+        "version": "2024.10.11"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esp_install",
+        "package_manifest_sha256": "eec2de373d8b9c84f503eeee69c21afbe305d2089c45f55341e70d53d98005f0",
+        "version": "5.3.4"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esptoolpy",
+        "package_manifest_sha256": "1a86cf8698d7ec2740219256e503eb0fffe6daf052e906990c42dc3c1c5a2dfd",
+        "version": "5.3.0"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-ninja",
+        "package_manifest_sha256": "8a0c50f198532e68ef83e4e29ba92eca3b0b555fd807fff3b93a485628d75d2c",
+        "version": "1.13.1"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-scons",
+        "package_manifest_sha256": "a9543d5b24b39d0203bc2c4c4e8ae62db6eb8842bd15d09f11d2b7a4628fe4db",
+        "version": "4.40801.0"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-xtensa-esp-elf-gdb",
+        "package_manifest_sha256": "e1b363e2e5d5cd0933ef91e07a42d3dfd883ae0cdb993ad63adc0faae0abd827",
+        "version": "17.1.0+20260402"
+      },
+      {
+        "compiler_binaries": [
+          {
+            "bytes": 1817464,
+            "name": "xtensa-esp-elf-as",
+            "sha256": "32f83de91612d56dca6929d31cf067bcb7b4aff3fc900f0dec0d211696a8cef5"
+          },
+          {
+            "bytes": 2366800,
+            "name": "xtensa-esp-elf-g++",
+            "sha256": "72e51a3a55d75efbb4396b5afe609e548b6edcfcfda478f3570a80633af818da"
+          },
+          {
+            "bytes": 2358608,
+            "name": "xtensa-esp-elf-gcc",
+            "sha256": "1ec70e2f9d74a7b85729f58be46defe676689575d8ac4b1311fe527f485424cf"
+          },
+          {
+            "bytes": 2125240,
+            "name": "xtensa-esp-elf-ld",
+            "sha256": "23fd83692df1810ddbafb0112a6676f5edafddf94c5a37e3ffd359ab471501e8"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32-elf-as",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32-elf-g++",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32-elf-gcc",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32-elf-ld",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s2-elf-as",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s2-elf-g++",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s2-elf-gcc",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s2-elf-ld",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s3-elf-as",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s3-elf-g++",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s3-elf-gcc",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          },
+          {
+            "bytes": 377648,
+            "name": "xtensa-esp32s3-elf-ld",
+            "sha256": "0cecb37914d9ef3ffc3836929915d8bc89d62b5c197ba43afab7262c2556a2b3"
+          }
+        ],
+        "name": "toolchain-xtensa-esp-elf",
+        "package_manifest_sha256": "c48c1b9576e07b786e4ae1cf17b9ee500317b7218c20d76a0238649f3424bb63",
+        "version": "14.2.0+20260121"
+      }
+    ],
+    "platformio_packages": {
+      "contrib-piohome": "3.4.4",
+      "framework-espidf": "3.50504",
+      "tool-cmake": "4.0.3",
+      "tool-esp-rom-elfs": "2024.10.11",
+      "tool-esp_install": "5.3.4",
+      "tool-esptoolpy": "5.3.0",
+      "tool-ninja": "1.13.1",
+      "tool-scons": "4.40801.0",
+      "tool-xtensa-esp-elf-gdb": "17.1.0+20260402",
+      "toolchain-xtensa-esp-elf": "14.2.0+20260121"
+    },
+    "targets": [
+      {
+        "binary_bytes": 1106224,
+        "binary_sha256": "68be8afad9a0390d376ae8e3c149b0ddf439a2bef76162759e55066193c7f3ff",
+        "config_sha256": "dbd8c50c889d712a80d71182aa34a0a87b272387993b09080d9f01ba172440ce",
+        "deployable": false,
+        "generated_cpp_sha256": "a980056cb73c6825cbbdf357875857f7bb530074cd2a989669f77e245a7ecc7d",
+        "platformio_ini_sha256": "74092360542f2aa5d70b35db68e2b9438569732eb88fa87ca1e80b0568448e13",
+        "result": "compiled",
+        "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+        "target": "greenhouse"
+      },
+      {
+        "binary_bytes": 1101104,
+        "binary_sha256": "f5b533df05c89d0955b5aad71f8027a9bf6e6c6f11fb1b42716cd8b7dd362681",
+        "config_sha256": "412a1e3145167bc4526725c6ad8882238176128a6548c7c48fd819fe2f859c09",
+        "deployable": false,
+        "generated_cpp_sha256": "99728ce6c2069f80d00580d2c4eddcb0f1634e9c5cc82c8480d926bfd074100e",
+        "platformio_ini_sha256": "11a3d07d8e344ad834354ee9dee1c89f57ebb4ce0b7cb87768e069a6b26d9eb6",
+        "result": "compiled",
+        "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+        "target": "greenhouse-recovery"
+      }
+    ]
+  },
+  "schema": "verdify-portable-firmware-container-qualification/v1",
+  "source": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206"
+}
