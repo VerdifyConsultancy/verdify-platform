@@ -97,8 +97,12 @@ if [ -z "${KUBECONFIG:-}" ]; then
   echo "ERROR: KUBECONFIG must be set (the scoped verdify-agent kubeconfig)." >&2
   exit 2
 fi
-if ! command -v kubectl >/dev/null 2>&1; then
-  echo "ERROR: kubectl not found on PATH." >&2
+if ! command -v kubectl >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
+  echo "ERROR: kubectl and python3 are required on PATH." >&2
+  exit 2
+fi
+if ! [[ "${TIMEOUT}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: --timeout must be a positive integer number of seconds." >&2
   exit 2
 fi
 if [ "${MODE}" = "smoke" ]; then
@@ -127,9 +131,41 @@ cleanup() {
     [ -n "${pid}" ] && kill "${pid}" >/dev/null 2>&1 || true
   done
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+# Bound the local client, including a stalled exec upgrade. Kubectl's request
+# timeout alone does not bound streaming exec. Kill only this invocation's local
+# process group so a child holding stdout cannot keep a socket scan alive.
+bounded_kubectl() {
+  python3 -c '
+import os, signal, subprocess, sys
+child = subprocess.Popen(sys.argv[2:], stdout=subprocess.PIPE, start_new_session=True)
+def stop_child():
+    try:
+        os.killpg(child.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    child.wait()
+def interrupted(signum, _frame):
+    stop_child()
+    raise SystemExit(128 + signum)
+signal.signal(signal.SIGINT, interrupted)
+signal.signal(signal.SIGTERM, interrupted)
+try:
+    output, _ = child.communicate(timeout=int(sys.argv[1]))
+    if child.returncode == 0:
+        sys.stdout.buffer.write(output)
+    raise SystemExit(child.returncode)
+except subprocess.TimeoutExpired:
+    stop_child()
+    print("kubectl read timed out; observation unavailable", file=sys.stderr)
+    raise SystemExit(124)
+' "${TIMEOUT}" "${KC[@]}" "$@"
+}
 
 # Start a localhost port-forward to a Service; record pid for cleanup. Returns
 # 0 if the forward came up within TIMEOUT, else 1. port-forward mutates nothing
@@ -158,7 +194,7 @@ run_smoke() {
   #    API container. Digest-only Kubernetes images carry no source SHA tag.
   echo "[1] api /health/detailed — image provenance"
   local img
-  img="$("${KC[@]}" get deploy verdify-api \
+  img="$(bounded_kubectl get deploy verdify-api \
     -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].image}' 2>/dev/null || true)"
   if [ -z "${img}" ]; then
     fail "api: could not read deployed image off Deployment verdify-api"
@@ -170,7 +206,7 @@ run_smoke() {
       fail "api: Deployment digest differs from reviewed ${EXPECTED_API_DIGEST}"
     fi
     local pods_json image_verdict
-    pods_json="$("${KC[@]}" get pods -l app.kubernetes.io/component=api -o json 2>/dev/null || true)"
+    pods_json="$(bounded_kubectl get pods -l app.kubernetes.io/component=api -o json 2>/dev/null || true)"
     image_verdict="$(printf '%s' "${pods_json}" | python3 -c '
 import json, sys
 try:
@@ -240,10 +276,10 @@ except (ValueError, KeyError, AssertionError, TypeError) as exc:
   local expected_tools mcp_pods pod mcp_verdict mcp_desired mcp_ready mcp_count
   expected_tools="$(python3 -c 'import sys,yaml; p=yaml.safe_load(open(sys.argv[1])); c=yaml.safe_load(p["data"]["config.yaml"]); print(",".join(sorted(c["mcp_servers"]["verdify_greenhouse"]["tools"]["include"])))' \
     "$(dirname "$0")/../deploy/k8s/components/hermes-iris/hermes-config.yaml" 2>/dev/null || true)"
-  mcp_pods="$("${KC[@]}" get pods -l app.kubernetes.io/component=mcp --field-selector=status.phase=Running \
+  mcp_pods="$(bounded_kubectl get pods -l app.kubernetes.io/component=mcp --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
-  mcp_desired="$("${KC[@]}" get deploy verdify-mcp -o jsonpath='{.spec.replicas}' 2>/dev/null || true)"
-  mcp_ready="$("${KC[@]}" get deploy verdify-mcp -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
+  mcp_desired="$(bounded_kubectl get deploy verdify-mcp -o jsonpath='{.spec.replicas}' 2>/dev/null || true)"
+  mcp_ready="$(bounded_kubectl get deploy verdify-mcp -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
   mcp_count="$(printf '%s\n' "${mcp_pods}" | awk 'NF { n++ } END { print n+0 }')"
   if [[ "${mcp_desired}" =~ ^[0-9]+$ ]] && [ "${mcp_desired}" -gt 0 ] &&
      [ "${mcp_desired}" = "${mcp_ready}" ] && [ "${mcp_desired}" = "${mcp_count}" ]; then
@@ -256,7 +292,7 @@ except (ValueError, KeyError, AssertionError, TypeError) as exc:
   else
     while IFS= read -r pod; do
       [ -z "${pod}" ] && continue
-      mcp_verdict="$("${KC[@]}" exec -i "${pod}" -c mcp -- python - "${expected_tools}" "${TIMEOUT}" <<'PY' 2>/dev/null
+      mcp_verdict="$(bounded_kubectl exec -i "${pod}" -c mcp -- python - "${expected_tools}" "${TIMEOUT}" <<'PY' 2>/dev/null
 import json, os, sys, urllib.error, urllib.request
 
 def request(method, ident, token):
@@ -309,7 +345,7 @@ assert all(name.replace("_", "").isalnum() for name in CANONICAL_FIELD_ORDER)
 print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORDER) + "]::text[]")
 ' 2>/dev/null || true)"
   if [ -n "${fields}" ]; then
-    snapshot="$("${KC[@]}" exec verdify-db-0 -c postgres -- psql -U verdify -d verdify -At \
+    snapshot="$(bounded_kubectl exec verdify-db-0 -c postgres -- psql -U verdify -d verdify -At \
       -c "WITH complete AS (SELECT ts FROM setpoint_snapshot WHERE greenhouse_id='vallery' AND zone IS NULL AND band_role IS NULL AND parameter=ANY(${fields}) AND ts>now()-interval '5 minutes' GROUP BY ts HAVING count(DISTINCT parameter)=48 ORDER BY ts DESC LIMIT 1) SELECT coalesce(extract(epoch from now()-max(ts))::int,999999),count(*) FROM complete" \
       2>/dev/null || true)"
   else
@@ -331,7 +367,7 @@ print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORD
 # ── Mode: device-monitor (prod exactly-one-writer) ──────────────────────────
 pod_departed() {
   local pod="$1" expected_uid="$2" state uid phase restart_policy containers terminations ended
-  if ! state="$("${KC[@]}" get pod "${pod}" --ignore-not-found \
+  if ! state="$(bounded_kubectl get pod "${pod}" --ignore-not-found \
     -o jsonpath='{.metadata.uid}{"|"}{.status.phase}{"|"}{.spec.restartPolicy}{"|"}{range .spec.containers[*]}x{end}{range .spec.ephemeralContainers[*]}x{end}{"|"}{range .status.containerStatuses[*]}{.state.terminated.finishedAt}{";"}{end}{range .status.ephemeralContainerStatuses[*]}{.state.terminated.finishedAt}{";"}{end}' \
     2>/dev/null)"; then
     return 1
@@ -353,7 +389,7 @@ run_device_monitor() {
   local octet1 octet2 octet3 octet4 remote_hex
   IFS=. read -r octet1 octet2 octet3 octet4 <<< "${DEVICE_ESP32_IP}"
   remote_hex="$(printf '%02X%02X%02X%02X:%04X' "${octet4}" "${octet3}" "${octet2}" "${octet1}" "${DEVICE_PORT}")"
-  if ! pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
+  if ! pods="$(bounded_kubectl get pods --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.uid}{"\n"}{end}' 2>/dev/null)"; then
     fail "device-monitor: Running pod inventory unavailable (writer count UNKNOWN)"
     print_summary; return
@@ -364,17 +400,17 @@ run_device_monitor() {
   fi
   while read -r pod uid; do
     [ -z "${pod}" ] && continue
-    out="$("${KC[@]}" exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)" || out=""
+    out="$(bounded_kubectl exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)" || out=""
     if [ -z "${out}" ]; then
       # A Running pod may have a completed default container and a live
       # sidecar/ephemeral container. They share the pod network namespace.
       # Bind the fallback to the inventoried UID; a replacement stays UNKNOWN.
-      containers="$("${KC[@]}" get pod "${pod}" -o jsonpath='{.metadata.uid}{"\n"}{range .status.containerStatuses[?(@.state.running)]}{.name}{"\n"}{end}{range .status.ephemeralContainerStatuses[?(@.state.running)]}{.name}{"\n"}{end}' 2>/dev/null)" || containers=""
+      containers="$(bounded_kubectl get pod "${pod}" -o jsonpath='{.metadata.uid}{"\n"}{range .status.containerStatuses[?(@.state.running)]}{.name}{"\n"}{end}{range .status.ephemeralContainerStatuses[?(@.state.running)]}{.name}{"\n"}{end}' 2>/dev/null)" || containers=""
       observed_uid="${containers%%$'\n'*}"
       if [ "${observed_uid}" = "${uid}" ]; then
         while read -r container; do
           [ -z "${container}" ] && continue
-          if out="$("${KC[@]}" exec "${pod}" -c "${container}" -- cat /proc/net/tcp 2>/dev/null)" && [ -n "${out}" ]; then
+          if out="$(bounded_kubectl exec "${pod}" -c "${container}" -- cat /proc/net/tcp 2>/dev/null)" && [ -n "${out}" ]; then
             break
           fi
           out=""
@@ -386,7 +422,7 @@ run_device_monitor() {
     else
       # Images without cat may still include a socket tool. A failed exec is
       # UNKNOWN, never proof that the pod has zero device sockets.
-      out="$("${KC[@]}" exec "${pod}" -- sh -c \
+      out="$(bounded_kubectl exec "${pod}" -- sh -c \
         'command -v ss >/dev/null 2>&1 && ss -tn 2>/dev/null || (command -v netstat >/dev/null 2>&1 && netstat -tn 2>/dev/null)' \
         2>/dev/null)" || out=""
       if [ -z "${out}" ]; then
@@ -411,7 +447,7 @@ run_device_monitor() {
     info "pod ${pod}: ${count} established ESP32 socket(s)"
   done <<< "${pods}"
 
-  if ! final_pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
+  if ! final_pods="$(bounded_kubectl get pods --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.uid}{"\n"}{end}' 2>/dev/null)"; then
     unknown=$((unknown+1))
     info "final Running pod inventory unavailable (UNKNOWN)"
