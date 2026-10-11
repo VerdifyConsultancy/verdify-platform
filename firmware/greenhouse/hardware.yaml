@@ -186,9 +186,8 @@ text_sensor:
     entity_category: diagnostic
     update_interval: 5s
 
-  # Full estimator JSON is consumed through the native API by the ingestor.
-  # HA states have a 255-character limit; keep this backend detail disabled
-  # in its entity registry and publish only the action on the visible entity.
+  # Compact estimator JSON is expanded by the native-API ingestor. Both states
+  # fit HA's 255-character limit; keep backend detail hidden by default.
   - platform: template
     id: gh_climate_moisture_exchange_details
     name: "Climate Moisture Exchange Details"
