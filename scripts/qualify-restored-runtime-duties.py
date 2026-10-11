@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 DUTIES = {"planner", "setpoint_server", "ha_backfill", "vision", "lab_publisher", "grafana"}
+TARGET_CLUSTER = "verdify-cnpg-s2"
 
 
 async def wait_target_transport(host, *, timeout=10):
@@ -47,15 +48,15 @@ def target_binding(raw, cluster_uid):
     for obj in (cluster, pod, service):
         assert obj["metadata"]["namespace"] == "verdify-db-rehearsal"
         assert obj["metadata"]["uid"] and not obj["metadata"].get("deletionTimestamp")
-    assert cluster["metadata"]["name"] == "verdify-cnpg-s2"
+    assert cluster["metadata"]["name"] == TARGET_CLUSTER
     assert cluster["metadata"]["uid"] == cluster_uid
     assert cluster["status"]["currentPrimary"] == pod["metadata"]["name"]
-    assert pod["metadata"]["labels"]["cnpg.io/cluster"] == "verdify-cnpg-s2"
+    assert pod["metadata"]["labels"]["cnpg.io/cluster"] == TARGET_CLUSTER
     assert pod["status"]["phase"] == "Running"
     assert any(c["type"] == "Ready" and c["status"] == "True" for c in pod["status"]["conditions"])
-    assert service["metadata"]["name"] == "verdify-cnpg-s2-rw"
+    assert service["metadata"]["name"] == TARGET_CLUSTER + "-rw"
     assert service["spec"].get("type", "ClusterIP") == "ClusterIP"
-    assert service["spec"]["selector"]["cnpg.io/cluster"] == "verdify-cnpg-s2"
+    assert service["spec"]["selector"]["cnpg.io/cluster"] == TARGET_CLUSTER
     selectors = [
         service["spec"]["selector"][k] for k in ("role", "cnpg.io/instanceRole") if k in service["spec"]["selector"]
     ]
@@ -73,7 +74,7 @@ def target_binding(raw, cluster_uid):
 def check_target_identity(identity, address, database_oid):
     assert identity["server_addr"] == address
     assert identity["database_oid"] == database_oid
-    assert identity["cluster_name"] == "verdify-cnpg-s2"
+    assert identity["cluster_name"] == TARGET_CLUSTER
     assert identity["replica"] is False
     assert identity["server_version_num"] == "160013"
 
@@ -127,7 +128,7 @@ def cases(fixture, duty):
 async def qualify(args):
     import importlib.util
 
-    assert args.target_host == "verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local"
+    assert args.target_host == TARGET_CLUSTER + "-rw.verdify-db-rehearsal.svc.cluster.local"
     assert args.target_database == "verdify_rehearsal"
     assert re.fullmatch(r"[0-9a-f-]{36}", args.cluster_uid)
     assert args.admission_sha256 and re.fullmatch(r"[0-9a-f]{64}", args.admission_sha256)
@@ -241,7 +242,7 @@ async def qualify(args):
         await conn.close()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--duty", choices=sorted(DUTIES), required=True)
     parser.add_argument("--target-host", required=True)
@@ -259,3 +260,7 @@ if __name__ == "__main__":
     except Exception as exc:
         print(json.dumps({"qualified": False, "error_type": type(exc).__name__, "details": "withheld"}))
         raise SystemExit(2) from None
+
+
+if __name__ == "__main__":
+    main()
