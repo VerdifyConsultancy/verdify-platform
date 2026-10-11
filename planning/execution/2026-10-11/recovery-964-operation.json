@@ -1,0 +1,170 @@
+{
+  "app_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "current_health": "Healthy",
+  "current_revision": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+  "current_sync": "Synced",
+  "finished_at": "2026-10-11T14:42:01Z",
+  "fresh_job_pods": [
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+          "name": "bootstrap-and-attest"
+        }
+      ],
+      "created_at": "2026-10-11T14:41:05Z",
+      "name": "verdify-experiment-v2-credential-bootstrap-6gb5q",
+      "native_receipt_sha256": "66b1647d2d76af2b5284830a94548632782c1316ea08819ddf952cd58f3f3038",
+      "phase": "Succeeded",
+      "uid": "e7e1e8bd-41c4-4779-b1e3-71ff3b784f18"
+    },
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+          "name": "bootstrap-and-attest"
+        }
+      ],
+      "created_at": "2026-10-11T14:41:05Z",
+      "name": "verdify-mcp-runtime-role-bootstrap-tsk6f",
+      "native_receipt_sha256": "c4bd496e6af55294d4fd1c1f7773ce6232dde3ad3e5f991b212624e00f91b133",
+      "phase": "Succeeded",
+      "uid": "06c34998-4b21-4cac-845d-dc4d5c3b1ae2"
+    },
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+          "name": "migrate"
+        }
+      ],
+      "created_at": "2026-10-11T14:39:17Z",
+      "name": "verdify-migrate-8h6hs",
+      "native_receipt_sha256": "86154b93a837149fd5d23680a3afa6b532785d1a5994a6f56743488a627e23ed",
+      "phase": "Succeeded",
+      "uid": "c87d002c-760a-4f60-9666-4fecafebc41d"
+    },
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+          "name": "bootstrap-and-attest"
+        }
+      ],
+      "created_at": "2026-10-11T14:40:57Z",
+      "name": "verdify-runtime-role-bootstrap-8q42l",
+      "native_receipt_sha256": "b56b95514b0b59a9687be8d810e25410a5f47b67006e40e775a16ceff2de887f",
+      "phase": "Succeeded",
+      "uid": "0af40193-39ed-4bd3-aded-c4a83e80c3c9"
+    },
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+          "name": "bootstrap-and-attest"
+        }
+      ],
+      "created_at": "2026-10-11T14:41:18Z",
+      "name": "verdify-six-runtime-role-bootstrap-hq7kj",
+      "native_receipt_sha256": "882714201c4c7937d71615da47a72687a660aa201bbee3223ba9798271e54654",
+      "phase": "Succeeded",
+      "uid": "57a7b9fe-c219-4026-9a87-d3bbca60e3d9"
+    },
+    {
+      "containers": [
+        {
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "name": "init-archive"
+        }
+      ],
+      "created_at": "2026-10-11T14:41:37Z",
+      "name": "verdify-winter-archive-init-qkj7m",
+      "native_receipt_sha256": "af24a19646f5885006da380cc98993e481a9ae5e9598c7e4754cf282d70d71a7",
+      "phase": "Succeeded",
+      "uid": "9ccd7dd5-790c-40a1-938c-8ddeebf7fc94"
+    }
+  ],
+  "gate_r_postsync": "absent from current production render; experiment activation component is separate; no claim that it ran",
+  "hooks": [
+    {
+      "group": "",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "ConfigMap",
+      "message": "verdify-c0-boundary-contract-240-248-c67h948tfk created",
+      "name": "verdify-c0-boundary-contract-240-248-c67h948tfk",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-migrate",
+      "status": "Synced"
+    },
+    {
+      "group": "",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "ConfigMap",
+      "message": "experiment-v2-direct-launch-bootstrap created",
+      "name": "experiment-v2-direct-launch-bootstrap",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-runtime-role-bootstrap",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "PreSync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-six-runtime-role-bootstrap",
+      "status": "Synced"
+    },
+    {
+      "group": "batch",
+      "hookPhase": "Succeeded",
+      "hookType": "Sync",
+      "kind": "Job",
+      "message": "Reached expected number of succeeded pods",
+      "name": "verdify-winter-archive-init",
+      "status": "Synced"
+    }
+  ],
+  "phase": "Succeeded",
+  "prune": false,
+  "resource_results": 128,
+  "schema": "verdify.recovery-operation/1",
+  "selective_resources": [],
+  "started_at": "2026-10-11T14:39:05Z",
+  "submitted_revision": "9f799919fb23404a7f71cf02668b8f4a0091fc5d",
+  "terminal_native_sha256": "9cb87760d1611dca5815ca5f44b7a02789ec88ed4324c1b1d23971fa5753bf87"
+}

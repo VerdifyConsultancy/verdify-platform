@@ -1,0 +1,313 @@
+{
+  "band_refreshes": [
+    {
+      "band_curve": "14:50:07Z",
+      "daily_kpi": "14:50:41Z",
+      "equipment_runtime_daily": "14:50:38Z",
+      "scheduled": "14:50Z"
+    },
+    {
+      "band_curve": "15:00:07Z",
+      "daily_kpi": "15:00:40Z",
+      "equipment_runtime_daily": "15:00:37Z",
+      "scheduled": "15:00Z"
+    },
+    {
+      "band_curve": "15:10:05Z",
+      "daily_kpi": "15:10:37Z",
+      "equipment_runtime_daily": "15:10:34Z",
+      "scheduled": "15:10Z"
+    }
+  ],
+  "cache": {
+    "deployment_uid": "70989e64-bb75-4325-b886-788543c522fb",
+    "file_count": 791,
+    "observed_at": "2026-10-11T15:11:17.867823+00:00",
+    "pods": [
+      {
+        "name": "verdify-lab-c5dc5ff54-b7f62",
+        "node": "vm-k3s-node5",
+        "ready": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-11T14:26:08Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          }
+        ],
+        "uid": "867a7ede-f6df-4ded-8b38-af99b9801266"
+      },
+      {
+        "name": "verdify-lab-c5dc5ff54-bxdr2",
+        "node": "vm-k3s-node5",
+        "ready": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-11T14:24:13Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          }
+        ],
+        "uid": "1d4bc043-0087-492b-9fdf-8c5975b63446"
+      }
+    ],
+    "public_sha256": "sha256:c33e5594bf1e3f4cf68a6835a54fbba49773996d17bb835acda3612aff5d4df4",
+    "status": {
+      "last_attempt": {
+        "at_utc": "2026-10-11T15:07:58Z",
+        "failure_class": null,
+        "outcome": "succeeded"
+      },
+      "last_contention_at_utc": "2026-10-06T00:13:24Z",
+      "last_success": {
+        "at_utc": "2026-10-11T15:07:58Z",
+        "content_sha256": "sha256:e8fd0d82d44de847d906f96a36eadb59eeeb523e616e4d4465021c76710ccbeb",
+        "fresh_until_utc": "2026-10-11T15:27:58Z",
+        "public_sha256": "sha256:c33e5594bf1e3f4cf68a6835a54fbba49773996d17bb835acda3612aff5d4df4",
+        "source": "s3_content_prefix",
+        "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+      },
+      "schema_version": 1,
+      "served_public_sha256": "sha256:c33e5594bf1e3f4cf68a6835a54fbba49773996d17bb835acda3612aff5d4df4"
+    }
+  },
+  "jobs": [
+    {
+      "completed": "2026-10-11T14:50:44Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T14:50:44Z",
+          "lastTransitionTime": "2026-10-11T14:50:44Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T14:50:44Z",
+          "lastTransitionTime": "2026-10-11T14:50:44Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-band-curve-refresh-29862170",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-band-curve-refresh",
+          "uid": "c1850fb9-b575-483d-9262-c583d816b8cb"
+        }
+      ],
+      "scheduled_at": "2026-10-11T14:50:00Z",
+      "start": "2026-10-11T14:50:00Z",
+      "succeeded": 1,
+      "uid": "3ad05e85-bca2-4ecc-973f-bf51d33b3661"
+    },
+    {
+      "completed": "2026-10-11T15:00:42Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T15:00:42Z",
+          "lastTransitionTime": "2026-10-11T15:00:42Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T15:00:42Z",
+          "lastTransitionTime": "2026-10-11T15:00:42Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-band-curve-refresh-29862180",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-band-curve-refresh",
+          "uid": "c1850fb9-b575-483d-9262-c583d816b8cb"
+        }
+      ],
+      "scheduled_at": "2026-10-11T15:00:00Z",
+      "start": "2026-10-11T15:00:00Z",
+      "succeeded": 1,
+      "uid": "b56efbd3-2312-4b29-8a47-5add45dbbc80"
+    },
+    {
+      "completed": "2026-10-11T15:10:40Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T15:10:40Z",
+          "lastTransitionTime": "2026-10-11T15:10:40Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T15:10:40Z",
+          "lastTransitionTime": "2026-10-11T15:10:40Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-band-curve-refresh-29862190",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-band-curve-refresh",
+          "uid": "c1850fb9-b575-483d-9262-c583d816b8cb"
+        }
+      ],
+      "scheduled_at": "2026-10-11T15:10:00Z",
+      "start": "2026-10-11T15:10:00Z",
+      "succeeded": 1,
+      "uid": "611af648-c36c-4938-ae8c-eebbd83fd087"
+    },
+    {
+      "completed": "2026-10-11T14:48:04Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T14:48:04Z",
+          "lastTransitionTime": "2026-10-11T14:48:04Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T14:48:05Z",
+          "lastTransitionTime": "2026-10-11T14:48:05Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-lab-publisher-29862160",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-lab-publisher",
+          "uid": "79aa5222-4fb3-439b-ba33-28101c514543"
+        }
+      ],
+      "scheduled_at": "2026-10-11T14:40:00Z",
+      "start": "2026-10-11T14:40:00Z",
+      "succeeded": 1,
+      "uid": "404a10b6-6f26-435a-8108-45e61880db80"
+    },
+    {
+      "completed": "2026-10-11T14:59:22Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T14:59:22Z",
+          "lastTransitionTime": "2026-10-11T14:59:22Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T14:59:22Z",
+          "lastTransitionTime": "2026-10-11T14:59:22Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-lab-publisher-29862170",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-lab-publisher",
+          "uid": "79aa5222-4fb3-439b-ba33-28101c514543"
+        }
+      ],
+      "scheduled_at": "2026-10-11T14:50:00Z",
+      "start": "2026-10-11T14:50:00Z",
+      "succeeded": 1,
+      "uid": "e368aa90-b1be-42f8-bbd9-3b38ed80fcc4"
+    },
+    {
+      "completed": "2026-10-11T15:08:08Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-11T15:08:08Z",
+          "lastTransitionTime": "2026-10-11T15:08:08Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-11T15:08:09Z",
+          "lastTransitionTime": "2026-10-11T15:08:09Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "name": "verdify-lab-publisher-29862180",
+      "owners": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-lab-publisher",
+          "uid": "79aa5222-4fb3-439b-ba33-28101c514543"
+        }
+      ],
+      "scheduled_at": "2026-10-11T15:00:00Z",
+      "start": "2026-10-11T15:00:03Z",
+      "succeeded": 1,
+      "uid": "d1af0263-3d4d-4edf-9eed-9d464f233347"
+    }
+  ],
+  "public_status": {
+    "last_attempt": {
+      "at_utc": "2026-10-11T15:07:58Z",
+      "failure_class": null,
+      "outcome": "succeeded"
+    },
+    "last_contention_at_utc": "2026-10-06T00:13:24Z",
+    "last_success": {
+      "at_utc": "2026-10-11T15:07:58Z",
+      "content_sha256": "sha256:e8fd0d82d44de847d906f96a36eadb59eeeb523e616e4d4465021c76710ccbeb",
+      "fresh_until_utc": "2026-10-11T15:27:58Z",
+      "public_sha256": "sha256:c33e5594bf1e3f4cf68a6835a54fbba49773996d17bb835acda3612aff5d4df4",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:c33e5594bf1e3f4cf68a6835a54fbba49773996d17bb835acda3612aff5d4df4"
+  },
+  "schema": "verdify.natural-publication-recovery/1"
+}

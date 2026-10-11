@@ -79,49 +79,49 @@
       "title": "Measurement and incident truth",
       "exit": "A trustworthy fixed-panel climate/resource contract and a safely classified September 4 wetting interruption.",
       "owner": "Evidence/data lead",
-      "estimate": "3–5 engineering days; raw-ledger access is the main uncertainty."
+      "estimate": "3\u20135 engineering days; raw-ledger access is the main uncertainty."
     },
     {
       "id": "C1",
       "title": "Recovery and integrated physical qualification",
       "exit": "Fresh restore-backed vertical evidence and one separately authorized, sealed physical proof; finish baseline-confirmed and off.",
       "owner": "Runtime/release lead",
-      "estimate": "3–5 engineering days, overlapping C0; physical window is not a promised date."
+      "estimate": "3\u20135 engineering days, overlapping C0; physical window is not a promised date."
     },
     {
       "id": "C2",
       "title": "Seasonal design lock and randomized start",
       "exit": "A declared exploratory pilot or justified revised study, one immutable draw, and separately authorized day 1.",
       "owner": "Research/release lead",
-      "estimate": "2–3 engineering days after C0/C1 evidence, plus the eligible seasonal start window."
+      "estimate": "2\u20133 engineering days after C0/C1 evidence, plus the eligible seasonal start window."
     },
     {
       "id": "C3",
       "title": "Complete pilot and decision report",
       "exit": "All assigned days retained, blinded exports frozen, one-way reveal and a reproducible decision with bounded claims.",
       "owner": "Research lead",
-      "estimate": "60 local days if the accepted 30-pair pilot is retained; 2–3 days for final analysis."
+      "estimate": "60 local days if the accepted 30-pair pilot is retained; 2\u20133 days for final analysis."
     },
     {
       "id": "C4",
       "title": "Delivery and runtime reliability",
       "exit": "Exact-source delivery, truthful planner/writer/alert health, real compile and device-safe release checks.",
       "owner": "Platform lead",
-      "estimate": "5–8 engineering days in coherent bundles; may run alongside C0–C3 without changing locked trial identity."
+      "estimate": "5\u20138 engineering days in coherent bundles; may run alongside C0\u2013C3 without changing locked trial identity."
     },
     {
       "id": "C5",
       "title": "Durability and least privilege",
       "exit": "Role-complete recoverable backups, durable ingest state, measured RPO/RTO and a rehearsed HA cutover option.",
       "owner": "Data/platform lead",
-      "estimate": "5–8 engineering days; any production DB cutover is a separately bounded release."
+      "estimate": "5\u20138 engineering days; any production DB cutover is a separately bounded release."
     },
     {
       "id": "C6",
       "title": "Evidence-led control and irrigation",
       "exit": "Safe behavior-preserving firmware simplification, grounded control decisions and commissioned irrigation feedback.",
       "owner": "Control lead",
-      "estimate": "2–3 implementation sprints after evidence; no treatment-affecting changes during a locked study."
+      "estimate": "2\u20133 implementation sprints after evidence; no treatment-affecting changes during a locked study."
     },
     {
       "id": "C7",
@@ -142,7 +142,7 @@
     {
       "key": "775",
       "issue_number": 775,
-      "title": "Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "title": "Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
       "stage": "C0",
       "kind": "epic",
       "priority": "P0",
@@ -154,7 +154,7 @@
       "why": "Starting a randomized day does not establish climate or resource benefit. The prior launch-first roadmap left semantic defects, low power, season mismatch and post-trial decisions unowned.",
       "how": [
         "Maintain planning/backlog.yaml as the machine-readable source, rendered issue bodies and native blocked-by edges; keep parentage separate from blocking dependencies.",
-        "Execute C0 and C1 in parallel where safe, then C2 lock/start and C3 run/readout. Pull C4/C5 reliability work in bounded bundles; defer C6–C8 behavioral changes until the frozen study permits them.",
+        "Execute C0 and C1 in parallel where safe, then C2 lock/start and C3 run/readout. Pull C4/C5 reliability work in bounded bundles; defer C6\u2013C8 behavioral changes until the frozen study permits them.",
         "Review evidence weekly, serialize shared migrations/writer changes, record scope changes and publish each stage exit. Keep old closed issues and the September 5 issue snapshot as history."
       ],
       "acceptance": [
@@ -170,7 +170,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "October11 review: ROOT INCOMPLETE: C0 source/measurement repairs and historical S1 acceptances exist; current operational regressions#949/#964 prevent fresh qualification. Zero direct proof receipts, draws, assigned outcomes, freezes, exports or open exposures. Seven-issue S2 completion sprint is the next delivery boundary; C1–C3 and C4–C8 remaining goals are explicitly retained.",
+      "baseline": "October11 review: ROOT INCOMPLETE: C0 source/measurement repairs and historical S1 acceptances exist; current operational regressions#949/#964 prevent fresh qualification. Zero direct proof receipts, draws, assigned outcomes, freezes, exports or open exposures. Seven-issue S2 completion sprint is the next delivery boundary; C1\u2013C3 and C4\u2013C8 remaining goals are explicitly retained.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -186,10 +186,10 @@
       "owner_role": "Evidence/data lead",
       "parent": "775",
       "depends_on": [],
-      "what": "Produce a joined, source-stamped causal timeline for 2026-09-04 14:30–18:45 America/Denver and a bounded remediation or safe unresolved disposition.",
-      "why": "At 15:30 the public house average reached 100.48°F and 5.395 kPa. Fog, center mist and recorded flow were zero during 15:00–18:00 while fans/vent ran. The cause is unknown and matters before another wetting proof.",
+      "what": "Produce a joined, source-stamped causal timeline for 2026-09-04 14:30\u201318:45 America/Denver and a bounded remediation or safe unresolved disposition.",
+      "why": "At 15:30 the public house average reached 100.48\u00b0F and 5.395 kPa. Fog, center mist and recorded flow were zero during 15:00\u201318:00 while fans/vent ran. The cause is unknown and matters before another wetting proof.",
       "how": [
-        "Join raw climate, forecast vintage, commanded/actual equipment, requested→sent→confirmed plans, occupancy/manual actions, wetting admission/block reasons, water limits and counter reset epochs on UTC event time.",
+        "Join raw climate, forecast vintage, commanded/actual equipment, requested\u2192sent\u2192confirmed plans, occupancy/manual actions, wetting admission/block reasons, water limits and counter reset epochs on UTC event time.",
         "Test occupancy, leak, irrigation/fertilizer conflict, invalid time, hard-volume, soft-budget and vent-compatibility hypotheses against actual firmware guards; distinguish absence of telemetry from refusal to actuate.",
         "Reconstruct start/stop and recovery around 18:00; implement only the smallest demonstrated defect in a follow-up change under this issue, with a replayed regression. Do not raise a cap to explain a flat counter."
       ],
@@ -229,7 +229,7 @@
         "Update public generators, planner/MCP context and dashboards together; unavailable DLI, center sensing, gas and resource cost remain unavailable. Preserve old API fields only with explicit deprecation semantics."
       ],
       "acceptance": [
-        "A fixture with high attributable credit and low physical compliance stays distinct through SQL→API→public/planner rendering; no COALESCE renames one metric into the other.",
+        "A fixture with high attributable credit and low physical compliance stays distinct through SQL\u2192API\u2192public/planner rendering; no COALESCE renames one metric into the other.",
         "Hand-calculated band/distance and missing-sensor cases pass; true crop targets versus historical dispatched bands are identified, not assumed equal.",
         "Current-day and historical sample probes agree across consumers with versioned definitions; historical score changes are published as revisions, not silent rewrites."
       ],
@@ -262,7 +262,7 @@
       "how": [
         "Audit fn_band_trace in migration 119, band resolvers, registry entity slugs, units/grids and actual firmware consumers; separate desired from confirmed and bound observation freshness/generation.",
         "Add forward-compatible lineage fields and fixtures for pending/failed writes, stale snapshots, quantization, wrong units and real same-semantic drift.",
-        "Collect passive exact-source 48-field evidence for #749. If a consumed value cannot be observed, say unobservable and stop the proof; any diagnostic write belongs only to #641’s bounded authorized work."
+        "Collect passive exact-source 48-field evidence for #749. If a consumed value cannot be observed, say unobservable and stop the proof; any diagnostic write belongs only to #641\u2019s bounded authorized work."
       ],
       "acceptance": [
         "All relevant low/high/target series have documented source, unit, grid, timestamps and consumed/readback relationship.",
@@ -295,7 +295,7 @@
         "371"
       ],
       "what": "Reproduce the August stale/fresh comparison using exact 15-minute data with north/east/west fixed throughout, and quantify sensor, target, weather and delivery confounding.",
-      "why": "South disappears after August 2, before the August 6–9 stale-policy window. Omitting wetter south increases earlier mean VPD by 0.091 kPa overall and 0.190 at midday; this is not a correction to the nonlinear matched effect.",
+      "why": "South disappears after August 2, before the August 6\u20139 stale-policy window. Omitting wetter south increases earlier mean VPD by 0.091 kPa overall and 0.190 at midday; this is not a correction to the nonlinear matched effect.",
       "how": [
         "Freeze raw exports and input hashes; rebuild unique-minute bins, fixed-panel aggregates and crop-band distance on the original matched and eligible population.",
         "Repeat weather/time matching with common support diagnostics; stratify sensor composition, firmware, plan delivery and target versions, reporting unmatched/missing rows.",
@@ -311,7 +311,7 @@
         "research/planner-efficacy/tests",
         "docs/research"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -328,7 +328,7 @@
       "parent": "775",
       "depends_on": [],
       "what": "Repair forecast verification and downstream bias priors using the issued-at vintage, valid time, lead and observed outdoor temperature/RH-derived VPD.",
-      "why": "Migration 101 compares outdoor forecast VPD to indoor greenhouse VPD. Historical 0–6h bias was +1.453 kPa with that wrong reference versus +0.539 outdoors, contaminating planning priors.",
+      "why": "Migration 101 compares outdoor forecast VPD to indoor greenhouse VPD. Historical 0\u20136h bias was +1.453 kPa with that wrong reference versus +0.539 outdoors, contaminating planning priors.",
       "how": [
         "Trace forecast ingestion, accuracy views and gather-plan-context consumers; define as-of selection with no post-decision vintage leakage and unit-consistent outdoor truth.",
         "Ship a new migration and update bias/context consumers; model indoor response as a separate labeled outcome, never provider forecast error.",
@@ -345,7 +345,7 @@
         "scripts/gather-plan-context.sh",
         "research/planner-efficacy"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -362,7 +362,7 @@
       "parent": "775",
       "depends_on": [],
       "what": "Version the measured resource scope, attribution, uncertainty and eligibility required for any efficiency claim; keep heterogeneous runtime as a separate burden diagnostic.",
-      "why": "August 14–September 4 water includes 68.7% ambiguous gallons and only 13/22 eligible days. Two-channel electricity is partial; modeled whole-equipment energy and gas/cost are not eligible. Score resource weight is zero.",
+      "why": "August 14\u2013September 4 water includes 68.7% ambiguous gallons and only 13/22 eligible days. Two-channel electricity is partial; modeled whole-equipment energy and gas/cost are not eligible. Score resource weight is zero.",
       "how": [
         "Map each meter/counter/circuit to units, reset epochs, sampling boundary, attribution class and calibration. Separate climate wetting, irrigation/fertigation, manual use and unallocated flow.",
         "Reconcile accepted gallons = attributed + ambiguous + manual/unattributed; define commissioned per-stream and aggregate eligibility without filling gaps from model estimates.",
@@ -380,7 +380,7 @@
         "research/planner-efficacy/switchback/v2_outcomes.py",
         "scripts"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -435,7 +435,7 @@
       "how": [
         "Read current applied migration ledger, desired/running digests, writer generation, orphan attempt and Argo status through authorized evidence paths; do not apply historical known-good pins blindly.",
         "Reuse merged readiness/recovery/proof implementation and only relevant reviewed hunks from PR #776 and draft #774. Build an image only when its source context actually changes.",
-        "Run current packet → already-authorized bounded Gate R if needed → retire recovery authority → separate attended Gate P → retire proof authority. Preserve all failed attempt evidence."
+        "Run current packet \u2192 already-authorized bounded Gate R if needed \u2192 retire recovery authority \u2192 separate attended Gate P \u2192 retire proof authority. Preserve all failed attempt evidence."
       ],
       "acceptance": [
         "Fresh source/Argo/runtime/backup receipts replace old point-in-time assertions and identify any remaining mismatch.",
@@ -481,7 +481,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -540,12 +540,12 @@
         "639",
         "587"
       ],
-      "what": "Resolve retained orphan work without proof credit, then seal exactly one new baseline→aggressive→baseline physical proof under a fresh bounded Gate P decision.",
+      "what": "Resolve retained orphan work without proof credit, then seal exactly one new baseline\u2192aggressive\u2192baseline physical proof under a fresh bounded Gate P decision.",
       "why": "Merged recovery migrations and unit tests cannot establish actual sequential setter safety or two-epoch physical confirmation. Reusing an expired attempt would invalidate both safety and evidence.",
       "how": [
         "Inspect current ledger first; use the append-only forward recovery path for the exact orphan and retire Gate R authority immediately afterward.",
         "After fresh #749 proof readiness obtain the separate Gate P window, supervisor and rescue owner; perform only immutable typed commissioning work with exclusive writer and no generalized vector/OTA.",
-        "At every boundary require two distinct complete ingestion-owned full-48 epochs ≥30 seconds apart with strictly newer component timestamps, current generations and no rescue/override/cache mixing. Seal once and return safely off."
+        "At every boundary require two distinct complete ingestion-owned full-48 epochs \u226530 seconds apart with strictly newer component timestamps, current generations and no rescue/override/cache mixing. Seal once and return safely off."
       ],
       "acceptance": [
         "Recovery retains predecessor failures, creates no nonbaseline exposure and earns no proof credit.",
@@ -559,7 +559,7 @@
         "deploy/k8s",
         "docs/runbooks/attended-convergence.md"
       ],
-      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Live proof receipt count0. Retained controller recovery/C1 restoration is not a sealed baseline→aggressive→baseline GateP proof. Draft#855 remains unmerged; physical readiness and separate exact authority stay unfulfilled.",
+      "baseline": "October11 review: No direct-proof receipt exists. Fresh physical readiness, executor/lifecycle fault matrix, authentic alert recovery, safe terminal state and restored vertical proof remain required. Current writer/Argo regressions are explicit. Retained October6 assessment, not new execution: Live proof receipt count0. Retained controller recovery/C1 restoration is not a sealed baseline\u2192aggressive\u2192baseline GateP proof. Draft#855 remains unmerged; physical readiness and separate exact authority stay unfulfilled.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Gate R was already authorized, subject to exact current bounded recovery binding. Gate P requires a separate fresh attended authorization; neither grants randomization or day-1 launch."
@@ -652,17 +652,17 @@
         "resource_contract"
       ],
       "what": "Reconcile the accepted underpowered pilot with the measured endpoint, fixed sensor/target panel, actual 18-hour outcome window and an appropriate pre-draw season/calendar.",
-      "why": "The current basis starts November 2 for cooling/wetting treatments. Modeled joint advance power is 0.13776; the model scales 22 hours while outcomes use 06:00–24:00, assumes admission/completeness and lacks actual selector replay.",
+      "why": "The current basis starts November 2 for cooling/wetting treatments. Modeled joint advance power is 0.13776; the model scales 22 hours while outcomes use 06:00\u201324:00, assumes admission/completeness and lacks actual selector replay.",
       "how": [
-        "Default to the already accepted 30-pair/60-local-day exploratory pilot unless a separately justified redesign is chosen before lock. Explicitly distinguish climate noninferiority (+0.05 kPa/+0.50°F current margins) from improvement and runtime burden from metered savings.",
+        "Default to the already accepted 30-pair/60-local-day exploratory pilot unless a separately justified redesign is chosen before lock. Explicitly distinguish climate noninferiority (+0.05 kPa/+0.50\u00b0F current margins) from improvement and runtime burden from metered savings.",
         "Replay the exact frozen selector context/profile choices on eligible pretrial fixed-panel days; estimate admission/fallback, 18-hour endpoint variance/covariance, carryover, pair completeness and joint power across prespecified effect sizes.",
         "Choose a defensible future seasonal window before draw, with explicit timezone/DST handling, or document a narrow winter pilot question. Update source/template/basis/analyzer goldens coherently; never silently bypass the current date guard or mutate a locked design.",
         "Preregister all assigned-day ITT, null/bounds/inconclusive rules, outcome windows, resource scope, target/sensor revisions, safety thresholds, stopping and one-way reveal. Keep 150-pair/300-day projections illustrative, not a season-mixing recommendation."
       ],
       "acceptance": [
         "An explicit decision document chooses pilot versus confirmatory scope and states exactly which claim can be tested with current meters.",
-        "Power replay is reproducible; include .99^30 ≈ .740 and .95^30 ≈ .215 all-pairs retention sensitivities rather than assuming .9995 reliability.",
-        "Calendar is future and seasonally justified; 06:00–24:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.",
+        "Power replay is reproducible; include .99^30 \u2248 .740 and .95^30 \u2248 .215 all-pairs retention sensitivities rather than assuming .9995 reliability.",
+        "Calendar is future and seasonally justified; 06:00\u201324:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.",
         "No draw has occurred before design approval/qualification; model is current source-pinned Luna/medium, not stale Sol issue prose."
       ],
       "paths": [
@@ -680,7 +680,7 @@
     {
       "key": "integration",
       "issue_number": 783,
-      "title": "Prove restore → selector → setter schema → receipt → frozen outcome end to end",
+      "title": "Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
       "stage": "C1",
       "kind": "task",
       "priority": "P0",
@@ -712,7 +712,7 @@
         "db/migrations/tests",
         "tests"
       ],
-      "baseline": "October11 review: INCOMPLETE: real current restored-DB selector→setter schema→receipt→freezer→export→analyzer qualification still lacks an accepted whole-path receipt. Fixtures and separate reseals do not substitute; retain #782/#639/#587 native predecessors.",
+      "baseline": "October11 review: INCOMPLETE: real current restored-DB selector\u2192setter schema\u2192receipt\u2192freezer\u2192export\u2192analyzer qualification still lacks an accepted whole-path receipt. Fixtures and separate reseals do not substitute; retain #782/#639/#587 native predecessors.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -807,8 +807,8 @@
       "what": "Verify real post-start daily materialization and export integrity without reveal, using the scientific contract qualified before lock.",
       "why": "This is a post-start acceptance task, not a circular launch dependency. Exposure-conditioned filtering or silently dropping a failed day would bias the causal comparison.",
       "how": [
-        "Emit one row for every assigned local 06:00–24:00 day including fallback/rescue/failure/zero-exposure/null; keep exposure union strictly a fidelity/per-protocol diagnostic.",
-        "Apply the locked unique-minute→15-minute climate rule (current 12/15 slots, 66/72 bins and max 30-minute gap unless prospectively revised), fixed panel/targets and per-stream resource definitions.",
+        "Emit one row for every assigned local 06:00\u201324:00 day including fallback/rescue/failure/zero-exposure/null; keep exposure union strictly a fidelity/per-protocol diagnostic.",
+        "Apply the locked unique-minute\u219215-minute climate rule (current 12/15 slots, 66/72 bins and max 30-minute gap unless prospectively revised), fixed panel/targets and per-stream resource definitions.",
         "Validate at-or-before-06:00 state seed and counter segment/reset boundaries; integrate counters over their exact sample interval, not a different full outcome window. Freeze blinded export with relational revision/work lineage."
       ],
       "acceptance": [
@@ -917,7 +917,7 @@
       "why": "Older CI receipts were absent/opaque and builders/promoters were not cleanly separated. Docs, tests and activation-only changes should not rebuild every application image.",
       "how": [
         "Rebaseline the owning jvallery/agents#4014 contract and the eight generated image profiles; implement common changes in their owning registry, not the managed .agent-fleet/ci.yaml mirror.",
-        "Classify actual COPY/runtime inputs: top-level planning/docs and tests/pins validate without application rebuilds, but docs/ is an ingestor RAG/playbook input and site/docs is publisher input. Build only affected profiles through Kaniko/Zot and bind source→digest→promotion→Argo→running image; metadata-only Git SHA changes do not require rebuilding every image.",
+        "Classify actual COPY/runtime inputs: top-level planning/docs and tests/pins validate without application rebuilds, but docs/ is an ingestor RAG/playbook input and site/docs is publisher input. Build only affected profiles through Kaniko/Zot and bind source\u2192digest\u2192promotion\u2192Argo\u2192running image; metadata-only Git SHA changes do not require rebuilding every image.",
         "Exercise success, source failure, infrastructure failure, cancel, missing receipt, retry and concurrent promotion. Add required checks/review protection only after the stable status producer passes its reliability matrix."
       ],
       "acceptance": [
@@ -931,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary.",
+      "baseline": "October11 execution:964 recovered production and953 natural Iris acceptance is sealed. Owner bounded PR agents#4763 ports Verdify-only delivery changes onto current main; original mixed4747 preserved.273 focused tests/736 subtests pass, generated artifacts/render pass. Native owner checks, deployed-consumer adoption/rollback and full fault/cancel/retry/concurrency matrix remain; l2lfz preserves genuine infrastructure failure before build. See S2-PROGRESS.md. October12 source update: owner PR agents#4763 merged at b874103a; deployed-consumer adoption and fault/cancel/retry/concurrency acceptance remain distinct and unfinished.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -965,7 +965,7 @@
         "Makefile",
         ".agent-fleet/ci.yaml"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1100,7 +1100,7 @@
       "acceptance": [
         "Requested/queued/sent/failed/cancelled/superseded/confirmed states match physical completion, never cache intent.",
         "Periodic work is not later than twice its intended cadence during writes; no repeated broad restore storm occurs.",
-        "Experiment qualification consumes the narrow #639/#749 evidence without waiting for unrelated firmware simplification; full closure requires this issue’s broader receipt."
+        "Experiment qualification consumes the narrow #639/#749 evidence without waiting for unrelated firmware simplification; full closure requires this issue\u2019s broader receipt."
       ],
       "paths": [
         "ingestor",
@@ -1108,7 +1108,7 @@
         "tests",
         "docs/reviews/firmware-simplification-proposal-2026-07-06.md"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1126,7 +1126,7 @@
       "depends_on": [
         "433"
       ],
-      "what": "Finish fault recovery, terminal required-plan accounting and effective-plan validity for the operational Hermes→MCP path, without adding a second planner writer.",
+      "what": "Finish fault recovery, terminal required-plan accounting and effective-plan validity for the operational Hermes\u2192MCP path, without adding a second planner writer.",
       "why": "September 5 routine planner health is good; older permanent-outage claims are stale. The remaining risk is green transport probes hiding unusable tools, dead workers or a trigger ending in acknowledgement instead of a full plan.",
       "how": [
         "Exercise missing MCP tools, DNS/refusal/prolonged outage and recovery with bounded backoff; record terminal action/status/time/correlation before SLA evaluation.",
@@ -1146,7 +1146,7 @@
         "tests",
         "deploy/k8s/components/planner"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1196,7 +1196,7 @@
       "owner_role": "Platform lead",
       "parent": "75",
       "depends_on": [],
-      "what": "Document and guard the estate’s actual rule-loading mechanism so a green render cannot silently ship inert alerts.",
+      "what": "Document and guard the estate\u2019s actual rule-loading mechanism so a green render cannot silently ship inert alerts.",
       "why": "Prometheus loads rule files from observability/prometheus-rules; a PrometheusRule CR in Verdify overlays is not selected by the current monitoring stack.",
       "how": [
         "Verify current owning monitoring configuration before implementation and link the source contract, not a historical assumption.",
@@ -1214,7 +1214,7 @@
         "scripts",
         "docs"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1250,7 +1250,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1287,7 +1287,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1321,7 +1321,7 @@
         "deploy/k8s",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1355,7 +1355,7 @@
         "tests",
         "deploy/k8s"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1479,7 +1479,7 @@
       "why": "pg_dump alone omits cluster globals; the current rehearsal seeds roles in-script and can pass without proving the actual disaster-recovery artifact is sufficient.",
       "how": [
         "Choose a declarative role manifest or password-free globals export (for example --no-role-passwords) with database ownership and memberships; never publish password hashes or Secret annotations.",
-        "Store versioned checksums/metadata alongside the dump, and make rehearsal consume those real artifacts in cluster→roles→database owner→restore→migrations order.",
+        "Store versioned checksums/metadata alongside the dump, and make rehearsal consume those real artifacts in cluster\u2192roles\u2192database owner\u2192restore\u2192migrations order.",
         "Assert intended bounded grants after restore and document runtime credentials are re-established separately through the authorized mechanism, not from dumped secrets."
       ],
       "acceptance": [
@@ -1493,7 +1493,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1529,7 +1529,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1599,7 +1599,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover.",
+      "baseline": "October11 execution: fresh frozen A/B each seal952 objects/9,699,553 rows,77 sequences and42 study tables exactly. Before fixture DML, active S2 native witness/COPY failed due changed/removed physical chunks; backgroundworkers16 versus frozen0. Drifted clone unchanged/excluded. Fresh contained recovery target/admission plus integrated client/recovery/reseal acceptance remain; these seals are not fresh restore/RTO proof. See S2-PROGRESS.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1653,7 +1653,7 @@
       "depends_on": [
         "670"
       ],
-      "what": "Remove schema-owner credentials from normal workloads and prove narrowly bounded runtime roles without weakening the study’s minimum integrity contract.",
+      "what": "Remove schema-owner credentials from normal workloads and prove narrowly bounded runtime roles without weakening the study\u2019s minimum integrity contract.",
       "why": "Randomizer/lifecycle/executor/freezer/blinded-analyst separation is already a launch requirement in #integration; broader platform role separation remains useful but must not become a duplicate launch gate.",
       "how": [
         "Inventory real workload duties and grants using metadata-only authorized evidence; design migration, API, ingestor, planner/context, MCP and optional twin roles.",
@@ -1671,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof.",
+      "baseline": "October11 execution: nine ordinary runtime roles pass actual bounded TCP login/read/deny/transaction-rollback/pool-close probes across11 consumers. Intended allowed DML, endpoint A-B-A, whole-service rollback and final952/77/42 reseals remain open. Exact new ingestor probe awaits image adoption. See runtime-643-login-progress.json and S2-PROGRESS.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1755,8 +1755,8 @@
       "owner_role": "Control lead",
       "parent": "359",
       "depends_on": [],
-      "what": "Reduce on-chip entity/churn/heap load in independently reversible, behavior-preserving tiers without destroying the current experiment’s raw readback contract.",
-      "why": "Historical 612 entities, constant tunable echoes and 3–8 KB heap motivate simplification, but projected 38–44 KB recovery is not a verified result. Replacing all readbacks with one hash now would break full-48 confirmation.",
+      "what": "Reduce on-chip entity/churn/heap load in independently reversible, behavior-preserving tiers without destroying the current experiment\u2019s raw readback contract.",
+      "why": "Historical 612 entities, constant tunable echoes and 3\u20138 KB heap motivate simplification, but projected 38\u201344 KB recovery is not a verified result. Replacing all readbacks with one hash now would break full-48 confirmation.",
       "how": [
         "Measure current entity/publish/write volume and heap after #433 before choosing further tiers.",
         "Use #369 to remove truly unused/static surface only after consumer inventory; preserve deterministic FSM, NVS/reboot safety, guardrails and all required current observation fields.",
@@ -1939,7 +1939,7 @@
       "what": "Consolidate the surviving cleanup from closed #300/#326 into one evidence-backed purge with net-negative unused surface.",
       "why": "Stale registry entries and static echoed entities cost memory and traffic, but deleting fields still used for current receipt or safety contracts would be a regression.",
       "how": [
-        "Build a registry→dispatcher→wire→firmware consumer→readback→public/twin/experiment matrix and classify unused/static/dynamic/locked fields.",
+        "Build a registry\u2192dispatcher\u2192wire\u2192firmware consumer\u2192readback\u2192public/twin/experiment matrix and classify unused/static/dynamic/locked fields.",
         "Remove only proven dead paths or compile-time-static fields with compatible schema/deprecation handling and generated drift tests.",
         "Measure LOC/entity/heap/publish changes; preserve full-48 observation requirements until an independently qualified successor protocol replaces them."
       ],
@@ -2017,11 +2017,11 @@
       "why": "Projected gain, a fixed clock window and a few favorable nights cannot establish reliable greenhouse-wide dry-out or justify a Vanda watering program.",
       "how": [
         "Verify current DB/device/Python solar parity, then join sunset-to-sunrise eligibility, outdoor absolute-humidity advantage, admission/stop reasons, indoor response and vent/fan/heat duty.",
-        "Compute realized 10–20-minute response with completeness/confounder flags, minimum temperature and local safety evidence.",
+        "Compute realized 10\u201320-minute response with completeness/confounder flags, minimum temperature and local safety evidence.",
         "Keep heat2 forbidden and existing wind/dwell/temperature safeguards; any response change becomes a separately scoped evidence-led firmware proposal."
       ],
       "acceptance": [
-        "Episodes use device solar semantics, never fixed 02:00–06:00, and incomplete/confounded episodes cannot be PASS.",
+        "Episodes use device solar semantics, never fixed 02:00\u201306:00, and incomplete/confounded episodes cannot be PASS.",
         "Solar-day held-temperature admission is zero while ordinary daytime dehumidification remains correctly distinguished.",
         "Planner/MCP sees realized validity-bearing outcomes and explicit disposition, not a universal VPD target or a crop-safety claim without sensing."
       ],
@@ -2114,7 +2114,7 @@
     {
       "key": "214",
       "issue_number": 214,
-      "title": "Prove crop-deviation trigger → valid plan on the sole operational planner path",
+      "title": "Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
       "stage": "C6",
       "kind": "task",
       "priority": "P1",
@@ -2129,7 +2129,7 @@
       "why": "Historical trigger detection existed while gather_context/action delivery failed. A green planner or acknowledged trigger does not prove a new effective full plan.",
       "how": [
         "Rebaseline current deviation detection and active Hermes/MCP context gather; remove any remaining active Docker-shell failure reporting.",
-        "Inject bounded non-actuating deviation fixtures and then observe an eligible real deviation through correlated context→full plan/fallback→effective validity→ingestor evidence.",
+        "Inject bounded non-actuating deviation fixtures and then observe an eligible real deviation through correlated context\u2192full plan/fallback\u2192effective validity\u2192ingestor evidence.",
         "Keep deterministic forecast actions and AI proposals distinct; ordinary proposals remain shadow-only when the experiment owns fields."
       ],
       "acceptance": [
@@ -2144,7 +2144,7 @@
         "mcp",
         "tests"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2280,7 +2280,7 @@
       ],
       "acceptance": [
         "Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.",
-        "One eligible saturated zone’s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
+        "One eligible saturated zone\u2019s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
         "No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement."
       ],
       "paths": [
@@ -2413,7 +2413,7 @@
       "what": "Create an operator-verified per-position map for lime tree, cannabis, hydro pot and unassigned SEN0600, replacing stale crop/probe assumptions.",
       "why": "The old topology and soil thresholds were two generations stale; a historical stuck-zero diagnosis may not describe a probe now moved into different media.",
       "how": [
-        "Observe actual positions and plumbing, verify sensor IDs/live series and ask for the unassigned probe’s intended location only when the physical target remains genuinely unknown.",
+        "Observe actual positions and plumbing, verify sensor IDs/live series and ask for the unassigned probe\u2019s intended location only when the physical target remains genuinely unknown.",
         "Extend the zone import contract to per-position records and version sensor_registry/zones/seed provenance with a forward migration.",
         "Document hydro/substrate-specific calibration and re-diagnose south soil probe contact separately from the failed south air probe in #751."
       ],
@@ -2551,7 +2551,7 @@
       "parent": "16",
       "depends_on": [],
       "what": "Evaluate whether actual orchid species and observed stage warrant a dormancy flag, lighting clamp or dry-down governance this season.",
-      "why": "A generic dormant-orchid row and universal 11–13-hour clamp can be wrong for the crop; old planning assumptions were explicitly conditional on empirical observations.",
+      "why": "A generic dormant-orchid row and universal 11\u201313-hour clamp can be wrong for the crop; old planning assumptions were explicitly conditional on empirical observations.",
       "how": [
         "Record actual species/stage, growth/root/leaf observations and current light/moisture evidence with operator input.",
         "If justified, design typed stage/validity/provenance and bounded species-specific lighting/dry-down policy with missing-data fallback.",
@@ -2634,7 +2634,7 @@
         "docs",
         "config"
       ],
-      "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2792,11 +2792,11 @@
         "readout"
       ],
       "what": "Implement and physically qualify any future atomic policy engine only after a demonstrated need beyond the current confirmed-component study.",
-      "why": "Sequential setters and full-state observations are the accepted pilot transport. A new ROM catalog/journal/OTA platform is not an appropriate workaround for today’s proof or science gaps.",
+      "why": "Sequential setters and full-state observations are the accepted pilot transport. A new ROM catalog/journal/OTA platform is not an appropriate workaround for today\u2019s proof or science gaps.",
       "how": [
-        "Use #638’s generated contract and approved operational full-48 baseline, immutable slots and one-control-tick snapshot for every consumer.",
+        "Use #638\u2019s generated contract and approved operational full-48 baseline, immutable slots and one-control-tick snapshot for every consumer.",
         "Implement bounded memory, validity/assignment fencing, two-copy crash-safe journal and conservative reset/water-budget fallback; prevent legacy armed-field mutation.",
-        "Run native/replay/HIL and every stage/journal power-loss/corruption case, then separately qualify pinned experiment/recovery binaries under #390 and the declared ≥48-hour device bake."
+        "Run native/replay/HIL and every stage/journal power-loss/corruption case, then separately qualify pinned experiment/recovery binaries under #390 and the declared \u226548-hour device bake."
       ],
       "acceptance": [
         "Every consumer reads one atomic per-tick policy and invalid/corrupt/expired state returns to approved safe baseline.",
@@ -2867,7 +2867,7 @@
         "371"
       ],
       "what": "Explore actuator-aware identification only after simpler bounded control comparisons and trustworthy data demonstrate a useful question.",
-      "why": "Both previous closed-loop response models failed validation; open-loop PID requested 64–138% more runtime on the factual trajectory but cannot establish counterfactual climate or savings.",
+      "why": "Both previous closed-loop response models failed validation; open-loop PID requested 64\u2013138% more runtime on the factual trajectory but cannot establish counterfactual climate or savings.",
       "how": [
         "Build as-of actuator/state/forecast datasets with fixed sensor/target versions and explicit excitation/support constraints.",
         "Validate response models on held-out seasons/events against persistence and simpler deterministic baselines, including uncertainty and safety-envelope violations.",
@@ -2903,7 +2903,7 @@
         "resource_contract",
         "410"
       ],
-      "what": "Close the gap to the full objective—less measured gas/electricity/water with better climate—through season-specific instrumentation and a separately powered study.",
+      "what": "Close the gap to the full objective\u2014less measured gas/electricity/water with better climate\u2014through season-specific instrumentation and a separately powered study.",
       "why": "Cooling/wetting-only profiles, partial electricity, ambiguous water, no eligible gas contrast and shared virtual inference cannot support whole-greenhouse economic or heating claims.",
       "how": [
         "Define calibrated meter/circuit/flow/gas boundaries, tariffs and uncertainty, including vent travel versus open time and compute cost only where it differs between policies.",
@@ -3112,7 +3112,7 @@
         "ingestor/ingestor.py",
         "tests/test_ingestor_gap_snapshot.py"
       ],
-      "baseline": "Complete bounded acceptance: deployedingestor.py bytehash matchesmain,15 focusedtests pass; complete/incomplete gaps are truthful; all11 cited alerts11537–11547 auto-resolved(system). Closed with exact source/digest/socket/readback receipt; unrelated vision degradation stays#951.",
+      "baseline": "Complete bounded acceptance: deployedingestor.py bytehash matchesmain,15 focusedtests pass; complete/incomplete gaps are truthful; all11 cited alerts11537\u201311547 auto-resolved(system). Closed with exact source/digest/socket/readback receipt; unrelated vision degradation stays#951.",
       "delivery": "Bounded exact-source live receipt; see October5 acceptance matrix. CLOSED.",
       "rollback": "Preserve snapshots, source/digests, alerts and publication receipts; do not remove evidence to fabricate health.",
       "decision": "Read-only triage performs no production deployment or device action."
@@ -3214,7 +3214,7 @@
         "tests",
         "ingestor/tasks/ha.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent\u2192observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3327,7 +3327,7 @@
     "sprints": [
       {
         "id": "S2",
-        "title": "S2 — Recoverability and reliable delivery (October 2026)",
+        "title": "S2 \u2014 Recoverability and reliable delivery (October 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
         "goal": "Finish the five remaining S2 outcomes using one release lane and one independent contained recovery lane.",
@@ -3335,7 +3335,7 @@
       },
       {
         "id": "S3",
-        "title": "S3 — Source truth, portable validation and prospective design",
+        "title": "S3 \u2014 Source truth, portable validation and prospective design",
         "kind": "sprint",
         "capacity_hours": 80,
         "goal": "Adopt the existing command/telemetry fixes safely, qualify portable firmware tooling and choose a defensible prospective study before any draw.",
@@ -3343,7 +3343,7 @@
       },
       {
         "id": "S4",
-        "title": "S4 — Current readiness and integrated qualification",
+        "title": "S4 \u2014 Current readiness and integrated qualification",
         "kind": "sprint",
         "capacity_hours": 80,
         "goal": "Join current executor, lifecycle, backup, readiness and restored-data evidence; prepare the attended physical proof.",
@@ -3351,7 +3351,7 @@
       },
       {
         "id": "S5",
-        "title": "S5 — Immutable lock, launch and first real outcome",
+        "title": "S5 \u2014 Immutable lock, launch and first real outcome",
         "kind": "conditional",
         "capacity_hours": 80,
         "goal": "After the genuine predecessor evidence and seasonal decision, lock once and perform one separately authorized launch.",
@@ -3402,7 +3402,7 @@
         "title": "Campaign and program roll-ups",
         "kind": "rollup",
         "capacity_hours": null,
-        "goal": "Track original C0–C8 program outcomes without double-counting epic effort.",
+        "goal": "Track original C0\u2013C8 program outcomes without double-counting epic effort.",
         "exit": "Each child retains its own acceptance and historical receipts. Parentage is ownership, never an automatic blocking edge."
       }
     ],
@@ -3412,7 +3412,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Research/platform lead"
       },
       {
@@ -3420,7 +3420,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -3460,7 +3460,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Platform lead"
       },
       {
@@ -3468,7 +3468,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3548,7 +3548,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Control lead"
       },
       {
@@ -3556,7 +3556,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Control lead"
       },
       {
@@ -3692,7 +3692,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Control lead"
       },
       {
@@ -3708,7 +3708,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Research/release lead"
       },
       {
@@ -3772,7 +3772,7 @@
         "sprint": "S4",
         "hours_min": 6,
         "hours_max": 10,
-        "next_action": "Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision.",
+        "next_action": "Prepare the exact current attended baseline\u2192aggressive\u2192baseline proof packet; execute only after Jason gives that specific fresh physical decision.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3796,7 +3796,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback.",
+        "next_action": "Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source\u2192build\u2192digest\u2192promotion\u2192full hooks\u2192running consumer/rollback.",
         "owner_role": "Platform lead"
       },
       {
@@ -3812,7 +3812,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3828,7 +3828,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "next_action": "Roll up child outcomes and preserve original C0\u2013C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
         "owner_role": "Evidence/data lead"
       },
       {
@@ -3844,7 +3844,7 @@
         "sprint": "S4",
         "hours_min": 12,
         "hours_max": 20,
-        "next_action": "Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal.",
+        "next_action": "Join the selected scientific contract to a real restore\u2192selector\u2192setter schema\u2192receipt\u2192freeze/export/analyzer path and final ledger/role reseal.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3884,7 +3884,7 @@
         "sprint": "RELEASE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "After native agents#4460→#4461 adoption, add exact owned-host exclusions and verify hook-free route delivery plus writer continuity.",
+        "next_action": "After native agents#4460\u2192#4461 adoption, add exact owned-host exclusions and verify hook-free route delivery plus writer continuity.",
         "owner_role": "Platform lead"
       },
       {

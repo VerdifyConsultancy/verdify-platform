@@ -1,0 +1,56 @@
+{
+  "qualification_scope": "Read-only fresh equality against accepted frozen A/B. No new restore, RTO or integrated ordinary-client acceptance claimed. Active S2 clone failed native witness/COPY because physical chunks had changed before fixture DML; retained unchanged and excluded.",
+  "rowsets": [
+    {
+      "accepted_rowset_deltas": 0,
+      "compact_receipt_sha256": "4c5668164d32ccdbf418b9e54bbb5e131d6fdee5586444076236a43b85ec86ad",
+      "complete": true,
+      "native_stdout_sha256": "d4b58dba16f037263c30f81fd27b459d8ae17b2aff985d1654023b469ebc986e",
+      "row_count": 9699553,
+      "table_count": 952,
+      "target": "a",
+      "terminal_marker_verified": true
+    },
+    {
+      "accepted_rowset_deltas": 0,
+      "compact_receipt_sha256": "e3e455597d227261fbe253f7d42d91d6f32c6268723969a7b42d8d2d10c0f43a",
+      "complete": true,
+      "native_stdout_sha256": "da1c1d73bb4aaa861693e15210a5a9ccee4068f004e8380ac070b28583313c83",
+      "row_count": 9699553,
+      "table_count": 952,
+      "target": "b",
+      "terminal_marker_verified": true
+    }
+  ],
+  "schema": "verdify.frozen-reseals/1",
+  "sequences_study": [
+    {
+      "all_exact": true,
+      "count": 77,
+      "proof": "sequences",
+      "sql_sha256": "9f21ac123a183e68fa4a754e31b2c7fd4bb864e2ae02d7e20f4990e9535c760e",
+      "target": "a"
+    },
+    {
+      "all_exact": true,
+      "count": 42,
+      "proof": "study42",
+      "sql_sha256": "42f931d4635e30cbd209ace3c7da4c4c14f3e80069d3cbae2aa2e352f7b8c29e",
+      "target": "a"
+    },
+    {
+      "all_exact": true,
+      "count": 77,
+      "proof": "sequences",
+      "sql_sha256": "9f21ac123a183e68fa4a754e31b2c7fd4bb864e2ae02d7e20f4990e9535c760e",
+      "target": "b"
+    },
+    {
+      "all_exact": true,
+      "count": 42,
+      "proof": "study42",
+      "sql_sha256": "42f931d4635e30cbd209ace3c7da4c4c14f3e80069d3cbae2aa2e352f7b8c29e",
+      "target": "b"
+    }
+  ]
+}
