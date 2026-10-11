@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# ci-local.sh — the ENTIRE pre-merge validation gate, runnable anywhere
+# ci-local.sh — pre-merge validation, with explicit host capability limits
 # (operator host, k3s pod, the in-cluster verdify-platform-ci Argo Workflow).
+# Linux publication tests run in native Linux CI; non-Linux host validation
+# reports those skips and does not qualify a release on its own.
 #
 # 2026-07-11: GitHub Actions is removed from this repo (operator directive —
 # no external CI dependency). This script IS the gate the old workflows ran:
@@ -61,7 +63,7 @@ step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py
 
 step "pure-logic / contract tests"
-$PY -m pytest -q \
+$PY -m pytest -q -rs \
   tests/test_05_dispatcher.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_bounded_reconcile.py \
@@ -320,4 +322,8 @@ if [ -n "${CI_BASE_REF:-}" ]; then
   fi
 fi
 
-printf '\nALL GATES GREEN\n'
+if [ "$(uname -s)" = Linux ]; then
+  printf '\nALL GATES GREEN\n'
+else
+  printf '\nHOST GATES GREEN — native Linux publication qualification remains required\n'
+fi
