@@ -29,16 +29,18 @@ spec:
             app.kubernetes.io/component: grafana-maintenance
         spec:
           restartPolicy: Never
-          # Co-locate with the DB pod so the refresh connection never crosses
-          # the Flannel overlay mesh. DB ingress is allowed by the dedicated
-          # grafana-maintenance peer in grafana.yaml.
+          # Prefer the DB node to reduce overlay traffic, but keep maintenance
+          # schedulable while that node is cordoned. The dedicated maintenance
+          # peer in grafana.yaml permits the service connection across nodes.
           affinity:
             podAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                    matchLabels:
-                      app.kubernetes.io/component: db
-                  topologyKey: kubernetes.io/hostname
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/component: db
+                    topologyKey: kubernetes.io/hostname
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
