@@ -3,6 +3,8 @@ kind: Cluster
 metadata:
   name: verdify-cnpg-s2
   namespace: verdify-db-rehearsal
+  annotations:
+    cnpg.io/hibernation: "on"
   labels: &id001
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: cnpg-rehearsal
@@ -58,6 +60,7 @@ spec:
       owner: rehearsal_bootstrap
   plugins:
   - name: barman-cloud.cloudnative-pg.io
+    enabled: true
     isWALArchiver: true
     parameters:
       barmanObjectName: verdify-cnpg-rehearsal-backup

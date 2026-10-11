@@ -58,6 +58,7 @@ spec:
       owner: rehearsal_bootstrap
   plugins:
   - name: barman-cloud.cloudnative-pg.io
+    enabled: true
     isWALArchiver: true
     parameters:
       barmanObjectName: verdify-cnpg-rehearsal-backup

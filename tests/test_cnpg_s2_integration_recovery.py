@@ -80,3 +80,12 @@ def test_client_network_can_only_reach_the_new_target_and_dns():
     assert "ingress" not in egress["spec"]
     assert ingress["spec"]["podSelector"]["matchLabels"] == {"cnpg.io/cluster": m.CLUSTER}
     assert ingress["spec"]["ingress"][0]["from"] == [{"podSelector": egress["spec"]["podSelector"]}]
+
+
+def test_old_rejected_clone_is_parked_and_new_restore_remains_awake():
+    old = yaml.safe_load((CLUSTERS / "s2-cluster.yaml").read_text())
+    new = yaml.safe_load((CLUSTERS / "s2-current274-integration-recovery.yaml").read_text())
+    assert old["metadata"]["annotations"]["cnpg.io/hibernation"] == "on"
+    assert "cnpg.io/hibernation" not in new["metadata"].get("annotations", {})
+    assert old["spec"]["instances"] == new["spec"]["instances"] == 3
+    assert old["spec"]["resources"]["requests"] == new["spec"]["resources"]["requests"]
