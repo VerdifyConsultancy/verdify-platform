@@ -1,0 +1,19 @@
+{
+  "base": "4c919a8c005e407372231a6a11b8dc111620aa7d",
+  "bundle_sha256": "e4258dae9c94f352464e5a3a073f21d66d452c5dadd7f23330348979bdc39ffb",
+  "captured_at": "2026-10-11T16:30:44.841102+00:00",
+  "checks": [
+    "full registered regeneration freshness passed",
+    "27 manifest contract tests passed on rebased source",
+    "executable source contract passed in build-required state",
+    "git diff --check passed",
+    "git bundle verify passed"
+  ],
+  "intersecting_paths_with_new_base": [],
+  "local_head": "e5c6f536d7ea28190f3c90b73bf8315abf2686eb",
+  "new_push_or_ci": false,
+  "prepared_patch_sha256": "4c2b10b4e2098bfb82f8820d111f97a3615999428c68f7fc90169f1d8f91713d",
+  "rebase": "three commits applied cleanly; upstream changes four network-capability paths",
+  "remote_head_preserved": "6b4eb6f43d0dac79b766a9338811b63d52b9074b",
+  "schema": "verdify-owner-4763-rebased-held-custody/v1"
+}

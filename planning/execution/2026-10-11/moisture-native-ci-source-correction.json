@@ -1,0 +1,48 @@
+{
+  "checks": {
+    "affected_suites_passed": 144,
+    "changed_file_rejection_cases": 2,
+    "firmware_tree_identical_to_compiled_head": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
+    "git_diff_check": "passed",
+    "ruff_format": "passed",
+    "ruff_lint": "passed",
+    "service_restart_guard": "passed"
+  },
+  "compile_receipts_reused_with_identical_firmware_tree": {
+    "linux_arm64_container_sha256": "aec65a4735f47b7936c6ab70121195dbf926d6c1420f40e636f3e134e8e16f90",
+    "mac_sha256": "dfb240385f3f477074401ac22d7b87fedcd9346cf49710eddb80f93d2e0d38de"
+  },
+  "controller_ota": false,
+  "corrected_head": "e64cc1c13b682d6d70e9ae86906fe885f69ccd8e",
+  "failed_head": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
+  "failed_native_workflow": {
+    "failed_tests": 17,
+    "failure": "ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml",
+    "finished_at": "2026-10-11T16:27:51Z",
+    "name": "verdify-platform-pr-ci-gkpb4",
+    "phase": "Failed",
+    "pod": "verdify-platform-pr-ci-gkpb4-validate-2341731415",
+    "pod_uid": "b612ff46-b35e-4957-92cc-6c06ea5e62d7",
+    "uid": "e3a3edb7-5e1c-4c7f-b414-e74ab5f72b5b"
+  },
+  "limits": [
+    "The reviewed controls.yaml diff changes moisture telemetry encoding/publication only; band arithmetic and existing qualified target identity are unchanged.",
+    "New evidence binds the new exact source revision; historical receipts and original failure remain immutable.",
+    "Standalone compiler passes do not substitute for the full native platform CI gate or source adoption.",
+    "PR-only source validation was reviewed against live sensors/templates; main remains d8068b7cac2f162153bc0d0a4377fc21eae974be. No producer/build retry or deployment."
+  ],
+  "native_ci_at_recording": "not yet qualified for corrected head",
+  "pr": 971,
+  "recorded_at": "2026-10-11T17:03:44.737594+00:00",
+  "runtime_changes": false,
+  "schema": "verdify-moisture-native-ci-source-correction-v1",
+  "source_binding": {
+    "algorithm_revision": "served-band-wire-v1:sha256:61f0a9fc80b6f4711af9c94d0dc557604620880185eccb521675ca01f78f0044",
+    "firmware_sources": {
+      "firmware/greenhouse/controls.yaml": "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
+      "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e"
+    },
+    "supported_firmware": "2026.10.2.0637.620a218a-wifi-bound",
+    "target_elf_sha256": "39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b"
+  }
+}
