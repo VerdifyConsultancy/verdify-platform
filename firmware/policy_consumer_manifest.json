@@ -1913,7 +1913,7 @@
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 2102,
+          "line": 2108,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2157,7 +2157,7 @@
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1920,
+          "line": 1926,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
