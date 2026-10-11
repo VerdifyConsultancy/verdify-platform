@@ -1,0 +1,31 @@
+{
+  "observed_at": "2026-10-11T15:34:07.549629+00:00",
+  "pods": [
+    {
+      "bound_reached": false,
+      "bytes": 9067041,
+      "created_at": "2026-10-06T01:02:57Z",
+      "lines": 90587,
+      "log_source": "kubectl current-container logs only; rotation limits historical coverage",
+      "matching_light_posts": [],
+      "pod": "verdify-api-64d768b666-8pjhm",
+      "requested_since_hours": 168,
+      "retained_first_log_at": "2026-10-05T19:03:17.349723394-06:00",
+      "retained_last_log_at": "2026-10-11T09:34:03.131416842-06:00",
+      "uid": "8538fc30-9037-419d-9613-253d4232b276"
+    },
+    {
+      "bound_reached": false,
+      "bytes": 9062469,
+      "created_at": "2026-10-06T01:03:33Z",
+      "lines": 90540,
+      "log_source": "kubectl current-container logs only; rotation limits historical coverage",
+      "matching_light_posts": [],
+      "pod": "verdify-api-64d768b666-rhmph",
+      "requested_since_hours": 168,
+      "retained_first_log_at": "2026-10-05T19:03:52.897351355-06:00",
+      "retained_last_log_at": "2026-10-11T09:34:02.248139048-06:00",
+      "uid": "59303fd5-09eb-4e0f-a8f3-dd0ae168a436"
+    }
+  ]
+}
