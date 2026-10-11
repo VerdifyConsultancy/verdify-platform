@@ -129,6 +129,8 @@ $PY -m pytest -q \
   tests/test_264_facility_safe_closure_delivery.py \
   tests/test_component_experiment_source.py \
   tests/test_native_transport_liveness.py \
+  tests/test_k3s_smoke_device_monitor.py \
+  tests/test_k3s_smoke_g10.py \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
