@@ -20,6 +20,13 @@ import pytest
 
 from verdify_public import output_policy as policy
 
+# These end-to-end publication cases exercise the production Linux renameat2
+# and process/runtime semantics. Keep them mandatory on Linux, even if its
+# libc lacks the primitive; an unsupported production runtime must still fail.
+linux_publication = pytest.mark.skipif(
+    sys.platform != "linux", reason="requires production Linux atomic publication; native Linux CI remains required"
+)
+
 
 @pytest.fixture(autouse=True)
 def _publisher_umask():
@@ -1908,6 +1915,7 @@ def test_publish_and_rebuild_scripts_guard_one_same_filesystem_candidate_before_
     assert '--promote-to "$LIVE_PUBLIC"' in rebuild
 
 
+@linux_publication
 def test_rebuild_promotion_is_complete_or_leaves_live_unchanged(tmp_path):
     repo_root = Path(__file__).resolve().parents[1]
     rebuild = repo_root / "scripts" / "rebuild-site.sh"
@@ -2009,6 +2017,7 @@ cp -a "${source_dir%/}/." "${destination%/}/"
             assert not marker.exists()
 
 
+@linux_publication
 def test_atomic_promoter_recovers_aged_sigkill_residue_and_rejects_hardlinks(tmp_path):
     promoter = load_promoter()
     live = tmp_path / "public"
@@ -2059,6 +2068,7 @@ def test_atomic_promoter_recovers_aged_sigkill_residue_and_rejects_hardlinks(tmp
     assert not other_live.exists()
 
 
+@linux_publication
 def test_atomic_exchange_leaves_an_inode_pinned_directory_view_retired_and_empty(tmp_path):
     promoter = load_promoter()
     live = tmp_path / "public"
@@ -2084,6 +2094,7 @@ def test_atomic_exchange_leaves_an_inode_pinned_directory_view_retired_and_empty
         os.close(retired_descriptor)
 
 
+@linux_publication
 def test_long_lived_parent_path_reader_observes_two_atomic_publishes_without_restart(tmp_path):
     promoter = load_promoter()
     cache_mount = tmp_path / "cache"
