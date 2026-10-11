@@ -867,7 +867,16 @@ def _confirmed_halt_writer_custody(state: dict, custody: dict) -> None:
         or metadata.get("name") != original["pod"]
         or custody["current"].get("pod") != original["pod"]
         or custody["current"].get("source") != original["source_revision"]
-        or any(observed[key] != original[key] for key in ("pod", "source_revision", "session_id", "generation"))
+        or any(observed[key] != original[key] for key in ("pod", "source_revision", "session_id"))
+        # A confirmed halted run survives transport reconnects in this same
+        # process. Retain the actual later census generation instead of
+        # relabelling it as the original approval generation. This is custody
+        # for archival only; fresh admission still binds the current identity,
+        # native confirmations, full plan and all 48 current readbacks.
+        or type(original["generation"]) is not int
+        or type(observed["generation"]) is not int
+        or original["generation"] < 1
+        or observed["generation"] < original["generation"]
     ):
         raise ValueError("confirmed-halt original full Pod custody identity mismatch")
 

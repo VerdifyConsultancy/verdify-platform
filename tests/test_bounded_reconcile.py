@@ -1035,6 +1035,44 @@ async def test_confirmed_halt_missing_current_snapshot_preserves_native_stopped_
 
 
 @pytest.mark.asyncio
+async def test_confirmed_halt_custody_retains_later_same_process_transport_generation(fixture, tmp_path):
+    state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
+    custody = forward["original_writer_custody"]
+    # Keep the original approved preview immutable while capturing a genuine
+    # later connection generation from the same Pod/source/process.
+    custody["current"]["preview"] = dict(custody["current"]["preview"], generation=4)
+    forward["writer_custody_digest"] = bounded._digest(custody)
+    bounded._write(tmp_path / bounded.RECOVERY_NAME, forward)
+    old = (tmp_path / bounded.STATE_NAME).read_bytes()
+    result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and result.changes == () and "fresh approval required" in result.reason
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == old
+    archive = bounded._read(tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json")
+    assert archive["state"]["approved_preview"]["generation"] == 3
+    assert archive["forward"]["original_writer_custody"]["current"]["preview"]["generation"] == 4
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("generation", [2, "4", True, None])
+async def test_confirmed_halt_custody_rejects_backwards_or_invalid_generation(fixture, tmp_path, generation):
+    state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
+    custody = forward["original_writer_custody"]
+    custody["current"]["preview"] = dict(custody["current"]["preview"], generation=generation)
+    with pytest.raises(ValueError, match="custody identity mismatch"):
+        bounded._confirmed_halt_writer_custody(state, custody)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field,value", [("session_id", "another-process"), ("source_revision", "f" * 40)])
+async def test_confirmed_halt_later_generation_cannot_change_process_or_source(fixture, tmp_path, field, value):
+    state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
+    custody = forward["original_writer_custody"]
+    custody["current"]["preview"] = dict(custody["current"]["preview"], generation=4, **{field: value})
+    with pytest.raises(ValueError, match="custody identity mismatch"):
+        bounded._confirmed_halt_writer_custody(state, custody)
+
+
+@pytest.mark.asyncio
 async def test_confirmed_halt_pod_custody_identity_cannot_be_relabelled(fixture, tmp_path):
     state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
     forward["original_writer_custody"]["pod"]["metadata"]["name"] = "another-writer"

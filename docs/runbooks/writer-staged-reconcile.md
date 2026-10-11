@@ -192,7 +192,12 @@ completed parameters/values, and no rollback history. Retain the raw active
 files as a JSON object mapping filenames to their exact text. Retain a full
 original Pod readback plus `current.source`, `current.pod`, and
 `current.preview` in the operator receipt; its Pod UID/name and original
-source/session/generation must agree. Export exactly the original native
+source/session must agree. The custody preview may retain a later integer
+transport generation from that same process after a reconnect; it must never
+move backwards or be relabelled as the original generation. The original
+approval remains unchanged. This custody exception grants only archival
+authority; current-generation readbacks and a distinct fresh approval still
+govern any new delivery. Export exactly the original native
 request rows (`ts`, `parameter`, `value`, `source`, `delivery_status`,
 `confirmed_at`, `expired_at`) read-only, excluding ESP32 observation rows.
 Every row must be confirmed with a non-null confirmation and no expiry.
