@@ -1,0 +1,33 @@
+{
+  "all_ledger_hashes_match_source": true,
+  "authenticated_smoke": {
+    "failed": 0,
+    "log_sha256": "b0f612a5456dd10f91738e718210effd7c6f4823cd85cc29a21595f1ccb458f3",
+    "passed": 9
+  },
+  "durable_writer_file_count": 26,
+  "durable_writer_files_byte_unchanged": true,
+  "dynamic_preview_and_policy_hold_excluded": [
+    "writer-drift-preview.json",
+    "writer-policy-hold.json",
+    "writer-stage-preview.json"
+  ],
+  "maximum_sequence": 275,
+  "migration_ledger_rows": 283,
+  "migration_ledger_sha256": "ea7933abe4fb3860fd753ac7308ec0950e61c87b4632a688a7232640861da94a",
+  "post_rollout_validation": {
+    "completed_at": "2026-10-11T14:48:00.462839+00:00",
+    "pod": "verdify-ingestor-69754948bf-mzdm5",
+    "started_at": "2026-10-11T14:43:00.452076+00:00",
+    "validation_error_count": 0,
+    "validation_errors": []
+  },
+  "schema": "verdify.recovery-validation/1",
+  "writer_socket_census": {
+    "esp32_connections": 1,
+    "log_sha256": "ac96baa7ed5f5ff459471932eed4e0038a9032989dea487111f9b8e92367eb56",
+    "unknown": 0
+  },
+  "writer_state_after_sha256": "1e9a6b2ca4e63e7c9ecbad37443a2ac47a363f09358df6eb813e7c7b4c0d8603",
+  "writer_state_before_sha256": "6628b76df009685847f2bbce54efb948e23503e3cda9b5f31b0101899ab04b56"
+}

@@ -1,0 +1,255 @@
+{
+  "observed_at": "2026-10-11T15:13:33.692539+00:00",
+  "render_objects": 128,
+  "render_sha256": "062f8800182036107751043debc4fe767a471237a72f45f941a9966a0ff89bf5",
+  "schema": "verdify.production-recovery-image-agreement/1",
+  "secrets": 0,
+  "source_revision": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+  "workloads": [
+    {
+      "desired_equals_live": true,
+      "images": {
+        "freezer": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "kind": "Deployment",
+      "name": "experiment-v2-freezer",
+      "uid": "398d673c-7e10-48f1-9ee2-bc89f949afe9"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "lifecycle": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "kind": "Deployment",
+      "name": "experiment-v2-lifecycle",
+      "uid": "55610359-c153-4f90-b670-e64b33250d00"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "selector": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "kind": "Deployment",
+      "name": "experiment-v2-selector",
+      "uid": "e1463798-093b-4fda-a7b8-3c6fba371388"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "api": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "uid": "1798428c-0da0-4d47-b0ff-a0a5e010c0f0"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "exporter": "python:3.12-alpine"
+      },
+      "kind": "Deployment",
+      "name": "verdify-db-backup-exporter",
+      "uid": "e8893eb2-d121-4f5b-b26c-17df6a6fe0ec"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "grafana": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "inject-canvas-css": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "renderer": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+      },
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "uid": "87d1186a-2baf-4922-86c9-793f2e71673c"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "render-cache": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+      },
+      "kind": "Deployment",
+      "name": "verdify-grafana-render-cache",
+      "uid": "4fed4d78-3b64-42b3-94cf-f2a8368efab7"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "hermes-iris": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e",
+        "seed-config": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+      },
+      "kind": "Deployment",
+      "name": "verdify-hermes-iris",
+      "uid": "ae52b99a-459c-4984-9aa7-f42be98d3ddc"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "ingestor": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+        "install-psql": "postgres:16",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "uid": "27889696-ee26-43ff-bfd8-a950ba279866"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "lab-site": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+        "prepare-private-public-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e"
+      },
+      "kind": "Deployment",
+      "name": "verdify-lab",
+      "uid": "70989e64-bb75-4325-b886-788543c522fb"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "mcp": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "uid": "7afb4c3c-9113-43d3-af1c-be1abb37796c"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "mosquitto": "eclipse-mosquitto:2"
+      },
+      "kind": "Deployment",
+      "name": "verdify-mqtt",
+      "uid": "5c8bd30b-863c-4915-8fb6-e43ea7c88d44"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "planner": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "uid": "d57756ae-4f7d-42bc-aba4-293f1aec0335"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "setpoint-server": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "Deployment",
+      "name": "verdify-setpoint-server",
+      "uid": "92485295-17f3-4a6f-9868-d283f456a4fb"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "traefik": "docker.io/traefik:v3.7.1"
+      },
+      "kind": "Deployment",
+      "name": "verdify-traefik",
+      "uid": "c5ac81e4-ee08-491e-81d0-a8e240fb5cc9"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "postgres": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "refresh": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "uid": "c1850fb9-b575-483d-9262-c583d816b8cb"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "pg-dump": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "CronJob",
+      "name": "verdify-db-backup",
+      "uid": "e17742c4-9863-409b-9700-6110f1830629"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "watchdog": "python:3.13-alpine"
+      },
+      "kind": "CronJob",
+      "name": "verdify-db-watchdog",
+      "uid": "3dde024d-1216-4705-9eee-18485ee80b83"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "builder": "ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+      },
+      "kind": "CronJob",
+      "name": "verdify-firmware-builder",
+      "uid": "c8846acd-4ee1-4e6c-a4c2-1347083481db"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "freeze-native-route-day": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "CronJob",
+      "name": "verdify-fixed-panel-native-freezer",
+      "uid": "96da9ff0-7a82-48b2-821f-8a58323bd534"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "backfill": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "uid": "0326f59b-f1ea-4e6d-9d05-1ca4b1c3779f"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e"
+      },
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "uid": "79aa5222-4fb3-439b-ba33-28101c514543"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "vision": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "uid": "4b0f62d3-20f2-4e28-b841-b7f649a12ddb"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "collect": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "kind": "CronJob",
+      "name": "verdify-winter-feasibility",
+      "uid": "357d96ac-f387-493c-8f8d-7dce8655ef4d"
+    },
+    {
+      "desired_equals_live": true,
+      "images": {
+        "lease-check": "python:3.13-alpine",
+        "watchdog": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "kind": "CronJob",
+      "name": "verdify-writer-watchdog",
+      "uid": "2978785a-3f89-4a44-86d2-d253d208e3f7"
+    }
+  ]
+}
