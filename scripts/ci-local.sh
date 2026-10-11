@@ -80,6 +80,7 @@ $PY -m pytest -q \
   tests/test_cnpg_s2_archive_reader.py \
   tests/test_cnpg_s2_failover_client.py \
   tests/test_cnpg_current275_transition.py \
+  tests/test_cnpg_s2_integration_recovery.py \
   tests/test_cnpg_complete_copy_receipt.py \
   tests/test_cnpg_solar_dryout_time_projection.py \
   tests/test_ordinary_runtime_qualification.py \
