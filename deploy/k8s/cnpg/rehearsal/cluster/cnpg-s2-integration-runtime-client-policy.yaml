@@ -1,0 +1,62 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cnpg-s2-integration-runtime-client-only
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-s2-runtime-qualification
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: verdify
+      app.kubernetes.io/component: cnpg-s2-runtime-qualification
+      verdify.ai/qualification-target: verdify-cnpg-s2-integration
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: verdify-cnpg-s2-integration
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cnpg-s2-integration-runtime-client-ingress
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-s2-runtime-qualification
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: verdify-cnpg-s2-integration
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: verdify
+          app.kubernetes.io/component: cnpg-s2-runtime-qualification
+          verdify.ai/qualification-target: verdify-cnpg-s2-integration
+    ports:
+    - protocol: TCP
+      port: 5432
