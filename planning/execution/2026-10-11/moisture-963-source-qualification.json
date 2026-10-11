@@ -21,11 +21,18 @@
       "failed": 0,
       "passed": 288
     },
+    "postcommit_replay": {
+      "divergent": 0,
+      "new": "e3adb4a6b1a0093fb96163c30e294b4b44dab3e7",
+      "old": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+      "rows": 296698
+    },
     "replay": {
       "divergent": 0,
       "limitations": "six missing setpoint columns; lambda compile checked separately",
       "rows": 296698
-    }
+    },
+    "service_restart_guard": "passed; verdify-ingestor named"
   },
   "credentials": "tracked dummy firmware/secrets.example.yaml only",
   "deployable": false,
@@ -75,7 +82,13 @@
   },
   "firmware_tool": "esphome 2026.6.5",
   "ota_performed": false,
-  "recorded_at_utc": "2026-10-11T15:50:00Z",
+  "platformio_packages": {
+    "framework-espidf": "3.50504",
+    "tool-esptoolpy": "5.3.0",
+    "toolchain-xtensa-esp-elf": "14.2.0+20260121"
+  },
+  "qualified_code_commit": "e3adb4a6b1a0093fb96163c30e294b4b44dab3e7",
+  "recorded_at_utc": "2026-10-11T15:48:56.645137+00:00",
   "schema": "verdify-moisture-state-boundary-qualification-v1",
   "source_base": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
   "source_manifest_sha256": "06756c64d8c5b9aa8f15a8e34de7b10e529239aa8dcc871c454bc63cf9182274"
