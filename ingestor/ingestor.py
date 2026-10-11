@@ -3641,6 +3641,11 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
 
         entity = STATE_MAP.get(obj_id)
         if entity:
+            # #963: preserve old firmware's JSON and new firmware's separate
+            # full-detail entity at the same canonical analytics key. A short
+            # visible action must never replace that structured observation.
+            if obj_id == "climate_moisture_exchange" and not val.lstrip().startswith("{"):
+                entity = "climate_moisture_exchange_action"
             old = state.system.get(entity)
             force_refresh = entity in {"gl_main_state", "gl_main_reason", "gl_grow_state", "gl_grow_reason"}
             if old != val or force_refresh:
