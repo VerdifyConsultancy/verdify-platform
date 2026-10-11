@@ -71,6 +71,7 @@ def render(image: str) -> list[dict]:
                 "plugins": [
                     {
                         "name": "barman-cloud.cloudnative-pg.io",
+                        "enabled": True,
                         "isWALArchiver": True,
                         "parameters": {"barmanObjectName": STORE},
                     }
