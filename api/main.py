@@ -2019,32 +2019,32 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
     return PlainTextResponse(content="\n".join(lines) + "\n")
 
 
-# ── Lights (ESP32 grow light control via MQTT command) ──
+# ── Lights (direct commands unavailable) ──
 
 
-@app.post("/api/v1/greenhouses/{greenhouse_id}/lights/{circuit}/{action}")
+@app.post(
+    "/api/v1/greenhouses/{greenhouse_id}/lights/{circuit}/{action}",
+    status_code=501,
+    responses={501: {"description": "Direct light control unavailable; no command accepted"}},
+)
 async def control_lights(
     greenhouse_id: str,
     circuit: str,
     action: str,
     _write_access: None = Depends(require_write_access),
 ):
-    """Publish light command to MQTT for the Lutron bridge to execute."""
+    """Reject unsupported direct commands without recording observed state."""
     if circuit not in ("main", "grow") or action not in ("on", "off"):
         raise HTTPException(status_code=400, detail="Invalid circuit or action")
-    # For now, record the intent in the DB. The local Lutron bridge
-    # or a future MQTT subscriber handles the actual switch.
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO v_runtime_equipment_state_write (ts, equipment, state, greenhouse_id)
-            VALUES (now(), $1, $2, $3)
-        """,
-            f"grow_light_{circuit}",
-            action == "on",
-            greenhouse_id,
-        )
-    return {"light": circuit, "action": action, "greenhouse_id": greenhouse_id, "status": "recorded"}
+    # The owning setpoint/HA writer is the only light delivery path. This route
+    # has no command transport, so intent must never enter equipment history.
+    raise HTTPException(
+        status_code=501,
+        detail={
+            "code": "light_control_unavailable",
+            "message": "Direct light control is unavailable. No command was accepted.",
+        },
+    )
 
 
 # ── Root + Health ──

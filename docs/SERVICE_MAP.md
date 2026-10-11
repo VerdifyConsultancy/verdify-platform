@@ -71,9 +71,10 @@ exclusive upstream light sender:
 | HA exterior lights override | In `jvallery/homeassistant`, `packages/controls_global/lighting_master_override.yaml` includes `switch.greenhouse_grow_light_{main,grow}` ESPHome proxy switches in `switch.all_exterior_light_switches`; engage/enforce sends `homeassistant.turn_off` while `input_boolean.exterior_lights_override` is on. | House-wide user override, conditional and off after its 30-minute timer. It can request light off through the firmware's HA service route; it is not an ESP32 climate writer. |
 
 The Verdify API `POST /api/v1/greenhouses/{id}/lights/{circuit}/{action}`
-currently records an `equipment_state` intent only; it does not call HA or
-publish a live MQTT light command. HA UI/manual calls to the Lutron switches
-remain possible. See [the read-only ownership check](runbooks/ha-grow-light-writer-ownership.md)
+rejects direct commands with HTTP501 `light_control_unavailable` and writes no
+command or observation. It has no command transport; authenticated requests
+cannot fabricate equipment runtime. HA UI/manual calls to the Lutron switches
+remain possible through the existing owning routes. See [the read-only ownership check](runbooks/ha-grow-light-writer-ownership.md)
 and `tests/test_ha_light_writer_boundary.py` before changing any route.
 
 ## Operational Components

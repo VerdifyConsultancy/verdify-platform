@@ -1,0 +1,39 @@
+{
+  "observed_at": "2026-10-11T15:33:39.925243+00:00",
+  "retained_lights": [
+    {
+      "equipment": "grow_light_grow",
+      "first_ts": "2024-11-17T13:00:01.747867+00:00",
+      "greenhouse_id": "vallery",
+      "last_ts": "2026-10-11T15:33:03.882962+00:00",
+      "rows": 43488,
+      "rows_7d": 2026
+    },
+    {
+      "equipment": "grow_light_main",
+      "first_ts": "2024-11-17T13:00:01.846637+00:00",
+      "greenhouse_id": "vallery",
+      "last_ts": "2026-10-11T15:33:03.882962+00:00",
+      "rows": 43632,
+      "rows_7d": 2019
+    }
+  ],
+  "schema_columns": [
+    {
+      "column": "ts",
+      "type": "timestamp with time zone"
+    },
+    {
+      "column": "equipment",
+      "type": "text"
+    },
+    {
+      "column": "state",
+      "type": "boolean"
+    },
+    {
+      "column": "greenhouse_id",
+      "type": "text"
+    }
+  ]
+}
