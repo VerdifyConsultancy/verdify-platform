@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import verdify_schemas.control_band_wire as wire
 from verdify_schemas.control_band_wire import (
     ANCHOR_PARAMS,
     SERIES,
@@ -46,6 +47,24 @@ def test_explicit_target_lowering_all_minutes(tmp_path):
 
 def test_source_revision_bound_to_actual_owning_files():
     assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
+
+
+@pytest.mark.parametrize("source", wire.FIRMWARE_SOURCES)
+def test_source_revision_rejects_changed_owning_file(tmp_path, monkeypatch, source):
+    root = Path(wire.__file__).resolve().parents[1]
+    module = tmp_path / "verdify_schemas/control_band_wire.py"
+    module.parent.mkdir()
+    shutil.copyfile(wire.__file__, module)
+    for name in wire.FIRMWARE_SOURCES:
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / name, target)
+    monkeypatch.setattr(wire, "__file__", str(module))
+    assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
+    changed = tmp_path / source
+    changed.write_bytes(changed.read_bytes() + b"\n// unreviewed change\n")
+    with pytest.raises(ValueError, match="served wire firmware source contract changed"):
+        algorithm_revision()
 
 
 @pytest.mark.parametrize(
