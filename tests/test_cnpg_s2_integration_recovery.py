@@ -2,6 +2,7 @@
 
 import copy
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -89,3 +90,47 @@ def test_old_rejected_clone_is_parked_and_new_restore_remains_awake():
     assert "cnpg.io/hibernation" not in new["metadata"].get("annotations", {})
     assert old["spec"]["instances"] == new["spec"]["instances"] == 3
     assert old["spec"]["resources"]["requests"] == new["spec"]["resources"]["requests"]
+
+
+@pytest.mark.parametrize("wrong_target", ["verdify-db", "verdify-cnpg-s2", "verdify-cnpg-s2-pitr-b-frozen"])
+def test_runtime_duty_runner_rejects_other_clusters_and_preserves_historical_target(wrong_target):
+    old = load("qualify-restored-runtime-duties.py", "historical_runtime_duties")
+    new = load("qualify-s2-integration-runtime-duties.py", "integration_runtime_duties").duties
+    assert old.TARGET_CLUSTER == "verdify-cnpg-s2"
+    assert new.TARGET_CLUSTER == m.CLUSTER
+    uid = "11111111-2222-4333-8444-555555555555"
+
+    def binding(cluster):
+        meta = {"namespace": "verdify-db-rehearsal", "uid": uid}
+        return {
+            "cluster": {"metadata": {**meta, "name": cluster}, "status": {"currentPrimary": cluster + "-1"}},
+            "pod": {
+                "metadata": {**meta, "name": cluster + "-1", "labels": {"cnpg.io/cluster": cluster}},
+                "status": {
+                    "phase": "Running",
+                    "podIP": "10.42.5.100",
+                    "conditions": [{"type": "Ready", "status": "True"}],
+                },
+            },
+            "service": {
+                "metadata": {**meta, "name": cluster + "-rw", "ownerReferences": [{"kind": "Cluster", "uid": uid}]},
+                "spec": {"selector": {"cnpg.io/cluster": cluster, "role": "primary"}, "ports": [{"port": 5432}]},
+            },
+        }
+
+    native = binding(m.CLUSTER)
+    assert new.target_binding(json.dumps(native).encode(), uid)[0] == "10.42.5.100"
+    with pytest.raises(AssertionError):
+        new.target_binding(json.dumps(binding(wrong_target)).encode(), uid)
+    native["service"]["metadata"]["ownerReferences"][0]["uid"] = "wrong-owner"
+    with pytest.raises(AssertionError):
+        new.target_binding(json.dumps(native).encode(), uid)
+    identity = {
+        "server_addr": "10.42.5.100",
+        "database_oid": 16447,
+        "cluster_name": wrong_target,
+        "replica": False,
+        "server_version_num": "160013",
+    }
+    with pytest.raises(AssertionError):
+        new.check_target_identity(identity, "10.42.5.100", 16447)
