@@ -1,0 +1,88 @@
+{
+  "broader_campaign_complete": false,
+  "delivery_hold": {
+    "action": "keep failed exact-head build and no retry/gate bypass until owner-qualified recovery",
+    "condition": "NAS mountd/nfsd lock cycle recurred; registry-origin NFS client and protected integrity/capacity qualification remain unresolved",
+    "evidence_as_of": "2026-10-11T16:00:00Z",
+    "owner": "existing storage-infra workstream"
+  },
+  "elapsed_goal_seconds_at_prior_service_readback": 6110,
+  "firmware_registered_validation": {
+    "captured_at_utc": "2026-10-11T15:59:31.375394+00:00",
+    "checks": [
+      {
+        "image_override": null,
+        "name": "platform-static"
+      },
+      {
+        "image_override": null,
+        "name": "platform-tests"
+      },
+      {
+        "image_override": null,
+        "name": "campaign-qualification"
+      },
+      {
+        "image_override": null,
+        "name": "firmware-logic"
+      },
+      {
+        "image_override": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+        "name": "firmware-secretless-compile"
+      }
+    ],
+    "compile_accepted": false,
+    "created_at": "2026-10-11T15:58:33Z",
+    "five_checks": "Pending existing repo-validate semaphore",
+    "head": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
+    "phase_at_readback": "Running",
+    "preflight_bypassed": false,
+    "prepare": "Succeeded",
+    "repo_pod_checkout_changed": false,
+    "workflow": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+    "workflow_uid": "d7119bc5-1c88-4265-ab73-007efb8cdfe0"
+  },
+  "lights_native_ci": {
+    "finished_at": "2026-10-11T15:50:38Z",
+    "github_context": "Verdify Platform / Argo PR CI",
+    "github_state": "success",
+    "head": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+    "phase": "Succeeded",
+    "workflow": "verdify-platform-pr-ci-c65wz",
+    "workflow_uid": "48e500c1-b8a2-4150-9852-05be0555cb6b"
+  },
+  "not_performed": [
+    "new source image adoption",
+    "old-S2 hibernation",
+    "new integration cluster/PVC creation or fixture DML",
+    "firmware OTA",
+    "physical commissioning",
+    "randomized launch",
+    "production DB cutover"
+  ],
+  "original_remaining_engineering_hours": [
+    46,
+    88
+  ],
+  "platform_main": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+  "recorded_at_utc": "2026-10-11T16:04:16.653403+00:00",
+  "s2_accepted": [
+    964,
+    953
+  ],
+  "s2_open": [
+    949,
+    644,
+    396,
+    382,
+    643
+  ],
+  "schema": "verdify-s2-source-preparation-and-delivery-queue-v1",
+  "source_only_prs": {
+    "968": "74f989f46ec0074690d81b5d764f1b13ab5c026f",
+    "969": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+    "970": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+    "971": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
+    "agents_4763": "6b4eb6f43d0dac79b766a9338811b63d52b9074b"
+  }
+}
