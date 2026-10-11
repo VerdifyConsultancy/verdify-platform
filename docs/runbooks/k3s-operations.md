@@ -213,7 +213,7 @@ milestones:
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.
    The age private key lives in the fleet secret store.
 3. **Lab static publishing** — Quartz is the sole generator. The S3-backed
-   `verdify-lab-publisher` builds and validates content every 10 minutes, then
+   `verdify-lab-publisher` builds and validates content every 30 minutes, then
    atomically updates the Longhorn cache served by content-free nginx. See
    `docs/site-publishing-pipeline.md`. Do not add a new `/mnt/iris` dependency
    or a second static-site generator.

@@ -1,7 +1,7 @@
 # Runbook: Quartz content -> lab.verdify.ai
 
 Quartz under `site/` is the only supported Lab generator. The production
-publisher runs every 10 minutes, builds the newest S3-backed content, validates
+publisher runs every 30 minutes (:05 and :35), builds the newest S3-backed content, validates
 it, and atomically installs it on the `verdify-lab-site-cache` PVC.
 
 ## Fast status

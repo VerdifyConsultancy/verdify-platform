@@ -57,7 +57,12 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: db-watchdog
 spec:
-  schedule: "*/2 * * * *"
+  # Every 5 minutes, offset one minute from writer-watchdog so the two probes
+  # never launch together (2026-10-11 cluster CronJob cadence review: ~900
+  # Job launches/hour were overloading containerd on the workers). A narrow
+  # remount-race healer, not DB HA: the ingestor spools climate rows while the
+  # DB is down, so up to ~3 extra minutes before the recreate is acceptable.
+  schedule: "1-59/5 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
