@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import re
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ for key, value in {
 from test_experiment_workers import FakeConn, FakePool  # noqa: E402
 
 import ingestor  # noqa: E402
+from verdify_schemas.telemetry import MX_COMPACT_WIRE_KEYS, expand_moisture_exchange_wire  # noqa: E402
 
 PAYLOAD = {
     "action": "vent_dehum",
@@ -44,6 +46,8 @@ PAYLOAD = {
     "future_estimator_key": 1.25,
 }
 RAW = json.dumps(PAYLOAD, separators=(",", ":"))
+WIRE_PAYLOAD = {"_mx": 1, **{alias: PAYLOAD[key] for alias, key in MX_COMPACT_WIRE_KEYS.items()}}
+WIRE_RAW = json.dumps(WIRE_PAYLOAD, separators=(",", ":"))
 
 
 @pytest.fixture(autouse=True)
@@ -123,3 +127,81 @@ def test_ha_entity_is_short_and_backend_detail_is_default_disabled():
     )
     actions = re.findall(r'return "([^"]+)";', action_function)
     assert actions and max(map(len, actions)) < 255
+
+
+def test_compact_wire_restores_canonical_analytics_keys():
+    assert len(WIRE_RAW) < 255
+    observe("climate_moisture_exchange_details", WIRE_RAW)
+    assert json.loads(ingestor.state.system["climate_moisture_exchange"]) == {
+        key: value for key, value in PAYLOAD.items() if key != "future_estimator_key"
+    }
+    conn = FakeConn([])
+    assert asyncio.run(ingestor.write_climate_action_log(FakePool(conn), datetime.now(UTC)))
+    stored = json.loads(conn.sql_calls("INSERT INTO v_runtime_climate_action_log_write")[0][2][17])
+    assert stored["climate_moisture_exchange"]["vent_held_vpd_gain_kpa"] == 0.055
+    assert stored["climate_moisture_exchange"]["outdoor_data_age_s"] == 4294967295
+    assert "_mx" not in stored["climate_moisture_exchange"]
+
+
+@pytest.mark.parametrize("version", [True, "1", 2, None])
+def test_unsupported_wire_marks_missing_detail_instead_of_retaining_stale_payload(version):
+    observe("climate_moisture_exchange_details", RAW)
+    observe("climate_moisture_exchange_details", json.dumps({**WIRE_PAYLOAD, "_mx": version}))
+    assert json.loads(ingestor.state.system["climate_moisture_exchange"]) == {
+        "raw": "unsupported_moisture_exchange_detail"
+    }
+
+
+def test_incomplete_or_ambiguous_wire_does_not_guess_field_meaning():
+    for payload in ({"_mx": 1}, {**WIRE_PAYLOAD, "action": "conflicting"}):
+        with pytest.raises(ValueError):
+            expand_moisture_exchange_wire(payload)
+    assert expand_moisture_exchange_wire(PAYLOAD) == PAYLOAD  # legacy extras remain tolerated
+
+
+def test_actual_native_formatter_bounds_normal_and_extreme_states(tmp_path):
+    controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
+    block = controls.split("const int moisture_exchange_len =", 1)[1].split("const uint32_t climate_diag_now_ms", 1)[0]
+    source = (
+        r"""
+    #include <cstdio>
+    #include <cstdint>
+    #include <cstring>
+    #include <limits>
+    #define ESP_LOGE(...) ((void)0)
+    struct Decision {
+      const char* moisture_exchange_action = "vent_humidify";
+      const char* moisture_exchange_reason = "vent_plus_heat_hold";
+      float moisture_vent_vpd_gain_kpa = -999.999f;
+      float moisture_vent_held_vpd_gain_kpa = -999.999f;
+      float moisture_heat_vpd_gain_kpa = -999.999f;
+      bool moisture_outdoor_fresh = false, moisture_vent_overcools = false;
+      bool moisture_heat_assist_corun = false, moisture_hold_required = false;
+      bool moisture_heat_assist_active = false;
+      uint32_t moisture_heat_assist_timer_ms = UINT32_MAX;
+    };
+    int main(int argc, char**) {
+      Decision climate_decision;
+      if (argc > 1) {
+        climate_decision.moisture_vent_vpd_gain_kpa = std::numeric_limits<float>::max();
+        climate_decision.moisture_vent_held_vpd_gain_kpa = std::numeric_limits<float>::max();
+        climate_decision.moisture_heat_vpd_gain_kpa = std::numeric_limits<float>::max();
+      }
+      struct { uint32_t outdoor_data_age_s = UINT32_MAX; } sensor_in;
+      char moisture_exchange[256];
+    """
+        + "const int moisture_exchange_len ="
+        + block
+        + r"""
+      if (std::strlen(moisture_exchange) > 255) return 1;
+      puts(moisture_exchange);
+    }
+    """
+    )
+    cpp, binary = tmp_path / "format.cpp", tmp_path / "format"
+    cpp.write_text(source)
+    subprocess.run(["g++", "-std=c++17", str(cpp), "-o", str(binary)], check=True, capture_output=True)
+    normal = json.loads(subprocess.check_output([str(binary)], text=True))
+    assert expand_moisture_exchange_wire(normal)["outdoor_data_age_s"] == 4294967295
+    extreme = json.loads(subprocess.check_output([str(binary), "extreme"], text=True))
+    assert extreme == {"raw": "moisture_exchange_payload_unavailable"}
