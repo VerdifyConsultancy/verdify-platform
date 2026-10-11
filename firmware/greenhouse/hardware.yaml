@@ -186,6 +186,15 @@ text_sensor:
     entity_category: diagnostic
     update_interval: 5s
 
+  # Compact estimator JSON is expanded by the native-API ingestor. Both states
+  # fit HA's 255-character limit; keep backend detail hidden by default.
+  - platform: template
+    id: gh_climate_moisture_exchange_details
+    name: "Climate Moisture Exchange Details"
+    entity_category: diagnostic
+    disabled_by_default: true
+    update_interval: 5s
+
   - platform: template
     id: gl_main_state_text
     name: "GL Main State"

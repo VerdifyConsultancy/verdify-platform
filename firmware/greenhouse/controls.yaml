@@ -1686,9 +1686,9 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
-            // Fixed stack buffer: the defended worst-case payload, including
-            // uint32 outdoor age, is 331 bytes; 384 leaves 52 bytes plus NUL.
-            char moisture_exchange[384];
+            // #963: compact v1 keys expand to the unchanged estimator schema
+            // in the ingestor. The buffer caps every published HA state at255.
+            char moisture_exchange[256];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
@@ -1702,16 +1702,16 @@ interval:
                      climate_decision.resource_cost_estimate.water_gal,
                      climate_decision.resource_cost_estimate.electric_kwh,
                      climate_decision.resource_cost_estimate.gas_therm);
-            // #410: additive fields vent_held_vpd_gain_kpa + hold_required
-            // (names coordinated with data-327 / migration 187 — do not rename).
+            // #410 canonical names remain settled after wire expansion:
+            // vh = vent_held_vpd_gain_kpa; hr = hold_required.
             const int moisture_exchange_len = snprintf(moisture_exchange, sizeof(moisture_exchange),
-                     "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
-                     "\"vent_held_vpd_gain_kpa\":%.3f,"
-                     "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
-                     "\"outdoor_data_age_s\":%u,"
-                     "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
-                     "\"hold_required\":%s,"
-                     "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
+                     "{\"_mx\":1,\"a\":\"%s\",\"r\":\"%s\",\"vg\":%.3f,"
+                     "\"vh\":%.3f,"
+                     "\"hg\":%.3f,\"of\":%s,"
+                     "\"oa\":%u,"
+                     "\"vo\":%s,\"hc\":%s,"
+                     "\"hr\":%s,"
+                     "\"ha\":%s,\"ht\":%.0f}",
                      climate_decision.moisture_exchange_action,
                      climate_decision.moisture_exchange_reason,
                      climate_decision.moisture_vent_vpd_gain_kpa,
@@ -1728,6 +1728,9 @@ interval:
                || static_cast<size_t>(moisture_exchange_len) >= sizeof(moisture_exchange)) {
               ESP_LOGE("climate", "Moisture-exchange telemetry truncated: required=%d capacity=%u",
                 moisture_exchange_len, unsigned(sizeof(moisture_exchange)));
+              // Do not publish partial JSON or retain stale detail as current.
+              snprintf(moisture_exchange, sizeof(moisture_exchange),
+                "{\"raw\":\"moisture_exchange_payload_unavailable\"}");
             }
             const uint32_t climate_diag_now_ms = millis();
             static uint32_t last_climate_continuous_diag_ms = 0;
@@ -1854,9 +1857,12 @@ interval:
               id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
             }
-            static char last_climate_moisture_exchange[384] = "";
+            static char last_climate_moisture_exchange[256] = "";
             if(climate_continuous_diag_due && strcmp(last_climate_moisture_exchange, moisture_exchange) != 0){
-              id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
+              // #963: HA gets a short action; the ingestor retains the exact
+              // structured payload through a default-disabled native entity.
+              id(gh_climate_moisture_exchange).publish_state(climate_decision.moisture_exchange_action);
+              id(gh_climate_moisture_exchange_details).publish_state(moisture_exchange);
               snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
             }
             if(climate_continuous_diag_due){

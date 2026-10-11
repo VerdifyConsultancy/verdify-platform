@@ -455,6 +455,34 @@ MX_REASONS: frozenset[str] = frozenset(
 # lands in `outdoor_age_s`.
 MX_ACCEPTED_KEY_ALIASES: dict[str, str] = {"outdoor_data_age_s": "outdoor_age_s"}
 
+# #963: versioned compact native text state. Expand before storing, so the
+# existing database/MCP field names and historical payloads remain unchanged.
+MX_COMPACT_WIRE_KEYS = {
+    "a": "action",
+    "r": "reason",
+    "vg": "vent_vpd_gain_kpa",
+    "vh": "vent_held_vpd_gain_kpa",
+    "hg": "heat_vpd_gain_kpa",
+    "of": "outdoor_fresh",
+    "oa": "outdoor_data_age_s",
+    "vo": "vent_overcools",
+    "hc": "heat_assist_corun",
+    "hr": "hold_required",
+    "ha": "heat_assist_active",
+    "ht": "heat_assist_timer_s",
+}
+
+
+def expand_moisture_exchange_wire(payload: dict) -> dict:
+    """Expand the closed compact v1 shape; legacy canonical JSON is unchanged."""
+    if "_mx" not in payload:
+        return payload
+    if type(payload["_mx"]) is not int or payload["_mx"] != 1:
+        raise ValueError("unsupported moisture-exchange wire version")
+    if set(payload) != {"_mx", *MX_COMPACT_WIRE_KEYS}:
+        raise ValueError("incomplete or ambiguous moisture-exchange wire fields")
+    return {canonical: payload[alias] for alias, canonical in MX_COMPACT_WIRE_KEYS.items()}
+
 
 class MoistureExchangeTelemetry(BaseModel):
     """JSON contract of the firmware `climate_moisture_exchange` text sensor.
