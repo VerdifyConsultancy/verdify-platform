@@ -3,6 +3,7 @@
   "delivery_hold": {
     "action": "No main advance, d806 build retry, producer/publication, deployment, restore, mount, node or gate bypass. PR-only platform validation is allowed only after live trigger/template review proves no such effects.",
     "condition": "Registry-origin is Synced/Healthy on retained NFSv3 data after coordinated normal fence. The 140GiB capacity floor and host/native-build holds remain; NAS server lock inversion recurred at16:42. Warm and two complete cold-image fetches are bounded recovery evidence, not all-layer or independent recovery acceptance.",
+    "continuation_readback": "The latest explicit native-build/host/NAS/capacity holds remain unreleased. Existing owner threads received the exact no-build/no-deploy progress update; their later repository-access/architecture work reported no relevant release.",
     "evidence_as_of": "2026-10-11T17:02:00Z",
     "origin_owner_revision": "69ba0f3",
     "owner": "existing storage-infra and Proxmox workstreams",
@@ -21,7 +22,7 @@
   },
   "elapsed_goal_readback_note": "October 11 goal-service readback; session elapsed time is not engineering hours or authentic study duration.",
   "elapsed_goal_seconds_at_prior_service_readback": 6110,
-  "elapsed_goal_seconds_at_service_readback": 10219,
+  "elapsed_goal_seconds_at_service_readback": 12801,
   "firmware_registered_validation": {
     "cancellation_receipt": "firmware-validation-cancel-receipt.json",
     "checks_executed": false,
@@ -82,29 +83,30 @@
   },
   "moisture_source_correction": {
     "current_head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
-    "current_native_validation": "moisture-final-native-validation-readback.json",
-    "current_status": "Pending normal shared validation semaphore; no concurrency/admission bypass.",
+    "current_native_validation": "moisture-current-source-native-validation.json",
+    "current_status": "Exact-source native offline gate Succeeded; GitHub context success. No build, publication, promotion or deployment.",
     "first_wire_guard_correction": {
       "current_local_checks": "144 affected tests pass, including two owning-file tamper rejections; lint/format/restart guards pass",
-      "current_native_ci": "pending",
+      "current_native_ci": "At correction head e64cc1c1 the prior failing tests passed; a later generated-manifest gate failed. Final corrected ce24459c passes the whole native gate.",
       "original_native_ci": "17 actual failed tests caused by the stale controls.yaml full-file hash",
       "receipt": "moisture-native-ci-source-correction.json"
     },
     "generated_change": "Two source-line locations only; all48 fields/194 reads/63 control-read authority classifications unchanged.",
     "generated_manifest_correction": "moisture-native-policy-manifest-correction.json",
-    "next_native_result": "Entire pure-logic/contract suite and subsequent migration/dashboard/solar/config gates passed at e64cc1c1, then generated policy-consumer drift failed."
+    "next_native_result": "Entire pure-logic/contract suite and subsequent migration/dashboard/solar/config gates passed at e64cc1c1, then generated policy-consumer drift failed.",
+    "whole_gate_finish_at": "2026-10-11T17:45:33Z"
   },
   "native_source_ci": {
-    "observed_at": "2026-10-11T17:30:21.506063+00:00",
+    "observed_at": "2026-10-11T17:48:37.772232+00:00",
     "prs": {
       "968": {
-        "head": "ebf04e0ff492926cc01ed400f0eb57376a698d11",
-        "state": "pending",
+        "head": "12f48a0f393e85d3db21e9dfc3d8e31d511f7910",
+        "state": "success",
         "statuses": [
           {
             "context": "Verdify Platform / Argo PR CI",
-            "created_at": "2026-10-11T17:12:52Z",
-            "state": "pending",
+            "created_at": "2026-10-11T17:47:48Z",
+            "state": "success",
             "target_url": null
           }
         ]
@@ -135,12 +137,12 @@
       },
       "971": {
         "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
-        "state": "pending",
+        "state": "success",
         "statuses": [
           {
             "context": "Verdify Platform / Argo PR CI",
-            "created_at": "2026-10-11T17:19:46Z",
-            "state": "pending",
+            "created_at": "2026-10-11T17:45:23Z",
+            "state": "success",
             "target_url": null
           }
         ]
@@ -185,7 +187,7 @@
     "source_only_prs_adopted": false,
     "strategy": "Recreate"
   },
-  "recorded_at_utc": "2026-10-11T17:32:11.147759+00:00",
+  "recorded_at_utc": "2026-10-11T17:49:03.046217+00:00",
   "s2_accepted": [
     964,
     953
@@ -197,9 +199,9 @@
     382,
     643
   ],
-  "schema": "verdify-s2-source-preparation-and-delivery-queue-v3",
+  "schema": "verdify-s2-source-preparation-and-delivery-queue-v4",
   "source_only_prs": {
-    "968": "ebf04e0ff492926cc01ed400f0eb57376a698d11",
+    "968": "12f48a0f393e85d3db21e9dfc3d8e31d511f7910",
     "969": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
     "970": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
     "971": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
@@ -209,16 +211,23 @@
   "standalone_firmware_qualification": {
     "current_exact_source": {
       "actual_environment": "Pinned Linux ARM64 OCI index/selected child/config digest; no fresh Mac compile claimed.",
+      "container_and_metadata_helper_exit_code": 0,
       "declared_command_exit_code": 0,
+      "fresh_compiler_binaries": 16,
+      "fresh_package_manifests": 10,
       "generated_service_negative_exit_code": 1,
-      "provenance_limit": "Current source/config/binary hashes and actual package versions captured. ANSI marker mismatch prevented fresh compiler-file hash capture; helper failure retained; earlier file hashes remain at their original source.",
-      "receipt": "portable-firmware-final-source-qualification.json",
+      "limits": [
+        "Standalone ARM64 qualification does not replace registered in-cluster amd64 matrix or owner deployed integration.",
+        "Nondeployable public dummy inputs, no OTA or physical acceptance; no cross-host bit reproducibility claim."
+      ],
+      "provenance": "Current source/config/generated-C++/PlatformIO/binary hashes and actual package/compiler-file hashes captured in this actual run before temporary cleanup. Prior failed attempts remain retained.",
+      "receipt": "portable-firmware-current-source-full-provenance.json",
       "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
       "targets_compiled": [
         "greenhouse",
         "greenhouse-recovery"
       ],
-      "vm_terminal": "Stopped normally, all state retained"
+      "vm_terminal": "Stopped normally; all state and existing profiles retained."
     },
     "earlier_34e7f1fc_qualifications": {
       "command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
@@ -249,6 +258,19 @@
       },
       "source_head": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206",
       "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f"
+    },
+    "prior_current_source_partial_capture": {
+      "actual_environment": "Pinned Linux ARM64 OCI index/selected child/config digest; no fresh Mac compile claimed.",
+      "declared_command_exit_code": 0,
+      "generated_service_negative_exit_code": 1,
+      "provenance_limit": "Current source/config/binary hashes and actual package versions captured. ANSI marker mismatch prevented fresh compiler-file hash capture; helper failure retained; earlier file hashes remain at their original source.",
+      "receipt": "portable-firmware-final-source-qualification.json",
+      "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+      "targets_compiled": [
+        "greenhouse",
+        "greenhouse-recovery"
+      ],
+      "vm_terminal": "Stopped normally, all state retained"
     }
   }
 }
