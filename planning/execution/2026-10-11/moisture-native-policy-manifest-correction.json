@@ -1,0 +1,72 @@
+{
+  "corrected_head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+  "current_native_source_ci": {
+    "finished_at": null,
+    "name": "verdify-platform-pr-ci-lnjvh",
+    "phase": "Running",
+    "started_at": "2026-10-11T17:19:34Z",
+    "uid": "6419749f-f3e7-4e45-8617-9c95ee7c5fa8"
+  },
+  "current_pinned_compile": "Fresh Linux ARM64 positive/negative compile at corrected source underway; the dummy fw_version and SOURCE_DATE_EPOCH are derived from Git, so prior binary hashes are not relabeled as this head.",
+  "failed_gate": "Generated firmware/policy_consumer_manifest.json was stale",
+  "failed_head": "e64cc1c13b682d6d70e9ae86906fe885f69ccd8e",
+  "failed_workflow": {
+    "finished_at": "2026-10-11T17:16:16Z",
+    "name": "verdify-platform-pr-ci-qkwqv",
+    "phase": "Failed",
+    "uid": "3c19d261-bbf5-49be-a38b-7d330fc9861e"
+  },
+  "generated_only_diff": [
+    {
+      "file": "firmware/greenhouse/controls.yaml",
+      "new_line": 2108,
+      "old_line": 2102
+    },
+    {
+      "file": "firmware/greenhouse/controls.yaml",
+      "new_line": 1926,
+      "old_line": 1920
+    }
+  ],
+  "generated_semantics_unchanged": {
+    "control_read_sites": 63,
+    "control_reads_migrated": 63,
+    "fields_clean": 48,
+    "read_sites": 194,
+    "reads_allowlisted": 32,
+    "reads_migrated": 162,
+    "write_sites_allowlisted": 77
+  },
+  "limits": [
+    "No main advance, image build/publication/retry, registry gate bypass, production sync, OTA, DB cutover or physical commissioning.",
+    "Prior exact-source compiler receipts and both real failed native runs remain retained."
+  ],
+  "local_following_gates": {
+    "generator_check": "passed",
+    "git_diff_check": "passed",
+    "policy_engine_checks_passed": 251,
+    "policy_recovery_checks_passed": 30,
+    "post_commit_replay_divergent_rows": 0,
+    "post_commit_replay_rows": 296698,
+    "prod_overlay_render": "passed",
+    "prometheus_source_guard": "passed",
+    "replay_limit": "Existing corpus lacks six input columns and full injectable coverage; zero replay divergence is not complete physical/semantic coverage.",
+    "service_restart_guard": "passed",
+    "twin_syntax": "passed"
+  },
+  "passed_native_gates": [
+    "ruff lint and format",
+    "schema suites",
+    "ClimateIntent controller audit",
+    "confirmed component selector/randomization/design",
+    "device write gate",
+    "entire pure-logic/contract suite including prior17 failures",
+    "migration rollback classifier",
+    "Grafana generated ConfigMaps",
+    "solar constants",
+    "config revision"
+  ],
+  "production_changes": false,
+  "recorded_at": "2026-10-11T17:23:09.506594+00:00",
+  "schema": "verdify-moisture-native-policy-manifest-correction-v1"
+}

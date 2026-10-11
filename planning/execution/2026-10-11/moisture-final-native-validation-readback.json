@@ -1,0 +1,28 @@
+{
+  "finished_at": null,
+  "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+  "mutation_or_bypass": false,
+  "observed_at": "2026-10-11T17:30:21.494773+00:00",
+  "qualified": false,
+  "schema": "verdify-final-source-native-validation-readback-v1",
+  "shared_validation_synchronization": {
+    "semaphore": {
+      "waiting": [
+        {
+          "holders": [
+            "agent-fleet-ci/repo-validate-jvallery-homeassistant-b906d2508952-push/repo-validate-jvallery-homeassistant-b906d2508952-push-2423661500",
+            "agent-fleet-ci/repo-validate-jvallery-homeassistant-03aafeed2c54-pr/repo-validate-jvallery-homeassistant-03aafeed2c54-pr-209858719",
+            "agent-fleet-ci/repo-validate-jvallery-homeassistant-b906d2508952-push/repo-validate-jvallery-homeassistant-b906d2508952-push-2275251392"
+          ],
+          "semaphore": "agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate"
+        }
+      ]
+    }
+  },
+  "started_at": "2026-10-11T17:19:34Z",
+  "validation_message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 5/8",
+  "validation_phase": "Pending",
+  "workflow": "verdify-platform-pr-ci-lnjvh",
+  "workflow_phase": "Running",
+  "workflow_uid": "6419749f-f3e7-4e45-8617-9c95ee7c5fa8"
+}
