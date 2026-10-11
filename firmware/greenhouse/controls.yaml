@@ -1856,7 +1856,10 @@ interval:
             }
             static char last_climate_moisture_exchange[384] = "";
             if(climate_continuous_diag_due && strcmp(last_climate_moisture_exchange, moisture_exchange) != 0){
-              id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
+              // #963: HA gets a short action; the ingestor retains the exact
+              // structured payload through a default-disabled native entity.
+              id(gh_climate_moisture_exchange).publish_state(climate_decision.moisture_exchange_action);
+              id(gh_climate_moisture_exchange_details).publish_state(moisture_exchange);
               snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
             }
             if(climate_continuous_diag_due){

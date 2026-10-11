@@ -428,6 +428,9 @@ STATE_MAP: dict[str, str] = {
     # climate_action_log.source_system_state, promoted to typed columns by
     # migration 187's v_moisture_estimator_telemetry view.
     "climate_moisture_exchange": "climate_moisture_exchange",
+    # #963: new firmware moves the full JSON to a HA-default-disabled native
+    # entity. The original key remains accepted for pre-split firmware.
+    "climate_moisture_exchange_details": "climate_moisture_exchange",
     "gl_main_state": "gl_main_state",
     "gl_main_reason": "gl_main_reason",
     "gl_main_decision_epoch": "gl_main_decision_epoch",  # TextSensorInfo exact epoch string

@@ -116,6 +116,7 @@ $PY -m pytest -q \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_action_log_policy_identity.py \
+  tests/test_moisture_state_boundary.py \
   tests/test_anchor_service_sync.py \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
