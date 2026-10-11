@@ -1,0 +1,62 @@
+{
+  "schema": "verdify-pr-only-validation-effect-review-v1",
+  "observed_at": "2026-10-11T17:02:30.332046+00:00",
+  "live_objects": [
+    {
+      "kind": "Sensor",
+      "name": "verdify-platform-pr-ci",
+      "uid": "9458d3e1-d98c-4beb-a341-1684c32b4f96",
+      "generation": 2,
+      "spec_sha256": "58f1e958260f10728f0da6dad4235efd26d045e3f4920236323b37a4fec19f1c"
+    },
+    {
+      "kind": "Sensor",
+      "name": "verdify-platform-ci",
+      "uid": "cfbfe64f-b3f4-4d65-b917-cbc8fbe35a98",
+      "generation": 3,
+      "spec_sha256": "27e51c6720f108abc46fce836f3e174ddd3a652b57978c9cd34bbe658bb76252"
+    },
+    {
+      "kind": "WorkflowTemplate",
+      "name": "verdify-platform-pr-ci",
+      "uid": "5810a2a0-55aa-455f-82f7-e4e3989e8c0f",
+      "generation": 18,
+      "spec_sha256": "d984f371dd75aa90b854a0ad4be0f5186ab092a44ce946a3270bdd2239c489b6"
+    },
+    {
+      "kind": "WorkflowTemplate",
+      "name": "verdify-platform-ci",
+      "uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+      "generation": 48,
+      "spec_sha256": "341552462fac930010d17d75f9875b303d9781061b5fa5d62f4a4b2089877499"
+    }
+  ],
+  "pr_steps": [
+    "report-pending",
+    "trusted-precheck",
+    "validate"
+  ],
+  "validate_template": {
+    "name": "verdify-platform-ci",
+    "template": "validate"
+  },
+  "classify_push_default": false,
+  "candidate_service_account": "native-ci-candidate",
+  "candidate_token_automount": false,
+  "persistent_or_host_volumes": false,
+  "main_sensor_ref": "^refs/heads/main$",
+  "limits": [
+    "Source validation consumes bounded CPU/RAM and emptyDir disk; not a producer/build admission receipt.",
+    "No main push, native retry, registry publication, production sync, restore, mount or node mutation authorized by this review."
+  ],
+  "generic_event_sensor": {
+    "uid": "401fe4d5-7868-4b51-87d0-530ef0ab88ec",
+    "generation": 27,
+    "registered_repo_filters": [
+      "^jvallery/homeassistant$",
+      "^jvallery/sentinel$",
+      "^jvallery/vallery\\.net$"
+    ],
+    "catchall_action": "audit-log only; effectful validation/build triggers bind separately filtered dependencies"
+  }
+}
