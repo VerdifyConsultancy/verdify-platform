@@ -1,0 +1,26 @@
+[
+  {
+    "plan_id": "iris-20261006-0704",
+    "trigger_id": "c1d7f13b-09a4-4682-aa05-f62e41b62cd2",
+    "rows": 195,
+    "transitions": 5,
+    "parameters": 39,
+    "valid_from": "2026-10-06T13:00:00+00:00",
+    "last_waypoint": "2026-10-07T03:00:00+00:00",
+    "expires_at": "2026-10-07T09:00:00+00:00",
+    "nonfinite": 0,
+    "invalid_expiry": 0
+  },
+  {
+    "plan_id": "iris-20261011-0709",
+    "trigger_id": "394036c5-0d87-4192-958f-fe6267f84ddc",
+    "rows": 195,
+    "transitions": 5,
+    "parameters": 39,
+    "valid_from": "2026-10-11T13:05:00+00:00",
+    "last_waypoint": "2026-10-12T03:30:00+00:00",
+    "expires_at": "2026-10-12T04:00:00+00:00",
+    "nonfinite": 0,
+    "invalid_expiry": 0
+  }
+]

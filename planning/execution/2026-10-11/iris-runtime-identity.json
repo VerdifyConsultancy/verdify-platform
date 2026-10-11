@@ -1,0 +1,16 @@
+{
+  "namespace": "verdify-prod",
+  "name": "verdify-hermes-iris-fcfb7dd98-7skpf",
+  "uid": "fc60d2ed-f4ba-4db1-bccc-59dcf3dec378",
+  "created_at": "2026-10-06T08:08:30Z",
+  "ready_since": "2026-10-06T08:09:10Z",
+  "profile_revision": "51de00576417",
+  "inventory_revision": "aaefffac230b",
+  "images": [
+    {
+      "name": "hermes-iris",
+      "image": "sha256:3b704fa6d2f6b1e27c42c93d4c469517658cb7980f9a1a761e856ad528094af3",
+      "imageID": "docker.io/nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+    }
+  ]
+}
