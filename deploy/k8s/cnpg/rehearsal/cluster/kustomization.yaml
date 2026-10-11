@@ -8,3 +8,5 @@ resources:
 - verdify-cnpg-rehearsal-isolation.yaml
 - deny-all-rehearsal.yaml
 - cnpg-s2-runtime-client-policy.yaml
+- s2-current274-integration-recovery.yaml
+- cnpg-s2-integration-runtime-client-policy.yaml
