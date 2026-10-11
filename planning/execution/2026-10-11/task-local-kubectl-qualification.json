@@ -1,0 +1,12 @@
+{
+  "schema": "verdify-task-local-kubectl-qualification/v1",
+  "version": "v1.35.5",
+  "platform": "darwin/arm64",
+  "official_binary_url": "https://dl.k8s.io/release/v1.35.5/bin/darwin/arm64/kubectl",
+  "official_checksum_url": "https://dl.k8s.io/release/v1.35.5/bin/darwin/arm64/kubectl.sha256",
+  "sha256": "4d79aa4ca3015d6c70ac593d8c387efe09f4000b5ff1098f42610e6030a8ccb3",
+  "existing_shared_client": "v1.33.3 unchanged",
+  "server_observed": "v1.35.5+k3s1-lifecycle",
+  "existing_repo_client": "v1.36.3 linux/amd64",
+  "scope": "Private task binary only; existing kube credentials and RBAC unchanged; no global install or context switch"
+}
