@@ -6,6 +6,8 @@ The [October 11 acceptance review and S2 completion sprint](reviews/2026-10-11/N
 
 The [October 6 review](reviews/2026-10-06/NEXT-SPRINT.md) remains historical evidence of the earlier healthy snapshot, not current deployment acceptance.
 
+The [October11 Iris execution receipt](execution/2026-10-11/IRIS-953.md) seals #953's first post-rollout and current natural-cycle acceptance. It updates that bounded issue after the full review; the remaining S2 and C0–C8 requirements stay open.
+
 The historical [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) records the previous S1 pull set and its dated full-issue acceptance, health and native graph receipts.
 
 The [September 26 production, issue, branch and worktree review](reviews/2026-09-26/NEXT-SPRINT.md) provides the next-sprint pull set and a full 80-issue inventory. The two later estate-rationalization issues, #801 and #802, are outside this 78-issue campaign source and are included in that review with their native cross-repository dependencies.

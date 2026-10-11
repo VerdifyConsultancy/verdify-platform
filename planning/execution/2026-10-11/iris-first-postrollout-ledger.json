@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1053894,
+    "event_type": "SUNRISE",
+    "expected_at": "2026-10-06T13:02:08.509156+00:00",
+    "delivered_at": "2026-10-06T13:04:18.373846+00:00",
+    "resolved_at": "2026-10-06T13:07:24.701703+00:00",
+    "status": "plan_written",
+    "trigger_id": "c1d7f13b-09a4-4682-aa05-f62e41b62cd2",
+    "resulting_plan_id": "iris-20261006-0704",
+    "plan_delivery_log_id": 6005,
+    "notes": "{\"run_id\": \"run_e8ccbfc3085e42ac95eeda66cc5ec62f\", \"status\": \"started\"}"
+  }
+]

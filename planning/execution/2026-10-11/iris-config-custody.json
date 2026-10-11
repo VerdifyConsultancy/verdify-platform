@@ -1,0 +1,21 @@
+{
+  "verdify-iris-inventory": {
+    "uid": "1a0a1c48-bb2b-42d3-991d-76eb065a0491",
+    "resource_version": "246741673",
+    "data_sha256": {
+      "SKILL.md": "40ae2ce74c9673a7dbba0fbe3741b76faa2968d8852b9b0b266671e05d93f5e7",
+      "SOUL.md": "c38d53b027a23010ccedb1f7e815591aa6f40feabc7d7fae3ebbcf022b42ada5",
+      "full-plan-payload-preflight.md": "cace1f0c1769ade8026ce43cab638727b61423b71c0daa1859b3746f7fed0f23",
+      "greenhouse-playbook.md": "38396eb74de01f4b09eae4175801a2e6e9ff5802aa489c6c59ab5c1d78a03a95",
+      "seed-inventory.py": "9b93a939d3f6a24fd1365411c8c80bf7ddf7924bd7a1b7a1718e2c3373226f6f"
+    }
+  },
+  "verdify-hermes-iris-config": {
+    "uid": "7b7adb94-6858-4eb7-9942-6875fe2f485f",
+    "resource_version": "151733921",
+    "data_sha256": {
+      "config.yaml": "51de00576417701fc4fed8fb03ec9a3f1bfbee5e4f5d057f25b763076c2a8b5f",
+      "tool-readiness.py": "6f0ec53b599f0c55424978612d63c6604affca4e72a2b241991eb4d66e4dbf6d"
+    }
+  }
+}

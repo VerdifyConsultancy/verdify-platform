@@ -1,0 +1,105 @@
+{
+  "session_id": "hermes:iris:main:trigger:394036c5-0d87-4192-958f-fe6267f84ddc",
+  "session_start": "2026-10-11T13:09:35.069417",
+  "last_updated": "2026-10-11T13:12:47.628349",
+  "model": "gpt-5.6-luna",
+  "native_session_sha256": "e738f6f08e83f18276096f3f45391f19e4b3443eab90755646c6d24e7c881e63",
+  "required_skill_calls": [
+    {
+      "message": 1,
+      "tool": "skill_view",
+      "name": "greenhouse-planning-mcp"
+    },
+    {
+      "message": 3,
+      "tool": "skill_view",
+      "name": "greenhouse-planning-mcp",
+      "file_path": "references/full-plan-payload-preflight.md"
+    },
+    {
+      "message": 3,
+      "tool": "skill_view",
+      "name": "greenhouse-planning-mcp",
+      "file_path": "references/sunrise-active-plan-boundary-and-terminal-reporting.md"
+    },
+    {
+      "message": 41,
+      "tool": "skill_manage",
+      "action": "patch",
+      "name": "greenhouse-planning-mcp"
+    },
+    {
+      "message": 43,
+      "tool": "skill_view",
+      "name": "greenhouse-planning-mcp"
+    },
+    {
+      "message": 45,
+      "tool": "skill_manage",
+      "action": "patch",
+      "name": "greenhouse-planning-mcp"
+    }
+  ],
+  "skill_results": [
+    {
+      "message": 2,
+      "tool": "skill_view",
+      "success": true,
+      "name": "greenhouse-planning-mcp"
+    },
+    {
+      "message": 4,
+      "tool": "skill_view",
+      "success": true,
+      "name": "greenhouse-planning-mcp",
+      "file": "references/full-plan-payload-preflight.md"
+    },
+    {
+      "message": 5,
+      "tool": "skill_view",
+      "success": true,
+      "name": "greenhouse-planning-mcp",
+      "file": "references/sunrise-active-plan-boundary-and-terminal-reporting.md"
+    },
+    {
+      "message": 42,
+      "tool": "skill_manage",
+      "success": false,
+      "error": "Could not find a match for old_string in the file"
+    },
+    {
+      "message": 44,
+      "tool": "skill_view",
+      "success": true,
+      "name": "greenhouse-planning-mcp"
+    },
+    {
+      "message": 46,
+      "tool": "skill_manage",
+      "success": true
+    }
+  ],
+  "missing_skill_or_reference_failures": 0,
+  "set_plan_results": [
+    {
+      "ok": true,
+      "plan_id": "iris-20261011-0709",
+      "transitions": 5,
+      "rows_written": 195,
+      "band_params_dropped": 0,
+      "planned_band_recorded": 0,
+      "forced_on_params": 0,
+      "climate_intent_segments": 5,
+      "climate_intent_version": "2026-05-25",
+      "climate_intent_guardrails": 0,
+      "structured_hypothesis": true,
+      "trigger_id": "394036c5-0d87-4192-958f-fe6267f84ddc",
+      "planner_instance": "local",
+      "delivery_status": "plan_written",
+      "terminal_action": "set_plan",
+      "valid_from": "2026-10-11T07:05:00-06:00",
+      "expires_at": "2026-10-11T22:00:00-06:00",
+      "note": "Dispatcher will execute waypoints on schedule. Old future waypoints deactivated."
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1096864,
+    "event_type": "SUNRISE",
+    "expected_at": "2026-10-11T13:07:15.019868+00:00",
+    "delivered_at": "2026-10-11T13:09:35.024748+00:00",
+    "resolved_at": "2026-10-11T13:11:39.27635+00:00",
+    "status": "plan_written",
+    "trigger_id": "394036c5-0d87-4192-958f-fe6267f84ddc",
+    "resulting_plan_id": "iris-20261011-0709",
+    "plan_delivery_log_id": 6085,
+    "notes": "{\"run_id\": \"run_f0f943e28762429b92c15bad580623b8\", \"status\": \"started\"}"
+  },
+  {
+    "id": 1096863,
+    "event_type": "MIDNIGHT",
+    "expected_at": "2026-10-11T06:15:00+00:00",
+    "delivered_at": "2026-10-11T06:16:28.972+00:00",
+    "resolved_at": "2026-10-11T06:17:59.148171+00:00",
+    "status": "plan_written",
+    "trigger_id": "c40e9e21-a189-4d88-bf5a-511697687520",
+    "resulting_plan_id": "iris-20261011-0016",
+    "plan_delivery_log_id": 6083,
+    "notes": "{\"run_id\": \"run_1eb3aa048bc24ca293c900313003527f\", \"status\": \"started\"}"
+  },
+  {
+    "id": 1088274,
+    "event_type": "SUNSET",
+    "expected_at": "2026-10-11T00:27:48.445966+00:00",
+    "delivered_at": "2026-10-11T00:29:48.102689+00:00",
+    "resolved_at": "2026-10-11T00:31:26.662285+00:00",
+    "status": "plan_written",
+    "trigger_id": "ca1d796d-6bf7-4d7d-a0b7-4af4bb83295e",
+    "resulting_plan_id": "iris-20261010-1829",
+    "plan_delivery_log_id": 6081,
+    "notes": "{\"run_id\": \"run_2b6b0330c8fd431d8032d4ec7f7641a9\", \"status\": \"started\"}"
+  },
+  {
+    "id": 1088270,
+    "event_type": "SUNRISE",
+    "expected_at": "2026-10-10T13:06:13.119702+00:00",
+    "delivered_at": "2026-10-10T13:08:33.95457+00:00",
+    "resolved_at": "2026-10-10T13:10:22.493743+00:00",
+    "status": "plan_written",
+    "trigger_id": "8dfdb57b-1a48-4044-9e93-17e1ed761823",
+    "resulting_plan_id": "iris-20261010-0708",
+    "plan_delivery_log_id": 6069,
+    "notes": "{\"run_id\": \"run_b2201e799f7c4317848aca63bd10825a\", \"status\": \"started\"}"
+  },
+  {
+    "id": 1088269,
+    "event_type": "MIDNIGHT",
+    "expected_at": "2026-10-10T06:15:00+00:00",
+    "delivered_at": "2026-10-10T06:16:21.186151+00:00",
+    "resolved_at": "2026-10-10T06:18:08.159099+00:00",
+    "status": "plan_written",
+    "trigger_id": "380e63eb-b53e-4dde-bf49-fdb113683cb5",
+    "resulting_plan_id": "iris-20261010-0016",
+    "plan_delivery_log_id": 6067,
+    "notes": "{\"run_id\": \"run_b93678ad26b84f4daa97e4514bc4e52e\", \"status\": \"started\"}"
+  },
+  {
+    "id": 1079681,
+    "event_type": "SUNSET",
+    "expected_at": "2026-10-10T00:29:22.122978+00:00",
+    "delivered_at": "2026-10-10T00:30:35.708577+00:00",
+    "resolved_at": "2026-10-10T00:32:04.397155+00:00",
+    "status": "plan_written",
+    "trigger_id": "efb31666-58ea-4877-bcb8-a967b3a5280f",
+    "resulting_plan_id": "iris-20261009-1830",
+    "plan_delivery_log_id": 6063,
+    "notes": "{\"run_id\": \"run_78e189fd092348dcad4595365cafbe24\", \"status\": \"started\"}"
+  }
+]
