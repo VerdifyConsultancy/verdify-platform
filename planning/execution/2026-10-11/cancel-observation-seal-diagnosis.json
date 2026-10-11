@@ -1,0 +1,20 @@
+{
+  "policy_source_sha256": "e7f431e73c503d474cc314ae8651fdbf38876a976641ca2a7583d3a240dadf32",
+  "schema": "verdify-cancel-observation-seal-diagnosis/v1",
+  "variants": {
+    "after_terminate": {
+      "accepted": false,
+      "reason": "Workflow content differs from its sealed submission snapshot"
+    },
+    "after_with_only_shutdown_removed_in_memory": {
+      "accepted": true,
+      "phase": "Failed"
+    },
+    "before_terminate": {
+      "accepted": true,
+      "phase": "Running"
+    }
+  },
+  "workflow": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+  "workflow_uid": "d7119bc5-1c88-4265-ab73-007efb8cdfe0"
+}

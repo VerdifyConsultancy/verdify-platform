@@ -1,0 +1,222 @@
+{
+  "captured_at": "2026-10-11T16:35:53.555772+00:00",
+  "custody": {
+    "complete_private_log_sha256": "b4f71b518b952b963e2d1b51d1ae6839d9fae8c4205a7ec37b52e8e9f9dda5fe",
+    "generated_agreement_sha256": "6b22137b88526d59ff48cd22644c7d0b7fe31bd27c17351a33f210de1c78fe5c",
+    "toolchain_metadata_sha256": "66c3f2ef2ee009894fa7e147679926eed7afdf69d4cbcea14165e3f07b0945dc"
+  },
+  "execution": {
+    "actual_esphome_version": "2026.6.5",
+    "cluster_job_submitted": false,
+    "command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
+    "credentials": "fixed public dummy compile values",
+    "declared_container_image": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+    "declared_container_image_executed": false,
+    "elapsed_log_lifetime_seconds": 305.419,
+    "exit_code": 0,
+    "fresh_private_home_and_platformio_core": true,
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "mode": "local Mac virtualenv",
+    "network_device_access": false,
+    "ota_invoked": false,
+    "positive_compile_seconds": [
+      164.66,
+      104.08
+    ],
+    "registry_and_generated_mirror_exactly_agree": true,
+    "tracked_firmware_blobs_only": true
+  },
+  "proof_limits": [
+    "Actual registered pinned-container/native CI execution remains unqualified; its extra prior run was canceled during the owner hold.",
+    "These dummy firmware binaries are nondeployable and provide no OTA, recovery-on-device, physical or experiment qualification.",
+    "Owner-lane least-authority deployed delivery and the remaining #304/#644 acceptance matrix remain open."
+  ],
+  "qualification": {
+    "generated_cpp_negative": {
+      "exit_code": 1,
+      "result": "expected_compile_failure"
+    },
+    "platformio_packages": {
+      "contrib-piohome": "3.4.4",
+      "framework-espidf": "3.50504",
+      "tool-cmake": "4.0.3",
+      "tool-esp-rom-elfs": "2024.10.11",
+      "tool-esp_install": "5.3.4",
+      "tool-esptoolpy": "5.3.0",
+      "tool-ninja": "1.13.1",
+      "tool-scons": "4.40801.0",
+      "tool-xtensa-esp-elf-gdb": "17.1.0+20260402",
+      "toolchain-xtensa-esp-elf": "14.2.0+20260121"
+    },
+    "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+    "targets": [
+      {
+        "binary_bytes": 1106224,
+        "binary_sha256": "e92143d7cc161b93e796ce2e86c4db38f46a66fba123e4641bc235c4f2bacb8c",
+        "config_sha256": "dbd8c50c889d712a80d71182aa34a0a87b272387993b09080d9f01ba172440ce",
+        "deployable": false,
+        "generated_cpp_sha256": "ca94814c1f66ef5ba73a7c4a041e3dd7cf7fe48bead8db22725c9e04c0550d88",
+        "platformio_ini_sha256": "74092360542f2aa5d70b35db68e2b9438569732eb88fa87ca1e80b0568448e13",
+        "result": "compiled",
+        "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+        "target": "greenhouse"
+      },
+      {
+        "binary_bytes": 1101136,
+        "binary_sha256": "58d4c5383090539dcc722c0d417f607c99d15bd1bbee026bbc9949d45765fdb2",
+        "config_sha256": "412a1e3145167bc4526725c6ad8882238176128a6548c7c48fd819fe2f859c09",
+        "deployable": false,
+        "generated_cpp_sha256": "ec51e95bcf73958ff13c286016d4cc2ad01f24898fe8afc99f5e9615bd5586e1",
+        "platformio_ini_sha256": "11a3d07d8e344ad834354ee9dee1c89f57ebb4ce0b7cb87768e069a6b26d9eb6",
+        "result": "compiled",
+        "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+        "target": "greenhouse-recovery"
+      }
+    ],
+    "toolchain": [
+      {
+        "compiler_binaries": [],
+        "name": "contrib-piohome",
+        "package_manifest_sha256": "895d814d31330f12b120ad32cb4ec29c28dfedeb64d1ba497a235b0ab476fd1d",
+        "version": "3.4.4"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "framework-espidf",
+        "package_manifest_sha256": "b140a22728d866707b3deac19db25cad3bb72ebe31fc4630f83e100087466127",
+        "version": "3.50504"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-cmake",
+        "package_manifest_sha256": "248bf8bb0ba33719b6bac894c8fbe51248cbd6c461930651420edc4be8a3e1c7",
+        "version": "4.0.3"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esp-rom-elfs",
+        "package_manifest_sha256": "cc1f89ca612a22a8ccaef261a5cfeda8dc5a4f162a429fec831065a6502b7ef1",
+        "version": "2024.10.11"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esp_install",
+        "package_manifest_sha256": "eec2de373d8b9c84f503eeee69c21afbe305d2089c45f55341e70d53d98005f0",
+        "version": "5.3.4"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-esptoolpy",
+        "package_manifest_sha256": "1a86cf8698d7ec2740219256e503eb0fffe6daf052e906990c42dc3c1c5a2dfd",
+        "version": "5.3.0"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-ninja",
+        "package_manifest_sha256": "8a0c50f198532e68ef83e4e29ba92eca3b0b555fd807fff3b93a485628d75d2c",
+        "version": "1.13.1"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-scons",
+        "package_manifest_sha256": "a9543d5b24b39d0203bc2c4c4e8ae62db6eb8842bd15d09f11d2b7a4628fe4db",
+        "version": "4.40801.0"
+      },
+      {
+        "compiler_binaries": [],
+        "name": "tool-xtensa-esp-elf-gdb",
+        "package_manifest_sha256": "e1b363e2e5d5cd0933ef91e07a42d3dfd883ae0cdb993ad63adc0faae0abd827",
+        "version": "17.1.0+20260402"
+      },
+      {
+        "compiler_binaries": [
+          {
+            "bytes": 1879504,
+            "name": "xtensa-esp-elf-as",
+            "sha256": "d8f49033e8950cc79f81262a0b9c116ce5bb3ed92e7f2ad461bc3a677acae862"
+          },
+          {
+            "bytes": 1653456,
+            "name": "xtensa-esp-elf-g++",
+            "sha256": "a74434aa9be158155bd6e6cc0772780031d2f5fa13458f9e9ce4b8e19b331306"
+          },
+          {
+            "bytes": 1653456,
+            "name": "xtensa-esp-elf-gcc",
+            "sha256": "40c2a55da56dbbecfa6936331b4283b742ec4befa7cade7ee27db67b704de4ee"
+          },
+          {
+            "bytes": 2194720,
+            "name": "xtensa-esp-elf-ld",
+            "sha256": "2340708135c7e8d9c9abbb8cf1ac3d1526d0ff0477c095834b945867d61124c0"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32-elf-as",
+            "sha256": "42b9ee9e1dad91b58e0100929afaf1d6b871f08ca8e4f77dc1d09363ae757ba0"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32-elf-g++",
+            "sha256": "5e8575814a07927dd303bfb2d1d0dab64669d224530ad2de23c25b2df00784c3"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32-elf-gcc",
+            "sha256": "eda0c84187669dda7f11dd5edbcf423bedcd911b7235a799bd2d3c874249d71c"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32-elf-ld",
+            "sha256": "63f027fa4feefc8d766f53cc370ff22a3671b75b72ff9e7df4602586147a5e7c"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s2-elf-as",
+            "sha256": "73f50c2dbd123f69a0c17759d390416d3d0457b93bcde2e3e69caa756f12c950"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s2-elf-g++",
+            "sha256": "1f530289f7ba9ac2e43cbd81fd9711117339a3a497f03b28629209297e4cb6af"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s2-elf-gcc",
+            "sha256": "b5eba1e2bf2ac04ab469f37c717e5477e9692c65f2e9c332c19eb035e445c2e5"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s2-elf-ld",
+            "sha256": "1e0138d27c03fdb179b88737fc8b17f0793f6942238086b7ac91be98f6eabe5f"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s3-elf-as",
+            "sha256": "a27a38c47fe816f79f1a664ae84ddc6fcf1c23169c55c692faf3ad1cd72ceb4f"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s3-elf-g++",
+            "sha256": "ead8e9ef74832ee73a251ba1aae645737202766687345e52d6e519935f2f4699"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s3-elf-gcc",
+            "sha256": "5e599f00ca913977715df9cfa51a8b63ff05538bdd3a871e65dc061dda06dccf"
+          },
+          {
+            "bytes": 388656,
+            "name": "xtensa-esp32s3-elf-ld",
+            "sha256": "a9bfcaa53672c09caddf4226f028b78983be7402403df4b560cc96486036e4d5"
+          }
+        ],
+        "name": "toolchain-xtensa-esp-elf",
+        "package_manifest_sha256": "c48c1b9576e07b786e4ae1cf17b9ee500317b7218c20d76a0238649f3424bb63",
+        "version": "14.2.0+20260121"
+      }
+    ]
+  },
+  "schema": "verdify-portable-firmware-local-qualification/v1",
+  "source": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206"
+}

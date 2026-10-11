@@ -1,0 +1,85 @@
+{
+  "captured_at": "2026-10-11T16:25:53.462170+00:00",
+  "corrections": [
+    "Wire the seven broker registry tests into the existing native unit-test manifest.",
+    "Bind the current Cortex capture program bytes to its v39 contract; historical frozen bindings remain unchanged.",
+    "Regenerate the existing executable-delivery contract workflow digest and broker/runtime source bundle hashes; retain build-required with all candidate releases and native qualification empty."
+  ],
+  "local_commits": [
+    "eda399c20d93f3b2c9ed0c94199cb46c0bb31ec4",
+    "6684c668c6a3eb6d77f5cb7f9b38eaa9ac56a0a3"
+  ],
+  "local_head": "6684c668c6a3eb6d77f5cb7f9b38eaa9ac56a0a3",
+  "local_pre_correction_shard": {
+    "diagnosis_limit": "Archived native summaries bind failure and identity but contain no private test output; local source reproduction identifies these defects.",
+    "failed_file": "apps/agent-fleet-repo-auth-broker/tests/test_manifest_contract.py",
+    "failed_files": 1,
+    "files": 135,
+    "passed_files": 134,
+    "python": "3.13.5"
+  },
+  "native_attempt": 13,
+  "native_failed_checks": [
+    "check-7e632488ee7267763b93e5de",
+    "check-bea2afae8e08df537b9ac23d"
+  ],
+  "native_failed_operation": "61fd9f9f-19d6-5fd0-84cc-e4d449886b95",
+  "native_original_base": "9b1d3d2c2e32485bbb726eeff1511147851a2496",
+  "native_synthetic_merge": "9b46aad8b35c43972ba049e93df314471ddc31ae",
+  "new_native_ci_submitted": false,
+  "other_checks": [
+    "all registered artifact freshness checks passed",
+    "test wiring completeness passed",
+    "542 test files partitioned across four shards with exact coverage",
+    "executable delivery check-source passed in build-required state",
+    "git diff --check passed",
+    "git bundle verify passed with published 6b4eb6f prerequisite"
+  ],
+  "owner_pr": "https://github.com/jvallery/agents/pull/4763",
+  "patch_sha256": "d6b8197e41b9e9c7536b45fbfe4a1d29e7ecdfc5a937858bdf58556fc3a549b1",
+  "post_correction_focused": {
+    "suites": [
+      {
+        "exit_code": 0,
+        "note": "Collected through pytest; direct invocation did not collect tests.",
+        "reported_tests": 3,
+        "test": "scripts/test_delivery_stage_reuse.py"
+      },
+      {
+        "exit_code": 0,
+        "reported_tests": 34,
+        "test": "scripts/test_executable_image_delivery.py"
+      },
+      {
+        "exit_code": 0,
+        "reported_tests": 11,
+        "test": "scripts/test_repo_build_output_fixture.py"
+      },
+      {
+        "exit_code": 0,
+        "reported_tests": 3,
+        "test": "scripts/test_verdify_binding_generations.py"
+      },
+      {
+        "exit_code": 0,
+        "reported_tests": 27,
+        "test": "apps/agent-fleet-repo-auth-broker/tests/test_manifest_contract.py"
+      },
+      {
+        "exit_code": 0,
+        "reported_tests": 7,
+        "test": "apps/agent-fleet-repo-auth-broker/tests/test_ci_registry.py"
+      }
+    ],
+    "tests": 85
+  },
+  "published_head": "6b4eb6f43d0dac79b766a9338811b63d52b9074b",
+  "push_performed": false,
+  "recovery_bundle_sha256": "73d16c9301e73016f16e2c8bbba69225198aa9a4d2b0720c9484afb1b1b4f6ad",
+  "remaining": [
+    "Wait for explicit storage/host owner clearance; no pushes or new CI during current hold.",
+    "Reconcile against then-current owner main, regenerate any affected artifacts, push these source corrections, and require exact-head fleet-ci/native success.",
+    "Complete #644 actual authority/retry/cancel/concurrency/deployed-consumer matrix and final source-to-runtime adoption."
+  ],
+  "schema": "verdify-owner-4763-held-source-corrections/v1"
+}
