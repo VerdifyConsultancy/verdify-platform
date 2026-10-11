@@ -1,0 +1,134 @@
+{
+  "actual_image_index_id": "sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+  "actual_selected_manifest": {
+    "digest": "sha256:551b3b56e9c355f55f669996cb90d22b2cd12df4a3493ad83b319705a826dca9",
+    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+    "platform": {
+      "architecture": "arm64",
+      "os": "linux"
+    },
+    "size": 3917
+  },
+  "authority": {
+    "config_empty": true,
+    "credential_environment_absent": true,
+    "credential_paths": {
+      "/home/esphome/.kube/config": "absent",
+      "/root/.kube/config": "inaccessible",
+      "/tmp/repo/firmware/secrets.yaml": "absent",
+      "/var/run/docker.sock": "absent",
+      "/var/run/secrets/kubernetes.io/serviceaccount/token": "absent"
+    },
+    "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+    "uid": 1000
+  },
+  "command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
+  "compile": {
+    "credentials": "public compile-only dummy values",
+    "deployable": false,
+    "esphome_version": "2026.6.5",
+    "generated_cpp_negative": {
+      "exit_code": 1,
+      "result": "expected_compile_failure"
+    },
+    "physical_qualification": false,
+    "platformio_packages": {
+      "contrib-piohome": "3.4.4",
+      "framework-espidf": "3.50504",
+      "tool-cmake": "4.0.3",
+      "tool-esp-rom-elfs": "2024.10.11",
+      "tool-esp_install": "5.3.4",
+      "tool-esptoolpy": "5.3.0",
+      "tool-ninja": "1.13.1",
+      "tool-scons": "4.40801.0",
+      "tool-xtensa-esp-elf-gdb": "17.1.0+20260402",
+      "toolchain-xtensa-esp-elf": "14.2.0+20260121"
+    },
+    "schema": "verdify.secretless-firmware/v1",
+    "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+    "targets": [
+      {
+        "binary_bytes": 1106224,
+        "binary_sha256": "5c88633b9d17019a9c8d7e13469ea8d336299a994b5f539c1932609c0099e264",
+        "config_sha256": "dbd8c50c889d712a80d71182aa34a0a87b272387993b09080d9f01ba172440ce",
+        "deployable": false,
+        "generated_cpp_sha256": "a6b86bcc3a235c5cb6d38b7344c2d408f5bee6acb1b77fc009c0a30c4effd3c4",
+        "platformio_ini_sha256": "74092360542f2aa5d70b35db68e2b9438569732eb88fa87ca1e80b0568448e13",
+        "result": "compiled",
+        "source_manifest_sha256": "5a6f97620e9786d0e8cbc3ed02757cb3e6a32aaea994a68d64afca19407c17d6",
+        "target": "greenhouse"
+      },
+      {
+        "binary_bytes": 1101104,
+        "binary_sha256": "217739df20d67b76f9677fda9c758e8edb55d7caa630db688460690a588aa68e",
+        "config_sha256": "412a1e3145167bc4526725c6ad8882238176128a6548c7c48fd819fe2f859c09",
+        "deployable": false,
+        "generated_cpp_sha256": "2b0ffd8bb6511cd370e14cbf6aa8abccdfca8e41b81fcfa24c5abb815716dd0f",
+        "platformio_ini_sha256": "11a3d07d8e344ad834354ee9dee1c89f57ebb4ce0b7cb87768e069a6b26d9eb6",
+        "result": "compiled",
+        "source_manifest_sha256": "5a6f97620e9786d0e8cbc3ed02757cb3e6a32aaea994a68d64afca19407c17d6",
+        "target": "greenhouse-recovery"
+      }
+    ],
+    "toolchain_image": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+  },
+  "compiler_file_hash_capture": {
+    "captured_for_this_run": false,
+    "operator_collector_exit_code": 1,
+    "operator_collector_sha256": "6a8fa1c029a3e9510c5ae97a54fb9c23b91e4a5e235a17fd8f2566c2fac83380",
+    "prior_complete_hash_receipt": "portable-firmware-container-qualification.json at original34e7f1fc only; not relabeled as current-head compiler bytes",
+    "reason": "Helper matched literal [SUCCESS]; ANSI color escapes prevented the hook. Both actual compiles and the negative completed, and the declared command/container exited0; the later helper assertion rejected missing optional compiler-file provenance."
+  },
+  "container_id": "d1df27d8cb0e60abfd62e6ec5c9725d705e59827794d36ea47812e98772f722e",
+  "container_name": "vfy-fw-compile-ce24459c-a2",
+  "declared_command_exit_code": 0,
+  "finished_at": "2026-10-11T17:26:54.908238056Z",
+  "limits": [
+    "Actual Linux ARM64 execution, not registered in-cluster Linux amd64 qualification.",
+    "Nondeployable public dummy inputs; no OTA, device connection, physical acceptance or registry publication.",
+    "The original Mac/first-container receipts retain their original exact source. No new Mac run or cross-host bit reproducibility is claimed.",
+    "No fresh compiler-file hashes were captured in this run. The immutable image identity and actual package versions are bound; old compiler hashes are not represented as fresh.",
+    "Compiler VM stopped normally; image, source, containers/volumes and both local helper/preflight failures remain recoverable."
+  ],
+  "log_sha256": "0bc18b5e6efd1a643f3313e53a35048827e5f816990d4d65b1ac7d86e3deca15",
+  "oom_killed": false,
+  "positive_compile_seconds": [
+    152.56,
+    100.17
+  ],
+  "prestart_mount_authority_checks": "All four actual mounts checked before start",
+  "prior_failed_local_preflight": {
+    "compiled": false,
+    "container_id": "c05762f681b4791a224b28b1aeaf7aed606ad6d30fe3762b8450d7ac27616a7d",
+    "exit_code": 1,
+    "reason": "UID1000 could not stat /root/.kube/config; corrected guard distinguishes absent from inaccessible credential paths; failure retained."
+  },
+  "recorded_at": "2026-10-11T17:29:18.707008+00:00",
+  "requested_image": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+  "runtime": {
+    "cap_drop": [
+      "ALL"
+    ],
+    "devices": [],
+    "network": "private bridge",
+    "read_only_root": true,
+    "scratch": "fresh named local volumes",
+    "security_opt": [
+      "no-new-privileges"
+    ],
+    "source_read_only": true,
+    "uid": 1000
+  },
+  "schema": "verdify-final-source-pinned-container-qualification-v1",
+  "selected_child_config_digest": "sha256:4525f983be0457dcc58d3a815c78d5293bff2323713ee5bdd34ff6f904a15812",
+  "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+  "started_at": "2026-10-11T17:22:15.488447912Z",
+  "vm_terminal": {
+    "docker_context": "default",
+    "existing_profiles": "default and verdify-vision-fixture remain Stopped",
+    "observed_at": "2026-10-11T17:29:56.246782+00:00",
+    "state_retained": true,
+    "status": "Stopped",
+    "status_log_sha256": "19732ee402db4f9720681b337be6fbccea470205d193bb8daf5fe7148a35bab0"
+  }
+}
