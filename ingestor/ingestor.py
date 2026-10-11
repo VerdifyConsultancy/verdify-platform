@@ -147,6 +147,7 @@ from verdify_schemas.experiment_config import (
     policy_vector_mode,
 )
 from verdify_schemas.policy_transport import POLICY_IDENTITY_SENSOR
+from verdify_schemas.telemetry import expand_moisture_exchange_wire
 from verdify_schemas.tunable_registry import get as get_tunable
 
 # ──────────────────────────────────────────────────────────────
@@ -3646,6 +3647,15 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
             # visible action must never replace that structured observation.
             if obj_id == "climate_moisture_exchange" and not val.lstrip().startswith("{"):
                 entity = "climate_moisture_exchange_action"
+            elif obj_id == "climate_moisture_exchange_details":
+                try:
+                    payload = json.loads(val)
+                    if not isinstance(payload, dict):
+                        raise ValueError("detail must be an object")
+                    val = json.dumps(expand_moisture_exchange_wire(payload), separators=(",", ":"))
+                except (ValueError, TypeError):
+                    log.warning("Moisture-exchange detail has an unsupported wire shape")
+                    val = '{"raw":"unsupported_moisture_exchange_detail"}'
             old = state.system.get(entity)
             force_refresh = entity in {"gl_main_state", "gl_main_reason", "gl_grow_state", "gl_grow_reason"}
             if old != val or force_refresh:

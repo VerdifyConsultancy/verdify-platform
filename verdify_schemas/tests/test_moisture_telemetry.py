@@ -22,6 +22,7 @@ fixture proof in db/migrations/tests/test-187-moisture-estimator-telemetry.sql.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from datetime import UTC, datetime
@@ -33,7 +34,7 @@ from verdify_schemas import (
     MoistureExchangeTelemetry,
     normalize_moisture_exchange_telemetry,
 )
-from verdify_schemas.telemetry import MX_ACCEPTED_KEY_ALIASES
+from verdify_schemas.telemetry import MX_ACCEPTED_KEY_ALIASES, MX_COMPACT_WIRE_KEYS, expand_moisture_exchange_wire
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MIGRATION_187 = REPO_ROOT / "db" / "migrations" / "187-moisture-estimator-telemetry.sql"
@@ -190,7 +191,9 @@ def _firmware_emitted_keys() -> set[str]:
     src = FIRMWARE_CONTROLS.read_text()
     start = src.index("snprintf(moisture_exchange")
     block = src[start : src.index(");", start)]
-    return set(re.findall(r'\\"([a-z0-9_]+)\\":', block))
+    keys = set(re.findall(r'\\"([a-z0-9_]+)\\":', block))
+    assert keys == {"_mx", *MX_COMPACT_WIRE_KEYS}, "compact firmware fields must match the complete versioned decoder"
+    return {MX_COMPACT_WIRE_KEYS[key] for key in keys - {"_mx"}}
 
 
 class TestKeyAgreementDriftGuards:
@@ -238,7 +241,7 @@ class TestKeyAgreementDriftGuards:
         capacity_match = re.search(r"char\s+moisture_exchange\[(\d+)\]", src)
         assert capacity_match, "fixed moisture_exchange buffer missing"
         capacity = int(capacity_match.group(1))
-        assert '"\\"outdoor_data_age_s\\":%u,"' in src
+        assert '"\\"oa\\":%u,"' in src
         assert "sensor_in.outdoor_data_age_s" in src
         assert "moisture_exchange_len < 0" in src
         assert "sizeof(moisture_exchange)" in src
@@ -254,7 +257,12 @@ class TestKeyAgreementDriftGuards:
             '"heat_assist_active":false,"heat_assist_timer_s":4294967}'
         )
         assert len(worst_case) == 331
-        assert capacity - (len(worst_case) + 1) >= 52
+        canonical = json.loads(worst_case)
+        wire = {"_mx": 1, **{alias: canonical[key] for alias, key in MX_COMPACT_WIRE_KEYS.items()}}
+        compact = json.dumps(wire, separators=(",", ":"))
+        assert expand_moisture_exchange_wire(wire) == canonical
+        assert len(compact) <= 255
+        assert capacity == 256 and capacity > len(compact)
 
     def test_settled_410_names_everywhere(self):
         """The two #410 fields keep their settled names in every consumer."""
