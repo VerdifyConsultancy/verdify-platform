@@ -2,28 +2,29 @@
   "acceptance": "source qualification only; ingestor adoption, OTA and live HA recovery unproven",
   "checks": {
     "esphome_compile": {
-      "binary_bytes": 1106336,
-      "binary_sha256": "2f2fb5f2f32140722b1783ed9b6ecf801ae93b17540bbb6a0d8a8e19c2b40336",
-      "generated_cpp_sha256": "e52e8be9b1d8f23a960e949cb9d208a04a466950a9de3bfc9c4aafab51a3b1ce",
+      "binary_bytes": 1106160,
+      "binary_sha256": "5d2b41abb80729d4e6de10dd08e950eded1e13696626c43ceb5a9dcff58cfbbc",
+      "generated_cpp_sha256": "ca406308e8ce94d46bb64de429f8d01848b3278d88695dce89d433355caadfb9",
       "generated_detail_default_disabled": true,
       "platformio_ini_sha256": "74092360542f2aa5d70b35db68e2b9438569732eb88fa87ca1e80b0568448e13",
       "result": "passed"
     },
     "focused_pytest": {
-      "passed": 31
+      "passed": 38
     },
     "invariants": {
       "full_injectable_coverage": false,
       "rows": 296698,
       "violations": 0
     },
+    "native_formatter": "normal maximum-age/timer and float-overflow states passed",
     "native_logic": {
       "failed": 0,
       "passed": 288
     },
     "postcommit_replay": {
       "divergent": 0,
-      "new": "e3adb4a6b1a0093fb96163c30e294b4b44dab3e7",
+      "new": "feb85d4c787b9692757f1ef0d8c4169a7339aae8",
       "old": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
       "rows": 296698
     },
@@ -34,6 +35,11 @@
     },
     "service_restart_guard": "passed; verdify-ingestor named"
   },
+  "consumer_sources": {
+    "ingestor/entity_map.py": "24b29cfcdd155feeb5c4512c7173b849262da3c0564038c1c86ac3e83f168bb7",
+    "ingestor/ingestor.py": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+    "verdify_schemas/telemetry.py": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816"
+  },
   "credentials": "tracked dummy firmware/secrets.example.yaml only",
   "deployable": false,
   "firmware_sources": {
@@ -42,10 +48,10 @@
     "firmware/build_api_batch_patch.py": "e96095765446c3a49265fba465e07e9ad09c7f91f841a7c7e81d257d86070ae0",
     "firmware/greenhouse-recovery.yaml": "412a1e3145167bc4526725c6ad8882238176128a6548c7c48fd819fe2f859c09",
     "firmware/greenhouse.yaml": "dbd8c50c889d712a80d71182aa34a0a87b272387993b09080d9f01ba172440ce",
-    "firmware/greenhouse/controls.yaml": "2b2f8e27560703db4ef75ff64d1327cdf5a82edfc54862cfe57bb2c0093e13ca",
+    "firmware/greenhouse/controls.yaml": "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
     "firmware/greenhouse/external_sensors.yaml": "c88cd1868380b7c501440a5192a36044e8b321c3c6826e846ecb6376094f62e5",
     "firmware/greenhouse/globals.yaml": "dd6a85a4a56cd304779c3bd69bed74d50b98a3ffae03dbcb5c14b7b527649a0c",
-    "firmware/greenhouse/hardware.yaml": "f84ce627b8ccea0cd5b868192add920f0dff140a9596136ea6d8a563de64c90d",
+    "firmware/greenhouse/hardware.yaml": "ccfc661da28cb59e73302b531d888b20bbb5ff6cfe464cace8c03a09ecaa196b",
     "firmware/greenhouse/policy_engine.yaml": "2f16fb69cd50d4c4f656ee3ba958e01e6a7079bc6e5d4464ab9c53e1896bfdb3",
     "firmware/greenhouse/sensors.yaml": "56f6e75095fd15f4e80e296ecac221090953c6255fd005bd5d3b028f2e1a0abd",
     "firmware/greenhouse/tunables.yaml": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
@@ -87,9 +93,18 @@
     "tool-esptoolpy": "5.3.0",
     "toolchain-xtensa-esp-elf": "14.2.0+20260121"
   },
-  "qualified_code_commit": "e3adb4a6b1a0093fb96163c30e294b4b44dab3e7",
-  "recorded_at_utc": "2026-10-11T15:48:56.645137+00:00",
+  "qualified_code_commit": "feb85d4c787b9692757f1ef0d8c4169a7339aae8",
+  "recorded_at_utc": "2026-10-11T15:56:09.875988+00:00",
   "schema": "verdify-moisture-state-boundary-qualification-v1",
   "source_base": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
-  "source_manifest_sha256": "06756c64d8c5b9aa8f15a8e34de7b10e529239aa8dcc871c454bc63cf9182274"
+  "source_manifest_sha256": "d66c26b33cc20642641ce32ceee3c2a7797082588d0104eea009d57920926c6f",
+  "wire_contract": {
+    "buffer_including_nul": 256,
+    "canonical_database_mcp_keys": "unchanged",
+    "marker": "_mx",
+    "max_published_detail_bytes": 255,
+    "overflow": "explicit raw unavailable diagnostic",
+    "unsupported_wire": "explicit raw unsupported diagnostic",
+    "version": 1
+  }
 }
