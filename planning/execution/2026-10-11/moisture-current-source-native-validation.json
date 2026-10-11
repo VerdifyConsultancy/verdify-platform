@@ -1,0 +1,77 @@
+{
+  "finished_at": "2026-10-11T17:45:33Z",
+  "github_statuses": [
+    {
+      "context": "Verdify Platform / Argo PR CI",
+      "created_at": "2026-10-11T17:45:23Z",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "state": "success",
+      "target_url": null,
+      "updated_at": "2026-10-11T17:45:23Z"
+    }
+  ],
+  "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+  "limits": [
+    "This native offline source validation does not build, publish, promote, deploy or qualify physical behavior.",
+    "The standalone pinned ARM64 firmware command is separately qualified; the canceled registered five-check firmware matrix remains unqualified."
+  ],
+  "message": null,
+  "mutation_or_bypass": false,
+  "native_validation_log_sha256": "2fefacb8c1b17aa1ac8519d3501e9162ee0120cd08b3560877ecf432438db93e",
+  "observed_at": "2026-10-11T17:45:51.662172+00:00",
+  "platform_main_unchanged": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+  "pod_execution": {
+    "main_image": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+    "main_image_id": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+    "node": "vm-k3s-node6",
+    "observed_at": "2026-10-11T17:39:06.296597+00:00",
+    "pod": "verdify-platform-pr-ci-lnjvh-validate-2321622277",
+    "source": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+    "state": {
+      "running": {
+        "startedAt": "2026-10-11T17:32:23Z"
+      }
+    },
+    "uid": "124cdcc4-bd2a-40b7-92be-5784f4fbed4d"
+  },
+  "pod_nodes": [
+    {
+      "displayName": "validate(0)",
+      "finishedAt": "2026-10-11T17:44:54Z",
+      "id": "verdify-platform-pr-ci-lnjvh-2321622277",
+      "message": null,
+      "phase": "Succeeded",
+      "startedAt": "2026-10-11T17:30:21Z"
+    },
+    {
+      "displayName": "trusted-precheck",
+      "finishedAt": "2026-10-11T17:19:39Z",
+      "id": "verdify-platform-pr-ci-lnjvh-2413364254",
+      "message": null,
+      "phase": "Succeeded",
+      "startedAt": "2026-10-11T17:19:34Z"
+    },
+    {
+      "displayName": "report(0)",
+      "finishedAt": "2026-10-11T17:45:26Z",
+      "id": "verdify-platform-pr-ci-lnjvh-2560919451",
+      "message": null,
+      "phase": "Succeeded",
+      "startedAt": "2026-10-11T17:45:03Z"
+    },
+    {
+      "displayName": "report-pending(0)",
+      "finishedAt": "2026-10-11T17:19:48Z",
+      "id": "verdify-platform-pr-ci-lnjvh-3854368706",
+      "message": null,
+      "phase": "Succeeded",
+      "startedAt": "2026-10-11T17:19:34Z"
+    }
+  ],
+  "qualified": true,
+  "schema": "verdify-current-source-native-validation-v1",
+  "started_at": "2026-10-11T17:19:34Z",
+  "workflow": "verdify-platform-pr-ci-lnjvh",
+  "workflow_phase": "Succeeded",
+  "workflow_uid": "6419749f-f3e7-4e45-8617-9c95ee7c5fa8"
+}
