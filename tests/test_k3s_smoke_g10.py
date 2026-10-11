@@ -26,6 +26,7 @@ IMAGE = "registry.vallery.net/verdifyconsultancy/verdify-api@" + DIGEST
         ("wrong_digest", 1, "Deployment digest differs from reviewed"),
         ("stale_data", 1, "data freshness unavailable/degraded"),
         ("missing_tools", 1, "tool-list unavailable"),
+        ("stalled_tools", 1, "tool-list unavailable"),
         ("stale_readbacks", 1, "setpoint snapshot stale/incomplete/unavailable"),
     ],
 )
@@ -82,7 +83,8 @@ def test_g10_smoke_fails_closed(tmp_path, case, expected_code, expected_text):
             '  *" get pods -l app.kubernetes.io/component=mcp "*) printf "mcp-one\\n" ;;\n'
             '  *" get deploy verdify-mcp -o jsonpath={.spec.replicas} "*) printf "1" ;;\n'
             '  *" get deploy verdify-mcp -o jsonpath={.status.readyReplicas} "*) printf "1" ;;\n'
-            '  *" exec -i mcp-one -c mcp "*) if [ "$MOCK_MCP_OK" = 1 ]; then printf "authenticated inventory\\n"; else exit 1; fi ;;\n'
+            '  *" exec -i mcp-one -c mcp "*) if [ "$MOCK_MCP_OK" = 1 ]; then printf "authenticated inventory\\n"; '
+            'if [ "$MOCK_MCP_STALL" = 1 ]; then exec sleep 60; fi; else exit 1; fi ;;\n'
             '  *" exec verdify-db-0 -c postgres "*) printf "%s\\n" "$MOCK_SNAPSHOT" ;;\n'
             '  *" port-forward svc/verdify-api "*) sleep 30 ;;\n'
             "  *) exit 1 ;;\n"
@@ -96,6 +98,7 @@ def test_g10_smoke_fails_closed(tmp_path, case, expected_code, expected_text):
             MOCK_IMAGE=IMAGE,
             MOCK_PODS=str(pod_file),
             MOCK_MCP_OK="0" if case == "missing_tools" else "1",
+            MOCK_MCP_STALL="1" if case == "stalled_tools" else "0",
             MOCK_SNAPSHOT="900|0" if case == "stale_readbacks" else "10|1",
         )
         expected_sha = "d" * 40 if case == "wrong_sha" else SHA
@@ -111,6 +114,7 @@ def test_g10_smoke_fails_closed(tmp_path, case, expected_code, expected_text):
                 expected_sha,
                 "--expected-api-digest",
                 expected_digest,
+                *(["--timeout", "1"] if case == "stalled_tools" else []),
             ],
             cwd=ROOT,
             env=env,
