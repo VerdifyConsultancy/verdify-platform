@@ -1,0 +1,95 @@
+{
+  "schema": "verdify-resumed-delivery-readback-v1",
+  "observed_at": "2026-10-12T17:48:11.958158+00:00",
+  "source": {
+    "canonical_pr": 973,
+    "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+    "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "exact_head_native_status": "success; refreshed from GitHub before this receipt",
+    "source_build_submitted": false
+  },
+  "production": {
+    "argo_sync": "Synced",
+    "argo_health": "Healthy",
+    "argo_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "ready_deployments": 15,
+    "ingestor": {
+      "pod": "verdify-ingestor-69754948bf-mzdm5",
+      "uid": "06b8f3a7-43f5-40ab-acdb-3b1991ad4694",
+      "source": "f48c6bf0257b25ed2820689154ca3502507129c6",
+      "session": "4517326b3ee44dd6ac4f4d5bb0e371a4",
+      "generation": 1
+    },
+    "socket_census": {
+      "running_pods": 21,
+      "unobservable": 0,
+      "esp32_connections": 1,
+      "pass": true
+    },
+    "complete48": {
+      "ts": "2026-10-12T17:47:49.531292+00:00",
+      "age_seconds": 22.426866,
+      "count": 1
+    }
+  },
+  "halt": {
+    "run_id": "76d18133852b490680bce2639e6d8397",
+    "reason": "unapproved candidate appeared",
+    "status": "halted",
+    "completed": 12,
+    "pending_records": 0,
+    "native_request_count": 12,
+    "all_native_confirmed": true,
+    "latest_native_request": "2026-10-06T23:43:24.568448+00:00",
+    "expired_approval": "2026-10-07T00:13:24.285569+00:00",
+    "raw_active_sha256": {
+      "writer-stage-state.json": "07156d884a6745beeeaeca9911004ea1af919153906bb05084c9712f2d06fbeb",
+      "writer-stage-approval.json": "a880452dd4fe711831e2d9741829f39b4ba97aa8bae13f7c26de9d3451f0e207"
+    },
+    "supported_archive_preflight": "passed locally; no active file changed, no archive manifest installed",
+    "fresh_admission_required_after_final_source": true
+  },
+  "registry_capacity_snapshot": {
+    "available_bytes": 203464527872,
+    "capacity_bytes": 805306368000,
+    "capacity_contract_id": "5e8a97b36acee313a9686a621e6db0f8d02e689e4bd2e4141dc1e86b25a0336e",
+    "observed_at": "2026-10-12T17:45:03Z",
+    "owner_native_observed_at": "2026-10-12T17:45:00.446145Z",
+    "owner_native_source_revision": "a9de83a66aa0f6efb63945a07b494b99c699f99b",
+    "physical_available_bytes": 203464527872,
+    "physical_capacity_bytes": 949359575040,
+    "protected_set": {
+      "count": 290,
+      "current_count": 36,
+      "generation": 156,
+      "reachable": true,
+      "rollback_count": 254,
+      "schema": "agent-fleet.registry-protected-digests/1",
+      "set_hash": "308aaf3d4b35c088f81d69511cce15ed860d3b8986394b4d96d619aa52863a73",
+      "verified_at": "2026-10-12T17:45:03Z"
+    },
+    "quota_available_bytes": 212680568832,
+    "quota_capacity_bytes": 805306368000,
+    "ready": true,
+    "schema": "agent-fleet.registry-capacity-signal/1",
+    "source": "agent-fleet-ci/registry-capacity-signal",
+    "target": "registry-origin/registry-origin-csi-data",
+    "writable": true
+  },
+  "caller_admission": {
+    "outcome": "unaccepted",
+    "actual_caller_packet": "current-main-caller-profile.json",
+    "whole_operation_debt": "unclosed; no cache/image/log/retry tail assumed zero",
+    "placement": "Physical owner reports only node7/Onyx nominal60Gi envelope within85% thin boundary;82.71Gi runway before new validation/pulls/cache/log growth. No build grant."
+  },
+  "boundaries": {
+    "release_writer": "Verdify runtime delivery chat only",
+    "max_commands_per_stage": 12,
+    "gate_p": false,
+    "ota": false,
+    "db_cutover": false,
+    "infra_mutation": false,
+    "credential_rotation": false,
+    "production_mutated": false
+  }
+}

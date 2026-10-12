@@ -1,0 +1,1175 @@
+{
+  "schema": "verdify-current-main-caller-profile-v1",
+  "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "capture": "2026-10-12T17:45Z",
+  "selected_images": [
+    "api",
+    "mcp",
+    "ingestor",
+    "setpoint-server",
+    "lab-publisher"
+  ],
+  "operation": "five serial conditional build steps after classification/validation; no retry authorized",
+  "verdify-platform-ci": {
+    "uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+    "resourceVersion": "263652253",
+    "sha256": "d0f88357143c9f6fea42ee24a05158d0c2c14e6e3947b27bcc500b1ba5ad33f6",
+    "workflow_spec": {
+      "activeDeadlineSeconds": 7200,
+      "parallelism": null,
+      "podGC": {
+        "strategy": "OnPodSuccess"
+      },
+      "ttlStrategy": {
+        "secondsAfterCompletion": 86400,
+        "secondsAfterFailure": 172800
+      },
+      "affinity": null,
+      "podSpecPatch": null,
+      "serviceAccountName": "verdify-platform-ci-publisher"
+    },
+    "templates": [
+      {
+        "name": "main",
+        "activeDeadlineSeconds": null,
+        "retryStrategy": null,
+        "nodeSelector": null,
+        "affinity": null,
+        "podSpecPatch": null,
+        "volumes": null,
+        "executor": null,
+        "automountServiceAccountToken": null,
+        "containers": [],
+        "steps": [
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "base-revision",
+                    "value": "{{workflow.parameters.before-revision}}"
+                  },
+                  {
+                    "name": "classify-push",
+                    "value": "true"
+                  }
+                ]
+              },
+              "name": "classify-push",
+              "template": "validate"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "api/Dockerfile"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-api"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  },
+                  {
+                    "name": "build_arg_1_name",
+                    "value": "GIT_SHA"
+                  },
+                  {
+                    "name": "build_arg_1_value",
+                    "value": "{{workflow.parameters.revision}}"
+                  }
+                ]
+              },
+              "name": "build-api",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.api}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "mcp/Dockerfile"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-mcp"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  },
+                  {
+                    "name": "build_arg_1_name",
+                    "value": "GIT_SHA"
+                  },
+                  {
+                    "name": "build_arg_1_value",
+                    "value": "{{workflow.parameters.revision}}"
+                  }
+                ]
+              },
+              "name": "build-mcp",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.mcp}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "ingestor/Dockerfile"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-ingestor"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  },
+                  {
+                    "name": "build_arg_1_name",
+                    "value": "GIT_SHA"
+                  },
+                  {
+                    "name": "build_arg_1_value",
+                    "value": "{{workflow.parameters.revision}}"
+                  }
+                ]
+              },
+              "name": "build-ingestor",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.ingestor}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "planner_graph/Dockerfile"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-planner"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  },
+                  {
+                    "name": "build_arg_1_name",
+                    "value": "GIT_SHA"
+                  },
+                  {
+                    "name": "build_arg_1_value",
+                    "value": "{{workflow.parameters.revision}}"
+                  }
+                ]
+              },
+              "name": "build-planner",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.planner}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "db/Dockerfile.migrate"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-migrate"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  }
+                ]
+              },
+              "name": "build-migrate",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.migrate}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "experiment_orchestrator/Dockerfile"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-experiment-v2-orchestrator"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  },
+                  {
+                    "name": "build_arg_1_name",
+                    "value": "GIT_SHA"
+                  },
+                  {
+                    "name": "build_arg_1_value",
+                    "value": "{{workflow.parameters.revision}}"
+                  }
+                ]
+              },
+              "name": "build-orchestrator",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.orchestrator}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "scripts/Dockerfile.setpoint-server"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-setpoint-server"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  }
+                ]
+              },
+              "name": "build-setpoint-server",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.setpoint-server}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+                  },
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "dockerfile",
+                    "value": "scripts/Dockerfile.lab-publisher"
+                  },
+                  {
+                    "name": "context",
+                    "value": "."
+                  },
+                  {
+                    "name": "image",
+                    "value": "verdifyconsultancy/verdify-lab-publisher-k3s"
+                  },
+                  {
+                    "name": "allowed_publish_scopes",
+                    "value": "verdifyconsultancy"
+                  },
+                  {
+                    "name": "test",
+                    "value": ""
+                  },
+                  {
+                    "name": "kaniko_memory_limit",
+                    "value": "4Gi"
+                  }
+                ]
+              },
+              "name": "build-lab-publisher",
+              "templateRef": {
+                "name": "repo-build",
+                "template": "build"
+              },
+              "when": "'{{steps.classify-push.outputs.parameters.lab-publisher}}' == 'true'"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.revision}}"
+                  },
+                  {
+                    "name": "api-ref",
+                    "value": "{{=steps['build-api'].status == 'Succeeded' ? jsonpath(toJson(steps), \"$['build-api']['outputs']['parameters']['image-ref']\") : ''}}"
+                  },
+                  {
+                    "name": "mcp-ref",
+                    "value": "{{=steps['build-mcp'].status == 'Succeeded' ? jsonpath(toJson(steps), \"$['build-mcp']['outputs']['parameters']['image-ref']\") : ''}}"
+                  },
+                  {
+                    "name": "ingestor-ref",
+                    "value": "{{=steps['build-ingestor'].status == 'Succeeded' ? jsonpath(toJson(steps), \"$['build-ingestor']['outputs']['parameters']['image-ref']\") : ''}}"
+                  },
+                  {
+                    "name": "migrate-ref",
+                    "value": "{{=steps['build-migrate'].status == 'Succeeded' ? jsonpath(toJson(steps), \"$['build-migrate']['outputs']['parameters']['image-ref']\") : ''}}"
+                  },
+                  {
+                    "name": "orchestrator-ref",
+                    "value": "{{=steps['build-orchestrator'].status == 'Succeeded' ? jsonpath(toJson(steps), \"$['build-orchestrator']['outputs']['parameters']['image-ref']\") : ''}}"
+                  }
+                ]
+              },
+              "name": "pin-digests",
+              "template": "pin-digests",
+              "when": "'{{steps.classify-push.outputs.parameters.mode}}' == 'build'"
+            }
+          ]
+        ]
+      },
+      {
+        "name": "validate",
+        "activeDeadlineSeconds": 1500,
+        "retryStrategy": {
+          "expression": "lastRetry.message matches '(?i)(deadline|image ?pull)'",
+          "limit": "1",
+          "retryPolicy": "Always"
+        },
+        "nodeSelector": null,
+        "affinity": null,
+        "podSpecPatch": null,
+        "volumes": [
+          {
+            "emptyDir": {
+              "sizeLimit": "1Mi"
+            },
+            "name": "impact-state"
+          },
+          {
+            "configMap": {
+              "defaultMode": 292,
+              "name": "agent-fleet-verdify-path-impact-v2"
+            },
+            "name": "verdify-path-impact"
+          },
+          {
+            "emptyDir": {
+              "sizeLimit": "8Gi"
+            },
+            "name": "validate-workspace"
+          },
+          {
+            "name": "github-app",
+            "secret": {
+              "defaultMode": 256,
+              "secretName": "agent-fleet-ci-github-app"
+            }
+          }
+        ],
+        "executor": {
+          "serviceAccountName": "native-ci-executor"
+        },
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "container",
+            "image": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+            "resources": {
+              "limits": {
+                "cpu": "2",
+                "ephemeral-storage": "10Gi",
+                "memory": "4Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "ephemeral-storage": "10Gi",
+                "memory": "768Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "fetch-validate-context",
+            "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+            "resources": null,
+            "restartPolicy": null
+          }
+        ],
+        "inputs": {
+          "parameters": [
+            {
+              "name": "revision"
+            },
+            {
+              "name": "base-revision",
+              "value": ""
+            },
+            {
+              "name": "classify-push",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      {
+        "name": "pin-digests",
+        "activeDeadlineSeconds": null,
+        "retryStrategy": null,
+        "nodeSelector": null,
+        "affinity": null,
+        "podSpecPatch": null,
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 365,
+              "name": "agent-fleet-repo-auth-publisher-client"
+            },
+            "name": "repo-auth-client"
+          },
+          {
+            "name": "repo-auth-jwt",
+            "projected": {
+              "defaultMode": 256,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "audience": "agent-fleet-repo-github-auth",
+                    "expirationSeconds": 3600,
+                    "path": "token"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "emptyDir": {
+              "sizeLimit": "1Mi"
+            },
+            "name": "publisher-auth"
+          }
+        ],
+        "executor": null,
+        "automountServiceAccountToken": null,
+        "containers": [
+          {
+            "name": "container",
+            "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+            "resources": {
+              "limits": {
+                "cpu": "300m",
+                "memory": "256Mi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "mint-publisher-token",
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "resources": null,
+            "restartPolicy": null
+          }
+        ],
+        "inputs": {
+          "parameters": [
+            {
+              "name": "revision"
+            },
+            {
+              "name": "api-ref"
+            },
+            {
+              "name": "mcp-ref"
+            },
+            {
+              "name": "ingestor-ref"
+            },
+            {
+              "name": "migrate-ref"
+            },
+            {
+              "name": "orchestrator-ref"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "repo-build": {
+    "uid": "32ef5b95-c391-460e-ba7f-ee68a7d9f76e",
+    "resourceVersion": "265534408",
+    "sha256": "8e3712e5cb6b68e28460274c1c0a187a7bce6dea7689d2f02e78fcd72f9185f2",
+    "workflow_spec": {
+      "activeDeadlineSeconds": 10800,
+      "parallelism": null,
+      "podGC": {
+        "strategy": "OnPodCompletion"
+      },
+      "ttlStrategy": {
+        "secondsAfterCompletion": 86400,
+        "secondsAfterFailure": 172800
+      },
+      "affinity": null,
+      "podSpecPatch": null,
+      "serviceAccountName": "argo-ci-workflow"
+    },
+    "templates": [
+      {
+        "name": "build",
+        "activeDeadlineSeconds": null,
+        "retryStrategy": null,
+        "nodeSelector": {
+          "agentfleet.vallery.net/runner-eligible": "true"
+        },
+        "affinity": null,
+        "podSpecPatch": "affinity: {{= inputs.parameters.kaniko_ephemeral_request == '50Gi' ? '{\"nodeAffinity\":{\"requiredDuringSchedulingIgnoredDuringExecution\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"agentfleet.vallery.net/heavy-build-headroom\",\"operator\":\"In\",\"values\":[\"true\"]}]}]},\"preferredDuringSchedulingIgnoredDuringExecution\":[{\"weight\":100,\"preference\":{\"matchExpressions\":[{\"key\":\"kubernetes.io/hostname\",\"operator\":\"In\",\"values\":[\"vm-k3s-node5\",\"vm-k3s-node7\"]}]} }]} }' : '{}' }}\n# Kubernetes starts this clock at Pod startTime, after scheduler admission.\n# The existing admission-owned heavy profile is exactly 50Gi scratch;\n# no caller-selected timeout parameter is introduced.\nactiveDeadlineSeconds: {{= inputs.parameters.kaniko_ephemeral_request == '50Gi' ? 7200 : 3600 }}\ninitContainers:\n  - name: test\n    resources:\n      requests:\n        cpu: \"{{inputs.parameters.test_cpu_request}}\"\n        memory: \"{{inputs.parameters.test_memory_request}}\"\n      limits:\n        cpu: \"{{inputs.parameters.test_cpu_limit}}\"\n        memory: \"{{inputs.parameters.test_memory_limit}}\"\n  - name: kaniko-build\n    resources:\n      requests:\n        cpu: \"{{inputs.parameters.kaniko_cpu_request}}\"\n        memory: \"{{inputs.parameters.kaniko_memory_request}}\"\n        ephemeral-storage: \"{{inputs.parameters.kaniko_ephemeral_request}}\"\n      limits:\n        cpu: \"{{inputs.parameters.kaniko_cpu_limit}}\"\n        memory: \"{{inputs.parameters.kaniko_memory_limit}}\"\n        ephemeral-storage: \"{{inputs.parameters.kaniko_ephemeral_limit}}\"\n",
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 365,
+              "name": "agent-fleet-registry-capacity-tool-v2"
+            },
+            "name": "registry-capacity-tool"
+          },
+          {
+            "configMap": {
+              "defaultMode": 365,
+              "name": "agent-fleet-repo-build-source-closure-v3"
+            },
+            "name": "source-closure-tool"
+          },
+          {
+            "configMap": {
+              "items": [
+                {
+                  "key": "signal.json",
+                  "path": "signal.json"
+                }
+              ],
+              "name": "agent-fleet-registry-capacity-signal",
+              "optional": true
+            },
+            "name": "registry-capacity-signal"
+          },
+          {
+            "emptyDir": {
+              "medium": "Memory",
+              "sizeLimit": "1Mi"
+            },
+            "name": "capacity-admission-state"
+          }
+        ],
+        "executor": null,
+        "automountServiceAccountToken": null,
+        "containers": [
+          {
+            "name": "container",
+            "image": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+            "resources": {
+              "limits": {
+                "cpu": "1",
+                "memory": "1Gi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "128Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "registry-capacity-preflight",
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "64Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "fetch-context",
+            "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+            "resources": null,
+            "restartPolicy": null
+          },
+          {
+            "name": "capture-build-inputs",
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "test",
+            "image": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+            "resources": {
+              "limits": {
+                "cpu": "1500m",
+                "memory": "4Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "1Gi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "verify-build-inputs",
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "64Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "kaniko-build",
+            "image": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+            "resources": {
+              "limits": {
+                "cpu": "3",
+                "ephemeral-storage": "60Gi",
+                "memory": "16Gi"
+              },
+              "requests": {
+                "cpu": "1",
+                "ephemeral-storage": "32Gi",
+                "memory": "2Gi"
+              }
+            },
+            "restartPolicy": null
+          },
+          {
+            "name": "registry-capacity-publish-gate",
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "64Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            },
+            "restartPolicy": null
+          }
+        ],
+        "inputs": {
+          "parameters": [
+            {
+              "name": "repo"
+            },
+            {
+              "name": "revision"
+            },
+            {
+              "name": "dockerfile"
+            },
+            {
+              "name": "context"
+            },
+            {
+              "name": "image"
+            },
+            {
+              "name": "test"
+            },
+            {
+              "name": "docker_target",
+              "value": ""
+            },
+            {
+              "name": "build_arg_1_name",
+              "value": ""
+            },
+            {
+              "name": "build_arg_1_value",
+              "value": ""
+            },
+            {
+              "name": "build_arg_2_name",
+              "value": ""
+            },
+            {
+              "name": "build_arg_2_value",
+              "value": ""
+            },
+            {
+              "name": "test_cpu_request",
+              "value": "500m"
+            },
+            {
+              "name": "test_memory_request",
+              "value": "1Gi"
+            },
+            {
+              "name": "test_cpu_limit",
+              "value": "1500m"
+            },
+            {
+              "name": "test_memory_limit",
+              "value": "4Gi"
+            },
+            {
+              "name": "kaniko_cpu_request",
+              "value": "1"
+            },
+            {
+              "name": "kaniko_memory_request",
+              "value": "2Gi"
+            },
+            {
+              "name": "kaniko_cpu_limit",
+              "value": "3"
+            },
+            {
+              "name": "kaniko_memory_limit",
+              "value": "16Gi"
+            },
+            {
+              "name": "kaniko_ephemeral_request",
+              "value": "32Gi"
+            },
+            {
+              "name": "kaniko_ephemeral_limit",
+              "value": "60Gi"
+            },
+            {
+              "name": "allowed_publish_scopes"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "impact_projection": {
+    "base_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "mode": "build",
+    "paths_sha256": "e50859d3dea993d226c6114adaefc3a6c08a5fcf0ef9f60772e119f952b857c1",
+    "profiles": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "api": [
+        "api/main.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "ingestor": [
+        "docs/SERVICE_MAP.md",
+        "docs/runbooks/api-light-command-boundary.md",
+        "docs/runbooks/moisture-telemetry-state-boundary.md",
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/k3s-smoke.sh",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "lab-publisher": [
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/k3s-smoke.sh",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "mcp": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "setpoint-server": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ]
+    },
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276"
+  },
+  "impact_adapter": {
+    "uid": "00804c64-c8f5-4532-b0cf-ce3e360f1eca",
+    "sha256": "da7f0c99ed9cffa3783613e7363918494621136943af56767c853af40b20fab1"
+  },
+  "build_resource_override": {
+    "kaniko_memory_limit": "4Gi",
+    "kaniko_ephemeral_request": "32Gi",
+    "kaniko_ephemeral_limit": "60Gi"
+  },
+  "injection_reference": {
+    "kind": "retained actual pod; not fresh prospective server admission",
+    "uid": "f12edac0-5fc2-4141-b2df-1c2a83110d98",
+    "pod": "verdify-platform-ci-xnbz7-build-3206582954",
+    "phase": "Failed",
+    "node": "vm-k3s-node7",
+    "containers": [
+      {
+        "name": "wait",
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      },
+      {
+        "name": "main",
+        "resources": {
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      }
+    ],
+    "initContainers": [
+      {
+        "name": "init",
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      },
+      {
+        "name": "registry-capacity-preflight",
+        "resources": {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        }
+      },
+      {
+        "name": "fetch-context",
+        "resources": {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      },
+      {
+        "name": "capture-build-inputs",
+        "resources": {
+          "limits": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        }
+      },
+      {
+        "name": "test",
+        "resources": {
+          "limits": {
+            "cpu": "1500m",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "memory": "1Gi"
+          }
+        }
+      },
+      {
+        "name": "verify-build-inputs",
+        "resources": {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        }
+      },
+      {
+        "name": "kaniko-build",
+        "resources": {
+          "limits": {
+            "cpu": "3",
+            "ephemeral-storage": "60Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "1",
+            "ephemeral-storage": "32Gi",
+            "memory": "2Gi"
+          }
+        }
+      },
+      {
+        "name": "registry-capacity-publish-gate",
+        "resources": {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        }
+      }
+    ]
+  },
+  "retained_debt": [
+    {
+      "pod_uid": "f12edac0-5fc2-4141-b2df-1c2a83110d98",
+      "state": "failed Pod retained; old32Gi scratch charge and local cache/image/log bytes are unclosed until owner measurement/release evidence",
+      "workflow": "verdify-platform-ci-xnbz7"
+    }
+  ],
+  "admission": "NOT GRANTED; scheduler declaration is not host thin/registry/workspace admission",
+  "lifetime": {
+    "main_deadline_seconds": 7200,
+    "build_pod_deadline_seconds": 3600,
+    "failed_ttl_seconds": 172800,
+    "build_retry": null,
+    "validation_retry_limit": 1,
+    "reuse": "five serial32Gi scratch requests/60Gi limits; only reuse after independently proven backend release. Unknown pull/cache/log/retry-tail bytes remain unknown, not zero."
+  }
+}
