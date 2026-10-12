@@ -1,3 +1,8 @@
+> Historical topology and runbook: its Synology storage, dev image, restore helper,
+> failover and backup assertions are not current qualification. Use
+> [the current #396 alongside rehearsal](../../../../docs/runbooks/cnpg-alongside-rehearsal.md)
+> to establish new evidence. This file does not authorize a production endpoint change.
+
 # Controlled Prod DB → CloudNativePG Migration Runbook (HA-4.3 / issue #245)
 
 **Status:** STAGED — DESIGN + RUNBOOK ONLY. Execute only from an explicit
