@@ -27,6 +27,10 @@ RUFF="${RUFF:-.venv/bin/ruff}"
 if [ ! -x "$PY" ]; then PY=python3; fi
 if [ ! -x "$RUFF" ]; then RUFF="$PY -m ruff"; fi
 
+# Shell helpers launch python3 themselves. Use the selected interpreter's
+# environment so their imports match pytest, including native CI's fresh venv.
+export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable).parent)'):$PATH"
+
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
