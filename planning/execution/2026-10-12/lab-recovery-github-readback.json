@@ -1,0 +1,80 @@
+{
+  "schema": "verdify-lab-recovery-github-readback/v1",
+  "observed_at": "2026-10-12T23:29:03.003869+00:00",
+  "artifact_provider_readback": {
+    "observed_at": "2026-10-12T23:26:42.171999+00:00",
+    "branch": "codex/runtime-delivery-evidence-20261012",
+    "commit": "190d0d03063460e8497564599166de896f737cf6",
+    "provider_branch_head_exact": true,
+    "artifacts": [
+      {
+        "path": "planning/execution/2026-10-12/README.md",
+        "blob_sha": "7b5931ee6ec5926e3bde514f3b752aaa21cd3c07",
+        "bytes": 28353,
+        "sha256": "31d839250189046badeb1adfe65e3c6cbeafc1796676b6b1e90389d07fd07ddf",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/lab-recovery-attended-build.json",
+        "blob_sha": "8c97f1954c6d0fbf8fbfc1e930b96d69b9a0999c",
+        "bytes": 6510,
+        "sha256": "29f14dcb84aa0c10ea6cb6610d84839c09dd16e17f4e3f675016995040d015bd",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/lab-recovery-delivery.json",
+        "blob_sha": "6a98726aef1d339625cc979b015e32020e49183e",
+        "bytes": 14059,
+        "sha256": "c579af46806a3096c9f89afae61d927e8f89397bf1f21b2c4df140534349aa36",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/runtime-recovery-window-start.json",
+        "blob_sha": "d0a64e54619aeb3d68569cd28c063ff65c4fef40",
+        "bytes": 3220,
+        "sha256": "a314a6365d6e5e1704e455b1feb571c2c79013aff7ad9c0566d861a6c6322229",
+        "exact_provider_bytes": true
+      }
+    ]
+  },
+  "issue949_current_body": {
+    "state": "open",
+    "updated_at": "2026-10-12T23:28:05Z",
+    "body_sha256": "dd8edb345c031fed658d7bcb252b26f78897fb809ae1d4e3d4dec999c810f7af",
+    "exact_provider_bytes": true,
+    "original_failed_window_running_claim_replaced": true,
+    "remaining_final_acceptance_unchecked": true
+  },
+  "comments": [
+    {
+      "issue": 949,
+      "comment_id": 6134581201,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949#issuecomment-6134581201",
+      "body_sha256": "22ff90bcaa29536416cded529d37a54cd0dc8fed51ba87fa67735f1da82acfd6",
+      "exact_provider_bytes": true
+    },
+    {
+      "issue": 644,
+      "comment_id": 6134581398,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644#issuecomment-6134581398",
+      "body_sha256": "379d4e89f341124d5175180462ce525ed092c9d58814a81e668c6268387c0182",
+      "exact_provider_bytes": true
+    }
+  ],
+  "runtime_checkpoint": {
+    "sample": 5,
+    "at": "2026-10-12T23:28:01.935200+00:00",
+    "native_status_counts": {
+      "confirmed": 97
+    },
+    "ordinary_candidates": 0,
+    "schema_error_counts": {
+      "ValidationError": 0,
+      "row failed schema validation": 0
+    },
+    "restart_count": 0,
+    "terminal_result_exists": false
+  },
+  "existing_coordinator_heartbeat": "Coordinator confirmed existing heartbeat moved to hourly minute30 through21:30MDT, with19:30 terminal check and restoration of9-16 minute0 after closeout. No new automation.",
+  "acceptance_issue_closed": false
+}
