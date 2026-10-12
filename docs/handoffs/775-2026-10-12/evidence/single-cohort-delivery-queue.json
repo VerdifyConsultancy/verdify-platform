@@ -1,6 +1,6 @@
 {
   "prepared_at": "2026-10-11T22:11:49.431239+00:00",
-  "state": "S2 2/7 accepted; PR973 native PASS and unmerged; production existing b5 Synced Healthy; no overnight cohort delivery",
+  "state": "PAUSED BY JASON. All delivery/admission/build/merge/sync work stopped; only shutdown custody until completion. No capacity event resumes execution.",
   "preferred_path": "single combined cohort after supported owner admission",
   "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
   "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
@@ -39,7 +39,7 @@
   "remote_branch": "https://github.com/VerdifyConsultancy/verdify-platform/tree/sprint/s2-resumed-20261011",
   "remote_sha_verified": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
   "pr_ci_only_request": "pr-ci-only-admission-request.json",
-  "updated_at": "2026-10-12T13:27:32.315676+00:00",
+  "updated_at": "2026-10-12T15:35:49.409062+00:00",
   "host_ci": "PASS supported offline gate; 23 smoke/monitor PASS; full native Linux PASS",
   "host_ci_receipt": "pr973-next-source-host-qualification.json",
   "pr_ci_disposition": "ONE genuine sourceupdate afterhostPASS+freshphysical001ac0d9 fitPASS; originalfailedvfdpreserved; noreset/duplicate/prioritychange",
@@ -149,7 +149,10 @@
   "independent_main_qualification": "ROOT agreed actual five-image caller independent of larger44; same-ledger Storage qualification requested through ROOT",
   "native_publisher_current_blocker": "CLEARED: live two-cycle qualification03:04:42Z; same-installation read-only observer0; no replay/restart",
   "latest_owner_confirmation": "/Users/jason/maintenance/verdify-s2-completion-20261011/resume-20261011/status-20261012T025810Z/root-independent-caller-confirmation.json",
-  "remaining_main_admission": "Ledger uninitialized; Agents exact access/owner channel/activation/reclamation under existing authority; actual five-image placement/whole-workflow grant pending. No user approval gate.",
+  "remaining_main_admission": "On explicit resume only: refresh exact caller/source/current full capacity and owner grant. Old state is historical, not admission.",
   "frozen_consumer_transition": "PASS03:42:41Z, receipt616e29ba verified; exact21f0 source and4CM identities/data preserved. No whole-build grant implied.",
-  "potential_user_decision": "RESOLVED: no Jason-specific GET rejection. Current source/handoff exclusion is engineering/authority gap routed to Agents, no new user approval gate."
+  "potential_user_decision": "RESOLVED: no Jason-specific GET rejection. Current source/handoff exclusion is engineering/authority gap routed to Agents, no new user approval gate.",
+  "automatic_resumption": "FORBIDDEN; requires explicit Jason resume",
+  "handoff": "https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md",
+  "owner_requests": "Verdify admission/build/resume requests withdrawn from ROOT/Storage/Physical; production remains running"
 }

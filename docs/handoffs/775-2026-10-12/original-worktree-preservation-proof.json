@@ -1,0 +1,197 @@
+{
+  "verified_at": "2026-10-12T15:35:49.409062+00:00",
+  "original_source_files_unchanged": 38,
+  "snapshots": 13,
+  "details": [
+    {
+      "worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+      "path": "deploy/k8s/components/grafana/generated/dashboards-cm-0.yaml",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+      "path": "grafana/dashboards/site-home.json",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+      "path": "verdify_schemas/views.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-782-gatep-reseal-20260928",
+      "path": "scripts/probe-256-rollback-only.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-782-gatep-reseal-20260928",
+      "path": "scripts/probe-ordinary-boundary-catalog.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-s2-cnpg-20261005",
+      "path": "scripts/cnpg-s2-runtime-transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-s2-cnpg-20261005",
+      "path": "scripts/cnpg-target-runtime-transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-s2-cnpg-20261005",
+      "path": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-s2-iris-20261005",
+      "path": "db/migrations/276-lighting-snapshot-indexed-latest.sql",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "deploy/k8s/cnpg/docs/PROD-CNPG-MIGRATION-RUNBOOK.md",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "deploy/k8s/cnpg/image/Dockerfile",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "scripts/ci-local.sh",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "docs/runbooks/cnpg-alongside-rehearsal.md",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "scripts/render-cnpg-rehearsal.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "path": "tests/test_cnpg_rehearsal.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-644-promotion-receipt-20260930",
+      "path": "SOURCE-RECEIPT.md",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-644-promotion-receipt-20260930",
+      "path": "uv.lock",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-consumer-manifest-20260930",
+      "path": "firmware/policy_consumer_manifest.json",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "ingestor/tasks/dispatcher.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "tests/test_05_dispatcher.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "verdify_schemas/climate_intent.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "verdify_schemas/component_executor.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "verdify_schemas/tests/test_climate_intent.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "path": "verdify_schemas/entity_grid.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+      "path": "scripts/cnpg-physical-runtime-transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+      "path": "tests/test_cnpg_physical_runtime_transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+      "path": "scripts/cnpg-band-trace-time-projection.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+      "path": "tests/fixtures/cnpg_band_trace_time_projection/source-native-properties.json",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-existing-target-recovery-20261001",
+      "path": "scripts/cnpg-existing-target-recovery.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+      "path": "scripts/cnpg-target-runtime-transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+      "path": "docs/runbooks/cnpg/physical-runtime-admission.md",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+      "path": "scripts/cnpg-physical-runtime-transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+      "path": "tests/test_cnpg_physical_runtime_transition.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+      "path": "firmware/greenhouse/controls.yaml",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+      "path": "firmware/greenhouse/hardware.yaml",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+      "path": "scripts/ci-local.sh",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+      "path": "tests/test_irrigation_stop_edges.py",
+      "unchanged": true
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-sso-rollback-proof-20261001",
+      "path": "deploy/k8s/components/grafana/grafana.yaml",
+      "unchanged": true
+    }
+  ]
+}
