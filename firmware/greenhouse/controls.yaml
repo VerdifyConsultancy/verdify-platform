@@ -148,6 +148,17 @@ interval:
             { id(vent_rly) , 0,0, MIN_VENT_ON_MS, MIN_VENT_OFF_MS }  // Vent
           };
 
+          // Refresh policy/legacy dwell limits without resetting transition
+          // history: mid-cycle changes still measure from the original edge.
+          R[0].min_on_ms = R[1].min_on_ms = MIN_HEAT_ON_MS;
+          R[0].min_off_ms = R[1].min_off_ms = MIN_HEAT_OFF_MS;
+          R[2].min_on_ms = R[3].min_on_ms = MIN_FAN_ON_MS;
+          R[2].min_off_ms = R[3].min_off_ms = MIN_FAN_OFF_MS;
+          R[4].min_on_ms = MIN_FOG_ON_MS;
+          R[4].min_off_ms = MIN_FOG_OFF_MS;
+          R[5].min_on_ms = MIN_VENT_ON_MS;
+          R[5].min_off_ms = MIN_VENT_OFF_MS;
+
           auto update_runtime = [&](RelayMeta &r){
             if(!r.sw->state && r.on_stamp_ms){
               r.runtime_ms += now_ms - r.on_stamp_ms;

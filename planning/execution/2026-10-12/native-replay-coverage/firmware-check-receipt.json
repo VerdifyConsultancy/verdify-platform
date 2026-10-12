@@ -1,0 +1,26 @@
+{
+  "command": [
+    "make",
+    "firmware-check"
+  ],
+  "started_at": "2026-10-12T18:12:52.819447+00:00",
+  "completed_at": "2026-10-12T18:15:21.035152+00:00",
+  "exit_code": 0,
+  "esphome_version": "2026.6.5",
+  "compile_only": true,
+  "device_contact": false,
+  "log_sha256": "a074f683eb342060036623b57dc8995c5c891f3d102c9f570b8430181c3334ff",
+  "logs_redacted_in_memory": true,
+  "firmware.bin": {
+    "sha256": "9f4f4100de9986315142645cf86f478dd053cc7cf028588cd27f651a9fafca5d",
+    "bytes": 1106304
+  },
+  "firmware.ota.bin": {
+    "sha256": "9f4f4100de9986315142645cf86f478dd053cc7cf028588cd27f651a9fafca5d",
+    "bytes": 1106304
+  },
+  "firmware.elf": {
+    "sha256": "50b378045c0df90a512f86d616d802e4405cb4215510615681f7a275d9bcade9",
+    "bytes": 20213232
+  }
+}

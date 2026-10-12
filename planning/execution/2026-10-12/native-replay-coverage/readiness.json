@@ -1,0 +1,165 @@
+{
+  "base_commit": "64586987b76f7e0fba7982d582b06184ff9966bf",
+  "checks": {
+    "firmware_check": {
+      "command": [
+        "make",
+        "firmware-check"
+      ],
+      "compile_only": true,
+      "completed_at": "2026-10-12T18:15:21.035152+00:00",
+      "device_contact": false,
+      "esphome_version": "2026.6.5",
+      "exit_code": 0,
+      "firmware.bin": {
+        "bytes": 1106304,
+        "sha256": "9f4f4100de9986315142645cf86f478dd053cc7cf028588cd27f651a9fafca5d"
+      },
+      "firmware.elf": {
+        "bytes": 20213232,
+        "sha256": "50b378045c0df90a512f86d616d802e4405cb4215510615681f7a275d9bcade9"
+      },
+      "firmware.ota.bin": {
+        "bytes": 1106304,
+        "sha256": "9f4f4100de9986315142645cf86f478dd053cc7cf028588cd27f651a9fafca5d"
+      },
+      "log_sha256": "a074f683eb342060036623b57dc8995c5c891f3d102c9f570b8430181c3334ff",
+      "logs_redacted_in_memory": true,
+      "started_at": "2026-10-12T18:12:52.819447+00:00"
+    },
+    "independent_review": {
+      "findings": [],
+      "independent_native_cases_passed": 84,
+      "manifest_diff": "55 line offsets, each +11",
+      "pre_fix_deployed_source_equal": true,
+      "reviewer": "/root/work_inventory/relay_refresh_review",
+      "scope": "bounded source regression; no full historical or physical qualification"
+    },
+    "make_firmware_invariants": {
+      "exit_code": 0,
+      "historical_rows": 296698,
+      "invariant_violations": 0
+    },
+    "make_firmware_replay_worktree": {
+      "diagnostic_only_rows": 0,
+      "divergent_rows": 0,
+      "exit_code": 0,
+      "limitation": "replay_emit does not execute the changed ESPHome relay wrapper",
+      "rows": 296698,
+      "threshold_pct": 0
+    },
+    "make_test_firmware": {
+      "exit_code": 0,
+      "greenhouse_cases": 288,
+      "historical_rows": 296698,
+      "policy_engine_checks": 251,
+      "policy_injection_cases": 14,
+      "policy_recovery_checks": 30,
+      "policy_vector_checks": 273
+    },
+    "policy_consumer_manifest": {
+      "allowlisted_reads": 32,
+      "control_reads_migrated": 63,
+      "control_reads_total": 63,
+      "exit_code": 0,
+      "fields_clean": 48,
+      "reads_migrated": 162,
+      "reads_total": 194,
+      "scope": "source migration completeness, not empirical replay coverage"
+    },
+    "ruff": {
+      "check": true,
+      "exit_code": 0,
+      "format_check": true
+    }
+  },
+  "deployed_source_applicability": {
+    "live_physical_reproduction": false,
+    "pre_fix_controls_equal_deployed_source": true,
+    "pre_fix_controls_sha256": "db066c4708bf33ac11014ae1d006a37d26098bbf6e17720312db3f7c36774ac3",
+    "reported_by": "parent runtime inventory",
+    "reported_commit": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+    "reported_version": "2026.10.2.0637.620a218a-wifi-bound"
+  },
+  "device_contact": false,
+  "final_regression_on_base": {
+    "errors": 0,
+    "failures": 72,
+    "skipped": 0,
+    "tests": 84
+  },
+  "firmware_deployed": false,
+  "focused_regressions": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 138
+  },
+  "green_test": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 84
+  },
+  "immutable_corpus": {
+    "decompressed_sha256": "ab03e16bd833fa5530832f85fceb67c36a1d3abb624ba5d5a90415d8b7b234ef",
+    "gzip_sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b",
+    "unchanged": true
+  },
+  "live_db_writes": false,
+  "native_historical_replay": {
+    "field_count": 48,
+    "full_coverage": false,
+    "imposed_count": 27,
+    "invariant_violations": 0,
+    "qualified_order_revision": null,
+    "rows": 296698,
+    "treatment_status": "UNPROVEN"
+  },
+  "post_fix_controls_sha256": "3f37614eff7e10fc52193d6bc2d3619d268feecb6dde1eceb2ffc9dda9ed6f50",
+  "receipt_archives": {
+    "focused-regressions.xml.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
+      "raw_bytes": 20836,
+      "raw_sha256": "3d06efb4b857cb8a348e55e2558f59ebbe0b0e327d4f5850e0ff710df6066521"
+    },
+    "relay-dwell-after-native-source.cpp.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
+      "raw_bytes": 11117,
+      "raw_sha256": "d43867a45ee4cf9250200bc41782b61545474747ef333fb0ac4a221e1980bd4f"
+    },
+    "relay-dwell-after-snapshot-and-legacy.xml.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
+      "raw_bytes": 13376,
+      "raw_sha256": "f91af070638ae3bf7ca757004fb0dfb8016f246ae11459e10fea9479dda2e56d"
+    },
+    "relay-dwell-before-snapshot-and-legacy.xml.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
+      "raw_bytes": 232281,
+      "raw_sha256": "6d3280f88bea08684214a9575a9c1698e683ff1e54d785779e9cbe86a8b09e9f"
+    },
+    "relay-dwell-before.xml.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
+      "raw_bytes": 84876,
+      "raw_sha256": "571a4e98d24f17e1f06c9c28d9d1217cc133d14a580db53d4e7f89219dc4b271"
+    }
+  },
+  "red_test": {
+    "errors": 0,
+    "failures": 36,
+    "skipped": 0,
+    "tests": 42
+  },
+  "schema": "verdify-native-relay-dwell-source-readiness-v1",
+  "source_files": {
+    "firmware/greenhouse/controls.yaml": "3f37614eff7e10fc52193d6bc2d3619d268feecb6dde1eceb2ffc9dda9ed6f50",
+    "firmware/policy_consumer_manifest.json": "9011610eb915a86034fc678453aee92ef0a59439555b7b16c85e926a8aa9073d",
+    "tests/test_policy_relay_dwell_refresh.py": "40778ec20c9e34b3e65ce5157f87421febad640b2cfdba7669429067c256703b"
+  },
+  "source_only": true
+}

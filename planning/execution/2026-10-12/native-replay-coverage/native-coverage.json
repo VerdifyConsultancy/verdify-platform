@@ -1,0 +1,175 @@
+{
+  "distinct_invariants": 0,
+  "field_count": 48,
+  "full_coverage": false,
+  "full_injectable_coverage": true,
+  "imposed": {
+    "band_track_fraction": {
+      "firmware_symbol": "Setpoints::band_track_fraction",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "cold_vent_guard_delta_f": {
+      "firmware_symbol": "Setpoints::cold_vent_guard_delta_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "cool_exit_hysteresis_f": {
+      "firmware_symbol": "Setpoints::cool_exit_hysteresis_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "cool_stage2_exit_hysteresis_f": {
+      "firmware_symbol": "Setpoints::cool_stage2_exit_hysteresis_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "cool_stage2_over_high_f": {
+      "firmware_symbol": "Setpoints::cool_stage2_over_high_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "direct_wet_stress_min_dew_margin_f": {
+      "firmware_symbol": "Setpoints::direct_wet_stress_min_dew_margin_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "direct_wet_stress_vpd_margin_kpa": {
+      "firmware_symbol": "Setpoints::direct_wet_stress_vpd_margin_kpa",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "dwell_gate_ms": {
+      "firmware_symbol": "Setpoints::dwell_gate_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "enthalpy_close": {
+      "firmware_symbol": "Setpoints::econ_block",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "enthalpy_open": {
+      "firmware_symbol": "Setpoints::econ_block",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "fog_escalation_kpa": {
+      "firmware_symbol": "Setpoints::fog_escalation_kpa",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "heat_hysteresis": {
+      "firmware_symbol": "Setpoints::heat_hysteresis",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "mist_backoff_s": {
+      "firmware_symbol": "Setpoints::mist_backoff_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "mist_max_closed_vent_s": {
+      "firmware_symbol": "Setpoints::sealed_max_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "mist_thermal_relief_s": {
+      "firmware_symbol": "Setpoints::relief_duration_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "mister_all_delay_s": {
+      "firmware_symbol": "Setpoints::mist_s2_delay_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "outdoor_staleness_max_s": {
+      "firmware_symbol": "Setpoints::outdoor_staleness_max_s",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "sw_cool_all_fans_at_high_enabled": {
+      "firmware_symbol": "Setpoints::cool_all_fans_at_high_enabled",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "sw_direct_wet_stress_override_enabled": {
+      "firmware_symbol": "Setpoints::direct_wet_stress_override_enabled",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "sw_dwell_gate_enabled": {
+      "firmware_symbol": "Setpoints::sw_dwell_gate_enabled",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "sw_summer_vent_enabled": {
+      "firmware_symbol": "Setpoints::sw_summer_vent_enabled",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "temp_hysteresis": {
+      "firmware_symbol": "Setpoints::temp_hysteresis",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "vent_exchange_fraction": {
+      "firmware_symbol": "Setpoints::vent_exchange_fraction",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "vent_prefer_dp_delta_f": {
+      "firmware_symbol": "Setpoints::vent_prefer_dp_delta_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "vent_prefer_temp_delta_f": {
+      "firmware_symbol": "Setpoints::vent_prefer_temp_delta_f",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "vpd_hysteresis": {
+      "firmware_symbol": "Setpoints::vpd_hysteresis",
+      "rows": 296698,
+      "source": "policy_state"
+    },
+    "vpd_watch_dwell_s": {
+      "firmware_symbol": "Setpoints::vpd_watch_dwell_ms",
+      "rows": 296698,
+      "source": "policy_state"
+    }
+  },
+  "imposed_count": 27,
+  "injectable_count": 27,
+  "invariant_violations": 0,
+  "policy_state": "rom-baseline",
+  "policy_state_sha256": null,
+  "reject_reason": null,
+  "rows": 296698,
+  "schema": "verdify-replay-invariants-coverage-v1",
+  "status": "ok",
+  "unimposed": {
+    "min_fan_off_s": "controls.yaml:80 MIN_FAN_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_fan_on_s": "controls.yaml:79 MIN_FAN_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_fog_off_s": "controls.yaml:84 MIN_FOG_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_fog_on_s": "controls.yaml:83 MIN_FOG_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_heat_off_s": "controls.yaml:78 MIN_HEAT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_heat_on_s": "controls.yaml:77 MIN_HEAT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_vent_off_s": "controls.yaml:82 MIN_VENT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "min_vent_on_s": "controls.yaml:81 MIN_VENT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input",
+    "mister_all_kpa": "controls.yaml:1480/1509 zone-mister arbiter; runs downstream of resolve_equipment",
+    "mister_center_penalty": "controls.yaml:1304 zone-mister weighting; runs downstream of resolve_equipment",
+    "mister_engage_delay_s": "controls.yaml:973 MISTER_ENGAGE_DELAY_MS; runs downstream of resolve_equipment",
+    "mister_engage_kpa": "controls.yaml:1128/1521 zone-mister engage threshold; runs downstream of resolve_equipment",
+    "mister_min_off_s": "controls.yaml:1247 zone-mister dwell floor; runs downstream of resolve_equipment",
+    "mister_pulse_gap_s": "controls.yaml:1232 zone-mister cadence; runs downstream of resolve_equipment",
+    "mister_pulse_on_s": "controls.yaml:1230 zone-mister cadence; runs downstream of resolve_equipment",
+    "mister_vpd_weight": "controls.yaml:1493 zone-mister pulse weighting; runs downstream of resolve_equipment",
+    "mister_water_budget_gal": "controls.yaml:865 daily water ceiling; runs downstream of resolve_equipment",
+    "night_vpd_bias_kpa": "controls.yaml:483-496 biases the ON-CHIP solar VPD band before it becomes Setpoints::vpd_low/high; the corpus sp_vpd_low/sp_vpd_high columns are already post-bias captures, so re-applying it here would double-count the bias",
+    "sw_direct_wet_gate_enabled": "controls.yaml:1164 wet-gate branch; evaluated in the ESPHome lambda, not in greenhouse_logic.h",
+    "sw_fog_closes_vent": "controls.yaml:921 post-resolve_equipment relay interlock; not a compiled-logic input",
+    "sw_mister_closes_vent": "controls.yaml:992 post-resolve_equipment relay interlock; not a compiled-logic input"
+  }
+}

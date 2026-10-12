@@ -1,0 +1,22 @@
+{
+  "README.md": "61ef4a4a9326d259245df090167a32d2dcb1b6242e66bc34c969c6cca924e6ad",
+  "firmware-check-receipt.json": "7031eba225adaa30233925210b0d861bd9835a24333e03be33735f7891e82364",
+  "firmware-check.log": "a074f683eb342060036623b57dc8995c5c891f3d102c9f570b8430181c3334ff",
+  "firmware-invariants.log": "a60cd4a8c8e28c7681898f9e4f5ba1dc6b6974bb3c001c023041055278d53884",
+  "firmware-replay-worktree.log": "a8beb45e66fd94c5f1e1a2f6d224ebc2376de619890aa72d16f22b139b0de4a0",
+  "focused-regressions.log": "f9ec72206bea32fbfa22f05fb67fd582774e404618f631536048d24fe80cc5c6",
+  "focused-regressions.xml.gz": "d9fb94fbd6c9391ecd5fe2506db6b50da839fd595f162b5d9e8c8eeff7393aa7",
+  "native-coverage.json": "0dcef87fb052faea35cfa66bbb76c7f38a41d66155e28d146c2c5d706b16da54",
+  "policy-native-replay.log": "914b652d56ad02b2341a2027694fca8e7d761bb9c801d86172e4ecc6e33bbc6a",
+  "readiness.json": "9a8a83c290cbf3579f892d959965deea382d89959c709e471ba900b16b993d81",
+  "relay-dwell-after-native-source.cpp.gz": "1155f8dd34c07cce524906f08158e8e81c4216bc4b1fa89e20013f5869bacb54",
+  "relay-dwell-after-snapshot-and-legacy.log": "20f5f27046a7bba4f1632529723920cb0714405e7c436f83ff72626e3a37131b",
+  "relay-dwell-after-snapshot-and-legacy.xml.gz": "c2d677ce159182a8fe01deb24d6d86864a7bce50fa82fc931a011c88b4d55f97",
+  "relay-dwell-after-source-manifest.json": "cd600a4ae0de93c55c72cb8094efab9cdbb37f699ac958f6db7866b471a37dc3",
+  "relay-dwell-before-snapshot-and-legacy.log": "c3a608de95b8832e89c10bf7ae3d16d733dee6b13b00c3585fe47234b8a97d94",
+  "relay-dwell-before-snapshot-and-legacy.xml.gz": "01401cc6a64430ca96a46502ff72908d3a669104e88368044c44ea3b1d9a5cd9",
+  "relay-dwell-before.log": "c4fef66dd547e7503a282707888dfc8a6723edf5e2c4a0b2a7428b0e78e1f3d5",
+  "relay-dwell-before.xml.gz": "1ada867522a3d49b49bfac05575f658ac1dd28ffe9087e50785c23c04aea39db",
+  "replay-worktree-diff.tsv": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "test-firmware.log": "4566504e573171de1b53ffa15e238a43a27d78f52c71a14649c35d1ed7b61cf7"
+}
