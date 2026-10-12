@@ -1,0 +1,62 @@
+{
+  "schema": "verdify-runtime-full-sync-start/v1",
+  "submitted_at": "2026-10-12T19:41:10.451377+00:00",
+  "started_at": "2026-10-12T19:41:10Z",
+  "revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "app_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "sync_request": {
+    "revision": "d43919e933eb1be69559be7566853ff69a64e903"
+  },
+  "render_sha256": "a9721b01e24c2f2dc6c9c334fd55b06442dea559ffc485b79f9121dc9b74f979",
+  "expected_hook_jobs": [
+    {
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "kind": "Job",
+      "phase": "PreSync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "kind": "Job",
+      "phase": "PreSync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-migrate",
+      "kind": "Job",
+      "phase": "PreSync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-runtime-role-bootstrap",
+      "kind": "Job",
+      "phase": "PreSync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-six-runtime-role-bootstrap",
+      "kind": "Job",
+      "phase": "PreSync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-winter-archive-init",
+      "kind": "Job",
+      "phase": "Sync",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      ]
+    }
+  ],
+  "status": "Running at checkpoint; source sync, hook completion and runtime acceptance not yet claimed."
+}

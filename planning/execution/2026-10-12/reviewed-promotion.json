@@ -1,0 +1,461 @@
+{
+  "schema": "verdify-reviewed-runtime-promotion/v1",
+  "recorded_at": "2026-10-12T19:40:36.609901+00:00",
+  "promotion_revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "promotion_parent_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+  "built_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "render_review": {
+    "schema": "verdify-runtime-promotion-render-review/v1",
+    "reviewed_at": "2026-10-12T19:37:30.425631+00:00",
+    "input_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+    "build_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "before_render_sha256": "007fdd0d0834e422e756d25fbdb4f0427a23c09df704b653b08f321c9e75d196",
+    "after_render_sha256": "a9721b01e24c2f2dc6c9c334fd55b06442dea559ffc485b79f9121dc9b74f979",
+    "object_count": 128,
+    "secret_count": 0,
+    "image_changes": {
+      "verdify-api": {
+        "after": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "before": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "verdify-experiment-v2-orchestrator": {
+        "after": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "before": "sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "verdify-ingestor": {
+        "after": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "before": "sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "verdify-mcp": {
+        "after": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "before": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      "verdify-migrate": {
+        "after": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+        "before": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "verdify-setpoint-server": {
+        "before": "sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+        "after": "sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491"
+      },
+      "verdify-lab-publisher-k3s": {
+        "before": "sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "after": "sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8"
+      }
+    },
+    "render_leaf_changes": [
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "experiment-v2-freezer"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "experiment-v2-lifecycle"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "experiment-v2-selector"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "verdify-api"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "verdify-ingestor"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "verdify-lab"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "initContainers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "verdify-mcp"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c"
+      },
+      {
+        "object": [
+          "apps/v1",
+          "Deployment",
+          "verdify-prod",
+          "verdify-setpoint-server"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "CronJob",
+          "verdify-prod",
+          "verdify-ha-gap-backfill"
+        ],
+        "path": [
+          "spec",
+          "jobTemplate",
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "CronJob",
+          "verdify-prod",
+          "verdify-lab-publisher"
+        ],
+        "path": [
+          "spec",
+          "jobTemplate",
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "CronJob",
+          "verdify-prod",
+          "verdify-lab-publisher"
+        ],
+        "path": [
+          "spec",
+          "jobTemplate",
+          "spec",
+          "template",
+          "spec",
+          "initContainers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "CronJob",
+          "verdify-prod",
+          "verdify-vision"
+        ],
+        "path": [
+          "spec",
+          "jobTemplate",
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "CronJob",
+          "verdify-prod",
+          "verdify-winter-feasibility"
+        ],
+        "path": [
+          "spec",
+          "jobTemplate",
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      },
+      {
+        "object": [
+          "batch/v1",
+          "Job",
+          "verdify-prod",
+          "verdify-winter-archive-init"
+        ],
+        "path": [
+          "spec",
+          "template",
+          "spec",
+          "containers",
+          0,
+          "image"
+        ],
+        "before": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+        "after": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      }
+    ],
+    "expected_hook_jobs": [
+      {
+        "name": "verdify-experiment-v2-credential-bootstrap",
+        "kind": "Job",
+        "phase": "PreSync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+        ]
+      },
+      {
+        "name": "verdify-mcp-runtime-role-bootstrap",
+        "kind": "Job",
+        "phase": "PreSync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+        ]
+      },
+      {
+        "name": "verdify-migrate",
+        "kind": "Job",
+        "phase": "PreSync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+        ]
+      },
+      {
+        "name": "verdify-runtime-role-bootstrap",
+        "kind": "Job",
+        "phase": "PreSync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+        ]
+      },
+      {
+        "name": "verdify-six-runtime-role-bootstrap",
+        "kind": "Job",
+        "phase": "PreSync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+        ]
+      },
+      {
+        "name": "verdify-winter-archive-init",
+        "kind": "Job",
+        "phase": "Sync",
+        "images": [
+          "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+        ]
+      }
+    ],
+    "gate_r_activation_in_render": false,
+    "ingestor_replicas": 1,
+    "ingestor_strategy": "Recreate",
+    "rollback_render_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+    "scope": "Exactly six release image changes; no non-image render difference. Gate R is not activated by this release."
+  },
+  "source_pin_receipt": {
+    "candidate_file_sha256": "096de824af694118c79381d9835bfa13733c0700ce639d3168d684dbb834b965",
+    "changes": {
+      "verdify-api": {
+        "after": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "before": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "verdify-experiment-v2-orchestrator": {
+        "after": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "before": "sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "verdify-ingestor": {
+        "after": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "before": "sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "verdify-mcp": {
+        "after": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "before": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      "verdify-migrate": {
+        "after": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+        "before": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      }
+    },
+    "evidence_scope": "source-only pin promotion; build provenance, CI and live adoption remain separate",
+    "promotion_input_source_sha": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+    "recorded_at": "2026-10-12T19:37:02.007643+00:00",
+    "release_pins_after_sha256": "c99ec22d87d1f45ff30d90ff8c09a17c1453eaeb7654ed6f1a83a22015dca0e9",
+    "release_pins_before_sha256": "fe3e065960bb4e80908426abdd6799deb3a0f796c2a1c5ad0da7d1c0d9e00acf",
+    "rollback_pins": {
+      "verdify-api": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "verdify-experiment-v2-orchestrator": "sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+      "verdify-ingestor": "sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+      "verdify-mcp": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+      "verdify-migrate": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+    },
+    "schema": "verdify-release-pin-promotion-v1"
+  },
+  "live_diff_review": {
+    "schema": "verdify-live-promotion-diff-review/v1",
+    "reviewed_at": "2026-10-12T19:40:03.978937+00:00",
+    "apply_mode": "Application default client-side apply; no server-side override",
+    "nonhook_object_count": 122,
+    "image_field_changes": 13,
+    "changed_image_pairs": [
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      ],
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+        "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+      ],
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+        "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+      ],
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8"
+      ],
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+        "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c"
+      ],
+      [
+        "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+        "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491"
+      ]
+    ],
+    "unexpected_changes": 0,
+    "dryrun_metadata_only": [
+      "Argo-injected tracking-id omitted from raw kustomize output",
+      "API-computed generation changes"
+    ],
+    "full_diff_exception": "Image-changing Sync hook verdify-winter-archive-init uses existing BeforeHookCreation. Six hooks reviewed separately and full selector-free sync will execute them.",
+    "original_receipts_retained": [
+      "promotion-live-diff-stderr.txt",
+      "promotion-live-nonhook-diff-stderr.txt",
+      "promotion-live-nonhook-client-diff.txt"
+    ],
+    "scope": "No live diff beyond reviewed image changes and raw-dryrun metadata effects. Server-side diff was not the Application apply mode and is not a release gate."
+  },
+  "promotion_classification": {
+    "base_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+    "mode": "validate",
+    "paths_sha256": "143640d19106c7a3b4e9dc1940d5c2627b7676b76fe4affd8554002ceaa26c6e",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "d43919e933eb1be69559be7566853ff69a64e903"
+  },
+  "prod_app_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "rollback_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+  "scope": "Reviewed source promotion; full production sync and runtime acceptance remain separate."
+}

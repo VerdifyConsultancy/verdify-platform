@@ -1,0 +1,1355 @@
+{
+  "schema": "verdify-attended-main-build-batch/v1",
+  "recorded_at": "2026-10-12T19:36:29.758643+00:00",
+  "workflow": {
+    "name": "verdify-platform-ci-8wkb8",
+    "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+    "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+  },
+  "phase": "Succeeded",
+  "finished_at": "2026-10-12T19:36:01Z",
+  "qualified_pr_head": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "qualified_and_built_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "validation": {
+    "id": "verdify-platform-ci-8wkb8-632154190",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-12T19:01:26Z",
+    "finishedAt": "2026-10-12T19:11:48Z",
+    "hostNodeName": "vm-k3s-node6"
+  },
+  "pin_actuator": {
+    "id": "verdify-platform-ci-8wkb8-928062048",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-12T19:35:30Z",
+    "finishedAt": "2026-10-12T19:35:54Z",
+    "hostNodeName": "vm-k3s-node7"
+  },
+  "stages": [
+    {
+      "stage": 1,
+      "step": "build-api",
+      "pod": {
+        "name": "verdify-platform-ci-8wkb8-build-1900895726",
+        "uid": "2edf624b-b56b-45a8-ae94-3b36a55b6fd2",
+        "stage": 1,
+        "step": "build-api"
+      },
+      "node": "vm-k3s-node7",
+      "started_at": "2026-10-12T19:13:04Z",
+      "finished_at": "2026-10-12T19:15:00Z",
+      "outputs": {
+        "digest": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "short-sha": "cb21fd3d3295",
+        "source-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-12T19:01:19Z",
+        "resolved-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "resolved-tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v3\",\"status\":\"not-applicable\"}"
+      },
+      "resources": {
+        "ephemeral_request": "32Gi",
+        "ephemeral_limit": "40Gi",
+        "memory_limit": "4Gi"
+      },
+      "registry_verification": {
+        "schema": "verdify-built-image-registry-verification/v1",
+        "verified_at": "2026-10-12T19:26:03.293179+00:00",
+        "workflow": {
+          "name": "verdify-platform-ci-8wkb8",
+          "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+          "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+        },
+        "stage": 1,
+        "pod": {
+          "name": "verdify-platform-ci-8wkb8-build-1900895726",
+          "uid": "2edf624b-b56b-45a8-ae94-3b36a55b6fd2",
+          "stage": 1,
+          "step": "build-api"
+        },
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "manifest_digest": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "config_digest": "sha256:1e1a116350bc05e07fff1404b8a34acf9bb902fb2df74f3e3f8f7670ad3acafd",
+        "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "layers": [
+          {
+            "digest": "sha256:26c307b5e35a59ce911f5fde5b9458120ec8734e831ea2da5649a9ad14abfd3d",
+            "size": 29780765,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:f5ea60e5d57e62f66284f9d9d3d6531b3e213ae0317ac34ac1bc89d0aea60e50",
+            "size": 1293272,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:c915bfca5450ca312ac59414e14f2889a3461e4fb3a5267b4b7eab95a83fbdc0",
+            "size": 11907466,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:31a024bb115af91f13f0a42f2e1bf3766c5aad8a2e9984729f9e0b1c38c1378f",
+            "size": 249,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:10842755c01b9306b8fca39a2efa58d9bf6e281635f8072ccccbf95fe6b3cea7",
+            "size": 5695213,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:1b6d528749052e4846bdaa7ad3a8b72b71dea58017434865e54805389d50abb7",
+            "size": 235,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:e8290a65a1d5831f638a8d529cf096602b0f3d5161402865c3cae2393ad75b6f",
+            "size": 19547437,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:dcd6977736219b08c2c350a008647d8fbed0f6a3e06e234921570b82d19cb66a",
+            "size": 73162,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:8e3ace8fae65b0692cd2967a4acb309ed9525a3f858c662fc36daacf8dd5508f",
+            "size": 266793,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:7c665ee9be0c3717b44746112b3eeaa0d56e0233b44b64028883d20d795bcf70",
+            "size": 10992,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:0292679aeeda9a5262cf2c7251a111b0bea775d54397c18ad55720b8394b7e35",
+            "size": 741830,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:a17cc788240e0302720963146653ed1e71aa6da4345c19bb222d24c6b633f270",
+            "size": 424,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:068593992c03ee68729488d1ff43ebd4a568a6866fb965282a759198f8f92e71",
+            "size": 366931,
+            "head_status": 200
+          }
+        ],
+        "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed."
+      },
+      "owned_root_release": {
+        "observed_at": "2026-10-12T19:16:38.017326+00:00",
+        "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+        "name": "verdify-platform-ci-8wkb8-build-1900895726",
+        "uid": "2edf624b-b56b-45a8-ae94-3b36a55b6fd2",
+        "root_capacity_bytes": 331712798720,
+        "root_available_bytes": 121666027520,
+        "pod_root_exists": false,
+        "workdir_exists": false,
+        "pod_log_paths": [],
+        "current_cri_container_count": 0,
+        "current_cri_sandbox_count": 0,
+        "containers": {
+          "55ae7f0349aee8f2d3b7bc51de446c2b7875f17675fc35e45935206ac09dc077": {
+            "name": "kaniko-build",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "55ae7f0349aee8f2d3b7bc51de446c2b7875f17675fc35e45935206ac09dc077",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940400/fs",
+            "upperdir_exists": false
+          },
+          "0e2d89072f0979b530d85fae793e38a84586cd6f77a3d5e74f1f0a5ae7daa41b": {
+            "name": "verify-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "0e2d89072f0979b530d85fae793e38a84586cd6f77a3d5e74f1f0a5ae7daa41b",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940399/fs",
+            "upperdir_exists": false
+          },
+          "be84a5e5c6fa778753b19f1d59196e7568eaf3324cfee592ca61ec2fec121053": {
+            "name": "test",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "be84a5e5c6fa778753b19f1d59196e7568eaf3324cfee592ca61ec2fec121053",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940398/fs",
+            "upperdir_exists": false
+          },
+          "285f45f1d4e5509c9027836706bc5fb92295d0a72bf02eea6ff60376b5fa097c": {
+            "name": "capture-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "285f45f1d4e5509c9027836706bc5fb92295d0a72bf02eea6ff60376b5fa097c",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940396/fs",
+            "upperdir_exists": false
+          },
+          "22e7ec13992a22f1319185b36989d9b571b3b326bc16b4e4fc2087a6022f2d8f": {
+            "name": "fetch-context",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "22e7ec13992a22f1319185b36989d9b571b3b326bc16b4e4fc2087a6022f2d8f",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940390/fs",
+            "upperdir_exists": false
+          },
+          "6ce4adf590d7cf070f2c41511372b58b1e4b92764c02e73b6a720edc050a7304": {
+            "name": "registry-capacity-preflight",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "6ce4adf590d7cf070f2c41511372b58b1e4b92764c02e73b6a720edc050a7304",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940389/fs",
+            "upperdir_exists": false
+          },
+          "e82fe69d9759ad20d26ce2e73e16a131bbbd936da7d0a94c0933fd98510e00aa": {
+            "name": "init",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "e82fe69d9759ad20d26ce2e73e16a131bbbd936da7d0a94c0933fd98510e00aa",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940388/fs",
+            "upperdir_exists": false
+          },
+          "6ee79ace8e2f520201b1f016d3992f88558fb768c81cb025597f8e3ddf4c3bde": {
+            "name": "pod-sandbox",
+            "kind": "sandbox",
+            "container_metadata_absent": true,
+            "snapshot_key": "6ee79ace8e2f520201b1f016d3992f88558fb768c81cb025597f8e3ddf4c3bde",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940387/fs",
+            "upperdir_exists": false
+          },
+          "8d6ea67720dffa0b1c63e6362030ba7a01b8af73763b4eadf4cfd816fe43fee3": {
+            "name": "main",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "8d6ea67720dffa0b1c63e6362030ba7a01b8af73763b4eadf4cfd816fe43fee3",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940419/fs",
+            "upperdir_exists": false
+          },
+          "f7b454e4b37845a8c5aa86555ca48d8640321f6c54c900e0a2cc1ff41416fdef": {
+            "name": "wait",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "f7b454e4b37845a8c5aa86555ca48d8640321f6c54c900e0a2cc1ff41416fdef",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940418/fs",
+            "upperdir_exists": false
+          },
+          "5fdcebf7138ec48b90e2d6964e867ef7622ba868b19dae67da3febf3ab9adc16": {
+            "name": "registry-capacity-publish-gate",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "5fdcebf7138ec48b90e2d6964e867ef7622ba868b19dae67da3febf3ab9adc16",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940417/fs",
+            "upperdir_exists": false
+          }
+        },
+        "all_tracked_owned_roots_released": true,
+        "read_only": true
+      },
+      "sampling": {
+        "count": 0,
+        "sampled_max_pod_bytes": null,
+        "min_remaining_shared_allowance_bytes": null,
+        "scope": "Bounded samples only; stage1 stats retained separately, no absolute peak claim."
+      }
+    },
+    {
+      "stage": 2,
+      "step": "build-mcp",
+      "pod": {
+        "stage": 2,
+        "name": "verdify-platform-ci-8wkb8-build-899856297",
+        "uid": "ae173830-9b9b-4f23-a709-60f0c11521e0",
+        "step": "build-mcp"
+      },
+      "node": "vm-k3s-node7",
+      "started_at": "2026-10-12T19:17:27Z",
+      "finished_at": "2026-10-12T19:20:34Z",
+      "outputs": {
+        "digest": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "short-sha": "cb21fd3d3295",
+        "source-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-12T19:01:19Z",
+        "resolved-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "resolved-tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:0fab57634ac98002857152bfb937eba86c0178e09658f8c5a03b12a71b1e2f2f",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-mcp\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v3\",\"status\":\"not-applicable\"}"
+      },
+      "resources": {
+        "ephemeral_request": "32Gi",
+        "ephemeral_limit": "40Gi",
+        "memory_limit": "4Gi"
+      },
+      "registry_verification": {
+        "schema": "verdify-built-image-registry-verification/v1",
+        "verified_at": "2026-10-12T19:26:03.778077+00:00",
+        "workflow": {
+          "name": "verdify-platform-ci-8wkb8",
+          "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+          "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+        },
+        "stage": 2,
+        "pod": {
+          "stage": 2,
+          "name": "verdify-platform-ci-8wkb8-build-899856297",
+          "uid": "ae173830-9b9b-4f23-a709-60f0c11521e0",
+          "step": "build-mcp"
+        },
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "manifest_digest": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "config_digest": "sha256:a26c4fbabe07d1677e46dbeed1272dd8e76b136752b6e0bd577f880325ae5947",
+        "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "layers": [
+          {
+            "digest": "sha256:26c307b5e35a59ce911f5fde5b9458120ec8734e831ea2da5649a9ad14abfd3d",
+            "size": 29780765,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:f5ea60e5d57e62f66284f9d9d3d6531b3e213ae0317ac34ac1bc89d0aea60e50",
+            "size": 1293272,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:c915bfca5450ca312ac59414e14f2889a3461e4fb3a5267b4b7eab95a83fbdc0",
+            "size": 11907466,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:31a024bb115af91f13f0a42f2e1bf3766c5aad8a2e9984729f9e0b1c38c1378f",
+            "size": 249,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:e6718dea9714e2bd37095e469297e5b8e08ace4f9d7b295d6fdd6c64e31d658f",
+            "size": 5695310,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:8f49b5fa17e482ed4dc10111443385d89a67778a0755e93507afb9af2ac3873d",
+            "size": 235,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:6d57be468709d8e6c09e40274548aca37ea63abb104504b45421738c0b465782",
+            "size": 23950546,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:374e03e67f4d84fc475c31fb17508d716116643ac7c5de3ead57b652e68d225f",
+            "size": 69532,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:1b35c039181b18f83a83c54deca568a5679051f214d6e5d74a40cdbb3d1bf99e",
+            "size": 1800,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:21ce3a28e908e630afbbd465250a0abd8c81da7aa2448abb1858f8cf7e70c49c",
+            "size": 1130,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:4ec1961c61298ca4ce14f189fb9d9704fce12f21cb522a492fe427c4b4da4242",
+            "size": 25543,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:cbf995e553a23bd59fdb007f7d5fc3fe4bfc0cc317fe1d59315c7e570d4ebfab",
+            "size": 267170,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:d258f56530dfc038cd21a2ab0874f86fa61d02beb33667a717d43744b0451cad",
+            "size": 368910,
+            "head_status": 200
+          }
+        ],
+        "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed."
+      },
+      "owned_root_release": {
+        "observed_at": "2026-10-12T19:21:45.822365+00:00",
+        "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+        "name": "verdify-platform-ci-8wkb8-build-899856297",
+        "uid": "ae173830-9b9b-4f23-a709-60f0c11521e0",
+        "root_capacity_bytes": 331712798720,
+        "root_available_bytes": 121674231808,
+        "pod_root_exists": false,
+        "workdir_exists": false,
+        "pod_log_paths": [],
+        "current_cri_container_count": 0,
+        "current_cri_sandbox_count": 0,
+        "containers": {
+          "c6bd196dd397d09460f45edc509ed04cba3e1e6141bd6e18424b2ffdb67f2d57": {
+            "name": "fetch-context",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "c6bd196dd397d09460f45edc509ed04cba3e1e6141bd6e18424b2ffdb67f2d57",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940492/fs",
+            "upperdir_exists": false
+          },
+          "077872e8f47f3746ab5484b0cc54cb3718c501a348561882cd6cc802934c863c": {
+            "name": "registry-capacity-preflight",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "077872e8f47f3746ab5484b0cc54cb3718c501a348561882cd6cc802934c863c",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940489/fs",
+            "upperdir_exists": false
+          },
+          "1bb6b1b992d099a62fe7d6ddf3e3070631bd9d229ed2650d2c58d3164718fad0": {
+            "name": "init",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "1bb6b1b992d099a62fe7d6ddf3e3070631bd9d229ed2650d2c58d3164718fad0",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940488/fs",
+            "upperdir_exists": false
+          },
+          "ac430e52140ca2fca429627b6a421abb01a934fad5c20ee689957d9a19011544": {
+            "name": "pod-sandbox",
+            "kind": "sandbox",
+            "container_metadata_absent": true,
+            "snapshot_key": "ac430e52140ca2fca429627b6a421abb01a934fad5c20ee689957d9a19011544",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940487/fs",
+            "upperdir_exists": false
+          },
+          "6475ca7c7953f2be4bfbc8a84052dc18ecf3e3fa46bcb1fc3cd7b570393e9114": {
+            "name": "kaniko-build",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "6475ca7c7953f2be4bfbc8a84052dc18ecf3e3fa46bcb1fc3cd7b570393e9114",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940505/fs",
+            "upperdir_exists": false
+          },
+          "d7d046790eeaf27e92caa5ad26fea96f047c0eb480dbbce326493dc2bf92c3a4": {
+            "name": "verify-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "d7d046790eeaf27e92caa5ad26fea96f047c0eb480dbbce326493dc2bf92c3a4",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940495/fs",
+            "upperdir_exists": false
+          },
+          "db5dc65a8b642e73ca40ea89a58a7af3666d812400f94d745609dc87bc69a99a": {
+            "name": "test",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "db5dc65a8b642e73ca40ea89a58a7af3666d812400f94d745609dc87bc69a99a",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940494/fs",
+            "upperdir_exists": false
+          },
+          "d6f64ee25121f24f1aec450c10f4d838033fb0175140e44db256ccc29f8bb79b": {
+            "name": "capture-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "d6f64ee25121f24f1aec450c10f4d838033fb0175140e44db256ccc29f8bb79b",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940493/fs",
+            "upperdir_exists": false
+          },
+          "239d78f58b44c85d352508e43e3a6be78dd94f1110cc5773a0583a53d585d597": {
+            "name": "registry-capacity-publish-gate",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "239d78f58b44c85d352508e43e3a6be78dd94f1110cc5773a0583a53d585d597",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940524/fs",
+            "upperdir_exists": false
+          },
+          "cfcf3920fe0faeb7c1bd27fd16b255d69027865af8241eef6aefb957a6807dd6": {
+            "name": "main",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "cfcf3920fe0faeb7c1bd27fd16b255d69027865af8241eef6aefb957a6807dd6",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940553/fs",
+            "upperdir_exists": false
+          },
+          "97664f781b7210b24c3d3fedbd3c1cb0f3f7c55cd21f74f30996f265b3631701": {
+            "name": "wait",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "97664f781b7210b24c3d3fedbd3c1cb0f3f7c55cd21f74f30996f265b3631701",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940552/fs",
+            "upperdir_exists": false
+          }
+        },
+        "all_tracked_owned_roots_released": true,
+        "read_only": true
+      },
+      "sampling": {
+        "count": 10,
+        "sampled_max_pod_bytes": 1261445120,
+        "min_remaining_shared_allowance_bytes": 11385643008.0,
+        "scope": "Bounded samples only; stage1 stats retained separately, no absolute peak claim."
+      }
+    },
+    {
+      "stage": 3,
+      "step": "build-ingestor",
+      "pod": {
+        "stage": 3,
+        "name": "verdify-platform-ci-8wkb8-build-2192892057",
+        "uid": "399688ed-1774-477b-aedf-d680a00f7a49",
+        "step": "build-ingestor"
+      },
+      "node": "vm-k3s-node7",
+      "started_at": "2026-10-12T19:24:52Z",
+      "finished_at": "2026-10-12T19:26:59Z",
+      "outputs": {
+        "digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "short-sha": "cb21fd3d3295",
+        "source-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-12T19:01:19Z",
+        "resolved-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "resolved-tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-ingestor\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v3\",\"status\":\"not-applicable\"}"
+      },
+      "resources": {
+        "ephemeral_request": "32Gi",
+        "ephemeral_limit": "40Gi",
+        "memory_limit": "4Gi"
+      },
+      "registry_verification": {
+        "schema": "verdify-built-image-registry-verification/v1",
+        "verified_at": "2026-10-12T19:27:22.486230+00:00",
+        "workflow": {
+          "name": "verdify-platform-ci-8wkb8",
+          "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+          "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+        },
+        "stage": 3,
+        "pod": {
+          "stage": 3,
+          "name": "verdify-platform-ci-8wkb8-build-2192892057",
+          "uid": "399688ed-1774-477b-aedf-d680a00f7a49",
+          "step": "build-ingestor"
+        },
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "manifest_digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "config_digest": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+        "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "layers": [
+          {
+            "digest": "sha256:26c307b5e35a59ce911f5fde5b9458120ec8734e831ea2da5649a9ad14abfd3d",
+            "size": 29780765,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:f5ea60e5d57e62f66284f9d9d3d6531b3e213ae0317ac34ac1bc89d0aea60e50",
+            "size": 1293272,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:c915bfca5450ca312ac59414e14f2889a3461e4fb3a5267b4b7eab95a83fbdc0",
+            "size": 11907466,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:31a024bb115af91f13f0a42f2e1bf3766c5aad8a2e9984729f9e0b1c38c1378f",
+            "size": 249,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:7a24977215b33dec36b0da36d1e5a9b421d77138e25eb5961df22bb1ab9845df",
+            "size": 730,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:c4b785710414cfc66357f318489356cabe08c47568a9480fccb6e23b58116204",
+            "size": 303,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:6b4bac37deb447d6e954406d48b8a7dca32699146b84d1c1d8d53ad02865e7b1",
+            "size": 32537978,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:96379570537c826cbd779f12cfd97a1b399c8fff6e6cb0f38b4db4a8362129bf",
+            "size": 436529,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:9d56be7fe449a1f53f89fa773e1a083c9eb7b808978978b93424e2a60d59acde",
+            "size": 6291,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:744cb555b488c2c845efe59d971247c9d2ff39c7bf20c34233f3de61725fcadf",
+            "size": 45318,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:bbeb32d7793babcdb647eb7f09eaff1b30435f09f625c331dcd45af3d0154130",
+            "size": 1805,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:d64e5bfc2efeadbd8b478584ea2cb8c09b5eb2cbe965892912d863ad6fcb2ff8",
+            "size": 1138,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:f64842b71534b5f678ba6708478ddcbbe75741d23c60366857ddf87b70fa2a69",
+            "size": 25554,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:93d2c7b264ca107caf58e227fa9905d3aecd45834a8f4816459fd03a5a4d44cf",
+            "size": 266954,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:1095ae3722490690ea88afea0a95e8d8416277d6c37297c074145012a7ac87ba",
+            "size": 991404,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:815657865965159d8a57612428b1b040eae38ac3c3395aff571ec9d1db1b3960",
+            "size": 2328039,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:b8101e6e48ea442265492d14bb75aa19ea4ac477c84cd3e935db4d6f83fba391",
+            "size": 4109094,
+            "head_status": 200
+          }
+        ],
+        "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed."
+      },
+      "owned_root_release": {
+        "observed_at": "2026-10-12T19:27:48.244801+00:00",
+        "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+        "name": "verdify-platform-ci-8wkb8-build-2192892057",
+        "uid": "399688ed-1774-477b-aedf-d680a00f7a49",
+        "root_capacity_bytes": 331712798720,
+        "root_available_bytes": 121669713920,
+        "pod_root_exists": false,
+        "workdir_exists": false,
+        "pod_log_paths": [],
+        "current_cri_container_count": 0,
+        "current_cri_sandbox_count": 0,
+        "containers": {
+          "ca4920c88059b968fa8a78b00ee9903ec687e934e5a852f7373165e45a71e97f": {
+            "name": "registry-capacity-preflight",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "ca4920c88059b968fa8a78b00ee9903ec687e934e5a852f7373165e45a71e97f",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940625/fs",
+            "upperdir_exists": false
+          },
+          "57728d0c7b3adef5dee4672ce479030d86866c00f0eee193e24710881206c2d2": {
+            "name": "init",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "57728d0c7b3adef5dee4672ce479030d86866c00f0eee193e24710881206c2d2",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940624/fs",
+            "upperdir_exists": false
+          },
+          "b4dd683292384fabece9ad5f7a85553bc4bbbedb6f845ac8289c7ee603068f77": {
+            "name": "pod-sandbox",
+            "kind": "sandbox",
+            "container_metadata_absent": true,
+            "snapshot_key": "b4dd683292384fabece9ad5f7a85553bc4bbbedb6f845ac8289c7ee603068f77",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940623/fs",
+            "upperdir_exists": false
+          },
+          "46ec65b782bc8af8a93e23af18ebcd7f0da65ec64b1a4860cd4a0487b1cba423": {
+            "name": "capture-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "46ec65b782bc8af8a93e23af18ebcd7f0da65ec64b1a4860cd4a0487b1cba423",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940654/fs",
+            "upperdir_exists": false
+          },
+          "0434b1c884a092a33edca9a78efd00fcd4c1d6ae2ef4cecf7187f93f0d608ee8": {
+            "name": "fetch-context",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "0434b1c884a092a33edca9a78efd00fcd4c1d6ae2ef4cecf7187f93f0d608ee8",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940626/fs",
+            "upperdir_exists": false
+          },
+          "40ac09008e6e0dfaab1a6025d338f6d911b18f078a7ea97aef25c3a6d38b58e2": {
+            "name": "kaniko-build",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "40ac09008e6e0dfaab1a6025d338f6d911b18f078a7ea97aef25c3a6d38b58e2",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940657/fs",
+            "upperdir_exists": false
+          },
+          "dbba32127714938d69ecd6abbc63f6bbd907a0f3fe2682e8058f42ab502df008": {
+            "name": "verify-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "dbba32127714938d69ecd6abbc63f6bbd907a0f3fe2682e8058f42ab502df008",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940656/fs",
+            "upperdir_exists": false
+          },
+          "c955edeabc6c4ecefb84397b0593f007495072714f7a2304a5dceda043cf9d49": {
+            "name": "test",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "c955edeabc6c4ecefb84397b0593f007495072714f7a2304a5dceda043cf9d49",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940655/fs",
+            "upperdir_exists": false
+          },
+          "c5bc223f391d7815cf6da278d96d03f6d9d89c6cdb54de5442f7fc60bd837985": {
+            "name": "registry-capacity-publish-gate",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "c5bc223f391d7815cf6da278d96d03f6d9d89c6cdb54de5442f7fc60bd837985",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940678/fs",
+            "upperdir_exists": false
+          },
+          "2e0778e12c6b02fe05c4dc14273b4489d17a7acf567cd267ef330f0f4d40c578": {
+            "name": "main",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "2e0778e12c6b02fe05c4dc14273b4489d17a7acf567cd267ef330f0f4d40c578",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940680/fs",
+            "upperdir_exists": false
+          },
+          "24078e01a5ba08b18b0bd50f882246b66baf8445a2cd35fe84872aeddb81a317": {
+            "name": "wait",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "24078e01a5ba08b18b0bd50f882246b66baf8445a2cd35fe84872aeddb81a317",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940679/fs",
+            "upperdir_exists": false
+          }
+        },
+        "all_tracked_owned_roots_released": true,
+        "read_only": true
+      },
+      "sampling": {
+        "count": 14,
+        "sampled_max_pod_bytes": 1286356992,
+        "min_remaining_shared_allowance_bytes": 11168452608.0,
+        "scope": "Bounded samples only; stage1 stats retained separately, no absolute peak claim."
+      }
+    },
+    {
+      "stage": 4,
+      "step": "build-setpoint-server",
+      "pod": {
+        "stage": 4,
+        "name": "verdify-platform-ci-8wkb8-build-3517089230",
+        "uid": "52cec42c-c0d0-4346-a87a-dec3bea7f4ca",
+        "step": "build-setpoint-server"
+      },
+      "node": "vm-k3s-node7",
+      "started_at": "2026-10-12T19:28:04Z",
+      "finished_at": "2026-10-12T19:29:41Z",
+      "outputs": {
+        "digest": "sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+        "short-sha": "cb21fd3d3295",
+        "source-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-12T19:01:19Z",
+        "resolved-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "resolved-tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:ba81303f6aee14e874e231f13d6eae4988dc54ec08696faa340a9aca979a166b",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-setpoint-server\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v3\",\"status\":\"not-applicable\"}"
+      },
+      "resources": {
+        "ephemeral_request": "32Gi",
+        "ephemeral_limit": "40Gi",
+        "memory_limit": "4Gi"
+      },
+      "registry_verification": {
+        "schema": "verdify-built-image-registry-verification/v1",
+        "verified_at": "2026-10-12T19:29:59.638242+00:00",
+        "workflow": {
+          "name": "verdify-platform-ci-8wkb8",
+          "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+          "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+        },
+        "stage": 4,
+        "pod": {
+          "stage": 4,
+          "name": "verdify-platform-ci-8wkb8-build-3517089230",
+          "uid": "52cec42c-c0d0-4346-a87a-dec3bea7f4ca",
+          "step": "build-setpoint-server"
+        },
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+        "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "manifest_digest": "sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+        "config_digest": "sha256:14318b27cfa9851cb31b336e86f9717b61ef458b5c5cdbcd7d4017332b4a1f29",
+        "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "layers": [
+          {
+            "digest": "sha256:ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e",
+            "size": 29843350,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:65a67aec859c5fafe6ca38c2ed07825c97acf3febdcf62b79441a1bfca4f3a4a",
+            "size": 1294038,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:3a5db7051419a594a866378c5d2c422e3d282d69e6792b3213772cb1349da446",
+            "size": 11923091,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:2f5b06adfd9138ef928aaf8b34f3fecf122b137a537133dfe421509dd57b4a47",
+            "size": 250,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:5b4212c522ebb6fcb4a3c7aeb3b7bb169bfab61e9fedb4627e7dbfe2f58b94bb",
+            "size": 746,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:df5b8d58f531b0e0fa1ba6d68621d8f187f18452a35477ccd835e0bc09e94c29",
+            "size": 238,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:8254aa3973af15570c8385cda0e70c4cdc7f00716d0e755b84eaf37b59e017d3",
+            "size": 9694861,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:ac9ff6970b474b4570d1732cfe52bcc3e92101c25cc1eba820438ae4d6ce5f60",
+            "size": 8560,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:0179339812f19662169a94b42d21a89f37d28e77232c5a085df51fa5d1cf613f",
+            "size": 267025,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:1902fdd89db4cc4d747a6c16103ae5b300e4a5726e1cf1d03641fa3327c3efab",
+            "size": 280235,
+            "head_status": 200
+          }
+        ],
+        "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed."
+      },
+      "owned_root_release": {
+        "observed_at": "2026-10-12T19:30:50.741311+00:00",
+        "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+        "name": "verdify-platform-ci-8wkb8-build-3517089230",
+        "uid": "52cec42c-c0d0-4346-a87a-dec3bea7f4ca",
+        "root_capacity_bytes": 331712798720,
+        "root_available_bytes": 121653075968,
+        "pod_root_exists": false,
+        "workdir_exists": false,
+        "pod_log_paths": [],
+        "current_cri_container_count": 0,
+        "current_cri_sandbox_count": 0,
+        "containers": {
+          "19649926263379ee8179170ba2897672a6f8477b622ff4d3003a03e0d51d057f": {
+            "name": "registry-capacity-preflight",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "19649926263379ee8179170ba2897672a6f8477b622ff4d3003a03e0d51d057f",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940707/fs",
+            "upperdir_exists": false
+          },
+          "6f83f6f9b1cb116186a4250c1e67ccd22746719e6934c16d6717d6b27bc7a20c": {
+            "name": "init",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "6f83f6f9b1cb116186a4250c1e67ccd22746719e6934c16d6717d6b27bc7a20c",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940706/fs",
+            "upperdir_exists": false
+          },
+          "c1f23b9b424104725c3f6a971a5773cc03142f674143e0b09c80b7f242844341": {
+            "name": "pod-sandbox",
+            "kind": "sandbox",
+            "container_metadata_absent": true,
+            "snapshot_key": "c1f23b9b424104725c3f6a971a5773cc03142f674143e0b09c80b7f242844341",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940705/fs",
+            "upperdir_exists": false
+          },
+          "ff2cf495f9761245f7ad36b36b2268e6c6af7f5563c5720fd33d0a5d2917f366": {
+            "name": "capture-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "ff2cf495f9761245f7ad36b36b2268e6c6af7f5563c5720fd33d0a5d2917f366",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940714/fs",
+            "upperdir_exists": false
+          },
+          "070415a65daa08ee4a71d42cfacbdcdd7d929374bbe6b146806cb6fa5d45c380": {
+            "name": "fetch-context",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "070415a65daa08ee4a71d42cfacbdcdd7d929374bbe6b146806cb6fa5d45c380",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940708/fs",
+            "upperdir_exists": false
+          },
+          "956c0b84f40c7cc365f024be40f7e2e835054565135e8903ca548b8f9f549b0a": {
+            "name": "kaniko-build",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "956c0b84f40c7cc365f024be40f7e2e835054565135e8903ca548b8f9f549b0a",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940718/fs",
+            "upperdir_exists": false
+          },
+          "27ec7b6d8449bd6fc947ef207d7309ae471e3ffb6bda9e9b055fdbf1381d909a": {
+            "name": "verify-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "27ec7b6d8449bd6fc947ef207d7309ae471e3ffb6bda9e9b055fdbf1381d909a",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940717/fs",
+            "upperdir_exists": false
+          },
+          "20039aed285072b4fc6ef7a6e4176ccecf8c53abc68a0bd1ee2ac7b969b3b9d3": {
+            "name": "test",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "20039aed285072b4fc6ef7a6e4176ccecf8c53abc68a0bd1ee2ac7b969b3b9d3",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940716/fs",
+            "upperdir_exists": false
+          },
+          "c057fd6f009582bb7d7689116aec8979a2af342c18a05df3c18f32816deeb674": {
+            "name": "main",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "c057fd6f009582bb7d7689116aec8979a2af342c18a05df3c18f32816deeb674",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940735/fs",
+            "upperdir_exists": false
+          },
+          "ded3e303ebdf4d64682972de5a3d4deb5500eacd4b099e94599074350cf5cab0": {
+            "name": "wait",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "ded3e303ebdf4d64682972de5a3d4deb5500eacd4b099e94599074350cf5cab0",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940734/fs",
+            "upperdir_exists": false
+          },
+          "ee1a7199b4a6e333f3f18299df4bb6454a264cb5c9eb5bedf3be9813337c35fe": {
+            "name": "registry-capacity-publish-gate",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "ee1a7199b4a6e333f3f18299df4bb6454a264cb5c9eb5bedf3be9813337c35fe",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940731/fs",
+            "upperdir_exists": false
+          }
+        },
+        "all_tracked_owned_roots_released": true,
+        "read_only": true
+      },
+      "sampling": {
+        "count": 13,
+        "sampled_max_pod_bytes": 978264064,
+        "min_remaining_shared_allowance_bytes": 11380555776.0,
+        "scope": "Bounded samples only; stage1 stats retained separately, no absolute peak claim."
+      }
+    },
+    {
+      "stage": 5,
+      "step": "build-lab-publisher",
+      "pod": {
+        "stage": 5,
+        "name": "verdify-platform-ci-8wkb8-build-237009249",
+        "uid": "2e2a2afa-c491-4d75-a0c4-5830b4e921b8",
+        "step": "build-lab-publisher"
+      },
+      "node": "vm-k3s-node7",
+      "started_at": "2026-10-12T19:31:06Z",
+      "finished_at": "2026-10-12T19:34:02Z",
+      "outputs": {
+        "digest": "sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+        "short-sha": "cb21fd3d3295",
+        "source-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-12T19:01:19Z",
+        "resolved-revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "resolved-tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-lab-publisher-k3s\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v3\",\"status\":\"not-applicable\"}"
+      },
+      "resources": {
+        "ephemeral_request": "32Gi",
+        "ephemeral_limit": "40Gi",
+        "memory_limit": "4Gi"
+      },
+      "registry_verification": {
+        "schema": "verdify-built-image-registry-verification/v1",
+        "verified_at": "2026-10-12T19:34:45.552834+00:00",
+        "workflow": {
+          "name": "verdify-platform-ci-8wkb8",
+          "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+          "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+        },
+        "stage": 5,
+        "pod": {
+          "stage": 5,
+          "name": "verdify-platform-ci-8wkb8-build-237009249",
+          "uid": "2e2a2afa-c491-4d75-a0c4-5830b4e921b8",
+          "step": "build-lab-publisher"
+        },
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+        "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+        "manifest_digest": "sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+        "config_digest": "sha256:64d97f931566d8d1181cdf7428f083650f1b85550ed34e176cb7bfe80db93f62",
+        "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+        "layers": [
+          {
+            "digest": "sha256:7fd1ebe418b5079d4aa36f416af9b143d127bc75b0155d71cb5fd559b5e04d39",
+            "size": 28249323,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:f0400f4b55b0ad346bf6167a1b64a258e4d73db608c457798ce35e4ffeebfaaf",
+            "size": 3313,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:d22c69a95cf463f4cb74462bd2899597ce505d82bd4c01ceddf7845e12f13856",
+            "size": 49837030,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:2cfab517365cfc6b4bd1f8c4cb01754884ef75bc38758b3c41e291c696f019f5",
+            "size": 1713011,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:a8de9fa052209313d8e45435a8486e29b20eebaa820e2e7f63a7c3c94b4fa567",
+            "size": 448,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:b9aa22992e8f7c17787701ba68679fc988e1f1556ab3fbb312e37ec389cab8c9",
+            "size": 97742041,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:9d19ff2f8ab57d38eeeb63e2dca39daa7e188da8cf164a063b1e5691cdf79c80",
+            "size": 21755893,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:2ff31074dfde02d9d5deaee6da3bd8e965005d948b4ad29ba2803b2f9459ba7e",
+            "size": 320,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:e362c8151d8d7573150d79e2469b6a784ef7f5e8a633461f32ea98a205ff6cac",
+            "size": 74309,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:d19e6114660d321700668ddc0dedca39dea33b64aa7c4f36f117c719584f72e4",
+            "size": 299736433,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:764af2205ab3f6c03702e66bbb544eba44fe9a5609373e309a7d0caae17bed44",
+            "size": 15597370,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:2aa747d2facf438f934a9521b1d01341b9f14194b9f4f5fa3a9365f3b796ab12",
+            "size": 991308,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:cd0c25ac4ab61870516f33c9227f54f687c3933ca0618df30eef6d1f8f0dbb67",
+            "size": 436596,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:4572c49071a9a3789a356939b54a4410eb7a2e712474a13fad37467c9b9ba73d",
+            "size": 72523,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:46137b8fa9b889dd63c64308e5d724e9b8de043174827287700878fa65abcc2b",
+            "size": 98319,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:51c11685357d7bcae0a83d87e61040b1c1cdeb8a835886bd6cc55e05fe00d28d",
+            "size": 267024,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:9915cd930f1f2449632c19f9353828bf97c79496b4b5c6c99e82ef2503630adc",
+            "size": 10998,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:16b799a63eb61827598a580a21708d76db98c76c0de36b7df2683c98c3e8aa35",
+            "size": 11949,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:75ef2b6408734af95572bbf856fc2a834fab2f362234e1c9399465b458792118",
+            "size": 2559,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:b3d99f894b8a0cb0f8c405680abbbdd56e9239640c0605def9d23b8a216c9876",
+            "size": 25535,
+            "head_status": 200
+          },
+          {
+            "digest": "sha256:43fd9577e4447441431876a842edd884464d082be0680e81655b7dbf73ab873d",
+            "size": 194915125,
+            "head_status": 200
+          }
+        ],
+        "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed."
+      },
+      "owned_root_release": {
+        "observed_at": "2026-10-12T19:34:51.250295+00:00",
+        "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+        "name": "verdify-platform-ci-8wkb8-build-237009249",
+        "uid": "2e2a2afa-c491-4d75-a0c4-5830b4e921b8",
+        "root_capacity_bytes": 331712798720,
+        "root_available_bytes": 121652871168,
+        "pod_root_exists": false,
+        "workdir_exists": false,
+        "pod_log_paths": [],
+        "current_cri_container_count": 0,
+        "current_cri_sandbox_count": 0,
+        "containers": {
+          "c424a44576cbac00683a378ec76a1a2cd3c0a106bf1e5c310b5685e23db0ac5a": {
+            "name": "registry-capacity-preflight",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "c424a44576cbac00683a378ec76a1a2cd3c0a106bf1e5c310b5685e23db0ac5a",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940793/fs",
+            "upperdir_exists": false
+          },
+          "13ea09b4db538a32d4f6e5670644862b22497719d1d5a97760923c585637bcd7": {
+            "name": "init",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "13ea09b4db538a32d4f6e5670644862b22497719d1d5a97760923c585637bcd7",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940792/fs",
+            "upperdir_exists": false
+          },
+          "984eb7aa5b707e7f66c92b9696e214f3a91dc339cd09a161a7d5e53038826bc4": {
+            "name": "pod-sandbox",
+            "kind": "sandbox",
+            "container_metadata_absent": true,
+            "snapshot_key": "984eb7aa5b707e7f66c92b9696e214f3a91dc339cd09a161a7d5e53038826bc4",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940791/fs",
+            "upperdir_exists": false
+          },
+          "33a14ebb127aab8fbf09350b248f86141a89d8009ab679b1539dc5d8ed9b5300": {
+            "name": "capture-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "33a14ebb127aab8fbf09350b248f86141a89d8009ab679b1539dc5d8ed9b5300",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940800/fs",
+            "upperdir_exists": false
+          },
+          "097098d145fba22113ffe513dc0b6cb8cc114cc748a073f061958eeba69580cc": {
+            "name": "fetch-context",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "097098d145fba22113ffe513dc0b6cb8cc114cc748a073f061958eeba69580cc",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940795/fs",
+            "upperdir_exists": false
+          },
+          "cec5b7c84a7c3eb131999ca6b4b036fda7a0808614859d1312ec6ef079e238bd": {
+            "name": "kaniko-build",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "cec5b7c84a7c3eb131999ca6b4b036fda7a0808614859d1312ec6ef079e238bd",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940804/fs",
+            "upperdir_exists": false
+          },
+          "6f6c4cc9beeb62d191245431c1c3c39f9fd4038991042fbdf276322e34f026b8": {
+            "name": "verify-build-inputs",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "6f6c4cc9beeb62d191245431c1c3c39f9fd4038991042fbdf276322e34f026b8",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940803/fs",
+            "upperdir_exists": false
+          },
+          "f03239547107d03382a74ffdbba8d901a7bc6cbdf5b4cc85a7d784cede473365": {
+            "name": "test",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "f03239547107d03382a74ffdbba8d901a7bc6cbdf5b4cc85a7d784cede473365",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940802/fs",
+            "upperdir_exists": false
+          },
+          "3e94153eab42057088166b1e6b69bcae8e4928ae89b4c90da761d61df3c5d898": {
+            "name": "registry-capacity-publish-gate",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "3e94153eab42057088166b1e6b69bcae8e4928ae89b4c90da761d61df3c5d898",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940837/fs",
+            "upperdir_exists": false
+          },
+          "83ac611fdc9631aa0c64716934c0902d57a375c3eb834c661defff7fd7b75580": {
+            "name": "main",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "83ac611fdc9631aa0c64716934c0902d57a375c3eb834c661defff7fd7b75580",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940839/fs",
+            "upperdir_exists": false
+          },
+          "5a29197f4ec577100a5d3919fc53d065c6a727fccfc46ab37ae87c33692419dd": {
+            "name": "wait",
+            "kind": "container",
+            "container_metadata_absent": true,
+            "snapshot_key": "5a29197f4ec577100a5d3919fc53d065c6a727fccfc46ab37ae87c33692419dd",
+            "snapshotter": "overlayfs",
+            "snapshot_metadata_absent": true,
+            "upperdir": "/var/lib/rancher/k3s/agent/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/940838/fs",
+            "upperdir_exists": false
+          }
+        },
+        "all_tracked_owned_roots_released": true,
+        "read_only": true
+      },
+      "sampling": {
+        "count": 18,
+        "sampled_max_pod_bytes": 3094372352,
+        "min_remaining_shared_allowance_bytes": 8539987968.0,
+        "scope": "Bounded samples only; stage1 stats retained separately, no absolute peak claim."
+      }
+    }
+  ],
+  "scope": "Successful attended five-image delivery batch. Operator fenced every next builder until prior CRI metadata and writable snapshot roots were released. This does not qualify the broader unattended retry/cancel/concurrent-promotion matrix or production."
+}
