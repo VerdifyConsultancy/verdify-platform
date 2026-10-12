@@ -2953,7 +2953,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "October12 read-only evidence: halted run76d18133852b490680bce2639e6d8397 remains bound to an expired October7 approval and an old pod/source/generation. Current Iris plans exist but no confirmed plan-sourced write after October6; preserve cap12 and original custody. Current ready workloads do not establish policy convergence. October12 execution: d439 production Synced/Healthy after full no-prune sync; fresh run f1a11599 completed20 requests in12+8 stages with original halt/approval preserved and one explicit guardrail hold. Two-hour source/digest window20:01:30.886995–earliest22:01:30.886995UTC is running; final elapsed/native-history/field review remains pending. Evidence branch bd7f71de; do not close before terminal owner verification.",
+      "baseline": "October12 read-only evidence: halted run76d18133852b490680bce2639e6d8397 remains bound to an expired October7 approval and an old pod/source/generation. Current Iris plans exist but no confirmed plan-sourced write after October6; preserve cap12 and original custody. Current ready workloads do not establish policy convergence. October12 execution: d439 production Synced/Healthy after full no-prune sync; fresh run f1a11599 completed20 requests in12+8 stages with original halt/approval preserved and one explicit guardrail hold. Two-hour source/digest window20:01:30.886995–earliest22:01:30.886995UTC is running; final elapsed/native-history/field review remains pending. Evidence branch bd7f71de; do not close before terminal owner verification. Superseding22:02readback: originalwindowFAILEDneeds-review21:09:31after68samplesatArgoSynced/Healthypredicate;currentappSynced/Degraded/mainunchangedd439. SameRetrywriterresumedfordiagnosis/preservedfailure/smallestauthorizedrecovery; no2hacceptanceorclosure.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3254,7 +3254,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-12T21:09:12Z",
+    "reviewed_at": "2026-10-12T22:02:09Z",
     "source_revision": "d43919e933eb1be69559be7566853ff69a64e903",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3899,7 +3899,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 12,
-        "next_action": "After actual terminal two-hour receipt, sole Retry owner verifies final smoke, full field/native history/stage-vector cap proof and natural publication; close only passed acceptance.",
+        "next_action": "Sole Retry owner diagnoses actual Synced/Degraded cause after preserved68-sample failed window, repairs within scope and provides valid complete observation plus final smoke/field/history/stage-cap/natural-publication proof before closure.",
         "owner_role": "Platform lead"
       },
       {
