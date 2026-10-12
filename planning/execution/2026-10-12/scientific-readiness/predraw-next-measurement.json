@@ -1,0 +1,98 @@
+{
+  "actions_performed": {
+    "declarations_or_schedules": false,
+    "design_lock_or_draw": false,
+    "issue_metadata_or_comments": false,
+    "new_tests_or_simulations": false,
+    "production_or_contained_target_connections": false,
+    "provider_or_device_calls": false,
+    "source_and_retained_public_evidence_review": true
+  },
+  "baseline_source": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "calendar": {
+    "days": 60,
+    "elapsed_seconds": 64800,
+    "end_inclusive": "2027-07-30",
+    "endpoint": "[06:00,24:00)",
+    "pairs": 30,
+    "start": "2027-06-01",
+    "timezone": "America/Denver"
+  },
+  "changed_input_trigger": "new authentic contributor/target/source custody or a specific decision about an unidentifiable scientific quantity",
+  "claim": {
+    "metered_resource_savings_qualified": false,
+    "minimum_power_launch_gate": false,
+    "operating": "nine_state_control_burden",
+    "temperature_noninferiority_margin_f": 0.5,
+    "vpd_noninferiority_margin_kpa": 0.05
+  },
+  "current_issue_readback_updated_at": "2026-10-12T17:54:54Z",
+  "empirical_quantities": {
+    "actual_selector_mix_fallback": null,
+    "carryover": null,
+    "joint_advance_power": null,
+    "paired18h_variance_covariance": null,
+    "physical_missing_endpoint_bounds": null
+  },
+  "existing_reproduction": {
+    "artifact": "fixed30-eligibility.json",
+    "recompute_needed": false,
+    "sha256": "f3ffae43db272370238145a8c914b31685e7de43e531ca2e6bdbbd8ab82b0d6e"
+  },
+  "firmware367": "source-only nextcohort outside frozen release; noOTA/physicalproof",
+  "first_measurement": {
+    "day": null,
+    "eligibility": {
+      "bins": 72,
+      "distinct_complete_minutes_per_bin": 12,
+      "maximum_missing_run_minutes": 30,
+      "required_valid_bins": 66
+    },
+    "reason": "choose genuinely future full day from actual clock after actual inputs exist; no fabricated date/retrospective declaration",
+    "steps": [
+      "actual contributor/crop-source custody",
+      "existing readonly future-day target draft; declaration SQL remains unexecuted",
+      "authentic pre06 context/vintages and original virtual choice where available, no clock spoofing/provider call by this packet",
+      "completed18h observational capture/hash/eligibility/continuity; no effect/power estimate from one day"
+    ],
+    "target_rule_recommendation": "fixed_panel_equal_zone_ideal_mean_v1"
+  },
+  "frozen_release_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "historical_oct2_capture": {
+    "contributor_rows": 0,
+    "current_live_table_count_claimed": false,
+    "cutoff_kind": "actual_current_clock_not_preregistered_pre06",
+    "forecast_rows": 31,
+    "original_provider_choice_retained": false,
+    "raw_private_bytes_revalidated_this_packet": false,
+    "source": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-5956255448",
+    "source_rows": 79,
+    "target_rows": 0
+  },
+  "listed_scientific_sources_unchanged_between_revisions": true,
+  "missing_evidence_groups": [
+    "independently authenticated actual three-probe serial/route/zone/calibration/freshness evidence",
+    "actual crop assignment/profile revisions and prospective15min grading-target declaration",
+    "original pre-boundary context/forecast source hashes and original virtual selector choice/fallback",
+    "target/contributor-qualified18h climate+authentic nine-state equipment continuity for eligible pretrial days",
+    "actual analyzer environment identity and supportable physical missing-endpoint bounds"
+  ],
+  "native_treatment_fields": "27/48 UNPROVEN",
+  "recommendation": "retain existing exploratory warm candidate and honest missing empirical inputs; no numerical rerun/calendar redesign before input or decision changes",
+  "schema": "verdify-782-finite-predraw-measurement-v1",
+  "source_sha256": {
+    "research/planner-efficacy/freeze_route_day_target.py": "ea5dc6283171a5811f0d967e7fb09e99ee767fd8bee72e1639ae24fec4c44344",
+    "research/planner-efficacy/pretrial_provenance.py": "6616d3acff2970b16da0fc4ffc812e0f5517cc3de1b0cba1b405a8a85e60e2cd",
+    "research/planner-efficacy/protocols/direct-launch-basis-v2.json": "074d7ef29415eea922d59b3ab1596612c0a7966624011b1c29bf477d50964835",
+    "research/planner-efficacy/protocols/warm-predraw-analysis-contract-v1.json": "a4a1a4c7df3e3a4a9b5faf8cd38e5c50cd8a7f7e957586455f9b64256e817164",
+    "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json": "f63dcca480c5413fcd66480e81eb5afb18f4f8395885b4392975cd4eca6d1301",
+    "scripts/experiment-v2-capture-inputs.py": "ab09e50e1971d14f7b02b1605e0c3fb9a974186a53f34d0b48b514f185a75c08"
+  },
+  "status": "prepared-not-executed-acceptance-incomplete",
+  "unidentifiable_warm_history_decision": "explicitly retain limitation in accepted exploratory contract before lock; no simulated replacement,80%gate,season mixing or outcome-driven retuning",
+  "winter_observer": {
+    "end_inclusive": "2026-12-31",
+    "scope": "separate passive observer; no new physical onsite gate and no warm-treatment efficacy inference",
+    "start": "2026-11-02"
+  }
+}
