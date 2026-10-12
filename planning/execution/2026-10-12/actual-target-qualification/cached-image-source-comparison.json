@@ -1,0 +1,471 @@
+{
+  "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "evidence_scope": "Git source comparison to historical running-image source readback, NOT actual current image file proof",
+  "consumers": [
+    {
+      "duty": "executor",
+      "historically_reported_consumer_source": "f48c6bf0257b25ed2820689154ca3502507129c6",
+      "files": [
+        {
+          "path": "ingestor/entity_map.py",
+          "frozen_sha256": "24b29cfcdd155feeb5c4512c7173b849262da3c0564038c1c86ac3e83f168bb7",
+          "candidate_source_sha256": "7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+          "exact": false
+        },
+        {
+          "path": "ingestor/esp32_push.py",
+          "frozen_sha256": "dd2020ac1df41a3622ab6d516a66ac11662cafde36c72d76251a4dabe6ddf5d1",
+          "candidate_source_sha256": "dd2020ac1df41a3622ab6d516a66ac11662cafde36c72d76251a4dabe6ddf5d1",
+          "exact": true
+        },
+        {
+          "path": "ingestor/shared.py",
+          "frozen_sha256": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+          "candidate_source_sha256": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+          "exact": true
+        },
+        {
+          "path": "ingestor/tasks/component_experiment.py",
+          "frozen_sha256": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+          "candidate_source_sha256": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/__init__.py",
+          "frozen_sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa",
+          "candidate_source_sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/alerts.py",
+          "frozen_sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985",
+          "candidate_source_sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/api.py",
+          "frozen_sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557",
+          "candidate_source_sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/band_defaults.yaml",
+          "frozen_sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148",
+          "candidate_source_sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/catalog.py",
+          "frozen_sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803",
+          "candidate_source_sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/climate_intent.py",
+          "frozen_sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7",
+          "candidate_source_sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/component_executor.py",
+          "frozen_sha256": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575",
+          "candidate_source_sha256": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/component_qualification.py",
+          "frozen_sha256": "31edae4180028353e2a23b64acd30e6e5c97a13179c27aecf0a81e2b1ea9e15a",
+          "candidate_source_sha256": "31edae4180028353e2a23b64acd30e6e5c97a13179c27aecf0a81e2b1ea9e15a",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/crop_profiles.py",
+          "frozen_sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce",
+          "candidate_source_sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/crops.py",
+          "frozen_sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099",
+          "candidate_source_sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/daily.py",
+          "frozen_sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3",
+          "candidate_source_sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/experiment_config.py",
+          "frozen_sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7",
+          "candidate_source_sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/external.py",
+          "frozen_sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c",
+          "candidate_source_sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/fixed_panel_native_route.py",
+          "frozen_sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed",
+          "candidate_source_sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/forecast.py",
+          "frozen_sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d",
+          "candidate_source_sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/forecast_ops.py",
+          "frozen_sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2",
+          "candidate_source_sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/lessons.py",
+          "frozen_sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e",
+          "candidate_source_sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/mcp_responses.py",
+          "frozen_sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1",
+          "candidate_source_sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/media.py",
+          "frozen_sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b",
+          "candidate_source_sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/observed_minutes.py",
+          "frozen_sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8",
+          "candidate_source_sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/operations.py",
+          "frozen_sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327",
+          "candidate_source_sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/physical_crop_band.py",
+          "frozen_sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2",
+          "candidate_source_sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/plan.py",
+          "frozen_sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1",
+          "candidate_source_sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/policy_vector.py",
+          "frozen_sha256": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c",
+          "candidate_source_sha256": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/setpoint.py",
+          "frozen_sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0",
+          "candidate_source_sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/slack_ops.py",
+          "frozen_sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a",
+          "candidate_source_sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/system_infra.py",
+          "frozen_sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778",
+          "candidate_source_sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/telemetry.py",
+          "frozen_sha256": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816",
+          "candidate_source_sha256": "e046cb6ea7577ebd6f75b641d679ef2070b2523c45177c7a7ae07eb0f9f00c7f",
+          "exact": false
+        },
+        {
+          "path": "verdify_schemas/topology.py",
+          "frozen_sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1",
+          "candidate_source_sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/tunable_registry.py",
+          "frozen_sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+          "candidate_source_sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/tunables.py",
+          "frozen_sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3",
+          "candidate_source_sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/vault.py",
+          "frozen_sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9",
+          "candidate_source_sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/views.py",
+          "frozen_sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753",
+          "candidate_source_sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753",
+          "exact": true
+        }
+      ],
+      "exact_count": 35,
+      "total": 37,
+      "changed_files": [
+        "ingestor/entity_map.py",
+        "verdify_schemas/telemetry.py"
+      ]
+    },
+    {
+      "duty": "lifecycle",
+      "historically_reported_consumer_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "files": [
+        {
+          "path": "api/main.py",
+          "frozen_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+          "candidate_source_sha256": "2f474fb578cbb1472ef8a5b9d17340be83a05040d2fc45fd82b9f19a0df1cd2c",
+          "exact": false
+        },
+        {
+          "path": "verdify_public/__init__.py",
+          "frozen_sha256": "5eab7c866511705c317a05184aaada7132e644109a4ad590156ef0df26be3caa",
+          "candidate_source_sha256": "5eab7c866511705c317a05184aaada7132e644109a4ad590156ef0df26be3caa",
+          "exact": true
+        },
+        {
+          "path": "verdify_public/build_provenance.py",
+          "frozen_sha256": "85a4bd9d4d57b72cb309728a5968cf194c3f5ba5bf618f784eb72564eeb4a861",
+          "candidate_source_sha256": "85a4bd9d4d57b72cb309728a5968cf194c3f5ba5bf618f784eb72564eeb4a861",
+          "exact": true
+        },
+        {
+          "path": "verdify_public/output_policy.py",
+          "frozen_sha256": "a65be8cbf5db872e5fa65dd94e97bd6ee61d4fa8a37ba0f006152ed5d319006e",
+          "candidate_source_sha256": "a65be8cbf5db872e5fa65dd94e97bd6ee61d4fa8a37ba0f006152ed5d319006e",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/__init__.py",
+          "frozen_sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa",
+          "candidate_source_sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/alerts.py",
+          "frozen_sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985",
+          "candidate_source_sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/api.py",
+          "frozen_sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557",
+          "candidate_source_sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/band_defaults.yaml",
+          "frozen_sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148",
+          "candidate_source_sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/catalog.py",
+          "frozen_sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803",
+          "candidate_source_sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/climate_intent.py",
+          "frozen_sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7",
+          "candidate_source_sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/crop_profiles.py",
+          "frozen_sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce",
+          "candidate_source_sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/crops.py",
+          "frozen_sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099",
+          "candidate_source_sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/daily.py",
+          "frozen_sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3",
+          "candidate_source_sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/experiment_config.py",
+          "frozen_sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7",
+          "candidate_source_sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/external.py",
+          "frozen_sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c",
+          "candidate_source_sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/fixed_panel_native_route.py",
+          "frozen_sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed",
+          "candidate_source_sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/forecast.py",
+          "frozen_sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d",
+          "candidate_source_sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/forecast_ops.py",
+          "frozen_sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2",
+          "candidate_source_sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/lessons.py",
+          "frozen_sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e",
+          "candidate_source_sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/mcp_responses.py",
+          "frozen_sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1",
+          "candidate_source_sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/media.py",
+          "frozen_sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b",
+          "candidate_source_sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/observed_minute_reader.py",
+          "frozen_sha256": "6f644f968455feec2082cbd5246ef72be97b8c15a96966d70fbf4617f82125e8",
+          "candidate_source_sha256": "6f644f968455feec2082cbd5246ef72be97b8c15a96966d70fbf4617f82125e8",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/observed_minutes.py",
+          "frozen_sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8",
+          "candidate_source_sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/operations.py",
+          "frozen_sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327",
+          "candidate_source_sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/physical_crop_band.py",
+          "frozen_sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2",
+          "candidate_source_sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/plan.py",
+          "frozen_sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1",
+          "candidate_source_sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/route_only_crop_band_reader.py",
+          "frozen_sha256": "eca3a9a27fe5014d1493fa4eb1d543d8ba864949bafa5c8b53c9d779d44f30e3",
+          "candidate_source_sha256": "eca3a9a27fe5014d1493fa4eb1d543d8ba864949bafa5c8b53c9d779d44f30e3",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/setpoint.py",
+          "frozen_sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0",
+          "candidate_source_sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/slack_ops.py",
+          "frozen_sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a",
+          "candidate_source_sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/system_infra.py",
+          "frozen_sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778",
+          "candidate_source_sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/telemetry.py",
+          "frozen_sha256": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816",
+          "candidate_source_sha256": "e046cb6ea7577ebd6f75b641d679ef2070b2523c45177c7a7ae07eb0f9f00c7f",
+          "exact": false
+        },
+        {
+          "path": "verdify_schemas/topology.py",
+          "frozen_sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1",
+          "candidate_source_sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/tunable_registry.py",
+          "frozen_sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+          "candidate_source_sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/tunables.py",
+          "frozen_sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3",
+          "candidate_source_sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/vault.py",
+          "frozen_sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9",
+          "candidate_source_sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9",
+          "exact": true
+        },
+        {
+          "path": "verdify_schemas/views.py",
+          "frozen_sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753",
+          "candidate_source_sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753",
+          "exact": true
+        }
+      ],
+      "exact_count": 34,
+      "total": 36,
+      "changed_files": [
+        "api/main.py",
+        "verdify_schemas/telemetry.py"
+      ]
+    }
+  ],
+  "image_module_bytes_verified": false,
+  "registry_authentication": "prior anonymous OCI config readback401; no Secret data read or retry",
+  "next_step": "authoritative image module/dependency hash metadata, or explicit frozen module overlays in isolated qualification Jobs; no production module substitution"
+}

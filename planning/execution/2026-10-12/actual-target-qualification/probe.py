@@ -62,17 +62,23 @@ def source_path(name, layout):
 def source_guard(*, layout="checkout", duty="executor"):
     manifest = json.loads((PACKET / "source-hashes.json").read_text())
     require(manifest["source"] == SOURCE, "source pin mismatch")
+    imports = json.loads((PACKET / "import-manifest.json").read_text())
+    require(imports["source"] == SOURCE, "import dependency source pin mismatch")
+    imported_files = next(row["files"] for row in imports["consumers"] if row["duty"] == duty)
+    dependency_files = set(imported_files)
+    dependency_files.add("scripts/qualify-restored-runtime-duties.py")
+    require(dependency_files <= manifest["files"].keys(), "incomplete frozen dependency hash guard")
+    require(
+        all(manifest["files"][name] == expected for name, expected in imported_files.items()),
+        "conflicting frozen dependency hashes",
+    )
     if layout != "checkout":
         require(
             (layout, duty) in (("api-image", "lifecycle"), ("ingestor-image", "executor")),
             "consumer image/duty mismatch",
         )
     for name, expected in manifest["files"].items():
-        if layout != "checkout" and not (
-            name in ("verdify_schemas/experiment_config.py", "scripts/qualify-restored-runtime-duties.py")
-            or (duty == "executor" and name.startswith("ingestor/"))
-            or (duty == "lifecycle" and name == "api/main.py")
-        ):
+        if layout != "checkout" and name not in dependency_files:
             continue
         require(
             hashlib.sha256(source_path(name, layout).read_bytes()).hexdigest() == expected,
@@ -82,11 +88,25 @@ def source_guard(*, layout="checkout", duty="executor"):
 
 
 def load_sources(*, duty=None, layout="checkout"):
+    # The image may contain bytecode for a pre-overlay source file. Read only
+    # verified source, with an absent cache prefix inside the read-only packet.
+    cache_prefix = PACKET / "qualification-bytecode-absent"
+    require(not cache_prefix.exists(), "unexpected qualification bytecode cache")
+    sys.dont_write_bytecode = True
+    sys.pycache_prefix = str(cache_prefix)
     runtime_root = ROOT if layout == "checkout" else Path("/app")
     sys.path[:0] = [str(runtime_root), str(runtime_root / "ingestor")]
     component = api = None
     if duty in (None, "executor"):
-        from tasks import component_experiment as component
+        # Import the exact module without tasks/__init__, which otherwise
+        # imports unrelated schedulers/config. The OFF/startup consumers used
+        # here do not execute its enabled-only relative-import paths.
+        spec = importlib.util.spec_from_file_location(
+            "frozen_v2_component_probe", source_path("ingestor/tasks/component_experiment.py", layout)
+        )
+        component = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = component
+        spec.loader.exec_module(component)
     if duty in (None, "lifecycle"):
         spec = importlib.util.spec_from_file_location("frozen_v2_api_probe", source_path("api/main.py", layout))
         api = importlib.util.module_from_spec(spec)

@@ -3,6 +3,8 @@
 import argparse
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import asyncpg
@@ -104,3 +106,43 @@ async def test_transaction_start_failure_always_closes_authenticated_connection(
     with pytest.raises(RuntimeError, match="transaction start failure"):
         await probe.actual_probe(prepared)
     assert calls == ["fixture-connect", "closed"]
+
+
+def test_exact_component_module_import_avoids_scheduler_and_config_package():
+    code = """import importlib.util,sys
+from pathlib import Path
+p=Path(sys.argv[1]);spec=importlib.util.spec_from_file_location('packet_import_guard',p)
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+m.source_guard();component,api,binding=m.load_sources(duty='executor')
+assert component is not None and api is None
+assert 'tasks' not in sys.modules and 'config' not in sys.modules
+assert 'tasks._common' not in sys.modules
+assert sys.dont_write_bytecode and sys.pycache_prefix==str(m.PACKET/'qualification-bytecode-absent')
+assert not Path(sys.pycache_prefix).exists()
+print('exact component module; no scheduler/config import')
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(Path(__file__).with_name("probe.py"))],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.stdout.strip() == "exact component module; no scheduler/config import"
+
+
+@pytest.mark.parametrize("defect", ["missing", "conflicting"])
+def test_image_dependency_guard_rejects_incomplete_or_conflicting_hashes(tmp_path, monkeypatch, defect):
+    for name in ("source-hashes.json", "import-manifest.json"):
+        (tmp_path / name).write_bytes((probe.PACKET / name).read_bytes())
+    manifest_path = tmp_path / "source-hashes.json"
+    manifest = json.loads(manifest_path.read_text())
+    if defect == "missing":
+        del manifest["files"]["ingestor/entity_map.py"]
+    else:
+        manifest["files"]["ingestor/entity_map.py"] = "0" * 64
+    manifest_path.write_text(json.dumps(manifest))
+    monkeypatch.setattr(probe, "PACKET", tmp_path)
+    monkeypatch.setattr(probe, "source_path", lambda *args: pytest.fail("source read before complete hashes checked"))
+    with pytest.raises(ValueError, match="dependency hash"):
+        probe.source_guard(layout="ingestor-image", duty="executor")

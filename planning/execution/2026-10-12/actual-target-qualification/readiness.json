@@ -21,7 +21,7 @@
       "skipped": 0
     },
     "packet-tests.xml": {
-      "tests": 4,
+      "tests": 7,
       "failures": 0,
       "errors": 0,
       "skipped": 0
@@ -29,13 +29,21 @@
   },
   "fixture_native_checks": 10,
   "fixture_study_rows_created": 0,
-  "independent_review": "guard cleanup/release/source-hash/count and image-layout/logging findings corrected; no target action",
+  "independent_review": "source staging and complete hash consistency independently verified; missing/conflicting hash guard defect corrected with regressions; no remaining actionable findings",
   "remaining": [
     "owner current275 native admission and serialized release",
-    "matching qualified frozen-source API and ingestor image identities",
+    "owner creates recorded immutable source overlays and read-only packet mount in bound cached images; complete local source guards must pass",
     "two target-only passwords/reference installation and actual restricted-login authentication",
     "read-only actual startup/status seam receipts then exact null-password inverse and952/77/42reseal",
     "full native48/two-fresh-epoch/fault/recovery/physical/alert acceptance remains separate",
     "authentic contributor, calibration, target, as-of forecast, selector, equipment and covariance inputs still needed; fixed30June1-July302027candidate unchanged"
-  ]
+  ],
+  "matching_cached_image_route": "actual bound file-hash/package capture complete; exact immutable two-file source overlays per consumer prepared, not created",
+  "source_import_guards": {
+    "executor_dependency_files": 37,
+    "lifecycle_dependency_files": 36,
+    "frozen_union_inputs": 48,
+    "avoids_tasks_config_imports": true,
+    "stale_image_bytecode_reads_prevented": true
+  }
 }

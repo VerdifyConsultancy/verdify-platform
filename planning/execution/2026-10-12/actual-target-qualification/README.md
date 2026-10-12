@@ -7,7 +7,8 @@ The recovery owner controls every target stage, credential mutation and reseal.
 No actual-target connection has been made by this lane.
 
 The preparatory result is useful but limited: 307 existing focused tests passed;
-the socket-only native PostgreSQL check below exercised the actual migration 264
+seven packet guard regressions also passed. The socket-only native PostgreSQL
+check below exercised the actual migration 264
 startup function, real SCRAM logins, genuine source attesters and Python startup
 parser with all eight study tables empty. The reduced fixture correctly failed
 both complete allowlists. It proves neither the admitted target nor #639/#587
@@ -29,8 +30,9 @@ The recovery owner's handoff is expected under
   admitted schema 275/952-object witness, 77 sequences and 42 study tables.
 - The exact owner release for this serialized stage, its admission receipt hash,
   existing component experiment UUID and device ID from restored data, and the
-  matching qualified API/ingestor image plus a read-only packet mount. No guessed image
-  digest or test-created study identity is acceptable.
+  bound immutable API/ingestor image plus the exact source overlays and read-only
+  packet mount below. No guessed image digest or test-created study identity is
+  acceptable.
 
 The probe checks the backend address, OID, primary, `cluster_name` and PG 160013.
 Its system-identifier/admission/release fields bind **external owner custody**;
@@ -117,6 +119,55 @@ does not authorize a privilege repair.
 
 ## Serialized read-only qualification commands
 
+### Cached images and exact immutable source overlays
+
+`actual-image-source-compatibility.json` records a bounded production read-only
+capture of SHA256/size for every local consumer import and the registry YAML,
+plus installed distribution metadata. Pod UID, container ID, restart count and
+full running image ID were identical before and after each capture. The capture
+used `python -I -S` with standard-library file/metadata readers only: no application
+import/startup, environment/Secret read, DB/network/device call or source content
+output occurred. It made no integration-target connection.
+
+| Consumer | Bound cached image digest | Frozen local inputs matching | Exact overlays needed |
+| --- | --- | ---: | --- |
+| Executor | `sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344` |35/37| `ingestor/entity_map.py`, `verdify_schemas/telemetry.py` |
+| API lifecycle | `sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778` |34/36| `api/main.py`, `verdify_schemas/telemetry.py` |
+
+Both images report Python3.13.15, asyncpg0.31.0, Pydantic2.13.5 and PyYAML6.0.3.
+The ingestor also has aioesphomeapi44.24.2; API has FastAPI0.142.2, httpx0.28.1 and
+uvicorn0.54.0. These are metadata observations, not package startup or complete
+behavioral proof. The offline historical-source comparison is retained separately
+in `cached-image-source-comparison.json`; actual container hashes are authoritative
+for this packet. These current production images do **not** run frozen973 source.
+
+`source-overlay-manifest.json` binds the two prepared immutable ConfigMaps,
+their compressed/uncompressed manifest hashes, exact UTF-8 source hashes and
+read-only `subPath` mount paths. The compressed manifests contain the actual
+frozen two-file payloads, not a fetch-at-runtime reference. They are each below
+the ConfigMap size limit. Only the recovery owner creates them in its serialized
+stage and records their actual UIDs; this lane has created no cluster object:
+
+```sh
+# Sole recovery writer only, after its explicit stage release.
+gzip -dc "$PACKET/source-overlay-executor.configmap.json.gz" |
+  kubectl --context vallery -n verdify-db-rehearsal create -f -
+gzip -dc "$PACKET/source-overlay-lifecycle.configmap.json.gz" |
+  kubectl --context vallery -n verdify-db-rehearsal create -f -
+```
+
+Mount only the corresponding ConfigMap's two files at the manifest's exact
+paths, with `readOnly: true`, in the corresponding pinned-digest qualification
+Job. Mount the packet separately read-only. Do not patch a production Pod or
+overwrite an existing immutable object; an existing name needs exact hash/UID
+readback. The CLI hashes the complete37/36 local dependency closure plus the
+frozen binding helper before any consumer import. The loader imports the exact
+component file without `tasks/__init__` or ingestor `config`, sets an absent
+cache prefix within the read-only packet and disables bytecode writes, so an
+image's old `.pyc` cannot bypass a verified source overlay. A fresh subprocess
+regression checks that isolation. No new image build is required for this
+bounded seam. The release owner independently delivers final production images.
+
 Run default preparation first; it checks hashes without reading a credential or
 opening a connection:
 
@@ -127,8 +178,9 @@ python "$PACKET/probe.py" --layout ingestor-image --duty executor
 python "$PACKET/probe.py" --layout api-image --duty lifecycle
 ```
 
-Each actual run is a separate bounded namespace-local Job, using the matching
-frozen-source API or ingestor immutable image, `automountServiceAccountToken: false`, no production/device/
+Each actual run is a separate bounded namespace-local Job, using the bound
+API or ingestor immutable image with its exact frozen overlays,
+`automountServiceAccountToken: false`, no production/device/
 provider credentials, and label
 `verdify.ai/qualification-target: verdify-cnpg-s2-integration`. Reuse the owner's
 closed target-only NetworkPolicy. Inject `QUALIFICATION_DB_PASSWORD` using the
@@ -142,7 +194,7 @@ and dependencies. Each imports only its own consumer, so no extra API/ESPHome
 libraries or new image build is needed. The byte-exact `frozen-target-binding.py`
 copy provides the existing native binding helper where the API image lacks
 `scripts/`; only its binding/readback functions are used, never its DML runner.
-Preparation checks pinned consumer/security-contract files before use. Record
+Preparation checks all pinned local import/security-contract files before use. Record
 actual image ID/source SHA, Job/Pod/ConfigMap UIDs and packet checksum alongside
 each receipt; matching file hashes alone do not prove image provenance.
 
@@ -200,7 +252,8 @@ owner's in-process non-echoing path with statement/error-query logging disabled;
 never emit it or overwrite it with another generated password. Restore only
 these two fields: there was no grant/ownership/schema change to undo.
 
-Delete the task-created credential Secret only by its exact recorded UID; if it
+Delete the task-created source/packet ConfigMaps only by recorded UIDs after
+all consuming Jobs and sessions are closed. Delete the task-created credential Secret only by its exact recorded UID; if it
 pre-existed, preserve it and use its prior custody/inverse instead. Compare the
 full 952-object/current275 witness, all 77 sequences, all42 study tables, role and
 native/storage identities against the admitted baseline, then run the owner's
