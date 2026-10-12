@@ -1,0 +1,255 @@
+{
+  "schema": "proxmox-verdify-read-only-capacity-qualification-v1",
+  "reported_at": "2026-10-12T17:51:53.163823+00:00",
+  "outcome": "Point-in-time capacity evidence complete; no whole-operation admission granted or inferred.",
+  "authorization_scope": "Read-only qualification for existing Verdify release owner; no build/merge, VM resize, node/label/taint/affinity changes, trim, cleanup, or infrastructure mutation.",
+  "caller": {
+    "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+    "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "packet_sha256": "b6db89fd67214ced5b47d002b3f1e130bb7a3771fa3e819677a6d551f21e4663",
+    "selected_images": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "sequence": "five conditional serial build steps selected by offline classifier, after validation",
+    "build_resources": {
+      "cpu_request": "1",
+      "cpu_limit": "3",
+      "memory_request": "2Gi",
+      "memory_limit": "4Gi",
+      "ephemeral_storage_request": "32Gi",
+      "ephemeral_storage_limit": "60Gi"
+    },
+    "resource_note": "32Gi/60Gi are ephemeral storage, not RAM. Injected containers and init phases remain additional lifecycle inputs; retained actual Pod is a reference, not future server admission.",
+    "validation": {
+      "ephemeral_request_and_limit": "10Gi",
+      "retry_limit": 1,
+      "max_attempts": 2
+    },
+    "build_retry": null,
+    "deadlines_and_retention": {
+      "main_deadline_seconds": 7200,
+      "build_pod_deadline_seconds": 3600,
+      "failed_ttl_seconds": 172800,
+      "build_retry": null,
+      "validation_retry_limit": 1,
+      "reuse": "five serial32Gi scratch requests/60Gi limits; only reuse after independently proven backend release. Unknown pull/cache/log/retry-tail bytes remain unknown, not zero."
+    },
+    "admission": "NOT GRANTED; scheduler declaration is not host thin/registry/workspace admission"
+  },
+  "observation_window": {
+    "scheduler": "2026-10-12T17:45:04.027862+00:00",
+    "filesystem_and_registry_capture": "2026-10-12T17:45:43.313998+00:00",
+    "host_thin": "2026-10-12T17:46:40.567997+00:00",
+    "retained_pod": "2026-10-12T17:48:43.239950+00:00",
+    "custom_trim": "2026-10-12T17:50:29.697058+00:00"
+  },
+  "placement": {
+    "selector": {
+      "agentfleet.vallery.net/runner-eligible": "true"
+    },
+    "eligible_general_workers": [
+      "vm-k3s-node5",
+      "vm-k3s-node6",
+      "vm-k3s-node7"
+    ],
+    "node4_excluded_by_existing_selector": true,
+    "node7_required_affinity_present": false,
+    "heavy_50gi_affinity_applies_to_this_32gi_caller": false,
+    "protected_node8": "dedicated=frigate:NoSchedule; runner-eligible=false; not treated as spare"
+  },
+  "node_host_comparison": [
+    {
+      "node": "vm-k3s-node4",
+      "host": "oro",
+      "ready": "True",
+      "unschedulable": false,
+      "taints": [],
+      "runner_eligible": "false",
+      "cpu_request_headroom": "12.570",
+      "memory_request_headroom_gib": 18.097741,
+      "ephemeral_request_headroom_gib": 55.759187,
+      "guest_root_available_gib": 120.469788,
+      "host_thin_data_percent": "76.87",
+      "host_thin_metadata_percent": "2.99",
+      "host_thin_unallocated_gib_approx": 92.52,
+      "runway_to_85_percent_benchmark_gib_approx": 32.52,
+      "after_60gib_scratch_to_85_benchmark_gib_approx": -27.48
+    },
+    {
+      "node": "vm-k3s-node5",
+      "host": "opal",
+      "ready": "True",
+      "unschedulable": false,
+      "taints": [],
+      "runner_eligible": "true",
+      "cpu_request_headroom": "19.015",
+      "memory_request_headroom_gib": 26.799883,
+      "ephemeral_request_headroom_gib": 212.567508,
+      "guest_root_available_gib": 100.54369,
+      "host_thin_data_percent": "74.11",
+      "host_thin_metadata_percent": "3.06",
+      "host_thin_unallocated_gib_approx": 103.56,
+      "runway_to_85_percent_benchmark_gib_approx": 43.56,
+      "after_60gib_scratch_to_85_benchmark_gib_approx": -16.44
+    },
+    {
+      "node": "vm-k3s-node6",
+      "host": "ore",
+      "ready": "True",
+      "unschedulable": false,
+      "taints": [],
+      "runner_eligible": "true",
+      "cpu_request_headroom": "23.720",
+      "memory_request_headroom_gib": 25.865987,
+      "ephemeral_request_headroom_gib": 218.146906,
+      "guest_root_available_gib": 103.658894,
+      "host_thin_data_percent": "67.38",
+      "host_thin_metadata_percent": "2.96",
+      "host_thin_unallocated_gib_approx": 110.211002,
+      "runway_to_85_percent_benchmark_gib_approx": 59.53151,
+      "after_60gib_scratch_to_85_benchmark_gib_approx": -0.46849
+    },
+    {
+      "node": "vm-k3s-node7",
+      "host": "onyx",
+      "ready": "True",
+      "unschedulable": false,
+      "taints": [],
+      "runner_eligible": "true",
+      "cpu_request_headroom": "24.075",
+      "memory_request_headroom_gib": 27.550982,
+      "ephemeral_request_headroom_gib": 141.632206,
+      "guest_root_available_gib": 111.505199,
+      "host_thin_data_percent": "61.29",
+      "host_thin_metadata_percent": "2.69",
+      "host_thin_unallocated_gib_approx": 135.026831,
+      "runway_to_85_percent_benchmark_gib_approx": 82.70437,
+      "after_60gib_scratch_to_85_benchmark_gib_approx": 22.70437
+    }
+  ],
+  "thin_comparison_limits": "85 percent is the inherited runway comparison, not a newly established CI admission formula or proof of a mandatory hard threshold. All listed hosts have more than60GiB unallocated at capture; only Onyx has60GiB plus the15-percent comparison margin. Thin Data percent is rounded to0.01 percent. Host shared demand, reservations, snapshots and other debt are not independently allocated by this read.",
+  "serial_lifecycle": {
+    "conservative_unreclaimed_comparison_gib": 320,
+    "formula": "5 *60GiB scratch +2 *10GiB validation",
+    "interpretation": "Conservative comparison only, not asserted actual incremental demand, mandatory reservation, or permission to consume it. Already allocated actual bytes are included in physical baseline and must not be double counted as new growth.",
+    "release_evidence": "Main OnPodSuccess can delete successful Pods, but PodGC and guest-free bytes do not independently prove backing thin extents reclaimed before next stage.",
+    "node7_trim": {
+      "timer": "proxmox-guest-root-trim.timer",
+      "enabled": true,
+      "active": "waiting",
+      "last_trigger_utc": "2026-10-12T17:34:45Z",
+      "service_completed_utc": "2026-10-12T17:34:58Z",
+      "service_exit_status": 0,
+      "root_online_discard_option": false,
+      "limitation": "Scheduled successful trim metadata exists; no per-build backend release/reuse bound is certified."
+    }
+  },
+  "retained_debt": {
+    "workflow": "verdify-platform-ci-xnbz7",
+    "pod_uid": "f12edac0-5fc2-4141-b2df-1c2a83110d98",
+    "pod_paths_measured": [
+      {
+        "path": "/var/lib/kubelet/pods/f12edac0-5fc2-4141-b2df-1c2a83110d98",
+        "exists": true,
+        "allocated_bytes": 8192,
+        "logical_bytes": 971,
+        "files": 9,
+        "errors": 0
+      },
+      {
+        "path": "/var/log/pods/agent-fleet-ci_verdify-platform-ci-xnbz7-build-3206582954_f12edac0-5fc2-4141-b2df-1c2a83110d98",
+        "exists": true,
+        "allocated_bytes": 114688,
+        "logical_bytes": 85492,
+        "files": 8,
+        "errors": 0
+      }
+    ],
+    "note": "Small Pod directory/log allocation does not close containerd unpack/cache or owner old32Gi scratch charge. Physical baseline already includes existing used bytes; unconsumed future obligations remain separate unknowns."
+  },
+  "registry": {
+    "observed_at": "2026-10-12T17:45:03Z",
+    "native_observed_at": "2026-10-12T17:45:00.446145Z",
+    "source_revision": "a9de83a66aa0f6efb63945a07b494b99c699f99b",
+    "ready_at_capture": true,
+    "writable_at_capture": true,
+    "target": "registry-origin/registry-origin-csi-data",
+    "capacity_contract_id": "5e8a97b36acee313a9686a621e6db0f8d02e689e4bd2e4141dc1e86b25a0336e",
+    "available_gib": 189.491108,
+    "minimum_free_gib": 140.0,
+    "above_minimum_gib": 49.491108,
+    "per_image_archive_allowance_gib": 20.0,
+    "signal_max_age_seconds": 300,
+    "protected_set": {
+      "count": 290,
+      "current_count": 36,
+      "generation": 156,
+      "reachable": true,
+      "rollback_count": 254,
+      "schema": "agent-fleet.registry-protected-digests/1",
+      "set_hash": "308aaf3d4b35c088f81d69511cce15ed860d3b8986394b4d96d619aa52863a73",
+      "verified_at": "2026-10-12T17:45:03Z"
+    },
+    "limitation": "GREEN at17:45:03Z supersedes older RED as that capture. Signal expires after300s and must be fresh at actual gate.49.491GiB above minimum does not certify5-image incremental publication;5x20GiB is an allowance comparison, not measured actual growth or a hard quota."
+  },
+  "remaining_owner_inputs": [
+    "Release/Agents owner: bind actual intended placement, or qualify every eligible domain; current32Gi caller does not require node7.",
+    "Release/compute/storage owners: bound incremental pull/unpack/cache/workspace/log growth, shared other obligations and retained failed debt for this exact caller; qualify stagewise backing release/reuse or a bounded aggregate write profile.",
+    "Storage/registry owner: qualify actual incremental5-image publication and other registry debt against a fresh write signal and existing retention requirements.",
+    "Use the existing operation owner admission/receipt if applicable; no exact five-image whole-operation grant was found or provided. Prior PR-only validation allowance does not transfer to main builds."
+  ],
+  "acceleration": "Reuse this finite packet and current owner caller profile. Resolve placement and bounded physical/registry growth in the existing release lane. No VM resize, RAG44 qualification, fleet-wide drain, repeated broad scans, or new global admission ledger is required by this read-only report.",
+  "limitations": [
+    "Point-in-time reads are not reservations; concurrent owners can consume capacity.",
+    "Known named registry ConfigMaps read successfully; a broad ConfigMap inventory timed out and was not retried.",
+    "No build, image pull, filesystem contents, Secret values, destructive cleanup or infrastructure mutation performed."
+  ],
+  "template_identities": {
+    "verdify-platform-ci": {
+      "uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+      "resourceVersion": "263652253",
+      "sha256": "d0f88357143c9f6fea42ee24a05158d0c2c14e6e3947b27bcc500b1ba5ad33f6"
+    },
+    "repo-build": {
+      "uid": "32ef5b95-c391-460e-ba7f-ee68a7d9f76e",
+      "resourceVersion": "265534408",
+      "sha256": "8e3712e5cb6b68e28460274c1c0a187a7bce6dea7689d2f02e78fcd72f9185f2"
+    }
+  },
+  "evidence": [
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/caller-profile-37fd.json",
+      "bytes": 36948,
+      "sha256": "b6db89fd67214ced5b47d002b3f1e130bb7a3771fa3e819677a6d551f21e4663"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/live-host-physical-readback.json",
+      "bytes": 3534,
+      "sha256": "b5380c1e73038d92166d160bf5fe7dcdb8ea8ebae3c3446973491e748e71720f"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/live-node7-custom-trim-metadata.json",
+      "bytes": 649,
+      "sha256": "8abce42541d38941511200381834d0ff44033e95cb7be6e3a7c4f86c34351cfa"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/live-node7-trim-retained-pod-metadata.json",
+      "bytes": 948,
+      "sha256": "58b9b6004cbbc3d8d42d1ba7f5014b95afea1426dd2619780e39485b14d94cb9"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/live-resource-readback.json",
+      "bytes": 157547,
+      "sha256": "05c423aa2046a4febc2f29046eef208709ce4bf8131b2762b81ec76d152a57b2"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/live-template-filesystem-registry-readback.json",
+      "bytes": 37031,
+      "sha256": "e6a3dfde1c89f9227c3b51f28ed0a736f36b6d45affa0f0f49edfb3f89c8230c"
+    }
+  ]
+}
