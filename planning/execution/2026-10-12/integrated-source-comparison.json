@@ -1,0 +1,27 @@
+{
+  "old_head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "new_head": "b915188466205d5f1816a382898c62d01d50d3bd",
+  "main": "8c9d563a69fa68501af112098e9d2e00947efe65",
+  "execution_plan_preserved": true,
+  "949_964_preserved": true,
+  "planning_record_changes": {
+    "644": [
+      "baseline"
+    ],
+    "396": [
+      "baseline"
+    ],
+    "643": [
+      "baseline"
+    ]
+  },
+  "nonplanning_runtime_differences": [],
+  "native_ci": "NOT RUN at new head; old success retained as history only",
+  "validation": {
+    "planning_tests": 35,
+    "planning_tests_result": "PASS",
+    "generated_views": 7,
+    "generated_views_result": "PASS",
+    "runtime_bytes_unchanged_from_native_qualified37fd": true
+  }
+}
