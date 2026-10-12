@@ -204,9 +204,22 @@ def validate_post270_logical(source, before, rollback, install, inherited, logic
     )
 
 
-def dataset_sql(profile):
+def dataset_sql(profile, observation_at):
     """Capture actual native counts/time/owners, never sampled or synthetic rows."""
     require(profile in (pitr.SOURCE, *t.PHYSICAL_TARGETS), "unsupported native dataset source/profile")
+    trace = t.load("cnpg-band-trace-time-projection")
+    observation = trace.observation_sql(observation_at)
+    projected_from = (
+        "CASE "
+        + " ".join(
+            "WHEN c.relname="
+            + t.literal(name)
+            + " THEN "
+            + t.literal("(" + trace.projection(name, observation_at) + ") AS trace_time")
+            for name in sorted(trace.VIEWS)
+        )
+        + " ELSE format('%I.%I',n.nspname,c.relname) END"
+    )
     return f"""\\set ON_ERROR_STOP on
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 -- Public view functions resolve their source-owned public dependencies.
@@ -230,6 +243,7 @@ BEGIN
  -- Local transaction state only; no temporary table or persistent DML.
  PERFORM set_config('verdify.physical_inventory','[]',true);
 END $physical_dataset$;
+{trace.guard_sql(observation_at)}
 -- One statement and one aggregate scan per relation. ON_ERROR_STOP makes any
 -- native failure terminal; all statements share the original readonly snapshot.
 SELECT format($relation_sql$
@@ -242,10 +256,10 @@ BEGIN
      jsonb_build_object('relation',%L,'count',row_count,'time_ranges',ranges)))::text,true);
 END $physical_relation$;
 $relation_sql$,
- format('SELECT count(*), %s FROM %I.%I',
+ format('SELECT count(*), %s FROM %s',
    CASE WHEN columns.fields IS NULL THEN '''{{}}''::jsonb'
         ELSE columns.fields END,
-   n.nspname,c.relname),format('%I.%I',n.nspname,c.relname))
+   {projected_from}),format('%I.%I',n.nspname,c.relname))
 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
 CROSS JOIN LATERAL (
  SELECT string_agg(format('jsonb_build_object(%L,jsonb_build_array(min(%I)::text,max(%I)::text))',
@@ -271,7 +285,8 @@ BEGIN
     CASE WHEN cc.id IS NOT NULL THEN format('%I.%I',cc.schema_name,cc.table_name) END)
  WHERE h.schema_name='public' AND NOT c.dropped;
  PERFORM set_config('verdify.physical_dataset',jsonb_build_object(
-     'schema','cnpg-physical-data-parity-v1','database',current_database(),
+     'schema','cnpg-physical-data-parity-v2','database',current_database(),
+     'observation_at',{observation},
      'relations',current_setting('verdify.physical_inventory')::jsonb,
      'timescale_owners',coalesce(owners,'[]'::jsonb))::text,true);
 END $physical_owners$;
@@ -280,9 +295,9 @@ COMMIT;
 """
 
 
-def dataset_peer_sql(profile):
+def dataset_peer_sql(profile, observation_at):
     """Use the same exact peer/owner bridge while retaining the readonly snapshot."""
-    sql = dataset_sql(profile)
+    sql = dataset_sql(profile, observation_at)
     readonly_begin = "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;"
     require(sql.count(readonly_begin) == 1 and "\nBEGIN;\n" not in sql, "unexpected dataset transaction shape")
     owner = sql.replace(readonly_begin, "BEGIN;", 1)
@@ -294,11 +309,12 @@ def dataset_peer_sql(profile):
 def validate_dataset(source, restored, catalog=None):
     require(source == restored, "native physical dataset/count/time/owner drift")
     require(
-        set(source) == {"schema", "database", "relations", "timescale_owners"}
-        and source["schema"] == "cnpg-physical-data-parity-v1"
+        set(source) == {"schema", "database", "observation_at", "relations", "timescale_owners"}
+        and source["schema"] == "cnpg-physical-data-parity-v2"
         and source["database"] == t.DATABASE,
         "unexpected native dataset witness",
     )
+    t.load("cnpg-band-trace-time-projection").observation_sql(source["observation_at"])
     require(isinstance(source["relations"], list) and source["relations"], "missing native data relation inventory")
     identities = set()
     for row in source["relations"]:
@@ -586,10 +602,11 @@ def main():
         parser = argparse.ArgumentParser(description="Emit native read-only full count/time/owner collector")
         parser.add_argument("emit-dataset-sql")
         parser.add_argument("--profile", choices=(pitr.SOURCE, *t.PHYSICAL_TARGETS), required=True)
+        parser.add_argument("--observation-at", required=True)
         parser.add_argument("--output", type=Path, required=True)
         args = parser.parse_args()
         with args.output.open("x") as stream:
-            stream.write(dataset_peer_sql(args.profile))
+            stream.write(dataset_peer_sql(args.profile, args.observation_at))
         return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=t.PHYSICAL_TARGETS, required=True)
