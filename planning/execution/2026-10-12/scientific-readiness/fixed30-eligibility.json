@@ -1,0 +1,200 @@
+{
+  "actual_provider_calls": 0,
+  "analysis_environment": {
+    "analyzer_image_digest": null,
+    "kind": "operator host numerical reproduction; not a frozen design-lock analyzer image",
+    "numpy": "2.5.2",
+    "python": "3.13.5",
+    "scipy": "1.18.1"
+  },
+  "calendar": {
+    "daily_window": "[06:00,24:00)",
+    "days": 60,
+    "end_inclusive": "2027-07-30",
+    "pairs": 30,
+    "seconds": 64800,
+    "start": "2027-06-01",
+    "timezone": "America/Denver"
+  },
+  "database_connections": 0,
+  "design_lock": null,
+  "device_calls": 0,
+  "historical_analogues": {
+    "warm_analogue_2026": {
+      "climate_eligible_adjacent_pairs": 30,
+      "climate_eligible_days": 60,
+      "correlation_scope": "descriptive eligible bin levels; not randomized paired endpoint covariance",
+      "expected_bins": 4320,
+      "expected_minutes": 64800,
+      "first_full_local_day_elapsed_hours": 24,
+      "first_local_date": "2026-06-01",
+      "joint_complete_minutes": 63214,
+      "joint_eligible_bins": 4309,
+      "last_local_date": "2026-07-30",
+      "level_correlation_pairs": 4309,
+      "primary_window_elapsed_hours": 18,
+      "raw_temperature_vpd_level_correlation": 0.696008497926266
+    },
+    "winter_analogue_2025": {
+      "climate_eligible_adjacent_pairs": 0,
+      "climate_eligible_days": 0,
+      "correlation_scope": "descriptive eligible bin levels; not randomized paired endpoint covariance",
+      "expected_bins": 4320,
+      "expected_minutes": 64800,
+      "first_full_local_day_elapsed_hours": 25,
+      "first_local_date": "2025-11-02",
+      "joint_complete_minutes": 16827,
+      "joint_eligible_bins": 0,
+      "last_local_date": "2025-12-31",
+      "level_correlation_pairs": 0,
+      "primary_window_elapsed_hours": 18,
+      "raw_temperature_vpd_level_correlation": null
+    }
+  },
+  "historical_climate_sha256": "c89652d763883aa3f9edb6365def1b0ea7cb53da9dfce3696798c5eed31b99cd",
+  "input_eligibility": {
+    "actual_18h_three_endpoint_paired_variance_and_covariance": null,
+    "asof_forecast_and_actual_frozen_selector_replay": "unavailable in these fixed historical inputs",
+    "direct_nine_state_equipment_receipts": "unavailable in these fixed historical inputs",
+    "empirical_joint_advance_power": null,
+    "historical_18h_route_climate_coverage": "authentic fixed-input recomputation; necessary climate coverage only",
+    "historical_crop_target_and_physical_contributor_identity": "unavailable",
+    "physical_missing_endpoint_bounds": null
+  },
+  "limits": [
+    "Provisional paired scales describe the old 22-hour window, not an empirical 18-hour treatment endpoint.",
+    "Selector proportions, endpoint correlation/effects and completeness are planning assumptions.",
+    "Warm historical climate eligibility does not authenticate crop targets, probe identity or future readiness.",
+    "Deterministic numerical simulations create no blinded study schedule or randomized assignment.",
+    "The winter passive observer remains separate; neither #782 nor physical/launch acceptance is claimed."
+  ],
+  "minimum_power_launch_gate": false,
+  "private_input_sha256": {
+    "climate_bins.csv": "05c96485a34cf3cdce3a2955e62e7ed98580a1e21546162724a285443abce486",
+    "climate_summary.json": "462d19ca78906f53cd72122e50537e3337e1b5a9edfa631d9e51125fcf927c49",
+    "input_presence.txt": "2f9b27713efe3366cdda40b2648b0d404413c3a83e2233eff2f764d176ed3c83"
+  },
+  "provisional_fixed30_simulations": [
+    {
+      "assumed_independent_complete_pair_probability": 0.9995,
+      "repeat_canonical_sha256": "2052e413471173f4ea55802e0e5ee065734682591fbaf88c68a3d19d519424ac",
+      "result": {
+        "complete_all_pairs_probability_model": 0.9851082442083701,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.13776,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.28976,
+          "temperature_corridor_distance_f": 0.98548,
+          "vpd_corridor_distance_kpa": 0.575
+        },
+        "monte_carlo_standard_error": 0.0021797447777205476,
+        "pairs": 30,
+        "repetitions": 25000,
+        "seed": 588640,
+        "simulated_complete_fraction": 0.98552
+      },
+      "two_repetitions_byte_identical": true
+    },
+    {
+      "assumed_independent_complete_pair_probability": 0.99,
+      "repeat_canonical_sha256": "1801fc0b272720b7bf1dd32e7a5daf573ff08416f2ff64da7a4ab821bac8680e",
+      "result": {
+        "complete_all_pairs_probability_model": 0.7397003733882802,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.102,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.21616,
+          "temperature_corridor_distance_f": 0.73952,
+          "vpd_corridor_distance_kpa": 0.43336
+        },
+        "monte_carlo_standard_error": 0.0019141159839466363,
+        "pairs": 30,
+        "repetitions": 25000,
+        "seed": 588640,
+        "simulated_complete_fraction": 0.73956
+      },
+      "two_repetitions_byte_identical": true
+    },
+    {
+      "assumed_independent_complete_pair_probability": 0.95,
+      "repeat_canonical_sha256": "b0ad7f4449ee09ee4386794dddaf4422c2aa8952ebd237f1877c7cb0ff3cb44a",
+      "result": {
+        "complete_all_pairs_probability_model": 0.21463876394293727,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.03004,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.06292,
+          "temperature_corridor_distance_f": 0.21164,
+          "vpd_corridor_distance_kpa": 0.1236
+        },
+        "monte_carlo_standard_error": 0.0010795850758509031,
+        "pairs": 30,
+        "repetitions": 25000,
+        "seed": 588640,
+        "simulated_complete_fraction": 0.21168
+      },
+      "two_repetitions_byte_identical": true
+    }
+  ],
+  "reference_fixed30_reproduced": true,
+  "retention_only_reweighting": [
+    {
+      "absolute_joint_advance_upper_bound_from_retention": 0.9851082442083701,
+      "all_30_pairs_retained_probability": 0.9851082442083701,
+      "assumed_independent_complete_pair_probability": 0.9995,
+      "provisional_model_only_rescaled_joint_power": 0.13776
+    },
+    {
+      "absolute_joint_advance_upper_bound_from_retention": 0.7397003733882802,
+      "all_30_pairs_retained_probability": 0.7397003733882802,
+      "assumed_independent_complete_pair_probability": 0.99,
+      "provisional_model_only_rescaled_joint_power": 0.10344154973533586
+    },
+    {
+      "absolute_joint_advance_upper_bound_from_retention": 0.21463876394293727,
+      "all_30_pairs_retained_probability": 0.21463876394293727,
+      "assumed_independent_complete_pair_probability": 0.95,
+      "provisional_model_only_rescaled_joint_power": 0.030015621424973764
+    }
+  ],
+  "sample_size_chooser_called": false,
+  "schema": "verdify-782-fixed30-source-eligibility-20261012-v1",
+  "scope": "Recomputed immutable historical climate eligibility and provisional fixed-30 planning sensitivity only",
+  "selector_input_presence": {
+    "actual_selector_choices": 0,
+    "empirical_fallback_rate": null,
+    "empirical_profile_mix": null,
+    "historical_asof_forecast_rows": 0,
+    "historical_equipment_receipts": 0,
+    "interpretation": "source absence; zero observed choices does not mean zero fallback",
+    "selector_effect_dilution": null
+  },
+  "source_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "source_sha256": {
+    "planning/execution/2026-10-12/scientific-readiness/reproduce.py": "bb6364580bfb1ee4ddebcf4bdc297651eeaf9b3660955e0635cd643846d88bf5",
+    "research/planner-efficacy/pre_draw_sensitivity.py": "de04c952c71e22a8b1f9ec6d7d6672b582000ddfbf625b789af6a4e54375dcc2",
+    "research/planner-efficacy/protocols/direct-launch-basis-v2.json": "074d7ef29415eea922d59b3ab1596612c0a7966624011b1c29bf477d50964835",
+    "research/planner-efficacy/protocols/planner-switchback-v2-power.json": "43317d4c242746f31e637ec96d43de10db10a54206ffbd4a6d439a94b49a405a",
+    "research/planner-efficacy/protocols/planner-switchback-v2.template.yaml": "a1939e3ec6da6cff6cd63164e3e53272491ca40aa36549c956fc6bdff4b73fce",
+    "research/planner-efficacy/protocols/warm-daily-observer-preparation-v1.json": "a8371a67914d7f8ea328be638b1626e1974f50e1d03a49b75c500376c5c5b78b",
+    "research/planner-efficacy/protocols/warm-predraw-analysis-contract-v1.json": "a4a1a4c7df3e3a4a9b5faf8cd38e5c50cd8a7f7e957586455f9b64256e817164",
+    "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json": "f63dcca480c5413fcd66480e81eb5afb18f4f8395885b4392975cd4eca6d1301",
+    "research/planner-efficacy/switchback/v2_analysis.py": "cab050add9be5ad3ce83605cb12e8ce6bf60fe622679e1c9b830942fd51f207b",
+    "research/planner-efficacy/switchback/v2_day1_export.py": "fbde0051acc67fd3b88c79649e11a5dd8865547c83ea7c3e71fd94574d3c76ad",
+    "research/planner-efficacy/switchback/v2_power.py": "fa39a9157da04a15b899dadea66a4d82b7a365521cf1c48dadede7e8c0c11921",
+    "research/planner-efficacy/switchback/v2_selector.py": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431"
+  },
+  "study_schedule_draws": 0
+}

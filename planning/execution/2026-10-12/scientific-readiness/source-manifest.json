@@ -1,0 +1,31 @@
+{
+  "scope": "selected qualification implementations/tests; research implementation hashes are additionally in fixed30-eligibility.json",
+  "source_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "source_sha256": {
+    "firmware/policy_consumer_manifest.json": "7a01cd245a611c4e7faf4ab7f95020375f4f9df6663644f88ddc10a5d0600807",
+    "firmware/test/data/replay_overrides.csv.gz": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b",
+    "firmware/test/replay_invariants.cpp": "e56a9f41615e8f2b01735cc168a30b17b4a704aefc03b152c231a1d1d06a2005",
+    "ingestor/esp32_push.py": "dd2020ac1df41a3622ab6d516a66ac11662cafde36c72d76251a4dabe6ddf5d1",
+    "ingestor/tasks/component_experiment.py": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+    "research/planner-efficacy/tests/test_pre_draw_sensitivity.py": "b30ddfec9ffc53ad861828a87b9d53c8615f44835f0b08cbcee093b0a4ad72ca",
+    "research/planner-efficacy/tests/test_switchback_v2_day1_export.py": "30af37214ff7b7e2a1f3ea36d517e63e1d2570de58a123f06cb29f4cdf661090",
+    "research/planner-efficacy/tests/test_switchback_v2_design.py": "c3a574bba79a98dc435f0361c6901108f908e9ac0c87690c66736998f620d1a2",
+    "research/planner-efficacy/tests/test_switchback_v2_selector.py": "ab506f740cf54dd3ffdc86799e3fc7af4d3628e6c978b4bf94728b7173340db1",
+    "research/planner-efficacy/tests/test_warm_season_calendar_prereg.py": "119df7f74d110f3a2839c0724a7b996a6b6e5cd659919092c4a6d02237752a4c",
+    "scripts/component_prefix_replay.py": "982242a1f694f55f566e48366cc42d7b899ab91ee163f6d9d5b98ba16d3caa8f",
+    "tests/test_component_experiment_api.py": "37d2b576d6f571557ff9632676f723cc84e19a484756b73ad8b3301623931490",
+    "tests/test_component_experiment_contract.py": "ea107b5c659eb080653b2e704c88f750451802afa3db1bb3986fc976062100a8",
+    "tests/test_component_experiment_executor.py": "ba83d7ff2a2e283e163d0f76d0d84d344cbc96291856e00ed77db1108c091c49",
+    "tests/test_component_experiment_observability.py": "22b2e74486b9507e1b0646dd6d4a6e88d6cd4df49a93a1efb450c52324c456ab",
+    "tests/test_component_experiment_source.py": "699cc742e03ed8c075731d0852c5d6742767e1b23e77b45182594ce81e6405b8",
+    "tests/test_component_experiment_store.py": "517f6226aca1c1f376b36ac2153c66b1ce38389556cf11953352ba5f1df24bf8",
+    "tests/test_component_experiment_writer.py": "1421c5a610ae9388c78ea078e1dfcb39bcbc493e002389acdfa70d80ff1d6bb1",
+    "tests/test_component_prefix_replay.py": "9cd9d19a7893df5d4f8933c2c93f00f84af2b66ac48a948a63b0a88a1a83abb2",
+    "tests/test_device_write_gate.py": "648e2dfce831df3aeb702631ecd7812eef138a3236ff8287e56ff78ba8479da5",
+    "tests/test_experiment_v2_readiness_guard.py": "462c3620cb6c312fc46769bdaa7a357fba1a7561400f89b8f6c975380da626ae",
+    "tests/test_policy_writer_demotion.py": "ad3a2a3ffcec560cf739c0854fc5a15f33be7b8628a9d31d24d028039c68c8a4",
+    "tests/test_writer_lease_fence.py": "53db5d0bd96bde26ca7ab1b908d8f7df5e8f545bc7c8a9d65b5fe5275bc37990",
+    "verdify_schemas/component_executor.py": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575",
+    "verdify_schemas/tunable_registry.py": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+  }
+}
