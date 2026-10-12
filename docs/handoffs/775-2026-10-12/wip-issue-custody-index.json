@@ -1,0 +1,174 @@
+{
+  "campaign_issue": 775,
+  "snapshot_count": 13,
+  "snapshots": [
+    {
+      "original_worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+      "original_head": "e1dd50c1d2c1ec23fe81c1131c3e93139180e81f",
+      "snapshot": "d31e316e73c3656f05aef6293e0865e52ca319b0",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-371-integration-review-20260928",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-371-integration-review-20260928",
+      "source_paths": [
+        "deploy/k8s/components/grafana/generated/dashboards-cm-0.yaml",
+        "grafana/dashboards/site-home.json",
+        "verdify_schemas/views.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Users/jason/repos/verdify-782-gatep-reseal-20260928",
+      "original_head": "eb90085cc27f8028c2c1a069129a5e45a6f32f9b",
+      "snapshot": "c82701509139bcea20158f5e010a25629a29dc34",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-782-gatep-reseal-20260928",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-782-gatep-reseal-20260928",
+      "source_paths": [
+        "scripts/probe-256-rollback-only.py",
+        "scripts/probe-ordinary-boundary-catalog.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Users/jason/repos/verdify-s2-cnpg-20261005",
+      "original_head": "79607ff2e8d218cac81317a0ab94f0cb3b863eee",
+      "snapshot": "b0b6b6087a005009ec5f9eed09ac6f9f5608dca5",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-s2-cnpg-20261005",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-s2-cnpg-20261005",
+      "source_paths": [
+        "scripts/cnpg-s2-runtime-transition.py",
+        "scripts/cnpg-target-runtime-transition.py",
+        "db/migrations/275-lighting-minutes-policy-bounded-jit.sql"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Users/jason/repos/verdify-s2-iris-20261005",
+      "original_head": "f70e8edba7e2c358611ffe566db22cd739fc1a3f",
+      "snapshot": "93cf537fd3d9f3f28e72cfe7daad47a8b2cb132f",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-s2-iris-20261005",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-s2-iris-20261005",
+      "source_paths": [
+        "db/migrations/276-lighting-snapshot-indexed-latest.sql"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+      "original_head": "d665c67ae4b6c763859415c55bd44ea2efc97000",
+      "snapshot": "59b0393db7b60f45eb20118f3c674d853464617b",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-396-cnpg-current-storage-20261001",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-396-cnpg-current-storage-20261001",
+      "source_paths": [
+        "deploy/k8s/cnpg/docs/PROD-CNPG-MIGRATION-RUNBOOK.md",
+        "deploy/k8s/cnpg/image/Dockerfile",
+        "scripts/ci-local.sh",
+        "docs/runbooks/cnpg-alongside-rehearsal.md",
+        "scripts/render-cnpg-rehearsal.py",
+        "tests/test_cnpg_rehearsal.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-644-promotion-receipt-20260930",
+      "original_head": "a6ed0105bd836625dc1c364b56c7e84e8014d9a9",
+      "snapshot": "4809678a4cbe78130c94b45c68b279d2f705b443",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-644-promotion-receipt-20260930",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-644-promotion-receipt-20260930",
+      "source_paths": [
+        "SOURCE-RECEIPT.md",
+        "uv.lock"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-c1-consumer-manifest-20260930",
+      "original_head": "f8680a07695d882ae06788e030d1014740fa2249",
+      "snapshot": "88195485270e59b93d3ad7761894172db00fd62f",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-c1-consumer-manifest-20260930",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-c1-consumer-manifest-20260930",
+      "source_paths": [
+        "firmware/policy_consumer_manifest.json"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+      "original_head": "86e07ee4aac04a748267dd4fae3b8124f48a9aab",
+      "snapshot": "2e81047bc60d928aea48340c30f4e43c15031700",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-climate-intent-grid-20260929",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-climate-intent-grid-20260929",
+      "source_paths": [
+        "ingestor/tasks/dispatcher.py",
+        "tests/test_05_dispatcher.py",
+        "verdify_schemas/climate_intent.py",
+        "verdify_schemas/component_executor.py",
+        "verdify_schemas/tests/test_climate_intent.py",
+        "verdify_schemas/entity_grid.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+      "original_head": "df591af33570d1077bf19cd92305e85bc99258c5",
+      "snapshot": "bfd1f1be5d112eb176f7fd9df8ff7057576b3138",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-cnpg-band-time-projection-20261002",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-cnpg-band-time-projection-20261002",
+      "source_paths": [
+        "scripts/cnpg-physical-runtime-transition.py",
+        "tests/test_cnpg_physical_runtime_transition.py",
+        "scripts/cnpg-band-trace-time-projection.py",
+        "tests/fixtures/cnpg_band_trace_time_projection/source-native-properties.json"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-cnpg-existing-target-recovery-20261001",
+      "original_head": "7acce17d947a0fb6436f5da1882a299b9920a267",
+      "snapshot": "026b9b2766950c1372eb97b6f56b9dbca70a0251",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-cnpg-existing-target-recovery-20261001",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-cnpg-existing-target-recovery-20261001",
+      "source_paths": [
+        "scripts/cnpg-existing-target-recovery.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+      "original_head": "e3ee6c813072605206f25f1c205bb30af98db4ec",
+      "snapshot": "6d58d8ec2e7f3668e7bf71ae4ba59f1db428ce86",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-cnpg-physical-runtime-profile-20261001",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-cnpg-physical-runtime-profile-20261001",
+      "source_paths": [
+        "scripts/cnpg-target-runtime-transition.py",
+        "docs/runbooks/cnpg/physical-runtime-admission.md",
+        "scripts/cnpg-physical-runtime-transition.py",
+        "tests/test_cnpg_physical_runtime_transition.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+      "original_head": "efaa4b677034bb759563b0bfb44723030f83a326",
+      "snapshot": "992d506f3b4c6ce280379c3079f6bf939e4ad96b",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-irrigation-source-audit-20261002",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-irrigation-source-audit-20261002",
+      "source_paths": [
+        "firmware/greenhouse/controls.yaml",
+        "firmware/greenhouse/hardware.yaml",
+        "scripts/ci-local.sh",
+        "tests/test_irrigation_stop_edges.py"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    },
+    {
+      "original_worktree": "/Volumes/Work/Codex/verdify-sso-rollback-proof-20261001",
+      "original_head": "b3b68e378a953b45ce41ca088bdc9fd9792daa01",
+      "snapshot": "99ea1811b44bc5df1f54c7164231c0e8944310f2",
+      "custody_branch": "in-progress/paused-20261012/wip-verdify-sso-rollback-proof-20261001",
+      "github_url": "https://github.com/VerdifyConsultancy/verdify-platform/tree/in-progress/paused-20261012/wip-verdify-sso-rollback-proof-20261001",
+      "source_paths": [
+        "deploy/k8s/components/grafana/grafana.yaml"
+      ],
+      "disposition": "Unreviewed historical WIP, preserved only; not merged, deployed or accepted by handoff"
+    }
+  ]
+}

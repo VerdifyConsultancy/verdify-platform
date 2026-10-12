@@ -1,0 +1,75 @@
+{
+  "checked_at": "2026-10-12T15:47:55.786837+00:00",
+  "objective": "Pause all work, capture status, review/update every GitHub item, preserve full context and all incomplete source, prepare shutdown and stop",
+  "requirements": [
+    {
+      "requirement": "Pause implementation/delivery",
+      "status": "PROVED",
+      "evidence": [
+        "final-stop-checkpoint.json",
+        "shutdown-runtime-readback.json"
+      ]
+    },
+    {
+      "requirement": "Full current assigned-scope status and every-item review",
+      "status": "PROVED",
+      "evidence": [
+        "README.md",
+        "ITEMS.md",
+        "item-review.json",
+        "native-dependencies.json",
+        "status-refresh-20261012.json"
+      ],
+      "scope": "91 campaign issues plus7openPRs, including all64openissues"
+    },
+    {
+      "requirement": "Update every reviewed GitHub item directly",
+      "status": "INCOMPLETE",
+      "published_exact": 5,
+      "pending": 93,
+      "evidence": [
+        "item-update-verification.json",
+        "final-five-comment-readback.json",
+        "item-update-queue.json",
+        "item-update-payloads/"
+      ],
+      "blocker": "Global GitHub secondary-content limit; allwritersstopped; nolease"
+    },
+    {
+      "requirement": "Durably preserve complete encrypted operational context in GitHub",
+      "status": "AWAITING ROOT REMOTE PROOF",
+      "evidence": [
+        "custody-assets.json after proof supplied"
+      ],
+      "local_validation": "221678616-byte archive,14293tarentries,decryptPASS"
+    },
+    {
+      "requirement": "Push incomplete source to in-progress custody and reference it",
+      "status": "PROVED FOR ALL KNOWN SOURCE WIP",
+      "evidence": [
+        "source-ref-verification.json",
+        "final-source-custody-readback.json",
+        "WIP-CUSTODY.md",
+        "wip-snapshot-manifest.json"
+      ],
+      "counts": {
+        "remote_refs": 466,
+        "source_heads": 453,
+        "wip_snapshots": 13,
+        "original_wip_files_unchanged": 38
+      },
+      "inspection_limit": "One old iCloud worktree retains dataless placeholders; indexed HEAD and resident bytes verified; no known source delta omitted"
+    },
+    {
+      "requirement": "Stop owned processes; leave production services running",
+      "status": "PROVED AT CAPTURE",
+      "evidence": [
+        "final-stop-checkpoint.json",
+        "shutdown-runtime-readback.json",
+        "owned-process-review.json"
+      ]
+    }
+  ],
+  "overall": "INCOMPLETE; preservation and stopped state established, but direct98itempublication not yet complete",
+  "future_actions": "No implementation resumption; only authorized handoff-publication follow-up after shared hold is released"
+}

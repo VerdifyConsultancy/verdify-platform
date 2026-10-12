@@ -1,5 +1,6 @@
 {
-  "state": "BLOCKED ON SHARED GITHUB CONTENT-WRITE COOLDOWN; await ROOT single writer",
+  "checkpoint_at": "2026-10-12T15:47:09.690466+00:00",
+  "state": "GLOBAL GITHUB API CONTENT STOP; renewed secondary403 at15:43:37Z; no ROOT writer lease",
   "verified": 5,
   "total": 98,
   "remaining": [
@@ -98,6 +99,7 @@
     964
   ],
   "payload_directory": "item-update-payloads",
-  "writer_session": "terminated143 after ROOT global secondary-limit notice; no blind retry",
-  "coverage_review_complete": true
+  "writer_session": "terminated143; no retry/probe or current lease",
+  "coverage_review_complete": true,
+  "resume_condition": "ROOT-authorized coordinated content-write window or explicit Jason follow-up; capacity changes do not resume implementation"
 }

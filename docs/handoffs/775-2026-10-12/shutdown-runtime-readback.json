@@ -1,0 +1,150 @@
+{
+  "observed_at": "2026-10-12T15:38:08.840939+00:00",
+  "verdify_business_workflows": [
+    {
+      "name": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+      "phase": "Failed",
+      "created": "2026-10-11T15:58:33Z"
+    },
+    {
+      "name": "verdify-platform-ci-l2lfz",
+      "phase": "Failed",
+      "created": "2026-10-11T14:45:00Z"
+    },
+    {
+      "name": "verdify-platform-ci-xnbz7",
+      "phase": "Failed",
+      "created": "2026-10-12T00:28:38Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-27gss",
+      "phase": "Succeeded",
+      "created": "2026-10-11T15:47:45Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-4pv5d",
+      "phase": "Failed",
+      "created": "2026-10-11T15:50:31Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-c65wz",
+      "phase": "Succeeded",
+      "created": "2026-10-11T15:37:36Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-g66xj",
+      "phase": "Succeeded",
+      "created": "2026-10-11T17:49:20Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-gkpb4",
+      "phase": "Failed",
+      "created": "2026-10-11T15:56:15Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-hgsxp",
+      "phase": "Succeeded",
+      "created": "2026-10-11T17:34:06Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-jmsfh",
+      "phase": "Succeeded",
+      "created": "2026-10-11T17:12:33Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-km8mw",
+      "phase": "Succeeded",
+      "created": "2026-10-11T16:04:22Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-lnjvh",
+      "phase": "Succeeded",
+      "created": "2026-10-11T17:19:34Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-nscxp",
+      "phase": "Succeeded",
+      "created": "2026-10-12T01:08:54Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-q9xp8",
+      "phase": "Succeeded",
+      "created": "2026-10-11T16:00:14Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-qkwqv",
+      "phase": "Failed",
+      "created": "2026-10-11T17:03:25Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-r7sn4",
+      "phase": "Succeeded",
+      "created": "2026-10-11T23:35:55Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-sbjjq",
+      "phase": "Succeeded",
+      "created": "2026-10-11T15:50:32Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-tmmdn",
+      "phase": "Succeeded",
+      "created": "2026-10-11T15:31:07Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-vfd2d",
+      "phase": "Failed",
+      "created": "2026-10-12T00:26:29Z"
+    }
+  ],
+  "active_business_workflows": [],
+  "production_readback": "Synced Healthy b5bdb3c65b243c230b7864fa81b95f926b2e68ff Succeeded",
+  "open_pr_auto_merge_capture": [
+    {
+      "number": 774,
+      "auto_merge": null,
+      "head": "1a6d64e853a861d4c4bd24f4cfc5f51a15f137b4",
+      "unmerged": true
+    },
+    {
+      "number": 855,
+      "auto_merge": null,
+      "head": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+      "unmerged": true
+    },
+    {
+      "number": 968,
+      "auto_merge": null,
+      "head": "4ceb6dcc47997be3cfa0c14db7d169e61f793d3d",
+      "unmerged": true
+    },
+    {
+      "number": 969,
+      "auto_merge": null,
+      "head": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+      "unmerged": true
+    },
+    {
+      "number": 970,
+      "auto_merge": null,
+      "head": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+      "unmerged": true
+    },
+    {
+      "number": 971,
+      "auto_merge": null,
+      "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+      "unmerged": true
+    },
+    {
+      "number": 973,
+      "auto_merge": null,
+      "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+      "unmerged": true
+    }
+  ],
+  "comment_writer": "terminated143, no remaining writer; awaiting ROOT single-writer release",
+  "source_worktree_changes": "none to originals;38WIP source files checked unchanged",
+  "production_shutdown": "not requested; services/sensors left running",
+  "cleanup": "no deletion/prune/restart/force detach"
+}
