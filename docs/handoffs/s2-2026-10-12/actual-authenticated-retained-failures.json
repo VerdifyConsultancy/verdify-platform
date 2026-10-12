@@ -1,0 +1,150 @@
+[
+  {
+    "duty": "planner-admission-refused",
+    "jobName": "verdify-s2-integration-duty-planner-20261012",
+    "jobUid": "b55c08d9-6994-404c-9d74-cd0bd1f49658",
+    "status": {
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-12T19:12:48Z",
+          "lastTransitionTime": "2026-10-12T19:12:48Z",
+          "message": "Job was active longer than specified deadline",
+          "reason": "DeadlineExceeded",
+          "status": "True",
+          "type": "FailureTarget"
+        },
+        {
+          "lastProbeTime": "2026-10-12T19:12:48Z",
+          "lastTransitionTime": "2026-10-12T19:12:48Z",
+          "message": "Job was active longer than specified deadline",
+          "reason": "DeadlineExceeded",
+          "status": "True",
+          "type": "Failed"
+        }
+      ],
+      "ready": 0,
+      "startTime": "2026-10-12T19:09:48Z",
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "receiptSha256": "62b44741832bbf4a28a397dac84471a52b8d9421d66baf46232e1dfce40ab91c",
+    "retainedPrivateAttempt": "/private/tmp/verdify-replan-20261012/contained-recovery/actual-target/ordinary-duty-jobs/planner-admission-refused",
+    "admittedPods": 0
+  },
+  {
+    "duty": "lifecycle",
+    "jobName": "verdify-v2-readonly-lifecycle-20261012",
+    "jobUid": "462f5c28-f270-4277-b2ca-33d397dd4f8e",
+    "status": {
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-12T19:16:16Z",
+          "lastTransitionTime": "2026-10-12T19:16:16Z",
+          "message": "Job has reached the specified backoff limit",
+          "reason": "BackoffLimitExceeded",
+          "status": "True",
+          "type": "FailureTarget"
+        },
+        {
+          "lastProbeTime": "2026-10-12T19:16:16Z",
+          "lastTransitionTime": "2026-10-12T19:16:16Z",
+          "message": "Job has reached the specified backoff limit",
+          "reason": "BackoffLimitExceeded",
+          "status": "True",
+          "type": "Failed"
+        }
+      ],
+      "failed": 1,
+      "ready": 0,
+      "startTime": "2026-10-12T19:16:08Z",
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "receiptSha256": "bd6eaea000f093b91b48c059162da52c2bcf7177b71a08c9005e8159e6df3b0d",
+    "retainedPrivateAttempt": "/private/tmp/verdify-replan-20261012/contained-recovery/actual-target/scientific-readonly-jobs/lifecycle",
+    "pod": {
+      "name": "verdify-v2-readonly-lifecycle-20261012-vxft4",
+      "uid": "2972fef0-4daa-459b-934b-48c65d3dbc81",
+      "ownerReferences": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Job",
+          "name": "verdify-v2-readonly-lifecycle-20261012",
+          "uid": "462f5c28-f270-4277-b2ca-33d397dd4f8e"
+        }
+      ],
+      "containerStatuses": [
+        {
+          "allocatedResources": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          },
+          "containerID": "containerd://5338a4a4388d6f473623a5f03792bf426debfc49cbfbdb66f5fbeddf754eaa20",
+          "image": "sha256:9d1c8b9a085a0e8e54dba22e161d461c833c994dede9d4a87fe42731d83a9d52",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "lastState": {},
+          "name": "readonly-consumer",
+          "ready": false,
+          "resources": {
+            "limits": {
+              "cpu": "1",
+              "memory": "512Mi"
+            },
+            "requests": {
+              "cpu": "100m",
+              "memory": "128Mi"
+            }
+          },
+          "restartCount": 0,
+          "started": false,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://5338a4a4388d6f473623a5f03792bf426debfc49cbfbdb66f5fbeddf754eaa20",
+              "exitCode": 1,
+              "finishedAt": "2026-10-12T19:16:13Z",
+              "reason": "Error",
+              "startedAt": "2026-10-12T19:16:09Z"
+            }
+          },
+          "user": {
+            "linux": {
+              "gid": 1000,
+              "supplementalGroups": [
+                1000
+              ],
+              "uid": 1000
+            }
+          },
+          "volumeMounts": [
+            {
+              "mountPath": "/qualification/packet",
+              "name": "packet",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            },
+            {
+              "mountPath": "/qualification/custody",
+              "name": "custody",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            },
+            {
+              "mountPath": "/app/main.py",
+              "name": "source-overlay",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            },
+            {
+              "mountPath": "/app/verdify_schemas/telemetry.py",
+              "name": "source-overlay",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

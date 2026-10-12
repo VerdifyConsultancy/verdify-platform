@@ -1,0 +1,9 @@
+{
+  "jobUid": "b55c08d9-6994-404c-9d74-cd0bd1f49658",
+  "actualPods": 0,
+  "sqlExecuted": false,
+  "credentialConsumed": false,
+  "qualified": false,
+  "reason": "PodSecurity restricted:latest runAsNonRoot missing",
+  "correction": "same source/fixture/image/credentials; explicit non-root UID/GID1000 on distinct restricted Job name"
+}

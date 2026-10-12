@@ -1,0 +1,325 @@
+{
+  "capturedAt": "2026-10-12T19:33:22.542589+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "phase": "Cluster in healthy state",
+  "readyInstances": 3,
+  "currentPrimary": "verdify-cnpg-s2-integration-1",
+  "pods": [
+    {
+      "name": "verdify-cnpg-s2-integration-1",
+      "uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "conditions": [
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:04Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodReadyToStartContainers"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:04Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Initialized"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:13Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:13Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "ContainersReady"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:34:56Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodScheduled"
+        }
+      ],
+      "containers": [
+        {
+          "name": "postgres",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        }
+      ]
+    },
+    {
+      "name": "verdify-cnpg-s2-integration-2",
+      "uid": "81790e3e-7f0a-4655-9595-83bf2c95f635",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "conditions": [
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:37:04Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodReadyToStartContainers"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:37:05Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Initialized"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:37:14Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:37:14Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "ContainersReady"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:37:01Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodScheduled"
+        }
+      ],
+      "containers": [
+        {
+          "name": "postgres",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        }
+      ]
+    },
+    {
+      "name": "verdify-cnpg-s2-integration-3",
+      "uid": "53a071c6-0889-4b04-8c94-714ad98f9d7b",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "conditions": [
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:38:18Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodReadyToStartContainers"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:38:19Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Initialized"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:38:27Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:38:27Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "ContainersReady"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:38:10Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodScheduled"
+        }
+      ],
+      "containers": [
+        {
+          "name": "postgres",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        }
+      ]
+    }
+  ],
+  "storage": [
+    {
+      "pvc": "verdify-cnpg-s2-integration-1",
+      "pvcUid": "5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+      "pv": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+      "pvUid": "9f82644a-3658-4480-a535-d6bdf1a54b4a",
+      "phase": "Bound",
+      "storage": "20Gi",
+      "longhornUid": "9573f600-48dd-4238-b8aa-7a46f2becf49",
+      "robustness": "healthy",
+      "replicas": 2
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-1-wal",
+      "pvcUid": "8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+      "pv": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+      "pvUid": "4e9d2192-0f6f-4b8e-8341-02e002e4d389",
+      "phase": "Bound",
+      "storage": "5Gi",
+      "longhornUid": "2961da22-0ba0-4856-8815-580163e7c1a9",
+      "robustness": "healthy",
+      "replicas": 2
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-2",
+      "pvcUid": "4975744d-876f-4f2a-8b44-2ff908ea0431",
+      "pv": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+      "pvUid": "1f723520-f858-4134-9ba5-6c7be7b87012",
+      "phase": "Bound",
+      "storage": "20Gi",
+      "longhornUid": "49174bfd-645b-4723-a405-cd6c26f3bd81",
+      "robustness": "healthy",
+      "replicas": 2
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-2-wal",
+      "pvcUid": "428fa291-e672-44c6-8d44-1b0980dfbcdf",
+      "pv": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+      "pvUid": "f9ff34e4-7907-4243-91d3-87bdbfe82e44",
+      "phase": "Bound",
+      "storage": "5Gi",
+      "longhornUid": "e749ed7e-522b-486e-b1f3-31664571bfa0",
+      "robustness": "healthy",
+      "replicas": 2
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-3",
+      "pvcUid": "6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+      "pv": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+      "pvUid": "455870f3-5c7c-4dec-9e41-28c110c8b918",
+      "phase": "Bound",
+      "storage": "20Gi",
+      "longhornUid": "287f8539-cda4-4c82-8697-8284801aa8de",
+      "robustness": "healthy",
+      "replicas": 2
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-3-wal",
+      "pvcUid": "463e7de8-3eaa-4d05-904c-f84f6455e531",
+      "pv": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+      "pvUid": "b9755702-ab66-4b1c-88ed-f02c1ba107d3",
+      "phase": "Bound",
+      "storage": "5Gi",
+      "longhornUid": "124e706a-7035-411d-a28e-8eaab3a4578e",
+      "robustness": "healthy",
+      "replicas": 2
+    }
+  ],
+  "temporaryJobsAndPodsAndConfigMapsAbsent": true,
+  "temporarySecretDeletionProof": "exact UID-precondition DELETE Status receipts; no Secret GET/LIST",
+  "clustersPresent": [
+    {
+      "name": "verdify-cnpg-s2-integration",
+      "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+    }
+  ],
+  "argo": {
+    "applicationUid": "97ff0f52-2691-4f07-9184-591d936e3a05",
+    "source": {
+      "path": "deploy/k8s/cnpg/rehearsal/cluster",
+      "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+      "targetRevision": "main"
+    },
+    "syncPolicy": {
+      "automated": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "syncOptions": [
+        "CreateNamespace=false",
+        "ServerSideApply=true"
+      ]
+    },
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "verdify-db-rehearsal",
+          "server": "https://kubernetes.default.svc"
+        },
+        "source": {
+          "path": "deploy/k8s/cnpg/rehearsal/cluster",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "status": "OutOfSync"
+    },
+    "health": {
+      "lastTransitionTime": "2026-10-12T18:38:29Z",
+      "status": "Healthy"
+    },
+    "operationPhase": "Succeeded",
+    "operationRevision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "operationResources": [
+      {
+        "group": "networking.k8s.io",
+        "hookPhase": "Running",
+        "kind": "NetworkPolicy",
+        "message": "networkpolicy.networking.k8s.io/cnpg-s2-integration-runtime-client-ingress created",
+        "name": "cnpg-s2-integration-runtime-client-ingress",
+        "namespace": "verdify-db-rehearsal",
+        "status": "Synced",
+        "syncPhase": "Sync",
+        "version": "v1"
+      },
+      {
+        "group": "networking.k8s.io",
+        "hookPhase": "Running",
+        "kind": "NetworkPolicy",
+        "message": "networkpolicy.networking.k8s.io/cnpg-s2-integration-runtime-client-only created",
+        "name": "cnpg-s2-integration-runtime-client-only",
+        "namespace": "verdify-db-rehearsal",
+        "status": "Synced",
+        "syncPhase": "Sync",
+        "version": "v1"
+      },
+      {
+        "group": "barmancloud.cnpg.io",
+        "hookPhase": "Running",
+        "kind": "ObjectStore",
+        "message": "objectstore.barmancloud.cnpg.io/verdify-cnpg-pitr-reader configured. Warning: resource objectstores/verdify-cnpg-pitr-reader is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by  apply.  apply should only be used on resources created declaratively by either  create --save-config or  apply. The missing annotation will be patched automatically.",
+        "name": "verdify-cnpg-pitr-reader",
+        "namespace": "verdify-db-rehearsal",
+        "status": "Synced",
+        "syncPhase": "Sync",
+        "version": "v1"
+      },
+      {
+        "group": "postgresql.cnpg.io",
+        "hookPhase": "Running",
+        "kind": "Cluster",
+        "message": "cluster.postgresql.cnpg.io/verdify-cnpg-s2-integration created",
+        "name": "verdify-cnpg-s2-integration",
+        "namespace": "verdify-db-rehearsal",
+        "status": "Synced",
+        "syncPhase": "Sync",
+        "version": "v1"
+      }
+    ],
+    "operationActive": false
+  }
+}

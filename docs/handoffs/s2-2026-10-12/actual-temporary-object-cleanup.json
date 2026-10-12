@@ -1,0 +1,183 @@
+{
+  "startedAt": "2026-10-12T19:27:24.790222+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "objects": [
+    {
+      "kind": "Secret",
+      "name": "verdify-cnpg-s2-integration-duty-auth-20261012",
+      "uid": "adef611d-be1c-44f8-a503-ae129dd66bcc",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "adef611d-be1c-44f8-a503-ae129dd66bcc",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Secret",
+      "name": "verdify-cnpg-s2-v2-qualification-auth",
+      "uid": "8bd68776-c0f7-49e3-86ed-f0e71be4c009",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "8bd68776-c0f7-49e3-86ed-f0e71be4c009",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-vision-restricted-20261012",
+      "uid": "1d92fda3-b071-435a-a373-dc0fbc3a0376",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "1d92fda3-b071-435a-a373-dc0fbc3a0376",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-ha-backfill-restricted-20261012",
+      "uid": "2bac15ee-7371-457d-9df2-4dc64b30b92b",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "2bac15ee-7371-457d-9df2-4dc64b30b92b",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-planner-restricted-20261012",
+      "uid": "6bf41ef9-d73f-45f6-b7a5-11e37415a881",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "6bf41ef9-d73f-45f6-b7a5-11e37415a881",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-setpoint-server-restricted-20261012",
+      "uid": "34f965d0-91c4-4a94-a7cc-fa31a206c3c1",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "34f965d0-91c4-4a94-a7cc-fa31a206c3c1",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-planner-20261012",
+      "uid": "b55c08d9-6994-404c-9d74-cd0bd1f49658",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "b55c08d9-6994-404c-9d74-cd0bd1f49658",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-grafana-restricted-20261012",
+      "uid": "065d1cca-e048-4eb9-b972-ff5ac3103580",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "065d1cca-e048-4eb9-b972-ff5ac3103580",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-integration-duty-lab-publisher-restricted-20261012",
+      "uid": "541d5688-d198-44aa-804b-03f729dc3abc",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "541d5688-d198-44aa-804b-03f729dc3abc",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-v2-readonly-lifecycle-20261012",
+      "uid": "462f5c28-f270-4277-b2ca-33d397dd4f8e",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "462f5c28-f270-4277-b2ca-33d397dd4f8e",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-v2-readonly-lifecycle-transport-20261012",
+      "uid": "09d46aa8-707f-4d0a-b298-eef831c9bec5",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "09d46aa8-707f-4d0a-b298-eef831c9bec5",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-v2-readonly-executor-20261012",
+      "uid": "28a71cdb-9b74-4ebc-b582-9f50df9da53b",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "28a71cdb-9b74-4ebc-b582-9f50df9da53b",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-cnpg-s2-duty-packet-20261012",
+      "uid": "a62b810d-a150-42d2-8016-84e0bb472727",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "a62b810d-a150-42d2-8016-84e0bb472727",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-v2-executor-source-3d9f31e8",
+      "uid": "18be1421-2ef4-446d-888a-a89dfe2f1cf1",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "18be1421-2ef4-446d-888a-a89dfe2f1cf1",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-v2-lifecycle-source-3d9f31e8",
+      "uid": "6669a3f5-8a67-421d-a332-caf1679cbcb5",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "6669a3f5-8a67-421d-a332-caf1679cbcb5",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-cnpg-s2-v2-readonly-packet-a0322582",
+      "uid": "5c032512-3cb0-4941-9892-bd14102278cd",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "5c032512-3cb0-4941-9892-bd14102278cd",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-cnpg-s2-integration-qualification-custody-20261012",
+      "uid": "586372fa-9b44-4128-b943-31752e1f3621",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "586372fa-9b44-4128-b943-31752e1f3621",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-cnpg-s2-v2-readonly-transport-a88966d1",
+      "uid": "14acb4fe-8cba-46a6-ac0f-a8402330d535",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "14acb4fe-8cba-46a6-ac0f-a8402330d535",
+      "uidPrecondition": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-cnpg-s2-v2-ready-custody-20261012",
+      "uid": "8463936a-b05d-4b39-93d3-3169a52ce025",
+      "deleteSucceeded": true,
+      "returnedKind": "Status",
+      "returnedUid": "8463936a-b05d-4b39-93d3-3169a52ce025",
+      "uidPrecondition": true
+    }
+  ],
+  "uidPreconditionForEveryDeletion": true,
+  "productionTouched": false,
+  "secretGETOrLISTPerformed": false,
+  "credentialValuesRecorded": false,
+  "finishedAt": "2026-10-12T19:27:26.288710+00:00",
+  "deletedObjectCount": 19
+}

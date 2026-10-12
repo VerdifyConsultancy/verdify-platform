@@ -1,0 +1,16 @@
+{
+  "stage": "password-null",
+  "startedAt": "2026-10-12T19:26:53.874501+00:00",
+  "finishedAt": "2026-10-12T19:26:54.132475+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "sourceSha256": "8ea66a1a4b49a46718652f020564cec6569eca69735b0c4f5e612de8d74b9dfc",
+  "exitCode": 0,
+  "stdoutSha256": "faa2e85482dc3e6859206529463b47d3fd4804c9de78ac1c6f645cc12b6ced9f",
+  "stderrBytes": 0,
+  "credentialValuesEmitted": false,
+  "productionTouched": false,
+  "grantOrMembershipChanges": false
+}

@@ -1,0 +1,79 @@
+{
+  "bytecode": "probe selects an absent read-only-packet cache prefix and disables bytecode writes before consumer imports",
+  "cleanup": "sole recovery owner deletes only recorded task-created ConfigMap UIDs after exact two-role inverse and before952/77/42reseal",
+  "overlays": [
+    {
+      "actual_creation_or_target_connection_performed": false,
+      "cached_imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+      "configMap_name": "verdify-v2-executor-source-3d9f31e8",
+      "duty": "executor",
+      "files": [
+        {
+          "bytes": 32355,
+          "key": "entity_map.py",
+          "logical_source": "ingestor/entity_map.py",
+          "mount_path": "/app/ingestor/entity_map.py",
+          "mount_read_only": true,
+          "mount_subPath": "entity_map.py",
+          "sha256": "24b29cfcdd155feeb5c4512c7173b849262da3c0564038c1c86ac3e83f168bb7"
+        },
+        {
+          "bytes": 24625,
+          "key": "telemetry.py",
+          "logical_source": "verdify_schemas/telemetry.py",
+          "mount_path": "/app/verdify_schemas/telemetry.py",
+          "mount_read_only": true,
+          "mount_subPath": "telemetry.py",
+          "sha256": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816"
+        }
+      ],
+      "immutable": true,
+      "manifest": "source-overlay-executor.configmap.json.gz",
+      "manifest_gzip_sha256": "2bf0f863c96612ee2b60c72da1420303b56f5fdf8f2dcc5c998fbe0f743ab596",
+      "manifest_uncompressed_bytes": 63787,
+      "manifest_uncompressed_sha256": "ca1da5ffd9c610a6cd98c8a187c64939ce649e853b999d4bc3abfe0d4fa7cf5b",
+      "namespace": "verdify-db-rehearsal",
+      "source_guard_expected_dependency_files": 37
+    },
+    {
+      "actual_creation_or_target_connection_performed": false,
+      "cached_imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "configMap_name": "verdify-v2-lifecycle-source-3d9f31e8",
+      "duty": "lifecycle",
+      "files": [
+        {
+          "bytes": 277528,
+          "key": "main.py",
+          "logical_source": "api/main.py",
+          "mount_path": "/app/main.py",
+          "mount_read_only": true,
+          "mount_subPath": "main.py",
+          "sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94"
+        },
+        {
+          "bytes": 24625,
+          "key": "telemetry.py",
+          "logical_source": "verdify_schemas/telemetry.py",
+          "mount_path": "/app/verdify_schemas/telemetry.py",
+          "mount_read_only": true,
+          "mount_subPath": "telemetry.py",
+          "sha256": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816"
+        }
+      ],
+      "immutable": true,
+      "manifest": "source-overlay-lifecycle.configmap.json.gz",
+      "manifest_gzip_sha256": "dcb14bdc3f72c8fbbcbbf481c53bffe27f5494e6b569231928ef9f1972826303",
+      "manifest_uncompressed_bytes": 317672,
+      "manifest_uncompressed_sha256": "ad25c6c75ff8bec6435ab6a805f633f1603d56cad6b26fc25817a5032b74c84f",
+      "namespace": "verdify-db-rehearsal",
+      "source_guard_expected_dependency_files": 36
+    }
+  ],
+  "owner_only_serialized_stage": true,
+  "packet_must_be_read_only": true,
+  "schema": "verdify-frozen-consumer-source-overlays-v1",
+  "scope": "bounded SQL seam only; does not turn cached production images into frozen973 production delivery",
+  "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "status": "prepared-not-created",
+  "target": "verdify-cnpg-s2-integration"
+}

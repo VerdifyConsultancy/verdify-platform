@@ -1,0 +1,64 @@
+{
+  "startedAt": "2026-10-12T19:08:35.626767+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "admissionRecordSha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "guardSha256": "5295aeeae37e6db41ae73edad6f2e532f8f4578fb3cde71df15c63dbc52174f8",
+  "inverseSha256": "8ea66a1a4b49a46718652f020564cec6569eca69735b0c4f5e612de8d74b9dfc",
+  "startingLogin": true,
+  "startingPasswordIsNull": true,
+  "roleNames": [
+    "verdify_planner_runtime_login",
+    "verdify_setpoint_server_runtime_login",
+    "verdify_ha_backfill_runtime_login",
+    "verdify_vision_runtime_login",
+    "verdify_lab_publisher_runtime_login",
+    "verdify_grafana_runtime_login",
+    "verdify_experiment_v2_component_executor_login",
+    "verdify_experiment_v2_lifecycle_login"
+  ],
+  "secrets": [
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-integration-duty-auth-20261012",
+      "uid": "adef611d-be1c-44f8-a503-ae129dd66bcc",
+      "keys": [
+        "planner",
+        "setpoint_server",
+        "ha_backfill",
+        "vision",
+        "lab_publisher",
+        "grafana"
+      ],
+      "immutable": true,
+      "lastAppliedAnnotation": false
+    },
+    {
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-v2-qualification-auth",
+      "uid": "8bd68776-c0f7-49e3-86ed-f0e71be4c009",
+      "keys": [
+        "executor",
+        "lifecycle"
+      ],
+      "immutable": true,
+      "lastAppliedAnnotation": false
+    }
+  ],
+  "productionCredentialsReadOrChanged": false,
+  "grantOrMembershipChanges": false,
+  "credentialValuesExported": false,
+  "passwordsProvisioned": true,
+  "inverse": "exact same eight existing LOGINs, PASSWORD NULL; preserve LOGIN true and every existing grant/membership",
+  "setter": {
+    "exitCode": 0,
+    "eightPasswordOnlySettersCommitted": true,
+    "credentialValuesEmitted": false,
+    "grantsChanged": false,
+    "sessionQueryAndErrorParameterLoggingDisabled": true
+  },
+  "finishedAt": "2026-10-12T19:08:36.823505+00:00"
+}

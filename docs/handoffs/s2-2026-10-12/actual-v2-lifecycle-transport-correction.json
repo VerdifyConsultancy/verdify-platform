@@ -1,0 +1,74 @@
+{
+  "consumer_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "diagnosis": {
+    "product_source_grants_credentials_algorithms_changed": false,
+    "readiness_is_authentication": false,
+    "smallest_correction": "Await the existing frozen binding.wait_target_transport(HOST) after actual binding checks and before password read. Its default deadline is ten seconds, TCP only; the authenticated connect remains single-shot.",
+    "source_observation": "Probe had one immediate asyncpg.connect to the fixed integration host. The API startup/lifespan is not called; the status consumer uses the pinned connection and wraps SQL exceptions as HTTPException.",
+    "supported_inference": "The uncaught ConnectionRefusedError is consistent with the initial fixed-host transport connection. It does not establish the underlying network-policy/startup cause."
+  },
+  "failed_attempt": {
+    "Job_UID": "462f5c28-f270-4277-b2ca-33d397dd4f8e",
+    "Pod_UID": "2972fef0-4daa-459b-934b-48c65d3dbc81",
+    "preserved": true,
+    "receipt": {
+      "actual_target_qualified": false,
+      "error_type": "ConnectionRefusedError",
+      "passed": false
+    },
+    "receipt_sha256": "bd6eaea000f093b91b48c059162da52c2bcf7177b71a08c9005e8159e6df3b0d",
+    "reexecuted": false
+  },
+  "focused_regression": {
+    "command": "PYTHONPATH=.:ingestor VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest planning/execution/2026-10-12/actual-target-qualification/test_probe.py -q -k \"transport or transaction_start\"",
+    "errors": 0,
+    "failures": 0,
+    "fixture_only_no_target_credit": true,
+    "junit_xml_sha256": "e7bd312bda99ed21c4a1774654a98bc1c22bf7d6cdd96ebd189124ddb58a00d8",
+    "ruff_check": "passed",
+    "skipped": 0,
+    "tests": 5
+  },
+  "job": {
+    "backoffLimit": 0,
+    "fresh_owner_custody_configMap": "verdify-cnpg-s2-v2-ready-custody-20261012",
+    "fresh_owner_release_required": "bind new packet/probe SHA256 and parent release e966d477724277182802755d9a5339dc442239b040c39772cfc19a8cf503a9d8 with the same actual native identity; owner creates immutable release, not packet lane",
+    "manifest": "job-lifecycle-transport.prepared.json",
+    "manifest_sha256": "d03c63a38d0d6580be63a7d10a564d4c749fc2e81c619c1d42a5b66941888760",
+    "name": "verdify-v2-readonly-lifecycle-transport-20261012",
+    "same_exact_custody_and_target_only_secret": false,
+    "same_exact_target_only_secret": true,
+    "source_overlay_unchanged": "verdify-v2-lifecycle-source-3d9f31e8",
+    "submitted": false
+  },
+  "limits": [
+    "no target call from packet lane",
+    "no actual SQL/LOGIN success inferred from TCP readiness",
+    "no HTTP/ASGI/authentication-route proof",
+    "27/48 UNPROVEN; physical and full behavioral acceptance remain unproved"
+  ],
+  "owner_sequence": [
+    "preserve failed attempt",
+    "refresh same native identity/custody and verify new immutable payload hashes",
+    "owner creates new packet CM and one new serial lifecycle Job in existing credential window",
+    "capture exact UID/image/receipt even on failure; no further automatic retry",
+    "perform exact NULL-password and five-sequence inverse, independent whole952/77/42 reseal"
+  ],
+  "runtime_packet_configMap": {
+    "files": {
+      "frozen-target-binding.py": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
+      "import-manifest.json": "e43f880c5874f990a27f57382fe1f457fab4935236365020953c8c50eb606713",
+      "probe.py": "a88966d10273ac7b3d1797af98e243437c81b4d25f16f1cf878513b0f8e15c13",
+      "source-hashes.json": "ae9c3ce97ca5b03e24926a648c83b48475d307a3246c43444dc8c990579a9ce8"
+    },
+    "immutable": true,
+    "manifest": "runtime-packet-transport.configmap.json.gz",
+    "manifest_gzip_sha256": "5917c52b9d68a0cde820089d22fc10d0c9a63578895eba0950ef42737c6fa180",
+    "manifest_uncompressed_bytes": 43652,
+    "manifest_uncompressed_sha256": "03567e5f5d7e187b63c678476ca26a197f4fca984d4cf6f5cb865be869c43c8c",
+    "name": "verdify-cnpg-s2-v2-readonly-transport-a88966d1",
+    "namespace": "verdify-db-rehearsal"
+  },
+  "schema": "verdify-contained-lifecycle-transport-correction-v1",
+  "state": "prepared-not-submitted-owner-only-single-guarded-retry"
+}

@@ -1,0 +1,16 @@
+{
+  "stage": "sequences",
+  "startedAt": "2026-10-12T19:27:21.481024+00:00",
+  "finishedAt": "2026-10-12T19:27:21.779022+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "sourceSha256": "f7f2cf2778b4ed277874f6cf97ad6515a0fe897c0d48b55f7400a2c02b85596e",
+  "exitCode": 0,
+  "stdoutSha256": "faa2e85482dc3e6859206529463b47d3fd4804c9de78ac1c6f645cc12b6ced9f",
+  "stderrBytes": 0,
+  "credentialValuesEmitted": false,
+  "productionTouched": false,
+  "grantOrMembershipChanges": false
+}

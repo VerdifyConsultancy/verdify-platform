@@ -1,0 +1,102 @@
+{
+  "kind": "clone-auth-preflight",
+  "roles": [
+    {
+      "name": "verdify_experiment_v2_component_executor_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_experiment_component_executor",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_experiment_v2_lifecycle_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_experiment_lifecycle",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_grafana_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_grafana_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_ha_backfill_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_ha_backfill_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_lab_publisher_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_lab_publisher_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_planner_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_planner_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_setpoint_server_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_setpoint_server_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    },
+    {
+      "name": "verdify_vision_runtime_login",
+      "can_login": true,
+      "memberships": [
+        {
+          "role": "verdify_vision_runtime",
+          "admin": false
+        }
+      ],
+      "password_is_null": true
+    }
+  ],
+  "extensions": [
+    "pgcrypto",
+    "plpgsql",
+    "timescaledb",
+    "vector"
+  ],
+  "database_oid": "16447",
+  "system_identifier": "7693399121498484768",
+  "shared_preload_libraries": "timescaledb,pg_stat_statements"
+}

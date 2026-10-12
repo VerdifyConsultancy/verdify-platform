@@ -1,0 +1,193 @@
+{
+  "admission_sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "cases": [
+    {
+      "error_type": null,
+      "expect": "allowed",
+      "passed": true,
+      "row_count": 1,
+      "sql_sha256": "bad481d8093bda2e0ab28944a51bf1cbb8f5b2742fc22759243aba804a923baa",
+      "sqlstate": null
+    },
+    {
+      "error_type": null,
+      "expect": "allowed",
+      "passed": true,
+      "row_count": 1,
+      "sql_sha256": "849e0d80b63dc86b5377b14490906b0895c8ee488dd4748f4a891d3cce5df09b",
+      "sqlstate": null
+    },
+    {
+      "error_type": null,
+      "expect": "allowed",
+      "passed": true,
+      "row_count": 1,
+      "sql_sha256": "5fd86e5875a247a0c29e29da41b33ae559d41a5908148031821fa0921f756ee6",
+      "sqlstate": null
+    },
+    {
+      "error_type": null,
+      "expect": "allowed",
+      "passed": true,
+      "row_count": 1,
+      "sql_sha256": "32c24fb081d22bc213a99a86bfc67c09276b40b91448c1c5c3d76f652ed299c7",
+      "sqlstate": null
+    },
+    {
+      "error_type": null,
+      "expect": "allowed",
+      "passed": true,
+      "row_count": 1,
+      "sql_sha256": "7309227327373f76d4b9e76f4978935af1e6793b4cde47dbabe96e44d330f0fd",
+      "sqlstate": null
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "dc6ee162e88c3f8d80df5a770bb9896618cc7538bdf2d424ff88a9a41ee95e54",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "969fac0a01b4b0e1a53e6fed05d139a03f5a98975dd484b3e9db2178ed8c9e36",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "13044ead4259dd1994b56c15cf4b44f48887bf8320a5291af55414c820e21938",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "ad4d541fb0d1b3f2ea6a4200fd225edd04eebeb328975191d6cfee4917e3b72d",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "847090f872b8bd32104eb3d6634e2c2f9229688f033b447a5018b272e78ba8f6",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "4dd4bae621b77f3e4b068746721d486c642ab4144f513bec4657927a3f24a6c3",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "b2c0a19ee79fcecb53e004a5361b428ce01705e3cffa40751808088bda117498",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "e9671c676c9ac1c131ee2f90b8f27e9f24704ca3a7f58ea1e9ac75347d32fdd0",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "60727e206e8df38c1aae57d7f883a9d08ac80195ee7bd11d079b2b4ee1bd6980",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "4c24621818e6ffad3e22b3e703de2d9a6d9239456c5a3419f73f2a722ef6d036",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "2ae2b0f14f47da0fea1414a3f46f5d3712408f86e359bbc78d57b9ddb8138daa",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "271bca018522787a0b265980a7a59c0b5342c89083102aacafd3c01efb941ab1",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "17009a9f410d76765fcf10229257db9c19db6cbb3b4cc778e6f4723d935c4752",
+      "sqlstate": "42501"
+    },
+    {
+      "error_type": "InsufficientPrivilegeError",
+      "expect": "42501",
+      "passed": true,
+      "row_count": null,
+      "sql_sha256": "ee8b31f8dcd6939a122c7b1db3924aac5f8ce5b55bb267d4a526d541a574a572",
+      "sqlstate": "42501"
+    }
+  ],
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "complete_case_count": 19,
+  "duty": "vision",
+  "fixture_sha256": "0a98b6fc39a69bb8b5142d17662de216f4bcd753fbf12898feff84dee458a4f6",
+  "identity": {
+    "cluster_name": "verdify-cnpg-s2-integration",
+    "current_database": "verdify_rehearsal",
+    "current_user": "verdify_vision_runtime_login",
+    "database_oid": 16447,
+    "replica": false,
+    "search_path": "verdify_vision_runtime, pg_catalog, public, pg_temp",
+    "server_addr": "10.42.6.178",
+    "server_version_num": "160013",
+    "session_user": "verdify_vision_runtime_login",
+    "transaction_read_only": "off"
+  },
+  "limitations": "Sequence allocation may advance on attempted inserts; owner must compare/restore clone sequence custody. Full application config rollout/rollback and production business health remain separate proofs.",
+  "mutations_committed": false,
+  "native_binding_sha256": "160a6c14011670ce530fd89d607eb9d259c442ff39b28f48640e096d25c93222",
+  "qualified": true,
+  "schema": "verdify-restored-runtime-duty-proof-v1",
+  "transport_attempts": [
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "TimeoutError",
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "TimeoutError",
+    "connected"
+  ],
+  "transport_readiness_is_authentication": false
+}

@@ -1,0 +1,15 @@
+{
+  "nativeJobSucceeded": true,
+  "jobUid": "09d46aa8-707f-4d0a-b298-eef831c9bec5",
+  "receiptSha256": "366f4ca3f72e6966b7ab5b5a766dd71bfc618fc2e7617eacc5dd86508341b145",
+  "ownerFormatterError": "KeyError transport_attempts; actual source field transport_readiness_attempts",
+  "nativeProofPreserved": true,
+  "jobResubmitted": false,
+  "credentialFreeTransportAttempts": [
+    "ConnectionRefusedError",
+    "ConnectionRefusedError",
+    "connected"
+  ],
+  "authenticatedConnectAttempts": 1,
+  "transportReadinessIsAuthentication": false
+}

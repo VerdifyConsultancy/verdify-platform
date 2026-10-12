@@ -79,7 +79,7 @@ The release coordinator is integrating one final source cohort. This correction 
 
 A separate [full-output preservation receipt](original-275-output-preservation.json) compares the complete historical S2 and frozen-B rollback SQL emitted from original `ac89df3e24f5dd34b6d1c145a300eb908b1519a8` source against correction `89e76357a8579101a17e56b1951f40c3a227aad4`, using the exact sealed274 input. Both outputs are byte-identical. This receipt adds no source behavior or execution.
 
-The [full951 COPY preparation](full951-preparation-receipt.json) retains the existing ordered-marker/terminal-marker protocol and accepted original 9,699,549-row baseline. Its read-only SQL adds a literal integration/database/OID/native-primary guard; fresh Cluster/primary-Pod UID binding remains mandatory before execution. The original incomplete S2 capture remains failed evidence and is not used as an accepted replacement baseline. Post275/native-admission controlled ledger and receipt deltas, the whole952 inverse seal, all77 sequences and42 study tables remain separate actual-target checks.
+The [full951 COPY preparation](full951-preparation-receipt.json) retains the existing ordered-marker/terminal-marker protocol and accepted original 9,699,549-row baseline. Its read-only SQL adds a literal integration/database/OID/native-primary guard; fresh Cluster/primary-Pod UID binding remains mandatory before execution. The original incomplete S2 capture remains failed evidence and is not used as an accepted replacement baseline. Post275/native-admission controlled ledger and receipt deltas, the whole952 inverse seal, all 77 sequences and42 study tables remain separate actual-target checks.
 
 ## Candidate-revision delivery is supported
 
@@ -91,7 +91,7 @@ Current capacity observations include all active Pod requests, no Pending Pods, 
 
 The exact candidate four-resource operation succeeded on October12 at18:32Z without changing the Application source or manual/prune-off policy. The [apply receipt](actual-restore-apply-receipt.json) distinguishes the normalized omitted-false status field from the submitted `prune:false`; only the four reviewed resources ran, with zero hooks/prunes and no original cluster recreation. The stopped local assertion is preserved and the operation was not resubmitted.
 
-The new primary has authoritative Cluster/Pod/Service identities, database OID16447, system identifier7693399121498484768, PostgreSQL16.13, Timescale2.25.2, vector0.8.1 and zero Timescale background workers. Its complete predecessor witness equals the exact sealed274 SHA256. The [native predecessor receipt](actual-native-predecessor-receipt.json) records fresh capacity and identities. Complete COPY,275 bridge, native admission and ordinary authentication are still separate pending checks. After automatic approval review rejected a whole-row export to the Mac, the safer approved COPY path runs the same streaming parser inside the isolated primary and returns only counts and hashes; no raw row file leaves or persists in that path.
+The new primary has authoritative Cluster/Pod/Service identities, database OID 16447, system identifier7693399121498484768, PostgreSQL16.13, Timescale2.25.2, vector0.8.1 and zero Timescale background workers. Its complete predecessor witness equals the exact sealed274 SHA256. The [native predecessor receipt](actual-native-predecessor-receipt.json) records fresh capacity and identities. Complete COPY,275 bridge, native admission and ordinary authentication are still separate pending checks. After automatic approval review rejected a whole-row export to the Mac, the safer approved COPY path runs the same streaming parser inside the isolated primary and returns only counts and hashes; no raw row file leaves or persists in that path.
 
 ## Actual predecessor data and rollback qualification
 
@@ -126,13 +126,82 @@ equals installed4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5
 The native admission record SHA is1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa.
 
 The [complete prefixture952 receipt](actual-prefixture-full952-copy.json)
-contains9,699,553rows, with all ordered and terminal markers verified and no raw
+contains 9,699,553 rows, with all ordered and terminal markers verified and no raw
 row export/persistence. Relative to the accepted original951,949relations are
 exact; only the ledger's one275 row and the two ordinary canonical receipt
 updates changed. The new native receipt relation has exactly three rows. This
 is a controlled successor baseline, not replacement of the old951 seal.
 [All77 sequences](actual-prefixture-sequence-receipt.json) and
-[all42 study tables](actual-prefixture-study42-derivation.json) remain exact.
+[all 42 study tables](actual-prefixture-study42-derivation.json) remain exact.
 Temporary target-only password provisioning, actual ordinary authentication/
 rollback duty behavior, scientific READ ONLY consumers and final inverses/reseals
 are the next finite checks. Production remains untouched by this lane.
+
+
+### Actual authentication, source consumers and exact final reseal (2026-10-12)
+
+The contained target passed all 107 allowed/denied cases across the six ordinary
+planner, setpoint-server, HA-backfill, vision, lab-publisher and Grafana LOGINs.
+Each proof used the real LOGIN as both current and session user against the bound
+primary/database OID 16447; the frozen role fixture ran inside an outer rollback.
+This establishes the scoped SQL role contracts, not a full application rollout.
+The first planner Job had no admitted Pod because restricted PodSecurity required
+an explicit nonroot identity. Its failed Job is retained as evidence; the distinct
+corrected manifests passed without changing the source runner or fixtures.
+
+The component executor and API lifecycle LOGINs also passed their real frozen
+source consumers in READ ONLY transactions. Their 21 and 25 function-only contracts,
+three protected-SELECT denials each, exact cached-image bytes plus minimal frozen
+source overlays, Job/Pod ownership and stage-release custody are recorded. The
+executor OFF path acquired no SQL connection and called no setters; the separate
+startup consumer reported the existing facility-safe closure, lease 19 and 98
+historical recovery debts. Lifecycle status retained component OFF, shadow/closed
+and zero open exposures for the restored experiment. HTTP authentication, physical
+execution and the missing 21 native harness fields are not established here.
+
+The first lifecycle Job failed on TCP transport readiness. Its failed receipt and
+UID remain preserved. A separate packet-only correction reused the existing
+credential-free transport wait before reading the password. The single corrected
+Job recorded two TCP refusals, then a ready connection and one authenticated
+LOGIN. No product algorithm, import closure, overlay, grant or credential changed.
+A final formatter-key correction changed reporting only; no second Job was run.
+
+All eight existing LOGINs began with NULL passwords. Only isolated target-specific
+temporary passwords were provisioned, privately in-process, with statement/error/
+parameter/utility retention disabled. The exact PASSWORD NULL inverse committed
+at 19:26:54Z; a fresh metadata record is byte-identical to the original record
+(SHA256 35f6df173e20202b73b6fee44923f14953bae9a3de1020edaadd7ffc54543084).
+LOGIN true, all role attributes, ownership, memberships and grants remain unchanged.
+No production credential was read or changed. Two temporary Secrets, ten Jobs and
+seven ConfigMaps were removed with exact UID preconditions; no Secret GET/LIST was
+performed and no credential values or verifiers are present in these receipts.
+
+Rollback fixtures allocated five sequences, including Timescale internal sequence
+allocations. The enumerated exact-state inverse committed at 19:27:21Z. A fresh
+read of all 77 states is byte-identical to frozenA/prefixture (SHA256 5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1).
+The complete final952-relation stream contains 9,699,553 rows and is exactly equal
+to the admitted prefixture baseline: stream SHA256 aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e.
+Every relation header, row count and full row-multiset hash matches; all 42 study
+relations and the complete native catalog/ACL witness match too. The latter is
+SHA256 4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5.
+Raw row bytes were hashed only in the Pod and never exported or persisted.
+
+The final target readback at 19:33:22Z confirms the same primary UID, three ready
+instances and six healthy Bound R2 volumes. All temporary runner Pods/Jobs/CMs are
+absent. The Application remains manual, source targetRevision main, OutOfSync/Healthy
+and idle after its exact candidate selective operation. This intentional state
+does not authorize a broad sync or production cutover. The recovered target is
+retained, with all eight qualification LOGIN passwords resealed NULL. Old failed
+targets, original recovery seals and historical failures remain authoritative.
+
+Receipts: [index](actual-qualification-receipts-index.json),
+[authenticated Job bindings](actual-authenticated-job-bindings.json),
+[final full952 execution](actual-final-full952-execution.json),
+[final complete COPY hashes](actual-final-full952-copy.json),
+[final native catalog](actual-final-native-catalog-receipt.json),
+[final role metadata](actual-auth-final-metadata.json),
+[sequence inverse](actual-sequence-inverse.json),
+[final77](actual-final-sequence-receipt.json),
+[study42](actual-final-study42-derivation.json),
+[temporary cleanup](actual-temporary-object-cleanup.json),
+[final target health](actual-final-target-health.json).

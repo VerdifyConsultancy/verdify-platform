@@ -1,0 +1,503 @@
+{
+  "actual_target_connected": false,
+  "captured_at_utc": "2026-10-12T18:52:12.704258+00:00",
+  "consumers": [
+    {
+      "binding_after": {
+        "container": {
+          "containerID": "containerd://337f1df765dd9b80305491ed6bf1d3ef458c41ba5744613c4cdd9de774e4e243",
+          "image": "sha256:3b46a56061a5b23767e7559da2c891ded859264a5e2048b8f1436f2d12a83ae5",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+          "name": "ingestor",
+          "ready": true,
+          "restartCount": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-11T14:42:20Z"
+            }
+          }
+        },
+        "name": "verdify-ingestor-69754948bf-mzdm5",
+        "node": "vm-k3s-node5",
+        "resource_version": "262244703",
+        "uid": "06b8f3a7-43f5-40ab-acdb-3b1991ad4694"
+      },
+      "binding_before": {
+        "container": {
+          "containerID": "containerd://337f1df765dd9b80305491ed6bf1d3ef458c41ba5744613c4cdd9de774e4e243",
+          "image": "sha256:3b46a56061a5b23767e7559da2c891ded859264a5e2048b8f1436f2d12a83ae5",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+          "name": "ingestor",
+          "ready": true,
+          "restartCount": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-11T14:42:20Z"
+            }
+          }
+        },
+        "name": "verdify-ingestor-69754948bf-mzdm5",
+        "node": "vm-k3s-node5",
+        "resource_version": "262244703",
+        "uid": "06b8f3a7-43f5-40ab-acdb-3b1991ad4694"
+      },
+      "capture": {
+        "files": {
+          "ingestor/entity_map.py": {
+            "bytes": 32136,
+            "path": "/app/ingestor/entity_map.py",
+            "sha256": "7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95"
+          },
+          "ingestor/esp32_push.py": {
+            "bytes": 58111,
+            "path": "/app/ingestor/esp32_push.py",
+            "sha256": "dd2020ac1df41a3622ab6d516a66ac11662cafde36c72d76251a4dabe6ddf5d1"
+          },
+          "ingestor/shared.py": {
+            "bytes": 18352,
+            "path": "/app/ingestor/shared.py",
+            "sha256": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2"
+          },
+          "ingestor/tasks/component_experiment.py": {
+            "bytes": 155010,
+            "path": "/app/ingestor/tasks/component_experiment.py",
+            "sha256": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50"
+          },
+          "verdify_schemas/__init__.py": {
+            "bytes": 11769,
+            "path": "/app/verdify_schemas/__init__.py",
+            "sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa"
+          },
+          "verdify_schemas/alerts.py": {
+            "bytes": 32835,
+            "path": "/app/verdify_schemas/alerts.py",
+            "sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985"
+          },
+          "verdify_schemas/api.py": {
+            "bytes": 20333,
+            "path": "/app/verdify_schemas/api.py",
+            "sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557"
+          },
+          "verdify_schemas/band_defaults.yaml": {
+            "bytes": 3930,
+            "path": "/app/verdify_schemas/band_defaults.yaml",
+            "sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148"
+          },
+          "verdify_schemas/catalog.py": {
+            "bytes": 5521,
+            "path": "/app/verdify_schemas/catalog.py",
+            "sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803"
+          },
+          "verdify_schemas/climate_intent.py": {
+            "bytes": 28189,
+            "path": "/app/verdify_schemas/climate_intent.py",
+            "sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7"
+          },
+          "verdify_schemas/component_executor.py": {
+            "bytes": 19064,
+            "path": "/app/verdify_schemas/component_executor.py",
+            "sha256": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575"
+          },
+          "verdify_schemas/component_qualification.py": {
+            "bytes": 16817,
+            "path": "/app/verdify_schemas/component_qualification.py",
+            "sha256": "31edae4180028353e2a23b64acd30e6e5c97a13179c27aecf0a81e2b1ea9e15a"
+          },
+          "verdify_schemas/crop_profiles.py": {
+            "bytes": 1164,
+            "path": "/app/verdify_schemas/crop_profiles.py",
+            "sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce"
+          },
+          "verdify_schemas/crops.py": {
+            "bytes": 9663,
+            "path": "/app/verdify_schemas/crops.py",
+            "sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099"
+          },
+          "verdify_schemas/daily.py": {
+            "bytes": 6799,
+            "path": "/app/verdify_schemas/daily.py",
+            "sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3"
+          },
+          "verdify_schemas/experiment_config.py": {
+            "bytes": 10530,
+            "path": "/app/verdify_schemas/experiment_config.py",
+            "sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7"
+          },
+          "verdify_schemas/external.py": {
+            "bytes": 4841,
+            "path": "/app/verdify_schemas/external.py",
+            "sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c"
+          },
+          "verdify_schemas/fixed_panel_native_route.py": {
+            "bytes": 11931,
+            "path": "/app/verdify_schemas/fixed_panel_native_route.py",
+            "sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed"
+          },
+          "verdify_schemas/forecast.py": {
+            "bytes": 2085,
+            "path": "/app/verdify_schemas/forecast.py",
+            "sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d"
+          },
+          "verdify_schemas/forecast_ops.py": {
+            "bytes": 1958,
+            "path": "/app/verdify_schemas/forecast_ops.py",
+            "sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2"
+          },
+          "verdify_schemas/lessons.py": {
+            "bytes": 6138,
+            "path": "/app/verdify_schemas/lessons.py",
+            "sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e"
+          },
+          "verdify_schemas/mcp_responses.py": {
+            "bytes": 18751,
+            "path": "/app/verdify_schemas/mcp_responses.py",
+            "sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1"
+          },
+          "verdify_schemas/media.py": {
+            "bytes": 1961,
+            "path": "/app/verdify_schemas/media.py",
+            "sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b"
+          },
+          "verdify_schemas/observed_minutes.py": {
+            "bytes": 9028,
+            "path": "/app/verdify_schemas/observed_minutes.py",
+            "sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8"
+          },
+          "verdify_schemas/operations.py": {
+            "bytes": 10790,
+            "path": "/app/verdify_schemas/operations.py",
+            "sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327"
+          },
+          "verdify_schemas/physical_crop_band.py": {
+            "bytes": 12528,
+            "path": "/app/verdify_schemas/physical_crop_band.py",
+            "sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2"
+          },
+          "verdify_schemas/plan.py": {
+            "bytes": 15077,
+            "path": "/app/verdify_schemas/plan.py",
+            "sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1"
+          },
+          "verdify_schemas/policy_vector.py": {
+            "bytes": 18910,
+            "path": "/app/verdify_schemas/policy_vector.py",
+            "sha256": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c"
+          },
+          "verdify_schemas/setpoint.py": {
+            "bytes": 3907,
+            "path": "/app/verdify_schemas/setpoint.py",
+            "sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0"
+          },
+          "verdify_schemas/slack_ops.py": {
+            "bytes": 6872,
+            "path": "/app/verdify_schemas/slack_ops.py",
+            "sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a"
+          },
+          "verdify_schemas/system_infra.py": {
+            "bytes": 2645,
+            "path": "/app/verdify_schemas/system_infra.py",
+            "sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778"
+          },
+          "verdify_schemas/telemetry.py": {
+            "bytes": 23541,
+            "path": "/app/verdify_schemas/telemetry.py",
+            "sha256": "e046cb6ea7577ebd6f75b641d679ef2070b2523c45177c7a7ae07eb0f9f00c7f"
+          },
+          "verdify_schemas/topology.py": {
+            "bytes": 21248,
+            "path": "/app/verdify_schemas/topology.py",
+            "sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1"
+          },
+          "verdify_schemas/tunable_registry.py": {
+            "bytes": 153800,
+            "path": "/app/verdify_schemas/tunable_registry.py",
+            "sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+          },
+          "verdify_schemas/tunables.py": {
+            "bytes": 1180,
+            "path": "/app/verdify_schemas/tunables.py",
+            "sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3"
+          },
+          "verdify_schemas/vault.py": {
+            "bytes": 3572,
+            "path": "/app/verdify_schemas/vault.py",
+            "sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9"
+          },
+          "verdify_schemas/views.py": {
+            "bytes": 14414,
+            "path": "/app/verdify_schemas/views.py",
+            "sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753"
+          }
+        },
+        "package_metadata_paths": [
+          "/usr/local/lib/python3.13/site-packages"
+        ],
+        "package_versions": {
+          "PyYAML": "6.0.3",
+          "aioesphomeapi": "44.24.2",
+          "asyncpg": "0.31.0",
+          "pydantic": "2.13.5"
+        },
+        "python_version": "3.13.15"
+      },
+      "capture_script_sha256": "9d2b68d581d0fbc39677f1ee7acd55a917b4128afe6c96a23c8ea73c90c0ca0c",
+      "differing_or_missing_files": [
+        "ingestor/entity_map.py",
+        "verdify_schemas/telemetry.py"
+      ],
+      "duty": "executor",
+      "frozen_source_file_count": 37,
+      "identity_stable": true,
+      "matching_files": 35
+    },
+    {
+      "binding_after": {
+        "container": {
+          "containerID": "containerd://ed11d510d077d5e2bdee3b2653ee861cb4e28c792b684ba7ed059fda25e130d3",
+          "image": "sha256:9d1c8b9a085a0e8e54dba22e161d461c833c994dede9d4a87fe42731d83a9d52",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "name": "api",
+          "ready": true,
+          "restartCount": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-06T01:03:12Z"
+            }
+          }
+        },
+        "name": "verdify-api-64d768b666-8pjhm",
+        "node": "vm-k3s-node5",
+        "resource_version": "246000138",
+        "uid": "8538fc30-9037-419d-9613-253d4232b276"
+      },
+      "binding_before": {
+        "container": {
+          "containerID": "containerd://ed11d510d077d5e2bdee3b2653ee861cb4e28c792b684ba7ed059fda25e130d3",
+          "image": "sha256:9d1c8b9a085a0e8e54dba22e161d461c833c994dede9d4a87fe42731d83a9d52",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "name": "api",
+          "ready": true,
+          "restartCount": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-06T01:03:12Z"
+            }
+          }
+        },
+        "name": "verdify-api-64d768b666-8pjhm",
+        "node": "vm-k3s-node5",
+        "resource_version": "246000138",
+        "uid": "8538fc30-9037-419d-9613-253d4232b276"
+      },
+      "capture": {
+        "files": {
+          "api/main.py": {
+            "bytes": 277597,
+            "path": "/app/main.py",
+            "sha256": "2f474fb578cbb1472ef8a5b9d17340be83a05040d2fc45fd82b9f19a0df1cd2c"
+          },
+          "verdify_public/__init__.py": {
+            "bytes": 622,
+            "path": "/app/verdify_public/__init__.py",
+            "sha256": "5eab7c866511705c317a05184aaada7132e644109a4ad590156ef0df26be3caa"
+          },
+          "verdify_public/build_provenance.py": {
+            "bytes": 854,
+            "path": "/app/verdify_public/build_provenance.py",
+            "sha256": "85a4bd9d4d57b72cb309728a5968cf194c3f5ba5bf618f784eb72564eeb4a861"
+          },
+          "verdify_public/output_policy.py": {
+            "bytes": 13351,
+            "path": "/app/verdify_public/output_policy.py",
+            "sha256": "a65be8cbf5db872e5fa65dd94e97bd6ee61d4fa8a37ba0f006152ed5d319006e"
+          },
+          "verdify_schemas/__init__.py": {
+            "bytes": 11769,
+            "path": "/app/verdify_schemas/__init__.py",
+            "sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa"
+          },
+          "verdify_schemas/alerts.py": {
+            "bytes": 32835,
+            "path": "/app/verdify_schemas/alerts.py",
+            "sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985"
+          },
+          "verdify_schemas/api.py": {
+            "bytes": 20333,
+            "path": "/app/verdify_schemas/api.py",
+            "sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557"
+          },
+          "verdify_schemas/band_defaults.yaml": {
+            "bytes": 3930,
+            "path": "/app/verdify_schemas/band_defaults.yaml",
+            "sha256": "d368f8fe5b5b29b0301bf53d78d084487560b3d5b2d323528d318898994dd148"
+          },
+          "verdify_schemas/catalog.py": {
+            "bytes": 5521,
+            "path": "/app/verdify_schemas/catalog.py",
+            "sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803"
+          },
+          "verdify_schemas/climate_intent.py": {
+            "bytes": 28189,
+            "path": "/app/verdify_schemas/climate_intent.py",
+            "sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7"
+          },
+          "verdify_schemas/crop_profiles.py": {
+            "bytes": 1164,
+            "path": "/app/verdify_schemas/crop_profiles.py",
+            "sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce"
+          },
+          "verdify_schemas/crops.py": {
+            "bytes": 9663,
+            "path": "/app/verdify_schemas/crops.py",
+            "sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099"
+          },
+          "verdify_schemas/daily.py": {
+            "bytes": 6799,
+            "path": "/app/verdify_schemas/daily.py",
+            "sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3"
+          },
+          "verdify_schemas/experiment_config.py": {
+            "bytes": 10530,
+            "path": "/app/verdify_schemas/experiment_config.py",
+            "sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7"
+          },
+          "verdify_schemas/external.py": {
+            "bytes": 4841,
+            "path": "/app/verdify_schemas/external.py",
+            "sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c"
+          },
+          "verdify_schemas/fixed_panel_native_route.py": {
+            "bytes": 11931,
+            "path": "/app/verdify_schemas/fixed_panel_native_route.py",
+            "sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed"
+          },
+          "verdify_schemas/forecast.py": {
+            "bytes": 2085,
+            "path": "/app/verdify_schemas/forecast.py",
+            "sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d"
+          },
+          "verdify_schemas/forecast_ops.py": {
+            "bytes": 1958,
+            "path": "/app/verdify_schemas/forecast_ops.py",
+            "sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2"
+          },
+          "verdify_schemas/lessons.py": {
+            "bytes": 6138,
+            "path": "/app/verdify_schemas/lessons.py",
+            "sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e"
+          },
+          "verdify_schemas/mcp_responses.py": {
+            "bytes": 18751,
+            "path": "/app/verdify_schemas/mcp_responses.py",
+            "sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1"
+          },
+          "verdify_schemas/media.py": {
+            "bytes": 1961,
+            "path": "/app/verdify_schemas/media.py",
+            "sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b"
+          },
+          "verdify_schemas/observed_minute_reader.py": {
+            "bytes": 2122,
+            "path": "/app/verdify_schemas/observed_minute_reader.py",
+            "sha256": "6f644f968455feec2082cbd5246ef72be97b8c15a96966d70fbf4617f82125e8"
+          },
+          "verdify_schemas/observed_minutes.py": {
+            "bytes": 9028,
+            "path": "/app/verdify_schemas/observed_minutes.py",
+            "sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8"
+          },
+          "verdify_schemas/operations.py": {
+            "bytes": 10790,
+            "path": "/app/verdify_schemas/operations.py",
+            "sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327"
+          },
+          "verdify_schemas/physical_crop_band.py": {
+            "bytes": 12528,
+            "path": "/app/verdify_schemas/physical_crop_band.py",
+            "sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2"
+          },
+          "verdify_schemas/plan.py": {
+            "bytes": 15077,
+            "path": "/app/verdify_schemas/plan.py",
+            "sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1"
+          },
+          "verdify_schemas/route_only_crop_band_reader.py": {
+            "bytes": 2223,
+            "path": "/app/verdify_schemas/route_only_crop_band_reader.py",
+            "sha256": "eca3a9a27fe5014d1493fa4eb1d543d8ba864949bafa5c8b53c9d779d44f30e3"
+          },
+          "verdify_schemas/setpoint.py": {
+            "bytes": 3907,
+            "path": "/app/verdify_schemas/setpoint.py",
+            "sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0"
+          },
+          "verdify_schemas/slack_ops.py": {
+            "bytes": 6872,
+            "path": "/app/verdify_schemas/slack_ops.py",
+            "sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a"
+          },
+          "verdify_schemas/system_infra.py": {
+            "bytes": 2645,
+            "path": "/app/verdify_schemas/system_infra.py",
+            "sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778"
+          },
+          "verdify_schemas/telemetry.py": {
+            "bytes": 23541,
+            "path": "/app/verdify_schemas/telemetry.py",
+            "sha256": "e046cb6ea7577ebd6f75b641d679ef2070b2523c45177c7a7ae07eb0f9f00c7f"
+          },
+          "verdify_schemas/topology.py": {
+            "bytes": 21248,
+            "path": "/app/verdify_schemas/topology.py",
+            "sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1"
+          },
+          "verdify_schemas/tunable_registry.py": {
+            "bytes": 153800,
+            "path": "/app/verdify_schemas/tunable_registry.py",
+            "sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+          },
+          "verdify_schemas/tunables.py": {
+            "bytes": 1180,
+            "path": "/app/verdify_schemas/tunables.py",
+            "sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3"
+          },
+          "verdify_schemas/vault.py": {
+            "bytes": 3572,
+            "path": "/app/verdify_schemas/vault.py",
+            "sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9"
+          },
+          "verdify_schemas/views.py": {
+            "bytes": 14414,
+            "path": "/app/verdify_schemas/views.py",
+            "sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753"
+          }
+        },
+        "package_metadata_paths": [
+          "/usr/local/lib/python3.13/site-packages"
+        ],
+        "package_versions": {
+          "PyYAML": "6.0.3",
+          "asyncpg": "0.31.0",
+          "fastapi": "0.142.2",
+          "httpx": "0.28.1",
+          "pydantic": "2.13.5",
+          "uvicorn": "0.54.0"
+        },
+        "python_version": "3.13.15"
+      },
+      "capture_script_sha256": "684efb0012434f10734cfbdf07740a4ccb26cb129d34808544e54c4b6dd8563a",
+      "differing_or_missing_files": [
+        "api/main.py",
+        "verdify_schemas/telemetry.py"
+      ],
+      "duty": "lifecycle",
+      "frozen_source_file_count": 36,
+      "identity_stable": true,
+      "matching_files": 34
+    }
+  ],
+  "frozen_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "method": "production bounded read-only exact-file SHA256/size and installed distribution metadata; python -I -S; no application imports/startup, environment/Secret reads, DB/network/device calls or file contents emitted",
+  "schema": "verdify-cached-consumer-source-byte-capture-v1",
+  "source_bytes_alone_prove_image_provenance": false
+}

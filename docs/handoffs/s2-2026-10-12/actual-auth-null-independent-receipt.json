@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-10-12T19:32:16.122845+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "databaseOid": 16447,
+  "sqlSha256": "61d9c56423f57df86a2214a58e6526910f8b8f4e1c6e5c6e71b7051e975260f1",
+  "recordSha256": "35f6df173e20202b73b6fee44923f14953bae9a3de1020edaadd7ffc54543084",
+  "exactOriginalRoleMetadata": true,
+  "roles": 8,
+  "allPasswordsNull": true,
+  "allLoginStatesUnchangedTrue": true,
+  "membershipsUnchanged": true,
+  "exitCode": 0,
+  "credentialValuesReadOrExported": false
+}

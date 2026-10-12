@@ -1,0 +1,128 @@
+{
+  "schema": "verdify-contained-qualification-receipts-v1",
+  "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "sciencePacket": "e4e4bac22b21cd76601d433fa0199129b6e3f18d",
+  "files": [
+    {
+      "path": "actual-auth-original-metadata.json",
+      "sha256": "35f6df173e20202b73b6fee44923f14953bae9a3de1020edaadd7ffc54543084"
+    },
+    {
+      "path": "actual-auth-temporary-window.json",
+      "sha256": "953d9aa5f1f08374272ee9cccb15bf8b59498263b507b1348e0f55a76bcfc98a"
+    },
+    {
+      "path": "actual-auth-null-inverse.json",
+      "sha256": "4f84d9a03d4aaf4d3ac887de9298fe29ba751dd2f028fd208d0e14cca95eabae"
+    },
+    {
+      "path": "actual-auth-null-independent-receipt.json",
+      "sha256": "2c15486ec08495cff63eb5e22babfbccf4e71b4b77de5bc3abd0190438e516af"
+    },
+    {
+      "path": "actual-auth-final-metadata.json",
+      "sha256": "35f6df173e20202b73b6fee44923f14953bae9a3de1020edaadd7ffc54543084"
+    },
+    {
+      "path": "actual-sequence-inverse-preparation.json",
+      "sha256": "865a920d9ecb4a44d2733bbc50ded4c723b5fb101dbbff74f699b7d0550c05fc"
+    },
+    {
+      "path": "actual-sequence-inverse.json",
+      "sha256": "4086aa61b7d71ddeb087467979eb69313db305668bbc724bab488a794e1e7a3e"
+    },
+    {
+      "path": "actual-final-sequence-receipt.json",
+      "sha256": "0a7785236b9bf75a50e7d7b2547211345d8c4fc412355d424cbca996a49be4a8"
+    },
+    {
+      "path": "actual-final-full952-copy.json",
+      "sha256": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8"
+    },
+    {
+      "path": "actual-final-full952-execution.json",
+      "sha256": "015c88ce90349cfee855dab02f1e9ea7ec648aa5eead6c3cfef542e848e4febb"
+    },
+    {
+      "path": "actual-final-study42-derivation.json",
+      "sha256": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0"
+    },
+    {
+      "path": "actual-final-native-catalog-receipt.json",
+      "sha256": "776aa50e486985220e56ee438f6841e96ce9234c3566aa6fa3a8d814c60dd9a3"
+    },
+    {
+      "path": "actual-temporary-object-cleanup.json",
+      "sha256": "805a1606bd34ca594851b31542330a49169a86e2766dc17ab35f2b883a924398"
+    },
+    {
+      "path": "actual-final-target-health.json",
+      "sha256": "a137967aac2d65fb7d7ad4b0022c96523552b8bdd401765beb053268dfbc4b0d"
+    },
+    {
+      "path": "actual-planner-podsecurity-refusal.json",
+      "sha256": "62b44741832bbf4a28a397dac84471a52b8d9421d66baf46232e1dfce40ab91c"
+    },
+    {
+      "path": "actual-v2-executor-readonly-receipt.json",
+      "sha256": "4d93e0b44a8d9541e33a11ad4b54c9116d25fd20dbb6a69ca054e570ce1f375c"
+    },
+    {
+      "path": "actual-v2-lifecycle-first-failure.json",
+      "sha256": "bd6eaea000f093b91b48c059162da52c2bcf7177b71a08c9005e8159e6df3b0d"
+    },
+    {
+      "path": "actual-v2-lifecycle-readonly-receipt.json",
+      "sha256": "366f4ca3f72e6966b7ab5b5a766dd71bfc618fc2e7617eacc5dd86508341b145"
+    },
+    {
+      "path": "actual-v2-lifecycle-owner-normalized-result.json",
+      "sha256": "2c5bbe32b852f2d7c1ff6b20e1d623e4ec481affce49f84658e0a68475ebe9a5"
+    },
+    {
+      "path": "actual-role-planner-restricted-receipt.json",
+      "sha256": "caa1ee687d8843a33977cca8ac9888e58282545bb9c4fe989aa51f0b14f7a959"
+    },
+    {
+      "path": "actual-role-setpoint_server-restricted-receipt.json",
+      "sha256": "d2ee7d695dff67a236f771adcb9ce356b29688e4a6887763a59352af8c4dc895"
+    },
+    {
+      "path": "actual-role-ha_backfill-restricted-receipt.json",
+      "sha256": "5b057376ec9edbc8db0f892c3706fa39fa8d047c5670bc48b67e3cab398fb495"
+    },
+    {
+      "path": "actual-role-vision-restricted-receipt.json",
+      "sha256": "919d39d44bb6c6ff7cf107eabc46d547e87c93c0ad8c90239c39bffc2cd973a2"
+    },
+    {
+      "path": "actual-role-lab_publisher-restricted-receipt.json",
+      "sha256": "003af47077b8b1c25ad8ee4e8baaa4c71b27a74642ae039bc5873ec98afcd8c1"
+    },
+    {
+      "path": "actual-role-grafana-restricted-receipt.json",
+      "sha256": "9ca66294b090f7d74d58a49e7908b40922423853898ff5b183406dfb451df542"
+    },
+    {
+      "path": "actual-authenticated-job-bindings.json",
+      "sha256": "5c0556807baa5580074392debd365e05701598ab8d0a4b9a57ccec2f09d20412"
+    },
+    {
+      "path": "actual-v2-cached-image-source-compatibility.json",
+      "sha256": "b4847f8d0b225f9ecb72033977c2cad015e1f333266acacbf0eaa019b1728458"
+    },
+    {
+      "path": "actual-v2-source-overlay-manifest.json",
+      "sha256": "744c57eede1628bbb0f315f77702593b717b4f3b05f1749f47f86413e97c502b"
+    },
+    {
+      "path": "actual-v2-lifecycle-transport-correction.json",
+      "sha256": "d6b39eb0c1ac8c4262b067d72890500de57537d479d387e58fbf62eb0db88e90"
+    },
+    {
+      "path": "actual-authenticated-retained-failures.json",
+      "sha256": "622796265a7d0e3b8b2cf64289691e1d48b5bc75fe4cdf647ca89cd26601472d"
+    }
+  ],
+  "rawRowsOrCredentialValuesIncluded": false
+}

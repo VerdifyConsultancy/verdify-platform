@@ -1,0 +1,67 @@
+{
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "sequenceCount": 77,
+  "changedSequenceCount": 5,
+  "changed": [
+    {
+      "name": "_timescaledb_catalog.chunk_constraint_name",
+      "before": {
+        "last_value": 1009,
+        "is_called": true
+      },
+      "after": {
+        "last_value": 1013,
+        "is_called": true
+      }
+    },
+    {
+      "name": "_timescaledb_catalog.chunk_id_seq",
+      "before": {
+        "last_value": 1108,
+        "is_called": true
+      },
+      "after": {
+        "last_value": 1115,
+        "is_called": true
+      }
+    },
+    {
+      "name": "_timescaledb_catalog.dimension_slice_id_seq",
+      "before": {
+        "last_value": 925,
+        "is_called": true
+      },
+      "after": {
+        "last_value": 932,
+        "is_called": true
+      }
+    },
+    {
+      "name": "public.image_observations_id_seq",
+      "before": {
+        "last_value": 726,
+        "is_called": true
+      },
+      "after": {
+        "last_value": 727,
+        "is_called": true
+      }
+    },
+    {
+      "name": "public.observations_id_seq",
+      "before": {
+        "last_value": 1826,
+        "is_called": true
+      },
+      "after": {
+        "last_value": 1827,
+        "is_called": true
+      }
+    }
+  ],
+  "sourceSha256": "f7f2cf2778b4ed277874f6cf97ad6515a0fe897c0d48b55f7400a2c02b85596e",
+  "semantic": "exact target-only setval inverse to retained last_value/is_called; no fixture data commits; sequence effects are nontransactional",
+  "guard": "fresh native UID+primary; peer/database/OID/systemid275/admission/roles; all8 passwords alreadyNULL; no ordinary/science session; exact postfixture state before each setval"
+}
