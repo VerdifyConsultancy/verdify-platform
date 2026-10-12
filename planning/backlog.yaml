@@ -931,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary. October12 execution: qualified973 tree merged ascb21; five affected images built/registry-verified, d439 full-hook production adoption and runtime smoke passed. Remaining18-clause source/native matrix retained at95e2f6ef. Isolated owner source-label fix AgentsPR4807 head6f1ebc369 is in ordinary required native qualification; no live adoption or unattended retry/concurrency acceptance claimed.",
+      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary. October12 execution: qualified973 tree merged ascb21; five affected images built/registry-verified, d439 full-hook production adoption and runtime smoke passed. Remaining18-clause source/native matrix retained at95e2f6ef. Isolated owner source-label fix AgentsPR4807 head6f1ebc369 is in ordinary required native qualification; no live adoption or unattended retry/concurrency acceptance claimed. OwnerPR4807 correctedheadf5d21bdb requirednativeSUCCESS20:46:41UTC12/12archives; original6f1failureandstricttrustedhashcorrectionretained957cb35a. Open/unmerged/undeployedunderobservationhold.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3214,7 +3214,7 @@
         "tests",
         "ingestor/tasks/ha.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests. October12 execution: PR970 correction is included in merged973/cb21 and d439 production API adoption. Source/negative tests retained; bounded read-only history provenance and final contract acceptance are next unblocked work, assigned to existing scientific worker. No livePOST or historical rewrite authorized by this packet.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests. October12 execution: PR970 correction is included in merged973/cb21 and d439 production API adoption. Source/negative tests retained; bounded read-only history provenance and final contract acceptance are next unblocked work, assigned to existing scientific worker. No livePOST or historical rewrite authorized by this packet. Accepted/closedOctober12 21:09:12UTC: exactbothreplica cb21 file/function/pinned75f digest andliveOpenAPI501/no200 verified bysoleowner0c6ea9a8; disabledroutewritesneithercommandnorobservedhistory. Aggregate87,878origin-unknownrowsretained/excludedfromverifiedphysical/runtime/resourcecredit; noPOSTorhistoryrewrite. Originalscopefiveclauseschecked; no broaderphysicalclaim.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3254,7 +3254,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-12T20:22:00Z",
+    "reviewed_at": "2026-10-12T21:09:12Z",
     "source_revision": "d43919e933eb1be69559be7566853ff69a64e903",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3321,8 +3321,7 @@
       801,
       802,
       949,
-      963,
-      965
+      963
     ],
     "sprints": [
       {
@@ -3909,14 +3908,6 @@
         "hours_min": 6,
         "hours_max": 12,
         "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 965,
-        "sprint": "S3",
-        "hours_min": 4,
-        "hours_max": 8,
-        "next_action": "Existing scientific worker completes bounded deployed-contract and affected-history provenance packet; noPOST, device action or broad historical rewrite.",
         "owner_role": "Platform lead"
       }
     ]

@@ -2,12 +2,12 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-12T20:22:00Z** against source `d43919e933eb1be69559be7566853ff69a64e903`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **64 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-12T21:09:12Z** against source `d43919e933eb1be69559be7566853ff69a64e903`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **63 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
 | S2 — Recoverability and reliable delivery (October 2026) | sprint | 36–68 | 80 | [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382), [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) |
-| S3 — Source truth, portable validation and prospective design | sprint | 38–72 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963), [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) |
+| S3 — Source truth, portable validation and prospective design | sprint | 34–64 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
 | PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
@@ -46,7 +46,6 @@ Exit: #965 no false observed light history; #963 compatible source and explicitl
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
-| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Platform lead | 4–8 | Existing scientific worker completes bounded deployed-contract and affected-history provenance packet; noPOST, device action or broad historical rewrite. |
 
 ## S4 — Current readiness and integrated qualification
 
