@@ -1,0 +1,58 @@
+{
+  "schema": "verdify-runtime-recovery-window-intent/v1",
+  "started_at": "2026-10-12T23:24:01.920752+00:00",
+  "earliest_complete_at": "2026-10-13T01:24:01.920752+00:00",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "revision": "9136f158641f918593df53471e3efe1792b7ad83",
+  "pod": "verdify-ingestor-7666f97959-htjdk",
+  "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+  "process_id": 28621,
+  "exec_session_id": 2512,
+  "interval_seconds": 60,
+  "socket_census_every_samples": 10,
+  "operator_collector_path": "/Users/jason/maintenance/verdify-runtime-delivery-20261012/qualify_runtime_recovery_window.py",
+  "operator_intent_path": "/Users/jason/maintenance/verdify-runtime-delivery-20261012/runtime-recovery-window-intent.json",
+  "operator_latest_path": "/Users/jason/maintenance/verdify-runtime-delivery-20261012/runtime-recovery-window-latest.json",
+  "operator_result_path": "/Users/jason/maintenance/verdify-runtime-delivery-20261012/runtime-recovery-window-result.json",
+  "collector_sha256": "0cd9cc9283a1d0bb7328309b4ee5426f7f4f61804cdd4122cb48a1fc54a98204",
+  "prior_attempt_result_sha256": "f6d7e8dacba45887d81c85bd98392a4ee862800ab158b6f5d513f151183e5def",
+  "prior_failed_attempt_preserved": true,
+  "prior_failed_window_receipt": "runtime-window-failure.json",
+  "lab_delivery_receipt": "lab-recovery-delivery.json",
+  "scope": "Distinct post-Lab-recovery read-only attempt; original failed window preserved. No production/device mutation.",
+  "first_actual_sample": {
+    "observed_at": "2026-10-12T23:24:01.921968+00:00",
+    "completed_at": "2026-10-12T23:24:07.840535+00:00",
+    "restart_count": 0,
+    "stage_status": "complete",
+    "ordinary_candidates": 2,
+    "native_status_counts": {
+      "confirmed": 93,
+      "sent": 2
+    },
+    "snapshot_age_seconds": 56.558114,
+    "heap_free_kib": 63.23828125,
+    "largest_block_kib": 56,
+    "schema_error_counts": {
+      "ValidationError": 0,
+      "row failed schema validation": 0
+    },
+    "socket_census_passed": true,
+    "socket_census_log_sha256": "78f524edf63380afcfe9cae5fa9c143e19629c872ac121391b82b1ac4d4b4a2b",
+    "actual_dispatch_command_counts": []
+  },
+  "acceptance_complete": false,
+  "remaining": [
+    "Actual two elapsed hours with no collector failure.",
+    "Final authenticated smoke/socket census, exact native history/per-field/current guardrail review and public publication receipt.",
+    "Publish terminal receipt and update #949 acceptance before considering closure."
+  ],
+  "limits": [
+    "Distinct new attempt; original stopped68sample window does not count as two hours.",
+    "Bounded minute sampling/socket census at endpoints and every10samples is not continuous socket observation.",
+    "Actual command cap proof uses native retained vectors and writer_dispatch command_count, not per-row timestamp grouping.",
+    "Two ordinary requests were sent at entry; their actual confirmations remain part of the observation, not suppressed.",
+    "Lab public publication freshness is separately checked;30-minute Cron schedule and20-minute receipt freshness may produce gaps. No guard/deadline relaxation."
+  ]
+}

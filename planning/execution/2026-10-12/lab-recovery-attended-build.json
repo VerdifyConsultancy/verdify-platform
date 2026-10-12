@@ -1,0 +1,113 @@
+{
+  "schema": "verdify-lab-recovery-attended-build/v1",
+  "captured_at": "2026-10-12T23:15:41.440835+00:00",
+  "source_pr": "https://github.com/VerdifyConsultancy/verdify-platform/pull/974",
+  "qualified_head": "8f6ff04e971f2a9a6a23278c43a1984a9a798133",
+  "qualified_tree": "f9c855b4dee1db7d219e16a967e75c884727da83",
+  "merged_source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+  "fix": "Normalize missing/nonfinite measured unit tokens in public generated prose to unavailable; preserve verification context and keep unchanged public guard rejecting raw invalid values.",
+  "focused_validation": "73 passed including five daily-summary/public-guard regressions; captured failing actual plan rejected before normalization and accepted after. Two broader dashboard failures also reproduced unchanged on original main; Mac site-doctor cannot access retired VM vault path.",
+  "native_pr_gate": {
+    "workflow": "verdify-platform-pr-ci-j2kdl",
+    "uid": "16a14c60-ce43-4cc9-ab79-afa52b3e233c",
+    "phase": "Succeeded",
+    "finished_at": "2026-10-12T22:23:57Z",
+    "github_status_id": 56177537006,
+    "github_status_state": "success"
+  },
+  "main_workflow": {
+    "name": "verdify-platform-ci-28shn",
+    "uid": "f233688e-dc35-47e5-91e5-4aebb5aa94cd",
+    "phase": "Succeeded",
+    "started_at": "2026-10-12T22:24:10Z",
+    "finished_at": "2026-10-12T22:55:41Z"
+  },
+  "classifier_profiles": [
+    "ingestor",
+    "lab-publisher"
+  ],
+  "classifier_reason": "Both supported Docker COPY surfaces include scripts. Building the ingestor candidate does not promote it.",
+  "attended_serialization": true,
+  "images": [
+    {
+      "stage": 1,
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:6856b46476ca4edbbf2a13bdc4f989d450de58e0e4d20ea2abedc38fc116a885",
+      "source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "source_tree": "f9c855b4dee1db7d219e16a967e75c884727da83",
+      "manifest_digest": "sha256:6856b46476ca4edbbf2a13bdc4f989d450de58e0e4d20ea2abedc38fc116a885",
+      "config_digest": "sha256:ef1b84c03d8fc4c7e6372c3463da327c8cb8185adb950e441031dab80444d0a8",
+      "oci_revision": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "baked_source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "layer_head_sizes_verified": 17,
+      "registry_verified_at": "2026-10-12T22:38:59.051442+00:00",
+      "registry_verification_scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed.",
+      "node_uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d",
+      "node_boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+      "imagefs_observed_at": "2026-10-12T22:35:42Z",
+      "root_available_bytes": 119034540032,
+      "root_capacity_bytes": 331712798720,
+      "headroom_above_twenty_percent_floor_bytes": 52691980288.0,
+      "remaining_after_full_40Gi_envelope_bytes": 9742307328.0,
+      "registry_physical_available_bytes": 202664771584,
+      "root_release_observed_at": "2026-10-12T22:49:34.451050+00:00",
+      "container_and_sandbox_roots_released": 11,
+      "cleanup_proof": "Nine exact live upperdirs absent; all eleven UID-bound CRI/container/snapshot metadata absent; two brief reporter roots additionally proven by filesystem birth-time census: 2645 numeric/GC directories, every birth time available, zero surviving directories born during builder lifetime plus 5s before/10s after. This was operator evidence-recovery latency, not measured ten-minute backend cleanup latency.",
+      "release_receipt_sha256": "ea2fa5b96da966f46501dcaf0a5a1778e49edb5138610bf7cf9033fd9211889c",
+      "promoted": false
+    },
+    {
+      "stage": 2,
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+      "source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "source_tree": "f9c855b4dee1db7d219e16a967e75c884727da83",
+      "manifest_digest": "sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+      "config_digest": "sha256:f163a42232921720d896b125368f6d02d993f71d069120c27ce2d432d3452713",
+      "oci_revision": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "baked_source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+      "layer_head_sizes_verified": 21,
+      "registry_verified_at": "2026-10-12T22:53:53.751957+00:00",
+      "registry_verification_scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed.",
+      "node_uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d",
+      "node_boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+      "imagefs_observed_at": "2026-10-12T22:49:32Z",
+      "root_available_bytes": 120461950976,
+      "root_capacity_bytes": 331712798720,
+      "headroom_above_twenty_percent_floor_bytes": 54119391232.0,
+      "remaining_after_full_40Gi_envelope_bytes": 11169718272.0,
+      "registry_physical_available_bytes": 202625007616,
+      "root_release_observed_at": "2026-10-12T22:54:36.398692+00:00",
+      "container_and_sandbox_roots_released": 11,
+      "cleanup_proof": "All eleven exact live upperdirs and all UID-bound container/sandbox/snapshot metadata absent. Earlier Pod/workdir deletion alone was not accepted.",
+      "release_receipt_sha256": "d6376357eeff7f4a96edfdf087b6462d374ab3fc6fff8543df8bac427982a626",
+      "promoted": true
+    }
+  ],
+  "pin_actuator_commit": "cc11025310930bb26c617d692b373f0d9f99c0a6",
+  "promotion": "9136f158641f918593df53471e3efe1792b7ad83",
+  "production_ingestor_retained_digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "limits": [
+    "Attended two-builder proof does not close #644 unattended failure/retry/cancel/concurrency matrix.",
+    "Bounded capacity sampling is not an absolute peak or a future capacity reservation.",
+    "Layer bodies were not independently rehashed."
+  ],
+  "metadata_only_native_qualification": [
+    {
+      "revision": "9136f158641f918593df53471e3efe1792b7ad83",
+      "workflow": "verdify-platform-ci-46mvr",
+      "uid": "5f517eac-4965-4a62-aee0-e1a459855915",
+      "phase": "Succeeded",
+      "mode": "validate",
+      "profiles": [],
+      "build_pods": 0
+    },
+    {
+      "revision": "cc11025310930bb26c617d692b373f0d9f99c0a6",
+      "workflow": "verdify-platform-ci-lbk42",
+      "uid": "eac379bf-be15-48ef-aaec-80e272d4e1b3",
+      "phase": "Succeeded",
+      "mode": "skip",
+      "profiles": [],
+      "build_pods": 0
+    }
+  ]
+}
