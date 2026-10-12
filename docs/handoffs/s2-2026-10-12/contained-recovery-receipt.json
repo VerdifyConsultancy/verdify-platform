@@ -1,0 +1,1184 @@
+{
+  "schema": "verdify-contained-recovery-readonly-receipt-v1",
+  "source_pr": 969,
+  "source_head": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+  "read_only": true,
+  "capture_windows_utc": {
+    "resource_inventory": "2026-10-12T17:48:08.913113+00:00",
+    "scheduler_metrics_pv": "2026-10-12T17:52:29.624313+00:00",
+    "historical_frozen_volume_comparison": "2026-10-12T17:54:47.119734+00:00"
+  },
+  "live_namespace": "verdify-db-rehearsal",
+  "current_rehearsal": {
+    "clusters": [],
+    "backups": [],
+    "services": [],
+    "pvcs": [
+      {
+        "kind": "PersistentVolumeClaim",
+        "metadata": {
+          "name": "verdify-s2-spool-qualification",
+          "namespace": "verdify-db-rehearsal",
+          "uid": "a7158960-36dc-439c-bd6f-14f1aa744bab",
+          "creationTimestamp": "2026-10-06T04:20:04Z",
+          "generation": null,
+          "deletionTimestamp": null,
+          "ownerReferences": null,
+          "labels": {
+            "app.kubernetes.io/component": "s2-spool-retained-qualification",
+            "app.kubernetes.io/part-of": "verdify"
+          }
+        },
+        "status": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "capacity": {
+            "storage": "2Gi"
+          },
+          "phase": "Bound"
+        },
+        "spec": {
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+              "storage": "2Gi"
+            }
+          },
+          "storageClassName": "longhorn-v1-workspace-rwo",
+          "volumeMode": "Filesystem",
+          "volumeName": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab"
+        }
+      }
+    ],
+    "pvs": [
+      {
+        "metadata": {
+          "name": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+          "namespace": null,
+          "uid": "8197e64e-e6ad-4ed3-a6f0-fea54e070fc3",
+          "creationTimestamp": "2026-10-06T04:20:07Z",
+          "deletionTimestamp": null
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "verdify-s2-spool-qualification",
+          "namespace": "verdify-db-rehearsal",
+          "resourceVersion": "246441853",
+          "uid": "a7158960-36dc-439c-bd6f-14f1aa744bab"
+        },
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "storageClassName": "longhorn-v1-workspace-rwo",
+        "reclaimPolicy": "Retain",
+        "status": {
+          "lastPhaseTransitionTime": "2026-10-06T04:20:07Z",
+          "phase": "Bound"
+        },
+        "csi": {
+          "driver": "driver.longhorn.io",
+          "volumeHandle": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab"
+        }
+      }
+    ],
+    "longhorn_volumes": [
+      {
+        "metadata": {
+          "name": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+          "namespace": "longhorn-system",
+          "uid": "7c0f9af2-f480-424c-a606-a38a1df1f7f0",
+          "creationTimestamp": "2026-10-06T04:20:05Z",
+          "deletionTimestamp": null
+        },
+        "spec": {
+          "size": "2147483648",
+          "numberOfReplicas": 2,
+          "nodeID": "",
+          "nodeSelector": [
+            "plane-longhorn"
+          ],
+          "diskSelector": [
+            "plane-longhorn"
+          ],
+          "dataEngine": "v1"
+        },
+        "status": {
+          "state": "detached",
+          "robustness": "unknown",
+          "currentNodeID": "",
+          "kubernetesStatus": {
+            "lastPVCRefAt": "",
+            "lastPodRefAt": "",
+            "namespace": "verdify-db-rehearsal",
+            "pvName": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+            "pvStatus": "Bound",
+            "pvcName": "verdify-s2-spool-qualification",
+            "workloadsStatus": [
+              {
+                "podName": "verdify-s2-promoted-spool-qualification",
+                "podStatus": "Failed",
+                "workloadName": "",
+                "workloadType": ""
+              },
+              {
+                "podName": "verdify-s2-promoted-spool-qualification-v2",
+                "podStatus": "Failed",
+                "workloadName": "",
+                "workloadType": ""
+              },
+              {
+                "podName": "verdify-s2-promoted-spool-qualification-v3",
+                "podStatus": "Failed",
+                "workloadName": "",
+                "workloadType": ""
+              },
+              {
+                "podName": "verdify-s2-promoted-spool-qualification-v4",
+                "podStatus": "Succeeded",
+                "workloadName": "",
+                "workloadType": ""
+              },
+              {
+                "podName": "verdify-s2-spool-recover",
+                "podStatus": "Succeeded",
+                "workloadName": "",
+                "workloadType": ""
+              }
+            ]
+          },
+          "actualSize": 166633472,
+          "conditions": [
+            {
+              "lastProbeTime": "",
+              "lastTransitionTime": "2026-10-06T04:20:06Z",
+              "message": "",
+              "reason": "",
+              "status": "False",
+              "type": "WaitForBackingImage"
+            },
+            {
+              "lastProbeTime": "",
+              "lastTransitionTime": "2026-10-06T04:20:06Z",
+              "message": "",
+              "reason": "",
+              "status": "False",
+              "type": "TooManySnapshots"
+            },
+            {
+              "lastProbeTime": "",
+              "lastTransitionTime": "2026-10-06T04:20:06Z",
+              "message": "",
+              "reason": "",
+              "status": "True",
+              "type": "Scheduled"
+            },
+            {
+              "lastProbeTime": "",
+              "lastTransitionTime": "2026-10-06T04:20:06Z",
+              "message": "",
+              "reason": "",
+              "status": "False",
+              "type": "Restore"
+            }
+          ]
+        }
+      }
+    ],
+    "pod_phase_counts": {
+      "Succeeded": 3,
+      "Failed": 3
+    },
+    "retained_jobs": 80,
+    "deployments": [
+      {
+        "metadata": {
+          "name": "verdify-s2-grafana-proof",
+          "namespace": "verdify-db-rehearsal",
+          "uid": "3eca1937-c309-4a92-9120-5750b96ecd1a",
+          "creationTimestamp": "2026-10-06T06:35:39Z",
+          "generation": 2,
+          "deletionTimestamp": null,
+          "ownerReferences": null,
+          "labels": null
+        },
+        "replicas": 0,
+        "readyReplicas": 0
+      }
+    ],
+    "objectstores": [
+      {
+        "kind": "ObjectStore",
+        "metadata": {
+          "name": "verdify-cnpg-pitr-reader",
+          "namespace": "verdify-db-rehearsal",
+          "uid": "e6dd97f3-3323-4155-b339-c984734b3d18",
+          "creationTimestamp": "2026-10-02T08:39:23Z",
+          "generation": 1,
+          "deletionTimestamp": null,
+          "ownerReferences": null,
+          "labels": {
+            "app.kubernetes.io/component": "cnpg-rehearsal",
+            "app.kubernetes.io/part-of": "verdify"
+          }
+        },
+        "status": null,
+        "spec": {
+          "retentionPolicy": null,
+          "configuration": {
+            "destinationPath": "s3://verdify-cnpg-rehearsal/postgresql",
+            "endpointURL": "https://s3-hdd.vallery.net",
+            "wal": {
+              "compression": "gzip"
+            },
+            "data": {
+              "compression": "gzip"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ObjectStore",
+        "metadata": {
+          "name": "verdify-cnpg-rehearsal-backup",
+          "namespace": "verdify-db-rehearsal",
+          "uid": "cd64a49f-140e-43ae-819e-0b9454a79bad",
+          "creationTimestamp": "2026-10-01T14:30:18Z",
+          "generation": 2,
+          "deletionTimestamp": null,
+          "ownerReferences": null,
+          "labels": {
+            "app.kubernetes.io/component": "cnpg-rehearsal",
+            "app.kubernetes.io/part-of": "verdify"
+          }
+        },
+        "status": {
+          "serverRecoveryWindow": {
+            "verdify-cnpg-rehearsal": {
+              "firstRecoverabilityPoint": "2026-10-02T03:35:12Z",
+              "lastSuccessfulBackupTime": "2026-10-11T03:34:28Z"
+            },
+            "verdify-cnpg-s2": {
+              "firstRecoverabilityPoint": "2026-10-06T05:30:30Z",
+              "lastSuccessfulBackupTime": "2026-10-06T05:30:30Z"
+            }
+          }
+        },
+        "spec": {
+          "retentionPolicy": "14d",
+          "configuration": {
+            "destinationPath": "s3://verdify-cnpg-rehearsal/postgresql",
+            "endpointURL": "https://s3-hdd.vallery.net",
+            "wal": {
+              "compression": "gzip"
+            },
+            "data": {
+              "compression": "gzip"
+            }
+          }
+        }
+      }
+    ],
+    "exact_historical_frozen_pv_volume_comparison": [
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-1",
+        "historical_pvc_uid": "3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+        "historical_pv": "pvc-3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+        "historical_volume": "pvc-3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-1-wal",
+        "historical_pvc_uid": "5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+        "historical_pv": "pvc-5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+        "historical_volume": "pvc-5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-2",
+        "historical_pvc_uid": "e752c593-8812-4209-b7cd-17bbe9b719ab",
+        "historical_pv": "pvc-e752c593-8812-4209-b7cd-17bbe9b719ab",
+        "historical_volume": "pvc-e752c593-8812-4209-b7cd-17bbe9b719ab",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-2-wal",
+        "historical_pvc_uid": "4b572ec5-3982-4059-8668-f2fd1fec74d3",
+        "historical_pv": "pvc-4b572ec5-3982-4059-8668-f2fd1fec74d3",
+        "historical_volume": "pvc-4b572ec5-3982-4059-8668-f2fd1fec74d3",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-3",
+        "historical_pvc_uid": "4c598b52-6104-4f65-9206-7bb04755118a",
+        "historical_pv": "pvc-4c598b52-6104-4f65-9206-7bb04755118a",
+        "historical_volume": "pvc-4c598b52-6104-4f65-9206-7bb04755118a",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-a-frozen-3-wal",
+        "historical_pvc_uid": "7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+        "historical_pv": "pvc-7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+        "historical_volume": "pvc-7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-1",
+        "historical_pvc_uid": "993b53bb-81fa-4fe4-8964-7958cec97a8e",
+        "historical_pv": "pvc-993b53bb-81fa-4fe4-8964-7958cec97a8e",
+        "historical_volume": "pvc-993b53bb-81fa-4fe4-8964-7958cec97a8e",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-1-wal",
+        "historical_pvc_uid": "d3f567f4-c8d2-4954-a330-988718680a1b",
+        "historical_pv": "pvc-d3f567f4-c8d2-4954-a330-988718680a1b",
+        "historical_volume": "pvc-d3f567f4-c8d2-4954-a330-988718680a1b",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-2",
+        "historical_pvc_uid": "8690f05f-f216-4166-a832-52b1aa2d34d2",
+        "historical_pv": "pvc-8690f05f-f216-4166-a832-52b1aa2d34d2",
+        "historical_volume": "pvc-8690f05f-f216-4166-a832-52b1aa2d34d2",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-2-wal",
+        "historical_pvc_uid": "4dcccffa-d6f5-45ee-9653-863a63697f73",
+        "historical_pv": "pvc-4dcccffa-d6f5-45ee-9653-863a63697f73",
+        "historical_volume": "pvc-4dcccffa-d6f5-45ee-9653-863a63697f73",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-3",
+        "historical_pvc_uid": "8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+        "historical_pv": "pvc-8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+        "historical_volume": "pvc-8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      },
+      {
+        "historical_pvc": "verdify-cnpg-s2-pitr-b-frozen-3-wal",
+        "historical_pvc_uid": "2f1d154f-0271-4668-b104-e89f36988c9b",
+        "historical_pv": "pvc-2f1d154f-0271-4668-b104-e89f36988c9b",
+        "historical_volume": "pvc-2f1d154f-0271-4668-b104-e89f36988c9b",
+        "current_pv_uid": null,
+        "current_volume_uid": null
+      }
+    ]
+  },
+  "argo": [
+    {
+      "name": "verdify-db-rehearsal-cluster",
+      "uid": "97ff0f52-2691-4f07-9184-591d936e3a05",
+      "source": {
+        "path": "deploy/k8s/cnpg/rehearsal/cluster",
+        "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "targetRevision": "main"
+      },
+      "manual_sync": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "verdify-db-rehearsal",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "path": "deploy/k8s/cnpg/rehearsal/cluster",
+            "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+            "targetRevision": "main"
+          }
+        },
+        "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+        "status": "OutOfSync"
+      },
+      "health": {
+        "lastTransitionTime": "2026-10-11T23:08:29Z",
+        "status": "Healthy"
+      },
+      "last_operation": {
+        "phase": "Succeeded",
+        "startedAt": "2026-10-02T01:17:33Z",
+        "finishedAt": "2026-10-02T01:17:34Z"
+      },
+      "resources": [
+        {
+          "group": "barmancloud.cnpg.io",
+          "kind": "ObjectStore",
+          "name": "verdify-cnpg-rehearsal-backup",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "NetworkPolicy",
+          "name": "cnpg-s2-runtime-client-ingress",
+          "namespace": "verdify-db-rehearsal",
+          "status": "OutOfSync",
+          "version": "v1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "NetworkPolicy",
+          "name": "cnpg-s2-runtime-client-only",
+          "namespace": "verdify-db-rehearsal",
+          "status": "OutOfSync",
+          "version": "v1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "NetworkPolicy",
+          "name": "deny-all-rehearsal",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "NetworkPolicy",
+          "name": "verdify-cnpg-rehearsal-isolation",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "group": "postgresql.cnpg.io",
+          "kind": "Cluster",
+          "name": "verdify-cnpg-rehearsal",
+          "namespace": "verdify-db-rehearsal",
+          "status": "OutOfSync",
+          "version": "v1"
+        },
+        {
+          "group": "postgresql.cnpg.io",
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2",
+          "namespace": "verdify-db-rehearsal",
+          "status": "OutOfSync",
+          "version": "v1"
+        },
+        {
+          "group": "postgresql.cnpg.io",
+          "kind": "ScheduledBackup",
+          "name": "verdify-cnpg-rehearsal-daily",
+          "namespace": "verdify-db-rehearsal",
+          "status": "OutOfSync",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "name": "verdify-db-rehearsal-namespace",
+      "uid": "8c478347-c607-4c6c-9cb6-e2d6771e8ab8",
+      "source": {
+        "path": "deploy/k8s/cnpg/rehearsal/namespace",
+        "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "targetRevision": "main"
+      },
+      "manual_sync": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "verdify-db-rehearsal",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "path": "deploy/k8s/cnpg/rehearsal/namespace",
+            "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+            "targetRevision": "main"
+          }
+        },
+        "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+        "status": "Synced"
+      },
+      "health": {
+        "lastTransitionTime": "2026-10-01T13:25:02Z",
+        "status": "Healthy"
+      },
+      "last_operation": {
+        "phase": "Succeeded",
+        "startedAt": "2026-10-01T13:25:02Z",
+        "finishedAt": "2026-10-01T13:25:02Z"
+      },
+      "resources": [
+        {
+          "kind": "Namespace",
+          "name": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        }
+      ]
+    },
+    {
+      "name": "verdify-db-rehearsal-secrets",
+      "uid": "0847f61d-69c8-4df6-842b-53ab1226dba2",
+      "source": {
+        "path": "platform/gitops/secrets-ksops/verdify-db-rehearsal",
+        "repoURL": "https://github.com/jvallery/agents.git",
+        "targetRevision": "main"
+      },
+      "manual_sync": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "verdify-db-rehearsal",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "path": "platform/gitops/secrets-ksops/verdify-db-rehearsal",
+            "repoURL": "https://github.com/jvallery/agents.git",
+            "targetRevision": "main"
+          }
+        },
+        "revision": "53681320d374f7cfd3e81782d6026c46da444126",
+        "status": "Synced"
+      },
+      "health": {
+        "lastTransitionTime": "2026-10-01T15:23:01Z",
+        "status": "Healthy"
+      },
+      "last_operation": {
+        "phase": "Succeeded",
+        "startedAt": "2026-10-01T17:52:44Z",
+        "finishedAt": "2026-10-01T17:52:46Z"
+      },
+      "resources": [
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-api-client-auth",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-ingestor-client-auth",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-mcp-client-auth",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-s3-reader",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-s3-region",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        },
+        {
+          "kind": "Secret",
+          "name": "verdify-cnpg-rehearsal-s3-writer",
+          "namespace": "verdify-db-rehearsal",
+          "status": "Synced",
+          "version": "v1"
+        }
+      ]
+    }
+  ],
+  "target": {
+    "name": "verdify-cnpg-s2-integration",
+    "cluster_uid": null,
+    "primary_pod_uid": null,
+    "pvc_pv_uids": [],
+    "service_uid": null,
+    "database_oid": null,
+    "system_identifier": null,
+    "target_exists": false,
+    "historical_source_cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+    "historical_source_backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "backup_id": "20261006T052358",
+    "source_timeline": 1,
+    "inclusive_target_time": "2026-10-06T05:38:19.219172+00:00",
+    "reader_objectstore_uid": "e6dd97f3-3323-4155-b339-c984734b3d18",
+    "archive_backup_wal_availability": "not independently revalidated in this read-only audit",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+    "instances": 3,
+    "data_per_instance_Gi": 20,
+    "wal_per_instance_Gi": 5,
+    "logical_Gi": 75,
+    "two_replica_potential_Gi": 150,
+    "cpu_request_total": 1.5,
+    "memory_request_total_Gi": 6,
+    "memory_limit_total_Gi": 18,
+    "background_workers_before_start": 0,
+    "archive_writer": false,
+    "anti_affinity": "required; topology.vallery.net/proxmox-host; three distinct eligible physical domains",
+    "storage_class": "longhorn-v1-rwo"
+  },
+  "capacity": {
+    "nodes": [
+      {
+        "node": "vm-k3s-node1",
+        "domain": null,
+        "pod_eligible": false,
+        "unschedulable": true,
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "node.kubernetes.io/unschedulable",
+            "timeAdded": "2026-08-26T23:59:21Z"
+          }
+        ],
+        "allocatable_cpu": "7250m",
+        "requested_cpu": "465m",
+        "request_cpu_headroom": 6.785,
+        "allocatable_memory_bytes": 5490565120,
+        "requested_memory": "949Mi",
+        "request_memory_headroom_Gi": 4.187,
+        "conditions": [
+          {
+            "type": "EtcdIsVoter",
+            "status": "True",
+            "reason": "MemberNotLearner"
+          },
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node2",
+        "domain": null,
+        "pod_eligible": false,
+        "unschedulable": true,
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "node.kubernetes.io/unschedulable",
+            "timeAdded": "2026-08-26T23:59:21Z"
+          }
+        ],
+        "allocatable_cpu": "7250m",
+        "requested_cpu": "460m",
+        "request_cpu_headroom": 6.79,
+        "allocatable_memory_bytes": 5490569216,
+        "requested_memory": "925Mi",
+        "request_memory_headroom_Gi": 4.21,
+        "conditions": [
+          {
+            "type": "EtcdIsVoter",
+            "status": "True",
+            "reason": "MemberNotLearner"
+          },
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node3",
+        "domain": null,
+        "pod_eligible": false,
+        "unschedulable": true,
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "node.kubernetes.io/unschedulable",
+            "timeAdded": "2026-08-26T23:59:21Z"
+          }
+        ],
+        "allocatable_cpu": "7250m",
+        "requested_cpu": "460m",
+        "request_cpu_headroom": 6.79,
+        "allocatable_memory_bytes": 5490561024,
+        "requested_memory": "925Mi",
+        "request_memory_headroom_Gi": 4.21,
+        "conditions": [
+          {
+            "type": "EtcdIsVoter",
+            "status": "True",
+            "reason": "MemberNotLearner"
+          },
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node4",
+        "domain": "oro",
+        "pod_eligible": true,
+        "unschedulable": false,
+        "taints": [],
+        "allocatable_cpu": "47",
+        "requested_cpu": "34425m",
+        "request_cpu_headroom": 12.575,
+        "allocatable_memory_bytes": 96599106602,
+        "requested_memory": "73584Mi",
+        "request_memory_headroom_Gi": 18.106,
+        "conditions": [
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node5",
+        "domain": "opal",
+        "pod_eligible": true,
+        "unschedulable": false,
+        "taints": [],
+        "allocatable_cpu": "47",
+        "requested_cpu": "28470m",
+        "request_cpu_headroom": 18.53,
+        "allocatable_memory_bytes": 96599099229,
+        "requested_memory": "63641Mi",
+        "request_memory_headroom_Gi": 27.816,
+        "conditions": [
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node6",
+        "domain": "ore",
+        "pod_eligible": true,
+        "unschedulable": false,
+        "taints": [],
+        "allocatable_cpu": "47",
+        "requested_cpu": "23285m",
+        "request_cpu_headroom": 23.715,
+        "allocatable_memory_bytes": 96598774826,
+        "requested_memory": "65661Mi",
+        "request_memory_headroom_Gi": 25.843,
+        "conditions": [
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node7",
+        "domain": "onyx",
+        "pod_eligible": true,
+        "unschedulable": false,
+        "taints": [],
+        "allocatable_cpu": "47",
+        "requested_cpu": "21595m",
+        "request_cpu_headroom": 25.405,
+        "allocatable_memory_bytes": 94424484500,
+        "requested_memory": "58598Mi",
+        "request_memory_headroom_Gi": 30.715,
+        "conditions": [
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      },
+      {
+        "node": "vm-k3s-node8",
+        "domain": "olivine",
+        "pod_eligible": false,
+        "unschedulable": false,
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "dedicated",
+            "value": "frigate"
+          }
+        ],
+        "allocatable_cpu": "47",
+        "requested_cpu": "33405m",
+        "request_cpu_headroom": 13.595,
+        "allocatable_memory_bytes": 96599102915,
+        "requested_memory": "58085Mi",
+        "request_memory_headroom_Gi": 33.241,
+        "conditions": [
+          {
+            "type": "MemoryPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientMemory"
+          },
+          {
+            "type": "DiskPressure",
+            "status": "False",
+            "reason": "KubeletHasNoDiskPressure"
+          },
+          {
+            "type": "PIDPressure",
+            "status": "False",
+            "reason": "KubeletHasSufficientPID"
+          },
+          {
+            "type": "Ready",
+            "status": "True",
+            "reason": "KubeletReady"
+          }
+        ]
+      }
+    ],
+    "disks": [
+      {
+        "node": "vm-k3s-node4",
+        "disk": "nvme-s7u5nj0xa01267a",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.815,
+        "available_Gi": 452.93,
+        "scheduled_Gi": 697.125,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 213.976,
+        "logical_200pct_headroom_Gi": 1114.506
+      },
+      {
+        "node": "vm-k3s-node4",
+        "disk": "nvme-s7u5nj0xa16865a",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.815,
+        "available_Gi": 492.188,
+        "scheduled_Gi": 775.098,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 253.234,
+        "logical_200pct_headroom_Gi": 1036.533
+      },
+      {
+        "node": "vm-k3s-node5",
+        "disk": "nvme-s4p4ng0m103293d",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.815,
+        "available_Gi": 393.555,
+        "scheduled_Gi": 986.348,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 154.601,
+        "logical_200pct_headroom_Gi": 825.283
+      },
+      {
+        "node": "vm-k3s-node5",
+        "disk": "nvme-s59anj0n203499k",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.815,
+        "available_Gi": 453.32,
+        "scheduled_Gi": 733.0,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 214.366,
+        "logical_200pct_headroom_Gi": 1078.631
+      },
+      {
+        "node": "vm-k3s-node6",
+        "disk": "nvme-s4p4ng0m103292y",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.816,
+        "available_Gi": 515.332,
+        "scheduled_Gi": 875.223,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 276.378,
+        "logical_200pct_headroom_Gi": 936.41
+      },
+      {
+        "node": "vm-k3s-node6",
+        "disk": "nvme-s4p4ng0m105377e",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.816,
+        "available_Gi": 397.461,
+        "scheduled_Gi": 625.0,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 158.507,
+        "logical_200pct_headroom_Gi": 1186.632
+      },
+      {
+        "node": "vm-k3s-node7",
+        "disk": "nvme-s59ans0na05876v",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.815,
+        "available_Gi": 253.223,
+        "scheduled_Gi": 1033.098,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 14.269,
+        "logical_200pct_headroom_Gi": 778.533
+      },
+      {
+        "node": "vm-k3s-node7",
+        "disk": "nvme-s7u5nj0xa01246z",
+        "native_schedulable": true,
+        "pod_eligible_node": true,
+        "maximum_Gi": 915.816,
+        "available_Gi": 394.141,
+        "scheduled_Gi": 687.0,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 155.187,
+        "logical_200pct_headroom_Gi": 1124.632
+      },
+      {
+        "node": "vm-k3s-node8",
+        "disk": "nvme-s7u5nj0xa01169z",
+        "native_schedulable": true,
+        "pod_eligible_node": false,
+        "maximum_Gi": 915.815,
+        "available_Gi": 283.594,
+        "scheduled_Gi": 278.0,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 44.64,
+        "logical_200pct_headroom_Gi": 1533.631
+      },
+      {
+        "node": "vm-k3s-node8",
+        "disk": "nvme-s7u5nj0xa01268w",
+        "native_schedulable": true,
+        "pod_eligible_node": false,
+        "maximum_Gi": 915.815,
+        "available_Gi": 782.324,
+        "scheduled_Gi": 97.125,
+        "reserved_Gi": 10.0,
+        "conservative_physical_headroom_Gi": 543.37,
+        "logical_200pct_headroom_Gi": 1714.506
+      }
+    ],
+    "storage_class": {
+      "metadata": {
+        "name": "longhorn-v1-rwo",
+        "namespace": null,
+        "uid": "ebcb0143-fbf2-4737-a9ab-9d11e856c466",
+        "creationTimestamp": "2026-06-26T06:22:25Z",
+        "generation": null,
+        "deletionTimestamp": null,
+        "ownerReferences": null,
+        "labels": null
+      },
+      "provisioner": "driver.longhorn.io",
+      "parameters": {
+        "dataEngine": "v1",
+        "dataLocality": "best-effort",
+        "diskSelector": "plane-longhorn",
+        "fsType": "ext4",
+        "nodeSelector": "plane-longhorn",
+        "numberOfReplicas": "2",
+        "recurringJobSelector": "[{\"name\":\"standard\",\"isGroup\":true}]",
+        "replicaSoftAntiAffinity": "disabled",
+        "staleReplicaTimeout": "30"
+      },
+      "volumeBindingMode": "WaitForFirstConsumer",
+      "reclaimPolicy": "Retain"
+    },
+    "longhorn_settings": {
+      "replica-auto-balance": "least-effort",
+      "replica-disk-soft-anti-affinity": "true",
+      "replica-soft-anti-affinity": "false",
+      "replica-zone-soft-anti-affinity": "true",
+      "storage-minimal-available-percentage": "25",
+      "storage-over-provisioning-percentage": "200"
+    },
+    "conservative_physical_headroom_pod_eligible_Gi": 1440.518,
+    "conservative_physical_headroom_all_eligible_Gi": 2028.528,
+    "node8": "CNPG pod excluded by dedicated=frigate:NoSchedule with no target toleration; Longhorn replicas remain eligible. Only existing per-disk10Gi reserve plus25% threshold is counted. Concurrent owner reservations must be confirmed.",
+    "admitted": false,
+    "admission_gap": "Current storage/Proxmox owner confirmation and coordination with Retry production lane not recorded; snapshot is not admission."
+  },
+  "rendered_directory_clusters": [
+    {
+      "name": "verdify-cnpg-rehearsal",
+      "data": "30Gi",
+      "wal": "10Gi",
+      "instances": 3,
+      "hibernation": null
+    },
+    {
+      "name": "verdify-cnpg-s2",
+      "data": "20Gi",
+      "wal": "5Gi",
+      "instances": 3,
+      "hibernation": "on"
+    },
+    {
+      "name": "verdify-cnpg-s2-integration",
+      "data": "20Gi",
+      "wal": "5Gi",
+      "instances": 3,
+      "hibernation": null
+    }
+  ],
+  "full_directory_potential_logical_Gi": 270,
+  "full_directory_potential_two_replica_Gi": 540,
+  "validation": {
+    "offline_modules": 14,
+    "offline_passed": 87,
+    "offline_skipped": 8,
+    "private_pg_modules": 3,
+    "private_pg_passed": 34,
+    "private_pg_version": "16.15 Homebrew, private Unix-socket synthetic fixture, no Timescale server",
+    "distinct_passed_tests": 95,
+    "remaining_skipped_tests": [],
+    "native_fixture_scope": "Synthetic SQL rollback/refusal and result-equivalence checks only; not restored PG16.13/Timescale/native whole-data proof.",
+    "production_restore_or_fault_execution": false
+  },
+  "evidence_sha256": {
+    "admission-inventory.json": "5e63f9b1aa24a3e8efcc68c08e331d4a349463ae11a4b089608881e245d396d8",
+    "capacity-refresh.json": "e862ac547833a7c1cfe049d3e9606f99f543a0d6294b6d873522fbef3b0426c4",
+    "pr969-rehearsal-render.yaml": "46870a880ec8b6d01a5d57391301373e3e72212c40fc177de6c888bc969307eb",
+    "offline-contract-tests.xml": "039c5130d5799d7531fdf60ef3960dff91c6f2c5774dbbf102f0e3358b9e2f00",
+    "private-postgres-tests.xml": "77ee25d56a36cc0bc0069495712d351f3df1e18233801b6a3b806a8a482bd9d2",
+    "historical-frozen-volume-comparison.json": "d5af745f6b1a9f86ac1d463f83a434170bd79e52c03ff9f10ccfbf3465c18e6f"
+  },
+  "next_steps": [
+    "Resolve absent-original-resource desired-state delta with owners; do not sync old initdb or original S2 manifests as if hibernating existing objects.",
+    "Independently revalidate historical backup/WAL/reader custody and current storage/Proxmox admission; coordinate Retry owner before target allocation.",
+    "Once admitted, deliver bounded exact target desired state; collect new Cluster, primary/replica Pod, PVC/PV/handle, RW Service UIDs, database OID/system identifier/image/placement.",
+    "Use existing predecessor/COPY witness, rollback-only275 bridge then reviewed install, distinct rollback-onlynative admission then reviewed install with independent post-readbacks.",
+    "Run current-source ordinary-client duties/fixtures/inverses, endpoint reversal and whole952 objects/77 sequences/42 study tables reseals; measure restore/failover/RPO/RTO separately."
+  ]
+}
