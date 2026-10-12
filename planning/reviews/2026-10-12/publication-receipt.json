@@ -1,0 +1,29 @@
+{
+  "phase": "source prepared; native sprint metadata publication next",
+  "review_base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "checks": {
+    "planning_tests_passed": 35,
+    "published_schema": "88 issues,9 stages,76 edges",
+    "render_fresh": true,
+    "ruff_lint_format": true,
+    "diff_check": true,
+    "native_graph": "95 nodes/80 edges;76canonical exact;no cycles/truncation/parent mismatches",
+    "open_allocation_coverage": "64/64 exactly once",
+    "render": "128objects/0Secrets;27image specs equal,0differ,5hookJobs absent betweenruns"
+  },
+  "runtime_mutation_by_audit": false,
+  "prior_publication": "98/98exact originalpreparedbodies once;notrepeated",
+  "automation": {
+    "id": "verdify-sprint-coordinator",
+    "status": "ACTIVE",
+    "timezone": "America/Denver",
+    "cadence": "weekdays hourly09:00\u201316:00",
+    "planning_capacity_hours_per_week": 40
+  },
+  "parallel_workers": {
+    "release_runtime": "existing Retry chat01a12b3b-f57c-7ab0-bdcc-3cdba80e82c3, soleproductionwriter",
+    "science_readiness": "codex/scientific-readiness-20261012",
+    "contained_recovery": "codex/contained-recovery-20261012"
+  },
+  "native_metadata_readback": "pending next publication phase"
+}

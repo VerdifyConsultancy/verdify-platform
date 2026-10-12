@@ -1,0 +1,326 @@
+{
+  "968": {
+    "head": "4ceb6dcc47997be3cfa0c14db7d169e61f793d3d",
+    "is_ancestor_of_combined": true,
+    "files": [
+      {
+        "path": "planning/backlog.yaml",
+        "standalone_blob": "12316c2e80b8a4143514b43d234eaea8ef9da3b2",
+        "combined_blob": "12316c2e80b8a4143514b43d234eaea8ef9da3b2",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/RECOVERY-964.md",
+        "standalone_blob": "6be31b5b986f56f29dd0fd2e5d767f62f23bfb56",
+        "combined_blob": "6be31b5b986f56f29dd0fd2e5d767f62f23bfb56",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/S2-PROGRESS.md",
+        "standalone_blob": "38e5fd3cd7084f9168c3579f429425c8539aec78",
+        "combined_blob": "38e5fd3cd7084f9168c3579f429425c8539aec78",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/cancel-observation-seal-diagnosis.json",
+        "standalone_blob": "6056264af03cf34bec161afbf7b8992cb34d3dea",
+        "combined_blob": "6056264af03cf34bec161afbf7b8992cb34d3dea",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/firmware-validation-cancel-receipt.json",
+        "standalone_blob": "39b21129cd30030983eb95ea3598223f4ddd01b9",
+        "combined_blob": "39b21129cd30030983eb95ea3598223f4ddd01b9",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-current-source-native-validation.json",
+        "standalone_blob": "1e36d5f2eed64e13890a340625ccbd1e12c7b277",
+        "combined_blob": "1e36d5f2eed64e13890a340625ccbd1e12c7b277",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-final-native-validation-readback.json",
+        "standalone_blob": "77adf6e37f63e92305ba412c219700a90d74f340",
+        "combined_blob": "77adf6e37f63e92305ba412c219700a90d74f340",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-native-ci-source-correction.json",
+        "standalone_blob": "38f09e3c201836023dd37fe49c6655897c7de236",
+        "combined_blob": "38f09e3c201836023dd37fe49c6655897c7de236",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-native-policy-manifest-correction.json",
+        "standalone_blob": "141f2890a8db6077ad547f3089e084a0e279039c",
+        "combined_blob": "141f2890a8db6077ad547f3089e084a0e279039c",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/owner-4763-held-source-corrections.json",
+        "standalone_blob": "3f161cf964de11086b43b141a86388b82c465955",
+        "combined_blob": "3f161cf964de11086b43b141a86388b82c465955",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/owner-4763-rebased-held-custody.json",
+        "standalone_blob": "585e18af4e2127510c3e0d1cd74623e83eb832d4",
+        "combined_blob": "585e18af4e2127510c3e0d1cd74623e83eb832d4",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/portable-firmware-container-qualification.json",
+        "standalone_blob": "699b1e4953a840572769e38273c5f2e0353ac937",
+        "combined_blob": "699b1e4953a840572769e38273c5f2e0353ac937",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/portable-firmware-current-source-full-provenance.json",
+        "standalone_blob": "dc072ad1691bc6e9fa1bd68adffbdee7cc2bd140",
+        "combined_blob": "dc072ad1691bc6e9fa1bd68adffbdee7cc2bd140",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/portable-firmware-final-source-qualification.json",
+        "standalone_blob": "0b57b5909713e20a683ab34cf8f542dd72f319fa",
+        "combined_blob": "0b57b5909713e20a683ab34cf8f542dd72f319fa",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/portable-firmware-local-qualification.json",
+        "standalone_blob": "33b40a5c1ff78805fe5a5ab10b833bad8e3f1078",
+        "combined_blob": "33b40a5c1ff78805fe5a5ab10b833bad8e3f1078",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/production-identity-handoff-readback.json",
+        "standalone_blob": "d919d036cba086b981694b80a98a00b3b411ddbe",
+        "combined_blob": "d919d036cba086b981694b80a98a00b3b411ddbe",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-396-frozen-reseals.json",
+        "standalone_blob": "a1328e547ac93d353f4699aa502ec5da7cec9236",
+        "combined_blob": "a1328e547ac93d353f4699aa502ec5da7cec9236",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-964-image-agreement.json",
+        "standalone_blob": "8fb44b5a31b59b8566ea687965977b859d661d88",
+        "combined_blob": "8fb44b5a31b59b8566ea687965977b859d661d88",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-964-natural-cadence.json",
+        "standalone_blob": "46772622ee8f6738f54fd133775cf7ec7372fdfa",
+        "combined_blob": "46772622ee8f6738f54fd133775cf7ec7372fdfa",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-964-operation.json",
+        "standalone_blob": "78c6ce2779463d42d57abcd9710003d5c166c076",
+        "combined_blob": "78c6ce2779463d42d57abcd9710003d5c166c076",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-964-validation.json",
+        "standalone_blob": "fe901f776b4e7ea8dc0ad2d4ce4a999ed48875c7",
+        "combined_blob": "fe901f776b4e7ea8dc0ad2d4ce4a999ed48875c7",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/recovery-SHA256SUMS",
+        "standalone_blob": "7459a459020b6755f02dc4947045af65e79d730d",
+        "combined_blob": "7459a459020b6755f02dc4947045af65e79d730d",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/runtime-643-login-progress.json",
+        "standalone_blob": "e2b33a21dafe393c18347a732a25731748beea25",
+        "combined_blob": "e2b33a21dafe393c18347a732a25731748beea25",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/source-only-pr-validation-effect-review.json",
+        "standalone_blob": "1d87ac418655c7a4c44f0d0104bce58d8efb1ea7",
+        "combined_blob": "1d87ac418655c7a4c44f0d0104bce58d8efb1ea7",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/source-preparation-SHA256SUMS",
+        "standalone_blob": "bda05e78e2b3514ff5a6be291b48c014f953a158",
+        "combined_blob": "bda05e78e2b3514ff5a6be291b48c014f953a158",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/source-preparation-delivery-queue.json",
+        "standalone_blob": "566f6ed8572edba3ea5daa0a3a6b8bfb8bde81ac",
+        "combined_blob": "566f6ed8572edba3ea5daa0a3a6b8bfb8bde81ac",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/task-local-kubectl-qualification.json",
+        "standalone_blob": "43bf13903b44ef377bf5cbf7d7627c7a5716b28c",
+        "combined_blob": "43bf13903b44ef377bf5cbf7d7627c7a5716b28c",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/tooling-credential-absence-readback.json",
+        "standalone_blob": "764ef104efb2e7fdb768af2150ce7f9d5a3f2930",
+        "combined_blob": "764ef104efb2e7fdb768af2150ce7f9d5a3f2930",
+        "equal": true
+      },
+      {
+        "path": "planning/issues_manifest.json",
+        "standalone_blob": "963b51a25f23c8bc8805dbf9c04f38dd86ff1e01",
+        "combined_blob": "963b51a25f23c8bc8805dbf9c04f38dd86ff1e01",
+        "equal": true
+      }
+    ]
+  },
+  "970": {
+    "head": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+    "is_ancestor_of_combined": true,
+    "files": [
+      {
+        "path": "api/main.py",
+        "standalone_blob": "6859a72a0afb1bb35dd59a16a892ca4c533733a3",
+        "combined_blob": "6859a72a0afb1bb35dd59a16a892ca4c533733a3",
+        "equal": true
+      },
+      {
+        "path": "docs/SERVICE_MAP.md",
+        "standalone_blob": "954d5e3c279624ca4af8b4c8e8168ccec9021985",
+        "combined_blob": "d379bbf9258bcde4e03a1872bf88771119a13cfe",
+        "equal": false
+      },
+      {
+        "path": "docs/runbooks/api-light-command-boundary.md",
+        "standalone_blob": "2c0741e5f393b5e7ff3a1ac489e7d74dfccc7e15",
+        "combined_blob": "2c0741e5f393b5e7ff3a1ac489e7d74dfccc7e15",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/lights-965-SHA256SUMS",
+        "standalone_blob": "0f562df243fc9ad7894334b0ca62783422071342",
+        "combined_blob": "0f562df243fc9ad7894334b0ca62783422071342",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/lights-965-current-container-log-audit.json",
+        "standalone_blob": "a79fea9fac04b9442de21af6ffdd7995d346a09b",
+        "combined_blob": "a79fea9fac04b9442de21af6ffdd7995d346a09b",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/lights-965-retained-history-audit.json",
+        "standalone_blob": "b72463fcaf9fc518adac74115cd378125736f086",
+        "combined_blob": "b72463fcaf9fc518adac74115cd378125736f086",
+        "equal": true
+      },
+      {
+        "path": "scripts/ci-local.sh",
+        "standalone_blob": "e3becf5192f0f6fc11aada67f8c356ae985a7b70",
+        "combined_blob": "e11f0728806fd51904c218b3de1a96cc0aacdc01",
+        "equal": false
+      },
+      {
+        "path": "tests/test_api_light_command_boundary.py",
+        "standalone_blob": "864e45a111ff936bed60d3387ab73d92453a8f4a",
+        "combined_blob": "864e45a111ff936bed60d3387ab73d92453a8f4a",
+        "equal": true
+      }
+    ]
+  },
+  "971": {
+    "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+    "is_ancestor_of_combined": true,
+    "files": [
+      {
+        "path": "docs/runbooks/moisture-telemetry-state-boundary.md",
+        "standalone_blob": "40d9eabc8d50dace0114464cde7a337c1f01b02f",
+        "combined_blob": "40d9eabc8d50dace0114464cde7a337c1f01b02f",
+        "equal": true
+      },
+      {
+        "path": "firmware/greenhouse/controls.yaml",
+        "standalone_blob": "7a2c3b45ab7edf92a94bc188da5ca8c3940f1434",
+        "combined_blob": "7a2c3b45ab7edf92a94bc188da5ca8c3940f1434",
+        "equal": true
+      },
+      {
+        "path": "firmware/greenhouse/hardware.yaml",
+        "standalone_blob": "07e61384dff5a6bbb3ba85df86dab74650515e41",
+        "combined_blob": "07e61384dff5a6bbb3ba85df86dab74650515e41",
+        "equal": true
+      },
+      {
+        "path": "firmware/policy_consumer_manifest.json",
+        "standalone_blob": "4b568e62a53e8724a99e23d060b27e1c8d8a5ba5",
+        "combined_blob": "4b568e62a53e8724a99e23d060b27e1c8d8a5ba5",
+        "equal": true
+      },
+      {
+        "path": "ingestor/entity_map.py",
+        "standalone_blob": "b347bd386314f3c20759ab7506debc38a2fb417a",
+        "combined_blob": "b347bd386314f3c20759ab7506debc38a2fb417a",
+        "equal": true
+      },
+      {
+        "path": "ingestor/ingestor.py",
+        "standalone_blob": "afe52f3fc761bfacc96f20a56b93a245bc511e64",
+        "combined_blob": "afe52f3fc761bfacc96f20a56b93a245bc511e64",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-963-SHA256SUMS",
+        "standalone_blob": "8a62ccb440e5118f5a96bba089178604fd25add3",
+        "combined_blob": "8a62ccb440e5118f5a96bba089178604fd25add3",
+        "equal": true
+      },
+      {
+        "path": "planning/execution/2026-10-11/moisture-963-source-qualification.json",
+        "standalone_blob": "985eab0b1869f5b590ff22a53ebde78f8eac9468",
+        "combined_blob": "985eab0b1869f5b590ff22a53ebde78f8eac9468",
+        "equal": true
+      },
+      {
+        "path": "scripts/ci-local.sh",
+        "standalone_blob": "4f3e851e56c5b9d6e34f8a5160803ab729ecb2ec",
+        "combined_blob": "e11f0728806fd51904c218b3de1a96cc0aacdc01",
+        "equal": false
+      },
+      {
+        "path": "tests/test_control_band_wire.py",
+        "standalone_blob": "444cf09de7c3b417093f922fb16802145286f64c",
+        "combined_blob": "444cf09de7c3b417093f922fb16802145286f64c",
+        "equal": true
+      },
+      {
+        "path": "tests/test_moisture_state_boundary.py",
+        "standalone_blob": "89a176e3958c53879e83c5bd4c147628d142fe3b",
+        "combined_blob": "89a176e3958c53879e83c5bd4c147628d142fe3b",
+        "equal": true
+      },
+      {
+        "path": "verdify_schemas/control_band_wire.py",
+        "standalone_blob": "bfa184c79f5769003ccdbe9598e13554396ba4bf",
+        "combined_blob": "bfa184c79f5769003ccdbe9598e13554396ba4bf",
+        "equal": true
+      },
+      {
+        "path": "verdify_schemas/telemetry.py",
+        "standalone_blob": "eb3eb075973781b85eff180325130cd177989fd2",
+        "combined_blob": "eb3eb075973781b85eff180325130cd177989fd2",
+        "equal": true
+      },
+      {
+        "path": "verdify_schemas/tests/test_moisture_telemetry.py",
+        "standalone_blob": "7f0ca432aaeb9f4dc80167ed3d7f4a06fa0e94ec",
+        "combined_blob": "7f0ca432aaeb9f4dc80167ed3d7f4a06fa0e94ec",
+        "equal": true
+      }
+    ]
+  }
+}

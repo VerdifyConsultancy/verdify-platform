@@ -1,0 +1,9 @@
+{
+  "expected_local_issues": 91,
+  "expected_open_prs": 7,
+  "comments_fetched": 1063,
+  "comment_count_mismatches": [],
+  "issue_event_pages_paginated": true,
+  "pr_file_count_mismatches": [],
+  "branches_fetched": 1148
+}

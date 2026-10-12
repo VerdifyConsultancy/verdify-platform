@@ -1,0 +1,177 @@
+[
+  {
+    "number": 973,
+    "title": "Fix unsupported light commands and moisture telemetry boundaries",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/973",
+    "head_ref": "sprint/s2-resumed-20261011",
+    "head_sha": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+    "base_ref": "main",
+    "base_sha": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-10-12T01:19:59Z"
+      }
+    ],
+    "files_expected": 54,
+    "files_fetched": 54,
+    "commits": 21,
+    "additions": 3854,
+    "deletions": 72
+  },
+  {
+    "number": 971,
+    "title": "Preserve estimator detail while keeping HA moisture state short",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/971",
+    "head_ref": "fix/moisture-telemetry-state-boundary-20261011",
+    "head_sha": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+    "base_ref": "main",
+    "base_sha": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-10-11T17:45:23Z"
+      }
+    ],
+    "files_expected": 14,
+    "files_fetched": 14,
+    "commits": 6,
+    "additions": 474,
+    "deletions": 21
+  },
+  {
+    "number": 970,
+    "title": "fix(api): stop light command intent from becoming observed runtime",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/970",
+    "head_ref": "fix/light-command-observation-boundary-20261011",
+    "head_sha": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+    "base_ref": "main",
+    "base_sha": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-10-11T15:50:28Z"
+      }
+    ],
+    "files_expected": 8,
+    "files_fetched": 8,
+    "commits": 2,
+    "additions": 176,
+    "deletions": 19
+  },
+  {
+    "number": 969,
+    "title": "fix(db): recover S2 into a contained clone without added memory pressure",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/969",
+    "head_ref": "fix/s2-contained-integration-recovery-20261011",
+    "head_sha": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+    "base_ref": "main",
+    "base_sha": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-10-11T16:04:20Z"
+      }
+    ],
+    "files_expected": 12,
+    "files_fetched": 12,
+    "commits": 4,
+    "additions": 360,
+    "deletions": 7
+  },
+  {
+    "number": 968,
+    "title": "docs: seal Lab recovery and current S2 acceptance limits",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/968",
+    "head_ref": "sprint/s2-evidence-integration-20261011",
+    "head_sha": "4ceb6dcc47997be3cfa0c14db7d169e61f793d3d",
+    "base_ref": "main",
+    "base_sha": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-10-11T18:12:04Z"
+      }
+    ],
+    "files_expected": 29,
+    "files_fetched": 29,
+    "commits": 6,
+    "additions": 3041,
+    "deletions": 11
+  },
+  {
+    "number": 855,
+    "title": "Stage one-shot Gate P direct-proof activation for #641",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855",
+    "head_ref": "agent/c1-gatep-activation-20260927",
+    "head_sha": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+    "base_ref": "main",
+    "base_sha": "3733c0c93d72534137ec3f171b69443aef587576",
+    "draft": true,
+    "mergeable": false,
+    "mergeable_state": "dirty",
+    "commit_status": "success",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "success",
+        "description": "Verdify Platform in-cluster PR validation passed",
+        "created_at": "2026-09-27T13:02:58Z"
+      }
+    ],
+    "files_expected": 4,
+    "files_fetched": 4,
+    "commits": 1,
+    "additions": 84,
+    "deletions": 8
+  },
+  {
+    "number": 774,
+    "title": "WIP: preserve component current-state capture tool",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/774",
+    "head_ref": "draft/component-current-state-capture",
+    "head_sha": "1a6d64e853a861d4c4bd24f4cfc5f51a15f137b4",
+    "base_ref": "main",
+    "base_sha": "13e46c84e8531c2f7dfdd488c95d59d573a00d0e",
+    "draft": true,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "commit_status": "pending",
+    "statuses": [],
+    "files_expected": 2,
+    "files_fetched": 2,
+    "commits": 1,
+    "additions": 888,
+    "deletions": 0
+  }
+]

@@ -2932,7 +2932,7 @@
       "title": "Bound planner-policy drift holds and prove autonomous safe convergence",
       "stage": "C4",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P0",
       "effort": "M",
       "owner_role": "Platform lead",
       "parent": "430",
@@ -2953,7 +2953,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "October11 review: REGRESSION: current stage state is halted (run 76d18133852b490680bce2639e6d8397), generation13. Six repeated blocked_stage messages in 30 minutes and 17 drift warnings per pass. No new confirmed setpoints in the captured24h (three observed rows). Preserve the prior two-hour acceptance as history, reopen for bounded recovery/current plan convergence; do not erase state, replay approval or raise cap.",
+      "baseline": "October12 read-only evidence: halted run76d18133852b490680bce2639e6d8397 remains bound to an expired October7 approval and an old pod/source/generation. Current Iris plans exist but no confirmed plan-sourced write after October6; preserve cap12 and original custody. Current ready workloads do not establish policy convergence.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3080,7 +3080,7 @@
       "paths": [
         "hermes/iris"
       ],
-      "baseline": "October11 execution acceptance: sealed the first required post-rollout SUNRISE and today's SUNRISE through exact native trigger/session/plan joins. Both resolve all required skill references without lookup failures and retain195 valid database rows/5 waypoints. Current exact-profile inventory resolves102/102 paths across88 skills. A later learned-skill patch mismatch and successful retry remain explicit, separate from required lookup and plan success. See planning/execution/2026-10-11/IRIS-953.md. No model or device call was created for verification.",
+      "baseline": "Accepted/closed on the sealed October11 first-postrollout/current natural-cycle receipts. October12 audit sees current Iris plans; do not repeat provider calls or reopen from old inventory-only prose.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 4 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3179,7 +3179,7 @@
         "scripts",
         "docs"
       ],
-      "baseline": "October11 review: OPEN P0: full promotion Failed October6; Lab replacement/publisher/band refresh are unschedulable against node7 affinity. Last published success October6 07:16:53Z, expired07:36:53Z. Recover supported placement and full exact-source adoption, then three natural publisher runs and band-refresh completion; no force detach or uncoordinated node/NFS action.",
+      "baseline": "Accepted/closed bounded production recovery remains historical current evidence: October12 main b5bdb3c6 Argo Synced/Healthy, all15deployments ready. The last completed operation was selective CronJob cadence; the last full hook-bearing sync succeeded October11 at9f799919. This does not accept #949 or the next source cohort.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3214,7 +3214,7 @@
         "tests",
         "ingestor/tasks/ha.py"
       ],
-      "baseline": "October11 review: OPEN SOURCE/RUNTIME-CONFIRMED BUG: running API light endpoint writes requested on/off into observed equipment history without invoking a writer. No live POST executed. Separate command intent from authentic observations, prevent false runtime/resource credit, and audit affected provenance.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3247,10 +3247,678 @@
         "firmware/greenhouse/controls.yaml",
         "ingestor/entity_map.py"
       ],
-      "baseline": "October11 review: OPEN SOURCE-CONFIRMED BUG: firmware publishes moisture-exchange JSON as text state; current native ingestor log contains >255-character payload. HA source report records unknown/error. Qualify a short-state/structured-detail consumer contract offline; OTA remains separately bounded. Not hidden inside S2.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
     }
-  ]
+  ],
+  "execution_plan": {
+    "reviewed_at": "2026-10-12T17:38:10Z",
+    "source_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "capacity_hours_per_week": 40,
+    "review_path": "planning/reviews/2026-10-12",
+    "open_issues": [
+      14,
+      16,
+      31,
+      45,
+      51,
+      52,
+      75,
+      218,
+      245,
+      296,
+      297,
+      298,
+      299,
+      303,
+      304,
+      317,
+      324,
+      350,
+      359,
+      361,
+      367,
+      368,
+      369,
+      370,
+      378,
+      379,
+      382,
+      386,
+      390,
+      396,
+      398,
+      410,
+      412,
+      419,
+      428,
+      430,
+      434,
+      581,
+      586,
+      587,
+      588,
+      606,
+      638,
+      639,
+      640,
+      641,
+      642,
+      643,
+      644,
+      749,
+      750,
+      751,
+      775,
+      782,
+      783,
+      784,
+      785,
+      786,
+      787,
+      801,
+      802,
+      949,
+      963,
+      965
+    ],
+    "sprints": [
+      {
+        "id": "S2",
+        "title": "S2 — Recoverability and reliable delivery (October 2026)",
+        "kind": "sprint",
+        "capacity_hours": 80,
+        "goal": "Finish the five remaining S2 outcomes using one release lane and one independent contained recovery lane.",
+        "exit": "Current #949 authentic convergence and exact-source #644 delivery; full #396/#382/#643 restore, event and runtime-role clauses sealed. Historical #964/#953 acceptance retained."
+      },
+      {
+        "id": "S3",
+        "title": "S3 — Source truth, portable validation and prospective design",
+        "kind": "sprint",
+        "capacity_hours": 80,
+        "goal": "Adopt the existing command/telemetry fixes safely, qualify portable firmware tooling and choose a defensible prospective study before any draw.",
+        "exit": "#965 no false observed light history; #963 compatible source and explicitly bounded live/OTA acceptance; #304/#303/#419 authentic tooling/replay; #782 reproducible scientific and seasonal decision. Prepare independent work during S2."
+      },
+      {
+        "id": "S4",
+        "title": "S4 — Current readiness and integrated qualification",
+        "kind": "sprint",
+        "capacity_hours": 80,
+        "goal": "Join current executor, lifecycle, backup, readiness and restored-data evidence; prepare the attended physical proof.",
+        "exit": "#749/#639/#587/#783 complete current original clauses, reusing closed #747 evidence only after a fresh backup check. #641 completes only in its separately authorized attended window; otherwise its prepared packet remains a declared conditional carryover."
+      },
+      {
+        "id": "S5",
+        "title": "S5 — Immutable lock, launch and first real outcome",
+        "kind": "conditional",
+        "capacity_hours": 80,
+        "goal": "After the genuine predecessor evidence and seasonal decision, lock once and perform one separately authorized launch.",
+        "exit": "#588 exactly one immutable lock/draw; #642 actual authorized day 1; #640 first genuine assigned-day freeze/export. No calendar launch date is promised."
+      },
+      {
+        "id": "PILOT",
+        "title": "Pilot operations and reproducible readout",
+        "kind": "ongoing",
+        "capacity_hours": null,
+        "goal": "Retain every assigned day and produce the prespecified bounded decision.",
+        "exit": "#784 genuine 60 local days if the retained design is chosen (or prespecified stopping boundary), then #785 one-way reveal and reproducible ITT report."
+      },
+      {
+        "id": "RELEASE",
+        "title": "Release safety and estate adoption follow-through",
+        "kind": "conditional",
+        "capacity_hours": null,
+        "goal": "Finish the remaining bounded release and ownership interfaces without delaying independent scientific work.",
+        "exit": "Actual #386/#390 release evidence, #317 regression qualification and owner-coordinated #801/#802 adoption; no broad shared-app sync or OTA implied."
+      },
+      {
+        "id": "CONTROL",
+        "title": "Evidence-led control and irrigation queue",
+        "kind": "conditional",
+        "capacity_hours": null,
+        "goal": "Retain C6 ownership and pull bounded sensing/safety maintenance independently; treatment changes respect study locks.",
+        "exit": "Original control/topology/irrigation acceptance with calibrated inputs and actual physical evidence. #378/#361 remain downstream of readout; no opportunistic tuning during assigned days."
+      },
+      {
+        "id": "PHYSICAL",
+        "title": "Physical and seasonal commissioning",
+        "kind": "conditional",
+        "capacity_hours": null,
+        "goal": "Prepare concrete operator worksheets and keep missing sensors visibly unavailable.",
+        "exit": "Actual crop/probe/plumbing map, calibrated chemistry/CO2, south/hydro repair and supported seasonal choices. No guessed dates or purchasing authority."
+      },
+      {
+        "id": "FUTURE",
+        "title": "Future comparator, resource economics and cutover options",
+        "kind": "future",
+        "capacity_hours": null,
+        "goal": "Keep independently justified future capabilities and optional DB cutover owned without adding them as pilot launch gates.",
+        "exit": "Issue-specific qualified proof and separate implementation decision after dependencies; no claim of whole-resource savings or AI superiority from the narrow pilot."
+      },
+      {
+        "id": "ROLLUP",
+        "title": "Campaign and program roll-ups",
+        "kind": "rollup",
+        "capacity_hours": null,
+        "goal": "Track original C0–C8 program outcomes without double-counting epic effort.",
+        "exit": "Each child retains its own acceptance and historical receipts. Parentage is ownership, never an automatic blocking edge."
+      }
+    ],
+    "allocations": [
+      {
+        "issue_number": 14,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 16,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 31,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 45,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 51,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 52,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 75,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 218,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 245,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 296,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 297,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 298,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 299,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 303,
+        "sprint": "S3",
+        "hours_min": 6,
+        "hours_max": 12,
+        "next_action": "Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 304,
+        "sprint": "S3",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 317,
+        "sprint": "RELEASE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Reuse atomic reset workaround; qualify the stale selective-operation regression with the owning fleet/upstream support before closure.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 324,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 350,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 359,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 361,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 367,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 368,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 369,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 370,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 378,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 379,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 382,
+        "sprint": "S2",
+        "hours_min": 6,
+        "hours_max": 12,
+        "next_action": "Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal.",
+        "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 386,
+        "sprint": "RELEASE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Qualify real grow-light minimum-on behavior at solar boundaries using current portable compilation and retained safety inputs.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 390,
+        "sprint": "RELEASE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Finish topology/cycling/runtime/rollback release evidence; keep accepted last-good distinct from provisional candidates.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 396,
+        "sprint": "S2",
+        "hours_min": 8,
+        "hours_max": 16,
+        "next_action": "Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery.",
+        "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 398,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 410,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 412,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 419,
+        "sprint": "S3",
+        "hours_min": 6,
+        "hours_max": 12,
+        "next_action": "Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 428,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 430,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 434,
+        "sprint": "CONTROL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 581,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Research/release lead"
+      },
+      {
+        "issue_number": 586,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 587,
+        "sprint": "S4",
+        "hours_min": 8,
+        "hours_max": 12,
+        "next_action": "Qualify lifecycle/kill-switch/blinded visibility with actual allowed/denied boundaries and preserved experiment ledger.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 588,
+        "sprint": "S5",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "After #641/#782/#783, bind qualified source/protocol identity and finalize exactly one immutable draw.",
+        "owner_role": "Research/release lead"
+      },
+      {
+        "issue_number": 606,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 638,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 639,
+        "sprint": "S4",
+        "hours_min": 8,
+        "hours_max": 16,
+        "next_action": "Execute remaining current executor/fault/full-state recovery clauses on a safe contained target; no device actuation by a fixture.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 640,
+        "sprint": "S5",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "Use a genuine assigned day and repeatable blinded freeze/export; retain null/rescue/failure ITT truth.",
+        "owner_role": "Research lead"
+      },
+      {
+        "issue_number": 641,
+        "sprint": "S4",
+        "hours_min": 6,
+        "hours_max": 10,
+        "next_action": "Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 642,
+        "sprint": "S5",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "Prepare a concrete exact-launch packet and request the specific randomized day-1 decision; verify actual assignment/exposure and safe cleanup.",
+        "owner_role": "Research/release lead"
+      },
+      {
+        "issue_number": 643,
+        "sprint": "S2",
+        "hours_min": 6,
+        "hours_max": 12,
+        "next_action": "Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal.",
+        "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 644,
+        "sprint": "S2",
+        "hours_min": 8,
+        "hours_max": 16,
+        "next_action": "Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 749,
+        "sprint": "S4",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 750,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 751,
+        "sprint": "PHYSICAL",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+        "owner_role": "Operator with data/control lead"
+      },
+      {
+        "issue_number": 775,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+        "owner_role": "Evidence/data lead"
+      },
+      {
+        "issue_number": 782,
+        "sprint": "S3",
+        "hours_min": 12,
+        "hours_max": 20,
+        "next_action": "Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision.",
+        "owner_role": "Evidence/data lead"
+      },
+      {
+        "issue_number": 783,
+        "sprint": "S4",
+        "hours_min": 12,
+        "hours_max": 20,
+        "next_action": "Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal.",
+        "owner_role": "Runtime/release lead"
+      },
+      {
+        "issue_number": 784,
+        "sprint": "PILOT",
+        "hours_min": 24,
+        "hours_max": 48,
+        "next_action": "Operate the retained pilot across genuine local assigned days, track blinded reconciliation and preserve prespecified stopping/missingness rules.",
+        "owner_role": "Research lead"
+      },
+      {
+        "issue_number": 785,
+        "sprint": "PILOT",
+        "hours_min": 12,
+        "hours_max": 20,
+        "next_action": "After the final frozen pilot/stopping boundary, reveal once and reproduce the complete bounded decision report.",
+        "owner_role": "Research lead"
+      },
+      {
+        "issue_number": 786,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 787,
+        "sprint": "FUTURE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+        "owner_role": "Research/platform lead"
+      },
+      {
+        "issue_number": 801,
+        "sprint": "RELEASE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After native agents#4460→#4461 adoption, add exact owned-host exclusions and verify hook-free route delivery plus writer continuity.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 802,
+        "sprint": "RELEASE",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Source enforce mode was corrected by PR972; finish manual-Argo adoption with agents#4451, preserving source/live policy and native authority removal.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 949,
+        "sprint": "S2",
+        "hours_min": 8,
+        "hours_max": 12,
+        "next_action": "Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 963,
+        "sprint": "S3",
+        "hours_min": 6,
+        "hours_max": 12,
+        "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 965,
+        "sprint": "S3",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command.",
+        "owner_role": "Platform lead"
+      }
+    ]
+  }
 }

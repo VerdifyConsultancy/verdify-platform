@@ -823,11 +823,11 @@
     {
       "key": "949",
       "number": 949,
-      "title": "[C4][P1] Bound planner-policy drift holds and prove autonomous safe convergence",
+      "title": "[C4][P0] Bound planner-policy drift holds and prove autonomous safe convergence",
       "stage": "C4",
       "parent": 430,
       "blocked_by": [],
-      "body_sha256": "c00ab3b89aff2c3a95d5afc59c1a8533ae6087a35a28db4b8fdf3ca8838bdfb9"
+      "body_sha256": "aaac17003220038eca10a9533b5a3096bd7496b2ed4b793c6bd777f31e2c2c47"
     },
     {
       "key": "950",
@@ -863,7 +863,7 @@
       "stage": "C4",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "6e10b0ecd30255f24e17be757f9c8fae8bdb826ab6abdf8291fb8575e381dbdc"
+      "body_sha256": "e6f27804f255574b1f411d220eb1ecc5109539f96e3603985de1d75024a61858"
     },
     {
       "key": "835",
@@ -890,7 +890,7 @@
       "stage": "C4",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "7df7a61109cb52959827f364ca1cb10483319eb82a6ba682ba52fd8aee16d692"
+      "body_sha256": "9437370aab1ff16d82febec1c945655909836d836f7657deaf3055859fb83375"
     },
     {
       "key": "965",
@@ -899,7 +899,7 @@
       "stage": "C4",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "30fb9f9800dbff37551adb747ce78b0b9920850a0afa309c0689bd51fb03ecbb"
+      "body_sha256": "393306b6814579e0f1d36728be191b7012a36d46713ca269ea376a606981c6bc"
     },
     {
       "key": "963",
@@ -908,7 +908,7 @@
       "stage": "C4",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "b1b77f70b319d3809507e4db305fb86b9e09d406539306face0141b80a0fb44e"
+      "body_sha256": "a75b90441617062be27a52fec98562b307cedca0156f751f88230df06395cd9b"
     }
   ]
 }

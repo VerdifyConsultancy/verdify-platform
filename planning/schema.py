@@ -23,6 +23,67 @@ class Stage(StrictModel):
     estimate: str
 
 
+class Sprint(StrictModel):
+    id: str
+    title: str
+    goal: str
+    exit: str
+    kind: Literal["sprint", "ongoing", "conditional", "future", "rollup"]
+    capacity_hours: int | None = None
+
+    @field_validator("capacity_hours")
+    @classmethod
+    def nonnegative_capacity(cls, value: int | None) -> int | None:
+        if value is not None and value < 0:
+            raise ValueError("sprint capacity must be nonnegative")
+        return value
+
+
+class Allocation(StrictModel):
+    issue_number: int
+    sprint: str
+    hours_min: int | None
+    hours_max: int | None
+    next_action: str
+    owner_role: str
+
+    @model_validator(mode="after")
+    def coherent_hours(self) -> Allocation:
+        if self.hours_min is None and self.hours_max is None:
+            return self
+        if self.hours_min is None or self.hours_max is None or self.hours_min < 0 or self.hours_max < self.hours_min:
+            raise ValueError("allocation hours must be a nonnegative range or both null")
+        return self
+
+
+class ExecutionPlan(StrictModel):
+    reviewed_at: str
+    source_revision: str
+    capacity_hours_per_week: int
+    review_path: str
+    open_issues: list[int]
+    sprints: list[Sprint]
+    allocations: list[Allocation]
+
+    @model_validator(mode="after")
+    def consistent(self) -> ExecutionPlan:
+        if self.capacity_hours_per_week <= 0:
+            raise ValueError("execution capacity must be positive")
+        sprint_ids = {sprint.id for sprint in self.sprints}
+        if len(sprint_ids) != len(self.sprints):
+            raise ValueError("duplicate execution sprint")
+        if len(set(self.open_issues)) != len(self.open_issues):
+            raise ValueError("duplicate execution open issue")
+        allocated = [allocation.issue_number for allocation in self.allocations]
+        if len(set(allocated)) != len(allocated):
+            raise ValueError("duplicate execution allocation")
+        if set(allocated) != set(self.open_issues):
+            raise ValueError("execution allocation coverage must exactly match open issues")
+        if any(allocation.sprint not in sprint_ids for allocation in self.allocations):
+            raise ValueError("unknown execution sprint")
+        return self
+
+
 class WorkItem(StrictModel):
     key: str
     issue_number: int | None
@@ -86,6 +147,7 @@ class Backlog(StrictModel):
     original_open_issues: list[int]
     stages: list[Stage]
     issues: list[WorkItem]
+    execution_plan: ExecutionPlan | None = None
 
     @model_validator(mode="after")
     def consistent(self) -> Backlog:
@@ -102,6 +164,10 @@ class Backlog(StrictModel):
             raise ValueError("duplicate original issue")
         if any(n <= 0 for n in numbers):
             raise ValueError("invalid issue number")
+        if self.execution_plan is not None:
+            allowed = set(numbers) | {317, 801, 802}
+            if not set(self.execution_plan.open_issues) <= allowed:
+                raise ValueError("unknown execution issue number")
         for item in self.issues:
             if item.stage not in stages:
                 raise ValueError(f"unknown stage: {item.key}")

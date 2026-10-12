@@ -1,0 +1,409 @@
+{
+  "base_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "rendered_objects": 128,
+  "rendered_secrets": 0,
+  "compared_at": "2026-10-12T17:38:00.744780+00:00",
+  "workload_image_specs": [
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-freezer",
+      "desired": {
+        "freezer": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "live": {
+        "freezer": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-lifecycle",
+      "desired": {
+        "lifecycle": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "live": {
+        "lifecycle": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-selector",
+      "desired": {
+        "selector": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "live": {
+        "selector": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "desired": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "api": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "live": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "api": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-db-backup-exporter",
+      "desired": {
+        "exporter": "python:3.12-alpine"
+      },
+      "live": {
+        "exporter": "python:3.12-alpine"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "desired": {
+        "inject-canvas-css": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "grafana": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "renderer": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+      },
+      "live": {
+        "inject-canvas-css": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "grafana": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+        "renderer": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-grafana-render-cache",
+      "desired": {
+        "render-cache": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+      },
+      "live": {
+        "render-cache": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-hermes-iris",
+      "desired": {
+        "seed-config": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e",
+        "hermes-iris": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+      },
+      "live": {
+        "seed-config": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e",
+        "hermes-iris": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "desired": {
+        "install-psql": "postgres:16",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "ingestor": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "live": {
+        "install-psql": "postgres:16",
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "ingestor": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-lab",
+      "desired": {
+        "prepare-private-public-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "lab-site": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+      },
+      "live": {
+        "prepare-private-public-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "lab-site": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "desired": {
+        "mcp": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      "live": {
+        "mcp": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mqtt",
+      "desired": {
+        "mosquitto": "eclipse-mosquitto:2"
+      },
+      "live": {
+        "mosquitto": "eclipse-mosquitto:2"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "desired": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "planner": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a"
+      },
+      "live": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "planner": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-setpoint-server",
+      "desired": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "setpoint-server": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952"
+      },
+      "live": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "setpoint-server": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-traefik",
+      "desired": {
+        "traefik": "docker.io/traefik:v3.7.1"
+      },
+      "live": {
+        "traefik": "docker.io/traefik:v3.7.1"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "desired": {
+        "postgres": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "live": {
+        "postgres": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "desired": {
+        "refresh": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "live": {
+        "refresh": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-db-backup",
+      "desired": {
+        "pg-dump": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "live": {
+        "pg-dump": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-db-watchdog",
+      "desired": {
+        "watchdog": "python:3.13-alpine"
+      },
+      "live": {
+        "watchdog": "python:3.13-alpine"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-firmware-builder",
+      "desired": {
+        "builder": "ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+      },
+      "live": {
+        "builder": "ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-fixed-panel-native-freezer",
+      "desired": {
+        "freeze-native-route-day": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "live": {
+        "freeze-native-route-day": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "desired": {
+        "backfill": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "live": {
+        "backfill": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "desired": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e"
+      },
+      "live": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "desired": {
+        "vision": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "live": {
+        "vision": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-winter-feasibility",
+      "desired": {
+        "collect": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "live": {
+        "collect": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-writer-watchdog",
+      "desired": {
+        "lease-check": "python:3.13-alpine",
+        "watchdog": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "live": {
+        "lease-check": "python:3.13-alpine",
+        "watchdog": "timescale/timescaledb:2.25.2-pg16"
+      },
+      "image_specs_equal": true,
+      "hook": null
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "desired": {
+        "bootstrap-and-attest": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "live": null,
+      "image_specs_equal": null,
+      "hook": "PreSync"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "desired": {
+        "bootstrap-and-attest": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "live": null,
+      "image_specs_equal": null,
+      "hook": "PreSync"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-migrate",
+      "desired": {
+        "wait-for-db": "timescale/timescaledb:2.25.2-pg16",
+        "migrate": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "live": null,
+      "image_specs_equal": null,
+      "hook": "PreSync"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-runtime-role-bootstrap",
+      "desired": {
+        "bootstrap-and-attest": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "live": null,
+      "image_specs_equal": null,
+      "hook": "PreSync"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-six-runtime-role-bootstrap",
+      "desired": {
+        "bootstrap-and-attest": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      },
+      "live": null,
+      "image_specs_equal": null,
+      "hook": "PreSync"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-winter-archive-init",
+      "desired": {
+        "init-archive": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "live": {
+        "init-archive": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+      },
+      "image_specs_equal": true,
+      "hook": "Sync"
+    }
+  ],
+  "matching": 27,
+  "mismatching": 0,
+  "not_present": 5,
+  "scope": "Image specifications only; hook absence between runs is not deployment failure. Pod imageIDs and source readbacks are in runtime-summary.json."
+}

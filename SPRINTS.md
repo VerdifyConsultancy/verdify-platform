@@ -1,4 +1,179 @@
-# Implementation sequence and estimates
+# Upcoming sprints and ongoing work
+
+## Current execution plan
+
+Reviewed **2026-10-12T17:38:10Z** against source `b5bdb3c65b243c230b7864fa81b95f926b2e68ff`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **64 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+
+| Pull set | Kind | Allocated hours | Capacity hours | Issues |
+|---|---|---|---|---|
+| S2 — Recoverability and reliable delivery (October 2026) | sprint | 36–68 | 80 | [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382), [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) |
+| S3 — Source truth, portable validation and prospective design | sprint | 38–72 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963), [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) |
+| S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
+| S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
+| PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
+| RELEASE — Release safety and estate adoption follow-through | conditional | Unestimated | Not timeboxed | [#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#801](https://github.com/VerdifyConsultancy/verdify-platform/issues/801), [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) |
+| CONTROL — Evidence-led control and irrigation queue | conditional | Unestimated | Not timeboxed | [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296), [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297), [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299), [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324), [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361), [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367), [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368), [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369), [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370), [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378), [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410), [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428), [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434) |
+| PHYSICAL — Physical and seasonal commissioning | conditional | Unestimated | Not timeboxed | [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45), [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51), [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52), [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298), [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398), [#412](https://github.com/VerdifyConsultancy/verdify-platform/issues/412), [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751) |
+| FUTURE — Future comparator, resource economics and cutover options | future | Unestimated | Not timeboxed | [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31), [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245), [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379), [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586), [#606](https://github.com/VerdifyConsultancy/verdify-platform/issues/606), [#638](https://github.com/VerdifyConsultancy/verdify-platform/issues/638), [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786), [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
+| ROLLUP — Campaign and program roll-ups | rollup | Unestimated | Not timeboxed | [#14](https://github.com/VerdifyConsultancy/verdify-platform/issues/14), [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16), [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75), [#218](https://github.com/VerdifyConsultancy/verdify-platform/issues/218), [#350](https://github.com/VerdifyConsultancy/verdify-platform/issues/350), [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359), [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430), [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581), [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750), [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) |
+
+Sprint allocations may cover bounded preparation. Full issue acceptance still depends on its predecessors, current evidence and declared physical or seasonal conditions. C0–C8 remain stage contracts; closed historical issues remain visible in the stage views below.
+
+## S2 — Recoverability and reliable delivery (October 2026)
+
+Kind: sprint. Capacity: 80 engineering hours. Goal: Finish the five remaining S2 outcomes using one release lane and one independent contained recovery lane.
+
+Exit: Current #949 authentic convergence and exact-source #644 delivery; full #396/#382/#643 restore, event and runtime-role clauses sealed. Historical #964/#953 acceptance retained.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal. |
+| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback. |
+| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours. |
+
+## S3 — Source truth, portable validation and prospective design
+
+Kind: sprint. Capacity: 80 engineering hours. Goal: Adopt the existing command/telemetry fixes safely, qualify portable firmware tooling and choose a defensible prospective study before any draw.
+
+Exit: #965 no false observed light history; #963 compatible source and explicitly bounded live/OTA acceptance; #304/#303/#419 authentic tooling/replay; #782 reproducible scientific and seasonal decision. Prepare independent work during S2.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | Platform lead | 6–12 | Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly. |
+| [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | Platform lead | 4–8 | Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments. |
+| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
+| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision. |
+| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
+| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Platform lead | 4–8 | Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command. |
+
+## S4 — Current readiness and integrated qualification
+
+Kind: sprint. Capacity: 80 engineering hours. Goal: Join current executor, lifecycle, backup, readiness and restored-data evidence; prepare the attended physical proof.
+
+Exit: #749/#639/#587/#783 complete current original clauses, reusing closed #747 evidence only after a fresh backup check. #641 completes only in its separately authorized attended window; otherwise its prepared packet remains a declared conditional carryover.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 8–12 | Qualify lifecycle/kill-switch/blinded visibility with actual allowed/denied boundaries and preserved experiment ledger. |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Execute remaining current executor/fault/full-state recovery clauses on a safe contained target; no device actuation by a fixture. |
+| [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | Runtime/release lead | 6–10 | Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies. |
+| [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) | Runtime/release lead | 12–20 | Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal. |
+
+## S5 — Immutable lock, launch and first real outcome
+
+Kind: conditional. Capacity: 80 engineering hours. Goal: After the genuine predecessor evidence and seasonal decision, lock once and perform one separately authorized launch.
+
+Exit: #588 exactly one immutable lock/draw; #642 actual authorized day 1; #640 first genuine assigned-day freeze/export. No calendar launch date is promised.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588) | Research/release lead | 4–8 | After #641/#782/#783, bind qualified source/protocol identity and finalize exactly one immutable draw. |
+| [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640) | Research lead | 4–8 | Use a genuine assigned day and repeatable blinded freeze/export; retain null/rescue/failure ITT truth. |
+| [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) | Research/release lead | 4–8 | Prepare a concrete exact-launch packet and request the specific randomized day-1 decision; verify actual assignment/exposure and safe cleanup. |
+
+## PILOT — Pilot operations and reproducible readout
+
+Kind: ongoing. Goal: Retain every assigned day and produce the prespecified bounded decision.
+
+Exit: #784 genuine 60 local days if the retained design is chosen (or prespecified stopping boundary), then #785 one-way reveal and reproducible ITT report.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784) | Research lead | 24–48 | Operate the retained pilot across genuine local assigned days, track blinded reconciliation and preserve prespecified stopping/missingness rules. |
+| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | Research lead | 12–20 | After the final frozen pilot/stopping boundary, reveal once and reproduce the complete bounded decision report. |
+
+## RELEASE — Release safety and estate adoption follow-through
+
+Kind: conditional. Goal: Finish the remaining bounded release and ownership interfaces without delaying independent scientific work.
+
+Exit: Actual #386/#390 release evidence, #317 regression qualification and owner-coordinated #801/#802 adoption; no broad shared-app sync or OTA implied.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317) | Platform lead | Unestimated | Reuse atomic reset workaround; qualify the stale selective-operation regression with the owning fleet/upstream support before closure. |
+| [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) | Platform lead | Unestimated | Qualify real grow-light minimum-on behavior at solar boundaries using current portable compilation and retained safety inputs. |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | Platform lead | Unestimated | Finish topology/cycling/runtime/rollback release evidence; keep accepted last-good distinct from provisional candidates. |
+| [#801](https://github.com/VerdifyConsultancy/verdify-platform/issues/801) | Platform lead | Unestimated | After native agents#4460→#4461 adoption, add exact owned-host exclusions and verify hook-free route delivery plus writer continuity. |
+| [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) | Platform lead | Unestimated | Source enforce mode was corrected by PR972; finish manual-Argo adoption with agents#4451, preserving source/live policy and native authority removal. |
+
+## CONTROL — Evidence-led control and irrigation queue
+
+Kind: conditional. Goal: Retain C6 ownership and pull bounded sensing/safety maintenance independently; treatment changes respect study locks.
+
+Exit: Original control/topology/irrigation acceptance with calibrated inputs and actual physical evidence. #378/#361 remain downstream of readout; no opportunistic tuning during assigned days.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+| [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434) | Control lead | Unestimated | Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone. |
+
+## PHYSICAL — Physical and seasonal commissioning
+
+Kind: conditional. Goal: Prepare concrete operator worksheets and keep missing sensors visibly unavailable.
+
+Exit: Actual crop/probe/plumbing map, calibrated chemistry/CO2, south/hydro repair and supported seasonal choices. No guessed dates or purchasing authority.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#412](https://github.com/VerdifyConsultancy/verdify-platform/issues/412) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+| [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751) | Operator with data/control lead | Unestimated | Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable. |
+
+## FUTURE — Future comparator, resource economics and cutover options
+
+Kind: future. Goal: Keep independently justified future capabilities and optional DB cutover owned without adding them as pilot launch gates.
+
+Exit: Issue-specific qualified proof and separate implementation decision after dependencies; no claim of whole-resource savings or AI superiority from the narrow pilot.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) | Data/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#606](https://github.com/VerdifyConsultancy/verdify-platform/issues/606) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#638](https://github.com/VerdifyConsultancy/verdify-platform/issues/638) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+| [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) | Research/platform lead | Unestimated | Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added. |
+
+## ROLLUP — Campaign and program roll-ups
+
+Kind: rollup. Goal: Track original C0–C8 program outcomes without double-counting epic effort.
+
+Exit: Each child retains its own acceptance and historical receipts. Parentage is ownership, never an automatic blocking edge.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#14](https://github.com/VerdifyConsultancy/verdify-platform/issues/14) | Research/platform lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16) | Operator with data/control lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75) | Platform lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#218](https://github.com/VerdifyConsultancy/verdify-platform/issues/218) | Data/platform lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#350](https://github.com/VerdifyConsultancy/verdify-platform/issues/350) | Control lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359) | Control lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581) | Research/release lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Runtime/release lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency. |
+
+## Campaign stage contracts
 
 Generated from [planning/backlog.yaml](planning/backlog.yaml). Edit the source and run `python -m planning.render`; do not maintain a competing roadmap.
 

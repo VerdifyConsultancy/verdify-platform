@@ -1,0 +1,4607 @@
+{
+  "captured_date": "2026-10-12",
+  "cluster_collected_at": "2026-10-12T17:38:00.744780+00:00",
+  "database_method": "Every probe BEGIN READ ONLY; statement timeout 8s; lock timeout 2s",
+  "mutation_performed": false,
+  "argo": {
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "verdify-prod",
+          "server": "https://kubernetes.default.svc"
+        },
+        "ignoreDifferences": [
+          {
+            "group": "apps",
+            "jsonPointers": [
+              "/spec/volumeClaimTemplates/0/spec/volumeMode",
+              "/spec/volumeClaimTemplates/0/status"
+            ],
+            "kind": "StatefulSet",
+            "name": "verdify-db",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-lab-site-cache",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-hermes-iris-data-portable-20260801",
+            "namespace": "verdify-prod"
+          }
+        ],
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+      "status": "Synced"
+    },
+    "health": {
+      "lastTransitionTime": "2026-10-11T22:25:51Z",
+      "status": "Healthy"
+    },
+    "last_operation": {
+      "finishedAt": "2026-10-12T00:30:05Z",
+      "message": "successfully synced (all tasks run)",
+      "operation": {
+        "initiatedBy": {
+          "username": "ci-velocity-cron"
+        },
+        "retry": {},
+        "sync": {
+          "resources": [
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-band-curve-refresh",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-db-backup",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-db-watchdog",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-ha-gap-backfill",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-lab-publisher",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-vision",
+              "namespace": "verdify-prod"
+            },
+            {
+              "group": "batch",
+              "kind": "CronJob",
+              "name": "verdify-writer-watchdog",
+              "namespace": "verdify-prod"
+            }
+          ],
+          "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+          "syncOptions": [
+            "ServerSideApply=true"
+          ]
+        }
+      },
+      "phase": "Succeeded",
+      "startedAt": "2026-10-12T00:30:03Z",
+      "syncResult": {
+        "resources": [
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "timescale/timescaledb:2.25.2-pg16"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-db-backup serverside-applied",
+            "name": "verdify-db-backup",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "timescale/timescaledb:2.25.2-pg16"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-band-curve-refresh serverside-applied",
+            "name": "verdify-band-curve-refresh",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "python:3.13-alpine"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-db-watchdog serverside-applied",
+            "name": "verdify-db-watchdog",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "timescale/timescaledb:2.25.2-pg16"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-writer-watchdog serverside-applied",
+            "name": "verdify-writer-watchdog",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-ha-gap-backfill serverside-applied",
+            "name": "verdify-ha-gap-backfill",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-lab-publisher serverside-applied",
+            "name": "verdify-lab-publisher",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "batch",
+            "hookPhase": "Running",
+            "images": [
+              "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+            ],
+            "kind": "CronJob",
+            "message": "cronjob.batch/verdify-vision serverside-applied",
+            "name": "verdify-vision",
+            "namespace": "verdify-prod",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          }
+        ],
+        "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      }
+    },
+    "history": [
+      {
+        "deployStartedAt": "2026-10-05T21:53:54Z",
+        "deployedAt": "2026-10-05T22:03:39Z",
+        "id": 58,
+        "initiatedBy": {
+          "username": "laptop-root"
+        },
+        "revision": "b5ffc37e483437615476cba49723a47d0eb2823f",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-10-05T22:44:57Z",
+        "deployedAt": "2026-10-05T22:47:15Z",
+        "id": 59,
+        "initiatedBy": {
+          "username": "laptop-root"
+        },
+        "revision": "88567ed19254a75e9bacde724c42c560709c14e6",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-10-06T00:06:55Z",
+        "deployedAt": "2026-10-06T00:15:38Z",
+        "id": 60,
+        "initiatedBy": {
+          "username": "laptop-root"
+        },
+        "revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-10-06T01:01:06Z",
+        "deployedAt": "2026-10-06T01:05:19Z",
+        "id": 61,
+        "initiatedBy": {
+          "username": "laptop-root"
+        },
+        "revision": "9b4f8023839ffda05b9d0fd1a70fe63e62c6d9b4",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-10-11T14:39:05Z",
+        "deployedAt": "2026-10-11T14:42:01Z",
+        "id": 62,
+        "initiatedBy": {
+          "username": "laptop-root"
+        },
+        "revision": "9f799919fb23404a7f71cf02668b8f4a0091fc5d",
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      }
+    ]
+  },
+  "workload_counts": {
+    "deployments": 15,
+    "statefulsets": 1,
+    "cronjobs": 10,
+    "jobs_retained": 67,
+    "pod_phases": {
+      "Running": 22,
+      "Succeeded": 13,
+      "Failed": 3
+    }
+  },
+  "workloads": [
+    {
+      "name": "experiment-v2-freezer",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "freezer",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+        }
+      ]
+    },
+    {
+      "name": "experiment-v2-lifecycle",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "lifecycle",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+        }
+      ]
+    },
+    {
+      "name": "experiment-v2-selector",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "selector",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0"
+        }
+      ]
+    },
+    {
+      "name": "verdify-api",
+      "kind": "Deployment",
+      "desired": 2,
+      "ready": 2,
+      "images": [
+        {
+          "name": "api",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+        }
+      ]
+    },
+    {
+      "name": "verdify-db-backup-exporter",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "exporter",
+          "image": "python:3.12-alpine"
+        }
+      ]
+    },
+    {
+      "name": "verdify-grafana",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "grafana",
+          "image": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd"
+        },
+        {
+          "name": "renderer",
+          "image": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+        }
+      ]
+    },
+    {
+      "name": "verdify-grafana-render-cache",
+      "kind": "Deployment",
+      "desired": 2,
+      "ready": 2,
+      "images": [
+        {
+          "name": "render-cache",
+          "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "name": "verdify-hermes-iris",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "hermes-iris",
+          "image": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+        }
+      ]
+    },
+    {
+      "name": "verdify-ingestor",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "ingestor",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344"
+        }
+      ]
+    },
+    {
+      "name": "verdify-lab",
+      "kind": "Deployment",
+      "desired": 2,
+      "ready": 2,
+      "images": [
+        {
+          "name": "lab-site",
+          "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp",
+      "kind": "Deployment",
+      "desired": 2,
+      "ready": 2,
+      "images": [
+        {
+          "name": "mcp",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93"
+        }
+      ]
+    },
+    {
+      "name": "verdify-mqtt",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "mosquitto",
+          "image": "eclipse-mosquitto:2"
+        }
+      ]
+    },
+    {
+      "name": "verdify-planner",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "planner",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a"
+        }
+      ]
+    },
+    {
+      "name": "verdify-setpoint-server",
+      "kind": "Deployment",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "setpoint-server",
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952"
+        }
+      ]
+    },
+    {
+      "name": "verdify-traefik",
+      "kind": "Deployment",
+      "desired": 2,
+      "ready": 2,
+      "images": [
+        {
+          "name": "traefik",
+          "image": "docker.io/traefik:v3.7.1"
+        }
+      ]
+    },
+    {
+      "name": "verdify-db",
+      "kind": "StatefulSet",
+      "desired": 1,
+      "ready": 1,
+      "images": [
+        {
+          "name": "postgres",
+          "image": "timescale/timescaledb:2.25.2-pg16"
+        }
+      ]
+    }
+  ],
+  "writer_lease": [
+    {
+      "kind": "Lease",
+      "metadata": {
+        "name": "verdify-ingestor-writer",
+        "namespace": "verdify-prod",
+        "uid": "ec92668e-064a-4010-a35f-448745210110",
+        "generation": null,
+        "creationTimestamp": "2026-06-20T15:38:37Z",
+        "ownerReferences": null,
+        "labels": null
+      },
+      "status": null,
+      "spec": {
+        "acquireTime": "2026-10-11T14:42:27.718534Z",
+        "holderIdentity": "verdify-ingestor-69754948bf-mzdm5",
+        "leaseDurationSeconds": 15,
+        "leaseTransitions": 1268,
+        "renewTime": "2026-10-12T17:37:57.667194Z"
+      }
+    }
+  ],
+  "controller_halt": {
+    "state": {
+      "completed": [
+        "cool_exit_hysteresis_f",
+        "cool_stage2_over_high_f",
+        "dwell_gate_ms",
+        "min_fog_on_s",
+        "mister_pulse_on_s",
+        "mister_vpd_weight",
+        "temp_hysteresis",
+        "vpd_hysteresis",
+        "vpd_watch_dwell_s",
+        "min_fog_off_s",
+        "mister_all_delay_s",
+        "mister_all_kpa"
+      ],
+      "completed_values": {
+        "cool_exit_hysteresis_f": 1.6,
+        "cool_stage2_over_high_f": 1.7725000000000002,
+        "dwell_gate_ms": 210000.0,
+        "min_fog_off_s": 54.0,
+        "min_fog_on_s": 66.0,
+        "mister_all_delay_s": 75.0,
+        "mister_all_kpa": 1.2069999999999999,
+        "mister_pulse_on_s": 33.75,
+        "mister_vpd_weight": 1.7000000000000002,
+        "temp_hysteresis": 1.6,
+        "vpd_hysteresis": 0.18749999999999994,
+        "vpd_watch_dwell_s": 52.5
+      },
+      "expires_at": "2026-10-07T00:13:24.285569+00:00",
+      "halt_reason": "unapproved candidate appeared",
+      "records": [],
+      "run_id": "76d18133852b490680bce2639e6d8397",
+      "stage_parameters": [
+        "cool_exit_hysteresis_f",
+        "cool_stage2_over_high_f",
+        "dwell_gate_ms",
+        "min_fog_on_s",
+        "mister_pulse_on_s",
+        "mister_vpd_weight",
+        "temp_hysteresis",
+        "vpd_hysteresis",
+        "vpd_watch_dwell_s",
+        "min_fog_off_s",
+        "mister_all_delay_s",
+        "mister_all_kpa"
+      ],
+      "stage_started_at": "2026-10-06T23:43:24.293556+00:00",
+      "status": "halted",
+      "version": 1,
+      "approved_preview": {
+        "captured_at": "2026-10-06T23:43:24.277588+00:00",
+        "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+        "session_id": "46fc0e1997bb4432b84e5d930cdc4048",
+        "pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+        "generation": 3,
+        "fingerprint": "b60d6e5e44cf898e90663010f0256973d21e5137bf356d69a9f57062af48dbda",
+        "changes": [
+          [
+            "vpd_target_south",
+            1.0
+          ],
+          [
+            "vpd_target_west",
+            0.77
+          ],
+          [
+            "vpd_target_east",
+            0.96
+          ],
+          [
+            "cool_exit_hysteresis_f",
+            1.6
+          ],
+          [
+            "cool_stage2_over_high_f",
+            1.7725000000000002
+          ],
+          [
+            "dwell_gate_ms",
+            210000.0
+          ],
+          [
+            "min_fog_off_s",
+            54.0
+          ],
+          [
+            "min_fog_on_s",
+            66.0
+          ],
+          [
+            "mister_all_delay_s",
+            75.0
+          ],
+          [
+            "mister_all_kpa",
+            1.2069999999999999
+          ],
+          [
+            "mister_engage_delay_s",
+            37.5
+          ],
+          [
+            "mister_pulse_on_s",
+            33.75
+          ],
+          [
+            "mister_vpd_weight",
+            1.7000000000000002
+          ],
+          [
+            "temp_hysteresis",
+            1.6
+          ],
+          [
+            "vpd_hysteresis",
+            0.18749999999999994
+          ],
+          [
+            "vpd_watch_dwell_s",
+            52.5
+          ]
+        ],
+        "readbacks": {
+          "band_track_fraction": 0.0,
+          "cold_vent_guard_delta_f": 8.0,
+          "cool_exit_hysteresis_f": 1.9600000381469727,
+          "cool_stage2_exit_hysteresis_f": 1.0,
+          "cool_stage2_over_high_f": 1.7000000476837158,
+          "direct_wet_stress_min_dew_margin_f": 8.0,
+          "direct_wet_stress_vpd_margin_kpa": 0.05000000074505806,
+          "dwell_gate_ms": 270000.0,
+          "enthalpy_close": 1.0,
+          "enthalpy_open": -2.0,
+          "fog_escalation_kpa": 0.20000000298023224,
+          "heat_hysteresis": 1.0,
+          "min_fan_off_s": 90.0,
+          "min_fan_on_s": 120.0,
+          "min_fog_off_s": 60.0,
+          "min_fog_on_s": 63.0,
+          "min_heat_off_s": 180.0,
+          "min_heat_on_s": 120.0,
+          "min_vent_off_s": 60.0,
+          "min_vent_on_s": 60.0,
+          "mist_backoff_s": 600.0,
+          "mist_max_closed_vent_s": 600.0,
+          "mist_thermal_relief_s": 90.0,
+          "mister_all_delay_s": 90.0,
+          "mister_all_kpa": 1.2599999904632568,
+          "mister_center_penalty": 0.5,
+          "mister_engage_delay_s": 45.0,
+          "mister_engage_kpa": 1.0399999618530273,
+          "mister_min_off_s": 45.0,
+          "mister_pulse_gap_s": 30.0,
+          "mister_pulse_on_s": 41.0,
+          "mister_vpd_weight": 1.7333333492279053,
+          "mister_water_budget_gal": 180.0,
+          "night_vpd_bias_kpa": 0.0,
+          "outdoor_staleness_max_s": 600.0,
+          "sw_cool_all_fans_at_high_enabled": 0.0,
+          "sw_direct_wet_gate_enabled": 1.0,
+          "sw_direct_wet_stress_override_enabled": 1.0,
+          "sw_dwell_gate_enabled": 1.0,
+          "sw_fog_closes_vent": 1.0,
+          "sw_mister_closes_vent": 0.0,
+          "sw_summer_vent_enabled": 1.0,
+          "temp_hysteresis": 1.9600000381469727,
+          "vent_exchange_fraction": 0.30000001192092896,
+          "vent_prefer_dp_delta_f": 3.0,
+          "vent_prefer_temp_delta_f": 4.0,
+          "vpd_hysteresis": 0.20749999582767487,
+          "vpd_target_east": 0.9700000286102295,
+          "vpd_target_south": 1.0199999809265137,
+          "vpd_target_west": 0.7799999713897705,
+          "vpd_watch_dwell_s": 67.0
+        },
+        "plan_rows": [
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "band_track_fraction",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "cold_vent_guard_delta_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 8.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "cool_exit_hysteresis_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.6
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "cool_stage2_exit_hysteresis_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "cool_stage2_over_high_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.7725000000000002
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "direct_wet_stress_min_dew_margin_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 8.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "direct_wet_stress_vpd_margin_kpa",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.05
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "dwell_gate_ms",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 210000.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "enthalpy_close",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "enthalpy_open",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": -2.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "fog_escalation_kpa",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.2
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "heat_hysteresis",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "min_fog_off_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 54.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "min_fog_on_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 66.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mist_backoff_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 600.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mist_max_closed_vent_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 600.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mist_thermal_relief_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 90.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_all_delay_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 75.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_all_kpa",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.2069999999999999
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_engage_delay_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 37.5
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_engage_kpa",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.057
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_pulse_gap_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 30.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_pulse_on_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 33.75
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_vpd_weight",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.7000000000000002
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "mister_water_budget_gal",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 180.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "night_vpd_bias_kpa",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "outdoor_staleness_max_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 600.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_cool_all_fans_at_high_enabled",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_direct_wet_stress_override_enabled",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_dwell_gate_enabled",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_fog_closes_vent",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_mister_closes_vent",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "sw_summer_vent_enabled",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "temp_hysteresis",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 1.6
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "vent_exchange_fraction",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.3
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "vent_prefer_dp_delta_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 3.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "vent_prefer_temp_delta_f",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 4.0
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "vpd_hysteresis",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 0.18749999999999994
+          },
+          {
+            "expires_at": "2026-10-09T23:30:00+00:00",
+            "parameter": "vpd_watch_dwell_s",
+            "plan_id": "iris-20261006-1737",
+            "ts": "2026-10-06T23:35:00+00:00",
+            "value": 52.5
+          }
+        ],
+        "earliest_plan_expiry": "2026-10-09T23:30:00+00:00"
+      }
+    },
+    "approval": {
+      "authority": "source_bound_ordinary_policy_v1",
+      "expires_at": "2026-10-07T00:13:24.285569+00:00",
+      "fingerprint": "b60d6e5e44cf898e90663010f0256973d21e5137bf356d69a9f57062af48dbda",
+      "generation": 3,
+      "run_id": "76d18133852b490680bce2639e6d8397",
+      "session_id": "46fc0e1997bb4432b84e5d930cdc4048",
+      "version": 1
+    },
+    "current_identity": {
+      "captured_at": "2026-10-12T17:38:39.386187+00:00",
+      "source_revision": "f48c6bf0257b25ed2820689154ca3502507129c6",
+      "pod": "verdify-ingestor-69754948bf-mzdm5",
+      "generation": 1,
+      "session_id": "4517326b3ee44dd6ac4f4d5bb0e371a4",
+      "earliest_plan_expiry": "2026-10-13T12:30:00+00:00"
+    },
+    "current_changes": [
+      [
+        "vpd_target_south",
+        1.15
+      ],
+      [
+        "vpd_target_west",
+        1.05
+      ],
+      [
+        "vpd_target_east",
+        1.18
+      ],
+      [
+        "vpd_target_center",
+        1.09
+      ],
+      [
+        "cool_exit_hysteresis_f",
+        1.96
+      ],
+      [
+        "cool_stage2_over_high_f",
+        1.6425
+      ],
+      [
+        "dwell_gate_ms",
+        270000.0
+      ],
+      [
+        "min_fog_off_s",
+        60.0
+      ],
+      [
+        "min_fog_on_s",
+        59.25
+      ],
+      [
+        "mister_all_delay_s",
+        90.0
+      ],
+      [
+        "mister_all_kpa",
+        1.154
+      ],
+      [
+        "mister_engage_kpa",
+        0.9540000000000001
+      ],
+      [
+        "mister_pulse_on_s",
+        41.25
+      ],
+      [
+        "mister_vpd_weight",
+        1.8333333333333335
+      ],
+      [
+        "temp_hysteresis",
+        1.96
+      ],
+      [
+        "vpd_hysteresis",
+        0.20750000000000002
+      ],
+      [
+        "vpd_watch_dwell_s",
+        67.5
+      ]
+    ],
+    "recovery_file": {
+      "exists": false
+    }
+  },
+  "database_findings": {
+    "freshness": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "source": "climate",
+          "latest": "2026-10-12T17:38:30.352197+00:00",
+          "age_s": 52.165255
+        },
+        {
+          "source": "diagnostics",
+          "latest": "2026-10-12T17:38:29.815763+00:00",
+          "age_s": 52.701689
+        },
+        {
+          "source": "system_state",
+          "latest": "2026-10-12T17:39:19.911356+00:00",
+          "age_s": 2.606096
+        },
+        {
+          "source": "setpoint_snapshot",
+          "latest": "2026-10-12T17:38:39.317903+00:00",
+          "age_s": 43.199549
+        },
+        {
+          "source": "equipment_state",
+          "latest": "2026-10-12T17:39:18.273476+00:00",
+          "age_s": 4.243976
+        },
+        {
+          "source": "energy",
+          "latest": "2026-10-12T17:39:18.100714+00:00",
+          "age_s": 4.416738
+        },
+        {
+          "source": "image_observations",
+          "latest": "2026-10-12T06:00:24.702369+00:00",
+          "age_s": 41937.815083
+        }
+      ]
+    },
+    "climate_24h": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "rows": 1390,
+          "first": "2026-10-11T17:39:43.233371+00:00",
+          "latest": "2026-10-12T17:38:30.352197+00:00",
+          "temp_avg": {
+            "max": 85.27999877929688,
+            "min": 62.96000289916992,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_north": {
+            "max": 90.31999969482422,
+            "min": 62.2400016784668,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "temp_east": {
+            "max": 85.27999877929688,
+            "min": 64.4000015258789,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_west": {
+            "max": 83.84000396728516,
+            "min": 62.2400016784668,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_case": {
+            "max": 85.0999984741211,
+            "min": 62.2400016784668,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_control": {
+            "max": 85.27999877929688,
+            "min": 62.90000534057617,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "temp_intake": {
+            "max": 83.1199951171875,
+            "min": 53.599998474121094,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "rh_avg": {
+            "max": 75.0999984741211,
+            "min": 55.29999923706055,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "rh_north": {
+            "max": 76.5999984741211,
+            "min": 37.60000228881836,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "rh_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "rh_east": {
+            "max": 78.5999984741211,
+            "min": 54.70000076293945,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "rh_west": {
+            "max": 79.9000015258789,
+            "min": 53.70000076293945,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "rh_case": {
+            "max": 71.5999984741211,
+            "min": 41.70000076293945,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_avg": {
+            "max": 1.8003973960876465,
+            "min": 0.5856461524963379,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_north": {
+            "max": 2.9837872982025146,
+            "min": 0.5622336864471436,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "vpd_east": {
+            "max": 1.4650568962097168,
+            "min": 0.6708068251609802,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_west": {
+            "max": 1.822717308998108,
+            "min": 0.4786301553249359,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_control": {
+            "max": 1.8393964767456055,
+            "min": 0.5822232961654663,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "dew_point": {
+            "max": 75.21701049804688,
+            "min": 47.58265686035156,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "abs_humidity": {
+            "max": 21.37016487121582,
+            "min": 8.36904525756836,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "enthalpy_delta": {
+            "max": -8.13298225402832,
+            "min": -40.679588317871094,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "co2_ppm": {
+            "max": 3128.533447265625,
+            "min": 2941.866943359375,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "lux": {
+            "max": 21408.1015625,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "dli_today": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "flow_gpm": {
+            "max": 2,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "water_total_gal": {
+            "max": 671,
+            "min": 643,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "mister_water_today": {
+            "max": 6.569530010223389,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "outdoor_temp_f": {
+            "max": 80.186,
+            "min": 54.77000045776367,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "outdoor_rh_pct": {
+            "max": 63.69999694824219,
+            "min": 24.510000228881836,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "ph_input": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ec_input": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ph_runoff_wall": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ec_runoff_wall": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ph_runoff_center": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ec_runoff_center": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "moisture_north": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "moisture_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "moisture_center": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "ppfd": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "dli_par_today": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "pressure_hpa": {
+            "max": 837.890336418762,
+            "min": 832.8599853515625,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "leaf_temp_north": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "leaf_temp_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "leaf_wetness_north": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "leaf_wetness_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "wind_speed_mph": {
+            "max": 6.88976377952756,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "wind_direction_deg": {
+            "max": 359,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "outdoor_lux": {
+            "max": 117188,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_irradiance_w_m2": {
+            "max": 977,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "precip_in": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "uv_index": {
+            "max": 7.369999885559082,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "hydro_tds_ppm": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "hydro_water_temp_f": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "wind_gust_mph": {
+            "max": 9.484879493713379,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "wind_lull_mph": {
+            "max": 3.6463098526000977,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "wind_speed_avg_mph": {
+            "max": 5.2344309234073,
+            "min": 0,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "wind_direction_avg_deg": {
+            "max": 359,
+            "min": 0,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "feels_like_f": {
+            "max": 80.186,
+            "min": 54.806,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "wet_bulb_temp_f": {
+            "max": 58.5914790586375,
+            "min": 46.8395186926602,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vapor_pressure_inhg": {
+            "max": 0.325572055069666,
+            "min": 0.228884185791119,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "air_density_kg_m3": {
+            "max": 1.01990015730467,
+            "min": 0.968885492557005,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "precip_intensity_in_h": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 288,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "lightning_count": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "lightning_avg_dist_mi": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_altitude_deg": {
+            "max": 42.59,
+            "min": -57.26,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_azimuth_deg": {
+            "max": 359.78,
+            "min": 0.26,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "hydro_ec_us_cm": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "hydro_orp_mv": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "hydro_ph": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "hydro_battery_pct": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "soil_moisture_south_1": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 895,
+            "last_nonnull": "2026-10-12T15:44:45.822336+00:00"
+          },
+          "soil_temp_south_1": {
+            "max": 80.05999755859375,
+            "min": 62.599998474121094,
+            "nonnull": 895,
+            "last_nonnull": "2026-10-12T15:44:45.822336+00:00"
+          },
+          "soil_ec_south_1": {
+            "max": 0,
+            "min": 0,
+            "nonnull": 895,
+            "last_nonnull": "2026-10-12T15:44:45.822336+00:00"
+          },
+          "soil_moisture_south_2": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "soil_temp_south_2": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "soil_moisture_west": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "soil_temp_west": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "intake_rh": {
+            "max": 68.5,
+            "min": 27.100000381469727,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "intake_vpd": {
+            "max": 2.796377420425415,
+            "min": 0.4390023946762085,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "outdoor_illuminance": {
+            "max": 117188,
+            "min": 0,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_phase": {
+            "max": 3.997218370437622,
+            "min": 0.011142099276185036,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_sunrise_min": {
+            "max": 426,
+            "min": 425,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_noon_min": {
+            "max": 767,
+            "min": 767,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "solar_sunset_min": {
+            "max": 1109,
+            "min": 1107,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "house_temp_target_f": {
+            "max": 80.3410415649414,
+            "min": 64.15895080566406,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "house_temp_delta_f": {
+            "max": 4.995567321777344,
+            "min": -2.8254470825195312,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "house_vpd_target": {
+            "max": 1.060034990310669,
+            "min": 0.8259207606315613,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "house_vpd_delta": {
+            "max": 0.5213605165481567,
+            "min": -0.32149261236190796,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_target_center": {
+            "max": 1.0999915599822998,
+            "min": 0.7000017166137695,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_target_south": {
+            "max": 1.1836010217666626,
+            "min": 0.7373366355895996,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_target_west": {
+            "max": 1.1019618511199951,
+            "min": 0.5175678133964539,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_target_east": {
+            "max": 1.2224879264831543,
+            "min": 0.7098965644836426,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_delta_center": {
+            "max": 0.46955740451812744,
+            "min": -0.2750062346458435,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_delta_south": {
+            "max": null,
+            "min": null,
+            "nonnull": 0,
+            "last_nonnull": null
+          },
+          "vpd_delta_west": {
+            "max": 0.4540821313858032,
+            "min": -0.3236979842185974,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          },
+          "vpd_delta_east": {
+            "max": 0.3720388412475586,
+            "min": -0.48099571466445923,
+            "nonnull": 1390,
+            "last_nonnull": "2026-10-12T17:38:30.352197+00:00"
+          }
+        }
+      ]
+    },
+    "climate_latest": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "ts": "2026-10-12T17:38:30.352197+00:00",
+          "temp_avg": 76.22000122070312,
+          "temp_north": 78.9800033569336,
+          "temp_south": null,
+          "temp_east": 74.66000366210938,
+          "temp_west": 75.0199966430664,
+          "temp_case": 77.54000091552734,
+          "temp_control": 76.22000122070312,
+          "temp_intake": 73.22000122070312,
+          "rh_avg": 60.0333366394043,
+          "rh_north": 52,
+          "rh_south": null,
+          "rh_east": 65.80000305175781,
+          "rh_west": 62,
+          "rh_case": 50.60000228881836,
+          "vpd_avg": 1.2444504499435425,
+          "vpd_north": 1.6129097938537598,
+          "vpd_south": null,
+          "vpd_east": 1.0022677183151245,
+          "vpd_west": 1.1271004676818848,
+          "vpd_control": 1.2337417602539062,
+          "dew_point": 61.33638381958008,
+          "abs_humidity": 13.48884105682373,
+          "enthalpy_delta": -21.013721466064453,
+          "co2_ppm": 3081.599853515625,
+          "lux": 10644.4716796875,
+          "dli_today": null,
+          "flow_gpm": 0,
+          "water_total_gal": 671,
+          "mister_water_today": 0,
+          "outdoor_temp_f": 78.656,
+          "outdoor_rh_pct": 24.65,
+          "ph_input": null,
+          "ec_input": null,
+          "ph_runoff_wall": null,
+          "ec_runoff_wall": null,
+          "ph_runoff_center": null,
+          "ec_runoff_center": null,
+          "moisture_north": null,
+          "moisture_south": null,
+          "moisture_center": null,
+          "ppfd": null,
+          "dli_par_today": null,
+          "pressure_hpa": 837.8403363986885,
+          "leaf_temp_north": null,
+          "leaf_temp_south": null,
+          "leaf_wetness_north": null,
+          "leaf_wetness_south": null,
+          "wind_speed_mph": 1.85665712240515,
+          "wind_direction_deg": 170,
+          "outdoor_lux": 81240,
+          "solar_irradiance_w_m2": 677,
+          "precip_in": 0,
+          "uv_index": 5.01,
+          "hydro_tds_ppm": null,
+          "hydro_water_temp_f": null,
+          "wind_gust_mph": 3.73568360773085,
+          "wind_lull_mph": 0.0447387258410881,
+          "wind_speed_avg_mph": 1.72244094488189,
+          "wind_direction_avg_deg": 158,
+          "feels_like_f": 78.656,
+          "wet_bulb_temp_f": 55.6862898033107,
+          "vapor_pressure_inhg": 0.243650846839296,
+          "air_density_kg_m3": 0.975984212159554,
+          "precip_intensity_in_h": 0,
+          "lightning_count": 0,
+          "lightning_avg_dist_mi": 0,
+          "solar_altitude_deg": 39.7,
+          "solar_azimuth_deg": 157.77,
+          "hydro_ec_us_cm": null,
+          "hydro_orp_mv": null,
+          "hydro_ph": null,
+          "hydro_battery_pct": null,
+          "soil_moisture_south_1": null,
+          "soil_temp_south_1": null,
+          "soil_ec_south_1": null,
+          "soil_moisture_south_2": null,
+          "soil_temp_south_2": null,
+          "soil_moisture_west": null,
+          "soil_temp_west": null,
+          "intake_rh": 29.899999618530273,
+          "intake_vpd": 1.940780520439148,
+          "outdoor_illuminance": 80970,
+          "greenhouse_id": "vallery",
+          "solar_phase": 0.7868583798408508,
+          "solar_sunrise_min": 426,
+          "solar_noon_min": 767,
+          "solar_sunset_min": 1107,
+          "house_temp_target_f": 76.96821594238281,
+          "house_temp_delta_f": -0.9555435180664062,
+          "house_vpd_target": 1.026505708694458,
+          "house_vpd_delta": 0.205963134765625,
+          "vpd_target_center": 1.0888950824737549,
+          "vpd_target_south": 1.1446152925491333,
+          "vpd_target_west": 1.048883080482483,
+          "vpd_target_east": 1.1762093305587769,
+          "vpd_delta_center": 0.1429530382156372,
+          "vpd_delta_south": null,
+          "vpd_delta_west": 0.06767845153808594,
+          "vpd_delta_east": -0.19160759449005127
+        }
+      ]
+    },
+    "diagnostics_latest": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "ts": "2026-10-12T17:38:29.815763+00:00",
+          "wifi_rssi": -66,
+          "heap_bytes": 63.09765625,
+          "uptime_s": 877574.625,
+          "probe_health": "OK",
+          "reset_reason": "Software reset",
+          "greenhouse_id": "vallery",
+          "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+          "active_probe_count": 4,
+          "relief_cycle_count": 0,
+          "vent_latch_timer_s": 0,
+          "sealed_timer_s": 0,
+          "vpd_watch_timer_s": 0,
+          "mist_backoff_timer_s": 0,
+          "vent_mist_assist_active": 0,
+          "heap_min_free_kb": 2.3359375,
+          "heap_largest_free_block_kb": 60,
+          "controller_time_epoch": 1791826660,
+          "controller_local_hour": 11,
+          "sntp_valid": 1,
+          "sntp_miss_count": 0,
+          "last_sntp_sync_age_s": 816,
+          "effective_heat_target_f": 53.75,
+          "effective_cool_stage2_delta_f": 1.7725000381469727,
+          "effective_vpd_hysteresis_kpa": 0.1875,
+          "effective_dehum_aggressive_kpa": 0.29999998211860657,
+          "zone_wet_granted": null,
+          "band_source": "onchip_curve"
+        }
+      ]
+    },
+    "firmware_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+          "first": "2026-10-05T17:39:27.545359+00:00",
+          "latest": "2026-10-12T17:38:29.815763+00:00",
+          "rows": 9683
+        },
+        {
+          "firmware_version": null,
+          "first": "2026-10-05T19:36:30.512672+00:00",
+          "latest": "2026-10-12T16:42:40.162719+00:00",
+          "rows": 69
+        }
+      ]
+    },
+    "alerts_open_summary": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "severity": "warning",
+          "alert_type": "sensor_offline",
+          "source": "system",
+          "count": 19,
+          "oldest": "2026-06-01T02:40:36.359006+00:00",
+          "latest": "2026-10-12T15:49:27.70965+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "soil_sensor_offline",
+          "source": "system",
+          "count": 7,
+          "oldest": "2026-10-12T12:04:20.221112+00:00",
+          "latest": "2026-10-12T16:19:27.439145+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "forecast_deviation",
+          "source": "ingestor",
+          "count": 5,
+          "oldest": "2026-06-26T14:12:44.904634+00:00",
+          "latest": "2026-07-08T23:23:01.451106+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "esp32_push_failed",
+          "source": "dispatcher",
+          "count": 2,
+          "oldest": "2026-07-24T22:09:31.446143+00:00",
+          "latest": "2026-08-05T09:07:54.853652+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "esp32_push_failed",
+          "source": "setpoint_listener",
+          "count": 2,
+          "oldest": "2026-08-05T10:41:04.209085+00:00",
+          "latest": "2026-08-05T10:41:04.220962+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "tunable_zero_variance",
+          "source": "system",
+          "count": 2,
+          "oldest": "2026-07-17T21:06:23.088925+00:00",
+          "latest": "2026-07-17T21:06:23.106627+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "site_content_stale",
+          "source": "ingestor",
+          "count": 1,
+          "oldest": "2026-09-29T00:44:27.758554+00:00",
+          "latest": "2026-09-29T00:44:27.758554+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "heap_pressure_warning",
+          "source": "system",
+          "count": 1,
+          "oldest": "2026-10-12T01:04:04.295487+00:00",
+          "latest": "2026-10-12T01:04:04.295487+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "irrigation_feedback_gap",
+          "source": "system",
+          "count": 1,
+          "oldest": "2026-07-15T18:37:14.584724+00:00",
+          "latest": "2026-07-15T18:37:14.584724+00:00"
+        }
+      ]
+    },
+    "alerts_24h_summary": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "severity": "warning",
+          "alert_type": "sensor_offline",
+          "count": 33,
+          "open": 3,
+          "first": "2026-10-12T02:29:07.95552+00:00",
+          "latest": "2026-10-12T15:49:27.70965+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "vpd_stress",
+          "count": 13,
+          "open": 0,
+          "first": "2026-10-11T17:58:32.900069+00:00",
+          "latest": "2026-10-12T05:04:13.063239+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "soil_sensor_offline",
+          "count": 10,
+          "open": 7,
+          "first": "2026-10-12T12:04:20.204468+00:00",
+          "latest": "2026-10-12T16:19:27.439145+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "forecast_deviation",
+          "count": 1,
+          "open": 0,
+          "first": "2026-10-11T23:58:20.357055+00:00",
+          "latest": "2026-10-11T23:58:20.357055+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "heap_pressure_warning",
+          "count": 1,
+          "open": 1,
+          "first": "2026-10-12T01:04:04.295487+00:00",
+          "latest": "2026-10-12T01:04:04.295487+00:00"
+        },
+        {
+          "severity": "warning",
+          "alert_type": "house_band_drift",
+          "count": 1,
+          "open": 0,
+          "first": "2026-10-12T12:59:23.029238+00:00",
+          "latest": "2026-10-12T12:59:23.029238+00:00"
+        }
+      ]
+    },
+    "alerts_open_high": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "setpoint_delivery_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "audit_day": "2026-10-12T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 6,
+          "confirmed": 6,
+          "latest": "2026-10-12T15:08:40.690668+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-11T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 112,
+          "confirmed": 112,
+          "latest": "2026-10-11T16:54:39.533561+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-10T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 8,
+          "confirmed": 8,
+          "latest": "2026-10-10T15:50:38.040808+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-09T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 8,
+          "confirmed": 8,
+          "latest": "2026-10-09T15:48:36.62886+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-08T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 2,
+          "confirmed": 2,
+          "latest": "2026-10-08T15:57:35.462454+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-07T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 4,
+          "confirmed": 4,
+          "latest": "2026-10-07T14:55:34.203107+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "source": "band",
+          "delivery_status": "confirmed",
+          "rows": 305,
+          "confirmed": 305,
+          "latest": "2026-10-06T23:32:53.014412+00:00",
+          "avg_confirm_s": 33.9
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "source": "band",
+          "delivery_status": "superseded",
+          "rows": 1,
+          "confirmed": 0,
+          "latest": "2026-10-06T15:45:20.818215+00:00",
+          "avg_confirm_s": null
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 300,
+          "confirmed": 300,
+          "latest": "2026-10-06T23:44:30.550562+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "source": "plan",
+          "delivery_status": "confirmed",
+          "rows": 335,
+          "confirmed": 335,
+          "latest": "2026-10-06T23:43:24.568448+00:00",
+          "avg_confirm_s": 44.01
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "source": "plan",
+          "delivery_status": "superseded",
+          "rows": 4,
+          "confirmed": 0,
+          "latest": "2026-10-06T21:00:22.119737+00:00",
+          "avg_confirm_s": null
+        },
+        {
+          "audit_day": "2026-10-05T00:00:00+00:00",
+          "source": "band",
+          "delivery_status": "confirmed",
+          "rows": 22,
+          "confirmed": 22,
+          "latest": "2026-10-05T23:00:37.768782+00:00",
+          "avg_confirm_s": 40.96
+        },
+        {
+          "audit_day": "2026-10-05T00:00:00+00:00",
+          "source": "esp32",
+          "delivery_status": "observed",
+          "rows": 242,
+          "confirmed": 242,
+          "latest": "2026-10-05T23:00:37.973074+00:00",
+          "avg_confirm_s": 0.0
+        },
+        {
+          "audit_day": "2026-10-05T00:00:00+00:00",
+          "source": "plan",
+          "delivery_status": "confirmed",
+          "rows": 61,
+          "confirmed": 61,
+          "latest": "2026-10-05T23:00:37.747326+00:00",
+          "avg_confirm_s": 52.43
+        },
+        {
+          "audit_day": "2026-10-05T00:00:00+00:00",
+          "source": "preemptive",
+          "delivery_status": "confirmed",
+          "rows": 3,
+          "confirmed": 3,
+          "latest": "2026-10-05T18:38:16.527415+00:00",
+          "avg_confirm_s": 7.64
+        }
+      ]
+    },
+    "setpoint_latest": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "ts": "2026-10-12T15:08:40.690668+00:00",
+          "parameter": "fog_burst_min",
+          "value": 5,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T15:08:40.690668+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-12T06:21:40.149772+00:00",
+          "parameter": "fog_burst_min",
+          "value": 8,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T06:21:40.149772+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-12T06:01:40.134625+00:00",
+          "parameter": "fog_burst_min",
+          "value": 5,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T06:01:40.134625+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-12T05:43:40.143478+00:00",
+          "parameter": "fog_burst_min",
+          "value": 8,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T05:43:40.143478+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-12T04:55:40.079337+00:00",
+          "parameter": "fog_burst_min",
+          "value": 5,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T04:55:40.079337+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-12T01:51:39.887953+00:00",
+          "parameter": "fog_burst_min",
+          "value": 8,
+          "source": "esp32",
+          "confirmed_at": "2026-10-12T01:51:39.887953+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T16:54:39.533561+00:00",
+          "parameter": "fog_burst_min",
+          "value": 5,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T16:54:39.533561+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.58205+00:00",
+          "parameter": "mist_vent_reopen_delay_s",
+          "value": 45,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.58205+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.56573+00:00",
+          "parameter": "gl_grow_min_off_s",
+          "value": 60,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.56573+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.552198+00:00",
+          "parameter": "safety_vpd_min",
+          "value": 0.3,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.552198+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.539092+00:00",
+          "parameter": "activity_start_minute",
+          "value": 0,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.539092+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.523036+00:00",
+          "parameter": "min_fog_off_s",
+          "value": 54,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.523036+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.506746+00:00",
+          "parameter": "direct_wet_min_temp_f",
+          "value": 65,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.506746+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.490703+00:00",
+          "parameter": "vent_exchange_fraction",
+          "value": 0.3,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.490703+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.477505+00:00",
+          "parameter": "direct_wet_stress_min_dew_margin_f",
+          "value": 8,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.477505+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.465447+00:00",
+          "parameter": "vent_latch_timeout_ms",
+          "value": 1800000,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.465447+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.45351+00:00",
+          "parameter": "irrig_wall_duration_min",
+          "value": 10,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.45351+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.436597+00:00",
+          "parameter": "safety_vpd_max",
+          "value": 2.5,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.436597+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:40.417842+00:00",
+          "parameter": "cold_vent_guard_delta_f",
+          "value": 8,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:40.417842+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.751142+00:00",
+          "parameter": "outdoor_staleness_max_s",
+          "value": 600,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.751142+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.738324+00:00",
+          "parameter": "direct_wet_center_start_offset_min",
+          "value": 120,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.738324+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.726821+00:00",
+          "parameter": "irrig_vpd_boost_threshold_hrs",
+          "value": 3,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.726821+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.710266+00:00",
+          "parameter": "mister_water_budget_gal",
+          "value": 180,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.710266+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.696286+00:00",
+          "parameter": "gl_main_sunrise_offset_min",
+          "value": 0,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.696286+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.683654+00:00",
+          "parameter": "gl_grow_sunrise_hour",
+          "value": 7,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.683654+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.67094+00:00",
+          "parameter": "fan_burst_min",
+          "value": 10,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.67094+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.658003+00:00",
+          "parameter": "min_fan_off_s",
+          "value": 90,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.658003+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.645068+00:00",
+          "parameter": "lead_rotate_s",
+          "value": 600,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.645068+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.628117+00:00",
+          "parameter": "gl_main_target_light_minutes",
+          "value": 780,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.628117+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        },
+        {
+          "ts": "2026-10-11T14:43:39.61282+00:00",
+          "parameter": "min_heat_on_s",
+          "value": 120,
+          "source": "esp32",
+          "confirmed_at": "2026-10-11T14:43:39.61282+00:00",
+          "delivery_status": "observed",
+          "expired_at": null
+        }
+      ]
+    },
+    "migrations_recent": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "filename": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql",
+          "source": "db/migrations",
+          "seq": 275,
+          "sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+          "applied_at": "2026-10-06T09:58:38.256618+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1607,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/274-qualified-physical-crop-band-publication.sql",
+          "source": "db/migrations",
+          "seq": 274,
+          "sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+          "applied_at": "2026-10-06T01:01:53.37532+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1694,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/273-native-route-measurement-reader.sql",
+          "source": "db/migrations",
+          "seq": 273,
+          "sha256": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+          "applied_at": "2026-10-05T21:54:34.576541+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1823,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/272-current-climate-scorecard-snapshot.sql",
+          "source": "db/migrations",
+          "seq": 272,
+          "sha256": "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+          "applied_at": "2026-10-05T21:54:32.72091+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1676,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/271-legacy-band-trace-deprecation.sql",
+          "source": "db/migrations",
+          "seq": 271,
+          "sha256": "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642",
+          "applied_at": "2026-10-05T21:54:32.521234+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 12,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/270-facility-safe-ops-projection.sql",
+          "source": "db/migrations",
+          "seq": 270,
+          "sha256": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+          "applied_at": "2026-10-02T02:55:10.302403+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 2247,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/269-lab-crop-zone-topology-projections.sql",
+          "source": "db/migrations",
+          "seq": 269,
+          "sha256": "2540c20810b07fa42e73200d120d3b753b9b36860b029a49b8db1b4a7283475d",
+          "applied_at": "2026-10-01T10:40:00.933578+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 2805,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/268-six-runtime-workload-role-boundaries.sql",
+          "source": "db/migrations",
+          "seq": 268,
+          "sha256": "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0",
+          "applied_at": "2026-10-01T07:42:51.557698+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 3077,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/267-idempotent-observational-source-events.sql",
+          "source": "db/migrations",
+          "seq": 267,
+          "sha256": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735",
+          "applied_at": "2026-10-01T03:54:58.715625+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1163,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/266-climate-integral-json-insertion.sql",
+          "source": "db/migrations",
+          "seq": 266,
+          "sha256": "742a99ba133dee5cbcba5bd2d7f80b5902da51ec0455b992170c89b9f4bf7526",
+          "applied_at": "2026-10-01T02:04:01.938674+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1208,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/265-idempotent-climate-source-events.sql",
+          "source": "db/migrations",
+          "seq": 265,
+          "sha256": "f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2",
+          "applied_at": "2026-10-01T00:20:55.544657+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1063,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/264-facility-safe-closure-startup-handoff.sql",
+          "source": "db/migrations",
+          "seq": 264,
+          "sha256": "406f284c941e599d142c336ce0a9afec1efd46d108d06c2f8069d0a08d7b1dc3",
+          "applied_at": "2026-09-30T17:15:10.430699+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1144,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/263-mcp-timescale-chunk-boundary-digest.sql",
+          "source": "db/migrations",
+          "seq": 263,
+          "sha256": "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b",
+          "applied_at": "2026-09-29T17:01:38.173223+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 787,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/262-fixed-panel-native-callback-ledger.sql",
+          "source": "db/migrations",
+          "seq": 262,
+          "sha256": "6b9ebfb1ee429fac2a31c07253014ccfbc1832e08307f7f0e0aad867fc46020e",
+          "applied_at": "2026-09-28T20:06:49.823212+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1534,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/261-outcome-kpi-ordinary-acl.sql",
+          "source": "db/migrations",
+          "seq": 261,
+          "sha256": "159d67ec9e34ec386a9e8bda5d57fbaf76243c5ce1f11dd276927c9834d86896",
+          "applied_at": "2026-09-28T20:06:48.235514+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1307,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/260-restore-climate-action-daily-scorecard.sql",
+          "source": "db/migrations",
+          "seq": 260,
+          "sha256": "3f1b1d0c7c055db75f008ab171ec505665ec2df14e918c2845dfbce3ff98cb80",
+          "applied_at": "2026-09-28T16:33:56.80058+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 245,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/259-mcp-ordinary-runtime-boundary.sql",
+          "source": "db/migrations",
+          "seq": 259,
+          "sha256": "5eb45e7264eb28d05aa30acab76bd571d7a5e7466f51b9a877fcea0beab13054",
+          "applied_at": "2026-09-28T15:47:57.397177+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1380,
+          "applied_by": "verdify"
+        },
+        {
+          "filename": "db/migrations/258-mcp-runtime-inert-roles.sql",
+          "source": "db/migrations",
+          "seq": 258,
+          "sha256": "5558c4be0d3624ccd5821d2e0231b4625feaa64a6657e5fe53ca67b79d55e78e",
+          "applied_at": "2026-09-28T14:31:23.609107+00:00",
+          "stamp_method": "runner",
+          "duration_ms": 1237,
+          "applied_by": "verdify"
+        }
+      ]
+    },
+    "migration_summary": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "count": 283,
+          "max_sequence": 275,
+          "last_applied": "2026-10-06T09:58:38.256618+00:00"
+        }
+      ]
+    },
+    "planner_journal_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "audit_day": "2026-10-12T00:00:00+00:00",
+          "plans": 5,
+          "last_plan": "2026-10-12T13:12:20.913861+00:00",
+          "validated": 4,
+          "mean_outcome_score": 5.0,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-11T00:00:00+00:00",
+          "plans": 3,
+          "last_plan": "2026-10-11T13:11:39.27635+00:00",
+          "validated": 3,
+          "mean_outcome_score": 4.0,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-10T00:00:00+00:00",
+          "plans": 6,
+          "last_plan": "2026-10-10T20:26:41.328284+00:00",
+          "validated": 6,
+          "mean_outcome_score": 2.8333333333333335,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-09T00:00:00+00:00",
+          "plans": 3,
+          "last_plan": "2026-10-09T13:08:45.525906+00:00",
+          "validated": 3,
+          "mean_outcome_score": 4.666666666666667,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-08T00:00:00+00:00",
+          "plans": 6,
+          "last_plan": "2026-10-08T20:24:28.395391+00:00",
+          "validated": 6,
+          "mean_outcome_score": 1.8333333333333333,
+          "mean_anchor_score": 1.25
+        },
+        {
+          "audit_day": "2026-10-07T00:00:00+00:00",
+          "plans": 5,
+          "last_plan": "2026-10-07T23:54:06.707392+00:00",
+          "validated": 5,
+          "mean_outcome_score": 1.8,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-06T00:00:00+00:00",
+          "plans": 8,
+          "last_plan": "2026-10-06T23:38:43.995436+00:00",
+          "validated": 8,
+          "mean_outcome_score": 2.625,
+          "mean_anchor_score": 1.0
+        },
+        {
+          "audit_day": "2026-10-05T00:00:00+00:00",
+          "plans": 3,
+          "last_plan": "2026-10-05T23:51:51.207038+00:00",
+          "validated": 3,
+          "mean_outcome_score": 1.6666666666666667,
+          "mean_anchor_score": null
+        }
+      ]
+    },
+    "planner_latest": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "plan_id": "iris-20261012-0710",
+          "created_at": "2026-10-12T13:12:20.913861+00:00",
+          "validated_at": null,
+          "outcome_score": null,
+          "anchor_score": null,
+          "valid_from": "2026-10-12T13:05:00+00:00",
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "lifecycle_status": "effective",
+          "planner_instance": "local",
+          "trigger_id": "9a715ade-f812-4b8c-a004-b0e466261dca",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261012-0202",
+          "created_at": "2026-10-12T08:03:43.97184+00:00",
+          "validated_at": "2026-10-12T13:12:30.422495+00:00",
+          "outcome_score": 5,
+          "anchor_score": 1,
+          "valid_from": "2026-10-12T08:00:00+00:00",
+          "expires_at": "2026-10-15T06:00:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "666213ef-d605-4612-b851-0f7fc794f0bf",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261012-0017",
+          "created_at": "2026-10-12T06:19:02.107698+00:00",
+          "validated_at": "2026-10-12T13:10:51.497126+00:00",
+          "outcome_score": 5,
+          "anchor_score": 1,
+          "valid_from": "2026-10-12T06:15:00+00:00",
+          "expires_at": "2026-10-12T22:30:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "3d2acb07-66da-4406-bf93-9570dab550c7",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261011-1828",
+          "created_at": "2026-10-12T00:30:33.24308+00:00",
+          "validated_at": "2026-10-12T08:02:32.129741+00:00",
+          "outcome_score": 5,
+          "anchor_score": 1,
+          "valid_from": "2026-10-12T00:25:00+00:00",
+          "expires_at": "2026-10-12T13:00:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "de420033-3395-48bb-a84a-4a7cbd16484d",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261011-1800",
+          "created_at": "2026-10-12T00:02:31.601585+00:00",
+          "validated_at": "2026-10-12T06:17:27.972072+00:00",
+          "outcome_score": 5,
+          "anchor_score": null,
+          "valid_from": "2026-10-12T00:00:00+00:00",
+          "expires_at": "2026-10-15T00:00:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "31ff4baa-d3c1-47de-bf98-e18a03a6dffa",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261011-0709",
+          "created_at": "2026-10-11T13:11:39.27635+00:00",
+          "validated_at": "2026-10-12T00:02:51.151412+00:00",
+          "outcome_score": 4,
+          "anchor_score": 1,
+          "valid_from": "2026-10-11T13:05:00+00:00",
+          "expires_at": "2026-10-12T04:00:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "394036c5-0d87-4192-958f-fe6267f84ddc",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261011-0016",
+          "created_at": "2026-10-11T06:17:59.148171+00:00",
+          "validated_at": "2026-10-12T00:29:05.985669+00:00",
+          "outcome_score": 5,
+          "anchor_score": 1,
+          "valid_from": "2026-10-11T06:15:00+00:00",
+          "expires_at": "2026-10-11T22:30:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "c40e9e21-a189-4d88-bf5a-511697687520",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        },
+        {
+          "plan_id": "iris-20261010-1829",
+          "created_at": "2026-10-11T00:31:26.662285+00:00",
+          "validated_at": "2026-10-12T00:01:01.723432+00:00",
+          "outcome_score": 3,
+          "anchor_score": 1,
+          "valid_from": "2026-10-11T00:28:00+00:00",
+          "expires_at": "2026-10-11T17:30:00+00:00",
+          "lifecycle_status": "superseded",
+          "planner_instance": "local",
+          "trigger_id": "ca1d796d-6bf7-4d7d-a0b7-4af4bb83295e",
+          "params_changed": [
+            "band_track_fraction",
+            "cold_vent_guard_delta_f",
+            "cool_exit_hysteresis_f",
+            "cool_stage2_exit_hysteresis_f",
+            "cool_stage2_over_high_f",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_vpd_margin_kpa",
+            "dwell_gate_ms",
+            "enthalpy_close",
+            "enthalpy_open",
+            "fog_escalation_kpa",
+            "heat_hysteresis",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "mist_backoff_s",
+            "mist_max_closed_vent_s",
+            "mist_thermal_relief_s",
+            "mister_all_delay_s",
+            "mister_all_kpa",
+            "mister_engage_delay_s",
+            "mister_engage_kpa",
+            "mister_pulse_gap_s",
+            "mister_pulse_on_s",
+            "mister_vpd_weight",
+            "mister_water_budget_gal",
+            "night_vpd_bias_kpa",
+            "outdoor_staleness_max_s",
+            "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "sw_dwell_gate_enabled",
+            "sw_fog_closes_vent",
+            "sw_mister_closes_vent",
+            "sw_summer_vent_enabled",
+            "temp_hysteresis",
+            "vent_exchange_fraction",
+            "vent_prefer_dp_delta_f",
+            "vent_prefer_temp_delta_f",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s"
+          ]
+        }
+      ]
+    },
+    "planner_graph_7d": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "planner_graph_errors": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "plan_delivery_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "instance": "local",
+          "status": "plan_written",
+          "gateway_status": 202,
+          "failure_class": null,
+          "count": 39,
+          "latest": "2026-10-12T13:10:09.888481+00:00"
+        },
+        {
+          "instance": "local",
+          "status": "acked",
+          "gateway_status": 202,
+          "failure_class": null,
+          "count": 14,
+          "latest": "2026-10-11T23:27:37.14487+00:00"
+        },
+        {
+          "instance": "local",
+          "status": "action_completed",
+          "gateway_status": 202,
+          "failure_class": null,
+          "count": 7,
+          "latest": "2026-10-10T23:29:18.121905+00:00"
+        }
+      ]
+    },
+    "vision_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "camera": "greenhouse_1",
+          "zone": "south",
+          "latest": "2026-10-12T06:00:19.430955+00:00",
+          "observations": 29,
+          "mean_confidence": 0.8068965517241382
+        },
+        {
+          "camera": "greenhouse_2",
+          "zone": "east",
+          "latest": "2026-10-12T06:00:24.702369+00:00",
+          "observations": 29,
+          "mean_confidence": 0.8206896551724141
+        }
+      ]
+    },
+    "sensor_staleness": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "sensor_id": "climate.vpd_delta_south",
+          "type": "vpd",
+          "zone": "south",
+          "expected_interval_s": 60,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_orp_mv",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 300,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_ph",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 300,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.soil_moisture_west",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.soil_temp_south_2",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.soil_temp_west",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.soil_moisture_south_2",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_ec_us_cm",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 300,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_battery_pct",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 300,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.rh_south",
+          "type": "humidity",
+          "zone": "south",
+          "expected_interval_s": 1800,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.temp_south",
+          "type": "temperature",
+          "zone": "south",
+          "expected_interval_s": 1800,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_water_temp_f",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 1800,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.hydro_tds_ppm",
+          "type": "hydroponic",
+          "zone": "east",
+          "expected_interval_s": 1800,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "climate.vpd_south",
+          "type": "vpd",
+          "zone": "south",
+          "expected_interval_s": 1800,
+          "last_seen_at": null,
+          "seconds_since": null,
+          "is_stale": true,
+          "staleness_ratio": null
+        },
+        {
+          "sensor_id": "equipment.sntp_status",
+          "type": "equipment",
+          "zone": null,
+          "expected_interval_s": 604800,
+          "last_seen_at": "2026-05-18T02:35:49.849405+00:00",
+          "seconds_since": 12755018,
+          "is_stale": true,
+          "staleness_ratio": 21.1
+        },
+        {
+          "sensor_id": "state.lead_fan",
+          "type": "system_state",
+          "zone": null,
+          "expected_interval_s": 604800,
+          "last_seen_at": "2026-06-11T01:05:12.384408+00:00",
+          "seconds_since": 10686856,
+          "is_stale": true,
+          "staleness_ratio": 17.7
+        },
+        {
+          "sensor_id": "climate.soil_temp_south_1",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": "2026-10-12T15:44:45.822336+00:00",
+          "seconds_since": 6882,
+          "is_stale": true,
+          "staleness_ratio": 114.7
+        },
+        {
+          "sensor_id": "climate.soil_moisture_south_1",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": "2026-10-12T15:44:45.822336+00:00",
+          "seconds_since": 6882,
+          "is_stale": true,
+          "staleness_ratio": 114.7
+        },
+        {
+          "sensor_id": "climate.soil_ec_south_1",
+          "type": "sensor",
+          "zone": null,
+          "expected_interval_s": 60,
+          "last_seen_at": "2026-10-12T15:44:45.822336+00:00",
+          "seconds_since": 6882,
+          "is_stale": true,
+          "staleness_ratio": 114.7
+        }
+      ]
+    },
+    "pipeline_health": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "source": "climate",
+          "rows_1h": 59,
+          "rows_24h": 1391,
+          "age_s": 2,
+          "null_pct_1h": 0
+        },
+        {
+          "source": "hydro",
+          "rows_1h": 0,
+          "rows_24h": 0,
+          "age_s": 967894,
+          "null_pct_1h": null
+        },
+        {
+          "source": "equipment",
+          "rows_1h": 25,
+          "rows_24h": 766,
+          "age_s": 16,
+          "null_pct_1h": null
+        },
+        {
+          "source": "diagnostics",
+          "rows_1h": 57,
+          "rows_24h": 1389,
+          "age_s": 64,
+          "null_pct_1h": 5.263157894736842
+        },
+        {
+          "source": "energy",
+          "rows_1h": 12,
+          "rows_24h": 288,
+          "age_s": 16,
+          "null_pct_1h": null
+        },
+        {
+          "source": "setpoints",
+          "rows_1h": 0,
+          "rows_24h": 6,
+          "age_s": 9053,
+          "null_pct_1h": null
+        },
+        {
+          "source": "forecast",
+          "rows_1h": 384,
+          "rows_24h": 9216,
+          "age_s": 3382,
+          "null_pct_1h": 0
+        },
+        {
+          "source": "daily_summary",
+          "rows_1h": 2,
+          "rows_24h": 3,
+          "age_s": 1500,
+          "null_pct_1h": 0
+        }
+      ]
+    },
+    "data_trust": {
+      "exit_code": 1,
+      "error": "ERROR:  canceling statement due to statement timeout\ncommand terminated with exit code 1\n"
+    },
+    "instrumentation_readiness": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "requirement_id": "actuator_feedback",
+          "category": "control",
+          "metric": "independent actuator state/current feedback",
+          "current_status": "needed",
+          "blocks_story": "Relay stuck proof beyond commanded state",
+          "recommended_source": "Current transformers or relay feedback contacts",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "center_root_zone_runoff_feedback",
+          "category": "root_zone_feedback",
+          "metric": "Center root-zone moisture plus runoff pH/EC",
+          "current_status": "needed",
+          "blocks_story": "Center fertigation lacks direct root-zone and runoff validation; current validation is relay state plus water-meter movement.",
+          "recommended_source": "Add center root-zone moisture and center runoff pH/EC instrumentation, then map the entities into climate ingestion.",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "leaf_wetness_temp",
+          "category": "disease",
+          "metric": "leaf wetness plus leaf temperature",
+          "current_status": "needed",
+          "blocks_story": "Canopy condensation and disease-risk proof",
+          "recommended_source": "Leaf wetness + IR leaf temperature sensors",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "par_ppfd",
+          "category": "light",
+          "metric": "calibrated PAR/PPFD and PAR DLI",
+          "current_status": "needed",
+          "blocks_story": "Calibrated DLI, yield per mol, light-use efficiency",
+          "recommended_source": "Apogee SQ-class PAR sensor or equivalent",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "south_soil_probe_1_repair",
+          "category": "root_zone_feedback",
+          "metric": "South soil probe 1 moisture/temp/EC",
+          "current_status": "needed",
+          "blocks_story": "South probe 1 is stuck at zero, so south-wall irrigation response should not be trusted from that sensor.",
+          "recommended_source": "Repair or replace the south SEN0601 probe/address-7 wiring and verify moisture response after an irrigation run.",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "zone_flow_meters",
+          "category": "water",
+          "metric": "per-zone flow and pressure instrumentation",
+          "current_status": "needed",
+          "blocks_story": "Water attribution by mister/drip/zone and leach fraction",
+          "recommended_source": "Zone flow meters, reservoir level, pressure sensors",
+          "priority": 1,
+          "readiness_status": "blocked"
+        },
+        {
+          "requirement_id": "energy_submetering",
+          "category": "energy",
+          "metric": "load-specific electrical and heat energy",
+          "current_status": "partial",
+          "blocks_story": "Cost per heat/fog/fan/light action and measured-vs-estimated calibration",
+          "recommended_source": "Submeter heat/fans/fog/lights plus gas telemetry",
+          "priority": 2,
+          "readiness_status": "warn"
+        }
+      ]
+    },
+    "dli_current": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "ts": "2026-10-12T17:39:32.11187+00:00",
+          "greenhouse_id": "vallery",
+          "crop_dli_mol_m2_day": null,
+          "availability": "unavailable",
+          "unavailable_reason": "source_reading_missing",
+          "provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "validity_revision": "dli-validity-v1",
+          "valid_from": "2024-01-01T00:00:00+00:00",
+          "valid_to": null,
+          "forensic_proxy_present": false
+        }
+      ]
+    },
+    "equipment_now": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "equipment": "drip_center",
+          "state": false,
+          "since": "2026-10-06T00:18:17.333081+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "drip_center_fert",
+          "state": false,
+          "since": "2026-10-06T00:18:17.332953+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "drip_wall",
+          "state": false,
+          "since": "2026-10-06T00:18:17.332727+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "drip_wall_fert",
+          "state": false,
+          "since": "2026-10-06T00:18:17.333405+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "economiser_blocked",
+          "state": false,
+          "since": "2026-10-06T00:18:17.096112+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "economiser_enabled",
+          "state": false,
+          "since": "2026-10-06T00:18:17.334698+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "fan1",
+          "state": false,
+          "since": "2026-10-12T11:12:15.593672+00:00",
+          "seconds_ago": 23250
+        },
+        {
+          "equipment": "fan2",
+          "state": false,
+          "since": "2026-10-12T11:14:15.729241+00:00",
+          "seconds_ago": 23130
+        },
+        {
+          "equipment": "fan_burst_active",
+          "state": false,
+          "since": "2026-10-06T00:18:17.095489+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "fert_master_valve",
+          "state": false,
+          "since": "2026-10-06T00:18:17.33359+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "fog",
+          "state": false,
+          "since": "2026-10-11T23:23:14.61547+00:00",
+          "seconds_ago": 65791
+        },
+        {
+          "equipment": "fog_burst_active",
+          "state": false,
+          "since": "2026-10-06T00:18:17.095753+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "fog_closes_vent",
+          "state": true,
+          "since": "2026-10-06T00:18:17.334609+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "gl_auto_mode",
+          "state": true,
+          "since": "2026-10-06T00:18:17.33424+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "grow_light_grow",
+          "state": false,
+          "since": "2026-10-12T17:39:18.273476+00:00",
+          "seconds_ago": 28
+        },
+        {
+          "equipment": "grow_light_main",
+          "state": false,
+          "since": "2026-10-12T17:39:18.273476+00:00",
+          "seconds_ago": 28
+        },
+        {
+          "equipment": "heap_pressure_critical",
+          "state": false,
+          "since": "2026-10-06T00:18:17.097225+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "heap_pressure_warning",
+          "state": false,
+          "since": "2026-10-06T00:18:17.097029+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "heat1",
+          "state": false,
+          "since": "2026-10-12T17:29:05.47702+00:00",
+          "seconds_ago": 640
+        },
+        {
+          "equipment": "heat2",
+          "state": false,
+          "since": "2026-10-06T00:18:17.095063+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "irrigation_center_enabled",
+          "state": false,
+          "since": "2026-10-06T00:18:17.335088+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "irrigation_enabled",
+          "state": true,
+          "since": "2026-10-06T00:18:17.33484+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "irrigation_wall_enabled",
+          "state": true,
+          "since": "2026-10-06T00:18:17.334962+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "irrigation_weather_skip",
+          "state": false,
+          "since": "2026-10-06T00:18:17.353565+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "leak_detected",
+          "state": false,
+          "since": "2026-10-06T00:18:17.096917+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "mister_any",
+          "state": false,
+          "since": "2026-10-06T00:18:17.096539+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "mister_budget_exceeded",
+          "state": false,
+          "since": "2026-10-06T00:18:17.096645+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "mister_center",
+          "state": false,
+          "since": "2026-10-11T20:55:12.569426+00:00",
+          "seconds_ago": 74673
+        },
+        {
+          "equipment": "mister_south",
+          "state": false,
+          "since": "2026-10-06T00:18:17.33258+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "mister_south_fert",
+          "state": false,
+          "since": "2026-10-06T00:18:17.332452+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "mister_west",
+          "state": false,
+          "since": "2026-10-06T00:18:17.332105+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "mister_west_fert",
+          "state": false,
+          "since": "2026-10-06T00:18:17.332317+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "occupancy",
+          "state": false,
+          "since": "2026-10-06T00:18:17.331743+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "occupancy_inhibit",
+          "state": true,
+          "since": "2026-10-06T00:18:17.353937+00:00",
+          "seconds_ago": 580888
+        },
+        {
+          "equipment": "occupancy_quiet_override_active",
+          "state": false,
+          "since": "2026-10-06T00:18:17.09588+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "sntp_status",
+          "state": false,
+          "since": "2026-05-18T02:35:49.849405+00:00",
+          "seconds_ago": 12755036
+        },
+        {
+          "equipment": "vent",
+          "state": false,
+          "since": "2026-10-12T11:14:16.657414+00:00",
+          "seconds_ago": 23129
+        },
+        {
+          "equipment": "vent_bypass_active",
+          "state": false,
+          "since": "2026-10-06T00:18:17.095625+00:00",
+          "seconds_ago": 580889
+        },
+        {
+          "equipment": "water_flowing",
+          "state": false,
+          "since": "2026-10-11T23:24:38.80877+00:00",
+          "seconds_ago": 65707
+        }
+      ]
+    },
+    "daily_kpi_7d": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "date": "2026-10-12",
+          "compliance_pct": 0.0,
+          "temp_compliance_pct": 1.5,
+          "vpd_compliance_pct": 94.6,
+          "heat_stress_h": 0.0,
+          "cold_stress_h": 10.68,
+          "vpd_high_stress_h": 0.58,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 11.26,
+          "kwh": null,
+          "therms": null,
+          "water_gal": null,
+          "mister_water_gal": null,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": null,
+          "cost_total": null,
+          "temp_min": 63.0,
+          "temp_max": 73.7,
+          "temp_avg": 66.9,
+          "vpd_min": 0.59,
+          "vpd_max": 1.05,
+          "vpd_avg": 0.75,
+          "dli": null,
+          "dp_margin_min_f": 8.5,
+          "dp_risk_hours": 0.0,
+          "planner_score": 83.2,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_day_incomplete",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": null,
+          "therms_modeled": null,
+          "water_gal_est": null,
+          "cost_electric_est": null,
+          "cost_gas_est": null,
+          "cost_water_est": null,
+          "cost_total_est": null
+        },
+        {
+          "date": "2026-10-11",
+          "compliance_pct": 17.4,
+          "temp_compliance_pct": 36.4,
+          "vpd_compliance_pct": 70.5,
+          "heat_stress_h": 1.37,
+          "cold_stress_h": 13.35,
+          "vpd_high_stress_h": 6.82,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 21.54,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 29,
+          "mister_water_gal": 21,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.14,
+          "cost_total": null,
+          "temp_min": 66.3,
+          "temp_max": 85.3,
+          "temp_avg": 73.5,
+          "vpd_min": 0.62,
+          "vpd_max": 1.8,
+          "vpd_avg": 0.87,
+          "dli": null,
+          "dp_margin_min_f": 8.2,
+          "dp_risk_hours": 0.0,
+          "planner_score": 77.3,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 21.12,
+          "therms_modeled": 0.0,
+          "water_gal_est": 29,
+          "cost_electric_est": 2.34,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.14,
+          "cost_total_est": 2.48
+        },
+        {
+          "date": "2026-10-10",
+          "compliance_pct": 9.6,
+          "temp_compliance_pct": 38.8,
+          "vpd_compliance_pct": 61.7,
+          "heat_stress_h": 1.85,
+          "cold_stress_h": 12.35,
+          "vpd_high_stress_h": 8.9,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 23.1,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 28,
+          "mister_water_gal": 15,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.14,
+          "cost_total": null,
+          "temp_min": 63.7,
+          "temp_max": 85.3,
+          "temp_avg": 73.6,
+          "vpd_min": 0.58,
+          "vpd_max": 1.96,
+          "vpd_avg": 0.91,
+          "dli": null,
+          "dp_margin_min_f": 8.2,
+          "dp_risk_hours": 0.0,
+          "planner_score": 74.9,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 23.95,
+          "therms_modeled": 0.0,
+          "water_gal_est": 28,
+          "cost_electric_est": 2.66,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.14,
+          "cost_total_est": 2.79
+        },
+        {
+          "date": "2026-10-09",
+          "compliance_pct": 14.1,
+          "temp_compliance_pct": 35.0,
+          "vpd_compliance_pct": 66.2,
+          "heat_stress_h": 2.58,
+          "cold_stress_h": 12.52,
+          "vpd_high_stress_h": 7.85,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 22.95,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 62,
+          "mister_water_gal": 25,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.3,
+          "cost_total": null,
+          "temp_min": 63.1,
+          "temp_max": 85.7,
+          "temp_avg": 73.5,
+          "vpd_min": 0.59,
+          "vpd_max": 2.02,
+          "vpd_avg": 0.93,
+          "dli": null,
+          "dp_margin_min_f": 8.5,
+          "dp_risk_hours": 0.0,
+          "planner_score": 77.5,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 21.56,
+          "therms_modeled": 0.0,
+          "water_gal_est": 62,
+          "cost_electric_est": 2.39,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.3,
+          "cost_total_est": 2.69
+        },
+        {
+          "date": "2026-10-08",
+          "compliance_pct": 15.8,
+          "temp_compliance_pct": 36.8,
+          "vpd_compliance_pct": 67.7,
+          "heat_stress_h": 2.05,
+          "cold_stress_h": 12.63,
+          "vpd_high_stress_h": 7.5,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 22.18,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 71,
+          "mister_water_gal": 29,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.34,
+          "cost_total": null,
+          "temp_min": 62.4,
+          "temp_max": 85.5,
+          "temp_avg": 72.9,
+          "vpd_min": 0.58,
+          "vpd_max": 1.92,
+          "vpd_avg": 0.9,
+          "dli": null,
+          "dp_margin_min_f": 8.5,
+          "dp_risk_hours": 0.0,
+          "planner_score": 75.4,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 22.49,
+          "therms_modeled": 0.0,
+          "water_gal_est": 71,
+          "cost_electric_est": 2.5,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.34,
+          "cost_total_est": 2.84
+        },
+        {
+          "date": "2026-10-07",
+          "compliance_pct": 13.6,
+          "temp_compliance_pct": 32.9,
+          "vpd_compliance_pct": 61.9,
+          "heat_stress_h": 2.1,
+          "cold_stress_h": 13.52,
+          "vpd_high_stress_h": 8.87,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 24.49,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 48,
+          "mister_water_gal": 21,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.23,
+          "cost_total": null,
+          "temp_min": 63.2,
+          "temp_max": 85.5,
+          "temp_avg": 73.0,
+          "vpd_min": 0.59,
+          "vpd_max": 1.99,
+          "vpd_avg": 0.92,
+          "dli": null,
+          "dp_margin_min_f": 8.2,
+          "dp_risk_hours": 0.0,
+          "planner_score": 76.9,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 20.23,
+          "therms_modeled": 0.0,
+          "water_gal_est": 48,
+          "cost_electric_est": 2.25,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.23,
+          "cost_total_est": 2.48
+        },
+        {
+          "date": "2026-10-06",
+          "compliance_pct": 16.5,
+          "temp_compliance_pct": 36.6,
+          "vpd_compliance_pct": 67.1,
+          "heat_stress_h": 2.68,
+          "cold_stress_h": 12.1,
+          "vpd_high_stress_h": 7.67,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 22.45,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 95,
+          "mister_water_gal": 31,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.46,
+          "cost_total": null,
+          "temp_min": 63.6,
+          "temp_max": 85.6,
+          "temp_avg": 73.9,
+          "vpd_min": 0.58,
+          "vpd_max": 1.89,
+          "vpd_avg": 0.93,
+          "dli": null,
+          "dp_margin_min_f": 7.9,
+          "dp_risk_hours": 0.0,
+          "planner_score": 76.3,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 17.9,
+          "therms_modeled": 0.0,
+          "water_gal_est": 95,
+          "cost_electric_est": 1.99,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.46,
+          "cost_total_est": 2.45
+        },
+        {
+          "date": "2026-10-05",
+          "compliance_pct": 14.9,
+          "temp_compliance_pct": 35.1,
+          "vpd_compliance_pct": 69.1,
+          "heat_stress_h": 2.37,
+          "cold_stress_h": 12.7,
+          "vpd_high_stress_h": 7.18,
+          "vpd_low_stress_h": 0.0,
+          "total_stress_h": 22.25,
+          "kwh": null,
+          "therms": null,
+          "water_gal": 104,
+          "mister_water_gal": 31,
+          "cost_electric": null,
+          "cost_gas": null,
+          "cost_water": 0.5,
+          "cost_total": null,
+          "temp_min": 62.2,
+          "temp_max": 85.7,
+          "temp_avg": 72.5,
+          "vpd_min": 0.58,
+          "vpd_max": 2.29,
+          "vpd_avg": 0.9,
+          "dli": null,
+          "dp_margin_min_f": 8.1,
+          "dp_risk_hours": 0.0,
+          "planner_score": 74.7,
+          "planner_score_resource_weight_pct": 0,
+          "resource_terms_available": false,
+          "dli_availability": "unavailable",
+          "dli_unavailable_reason": "source_reading_missing",
+          "dli_provenance": "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+          "dli_validity_revision": "dli-validity-v1",
+          "dli_valid_from": "2024-01-01T00:00:00+00:00",
+          "dli_valid_to": null,
+          "kwh_modeled": 23.06,
+          "therms_modeled": 0.0,
+          "water_gal_est": 104,
+          "cost_electric_est": 2.56,
+          "cost_gas_est": 0.0,
+          "cost_water_est": 0.5,
+          "cost_total_est": 3.06
+        }
+      ]
+    },
+    "experiments": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+          "name": "Verdify confirmed-component AI-vs-frozen-FSM switchback v2",
+          "status": "draft",
+          "kind": "randomized",
+          "protocol_version": 2,
+          "transport_kind": "legacy_components_v1",
+          "execution_phase": "shadow",
+          "admission_state": "closed",
+          "component_enabled": false,
+          "lease_generation": 19,
+          "firmware_revision": "2026.7.10.1500.09ee886",
+          "config_revision": "4dbb2e691d91",
+          "registry_revision": "tunable-registry-v1:sha256:5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b",
+          "source_git_sha": null,
+          "started_at": null,
+          "ended_at": null,
+          "updated_at": "2026-09-30T17:50:12.193585+00:00"
+        }
+      ]
+    },
+    "experiment_work_7d": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "experiment_faults_7d": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "experiment_epochs_7d": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "experiment_direct_proof": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "policy_outbox": {
+      "exit_code": 0,
+      "rows": []
+    },
+    "runtime_attestations": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "login_name": "verdify_ingestor_runtime_login",
+          "boundary_sha256": "\\x8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+          "captured_at": "2026-10-06T09:58:39.865245+00:00"
+        },
+        {
+          "login_name": "verdify_api_runtime_login",
+          "boundary_sha256": "\\x5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+          "captured_at": "2026-10-06T09:58:39.86483+00:00"
+        }
+      ]
+    },
+    "mcp_boundary": {
+      "exit_code": 0,
+      "rows": [
+        {
+          "singleton": true,
+          "boundary_sha256": "\\x7083e4d43044e7f2b0150b58fa3cc8cc45c599a68b1f3cafaf9242e0f0f79e68"
+        }
+      ]
+    }
+  },
+  "service_readbacks": [
+    {
+      "pod": "experiment-v2-freezer-755b4f45ff-n588z",
+      "container": "freezer",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null
+      }
+    },
+    {
+      "pod": "experiment-v2-lifecycle-556f9779c5-4pb2z",
+      "container": "lifecycle",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null
+      }
+    },
+    {
+      "pod": "experiment-v2-selector-6fdd654c78-4ktmd",
+      "container": "selector",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null
+      }
+    },
+    {
+      "pod": "verdify-api-64d768b666-8pjhm",
+      "container": "api",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+        "http://127.0.0.1:8080/health/detailed": {
+          "status": 200,
+          "body": {
+            "status": "ready",
+            "git_sha": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+            "git_ref": "unknown",
+            "build_time": "unknown",
+            "checks": {
+              "db_reachable": true
+            }
+          }
+        },
+        "http://127.0.0.1:8080/health": {
+          "status": 200,
+          "body": {
+            "status": "ok",
+            "checks": {
+              "climate_age_seconds": 20,
+              "climate_action_log_age_seconds": 20,
+              "climate_action_log_proof_missing": "",
+              "compliance_pct": 0,
+              "planner_score": 83.2,
+              "active_alerts_1h": 1,
+              "last_setpoint_change_seconds": 9136,
+              "greenhouse_mode": "IDLE",
+              "service_ingestor": "ok",
+              "service_climate_action_log": "ok"
+            }
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-api-64d768b666-rhmph",
+      "container": "api",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+        "http://127.0.0.1:8080/health/detailed": {
+          "status": 200,
+          "body": {
+            "status": "ready",
+            "git_sha": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+            "git_ref": "unknown",
+            "build_time": "unknown",
+            "checks": {
+              "db_reachable": true
+            }
+          }
+        },
+        "http://127.0.0.1:8080/health": {
+          "status": 200,
+          "body": {
+            "status": "ok",
+            "checks": {
+              "climate_age_seconds": 23,
+              "climate_action_log_age_seconds": 23,
+              "climate_action_log_proof_missing": "",
+              "compliance_pct": 0,
+              "planner_score": 83.2,
+              "active_alerts_1h": 1,
+              "last_setpoint_change_seconds": 9138,
+              "greenhouse_mode": "IDLE",
+              "service_ingestor": "ok",
+              "service_climate_action_log": "ok"
+            }
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-ingestor-69754948bf-mzdm5",
+      "container": "ingestor",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null,
+        "state_files": {
+          "writer-stage-state.json": {
+            "status": "halted",
+            "halt_reason": "unapproved candidate appeared",
+            "run_id": "76d18133852b490680bce2639e6d8397",
+            "expires_at": "2026-10-07T00:13:24.285569+00:00",
+            "stage_parameters": [
+              "cool_exit_hysteresis_f",
+              "cool_stage2_over_high_f",
+              "dwell_gate_ms",
+              "min_fog_on_s",
+              "mister_pulse_on_s",
+              "mister_vpd_weight",
+              "temp_hysteresis",
+              "vpd_hysteresis",
+              "vpd_watch_dwell_s",
+              "min_fog_off_s",
+              "mister_all_delay_s",
+              "mister_all_kpa"
+            ],
+            "completed": [
+              "cool_exit_hysteresis_f",
+              "cool_stage2_over_high_f",
+              "dwell_gate_ms",
+              "min_fog_on_s",
+              "mister_pulse_on_s",
+              "mister_vpd_weight",
+              "temp_hysteresis",
+              "vpd_hysteresis",
+              "vpd_watch_dwell_s",
+              "min_fog_off_s",
+              "mister_all_delay_s",
+              "mister_all_kpa"
+            ],
+            "mtime": 1791330318.0333374,
+            "fields": [
+              "approved_preview",
+              "completed",
+              "completed_values",
+              "expires_at",
+              "halt_reason",
+              "records",
+              "run_id",
+              "stage_parameters",
+              "stage_started_at",
+              "status",
+              "version"
+            ],
+            "approved_preview": {
+              "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+              "pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+              "session_id": "46fc0e1997bb4432b84e5d930cdc4048",
+              "generation": 3,
+              "earliest_plan_expiry": "2026-10-09T23:30:00+00:00"
+            }
+          },
+          "writer-stage-preview.json": {
+            "source_revision": "f48c6bf0257b25ed2820689154ca3502507129c6",
+            "generation": 1,
+            "session_id": "4517326b3ee44dd6ac4f4d5bb0e371a4",
+            "pod": "verdify-ingestor-69754948bf-mzdm5",
+            "earliest_plan_expiry": "2026-10-13T12:30:00+00:00",
+            "mtime": 1791826719.3865068,
+            "fields": [
+              "captured_at",
+              "changes",
+              "diagnostic_readbacks",
+              "earliest_plan_expiry",
+              "fingerprint",
+              "generation",
+              "plan_rows",
+              "pod",
+              "readbacks",
+              "session_id",
+              "source_revision",
+              "version"
+            ],
+            "change_count": 17
+          },
+          "writer-policy-hold.json": {
+            "reason": "run halted; bounded rollback available",
+            "source_revision": "f48c6bf0257b25ed2820689154ca3502507129c6",
+            "generation": 1,
+            "session_id": "4517326b3ee44dd6ac4f4d5bb0e371a4",
+            "mtime": 1791826719.3935068,
+            "fields": [
+              "captured_at",
+              "disposition",
+              "fields",
+              "generation",
+              "reason",
+              "schema",
+              "session_id",
+              "source_revision"
+            ]
+          },
+          "c1-overlay-state.json": {
+            "exists": false
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-lab-publisher-29863775-8sgz6",
+      "container": "publisher",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null
+      }
+    },
+    {
+      "pod": "verdify-mcp-6c447bcf6c-m6cfs",
+      "container": "mcp",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null,
+        "http://127.0.0.1:8000/readyz": {
+          "status": 200,
+          "body": {
+            "ready": true,
+            "required_tools": [
+              "acknowledge_trigger",
+              "alerts",
+              "climate",
+              "crop_history",
+              "crop_lifecycle",
+              "crops",
+              "equipment_state",
+              "forecast",
+              "get_setpoints",
+              "history",
+              "knowledge_search",
+              "lessons",
+              "lessons_manage",
+              "lessons_search",
+              "observations",
+              "plan_evaluate",
+              "plan_status",
+              "position_current",
+              "scorecard",
+              "set_plan",
+              "set_tunable",
+              "slack_ops",
+              "topology"
+            ],
+            "missing_tools": [],
+            "db": "ok",
+            "db_error_class": null,
+            "auth_mode": "enforce",
+            "auth_audiences_configured": [
+              "iris",
+              "observer"
+            ],
+            "auth_unrecognized_token_envs": [],
+            "auth_duplicate_token_envs": [],
+            "auth_invalid_token_envs": [],
+            "auth_misconfigured": false
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-mcp-6c447bcf6c-q9brp",
+      "container": "mcp",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null,
+        "http://127.0.0.1:8000/readyz": {
+          "status": 200,
+          "body": {
+            "ready": true,
+            "required_tools": [
+              "acknowledge_trigger",
+              "alerts",
+              "climate",
+              "crop_history",
+              "crop_lifecycle",
+              "crops",
+              "equipment_state",
+              "forecast",
+              "get_setpoints",
+              "history",
+              "knowledge_search",
+              "lessons",
+              "lessons_manage",
+              "lessons_search",
+              "observations",
+              "plan_evaluate",
+              "plan_status",
+              "position_current",
+              "scorecard",
+              "set_plan",
+              "set_tunable",
+              "slack_ops",
+              "topology"
+            ],
+            "missing_tools": [],
+            "db": "ok",
+            "db_error_class": null,
+            "auth_mode": "enforce",
+            "auth_audiences_configured": [
+              "iris",
+              "observer"
+            ],
+            "auth_unrecognized_token_envs": [],
+            "auth_duplicate_token_envs": [],
+            "auth_invalid_token_envs": [],
+            "auth_misconfigured": false
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-planner-7fd8478586-6drvt",
+      "container": "planner",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null,
+        "http://127.0.0.1:8080/health": {
+          "status": 200,
+          "body": {
+            "service": "ok",
+            "private_api": true,
+            "default_run_mode": "production",
+            "worker": "ready",
+            "db": "ok",
+            "openai": "configured",
+            "mcp": "verdify-executes",
+            "checkpoint": "postgres",
+            "production_authority": "non-authoritative",
+            "consecutive_store_failures": 0,
+            "retry_delay_seconds": 0.0,
+            "last_error_class": null
+          }
+        }
+      }
+    },
+    {
+      "pod": "verdify-setpoint-server-766bb85dc-2v7d8",
+      "container": "setpoint-server",
+      "exit_code": 0,
+      "result": {
+        "baked_source_revision": null,
+        "http://127.0.0.1:8200/health": {
+          "status": 200,
+          "body": {
+            "status": "ok",
+            "lights": {
+              "main": false,
+              "grow": false
+            }
+          }
+        }
+      }
+    }
+  ],
+  "log_evidence": {
+    "container_logs": 36,
+    "bytes": 4254933,
+    "findings": {
+      "writer_stage_halted": 21,
+      "readback_drift": 313,
+      "retired_infra_no_route": 152,
+      "schema_validation_drop": 0,
+      "db_statement_timeout": 6
+    },
+    "limits": "Requested since 24h tail1500; high volume logs truncated to much shorter windows; not complete day/history."
+  },
+  "limitations": [
+    "No mutations, device commands, OTA, synthetic production test, DB data repair, or sync performed.",
+    "No physical greenhouse inspection or independent actuator-current measurement.",
+    "One fresh writer lease plus singleton desired/actual replicas is not independent socket census.",
+    "Registry source label readback failed: Docker credential helper missing; anonymous origin access unauthorized.",
+    "Only API exposes immutable /etc/verdify/source-revision in sampled images; ingestor source obtained from its live stage preview.",
+    "v_data_trust_ledger exceeded 8s; no heavy query retry.",
+    "Nightly pg_dump success is not isolated restore or disaster recovery qualification."
+  ],
+  "rehearsal": {
+    "namespace": "verdify-db-rehearsal",
+    "cnpg_cluster_present": false,
+    "counts": {
+      "Pod": 6,
+      "Deployment": 1,
+      "PersistentVolumeClaim": 1,
+      "Job": 80
+    },
+    "running_pods": 0,
+    "deployments": [
+      {
+        "name": "verdify-s2-grafana-proof",
+        "replicas": 0
+      }
+    ],
+    "pvc": [
+      {
+        "name": "verdify-s2-spool-qualification",
+        "phase": "Bound",
+        "capacity": {
+          "storage": "2Gi"
+        }
+      }
+    ]
+  },
+  "cnpg_scope": {
+    "all_namespace_scan_completed": true,
+    "verdify_cluster_count": 0,
+    "other_clusters_omitted_from_project_publication": 8,
+    "rehearsal_namespace": "verdify-db-rehearsal",
+    "verdify_rehearsal_cluster_present": false,
+    "interpretation": "Retained completed/failed qualification resources are not a hibernated CNPG cluster."
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "base_source": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "nominal_engineering_hours": 52,
+  "range_engineering_hours": [
+    40,
+    68
+  ],
+  "counts_as_physical_or_randomized_authority": false,
+  "tasks": [
+    {
+      "issue": 782,
+      "owner_role": "Research/evidence lead",
+      "nominal_hours": 16,
+      "range_hours": [
+        12,
+        20
+      ],
+      "start_now": "Freeze current v2 warm candidate/source hashes, use preserved pretrial replay inputs, classify eligibility and compute fixed30 operating-characteristic sensitivity; leave unavailable empirical fields null.",
+      "dependencies": [
+        371,
+        779,
+        780,
+        781
+      ],
+      "execution_dependencies": [
+        "Qualified physical contributor/target revisions for scientific closure; otherwise deliver truthful preparation only"
+      ],
+      "exit": "Reproducible current-source pre-draw decision/analysis packet, stated exploratory claim, preserved missingness/ITT/all-pairs rules and prospective calendar; exact empirical/physical gaps remain explicit. No draw or physical efficacy claim.",
+      "deliverables": [
+        "Current-v2 decision and claims document",
+        "Fixed30 selector/power replay artifact and immutable input/output hashes",
+        "Source/schema/analyzer environment digest and numeric goldens",
+        "Physical target/contributor request with evidence needed, no invented commissioning"
+      ]
+    },
+    {
+      "issue": 639,
+      "owner_role": "Runtime qualification lead",
+      "nominal_hours": 12,
+      "range_hours": [
+        8,
+        16
+      ],
+      "start_now": "Extend the existing component executor/prefix replay matrix only where current acceptance cases have no genuine exact-source receipt; use real generated grid/resolvers and device-denied transport.",
+      "dependencies": [],
+      "execution_dependencies": [
+        "Final delivered runtime/source identity for live acceptance; shared restored target for authentic SQL seams"
+      ],
+      "exit": "All activation/rollback/full48 prefixes fail closed; two fresh generation-bound epochs are necessary; exclusive writer bundles do not interleave; recovery closes exposure first and hands back ordinary writer only after confirmed baseline. Source receipt reusable by #641/#642.",
+      "deliverables": [
+        "One case matrix keyed to existing tests and exact source",
+        "Original fault/recovery result receipts, including failed attempts",
+        "Generation/lease/reconnect/rescue and zero-shadow-call evidence",
+        "Final source/config/digest compatibility receipt"
+      ]
+    },
+    {
+      "issue": 587,
+      "owner_role": "Runtime safety lead with monitoring owner",
+      "nominal_hours": 8,
+      "range_hours": [
+        8,
+        12
+      ],
+      "start_now": "Exercise existing off/locked/armed/emergency-hold and baseline-confirmed-disable paths against isolated roles/SQL; complete missing exact-source source tests, then coordinate one bounded alert fire/clear receipt.",
+      "dependencies": [],
+      "execution_dependencies": [
+        "Shared restored target and role boundaries; monitoring-stack#804/#807 active interfaces for actual alert delivery evidence"
+      ],
+      "exit": "Featureoff emits zero experiment calls; no illegal phase reopening; disable/IDclear/ordinary handoff requires confirmed baseline; emergency-safe remains distinct; alerts fire and clear through owning route without assignment mapping or comparative leakage.",
+      "deliverables": [
+        "Authenticated transition/deny and rollback matrix",
+        "Blinded operational visibility snapshot",
+        "Owning alert route fire/clear result",
+        "Reusable exact-source lifecycle safety receipt"
+      ]
+    },
+    {
+      "issue": 783,
+      "owner_role": "Integrated qualification lead",
+      "nominal_hours": 16,
+      "range_hours": [
+        12,
+        20
+      ],
+      "start_now": "Prepare the one command/artifact index against current restore-rehearsal and selector/setter/freezer/export/analyzer interfaces; execute only on an admitted device-denied actual restored target.",
+      "dependencies": [
+        782,
+        639,
+        587
+      ],
+      "execution_dependencies": [
+        "#396/#382/#643 shared recovered current-data/role/spool target packet; reuse #969 candidate after owner storage/target admission, without adding a circular native edge"
+      ],
+      "exit": "Authentic restored-production-data whole path twice, byte-identical canonical hashes with no freezer/analyzer reshaping; all assigned null/failed/rescue/reset/zero-exposure days retained, real allow/deny boundaries, no production credentials in artifacts and no device path.",
+      "deliverables": [
+        "One executable reproducer and immutable artifact index",
+        "Two canonical full-path outputs and hashes",
+        "Actual restore/image/migration/role identities",
+        "Success/fallback/rescue/null/restart/failure matrix consumed by #588"
+      ]
+    }
+  ]
+}

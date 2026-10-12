@@ -1,0 +1,53 @@
+{
+  "origin_main": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "worktrees": 432,
+  "worktree_paths_existing": 410,
+  "worktree_paths_absent": 22,
+  "worktree_prunable": 22,
+  "dirty_worktrees": 16,
+  "status_errors": 1,
+  "existing_nonmain_heads": 149,
+  "local_branches": 401,
+  "local_branches_in_main": 209,
+  "local_branches_unmerged": 192,
+  "local_only_committed_heads": 0,
+  "remote_branches": 1171,
+  "remote_unmerged": 584,
+  "main_commits_since_20260926": 561,
+  "worktree_lane_counts": {
+    "unclassified; review title/source": 116,
+    "C0 measurement/control truth": 59,
+    "release/custody/integration": 37,
+    "C5 delivery/platform": 22,
+    "C2 experiment lock": 19,
+    "C4 planner/runtime": 13,
+    "C1 recovery/qualification": 153,
+    "firmware/transport": 13
+  },
+  "local_durability_counts": {
+    "head exact on captured remote ref": 192,
+    "head reachable from captured origin/main": 209
+  },
+  "origin_remote_tracking_branches": 1148,
+  "other_remote_tracking_refs": 23,
+  "provider_exact_unmerged_local_heads": 192,
+  "provider_exact_nonmain_worktree_heads": 152,
+  "source_wip_worktrees": 13,
+  "source_wip_files": 38,
+  "source_wip_unchanged_and_remote_equal": true,
+  "local_branch_disposition_counts": {
+    "historical unmerged holding; exact remote custody; pull only missing issue-bound delta": 81,
+    "historical head reachable from main; eligible for later documented archival after WIP and custody checks": 208,
+    "PR merged through non-ancestor/squash history; review delta before later archival": 59,
+    "old one-shot physical activation draft; retain disabled, rebind only after current readiness and exact authorization": 1,
+    "closed unmerged PR holding; preserved, no implicit delivery; review retained delta only if needed": 19,
+    "current planning task; preserve independently": 1,
+    "old current-state capture draft; salvage only missing read-only functions": 1,
+    "integrated component PR; deliver through #973 only": 1,
+    "integrated component PR; deliver compatible ingestor through #973; OTA separately bounded": 1,
+    "independent contained recovery candidate; reserve storage and qualify before use": 1,
+    "custody only; preserve and link, never merge as runtime cohort": 26,
+    "integrated component PR; retain evidence and supersede through #973": 1,
+    "canonical combined implementation cohort; qualify and deliver once": 1
+  }
+}

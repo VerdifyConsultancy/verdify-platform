@@ -1,0 +1,42 @@
+[
+  {
+    "repo": "jvallery/agents",
+    "number": 4763,
+    "state": "closed",
+    "title": "fix(ci): bind Verdify source and publication custody on current main",
+    "merged_at": "2026-10-12T15:21:45Z",
+    "updated_at": "2026-10-12T15:39:25Z",
+    "latest_comment": "https://github.com/jvallery/agents/pull/4763#issuecomment-6127536515",
+    "latest_comment_at": "2026-10-12T15:39:25Z"
+  },
+  {
+    "repo": "jvallery/storage-infra",
+    "number": 679,
+    "state": "open",
+    "title": "NAS (obsidian) NFS stalls fleet-wide around 00:08\u201300:41 MDT; Frigate lost ~33 min of recordings on 2026-10-11 (recurring at midnight)",
+    "merged_at": null,
+    "updated_at": "2026-10-12T17:37:59Z",
+    "latest_comment": "https://github.com/jvallery/storage-infra/issues/679#issuecomment-6129411204",
+    "latest_comment_at": "2026-10-12T17:37:59Z"
+  },
+  {
+    "repo": "jvallery/storage-infra",
+    "number": 682,
+    "state": "open",
+    "title": "[EPIC][Storage completion] Close the source-to-live reliability and independent recovery gaps",
+    "merged_at": null,
+    "updated_at": "2026-10-12T17:38:23Z",
+    "latest_comment": "https://github.com/jvallery/storage-infra/issues/682#issuecomment-6129417091",
+    "latest_comment_at": "2026-10-12T17:38:23Z"
+  },
+  {
+    "repo": "jvallery/proxmox-infrastructure",
+    "number": 195,
+    "state": "open",
+    "title": "[ROOT-GET-WELL][LANE-STORAGE] Storage foundation and Longhorn safety",
+    "merged_at": null,
+    "updated_at": "2026-10-12T15:43:06Z",
+    "latest_comment": "https://github.com/jvallery/proxmox-infrastructure/issues/195#issuecomment-6127602248",
+    "latest_comment_at": "2026-10-12T15:43:06Z"
+  }
+]

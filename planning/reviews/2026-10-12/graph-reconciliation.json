@@ -1,0 +1,58 @@
+{
+  "all_nodes": 95,
+  "local_nodes": 91,
+  "all_native_blockedBy_edges": 80,
+  "canonical_planned_edges": 76,
+  "canonical_live_edges": 76,
+  "planned_missing_live": [],
+  "live_missing_plan": [],
+  "parent_mismatches": [],
+  "cycles": [],
+  "unassigned_open_issues": 63,
+  "local_open_nodes": 64,
+  "local_closed_nodes": 27,
+  "cross_repository_predecessors": [
+    {
+      "repository": "jvallery/agents",
+      "number": 4461,
+      "state": "OPEN",
+      "title": "[ARGO-02] Adopt the hand-applied tenant Applications into the local-prod catalog"
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4451,
+      "state": "OPEN",
+      "title": "[EST-01] Create estate-ownership.yaml and the estate lane map (docs/estate/README.md)"
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4459,
+      "state": "CLOSED",
+      "title": "[ROOT-02] Reconcile the three env roots and agent-fleet-appprojects to reviewed main SHAs"
+    },
+    {
+      "repository": "jvallery/agents",
+      "number": 4460,
+      "state": "OPEN",
+      "title": "[ARGO-01] Adopt 10 hand-applied AppProjects into agents and delete the 5 unused ones"
+    }
+  ],
+  "external_edges": [
+    {
+      "issue": "VerdifyConsultancy/verdify-platform#801",
+      "blockedBy": "jvallery/agents#4461"
+    },
+    {
+      "issue": "VerdifyConsultancy/verdify-platform#802",
+      "blockedBy": "jvallery/agents#4451"
+    },
+    {
+      "issue": "VerdifyConsultancy/verdify-platform#802",
+      "blockedBy": "jvallery/agents#4459"
+    },
+    {
+      "issue": "jvallery/agents#4461",
+      "blockedBy": "jvallery/agents#4460"
+    }
+  ]
+}

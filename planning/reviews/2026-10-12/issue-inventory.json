@@ -1,0 +1,3731 @@
+[
+  {
+    "number": 14,
+    "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+    "stage": "C8",
+    "kind": "epic",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 14,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Coverage and limitations are explicit; unsupported/default-only fields cannot produce a full-parity PASS.",
+      "Source/build/runtime and actual read-only output receipts exist, with no startup compiler/pip downloads.",
+      "The current pilot remains independent; a future twin gate is adopted only after useful positive and negative evidence."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+    "stage": "C7",
+    "kind": "epic",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 16,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "Each physical item has a named measurement/control need, commissioning worksheet and explicit enabled/disabled state.",
+      "No center-fertilizer path contradicts #434; absent sensors are not synthesized as real observations.",
+      "Operator windows and seasonal triggers are tracked without guessed dates or blanket launch blockers."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 31,
+    "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 31,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Every active consumer is covered or explicitly excluded from the oracle claim with a reason.",
+      "Missing required input and a known nondefault divergence fail loudly; identical-source self-diff passes.",
+      "No twin result can qualify full current 48-field physical exposure or new transport by default."
+    ],
+    "parent": {
+      "number": 14,
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [
+      "jvallery"
+    ],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 45,
+    "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 45,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "Required channels produce credible calibrated data, not merely nonzero rows; current gap counts are measured rather than assumed four.",
+      "Feedback check passes and requirements/alerts close from actual accepted measurements.",
+      "Unknown chemistry, sensor or plumbing state remains visibly unavailable and cannot enable fertilizer or soil feedback."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 398,
+        "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 49,
+    "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/49",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Only the reviewed historical suppressed sensor_offline IDs are updated; a second run changes zero rows.",
+      "Before/after receipt lists non-secret IDs/counts and verifies no active alert was hidden.",
+      "Forward lifecycle behavior remains correct and reversal data is retained for the exact touched fields."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 51,
+    "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 51,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "New coefficients derive from recorded field pairs and pass the predeclared independent tolerance.",
+      "Plausibility guards and units remain correct, with uncertainty visible to consumers.",
+      "If the reference/window is unavailable, retain uncalibrated status without guessing anchors or buying equipment implicitly."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 52,
+    "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 52,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "A documented no-change or specific seasonal-care decision is supported by actual crop observations.",
+      "Any new dormancy/light/dry-down setting is versioned, reversible and cannot silently alter a locked study.",
+      "No species-wide agronomic or yield claim is made from uncalibrated DLI or a house-average proxy."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 75,
+    "title": "[C4][P1] Observability program: prove actionable health from source through device",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+    "stage": "C4",
+    "kind": "epic",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 75,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Each child has a failing and recovering real or isolated fault receipt and a clear owner/runbook.",
+      "No inactive PrometheusRule or static-green worker is accepted as live monitoring.",
+      "Historical closed children remain history; current coverage and omissions are documented."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 89,
+    "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/89",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Smoke fails on wrong image SHA, stale data, missing tools or invalid writer count; staging proves zero device writes.",
+      "Production receipt ties reviewed source, desired/running digest, Argo Synced + Healthy and current data/action evidence.",
+      "No DB parity or device confirmation is inferred from mere network reachability."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 563,
+        "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 174,
+    "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/174",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Only intended admin apps are exposed behind global SSO; no temporary unauthenticated bypass exists.",
+      "Current source/route identity and end-to-end allowed/denied probes are recorded.",
+      "Unused legacy auth branding is redirected or retired only after exact target/use verification; no new identity provider is deployed."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 214,
+    "title": "[C6][P1] Prove crop-deviation trigger → valid plan on the sole operational planner path",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/214",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": null,
+    "acceptance": [
+      "One real eligible deviation produces a valid expiring set_plan or explicit neutral fallback with terminal lineage.",
+      "Gather/tool failures enter the canonical alert lifecycle and recover without false success.",
+      "No second writer or planner_graph routing change is introduced to satisfy acceptance."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 780,
+        "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 427,
+        "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/427",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 218,
+    "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+    "stage": "C5",
+    "kind": "epic",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": {
+      "issue_number": 218,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Data/platform lead"
+    },
+    "acceptance": [
+      "Backup, restore, ingest-loss and HA children provide measured evidence rather than deployment counts.",
+      "RPO/RTO and residual failure domains are explicitly reported, with PITR claims only after a point-in-time restore.",
+      "No broad live DB mutation is authorized by closing the planning or design tasks."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 245,
+    "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/245",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": {
+      "issue_number": 245,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Data/platform lead"
+    },
+    "acceptance": [
+      "A rehearsal proves all writers are quiescent and measures downtime, parity, RPO/RTO and both rollback boundaries.",
+      "Production source/running DB authority and health are verified through at least the declared 60-minute initial observation and seven-day durability bake.",
+      "No old database/PVC removal before separate verified retention/decommission criteria; no unqualified sub-minute zero-loss promise."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 396,
+        "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 382,
+        "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 296,
+    "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/296",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 296,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Either a documented no-build decision or a qualified implementation is delivered; no automatic expansion occurs.",
+      "With commissioned probes a saturated zone suppresses eligible drip conservatively, without duplicate dispatcher/firmware control.",
+      "Missing/failed sensors, reboot, manual rescue and maximum limits remain safe; physical enablement waits for commissioning."
+    ],
+    "parent": {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 434,
+        "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 297,
+        "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 45,
+        "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 297,
+    "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 297,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.",
+      "One eligible saturated zone’s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
+      "No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement."
+    ],
+    "parent": {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 398,
+        "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 45,
+        "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 298,
+    "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 298,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "Repo and DB map agree with observed physical positions and crop/substrate identities; no Canna-Lily residue is carried as current fact.",
+      "Each sensor has source ID, location, validity/calibration state and explicit unassigned/disabled status when appropriate.",
+      "No automatic irrigation is enabled by a topology import alone; #398/#45 own threshold and feedback commissioning."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 299,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "No origin or restart can re-fire before the declared protection permits; hard safety remains dominant.",
+      "Eligible re-fire resumes correctly rather than staying latched without reason.",
+      "Source/firmware/cycle evidence shows protection survived #434-related changes with a rollback canary."
+    ],
+    "parent": {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 303,
+    "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 303,
+      "sprint": "S3",
+      "hours_min": 6,
+      "hours_max": 12,
+      "next_action": "Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Each declared target actually compiles from a clean checkout; a deliberately broken generated service declaration fails the lane.",
+      "No network device, secret-bearing configuration or OTA permission is required for compilation.",
+      "Artifacts bind exact source and toolchain and feed #390 without being labeled physically qualified."
+    ],
+    "parent": {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 322,
+        "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/322",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 304,
+        "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 304,
+    "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 304,
+      "sprint": "S3",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "A clean environment reports pinned tool versions and runs the declared compile fixture reproducibly.",
+      "No tool install grants Secret, exec, device or cross-namespace access; absence of credentials fails safely.",
+      "Owning fleet delivery and generated repo references agree; no redundant image is introduced solely for convenience."
+    ],
+    "parent": {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 317,
+    "title": "ArgoCD: unscoped sync operations on verdify-prod-dark get rewritten to a stale 2-resource selective scope",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/317",
+    "stage": "project interface",
+    "kind": "task",
+    "priority": "native issue labels",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 317,
+      "sprint": "RELEASE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Reuse atomic reset workaround; qualify the stale selective-operation regression with the owning fleet/upstream support before closure.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [],
+    "parent": null,
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 322,
+    "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/322",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "No active CI gate requires the destroyed VM stack; relevant current .agent-fleet/ci.yaml checks pass.",
+      "Negative tests fail for the intended invariant rather than a missing binary/path, and historical docs are not blindly rewritten.",
+      "The resulting suite is device-denied and reproducible from a clean checkout."
+    ],
+    "parent": {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 324,
+    "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/324",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 324,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Per-zone and legacy fixtures round-trip through schema, ingest and read APIs without ambiguous field meaning.",
+      "No new property lacks a model/readback/drift guard, and unavailable center measurements remain unavailable.",
+      "Only a separately reviewed future control design consumes new zonal authority."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 424,
+        "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+    "stage": "C6",
+    "kind": "epic",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 350,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Software allows only the approved plumbing/origin combinations and fails closed without required calibration.",
+      "Overwatering-safe feedback is commissioned on actual crop/substrate sensors before actuation.",
+      "Physical feed, crop safety/yield and irrigation water claims require their own observed evidence."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+    "stage": "C6",
+    "kind": "epic",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 359,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Measurement and localized safety are trustworthy independently of AI credit.",
+      "Every tuning proposal cites fixed-panel realized climate/resource evidence and explicit guardrails/replay/rollback.",
+      "No PID arm, unvalidated response model, unmeasured efficiency claim or firmware safety delegation to AI enters the current pilot."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 361,
+    "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/361",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 361,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "No anchor retune precedes source/solar/band truth or changes a locked study.",
+      "Candidate changes have explicit temperature/VPD safety limits and observed evidence, not target-hugging intent.",
+      "Any accepted implementation is versioned with current source/readback and rollback values."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 410,
+        "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 378,
+        "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 367,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Exactly one documented dwell authority governs ordinary transitions and all safety exceptions remain explicit.",
+      "Boundary/reboot/override tests and #299 center-mister re-fire invariants pass.",
+      "Measured starts/runtime and behavior parity show no new chatter or unsafe starvation; #390 release evidence is present."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 368,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Synthetic impossible jump/stuck cases are detected without suppressing legitimate steady values.",
+      "Control consumes explicitly valid inputs; degraded quorum and true SENSOR_FAULT behavior are documented and tested, not conflated.",
+      "No silent sensor substitution changes trial endpoints; any firmware portion passes #390 before OTA."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 424,
+        "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 369,
+    "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 369,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Each removed property has zero required live consumer or an explicit tested migration; no dangling generated IDs or docs remain.",
+      "Net-negative unused code/entity counts are measured and behavior/safety replay is unchanged.",
+      "No active trial identity changes silently, no safety control is made AI-writable, and #390 release checks pass for firmware changes."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 433,
+        "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 370,
+    "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 370,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Exhaustive conflict/origin fixtures produce one deterministic safe result and an auditable block reason.",
+      "Reverse conflicts, manual rescue, restart and partial delivery cannot energize incompatible relays.",
+      "Native/invariant/replay/compile and #390 physical release checks pass without unapproved control-policy changes."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 367,
+        "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 371,
+    "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "A fixture with high attributable credit and low physical compliance stays distinct through SQL→API→public/planner rendering; no COALESCE renames one metric into the other.",
+      "Hand-calculated band/distance and missing-sensor cases pass; true crop targets versus historical dispatched bands are identified, not assumed equal.",
+      "Current-day and historical sample probes agree across consumers with versioned definitions; historical score changes are published as revisions, not silent rewrites."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 378,
+    "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 378,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.",
+      "No retrospective redefinition rewrites the completed study endpoint.",
+      "Any live band change has bounded scope, exact rollback values and required operator/release authority."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 785,
+        "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 379,
+    "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/379",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 379,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Held-out calibration/response gates pass before any counterfactual efficacy or MPC proposal.",
+      "No PID treatment arm or new outer-loop control enters the current experiment.",
+      "A separately reviewed bounded implementation/release plan exists for any justified controller change."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 786,
+        "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 419,
+        "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 382,
+    "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": {
+      "issue_number": 382,
+      "sprint": "S2",
+      "hours_min": 6,
+      "hours_max": 12,
+      "next_action": "Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal.",
+      "owner_role": "Data/platform lead"
+    },
+    "acceptance": [
+      "Accepted buffered events survive the declared restart/node-loss boundary with zero unexplained loss and bounded duplicate handling.",
+      "Replayed data cannot invent fresh device confirmation or reorder writer generations.",
+      "Storage capacity, backlog alerting, recovery time and rollback of the format are documented and measured."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 386,
+    "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 386,
+      "sprint": "RELEASE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Qualify real grow-light minimum-on behavior at solar boundaries using current portable compilation and retained safety inputs.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Tests fail for both premature cycling and unintended overrun, with exact transition times and stop reasons.",
+      "Source and actual grow-light state agree across the boundary; safety/manual override remains dominant.",
+      "No DLI or lighting-efficiency claim is inferred from runtime while interior light measurement is unavailable."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 303,
+        "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 390,
+      "sprint": "RELEASE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Finish topology/cycling/runtime/rollback release evidence; keep accepted last-good distinct from provisional candidates.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Negative cases for wrong topology, impossible cycling, stale outdoor inputs and missing compile/runtime receipts refuse release.",
+      "Exact source/binary/version is tied to observed relay/cfg outcomes and a demonstrated recovery path.",
+      "No unreviewed firmware or failed watchdog candidate is promoted to last-good; no OTA is performed by ordinary CI."
+    ],
+    "parent": {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 419,
+        "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 303,
+        "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 394,
+    "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/394",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "The current singleton state does not alert; zero/multiple/unknown conditions follow the declared policy.",
+      "A delivered test alert and resolved state are evidenced through the actual receiver path without sending unrelated messages.",
+      "Exact source/config revision and rule reload are recorded; no inert CR or live split-brain experiment is used."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 563,
+        "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 396,
+    "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": {
+      "issue_number": 396,
+      "sprint": "S2",
+      "hours_min": 8,
+      "hours_max": 16,
+      "next_action": "Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery.",
+      "owner_role": "Data/platform lead"
+    },
+    "acceptance": [
+      "Candidate uses digest-pinned compatible images and declared storage/anti-affinity; no production writer or device route is acquired.",
+      "Restore, failover and PITR are proven with data checks, not only Ready replicas.",
+      "#245 receives an exact cutover/rollback packet and measured downtime/data risks; live DB remains unchanged."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 672,
+        "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/672",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 670,
+        "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 398,
+    "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 398,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "Current map, seed and DB rows agree without overwriting valid operator-specific values.",
+      "No saturation/drip-skip consumer uses an uncommissioned or mismatched target as valid.",
+      "Before/after row receipt and exact rollback data exist; #45 can validate the resulting feedback contract."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 298,
+        "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 399,
+    "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/399",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Every live grow-light command origin is attributable to the declared owner; no ambient second climate writer is permitted.",
+      "Negative competing-writer fixture fails and the legitimate lighting path passes.",
+      "The exact source/route ownership is documented without changing active scheduling or auth."
+    ],
+    "parent": {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 410,
+    "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 410,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Episodes use device solar semantics, never fixed 02:00–06:00, and incomplete/confounded episodes cannot be PASS.",
+      "Solar-day held-temperature admission is zero while ordinary daytime dehumidification remains correctly distinguished.",
+      "Planner/MCP sees realized validity-bearing outcomes and explicit disposition, not a universal VPD target or a crop-safety claim without sensing."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 424,
+        "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 419,
+        "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 412,
+    "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 412,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "The trigger and physical completion are recorded from observation, not a reminder date alone.",
+      "Temperature/moisture/ventilation remain within the declared safety envelope after closure.",
+      "Any study receives a visible intervention/deviation record rather than an unexplained seasonal covariate change."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 419,
+    "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 419,
+      "sprint": "S3",
+      "hours_min": 6,
+      "hours_max": 12,
+      "next_action": "Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Corpus contains measured finite outdoor age with provenance and both fresh/stale branches; a zero-coverage corpus fails loudly.",
+      "No future outdoor sample leaks into replay; missing values preserve safe stale behavior.",
+      "Native/invariant/band and targeted outdoor tests pass against the candidate and known-good self-diff."
+    ],
+    "parent": {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 424,
+    "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "All relevant low/high/target series have documented source, unit, grid, timestamps and consumed/readback relationship.",
+      "The historical discrepancy is explicitly resolved, still present or unobservable; a desired row/cache is never called device confirmation.",
+      "#749 can distinguish reporting-only mismatch from a real control contradiction and fails closed on the latter without an OTA workaround."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 427,
+    "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/427",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Controlled required-cycle failures end in a valid full plan or explicit typed fallback and resolve alerts only from actual terminal evidence.",
+      "Exactly one effective expiring plan and one device writer remain; synthetic planner_graph runs produce zero device writes and no production trigger credit.",
+      "Tool-level readiness, recovery and live source/digest evidence pass without claiming that Ready pods alone establish planner delivery."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 433,
+        "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 428,
+    "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/428",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 428,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Cause is reproduced or uncertainty explicitly bounded with current load/reset evidence; software-reset versus watchdog counts are distinct.",
+      "Candidate meets predeclared heap/fragmentation/timing and clean-runtime criteria under representative worst-case load.",
+      "No last-good promotion occurs solely on compile/replay success, a reset count omission or a projected heap improvement."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 433,
+        "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 430,
+    "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+    "stage": "C6",
+    "kind": "epic",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 430,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "Each tier has measured before/after heap/traffic and zero unintended native/replay behavior divergence.",
+      "Network-isolation autonomy, reset/water-budget conservatism and current full-state evidence survive.",
+      "#428/#369/#367/#370 receipts define the achieved scope; theoretical entity or heap savings are labeled projections."
+    ],
+    "parent": {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 433,
+    "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Requested/queued/sent/failed/cancelled/superseded/confirmed states match physical completion, never cache intent.",
+      "Periodic work is not later than twice its intended cadence during writes; no repeated broad restore storm occurs.",
+      "Experiment qualification consumes the narrow #639/#749 evidence without waiting for unrelated firmware simplification; full closure requires this issue’s broader receipt."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 434,
+    "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+    "stage": "C6",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Control lead",
+    "allocation": {
+      "issue_number": 434,
+      "sprint": "CONTROL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
+      "owner_role": "Control lead"
+    },
+    "acceptance": [
+      "All command origins and reverse conflicts prove zero south/west climate demand, zero center non-climate mist and zero non-wall fertilizer actuation.",
+      "Missing/stale/nonfinite/zero/out-of-bounds calibration prevents feed; restart/duplicate/missed-window cases cannot double-dose.",
+      "Native/invariant/replay/band/compile and make irrigation-stack-software-check pass; #390 release ties actual routing/readbacks/sequence to exact binary with rollback."
+    ],
+    "parent": {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 299,
+        "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 563,
+    "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "A fixture PrometheusRule fails with the expected first diagnostic; valid ConfigMap contract passes and missing path is explicit.",
+      "Documentation tells #89/#394 where the real rule source lives; no cross-namespace imperative patch is used.",
+      "If the monitoring architecture changed, revise the contract with observed selector evidence before changing the guard."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 581,
+    "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+    "stage": "C2",
+    "kind": "epic",
+    "priority": "P0",
+    "owner_role": "Research/release lead",
+    "allocation": {
+      "issue_number": 581,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Research/release lead"
+    },
+    "acceptance": [
+      "No launch before exact physical proof, tested outcome path, frozen design/no-redraw and separate launch authority.",
+      "All assigned days, including failed delivery, fallback, rescue and null outcomes, survive into ITT.",
+      "Final report states whether the result is feasible, promising, adverse or inconclusive and distinguishes climate noninferiority from improvement and runtime from resource savings."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 586,
+    "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/586",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 586,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Every consumer reads one atomic per-tick policy and invalid/corrupt/expired state returns to approved safe baseline.",
+      "Worst-case heap/fragmentation/watchdog margins and independent recovery flashing are measured, not projected.",
+      "Separate OTA authority and future protocol decision exist before vector mode can enable; current pilot remains unchanged."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 785,
+        "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 638,
+        "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/638",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 390,
+        "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 587,
+    "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 587,
+      "sprint": "S4",
+      "hours_min": 6,
+      "hours_max": 10,
+      "next_action": "Qualify lifecycle/kill-switch/blinded visibility with actual allowed/denied boundaries and preserved experiment ledger.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "Feature off means zero experiment calls; locked/armed cannot reopen readiness and emergency hold cannot actuate.",
+      "Normal disable/ID clear/ordinary ownership restoration requires confirmed baseline; only an explicit facility-owned emergency-safe closure may state otherwise without relabeling it baseline.",
+      "Alerts actually fire and clear through the owning delivery route, no comparative leakage occurs, and the exact-source rollback test is consumed by #integration/#641."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 588,
+    "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+    "stage": "C2",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Research/release lead",
+    "allocation": {
+      "issue_number": 588,
+      "sprint": "S5",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "After #641/#782/#783, bind qualified source/protocol identity and finalize exactly one immutable draw.",
+      "owner_role": "Research/release lead"
+    },
+    "acceptance": [
+      "Current model/context/request limits, full source identity and #study_design scientific choice match the lock byte-for-byte.",
+      "Exactly one draw exists; duplicate/replacement/caller-time/secret attempts fail without leaking mapping or randomization material.",
+      "Future first assignment boundary and schedule commitment reproduce; no physical randomized work occurs before the separate #642 authority."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 783,
+        "title": "[C1][P0] Prove restore → selector → setter schema → receipt → frozen outcome end to end",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 782,
+        "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 641,
+        "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 606,
+    "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/606",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 606,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Owning registry and generated mirror agree and one verified immutable digest is consumable.",
+      "Runtime is read-only/device-denied and has no undeclared build or network dependency.",
+      "This enablement issue is not a blocker for the current #581/#642 component pilot."
+    ],
+    "parent": {
+      "number": 14,
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 638,
+    "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/638",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 638,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Cross-language identity and actual service declaration/host call schemas agree; tests fail against the former incompatible interface.",
+      "Restore admission creates the intended outbox and compiled commit/stage/activate/expiry/abort paths consume host bytes.",
+      "Generalized vector mode remains off; closing this issue does not switch any active trial transport or claim physical qualification."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 639,
+    "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 639,
+      "sprint": "S4",
+      "hours_min": 10,
+      "hours_max": 18,
+      "next_action": "Execute remaining current executor/fault/full-state recovery clauses on a safe contained target; no device actuation by a fixture.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "No prefix opens exposure; two fresh full-48 epochs with current generations are required for baseline and target.",
+      "Exclusive bundles never interleave with ordinary/MCP/forecast/retry writers; shadow emits zero calls and nonrandom work has no assignment lineage.",
+      "Recovery closes exposure first, yields to facility rescue, uses linked baseline-only work and verifies two epochs before ordinary-writer handoff. The qualified source receipt is reusable by #641 and #642."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 640,
+    "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+    "stage": "C3",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Research lead",
+    "allocation": {
+      "issue_number": 640,
+      "sprint": "S5",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "Use a genuine assigned day and repeatable blinded freeze/export; retain null/rescue/failure ITT truth.",
+      "owner_role": "Research lead"
+    },
+    "acceptance": [
+      "The first full assigned window is frozen twice to identical canonical rows/hashes and consumed by the analyzer without reshaping or reveal.",
+      "A ledger reconciliation proves every assignment has exactly one row irrespective of exposure or outcome availability.",
+      "Freezer cannot mutate assignments/read mapping; analyst sees frozen X/Y only. Missing center/DLI/gas and unselected resource fields remain truthfully unavailable."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 642,
+        "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 641,
+    "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 641,
+      "sprint": "S4",
+      "hours_min": 6,
+      "hours_max": 10,
+      "next_action": "Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "Recovery retains predecessor failures, creates no nonbaseline exposure and earns no proof credit.",
+      "Exactly one successor-attempt receipt binds baseline-before/aggressive/baseline-after to actual current source and observations.",
+      "Mismatch closes exposure/revokes nonbaseline before facility-compatible recovery; final baseline-confirmed draft/shadow/closed, feature off, empty ID, vector off and zero exposure are evidenced."
+    ],
+    "parent": {
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 749,
+        "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 747,
+        "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 639,
+        "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 587,
+        "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 642,
+    "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+    "stage": "C2",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Research/release lead",
+    "allocation": {
+      "issue_number": 642,
+      "sprint": "S5",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "Prepare a concrete exact-launch packet and request the specific randomized day-1 decision; verify actual assignment/exposure and safe cleanup.",
+      "owner_role": "Research/release lead"
+    },
+    "acceptance": [
+      "Exact launch authority, unique assignment, frozen identity, observed physical target, two epochs and exposure lineage exist.",
+      "Freezer can progress, singleton writer/public health hold and exact-source Argo is Synced + Healthy.",
+      "Rollback evidence is current and first-day/export ownership hands to #640; closure does not claim experiment success."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 588,
+        "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 643,
+    "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/643",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": {
+      "issue_number": 643,
+      "sprint": "S2",
+      "hours_min": 6,
+      "hours_max": 12,
+      "next_action": "Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal.",
+      "owner_role": "Data/platform lead"
+    },
+    "acceptance": [
+      "Live-role matrix allows intended functions and rejects unrelated DML, mapping reads and cross-workload capabilities.",
+      "No credentials or Secret annotation values enter issue/log/backup artifacts; ordinary pods lack owner/migration authority.",
+      "Public/planner/ingestor health and experiment integrity survive rollout/rollback; no unsolicited credential rotation occurs."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 670,
+        "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 644,
+    "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 644,
+      "sprint": "S2",
+      "hours_min": 8,
+      "hours_max": 16,
+      "next_action": "Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Exact-SHA results are durable, redacted and actionable; no recursive builds from pin commits.",
+      "Builder cannot deploy/promote and ordinary validation cannot access device/OTA/runtime secrets; immutable digest consumer receipt identifies rollback pins.",
+      "Verdify integration and owning fleet dependency are linked; current branch policy is measured rather than copied from an August snapshot."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 964,
+        "title": "[C4][P0] Recover failed production promotion and schedulable Lab/band refresh",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/964",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 670,
+    "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": null,
+    "acceptance": [
+      "A clean restore succeeds using only declared backup/role artifacts and separately provisioned credentials, not a hidden local role seed.",
+      "Role/membership/ownership/ACL parity and no-elevation deny tests pass; artifacts contain no secret-bearing globals.",
+      "A scheduled backup produces the matching pair of integrity-checked artifacts and the runbook gives a tested restore order."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 671,
+    "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/671",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Failure is visible with class and bounded retry while active contention is not mislabeled corruption.",
+      "A failed publish never replaces good content with partial output; lock release/recovery is deterministic.",
+      "Current content hash/source/freshness is exposed and a successful subsequent publish clears the correct failure."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 672,
+    "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/672",
+    "stage": "C5",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Data/platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Clean and adversarial restore fixtures pass through the supported ownership path or fail with an explicit actionable unsupported-state error.",
+      "No direct unsupported chunk mutation or silent narrowing eliminates the intended hostile test.",
+      "The real rehearsal consumes current artifacts and treats this invariant as blocking, with version and object/ACL evidence retained."
+    ],
+    "parent": {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 670,
+        "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 747,
+    "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": null,
+    "acceptance": [
+      "Scheduled success and artifact metadata are current and controller-owned; source retry regression tests pass.",
+      "One writer, stable generation, fresh 48-field truth and ordinary planner/data health are maintained.",
+      "Exact source/digest/Argo receipt exists or the issue remains explicitly open on that missing evidence."
+    ],
+    "parent": {
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 749,
+    "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 749,
+      "sprint": "S4",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "3-of-4 degraded-pass is truthful; two or fewer probes, nonfinite aggregates, excess spread, stale evidence or semantic contradiction fail closed.",
+      "Hydro is traced as absent from proof/selector/executor/outcome causal inputs; any new dependency is classified before use.",
+      "Packet is read-only, current at every boundary and cannot grant proof or randomized authority; probe loss closes exposure before recovery."
+    ],
+    "parent": {
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 949,
+        "title": "[C4][P1] Bound planner-policy drift holds and prove autonomous safe convergence",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 778,
+        "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 424,
+        "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 750,
+    "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+    "stage": "C1",
+    "kind": "epic",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 750,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "Fresh source/Argo/runtime/backup receipts replace old point-in-time assertions and identify any remaining mismatch.",
+      "#747, #749 and #641 have their own acceptance evidence; proof and orphan recovery never share credit.",
+      "Final safe state and rollback receipt are verified; no randomized design/draw/launch is performed under this roll-up."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+    "stage": "C7",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Operator with data/control lead",
+    "allocation": {
+      "issue_number": 751,
+      "sprint": "PHYSICAL",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Prepare the existing operator commissioning worksheet and required measurement/calibration evidence. Pull only when actual hardware, crop and seasonal observations are available; preserve unavailable channels as unavailable.",
+      "owner_role": "Operator with data/control lead"
+    },
+    "acceptance": [
+      "South supplies credible fresh finite temperature/RH/VPD and is validated against reference/neighbors; hydro cause and restored or explicit unresolved state are documented.",
+      "Contributor diagnostics become truthful and alerts resolve from telemetry, not manual deletion.",
+      "No replacement becomes a surprise pilot gate or silently changes the locked analysis panel."
+    ],
+    "parent": {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 775,
+    "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+    "stage": "C0",
+    "kind": "epic",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": {
+      "issue_number": 775,
+      "sprint": "ROLLUP",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Roll up child outcomes and preserve original C0–C8 acceptance. Do not count this umbrella as additional engineering effort or as a child blocking dependency.",
+      "owner_role": "Evidence/data lead"
+    },
+    "acceptance": [
+      "Every issue open at the snapshot has exactly one owner role, stage, what/why/how, testable acceptance and disposition.",
+      "The full native dependency graph is acyclic and equals the repository graph; no child is blocked by its own umbrella.",
+      "The pilot ends in a reproducible decision, including an inconclusive/no-benefit result if that is what the evidence supports; broader efficiency claims remain gated."
+    ],
+    "parent": null,
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 778,
+    "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "Timeline reproduces the three-hour interruption with raw-row hashes, provenance and explicit unknowns.",
+      "The flat cumulative 600 and mister-today 157.38 counters are not labeled an exhausted 600-gallon budget without matching semantics/reset/limit evidence.",
+      "A named cause plus regression evidence, or a fail-closed unresolved constraint, is incorporated into #749; no unsafe wetting proof is allowed by an unexplained safety contradiction."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 779,
+    "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "Exact matched counts and excluded reasons reproduce from one command and immutable inputs.",
+      "No changing-probe aggregate crosses the epoch comparison; repaired probes require a new panel/version.",
+      "Conclusions explicitly distinguish descriptive association from causal identification and supply empirical variance/completeness inputs to study design."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 780,
+    "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "A fixture with correct outdoor forecast and different indoor VPD has zero forecast error, not indoor/outdoor difference.",
+      "No future-issued forecast enters a historical decision; lead/freshness and sample-count fields reach planner context.",
+      "Historical and live read-only probes reconcile raw/corrected priors; this fix does not silently retune a locked study."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 781,
+    "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": null,
+    "acceptance": [
+      "Frozen daily ledger reproduces 5,047 = 1,361 + 3,465 + 221 gallons for the reviewed 22-day snapshot and explains any later revision.",
+      "Each electricity result names circuit scope; vent-open minutes are never motor energy, and partial measured versus whole modeled totals are never subtracted as waste.",
+      "Endpoint definition includes uncertainty, minimum coverage, missingness/reset and cost-input policy; absent gas/DLI remain null, not zero-benefit proof."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 782,
+    "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+    "stage": "C0",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Evidence/data lead",
+    "allocation": {
+      "issue_number": 782,
+      "sprint": "S3",
+      "hours_min": 12,
+      "hours_max": 20,
+      "next_action": "Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision.",
+      "owner_role": "Evidence/data lead"
+    },
+    "acceptance": [
+      "An explicit decision document chooses pilot versus confirmatory scope and states exactly which claim can be tested with current meters.",
+      "Power replay is reproducible; include .99^30 ≈ .740 and .95^30 ≈ .215 all-pairs retention sensitivities rather than assuming .9995 reliability.",
+      "Calendar is future and seasonally justified; 06:00–24:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.",
+      "No draw has occurred before design approval/qualification; model is current source-pinned Luna/medium, not stale Sol issue prose."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 781,
+        "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 780,
+        "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 779,
+        "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 371,
+        "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 783,
+    "title": "[C1][P0] Prove restore → selector → setter schema → receipt → frozen outcome end to end",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+    "stage": "C1",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Runtime/release lead",
+    "allocation": {
+      "issue_number": 783,
+      "sprint": "S4",
+      "hours_min": 12,
+      "hours_max": 20,
+      "next_action": "Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal.",
+      "owner_role": "Runtime/release lead"
+    },
+    "acceptance": [
+      "One command/artifact index reproduces the whole path twice with byte-identical canonical hashes and no data reshaping between freezer and analyzer.",
+      "First-day, missing-day, zero-exposure, reset and failed-delivery rows exist by assignment, never filtered by exposure.",
+      "Device-denied restore contains no production credentials in logs/artifacts; minimum randomizer/lifecycle/executor/freezer/blinded-analyst boundaries pass. Current source and failure matrix are recorded before #588."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 782,
+        "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 639,
+        "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 587,
+        "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 784,
+    "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+    "stage": "C3",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Research lead",
+    "allocation": {
+      "issue_number": 784,
+      "sprint": "PILOT",
+      "hours_min": 24,
+      "hours_max": 48,
+      "next_action": "Operate the retained pilot across genuine local assigned days, track blinded reconciliation and preserve prespecified stopping/missingness rules.",
+      "owner_role": "Research lead"
+    },
+    "acceptance": [
+      "All locked assignments are accounted for, including incomplete/no-exposure/aborted days; no replacement pair, redraw or post-hoc endpoint change occurs.",
+      "Blinded integrity and safety reviews have receipts at the cadence declared before launch; departures are preserved.",
+      "Study ends safe with stopped admission, closed exposure, frozen outcome/deviation/fidelity/environment hashes ready for #readout."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 640,
+        "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 785,
+    "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+    "stage": "C3",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Research lead",
+    "allocation": {
+      "issue_number": 785,
+      "sprint": "PILOT",
+      "hours_min": 12,
+      "hours_max": 20,
+      "next_action": "After the final frozen pilot/stopping boundary, reveal once and reproduce the complete bounded decision report.",
+      "owner_role": "Research lead"
+    },
+    "acceptance": [
+      "Independent rerun from frozen artifacts produces identical tables and decision; reveal occurs once with audited authority.",
+      "Report permits adverse/no-benefit/inconclusive conclusions and gives no yield/profit/whole-resource/other-season claim beyond measurements.",
+      "#775/#581 close only on this completed decision boundary; #comparator/#economics and deferred work have explicit go/no-go rationale, not automatic promotion."
+    ],
+    "parent": {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 784,
+        "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 786,
+    "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 786,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "A go/no-go decision is linked to #readout, with a prespecified comparator and no reused revealed schedule.",
+      "Offline command replay is not described as a physical climate or resource effect.",
+      "Any new trial has its own lock/draw/authority and a claim that matches its measured endpoint."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 785,
+        "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 780,
+        "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 787,
+    "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/787",
+    "stage": "C8",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Research/platform lead",
+    "allocation": {
+      "issue_number": 787,
+      "sprint": "FUTURE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Retain explicit future owner and native dependencies; scope and estimate a coherent implementation only when the prerequisite evidence and specific decision exist. No launch gate, DB cutover or whole-resource claim is added.",
+      "owner_role": "Research/platform lead"
+    },
+    "acceptance": [
+      "Each claimed resource has eligible measured coverage and calibration/uncertainty; modeled proxies remain secondary.",
+      "A new prospective study can test climate improvement and resource benefit as stated, or the claim is explicitly narrowed.",
+      "No hardware purchase, gas tuning, yield/profit claim or seasonal controller expansion follows automatically from the current pilot."
+    ],
+    "parent": {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 785,
+        "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 781,
+        "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+        "state": "CLOSED",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      {
+        "number": 410,
+        "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+        "state": "OPEN",
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 801,
+    "title": "[VP-02] Exclude www-dev and proposals-hello from the verdify-tier1-forward HostRegexp",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/801",
+    "stage": "project interface",
+    "kind": "task",
+    "priority": "native issue labels",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 801,
+      "sprint": "RELEASE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "After native agents#4460→#4461 adoption, add exact owned-host exclusions and verify hook-free route delivery plus writer continuity.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [],
+    "parent": {
+      "number": 4493,
+      "title": "[EPIC] Estate rationalization: one owner per thing across jvallery and VerdifyConsultancy",
+      "state": "OPEN",
+      "url": "https://github.com/jvallery/agents/issues/4493",
+      "repository": {
+        "nameWithOwner": "jvallery/agents"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 4461,
+        "title": "[ARGO-02] Adopt the hand-applied tenant Applications into the local-prod catalog",
+        "state": "OPEN",
+        "url": "https://github.com/jvallery/agents/issues/4461",
+        "repository": {
+          "nameWithOwner": "jvallery/agents"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 802,
+    "title": "[VP-01] Put verdify-descheduler under Argo (manual) with Git equal to live enforce mode",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/802",
+    "stage": "project interface",
+    "kind": "task",
+    "priority": "native issue labels",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 802,
+      "sprint": "RELEASE",
+      "hours_min": null,
+      "hours_max": null,
+      "next_action": "Source enforce mode was corrected by PR972; finish manual-Argo adoption with agents#4451, preserving source/live policy and native authority removal.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [],
+    "parent": {
+      "number": 4493,
+      "title": "[EPIC] Estate rationalization: one owner per thing across jvallery and VerdifyConsultancy",
+      "state": "OPEN",
+      "url": "https://github.com/jvallery/agents/issues/4493",
+      "repository": {
+        "nameWithOwner": "jvallery/agents"
+      }
+    },
+    "blocked_by": [
+      {
+        "number": 4451,
+        "title": "[EST-01] Create estate-ownership.yaml and the estate lane map (docs/estate/README.md)",
+        "state": "OPEN",
+        "url": "https://github.com/jvallery/agents/issues/4451",
+        "repository": {
+          "nameWithOwner": "jvallery/agents"
+        }
+      },
+      {
+        "number": 4459,
+        "title": "[ROOT-02] Reconcile the three env roots and agent-fleet-appprojects to reviewed main SHAs",
+        "state": "CLOSED",
+        "url": "https://github.com/jvallery/agents/issues/4459",
+        "repository": {
+          "nameWithOwner": "jvallery/agents"
+        }
+      }
+    ],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 835,
+    "title": "Fix reconnect equipment snapshot provenance and stale relay alerts",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/835",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Fenced fresh canonical state capture without cache inference.",
+      "Snapshot_taken only on complete persisted burst; incomplete otherwise.",
+      "Focused reconnect tests plus live readback and monitor-owned cited alert resolution."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 862,
+    "title": "Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/862",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Bound warm-cache initialization with measured scan timings and unchanged safety guard.",
+      "Natural publisher cadence and fresh_until availability satisfy the declared contract.",
+      "Source/runtime receipt and preserved failure/rollback data distinguish active work from stall."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 949,
+    "title": "[C4][P1] Bound planner-policy drift holds and prove autonomous safe convergence",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 949,
+      "sprint": "S2",
+      "hours_min": 8,
+      "hours_max": 12,
+      "next_action": "Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Every held field has actual desired/readback provenance and an explicit safe convergence or bounded hold disposition.",
+      "No repeated broad device push, cap increase, fabricated confirmation or replay of expired approval; delivery failure/cancellation remains terminal history.",
+      "Natural or explicitly scoped plan change converges through permitted stages, with one writer, timely tasks, fresh confirmation, and a two-hour exact-source receipt."
+    ],
+    "parent": {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 950,
+    "title": "[C4][P1] Restore the ingestor Slack credential-file contract and operator delivery",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/950",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Source-rendered and running file/env contracts agree; token remains secret and existing credential is preserved.",
+      "Natural evening/midnight/morning delivery succeeds and retries are bounded with actionable failures.",
+      "Intended alert path is checked independently of brief success; no test message or credential rotation is sent by this triage."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 951,
+    "title": "[C4][P1] Restore authenticated greenhouse camera snapshots after connection refusals",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/951",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Both authenticated camera requests return current valid JPEGs with the declared TLS identity; no broad/admin endpoint or secret is exposed.",
+      "A natural verdify-vision Job succeeds through capture and analysis; missing/partial/stale input still fails truthfully.",
+      "Argo aggregate degradation is independently rechecked; old failed Jobs are preserved until disposition, never deleted merely to make health green."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 952,
+    "title": "[C4][P1] Preserve Verdify Grafana monitoring identity across pod replacement",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/952",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "A least-scope service identity survives or is recreated deterministically after replacement without printing or rotating credentials unsolicited.",
+      "Local and external authenticated probe evidence succeeds, negative unauthenticated behavior remains denied, and related alerts recover.",
+      "Rendered/source/runtime identity and rollback are recorded; UI availability alone is insufficient."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 953,
+    "title": "[C4][P2] Reconcile Iris planning skill lookup and required reference inventory",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/953",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Every required prompt reference resolves in the running profile at exact source/config identity.",
+      "Next natural required cycle writes a valid plan without missing-skill/reference retries; no extra provider calls solely for triage.",
+      "No static worker-ready signal is presented as plan success; existing ledger/source proofs remain intact."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 963,
+    "title": "Greenhouse ESPHome text sensor moisture_exchange publishes >255-char JSON as state (HA drops it to unknown, logs ERROR every update)",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P2",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 963,
+      "sprint": "S3",
+      "hours_min": 6,
+      "hours_max": 12,
+      "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Every possible published state fits the HA255-character contract; diagnostic detail is preserved through an explicit tested consumer schema.",
+      "Native ingestor/planner/Grafana consumers remain compatible; actual HA state is available without repeated overlength errors.",
+      "Exact binary/source and firmware release/rollback evidence exist; no OTA occurs solely for triage."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 964,
+    "title": "[C4][P0] Recover failed production promotion and schedulable Lab/band refresh",
+    "state": "CLOSED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/964",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P0",
+    "owner_role": "Platform lead",
+    "allocation": null,
+    "acceptance": [
+      "Exact intended revision/render and running image specifications agree; full operation Succeeded and Argo Synced/Healthy; required migrations/bootstrap/readiness hooks have explicit results.",
+      "Replacement Lab pods become ready using supported storage placement; existing public tree and recovery data survive. At least three natural publisher runs complete on the declared cadence with current fresh_until and served/success generation agreement.",
+      "Band-refresh Jobs schedule and complete at natural cadence, with fresh downstream rows and no hidden backlog/deadline failure.",
+      "Singleton writer, fresh telemetry and authenticated API/MCP behavior remain proven. Any socket-monitor UNKNOWN remains unaccepted until a complete observable census succeeds.",
+      "Exact prior pins/specs/cache/PVC recovery coordinates and owner decisions are published; no DB/PVC pruning or unrelated estate mutation."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  },
+  {
+    "number": 965,
+    "title": "[C4][P1] Separate API grow-light command intent from observed equipment history",
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/965",
+    "stage": "C4",
+    "kind": "task",
+    "priority": "P1",
+    "owner_role": "Platform lead",
+    "allocation": {
+      "issue_number": 965,
+      "sprint": "S3",
+      "hours_min": 4,
+      "hours_max": 8,
+      "next_action": "Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command.",
+      "owner_role": "Platform lead"
+    },
+    "acceptance": [
+      "Either return an explicit unsupported/disabled result without writing observed history, or deliver a typed command through the existing owning HA/setpoint writer with authorization, idempotency and terminal failure semantics. Do not introduce a second device writer.",
+      "Only authentic source-bound readback writes observed equipment state. A requested on command while real state remains off cannot fabricate an on interval or resource credit.",
+      "Focused positive and rejected/failed/timeout tests distinguish intent, delivery and observation; ordinary auth and greenhouse/circuit boundaries hold.",
+      "Exact source/digest/config adoption and read-only live contract verification are published. Any physical command test has a bounded operator-safe scope and actual observation; no live command is sent merely for triage.",
+      "Existing affected history is audited for provenance and explicitly bounded; no broad rewrite of historical outcomes, assigned-day denominators or resource claims."
+    ],
+    "parent": {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "repository": {
+        "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+      }
+    },
+    "blocked_by": [],
+    "assignees": [],
+    "review_scope": "Current source/GitHub/runtime audit; original clauses remain binding. Closed acceptance remains dated history."
+  }
+]
