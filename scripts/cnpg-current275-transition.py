@@ -78,7 +78,9 @@ def remap_migration(raw):
 def configured(cluster):
     """Private module instance: historical emitter modules/outputs stay intact."""
     t.c0.require(cluster in TARGETS, "unsupported closed275 target")
-    t.operator.CLUSTER = TARGETS[0]
+    # The source-pinned C0 witness is emitted under its original S2 profile;
+    # witness_select then remaps only its exact guard to the admitted target.
+    t.operator.CLUSTER = "verdify-cnpg-s2"
     t.PHYSICAL_TARGETS = TARGETS
     t.PHYSICAL_TABLE = TABLE
     return t

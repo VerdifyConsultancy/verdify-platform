@@ -95,6 +95,17 @@ def test_new_admission_retains_historical_source_and_custody_guards():
     assert m.transition.remap_migration(raw) == old.remap_migration(raw)
 
 
+def test_real_witness_emitter_preserves_c0_source_and_binds_only_integration_target():
+    guards, select = m.transition.witness_parts(m.CLUSTER)
+    assert m.transition.t.operator.CLUSTER == "verdify-cnpg-s2"
+    assert "current_setting('cluster_name') <> '" + m.CLUSTER + "'" in guards
+    assert "current_setting('cluster_name') <> 'verdify-cnpg-s2'" not in guards
+    assert "C0 logical recovery witness refuses changed executable digest implementation" in guards
+    assert select.startswith("SELECT jsonb_build_object(")
+    with pytest.raises(ValueError, match="unsupported isolated cluster profile"):
+        m.transition.t.c0.emit_sql(target=True, bootstrap_grantor_profile=True, cluster_name=m.CLUSTER)
+
+
 def test_client_network_can_only_reach_the_new_target_and_dns():
     policies = list(yaml.safe_load_all((CLUSTERS / "cnpg-s2-integration-runtime-client-policy.yaml").read_text()))
     egress, ingress = policies
