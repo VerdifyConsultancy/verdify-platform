@@ -1,0 +1,81 @@
+{
+  "actual_alert_delivery_witness": false,
+  "all_tests_offline_mocks_or_synthetic_fixtures": true,
+  "device_write_enabled": false,
+  "groups": [
+    {
+      "command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest research/planner-efficacy/tests/test_warm_season_calendar_prereg.py research/planner-efficacy/tests/test_pre_draw_sensitivity.py research/planner-efficacy/tests/test_switchback_v2_design.py research/planner-efficacy/tests/test_switchback_v2_selector.py research/planner-efficacy/tests/test_switchback_v2_day1_export.py -q --junitxml=planning/execution/2026-10-12/scientific-readiness/research-junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 124
+      },
+      "junit_file": "research-junit.xml",
+      "junit_sha256": "3e4df0d6dd7e8bb12b837da82a853dd1275a761b7cdea67f4422d46ecb63a83e",
+      "name": "research",
+      "source_files": [
+        "research/planner-efficacy/tests/test_warm_season_calendar_prereg.py",
+        "research/planner-efficacy/tests/test_pre_draw_sensitivity.py",
+        "research/planner-efficacy/tests/test_switchback_v2_design.py",
+        "research/planner-efficacy/tests/test_switchback_v2_selector.py",
+        "research/planner-efficacy/tests/test_switchback_v2_day1_export.py"
+      ]
+    },
+    {
+      "command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest tests/test_component_experiment_contract.py tests/test_component_experiment_executor.py tests/test_component_experiment_writer.py tests/test_component_experiment_observability.py tests/test_component_prefix_replay.py tests/test_writer_lease_fence.py tests/test_policy_writer_demotion.py tests/test_device_write_gate.py -q --junitxml=planning/execution/2026-10-12/scientific-readiness/executor-lifecycle-junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 314
+      },
+      "junit_file": "executor-lifecycle-junit.xml",
+      "junit_sha256": "ff243e329cad1c65920cce68b708343892b7cf4f4098b0f1ae230c68b1904a1c",
+      "name": "executor_lifecycle",
+      "source_files": [
+        "tests/test_component_experiment_contract.py",
+        "tests/test_component_experiment_executor.py",
+        "tests/test_component_experiment_writer.py",
+        "tests/test_component_experiment_observability.py",
+        "tests/test_component_prefix_replay.py",
+        "tests/test_writer_lease_fence.py",
+        "tests/test_policy_writer_demotion.py",
+        "tests/test_device_write_gate.py"
+      ]
+    },
+    {
+      "command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest tests/test_component_experiment_api.py tests/test_component_experiment_store.py tests/test_component_experiment_source.py tests/test_experiment_v2_readiness_guard.py -q --junitxml=planning/execution/2026-10-12/scientific-readiness/api-store-readiness-junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 183
+      },
+      "junit_file": "api-store-readiness-junit.xml",
+      "junit_sha256": "4838408ac766a8925187a9203ee6b694dab3bbe05872399e9e55055ce686ed87",
+      "name": "api_store_readiness",
+      "source_files": [
+        "tests/test_component_experiment_api.py",
+        "tests/test_component_experiment_store.py",
+        "tests/test_component_experiment_source.py",
+        "tests/test_experiment_v2_readiness_guard.py"
+      ]
+    }
+  ],
+  "issues_closed": [],
+  "kubeconfig": "/dev/null",
+  "native_full48_qualified": false,
+  "negative_immutable_hash_check": {
+    "analysis_results_emitted": false,
+    "exception_type": "ValueError",
+    "message": "frozen private input hash differs: climate_bins.csv",
+    "original_private_inputs_modified": false,
+    "tampered_dummy_private_input_rejected": true
+  },
+  "real_restored_data_vertical_execution": false,
+  "real_sql_role_login_witness": false,
+  "schema": "verdify-scientific-readiness-20261012-v1",
+  "source_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "total_tests_passed": 621
+}
