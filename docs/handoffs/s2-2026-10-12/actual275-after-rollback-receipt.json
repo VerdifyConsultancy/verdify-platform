@@ -1,0 +1,18 @@
+{
+  "stage": "after-bridge-rollback",
+  "startedAt": "2026-10-12T18:39:20.817043+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "podUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "sqlSha256": "0b11d8e7f8f4512a352ad4da16b7341ad2b2d8651ed2beb9de16e46309f7f66b",
+  "authentication": "native postgres peer; owner bootstrap where source requires; not ordinary LOGIN proof",
+  "outputCustody": "private Mac files, no database rows in logs or Git",
+  "exitCode": 0,
+  "finishedAt": "2026-10-12T18:39:30.556476+00:00",
+  "stdoutSha256": "3b2ede289ee0626f22e66b5d306d05ea21860f9fa7553951a0d92f4a310e0fd8",
+  "stdoutBytes": 35516530,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrBytes": 0,
+  "recordSha256": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+  "equalsSealed274Witness": true
+}

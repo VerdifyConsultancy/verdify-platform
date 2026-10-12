@@ -1,0 +1,105 @@
+{
+  "capturedAt": "2026-10-12T18:39:53.046702+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "sqlSha256": "8544a8066af40980fc5705bea9846ec2a5588bc6cdef3fe579d6384bae66df41",
+  "recordsSha256": "ff0af9c9716da62c2d5e3cf3434b7a9a79ac196ef3d15a36c9681f3087bbbeec",
+  "exitCode": 0,
+  "passwordOrVerifierExported": false,
+  "records": [
+    {
+      "kind": "two-role-starting-posture",
+      "roles": [
+        {
+          "name": "verdify_experiment_component_executor",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_lifecycle",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_component_executor_login",
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": true,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [
+            {
+              "role": "verdify_experiment_component_executor",
+              "admin_option": false
+            }
+          ],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_lifecycle_login",
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": true,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [
+            {
+              "role": "verdify_experiment_lifecycle",
+              "admin_option": false
+            }
+          ],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_owner",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        }
+      ],
+      "ledger_max": 274,
+      "database_oid": "16447",
+      "system_identifier": "7693399121498484768"
+    },
+    {
+      "kind": "existing-component-bindings",
+      "experiments": [
+        {
+          "status": "draft",
+          "device_ids": [
+            "esp32-vallery"
+          ],
+          "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+          "admission_state": "closed",
+          "execution_phase": "shadow",
+          "lease_generation": 19,
+          "component_enabled": false
+        }
+      ]
+    }
+  ]
+}

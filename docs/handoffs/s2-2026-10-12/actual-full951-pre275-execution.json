@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-10-12T18:36:57.835358+00:00",
+  "finishedAt": "2026-10-12T18:37:50.782799+00:00",
+  "exitCode": 0,
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "sqlSha256": "3c27ff4bc85c728f28edd0c036da8c5b5a07c499bfa156c8bf2e4276598b1bd4",
+  "headersSha256": "d439f890cdd56231c1b76387e400838db90b72665395d4c0cc08d55063a78f59",
+  "parserSourceSha256": "297f733c4923d98e40fad807aea54cdd045bc783a40c43b6f58a1f39eb3b3294",
+  "rawRowsExported": false,
+  "rawRowsPersisted": false,
+  "stderrBytes": 0,
+  "complete": true,
+  "terminalMarkerVerified": true,
+  "tableCount": 951,
+  "rowCount": 9699549,
+  "whole951ExactBaseline": true,
+  "nativeStreamBytes": 2457973078,
+  "nativeStreamSha256": "b72e9de4ad1502d198ecdec3a6fb0b0054669186906077144892500d06164294",
+  "parserPeakRssKiB": 511548
+}
