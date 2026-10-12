@@ -1,3 +1,15 @@
+# Final Verdify runtime cohort — October 12, 2026
+
+The combined source includes #968/#970/#971, reader-only exact-lineage integration recovery from #969, the real recovery-emitter correction89e76357, and the bounded native replay evidence hash fix. All135 focused tests pass with zero skips. The128-object production render remains byte-identical to37fd with zero Secrets; the separate eight-object rehearsal render contains only verdify-cnpg-s2-integration, zero Secrets and no hooks. The original37fd native success is retained as historical evidence; the final combined head requires its own native result.
+
+[Final source qualification](final-cohort-source-qualification.json) records the exact tested source, unchanged render hashes, trusted offline projection and bounded PR-only capacity readback. The existing caller has eight conditional image steps; the projection selects api, mcp, ingestor, setpoint-server and lab-publisher. Actual native classification and build outputs remain authoritative. The 18:11 Ore readback supports the finite PR-only scratch comparison; it grants no image build or contained-recovery allocation. The inherited85-percent comparison is descriptive, not an added gate.
+
+PR #973 remains the canonical source cohort. Preserve the original #969/ac89/38ef and37fd branches and custody. One normal PR validation is followed by one main validation/build, reviewed promotion and one full production sync. Source, CI, publication, deployment and runtime acceptance are distinct. #644 and #949 stay open; their original98-item publication batch and the two verified resume comments are complete. No repeated issue publication is needed.
+
+The sole release writer retains #949's original halted run, expired approval and12 real confirmations. After final deployment, recapture custody and use the supported archive-only confirmed_halt_forward path plus a distinct fresh ordinary admission, cap12, one socket, real confirmations and one uninterrupted two-hour window. No archive or admission has been installed by this source qualification. The contained recovery owner executes only after its own current resource admission; scientific prefixes remain UNPROVEN27/48, with later coverage investigation outside this frozen cohort.
+
+## Historical resume checkpoints
+
 # Resumed Verdify runtime delivery — October 12, 2026
 
 Jason's explicit continuous project-execution instruction resumes this lane. The coordinator owns the project replan; this chat is the sole runtime/release writer for #644 and #949. The earlier shutdown remains a historical custody record. No automation is created here; the coordinator maintains the existing heartbeat.

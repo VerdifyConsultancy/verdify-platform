@@ -1,0 +1,142 @@
+{
+  "schema": "verdify.final-cohort-source-qualification/v1",
+  "tested_source_head": "a9f7216b51915d9e2d67bc76da0e0e3bd976fe35",
+  "base": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+  "tests": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "135",
+      "time": "6.464",
+      "timestamp": "2026-10-12T12:12:56.752752-06:00",
+      "hostname": "jasons-mbp-4.home.vallery.net"
+    }
+  ],
+  "test_xml_sha256": "774ca6cf13ad36487178034f04151eb6650df34254c545f75d50a6df7b1610db",
+  "recovery_correction_source": "89e76357a8579101a17e56b1951f40c3a227aad4",
+  "recovery_cli": "Real sealed274 witness emits rollback-only SQL; unmocked emitter regression passes. No SQL executed.",
+  "production_render": {
+    "objects": 128,
+    "sha256": "007fdd0d0834e422e756d25fbdb4f0427a23c09df704b653b08f321c9e75d196",
+    "secrets": 0,
+    "clusters": [],
+    "hooks": [
+      "experiment-v2-direct-launch-bootstrap",
+      "verdify-c0-boundary-contract-240-248-c67h948tfk",
+      "verdify-experiment-v2-credential-bootstrap",
+      "verdify-mcp-runtime-role-bootstrap",
+      "verdify-migrate",
+      "verdify-runtime-role-bootstrap",
+      "verdify-six-runtime-role-bootstrap",
+      "verdify-winter-archive-init"
+    ]
+  },
+  "rehearsal_render": {
+    "objects": 8,
+    "sha256": "1c8adaf41301c4fcc405dff2639e6975e0d369f1b03b1e5356382fa8ed668a9b",
+    "secrets": 0,
+    "clusters": [
+      "verdify-cnpg-s2-integration"
+    ],
+    "hooks": []
+  },
+  "offline_projection": {
+    "base_revision": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+    "mode": "build",
+    "paths_sha256": "0ea4a9149ed0ee94a9ef02e2996d7089fa711aea355649685110901cb734d3e8",
+    "profiles": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "api": [
+        "api/main.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "ingestor": [
+        "docs/SERVICE_MAP.md",
+        "docs/handoffs/s2-2026-10-12/archive-custody-recheck.json",
+        "docs/handoffs/s2-2026-10-12/archive-recheck-job.json",
+        "docs/handoffs/s2-2026-10-12/contained-recovery-receipt.json",
+        "docs/handoffs/s2-2026-10-12/contained-recovery.md",
+        "docs/handoffs/s2-2026-10-12/integration-only-source-receipt.json",
+        "docs/handoffs/s2-2026-10-12/live-reader-policy-readback.json",
+        "docs/handoffs/s2-2026-10-12/native275-preparation-receipt.json",
+        "docs/handoffs/s2-2026-10-12/physical-backing-summary.json",
+        "docs/runbooks/api-light-command-boundary.md",
+        "docs/runbooks/cnpg/s2-contained-integration-recovery.md",
+        "docs/runbooks/moisture-telemetry-state-boundary.md",
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/cnpg-current275-transition.py",
+        "scripts/cnpg-s2-integration-current275-transition.py",
+        "scripts/component_prefix_replay.py",
+        "scripts/k3s-smoke.sh",
+        "scripts/qualify-restored-runtime-duties.py",
+        "scripts/qualify-s2-integration-runtime-duties.py",
+        "scripts/render-cnpg-rehearsal.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "lab-publisher": [
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/cnpg-current275-transition.py",
+        "scripts/cnpg-s2-integration-current275-transition.py",
+        "scripts/component_prefix_replay.py",
+        "scripts/k3s-smoke.sh",
+        "scripts/qualify-restored-runtime-duties.py",
+        "scripts/qualify-s2-integration-runtime-duties.py",
+        "scripts/render-cnpg-rehearsal.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "mcp": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "setpoint-server": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ]
+    },
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "a9f7216b51915d9e2d67bc76da0e0e3bd976fe35"
+  },
+  "pr_capacity": {
+    "observed_at": "2026-10-12T18:11:09.487107+00:00",
+    "physical_receipt_sha256": "4bd803e2a4f1caa8b74f2bef233568bd93255a532ef978d6ff9d1acbf1c49478",
+    "worker": "vm-k3s-node6",
+    "future_incremental_bound_gib": 56,
+    "includes": "28Gi final validation plus up to28Gi existing partial969 tail; occupied bytes already reflected in baseline",
+    "physical_unallocated_gib": 103.1158734375,
+    "remaining_after_bound_gib": 47.1158734375,
+    "comparison_85_percent_is_not_gate": true,
+    "image_build_admission": false
+  },
+  "native_final_head_validation": "pending",
+  "production_delivery": "not submitted",
+  "historical_native_success_head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "remaining": [
+    "exact-head native PR CI",
+    "actual main caller finite growth and fresh registry admission",
+    "one main build and reviewed promotion",
+    "one full no-prune production sync",
+    "ordinary recovery and uninterrupted two-hour qualification"
+  ]
+}
