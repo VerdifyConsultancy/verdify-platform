@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,32 @@ def load(filename, module_name):
 
 
 m = load("cnpg-s2-integration-current275-transition.py", "integration_current275")
+
+
+def test_actual_rehearsal_render_cannot_recreate_original_initdb_or_archive_writer():
+    rendered = subprocess.check_output(["kustomize", "build", str(CLUSTERS)], text=True, timeout=30)
+    objects = list(yaml.safe_load_all(rendered))
+    clusters = [obj for obj in objects if obj["kind"] == "Cluster"]
+    assert [obj["metadata"]["name"] for obj in clusters] == [m.CLUSTER]
+    assert "initdb" not in clusters[0]["spec"]["bootstrap"]
+    assert "plugins" not in clusters[0]["spec"]
+    assert not any(obj["kind"] in {"Secret", "Backup", "ScheduledBackup"} for obj in objects)
+    stores = [obj for obj in objects if obj["kind"] == "ObjectStore"]
+    assert len(stores) == 1 and stores[0]["metadata"]["name"] == "verdify-cnpg-pitr-reader"
+    assert "retentionPolicy" not in stores[0]["spec"]
+    credentials = stores[0]["spec"]["configuration"]["s3Credentials"]
+    assert credentials["accessKeyId"] == {
+        "name": "verdify-cnpg-rehearsal-s3-reader",
+        "key": "AWS_ACCESS_KEY_ID",
+    }
+    assert credentials["secretAccessKey"] == {
+        "name": "verdify-cnpg-rehearsal-s3-reader",
+        "key": "AWS_SECRET_ACCESS_KEY",
+    }
+    assert credentials["region"] == {
+        "name": "verdify-cnpg-rehearsal-s3-region",
+        "key": "AWS_DEFAULT_REGION",
+    }
 
 
 def test_fresh_clone_keeps_exact_accepted_reader_lineage_and_stops_jobs_before_start():

@@ -1,0 +1,162 @@
+{
+  "schema": "verdify-contained-recovery-archive-custody-recheck-v1",
+  "verifiedAt": "2026-10-12T18:00:40.169311+00:00",
+  "historical_reader_hashes_exact": true,
+  "historical_base_sizes_exact": true,
+  "full_current_base_tar_retrieved": true,
+  "current_reader": {
+    "schema": "cnpg-s2-independent-archive-reader-v1",
+    "server_name": "verdify-cnpg-s2",
+    "backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "backup_id": "20261006T052358",
+    "required_wals": [
+      "000000010000000100000072",
+      "000000010000000100000073",
+      "000000010000000100000074"
+    ],
+    "base_object_heads": [
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/backup.info",
+        "bytes": 1452
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/data.tar.gz",
+        "bytes": 619166118
+      }
+    ],
+    "retrieved": [
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/backup.info",
+        "bytes": 1452,
+        "sha256": "22857b5894d958a77474fa99ada244ff5707ca6037e39daf8a99e11e8f00b7d8"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/data.tar.gz",
+        "bytes": 619166118,
+        "sha256": "c3b56cd2ee1fa9612822228af7c0c0f1334a2b7c877836a6989bcecc024cd164"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000072.gz",
+        "bytes": 23423,
+        "sha256": "f3fea5c0b18de5d0299a2d6c10287470625256203bf4817c69a1cf3af1362811"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000073.gz",
+        "bytes": 66495,
+        "sha256": "f0719ad23f53ab60bed2a47475bdf7dd94658d8a1ecf53a942a3a4e1cda1cf32"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000074.gz",
+        "bytes": 16925,
+        "sha256": "83114d43683fb3135ddfca3da5b127103e5a145666bdff2b137019bf50fc34b1"
+      }
+    ],
+    "reader_only_secret_ref": true,
+    "complete": true
+  },
+  "native_execution": {
+    "capturedAt": "2026-10-12T18:00:32.282883+00:00",
+    "job_uid": "40f2d3fe-708c-42df-8232-f273082e0cba",
+    "status": {
+      "completionTime": "2026-10-12T17:59:41Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-12T17:59:41Z",
+          "lastTransitionTime": "2026-10-12T17:59:41Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-12T17:59:41Z",
+          "lastTransitionTime": "2026-10-12T17:59:41Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "ready": 0,
+      "startTime": "2026-10-12T17:58:04Z",
+      "succeeded": 1,
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "pods": [
+      {
+        "name": "verdify-cnpg-s2-archive-recheck-20261012-xb456",
+        "uid": "96dcbabe-fd0c-46c6-8d74-656a5fba09be",
+        "node": "vm-k3s-node7",
+        "phase": "Succeeded",
+        "containerStatuses": [
+          {
+            "allocatedResources": {
+              "cpu": "50m",
+              "memory": "64Mi"
+            },
+            "containerID": "containerd://48e16e20049744df8a40f52a41b9452cb8a03f1305ab358ac6d25764324a90a2",
+            "image": "sha256:1b228b18e86a19efcd8e5d6d39e70ef676c8079fae617472291c827e55752e54",
+            "imageID": "ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar@sha256:9880817c285c7afa4d195da2145064d21907405489ed6ec39abe59b1feb558a4",
+            "lastState": {},
+            "name": "reader",
+            "ready": false,
+            "resources": {
+              "limits": {
+                "memory": "256Mi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              }
+            },
+            "restartCount": 0,
+            "started": false,
+            "state": {
+              "terminated": {
+                "containerID": "containerd://48e16e20049744df8a40f52a41b9452cb8a03f1305ab358ac6d25764324a90a2",
+                "exitCode": 0,
+                "finishedAt": "2026-10-12T17:59:38Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-12T17:58:05Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 26,
+                "supplementalGroups": [
+                  26
+                ],
+                "uid": 26
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "log_exit": 0,
+    "log_bytes": 1426
+  },
+  "source_reader": {
+    "historical_job_uid": "15d24651-192b-407f-8236-8392e458ff85",
+    "historical_reader_source_exact": true,
+    "source_image": "ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar:v0.14.0@sha256:9880817c285c7afa4d195da2145064d21907405489ed6ec39abe59b1feb558a4",
+    "source_script_sha256": "8a40c8fb2f35d8d9af59f02bd13139a88b43d0a6b3d112af83fcd0ee97a7f5b7",
+    "actual_script_sha256": "21565744721ee3cf82daf5676862457d39cd48c6a796fdfea7ef5a0aec9d6edd",
+    "difference": "Retrieve all exact backup objects, including data tar, rather than HEAD-only for data tar; otherwise exact source reader.",
+    "expected": {
+      "backup_id": "20261006T052358",
+      "backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+      "wal_names": [
+        "000000010000000100000072",
+        "000000010000000100000073",
+        "000000010000000100000074"
+      ]
+    },
+    "secret_data_read": false,
+    "credentials": "unchanged reader-only Secret key references"
+  },
+  "historical_evidence_sha256": "11a36d46f008db24d7fd77204e74f416175b5fb063b600655f69cbcad1994ffa",
+  "restore_proven": false,
+  "new_target_created": false
+}
