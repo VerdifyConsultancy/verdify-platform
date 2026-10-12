@@ -1,6 +1,7 @@
-# Promotion source: df591af33570d1077bf19cd92305e85bc99258c5
-# Original owning build: verdify-platform-ci-tnbp5 UID 5a972e1a-d02c-4b11-9f04-bbdf31f87ca0
-# Qualified managed-five origin receipt SHA256: 674af9032b4d356b6420b0ef16284532252fd0c00ab1ec6e5dc3be85bd188485
+# Promotion inputs: d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f
+# Fresh api/mcp/ingestor source: cb21fd3d3295aa8d7183f70b0d5ac82405410b1a
+# Owning build: verdify-platform-ci-8wkb8 UID a94200db-a899-45f8-95d1-80bea935a093
+# Migrate is unchanged; the orchestrator candidate retains baked source 3fe6abca.
 # Release pins: the digests production runs for the five images that the
 # verdify-platform-ci pin actuator manages (api, mcp, ingestor, migrate and
 # experiment-v2-orchestrator).
@@ -24,7 +25,7 @@ metadata:
   name: release-pin-verdify-api
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-api
-  digest: sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778
+  digest: sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -32,7 +33,7 @@ metadata:
   name: release-pin-verdify-mcp
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-mcp
-  digest: sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93
+  digest: sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -40,7 +41,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344
+  digest: sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -56,4 +57,4 @@ metadata:
   name: release-pin-verdify-experiment-v2-orchestrator
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-  digest: sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0
+  digest: sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0
