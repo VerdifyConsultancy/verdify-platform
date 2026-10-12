@@ -1,0 +1,389 @@
+{
+  "version": "s2-recovery-physical-backing-summary-v1",
+  "capturedAt": "2026-10-12T18:09:31.462095+00:00",
+  "readOnly": true,
+  "reservationOrAllocation": false,
+  "sourceEvidenceSha256": "ea440dcd8dbb82b81b4bbc1a7a7c7eec609e6947ff9d19b34582e2b963db31fe",
+  "workers": [
+    {
+      "name": "vm-k3s-node4",
+      "workerCapturedAt": "2026-10-12T18:08:10.460885+00:00",
+      "mounts": [
+        {
+          "queriedPath": "/",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/rancher/k3s",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/kubelet",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S7U5NJ0XA01267A",
+          "target": "/mnt/longhorn-nvme/S7U5NJ0XA01267A",
+          "source": "/dev/nvme1n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:3"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S7U5NJ0XA16865A",
+          "target": "/mnt/longhorn-nvme/S7U5NJ0XA16865A",
+          "source": "/dev/nvme0n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:4"
+        }
+      ],
+      "nvmeDevices": [
+        {
+          "name": "nvme1n1",
+          "model": "Samsung SSD 990 EVO Plus 1TB",
+          "serial": "S7U5NJ0XA01267A",
+          "size": 1000204886016
+        },
+        {
+          "name": "nvme0n1",
+          "model": "Samsung SSD 990 EVO Plus 1TB",
+          "serial": "S7U5NJ0XA16865A",
+          "size": 1000204886016
+        }
+      ],
+      "host": "oro",
+      "vmid": 323,
+      "hostCapturedAt": "2026-10-12T18:09:31.118311+00:00",
+      "qm": {
+        "balloon": "106496",
+        "cores": "12",
+        "hostpci0": "mapping=nvme-node4-0,pcie=1",
+        "hostpci1": "mapping=nvme-node4-1,pcie=1",
+        "hostpci2": "mapping=gpu0,pcie=1,rombar=0",
+        "hostpci3": "mapping=gpu1,pcie=1,rombar=0",
+        "memory": "106496",
+        "name": "vm-k3s-node4",
+        "numa": "1",
+        "scsi0": "oro-rebuilt:vm-323-disk-0,discard=on,iothread=1,size=400G,ssd=1",
+        "sockets": "4"
+      },
+      "hostBlockDevices": [
+        {
+          "name": "nvme2n1",
+          "model": "Samsung SSD 970 PRO 512GB",
+          "serial": "S469NF0KC01798A",
+          "size": 512110190592
+        }
+      ],
+      "thinPoolsSnapshot": [
+        {
+          "vg_name": "pve512",
+          "lv_name": "data",
+          "lv_size": "429496729600",
+          "data_percent": "77.54",
+          "metadata_percent": "3.00",
+          "pool_lv": "",
+          "devices": "data_tdata(0)"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node5",
+      "workerCapturedAt": "2026-10-12T18:08:13.736502+00:00",
+      "mounts": [
+        {
+          "queriedPath": "/",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/rancher/k3s",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/kubelet",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S4P4NG0M103293D",
+          "target": "/mnt/longhorn-nvme/S4P4NG0M103293D",
+          "source": "/dev/nvme1n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:4"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S59ANJ0N203499K",
+          "target": "/mnt/longhorn-nvme/S59ANJ0N203499K",
+          "source": "/dev/nvme0n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:2"
+        }
+      ],
+      "nvmeDevices": [
+        {
+          "name": "nvme0n1",
+          "model": "Samsung SSD 970 EVO Plus 1TB",
+          "serial": "S59ANJ0N203499K",
+          "size": 1000204886016
+        },
+        {
+          "name": "nvme1n1",
+          "model": "Samsung SSD 970 EVO Plus 1TB",
+          "serial": "S4P4NG0M103293D",
+          "size": 1000204886016
+        }
+      ],
+      "host": "opal",
+      "vmid": 324,
+      "hostCapturedAt": "2026-10-12T18:09:31.399665+00:00",
+      "qm": {
+        "balloon": "106496",
+        "cores": "12",
+        "hostpci0": "mapping=nvme-node5-0,pcie=1",
+        "hostpci1": "mapping=gpu0,pcie=1,rombar=0",
+        "hostpci2": "mapping=gpu1,pcie=1,rombar=0",
+        "hostpci3": "mapping=nvme-node5-1,pcie=1",
+        "memory": "106496",
+        "name": "vm-k3s-node5",
+        "numa": "1",
+        "scsi0": "opal-rebuilt:vm-324-disk-0,discard=on,iothread=1,size=360G,ssd=1",
+        "sockets": "4"
+      },
+      "hostBlockDevices": [
+        {
+          "name": "nvme2n1",
+          "model": "Samsung SSD 970 PRO 512GB",
+          "serial": "S5JYNC0N203047D",
+          "size": 512110190592
+        }
+      ],
+      "thinPoolsSnapshot": [
+        {
+          "vg_name": "opal512",
+          "lv_name": "data",
+          "lv_size": "429496729600",
+          "data_percent": "74.82",
+          "metadata_percent": "3.07",
+          "pool_lv": "",
+          "devices": "data_tdata(0)"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node6",
+      "workerCapturedAt": "2026-10-12T18:08:10.488879+00:00",
+      "mounts": [
+        {
+          "queriedPath": "/",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/rancher/k3s",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/kubelet",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S4P4NG0M103292Y",
+          "target": "/mnt/longhorn-nvme/S4P4NG0M103292Y",
+          "source": "/dev/nvme1n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:3"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S4P4NG0M105377E",
+          "target": "/mnt/longhorn-nvme/S4P4NG0M105377E",
+          "source": "/dev/nvme0n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:5"
+        }
+      ],
+      "nvmeDevices": [
+        {
+          "name": "nvme0n1",
+          "model": "Samsung SSD 970 EVO Plus 1TB",
+          "serial": "S4P4NG0M105377E",
+          "size": 1000204886016
+        },
+        {
+          "name": "nvme1n1",
+          "model": "Samsung SSD 970 EVO Plus 1TB",
+          "serial": "S4P4NG0M103292Y",
+          "size": 1000204886016
+        }
+      ],
+      "host": "ore",
+      "vmid": 325,
+      "hostCapturedAt": "2026-10-12T18:09:30.402279+00:00",
+      "qm": {
+        "balloon": "106496",
+        "cores": "12",
+        "hostpci0": "mapping=gpu2,pcie=1,rombar=0",
+        "hostpci2": "mapping=nvme-node6-0,pcie=1",
+        "hostpci3": "mapping=nvme-node6-1,pcie=1",
+        "memory": "106496",
+        "name": "vm-k3s-node6",
+        "numa": "1",
+        "scsi0": "local-lvm:vm-325-disk-0,discard=on,iothread=1,size=296G,ssd=1",
+        "sockets": "4"
+      },
+      "hostBlockDevices": [
+        {
+          "name": "nvme1n1",
+          "model": "Samsung SSD 980 PRO 500GB",
+          "serial": "S5NYNG0NB12793M",
+          "size": 500107862016
+        }
+      ],
+      "thinPoolsSnapshot": [
+        {
+          "vg_name": "pve",
+          "lv_name": "data",
+          "lv_size": "362777935872",
+          "data_percent": "69.45",
+          "metadata_percent": "2.98",
+          "pool_lv": "",
+          "devices": "data_tdata(0)"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node7",
+      "workerCapturedAt": "2026-10-12T18:08:13.068803+00:00",
+      "mounts": [
+        {
+          "queriedPath": "/",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/rancher/k3s",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/var/lib/kubelet",
+          "target": "/",
+          "source": "/dev/sda1",
+          "fstype": "ext4",
+          "options": "rw,relatime,errors=remount-ro,commit=30",
+          "maj:min": "8:1"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S59ANS0NA05876V",
+          "target": "/mnt/longhorn-nvme/S59ANS0NA05876V",
+          "source": "/dev/nvme0n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:4"
+        },
+        {
+          "queriedPath": "/mnt/longhorn-nvme/S7U5NJ0XA01246Z",
+          "target": "/mnt/longhorn-nvme/S7U5NJ0XA01246Z",
+          "source": "/dev/nvme1n1p1",
+          "fstype": "ext4",
+          "options": "rw,noatime",
+          "maj:min": "259:3"
+        }
+      ],
+      "nvmeDevices": [
+        {
+          "name": "nvme1n1",
+          "model": "Samsung SSD 990 EVO Plus 1TB",
+          "serial": "S7U5NJ0XA01246Z",
+          "size": 1000204886016
+        },
+        {
+          "name": "nvme0n1",
+          "model": "Samsung SSD 970 EVO Plus 1TB",
+          "serial": "S59ANS0NA05876V",
+          "size": 1000204886016
+        }
+      ],
+      "host": "onyx",
+      "vmid": 326,
+      "hostCapturedAt": "2026-10-12T18:09:30.669923+00:00",
+      "qm": {
+        "balloon": "106496",
+        "cores": "12",
+        "hostpci0": "mapping=nvme-node7-0,pcie=1",
+        "hostpci1": "mapping=nvme-node7-1,pcie=1",
+        "hostpci2": "mapping=gpu-node7-0,pcie=1,rombar=0",
+        "hostpci3": "mapping=gpu-node7-1,pcie=1,rombar=0",
+        "memory": "106496",
+        "name": "vm-k3s-node7",
+        "numa": "1",
+        "scsi0": "local-lvm:vm-326-disk-0,discard=on,iothread=1,size=320G,ssd=1",
+        "sockets": "4"
+      },
+      "hostBlockDevices": [
+        {
+          "name": "nvme2n1",
+          "model": "Samsung SSD 970 PRO 512GB",
+          "serial": "S463NF0M516712W",
+          "size": 512110190592
+        }
+      ],
+      "thinPoolsSnapshot": [
+        {
+          "vg_name": "pve",
+          "lv_name": "data",
+          "lv_size": "374538764288",
+          "data_percent": "64.46",
+          "metadata_percent": "2.72",
+          "pool_lv": "",
+          "devices": "data_tdata(0)"
+        }
+      ]
+    }
+  ],
+  "conclusion": "Longhorn passthrough NVMe physical bytes and legacy emptyDir/root thin physical bytes are separate; coordinate shared memory and actual root/image/cache/log growth, without double-counting existing use."
+}
