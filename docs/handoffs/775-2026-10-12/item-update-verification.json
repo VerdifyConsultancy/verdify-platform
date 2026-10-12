@@ -6,7 +6,8 @@
     "comment_id": 6127407206,
     "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382#issuecomment-6127407206",
     "body_sha256": "f39ef5f0a18b0ebc37ed601cf85ea5c5564da1c6ebe154761e3ce28ad56550bd",
-    "remote_body_exact": true
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:50:57.878923+00:00"
   },
   {
     "number": 396,
@@ -15,7 +16,8 @@
     "comment_id": 6127408941,
     "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396#issuecomment-6127408941",
     "body_sha256": "926d8d96974396a55759a42b6820240e825aa63bb2c19c64a70df280eb26ffa2",
-    "remote_body_exact": true
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:50:58.412166+00:00"
   },
   {
     "number": 643,
@@ -24,7 +26,8 @@
     "comment_id": 6127410665,
     "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/643#issuecomment-6127410665",
     "body_sha256": "7a76fb6e480a10054cef64f0eed67bbb90ac6005ac1e092b1742e57f4d9a998f",
-    "remote_body_exact": true
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:50:59.007232+00:00"
   },
   {
     "number": 644,
@@ -33,7 +36,8 @@
     "comment_id": 6127412424,
     "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644#issuecomment-6127412424",
     "body_sha256": "d5525528f148ab1a3131e0702b00706057294ade219d1b408fd22b7d1ad4611a",
-    "remote_body_exact": true
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:50:59.641703+00:00"
   },
   {
     "number": 775,
@@ -42,6 +46,937 @@
     "comment_id": 6127414303,
     "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6127414303",
     "body_sha256": "d85fb15e64e42e96a1b4d86e34bad9cd22d3c533766316d87b6a2c0c0fb5b1d7",
-    "remote_body_exact": true
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:00.114431+00:00"
+  },
+  {
+    "number": 949,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128687924,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949#issuecomment-6128687924",
+    "body_sha256": "c42f21038625ef1e0dc64dee8cbefbd94b1abe6d84650aa9ab112d1c5126312d",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:02.006580+00:00"
+  },
+  {
+    "number": 973,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128690732,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/973#issuecomment-6128690732",
+    "body_sha256": "cb073d2fb4e5fc97d248cf9eced6fec1a10b9985301d006583d4483777d5ac58",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:12.893199+00:00"
+  },
+  {
+    "number": 14,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128693528,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14#issuecomment-6128693528",
+    "body_sha256": "b7ca8c606fd9902b9398815259b2d240d8ef607aafa54c7636bb93094aefb84d",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:23.677828+00:00"
+  },
+  {
+    "number": 16,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128696320,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6128696320",
+    "body_sha256": "40ec74172faea3485d701d51586ae7d8dca4981dfce4334c8fbd1fdb14d366f9",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:34.619415+00:00"
+  },
+  {
+    "number": 31,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128699006,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6128699006",
+    "body_sha256": "7783ec865b5fccaa913c7af8514c0a404c008c7677c225ce986d7f530c8015b8",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:45.390454+00:00"
+  },
+  {
+    "number": 45,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128701692,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6128701692",
+    "body_sha256": "e9d870de47baef4062f0dfcd457e6c431eb244bfdaddfc88fc083fcc4d91927f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:51:56.365025+00:00"
+  },
+  {
+    "number": 49,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128704407,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/49#issuecomment-6128704407",
+    "body_sha256": "6766999e3cb54cf4d05fffe0934fe48a44656591bfda24e38624a5bed082f340",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:52:07.236749+00:00"
+  },
+  {
+    "number": 51,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128707158,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6128707158",
+    "body_sha256": "916b50407b0c8e02f21ab31ebae7f3683e01fdf4154a4cfd43143e64050de08c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:52:18.109181+00:00"
+  },
+  {
+    "number": 52,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128709750,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6128709750",
+    "body_sha256": "b15e1d0cbb1b322bffdbf0722e09605ab1e00b9edae9b4093dae3f351c9e5dee",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:52:28.933345+00:00"
+  },
+  {
+    "number": 75,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128712391,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6128712391",
+    "body_sha256": "6ab9b915a0f7cbc63a33af024309afe32d5e7e830183eeae9702e37856717384",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:52:39.711506+00:00"
+  },
+  {
+    "number": 89,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128715178,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/89#issuecomment-6128715178",
+    "body_sha256": "5b7f07fef92fab1e0706a7076a0b018c4b4dc33cbe9ca78a872528ae1d2c9a34",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:52:50.539717+00:00"
+  },
+  {
+    "number": 174,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128717903,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/174#issuecomment-6128717903",
+    "body_sha256": "61aeb04c3ae60e46e817702f90733437e908c993bb86dd2846d8e56547f069df",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:01.509238+00:00"
+  },
+  {
+    "number": 214,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128720446,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/214#issuecomment-6128720446",
+    "body_sha256": "ed84a3c6116eec549bbaf073b5a12aefd6731653adb09971abcaa642a151e59d",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:12.307609+00:00"
+  },
+  {
+    "number": 218,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128723029,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218#issuecomment-6128723029",
+    "body_sha256": "db7f60c4b073f08e248ad385c73958912144e25c0e52b48c777c8c69c1e86628",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:23.148122+00:00"
+  },
+  {
+    "number": 245,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128725693,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/245#issuecomment-6128725693",
+    "body_sha256": "8b50fa08ac7d0d62740caaa2a6e231bf6b73183a766125bdb658613ceee8c966",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:34.107367+00:00"
+  },
+  {
+    "number": 296,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128728409,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/296#issuecomment-6128728409",
+    "body_sha256": "b8f4534c087201caf6b16cb1d59d9fdf1746b78374b8343c684ec472e8ac42d4",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:44.973799+00:00"
+  },
+  {
+    "number": 297,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128731280,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6128731280",
+    "body_sha256": "3c19720d25fdcacb16852f75bc605164c9193c3dc5597a643e933fe6c32cb394",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:53:56.129963+00:00"
+  },
+  {
+    "number": 298,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128734005,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6128734005",
+    "body_sha256": "888e2ee87ac03f5dce508b59cabe531718ed83e9d2a3df0ea149a8c366ea8f4c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:54:07.016863+00:00"
+  },
+  {
+    "number": 299,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128736636,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6128736636",
+    "body_sha256": "d5b3e58f1f72eec202d1ab0251d525393c0d55185d0dec38b78eb9180fefd988",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:54:18.239784+00:00"
+  },
+  {
+    "number": 303,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128739435,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303#issuecomment-6128739435",
+    "body_sha256": "1a07472904f4de1ae0fc0c9d8caa25867fbf1d2fac3a64bc4b63d75a2c9aebc7",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:54:29.487648+00:00"
+  },
+  {
+    "number": 304,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128742190,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/304#issuecomment-6128742190",
+    "body_sha256": "3a8cdda6d079735b4747b17a5685cb0e286df35b6c2c4da56617b64034be500f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:54:40.223778+00:00"
+  },
+  {
+    "number": 317,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128745377,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/317#issuecomment-6128745377",
+    "body_sha256": "62b5610ffbf7ae7ef3b2b07e258555a342786dc6ad40d847352cde0958c4b2f0",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:54:51.323107+00:00"
+  },
+  {
+    "number": 322,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128748250,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/322#issuecomment-6128748250",
+    "body_sha256": "d12910ac0d243c7ee2fdf44492896dae6ab17cb025ab37730e90b9c940e614ad",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:02.151606+00:00"
+  },
+  {
+    "number": 324,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128750986,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/324#issuecomment-6128750986",
+    "body_sha256": "5e73098385f8b324184458bc7c1a7d6bbea6ed65fc89b1d9685aa4b91d6234bc",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:13.123970+00:00"
+  },
+  {
+    "number": 350,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128753628,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6128753628",
+    "body_sha256": "c1737dde7e7e9efff3aeef6ff624e39f071c80e778992bdd5a692517078aa33c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:24.007098+00:00"
+  },
+  {
+    "number": 359,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128756313,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6128756313",
+    "body_sha256": "6d651173745a7744ad71bab4ce01a05fb068d656e66c9c77959a096a5d47892c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:34.945470+00:00"
+  },
+  {
+    "number": 361,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128759171,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/361#issuecomment-6128759171",
+    "body_sha256": "d617119733ffb8cf8aaa3ffde1fbc0b8cf54af9ef388ba27ef293dc1772daf82",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:45.943446+00:00"
+  },
+  {
+    "number": 367,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128761953,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6128761953",
+    "body_sha256": "fa264fabab1ef6a17db30de2cab0559be78f041b61f466645874e549f4339121",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:55:56.728774+00:00"
+  },
+  {
+    "number": 368,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128764687,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6128764687",
+    "body_sha256": "08be0cbb81fe45ab0e2c8b57fc099a0218ba081550a8b2608f7aabc7cb6832fc",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:56:07.802033+00:00"
+  },
+  {
+    "number": 369,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128767504,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6128767504",
+    "body_sha256": "f9b089f8f450c50e9f572037e45a96f885f2328f996ae9bb27c16a3510baa594",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:56:18.566452+00:00"
+  },
+  {
+    "number": 370,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128770176,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6128770176",
+    "body_sha256": "7d4fd2897471de71f201be32662adfcbdfd565aa277fe70607672159f46566ba",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:56:29.490104+00:00"
+  },
+  {
+    "number": 371,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128772972,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371#issuecomment-6128772972",
+    "body_sha256": "0c6d1e499e363006c39127f6e126d1499e818fb7c68f686dd1429ed0ec11297c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:56:40.313597+00:00"
+  },
+  {
+    "number": 378,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128775579,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6128775579",
+    "body_sha256": "f5052415b83bd98a61f7dd2457fbdd62b48b492129d733a45d7086083fb20505",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:56:51.218305+00:00"
+  },
+  {
+    "number": 379,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128778343,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/379#issuecomment-6128778343",
+    "body_sha256": "3e42b8b9c34b98676d8dc495a7713809502fa8b1fa8ef9db100fa23e8a8cf80a",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:02.173117+00:00"
+  },
+  {
+    "number": 386,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128781072,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6128781072",
+    "body_sha256": "42ced582d3ee0201d396edc1af39b1b26852b0d665bdc66c8ecc829ce53ef088",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:13.060196+00:00"
+  },
+  {
+    "number": 390,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128783794,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6128783794",
+    "body_sha256": "79c9ae30e5297b9198d13e1092cb02d2c42b0234d35a474f928b67603437ddba",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:23.936207+00:00"
+  },
+  {
+    "number": 394,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128786661,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/394#issuecomment-6128786661",
+    "body_sha256": "cfc49bea6827d597fe2cde0bac475078979080f21d753bae577b0350706d97af",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:34.750594+00:00"
+  },
+  {
+    "number": 398,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128789542,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6128789542",
+    "body_sha256": "083748baeec6dd5f7194fd4b9be25ac246aa96205c84c129c3a3a5594e170952",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:45.735206+00:00"
+  },
+  {
+    "number": 399,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128792535,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/399#issuecomment-6128792535",
+    "body_sha256": "a50f44524045f9806925d510bb0c705ad0eb96746495da90b23aa5499b156892",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:57:56.750716+00:00"
+  },
+  {
+    "number": 410,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128795595,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6128795595",
+    "body_sha256": "e2047ba17e22bf939fcd36b7638d98bdda0f8c5c843e69712c87e8976c08ef6b",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:58:07.764705+00:00"
+  },
+  {
+    "number": 412,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128798501,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6128798501",
+    "body_sha256": "cc9c0ca3d11a9b9ba3d2d6e438a224215664ffed7589391067f4937c61dfffea",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:58:18.683569+00:00"
+  },
+  {
+    "number": 419,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128801498,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419#issuecomment-6128801498",
+    "body_sha256": "7858bc8af931cba0253dda30cc92e8469fc42834848005b9e37b214af28fdee3",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:58:29.605936+00:00"
+  },
+  {
+    "number": 424,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128804536,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424#issuecomment-6128804536",
+    "body_sha256": "0cc5972591974a2937cd3c2ca8024a4323ac2f5e6f6f7c67d13b86adf8275d83",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:58:40.551984+00:00"
+  },
+  {
+    "number": 427,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128807801,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/427#issuecomment-6128807801",
+    "body_sha256": "c28a1c50f917d530f27919e1e9e0cbea0fbad376ee222a401ab5ef9b7a737377",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:58:51.440713+00:00"
+  },
+  {
+    "number": 428,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128811205,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/428#issuecomment-6128811205",
+    "body_sha256": "933aac7eff7134896097f80dcdc98204203e24c0019351713a316f66b8109ce2",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:02.328294+00:00"
+  },
+  {
+    "number": 430,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128814554,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6128814554",
+    "body_sha256": "172983ca620cc18f2859d4e0211b8f91c227430ffcf604ca713ba3eaa2d8302f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:13.272826+00:00"
+  },
+  {
+    "number": 433,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128817729,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433#issuecomment-6128817729",
+    "body_sha256": "45abe018dc05a4d8086249b26a4caa64570088d51ab4ea697f71279ba5e2e674",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:24.194563+00:00"
+  },
+  {
+    "number": 434,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128820781,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6128820781",
+    "body_sha256": "a8158ec57f76d335d7b5a73abbe68cb17e5e953cf92a25fc793c0215d6d959db",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:35.169527+00:00"
+  },
+  {
+    "number": 563,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128823637,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563#issuecomment-6128823637",
+    "body_sha256": "2251bd8e29f151a7b3a6e4fe5f5f345d4dc0f5121666642089223fc6ab8a3dfc",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:46.262224+00:00"
+  },
+  {
+    "number": 581,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128826555,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6128826555",
+    "body_sha256": "946069b42e5ad5e626f556e4bb2d79c535539f7ade12f2adaecc8b7c7cb866d7",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T16:59:57.213858+00:00"
+  },
+  {
+    "number": 586,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128829530,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/586#issuecomment-6128829530",
+    "body_sha256": "1eea7ab023e0609081507d24da72be24f047b3d71a4d06e38b414e83883c8e5e",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:00:08.658521+00:00"
+  },
+  {
+    "number": 587,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128832375,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6128832375",
+    "body_sha256": "ac61dd3a656f33ef7c23466febf6347d1cb8a2718f3364793f7e748cae2b1715",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:00:19.596302+00:00"
+  },
+  {
+    "number": 588,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128835342,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6128835342",
+    "body_sha256": "38fc99faa9b91481cd1bf518159cde88c3706b56561a9f984f2b6047863b07fd",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:00:31.590285+00:00"
+  },
+  {
+    "number": 606,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128838411,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/606#issuecomment-6128838411",
+    "body_sha256": "dd8d16325052213a7cd8cc93612d190e2556204186ab82758affd2a82193fbd9",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:00:42.408643+00:00"
+  },
+  {
+    "number": 638,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128841350,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/638#issuecomment-6128841350",
+    "body_sha256": "31a138a8df74858a92047d83fa9c35d36621ec80fa1524ae9f27f6a77e23a27d",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:00:53.302474+00:00"
+  },
+  {
+    "number": 639,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128844285,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6128844285",
+    "body_sha256": "32230c4695268cba2ee7ce098f6aa9a17947a52da954e289d9eeb76fc7d2864a",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:04.258992+00:00"
+  },
+  {
+    "number": 640,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128847310,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6128847310",
+    "body_sha256": "4ac351caddfe80bf1feaf5c2d417aa411f92113aa910c6680fbebfd5936f2e14",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:15.239788+00:00"
+  },
+  {
+    "number": 641,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128850120,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6128850120",
+    "body_sha256": "acef2a98eb6837b0583e164dad324508682a8b5427a1ba8abed91f62d4730240",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:26.255882+00:00"
+  },
+  {
+    "number": 642,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128853154,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6128853154",
+    "body_sha256": "7cf1e501957648afd872fac3940cab5d92f9e2cb7e200fc508869dc56e24474d",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:37.932363+00:00"
+  },
+  {
+    "number": 670,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128856136,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670#issuecomment-6128856136",
+    "body_sha256": "9d9a6f0fa70faf527225e15d8c82f5adda1215e09f6193263354c7d3e8d22e66",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:48.899176+00:00"
+  },
+  {
+    "number": 671,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128859229,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/671#issuecomment-6128859229",
+    "body_sha256": "86f3ec0f83e03eb5a86261d59a8f6b918b2347e6519bde72069c7983cd8828a5",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:01:59.807333+00:00"
+  },
+  {
+    "number": 672,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128862302,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/672#issuecomment-6128862302",
+    "body_sha256": "20c6bf89f5a1ab73055ba01ace95af8ceacb94d31be377a8094b73a756fb3c00",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:02:11.107962+00:00"
+  },
+  {
+    "number": 747,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128865209,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747#issuecomment-6128865209",
+    "body_sha256": "108e64c20e745fd02a239d19866dfb85a002971cfaaa11669b09420d173fd5b3",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:02:22.068196+00:00"
+  },
+  {
+    "number": 749,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128868006,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6128868006",
+    "body_sha256": "a78ec084fb8139e7ffc15982349bc0a52e5726c58724ea3ecd7824d105b767f6",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:02:32.880796+00:00"
+  },
+  {
+    "number": 750,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128870870,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750#issuecomment-6128870870",
+    "body_sha256": "d10c469ddbe9f3258bed746d3a4238e3f5311eed37dc33e73b890832b66044e2",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:02:44.223433+00:00"
+  },
+  {
+    "number": 751,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128873731,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6128873731",
+    "body_sha256": "ccbdd3479d9b2b2dbda70d2b6fcddf3d4a3b08efea137c1d515f9a9d0f3eb52c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:02:55.457707+00:00"
+  },
+  {
+    "number": 774,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128876414,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/774#issuecomment-6128876414",
+    "body_sha256": "c9e22c854ed28d911925e4b7da5abf0d26b20ff0f46de241a88b2940babbf075",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:03:06.222946+00:00"
+  },
+  {
+    "number": 778,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128879364,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778#issuecomment-6128879364",
+    "body_sha256": "75cc0a085791fc57cefe69e0f00e5bd43ed2d9afb678b68c76d6ea4d0c6a7d2c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:03:17.899810+00:00"
+  },
+  {
+    "number": 779,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128882254,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779#issuecomment-6128882254",
+    "body_sha256": "a540d27940da9b8ded6784dfd647b8308d5729f161da7e544ef95ec6b6df0447",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:03:28.983266+00:00"
+  },
+  {
+    "number": 780,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128885021,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780#issuecomment-6128885021",
+    "body_sha256": "ffea72446a0a638ad67048396452a02745e7ae246ba997a0e602d385696a6612",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:03:39.919731+00:00"
+  },
+  {
+    "number": 781,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128887782,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781#issuecomment-6128887782",
+    "body_sha256": "c68c636b3efb2c3f5f0b5cdc495d6c61a67b96afa676086f064e624ac49be950",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:03:50.713965+00:00"
+  },
+  {
+    "number": 782,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128890358,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6128890358",
+    "body_sha256": "385cd7c20b1694c2e5b9646a2b97afe6751f49bddbd07af76c53e3a30776707f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:01.503225+00:00"
+  },
+  {
+    "number": 783,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128893168,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6128893168",
+    "body_sha256": "4596706d570d33a9e938911b3cf88ec11450d18381b7b70426607e07c1eed6fe",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:12.984590+00:00"
+  },
+  {
+    "number": 784,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128895966,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6128895966",
+    "body_sha256": "737cb5f6bee09c3ea902fe4ea6f554cb00aee9487ad42727b9395ae1ea2db40b",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:24.172908+00:00"
+  },
+  {
+    "number": 785,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128898751,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6128898751",
+    "body_sha256": "47eb4dc061d05b23ff51428f260b5cd91a612c70c08614ff28bc2a5f47db5e5e",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:35.166971+00:00"
+  },
+  {
+    "number": 786,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128901581,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786#issuecomment-6128901581",
+    "body_sha256": "b3289dcd56453295282f66f9e834387cc4496e9fbb12431632a8ea02c6e2a84f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:46.020775+00:00"
+  },
+  {
+    "number": 787,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128904266,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/787#issuecomment-6128904266",
+    "body_sha256": "f43361d126531c6ba9af6fef1db051d1878315bdab3dfc7c58cc91eb2186ac00",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:04:56.973662+00:00"
+  },
+  {
+    "number": 801,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128906949,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/801#issuecomment-6128906949",
+    "body_sha256": "1721a2c2a7ce698e8317d2c640f8bbd6cc8b3e337dbd7b8f54e55e723e0b49e4",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:05:07.926621+00:00"
+  },
+  {
+    "number": 802,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128909619,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/802#issuecomment-6128909619",
+    "body_sha256": "c04c6ef4bdba8820c5cbf62d21d1e5ea4ea24bf70fc91e2c41733a2404186630",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:05:18.894509+00:00"
+  },
+  {
+    "number": 835,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128912293,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/835#issuecomment-6128912293",
+    "body_sha256": "9a6d48e68f2a6c58ebc0fc5d631503ae161bdbd18f9e2d3bed63abc7498e61cd",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:05:29.672758+00:00"
+  },
+  {
+    "number": 855,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128914995,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855#issuecomment-6128914995",
+    "body_sha256": "18ea70da46d2c06dd069f1fd96ab694b980a2d4528484f462a4e69a9c5e17920",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:05:40.715532+00:00"
+  },
+  {
+    "number": 862,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128917723,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/862#issuecomment-6128917723",
+    "body_sha256": "ad8b013208e96cd6cea8770a575e23d349a970ccb64325d2d94fde6be0048e3c",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:05:51.641597+00:00"
+  },
+  {
+    "number": 950,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128920392,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/950#issuecomment-6128920392",
+    "body_sha256": "c88545e529cc528832f0057a473b7c339b14a76b55eb016f1019582b2bcdba44",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:02.551057+00:00"
+  },
+  {
+    "number": 951,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128923110,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/951#issuecomment-6128923110",
+    "body_sha256": "346cf8dfb1054bbf1f95401d328b0e775149ccbca1765469e5c483719f2a7f0f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:13.417346+00:00"
+  },
+  {
+    "number": 952,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128925736,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/952#issuecomment-6128925736",
+    "body_sha256": "a6d2e19dd4ee5caf39377df4e65fcbda73a74d591a0bfced71cc600648f51a9b",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:24.378990+00:00"
+  },
+  {
+    "number": 953,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128928410,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/953#issuecomment-6128928410",
+    "body_sha256": "fd00433b523672c0fa4860cc2b65661bc32587a2e5776274f5b1761e1d573921",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:35.305417+00:00"
+  },
+  {
+    "number": 963,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128931165,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6128931165",
+    "body_sha256": "3740a076319b93b3cb8a199d4d37a1ffa3c315c949faeb0fbbf58ca6b35665fd",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:46.483847+00:00"
+  },
+  {
+    "number": 964,
+    "kind": "issue",
+    "state_at_capture": "closed",
+    "comment_id": 6128933829,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/964#issuecomment-6128933829",
+    "body_sha256": "17342b071ecef086e23e2f10f6a31dd3167dc18732e9bf609d7ccda1b420c138",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:06:57.459046+00:00"
+  },
+  {
+    "number": 965,
+    "kind": "issue",
+    "state_at_capture": "open",
+    "comment_id": 6128936608,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/965#issuecomment-6128936608",
+    "body_sha256": "7495dee48169a2947be8f32d862cf4a1b704bbf1522c5900f3f3f2e3be839215",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:07:08.578330+00:00"
+  },
+  {
+    "number": 968,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128939403,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/968#issuecomment-6128939403",
+    "body_sha256": "4702b3bd70b347474485da68b08e674c2f5ba2eff415cc4ad09352978eda3ff2",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:07:19.687928+00:00"
+  },
+  {
+    "number": 969,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128942457,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/969#issuecomment-6128942457",
+    "body_sha256": "0979c2414ee9963892745dbae5bf31d8ef29cb37440301c0153f27ba50680c43",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:07:30.917141+00:00"
+  },
+  {
+    "number": 970,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128945437,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/970#issuecomment-6128945437",
+    "body_sha256": "f430e529e651c7a56cf59c77cf8709ce1003e963c4b632d774ab3b0a45b1f64f",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:07:42.390813+00:00"
+  },
+  {
+    "number": 971,
+    "kind": "PR",
+    "state_at_capture": "open",
+    "comment_id": 6128948245,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/971#issuecomment-6128948245",
+    "body_sha256": "ea64bdd31310572e54deaeabaeb769806654c5d18a96947fcf1922e9fe0ced60",
+    "remote_body_exact": true,
+    "verified_at": "2026-10-12T17:07:53.800927+00:00"
   }
 ]
