@@ -1,0 +1,46 @@
+{
+  "state": "required actual readback; NOT an executable inverse witness",
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primary_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "database_oid": 16447,
+  "clients_stopped": false,
+  "before_year2000_chunks": null,
+  "before_fixture_rows": null,
+  "manifest_run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "added_chunks": [
+    {
+      "table": "climate",
+      "name": null,
+      "owned_rows": null,
+      "other_rows": null,
+      "range_start": null,
+      "range_end": null
+    },
+    {
+      "table": "diagnostics",
+      "name": null,
+      "owned_rows": null,
+      "other_rows": null,
+      "range_start": null,
+      "range_end": null
+    },
+    {
+      "table": "equipment_state",
+      "name": null,
+      "owned_rows": null,
+      "other_rows": null,
+      "range_start": null,
+      "range_end": null
+    }
+  ],
+  "row_sha256": {
+    "climate_source_events": null,
+    "observational_source_events": null,
+    "equipment_state_source_receipts": null
+  },
+  "immutable_trigger": {
+    "enabled": null,
+    "function_sha256": null
+  },
+  "do_not_fill_from_offline_fixture_tests": true
+}

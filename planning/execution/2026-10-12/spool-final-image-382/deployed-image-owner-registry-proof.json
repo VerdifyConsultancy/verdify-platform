@@ -1,0 +1,112 @@
+{
+  "config_digest": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+  "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "layers": [
+    {
+      "digest": "sha256:26c307b5e35a59ce911f5fde5b9458120ec8734e831ea2da5649a9ad14abfd3d",
+      "head_status": 200,
+      "size": 29780765
+    },
+    {
+      "digest": "sha256:f5ea60e5d57e62f66284f9d9d3d6531b3e213ae0317ac34ac1bc89d0aea60e50",
+      "head_status": 200,
+      "size": 1293272
+    },
+    {
+      "digest": "sha256:c915bfca5450ca312ac59414e14f2889a3461e4fb3a5267b4b7eab95a83fbdc0",
+      "head_status": 200,
+      "size": 11907466
+    },
+    {
+      "digest": "sha256:31a024bb115af91f13f0a42f2e1bf3766c5aad8a2e9984729f9e0b1c38c1378f",
+      "head_status": 200,
+      "size": 249
+    },
+    {
+      "digest": "sha256:7a24977215b33dec36b0da36d1e5a9b421d77138e25eb5961df22bb1ab9845df",
+      "head_status": 200,
+      "size": 730
+    },
+    {
+      "digest": "sha256:c4b785710414cfc66357f318489356cabe08c47568a9480fccb6e23b58116204",
+      "head_status": 200,
+      "size": 303
+    },
+    {
+      "digest": "sha256:6b4bac37deb447d6e954406d48b8a7dca32699146b84d1c1d8d53ad02865e7b1",
+      "head_status": 200,
+      "size": 32537978
+    },
+    {
+      "digest": "sha256:96379570537c826cbd779f12cfd97a1b399c8fff6e6cb0f38b4db4a8362129bf",
+      "head_status": 200,
+      "size": 436529
+    },
+    {
+      "digest": "sha256:9d56be7fe449a1f53f89fa773e1a083c9eb7b808978978b93424e2a60d59acde",
+      "head_status": 200,
+      "size": 6291
+    },
+    {
+      "digest": "sha256:744cb555b488c2c845efe59d971247c9d2ff39c7bf20c34233f3de61725fcadf",
+      "head_status": 200,
+      "size": 45318
+    },
+    {
+      "digest": "sha256:bbeb32d7793babcdb647eb7f09eaff1b30435f09f625c331dcd45af3d0154130",
+      "head_status": 200,
+      "size": 1805
+    },
+    {
+      "digest": "sha256:d64e5bfc2efeadbd8b478584ea2cb8c09b5eb2cbe965892912d863ad6fcb2ff8",
+      "head_status": 200,
+      "size": 1138
+    },
+    {
+      "digest": "sha256:f64842b71534b5f678ba6708478ddcbbe75741d23c60366857ddf87b70fa2a69",
+      "head_status": 200,
+      "size": 25554
+    },
+    {
+      "digest": "sha256:93d2c7b264ca107caf58e227fa9905d3aecd45834a8f4816459fd03a5a4d44cf",
+      "head_status": 200,
+      "size": 266954
+    },
+    {
+      "digest": "sha256:1095ae3722490690ea88afea0a95e8d8416277d6c37297c074145012a7ac87ba",
+      "head_status": 200,
+      "size": 991404
+    },
+    {
+      "digest": "sha256:815657865965159d8a57612428b1b040eae38ac3c3395aff571ec9d1db1b3960",
+      "head_status": 200,
+      "size": 2328039
+    },
+    {
+      "digest": "sha256:b8101e6e48ea442265492d14bb75aa19ea4ac477c84cd3e935db4d6f83fba391",
+      "head_status": 200,
+      "size": 4109094
+    }
+  ],
+  "manifest_digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "oci_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "oci_source": "https://github.com/VerdifyConsultancy/verdify-platform",
+  "pod": {
+    "name": "verdify-platform-ci-8wkb8-build-2192892057",
+    "stage": 3,
+    "step": "build-ingestor",
+    "uid": "399688ed-1774-477b-aedf-d680a00f7a49"
+  },
+  "schema": "verdify-built-image-registry-verification/v1",
+  "scope": "Manifest/config bytes match their digests; all layer HEAD sizes match. Layer bytes were not independently rehashed.",
+  "source_env": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "source_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "stage": 3,
+  "verified_at": "2026-10-12T19:27:22.486230+00:00",
+  "workflow": {
+    "name": "verdify-platform-ci-8wkb8",
+    "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "uid": "a94200db-a899-45f8-95d1-80bea935a093"
+  }
+}

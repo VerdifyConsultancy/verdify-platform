@@ -19,13 +19,20 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-SOURCE = "4b5b30c8dc1f86a0390193d82fe7b61d39b3b008"
-MODULE_SHA = "ea56f9c331b6ee9271fa3856fd55379636b3efa5a72f9d7acec0d21ff4f84aff"
-IMAGE = "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:cbdd4419dd74d9857092a8e7f44f0a7a94d4916b1a6b0a94f3593b81cb70481b"
+SOURCE = "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+MODULE_SHA = "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d"
+IMAGE = "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+CLUSTER = "verdify-cnpg-s2-integration"
+SYSTEM_IDENTIFIER = "7693399121498484768"
+MODULE_SHAS = {
+    "ingestor.py": MODULE_SHA,
+    "source_spool.py": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+    "observation_spool.py": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+}
 LOGIN = "verdify_ingestor_runtime_login"
-HOST = "verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local"
-CLUSTER_UID = "4f697776-df25-4e22-b930-0b76cf35496e"
-PRIMARY_UID = "6379db06-2bad-4c5b-9a50-86feac4651dc"
+HOST = "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local"
+CLUSTER_UID = "b087a146-58c5-4d98-8054-09094d22ecfe"
+PRIMARY_UID = "45cbb6ef-a246-4448-9111-8d1a2ba4afad"
 PHASES = ("unavailable", "crash-climate", "crash-observation", "crash-equipment", "replay", "duplicate", "conflict")
 
 
@@ -120,7 +127,8 @@ def prepared_manifest():
 
 def require_authority(binding):
     assert binding["cluster_uid"] == CLUSTER_UID and binding["primary_uid"] == PRIMARY_UID
-    assert binding["database_oid"] == 16447 and binding["cluster"] == "verdify-cnpg-s2"
+    assert binding["database_oid"] == 16447 and binding["cluster"] == CLUSTER
+    assert binding["system_identifier"] == SYSTEM_IDENTIFIER
     assert binding["consumer_image"] == IMAGE and binding["consumer_source"] == SOURCE
     for key in ("sealed_admission_sha256", "protected_backup_wal_receipt_sha256"):
         value = binding[key]
@@ -143,7 +151,8 @@ async def run(args):
     require_authority(binding)
     directory = Path("/qualification-state") / ("s2-db-replay-" + manifest["run_id"])
     path = Path("/app/ingestor/ingestor.py")
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == MODULE_SHA
+    for filename, expected in MODULE_SHAS.items():
+        assert hashlib.sha256((path.parent / filename).read_bytes()).hexdigest() == expected
     sys.path.insert(0, str(path.parent))
     spec = importlib.util.spec_from_file_location("qualified_committed_ingestor", path)
     consumer = importlib.util.module_from_spec(spec)
@@ -169,6 +178,7 @@ async def run(args):
         "consumer_image": IMAGE,
         "consumer_source": SOURCE,
         "consumer_module_sha256": MODULE_SHA,
+        "consumer_modules_sha256": MODULE_SHAS,
         "target_binding": {k: binding[k] for k in ("cluster_uid", "primary_uid", "database_oid")},
         "normal_main_started": False,
         "fresh_device_confirmation_claimed": False,
@@ -216,7 +226,7 @@ async def run(args):
             )
             assert identity["current_user"] == identity["session_user"] == LOGIN
             assert identity["database"] == "verdify_rehearsal" and identity["database_oid"] == 16447
-            assert identity["cluster_name"] == "verdify-cnpg-s2" and identity["replica"] is False
+            assert identity["cluster_name"] == CLUSTER and identity["replica"] is False
             assert identity["backend_address"] == binding["primary_address"]
         result["identity"] = identity
         collector = await consumer.create_equipment_source_pool()

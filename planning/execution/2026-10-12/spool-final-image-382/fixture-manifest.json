@@ -1,0 +1,61 @@
+{
+  "events": {
+    "climate": {
+      "event": {
+        "connection_generation": 7,
+        "greenhouse_id": "vallery",
+        "row": {
+          "temp_avg": 70.0,
+          "ts": "2000-01-01T00:00:00.168626+00:00"
+        },
+        "runtime_instance_id": "f4d61647-6648-4d8d-a19a-802e07638a7c",
+        "sample_provenance": {
+          "temp_avg": {
+            "connection_generation": 7,
+            "received_at": "2000-01-01T00:00:00.168626+00:00",
+            "runtime_instance_id": "f4d61647-6648-4d8d-a19a-802e07638a7c",
+            "source": "s2-qualification"
+          }
+        }
+      },
+      "identity": "4cc32461-2d38-402e-a97a-75105d9694ce"
+    },
+    "diagnostics": {
+      "event": {
+        "connection_generation": 7,
+        "greenhouse_id": "vallery",
+        "observed_at": "2000-01-01T00:00:00.168626+00:00",
+        "payload": {
+          "firmware_version": "s2-qualification"
+        },
+        "runtime_instance_id": "f4d61647-6648-4d8d-a19a-802e07638a7c"
+      },
+      "identity": "24e3fbd7-43b2-4676-9873-5ac888db7484"
+    },
+    "equipment": {
+      "event": {
+        "events": [
+          {
+            "equipment": "fan1",
+            "event_id": "48ba4a45-2c6d-4605-b529-1eb93dea52ff",
+            "firmware_revision": "s2-qualification",
+            "source_connection_generation": 7,
+            "source_observed_at": "2000-01-01T00:00:00.168626+00:00",
+            "source_runtime_instance_id": "f4d61647-6648-4d8d-a19a-802e07638a7c",
+            "state": false
+          }
+        ],
+        "firmware_revision": "s2-qualification",
+        "gap_requested": true,
+        "gap_version": 1,
+        "receipt_id": "e386f4fe-4c90-42b1-a954-0996ed009304",
+        "source_connection_generation": 7,
+        "source_observed_through": "2000-01-01T00:00:00.168626+00:00",
+        "source_runtime_instance_id": "f4d61647-6648-4d8d-a19a-802e07638a7c"
+      },
+      "identity": "e386f4fe-4c90-42b1-a954-0996ed009304"
+    }
+  },
+  "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "schema": "s2-committed-spool-v1"
+}

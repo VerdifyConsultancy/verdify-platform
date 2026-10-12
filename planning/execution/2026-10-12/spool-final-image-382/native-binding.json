@@ -1,0 +1,27 @@
+{
+  "binding_state": "accepted historical custody; fresh identical owner identity/isolation/seals required before release; not a current capacity grant",
+  "cluster": "verdify-cnpg-s2-integration",
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "consumer_modules_sha256": {
+    "ingestor.py": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+    "observation_spool.py": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+    "source_spool.py": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983"
+  },
+  "consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "database": "verdify_rehearsal",
+  "database_oid": 16447,
+  "full_native_count_time_parity": true,
+  "primary_address": "10.42.6.178",
+  "primary_name": "verdify-cnpg-s2-integration-1",
+  "primary_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "protected_backup_wal": true,
+  "protected_backup_wal_receipt_sha256": "321582b9efddd5689251e128c647d74c6d6fe783d4141cb763ab204bb42de35b",
+  "rw_service_uid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "sealed_admission_sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "sequence77_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+  "server_version_num": 160013,
+  "study42_receipt_sha256": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0",
+  "system_identifier": "7693399121498484768",
+  "whole952_receipt_sha256": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8"
+}

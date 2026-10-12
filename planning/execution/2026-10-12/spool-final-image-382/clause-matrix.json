@@ -1,0 +1,43 @@
+{
+  "schema": "verdify-382-bounded-clause-matrix-v1",
+  "issue_state": "open/partial",
+  "current_execution": "prepared-only, no target calls or objects",
+  "clauses": [
+    {
+      "clause": "accepted buffer survives declared abrupt-process/interrupted-ACK/cross-worker retained-volume boundary",
+      "retained": "3 queues x1000 exact UUID/payload/source time/runtime/generation and FIFO; old actual image/PVC/Pod receipts remain attributed",
+      "new_credit": false,
+      "remaining": "Join final-image committed SQL replay without relabeling historical source; physical host power loss remains unproved"
+    },
+    {
+      "clause": "DB commit before ACK / immutable duplicate conflict / zero unexplained loss",
+      "retained": "source functions and local component regressions; no accepted seven-phase PostgreSQL run",
+      "remaining": "Exact seven serial final-image phases, real native commit/row hashes, queue states, SQLSTATEP0001 and bounded elapsed/RSS; packet is not execution"
+    },
+    {
+      "clause": "no invented fresh confirmation or reordered writer generations",
+      "retained": "historical FIFO/source-time/runtime/generation relocation proof and source historical INSERT-only APIs",
+      "remaining": "Owned native source lineage hashes, unchanged protected control/study/confirmation seals; one diagnostics event and generation7 do not alone prove all observation kinds or generation transitions"
+    },
+    {
+      "clause": "capacity/backlog/recovery/format rollback measured and documented",
+      "retained": "component SQLite-full/format999/v1 restoration and actual warning/clear receipts; post-mount decode0.47834s",
+      "remaining": "Actual final-image spool replay elapsed/peak; do not call historical decode DB replay RTO or infer current cache/fit from old free space"
+    },
+    {
+      "clause": "safe exact fixture inverse and study/data seal",
+      "retained": "same integration target admitted275;952 relations/9699553rows,77 sequences,42 study records resealed after earlier independent role window",
+      "remaining": "New owned row/chunk inverse + exact two-role credential inverse + actual sequence deltas; all952/77/42/native metadata must return exact. Wrong subject_id receipt guard corrected source-only."
+    }
+  ],
+  "native_missing_predicates": [
+    "Root-coordinated sole target writer/window and applicable current capacity",
+    "Exact current cached c6cc image on proposed node7 (Never pull)",
+    "Fresh identical Cluster/primary/Service/OID/systemID/backend and target policy/no runner",
+    "Fresh exact952/77/42/catalog baseline and no existing fixture/window/chunks",
+    "Actual two required LOGIN metadata/custody and supported exact verifier inverse",
+    "Actual phase witnesses, dynamic exact inverse facts and final seals"
+  ],
+  "new_jason_decision": null,
+  "production_changes": false
+}

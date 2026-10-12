@@ -25,6 +25,17 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
+def frozen_receipt_reference_sql(receipt_id):
+    """Exact receipt keys in frozen canonical bundles; subject_id is a study ID."""
+    receipt = literal(str(uuid.UUID(receipt_id)))
+    bundle = "convert_from(source_bundle_canonical,'UTF8')::jsonb"
+    variables = f"jsonb_build_object('receipt',{receipt}::text)"
+    return " OR ".join(
+        f"jsonb_path_exists({bundle},'$.**.{key} ? (@ == $receipt)',{variables})"
+        for key in ("receipt_id", "source_receipt_id")
+    )
+
+
 def render(manifest, witness):
     probe.validate_manifest(manifest)
     assert witness["cluster_uid"] == probe.CLUSTER_UID and witness["primary_uid"] == probe.PRIMARY_UID
@@ -74,9 +85,9 @@ def render(manifest, witness):
     row_guard += f" AND EXISTS(SELECT 1 FROM public.observational_source_events WHERE event_id={literal(diagnostics['identity'])}::uuid AND kind='diagnostics' AND greenhouse_id='vallery' AND source_ts={qts}::timestamptz AND source_runtime_instance_id={qruntime}::uuid AND source_connection_generation=7 AND event_payload={literal(json.dumps(diagnostics['event']['payload']))}::jsonb)"
     body = [
         "BEGIN; SET LOCAL statement_timeout='30s'; SET LOCAL lock_timeout='5s';",
-        "DO $guard$ BEGIN IF current_user<>'postgres' OR session_user<>'postgres' OR current_database()<>'verdify_rehearsal' OR current_setting('cluster_name')<>'verdify-cnpg-s2' OR pg_is_in_recovery() OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16447 THEN RAISE EXCEPTION 'clone inverse authority refused';END IF; END $guard$;",
+        f"DO $guard$ BEGIN IF current_user<>'postgres' OR session_user<>'postgres' OR current_database()<>'verdify_rehearsal' OR current_setting('cluster_name')<>{literal(probe.CLUSTER)} OR pg_is_in_recovery() OR (SELECT system_identifier::text FROM pg_control_system())<>{literal(probe.SYSTEM_IDENTIFIER)} OR current_setting('server_version_num')::int<>160013 OR inet_client_addr() IS NOT NULL OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16447 THEN RAISE EXCEPTION 'clone inverse authority refused';END IF; END $guard$;",
         "LOCK TABLE public.climate_source_events, public.observational_source_events, public.equipment_state_source_receipts, public.climate, public.diagnostics, public.equipment_state IN ACCESS EXCLUSIVE MODE;",
-        f"DO $guard$ BEGIN IF NOT ({row_guard} AND {chunk_guards}) OR EXISTS(SELECT 1 FROM public.experiment_v2_outcome_source_bindings WHERE subject_id={equipment_id}::uuid) OR NOT EXISTS(SELECT 1 FROM public.equipment_state_source_receipts WHERE receipt_id={equipment_id}::uuid AND source_connection_generation=7 AND source_runtime_instance_id={qruntime}::uuid AND source_observed_through={qts}::timestamptz AND gap_requested AND gap_before AND gap_reason='initial_receipt' AND source_sequence=1 AND event_count=1 AND firmware_revision='s2-qualification') THEN RAISE EXCEPTION 'owned fixture/chunk/experiment guard refused'; END IF; END $guard$;",
+        f"DO $guard$ BEGIN IF NOT ({row_guard} AND {chunk_guards}) OR EXISTS(SELECT 1 FROM public.experiment_v2_outcome_source_bindings WHERE {frozen_receipt_reference_sql(equipment['identity'])}) OR NOT EXISTS(SELECT 1 FROM public.equipment_state_source_receipts WHERE receipt_id={equipment_id}::uuid AND source_connection_generation=7 AND source_runtime_instance_id={qruntime}::uuid AND source_observed_through={qts}::timestamptz AND gap_requested AND gap_before AND gap_reason='initial_receipt' AND source_sequence=1 AND event_count=1 AND firmware_revision='s2-qualification') THEN RAISE EXCEPTION 'owned fixture/chunk/experiment guard refused'; END IF; END $guard$;",
         f"DO $guard$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.equipment_state_source_receipts'::regclass AND tgname='trg_equipment_state_source_receipts_immutable' AND tgenabled={literal(trigger['enabled'])} AND encode(sha256(convert_to(pg_get_functiondef(tgfoid),'UTF8')),'hex')={literal(trigger['function_sha256'])}) THEN RAISE EXCEPTION 'original immutable trigger custody refused';END IF; END $guard$;",
         "ALTER TABLE public.equipment_state_source_receipts DISABLE TRIGGER trg_equipment_state_source_receipts_immutable;",
         f"DELETE FROM public.equipment_state_source_receipts WHERE receipt_id={equipment_id}::uuid;",

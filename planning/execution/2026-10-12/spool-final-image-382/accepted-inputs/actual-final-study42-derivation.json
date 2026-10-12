@@ -1,0 +1,373 @@
+{
+  "schema": "verdify-study42-derived-from-complete-copy-v1",
+  "target": "verdify-cnpg-s2-integration",
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "stage": "admitted275/post-authentication-and-exact-inverses",
+  "tables": [
+    {
+      "table": "control_assignments",
+      "rows": 0,
+      "copy_header": "COPY public.control_assignments (assignment_id, experiment_id, greenhouse_id, pair_index, block_index, arm_label, operation_kind, slot_id, scheduler_ref, reason, algorithm, algorithm_version, valid_range, frozen_strata, status, locked_at, created_by, created_at, updated_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "crop_assignment_revisions",
+      "rows": 10,
+      "copy_header": "COPY public.crop_assignment_revisions (revision_id, recorded_at, operation, crop_id, greenhouse_id, crop, crop_sha256, transaction_id) FROM stdin;",
+      "row_multiset_sha256": "0865b58fe52c0ae762116bfa58a31fb8eab2a9756690d1945d01fad6ec095e4a",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_approvals",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_approvals (approval_id, experiment_id, approval_kind, scope_name, issue_number, approval_ref, artifact_sha256, revision_bundle_sha256, valid_range, expires_at, supervisor_role, rescue_owner_role, approved_by, approved_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_bundle_attempts",
+      "rows": 560,
+      "copy_header": "COPY public.experiment_v2_bundle_attempts (attempt_id, experiment_id, work_id, purpose, requested_bundle_id, canonical_bundle_id, outcome, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "1701e6c62939dd5e2961e816ac99a1cb4f3f6f7be64f79b90fcc46a5680d3b09",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_candidate_revisions",
+      "rows": 1,
+      "copy_header": "COPY public.experiment_v2_candidate_revisions (revision_bundle_sha256, experiment_id, transport_kind, firmware_revision, config_revision, registry_revision, grid_revision, study_id, assignment_namespace_uuid, supersedes_revision_bundle_sha256, configured_by, configured_at) FROM stdin;",
+      "row_multiset_sha256": "e1a3c9f778eef1f0e8c1a42460dc8630f368f45564ec162f74699ff18e3acfc5",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_component_outcomes",
+      "rows": 6263,
+      "copy_header": "COPY public.experiment_v2_component_outcomes (component_outcome_id, experiment_id, work_id, bundle_id, wire_id, delivery_status, reason, writer_generation, connection_generation, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "b698a6d8074e482565d573a774885b5a9b23d03566050af5431f588823a856ea",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_contract_constants",
+      "rows": 1,
+      "copy_header": "COPY public.experiment_v2_contract_constants (singleton, observation_receipt_schema_sha256, schedule_schema_sha256) FROM stdin;",
+      "row_multiset_sha256": "39ad3bc821ad326bb21d47637983af0058173902e3b06a251bb0720f1c2aabd7",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_day_evidence",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_day_evidence (assignment_id, experiment_id, deviation_payload, deviation_sha256, fidelity_payload, fidelity_sha256, environment_payload, environment_sha256, integrity_payload, integrity_sha256, evidence_bundle_sha256, integrity_passed, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_delivery_bundle_completions",
+      "rows": 26,
+      "copy_header": "COPY public.experiment_v2_delivery_bundle_completions (bundle_id, bundle_finished_at, completed_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "983043fe5d0960c43e458e1d780efd539de151becabde9ea6333dd5da95bfac4",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_delivery_bundles",
+      "rows": 43,
+      "copy_header": "COPY public.experiment_v2_delivery_bundles (bundle_id, experiment_id, work_id, device_id, purpose, started_by, started_at) FROM stdin;",
+      "row_multiset_sha256": "9ce3fd8bb30502c80fac4a990bbd6317139a012fc00762eb23accaa2173bb065",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_launch_waivers",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_direct_launch_waivers (waiver_id, experiment_id, revision_bundle_sha256, issue_number, authorization_ref, qualification_artifact_sha256, profile_artifact_sha256, baseline_before_evidence_sha256, aggressive_evidence_sha256, baseline_after_evidence_sha256, proof_valid_range, supervisor_role, rescue_owner_role, compiled_qualified_fields, compiled_unqualified_fields, waived_stages, design_lock_sha256, source_git_sha, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_attempt_events",
+      "rows": 5,
+      "copy_header": "COPY public.experiment_v2_direct_proof_attempt_events (attempt_event_id, authorization_id, experiment_id, event_kind, successor_authorization_id, reason, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "d387e541fc65f0b0890e23454201cbdc01e230a1ae7c46cece938fdb4e0b56e1",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_attempt_work",
+      "rows": 6,
+      "copy_header": "COPY public.experiment_v2_direct_proof_attempt_work (authorization_id, experiment_id, stage, work_id, bound_at) FROM stdin;",
+      "row_multiset_sha256": "60106818fc7ff59ef48393a4873555561f4b2709b5e7f552dba5f039011dc7a1",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_authorizations",
+      "rows": 3,
+      "copy_header": "COPY public.experiment_v2_direct_proof_authorizations (authorization_id, experiment_id, revision_bundle_sha256, issue_number, authorization_ref, proof_valid_range, supervisor_role, rescue_owner_role, authorized_by, authorized_at, attempt_number) FROM stdin;",
+      "row_multiset_sha256": "e3fb601bd5a36889bafaca50834948f6c6bf86893058caefdcfb3e7166a65c3d",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_emergency_recovery_attempt_events",
+      "rows": 8,
+      "copy_header": "COPY public.experiment_v2_direct_proof_emergency_recovery_attempt_events (recovery_attempt_event_id, authorization_id, experiment_id, failed_resolution_id, successor_resolution_id, reason, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "69e4c725aa84cafdfd7ba076214835a5fcbe29455bc9dd845ba8fb26d6b4490e",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_emergency_recovery_receipts",
+      "rows": 3,
+      "copy_header": "COPY public.experiment_v2_direct_proof_emergency_recovery_receipts (resolution_id, authorization_id, experiment_id, recovery_work_id, recovery_evidence_sha256, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "ce68929f5d86b36a2c89a3b3b9105cd7276fb0e38fe39637081dcf499c8f99de",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_emergency_resolutions",
+      "rows": 11,
+      "copy_header": "COPY public.experiment_v2_direct_proof_emergency_resolutions (resolution_id, authorization_id, experiment_id, resolution_kind, expected_revision_bundle_sha256, expected_emergency_lease_generation, facility_authorization_ref, safe_state_artifact_sha256, recovery_work_id, recovery_valid_range, reason, recorded_by, recorded_at, recovery_attempt_number) FROM stdin;",
+      "row_multiset_sha256": "1348fa5bbad43cc17050bcd6604866575e0b5634a852254a98a81ad95efb82af",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_direct_proof_receipts",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_direct_proof_receipts (proof_receipt_id, authorization_id, experiment_id, revision_bundle_sha256, baseline_before_work_id, aggressive_work_id, baseline_after_work_id, baseline_before_evidence_sha256, aggressive_evidence_sha256, baseline_after_evidence_sha256, proof_valid_range, proof_receipt_sha256, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_exports",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_exports (experiment_id, export_payload, export_sha256, evidence_bundle_sha256, analyzer_environment_sha256, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_exposure_closures",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_exposure_closures (exposure_id, ended_at, close_reason, writer_generation, connection_generation, closed_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_exposures",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_exposures (exposure_id, experiment_id, work_id, assignment_id, device_id, first_receipt_id, second_receipt_id, state_content_sha256, started_at, opened_by, opened_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_facility_safe_closures",
+      "rows": 1,
+      "copy_header": "COPY public.experiment_v2_facility_safe_closures (experiment_id, authorization_ref, safe_state_artifact_sha256, safe_state_kind, closed_by, closed_at, closed_lease_generation) FROM stdin;",
+      "row_multiset_sha256": "d6db99168d908aaaa059af1cbc1519f9b958d763ee2939bb26717e86eb07f4d7",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_observation_epochs",
+      "rows": 25,
+      "copy_header": "COPY public.experiment_v2_observation_epochs (source_epoch_id, experiment_id, work_id, bundle_id, wire_vector, observations, first_observed_at, last_observed_at, firmware_revision, config_revision, registry_revision, grid_revision, runtime_instance_id, writer_generation, connection_generation, persisted_at, recorded_by) FROM stdin;",
+      "row_multiset_sha256": "0c394f724888efe4f229e9565adf4d4f635179fb501f7e93702241045aee4ce5",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_observation_receipts",
+      "rows": 25,
+      "copy_header": "COPY public.experiment_v2_observation_receipts (receipt_id, source_epoch_id, experiment_id, work_id, bundle_id, policy_state_content_sha256, canonical_payload, canonical_payload_sha256, observation_receipt_sha256, payload, persisted_at) FROM stdin;",
+      "row_multiset_sha256": "ef6cf0d3779217240e654b6994725f3627f158c249ef6a7e50db1e71aea06c57",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_outcome_freezes",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_outcome_freezes (assignment_id, outcome_payload, delivery_failed, fallback_used, facility_rescue, zero_value_retained, null_value_retained, exposure_seconds, expected_seconds, outcome_sha256, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_outcome_source_bindings",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_outcome_source_bindings (source_kind, subject_id, experiment_id, local_date, timezone, window_start_at, window_end_at, revision_bundle_sha256, outcome_schema_sha256, endpoint_artifact_sha256, analyzer_environment_sha256, source_bundle_canonical, source_bundle_sha256, delivery_failed, fallback_used, facility_rescue, resolved_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_outcomes",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_outcomes (assignment_id, experiment_id, pair_index, day_index, blinded_arm, assigned_local_date, itt_range, created_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_preexposure_mismatch_epochs",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_preexposure_mismatch_epochs (source_epoch_id, experiment_id, work_id, bundle_id, device_id, expected_state_content_sha256, expected_wire_vector, observed_state_content_sha256, observed_wire_vector, observations, first_observed_at, last_observed_at, firmware_revision, config_revision, registry_revision, grid_revision, runtime_instance_id, lease_generation, writer_generation, connection_generation, source_epoch_sha256, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_randomization",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_randomization (experiment_id, secret_bytes, x_physical_arm, y_physical_arm, schedule, schedule_sha256, mapping_commitment_sha256, design_lock_sha256, source_git_sha, schedule_schema_sha256, algorithm_revision, finalization_receipt, finalization_receipt_sha256, no_redraw, generated_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_reveals",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_reveals (experiment_id, export_sha256, revealed_secret, mapping_payload, mapping_payload_sha256, reproduced_schedule_sha256, reproduced_commitment_sha256, reveal_receipt_sha256, revealed_by, revealed_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_runtime_faults",
+      "rows": 94,
+      "copy_header": "COPY public.experiment_v2_runtime_faults (fault_report_id, experiment_id, device_id, fault_source, source_epoch_sha256, reported_fault_kind, reason, reported_lease_generation, current_lease_generation, reporter_runtime_instance_id, reporter_writer_generation, reporter_connection_generation, current_runtime_instance_id, current_writer_generation, current_connection_generation, lease_mismatch, runtime_mismatch, exposure_id, close_reason, recovery_work_id, admission_state_after, authority_hold_required, facility_authority_yielded, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "3ee658b0b97a678806996456cc15f214a23c3e77c6ca7b6e693c68af35f839a3",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_runtime_generations",
+      "rows": 225,
+      "copy_header": "COPY public.experiment_v2_runtime_generations (generation_event_id, experiment_id, device_id, runtime_instance_id, writer_generation, connection_generation, restart_detected, reconnect_detected, recovery_work_id, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "130fe21b1a4b59c593f4e5ea665fc2792caa02bba0625df12f045dff7c81d256",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_runtime_snapshots",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_runtime_snapshots (source_epoch_id, experiment_id, device_id, exposure_id, work_id, target_state_content_sha256, target_wire_vector, observed_state_content_sha256, observed_wire_vector, observations, first_observed_at, last_observed_at, firmware_revision, config_revision, registry_revision, grid_revision, runtime_instance_id, writer_generation, connection_generation, common_field_drift, cfg_drift, lineage_drift, reset_detected, foreign_writer, close_reason, recovery_work_id, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_selector_choices",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_selector_choices (assignment_id, experiment_id, assigned_local_date, choice_id, invocation_key, choice_status, selected_profile, fallback_reason, context_sha256, context_schema_sha256, identity_sha256, raw_request_sha256, raw_response_sha256, attempt_receipt_sha256, selector_artifact_sha256, virtual_choice_sha256, recorded_by, recorded_at, accepted_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_selector_contexts",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_selector_contexts (assignment_id, experiment_id, assigned_local_date, context_cutoff_at, boundary_at, context_status, context_payload, context_canonical_bytes, context_sha256, source_bundle_sha256, source_max_at, failure_reason, context_schema_sha256, selector_identity_sha256, selector_artifact_sha256, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_shadow_choices",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_shadow_choices (cycle_id, experiment_id, local_date, choice_id, invocation_key, choice_status, selected_profile, fallback_reason, context_sha256, selector_identity_sha256, raw_request_sha256, raw_response_sha256, attempt_receipt_sha256, selector_artifact_sha256, virtual_a_profile, virtual_a_state_content_sha256, virtual_b_profile, virtual_b_state_content_sha256, virtual_choice_sha256, accepted_at, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_shadow_contexts",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_shadow_contexts (cycle_id, experiment_id, context_status, context_payload, context_canonical_bytes, context_sha256, source_bundle_sha256, source_max_at, failure_reason, context_schema_sha256, selector_identity_sha256, selector_artifact_sha256, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_shadow_cycles",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_shadow_cycles (cycle_id, experiment_id, work_id, local_date, context_cutoff_at, boundary_at, outcome_start_at, outcome_end_at, context_schema_sha256, selector_identity_sha256, selector_artifact_sha256, endpoint_artifact_sha256, outcome_schema_sha256, revision_bundle_sha256, lease_generation, created_by, created_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_shadow_outcome_previews",
+      "rows": 0,
+      "copy_header": "COPY public.experiment_v2_shadow_outcome_previews (cycle_id, experiment_id, outcome_payload, endpoint_artifact_sha256, outcome_schema_sha256, outcome_preview_sha256, frozen_by, frozen_at) FROM stdin;",
+      "row_multiset_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_state_artifacts",
+      "rows": 3,
+      "copy_header": "COPY public.experiment_v2_state_artifacts (state_artifact_id, experiment_id, revision_bundle_sha256, profile, wire_schema_version, wire_manifest_digest, wire_vector, state_content_sha256, recorded_by, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "30f57a8abcbba4415afe54e5142613126877a52c6a71476bfbd6f31f77d6f9e9",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_work",
+      "rows": 111,
+      "copy_header": "COPY public.experiment_v2_work (work_id, experiment_id, assignment_id, parent_work_id, execution_phase, operation_kind, target_profile, target_state_content_sha256, revision_bundle_sha256, firmware_revision, config_revision, registry_revision, grid_revision, lease_generation, valid_range, expires_at, created_by, created_at) FROM stdin;",
+      "row_multiset_sha256": "d188eff24f8dc8d7eefec0b6e958c1ca9ca41caf56bd93d4eb026f34ac55676e",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    },
+    {
+      "table": "experiment_v2_work_events",
+      "rows": 322,
+      "copy_header": "COPY public.experiment_v2_work_events (work_event_id, experiment_id, work_id, event_kind, worker_ref, claim_expires_at, detail, recorded_at) FROM stdin;",
+      "row_multiset_sha256": "1312c373241142c01b755d6be458232a88ef92c66eb8f2b65bffc0fd4abdbd0c",
+      "baseline_exact": true,
+      "historical_study42_row_count_exact": true
+    }
+  ],
+  "table_count": 42,
+  "all_exact": true,
+  "row_values_read_or_exported": false,
+  "new_target_SQL_executed": false,
+  "protocol": "existing cnpg-complete-native-copy-receipt-v1 row_multiset_sha256, not the historical study42 MD5/JSON serialization",
+  "custody": [
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/full951-preparation-receipt.json",
+      "sha256": "d236818807d8c3165609bda2a49a84dec314cab18c1ee56e2551794c5a59fc7f"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-a-b-recovery-proposal-once/a-full951-copy/receipt.json",
+      "sha256": "0d7bbd6a42cb5e0a7ec89153710eff6240f6ec6f155a1bb41e7a3bbcbdd6f912"
+    },
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/actual-target/pre-full951-in-pod/receipt.json",
+      "sha256": "53f48ad8688409cc38cb1fc24cd207ae81ec02e80fb760dd7d3847327e699fdc"
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-s2-completion-20261011/frozen-sequences-study-fresh/a-study42.json",
+      "sha256": "b6a8cf8d9459c25eed6e5ee89852210da816fabe111ac94b074262efadda4dfb"
+    }
+  ],
+  "historical_md5_compared_to_sha256": false,
+  "limits": [
+    "READ ONLY consumer seams and transaction-rollback role fixtures do not establish full application, HTTP, physical, or native harness48/48 behavior"
+  ],
+  "current_admitted952_receipt_sha256": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8",
+  "prefixture_study42_sha256": "3c98a8fdc3f459b599b6179c937fed9843af69a424ff5865d938fca736ea3305"
+}

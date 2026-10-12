@@ -1,0 +1,28 @@
+{
+  "apiVersion": "v1",
+  "kind": "PersistentVolumeClaim",
+  "metadata": {
+    "annotations": {
+      "verdify.ai/execution-state": "prepared-not-created-capacity-owner-release-required"
+    },
+    "labels": {
+      "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+      "app.kubernetes.io/part-of": "verdify",
+      "verdify.ai/qualification-run": "7fa4f802",
+      "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+    },
+    "name": "verdify-s2-spool-382-7fa4f802",
+    "namespace": "verdify-db-rehearsal"
+  },
+  "spec": {
+    "accessModes": [
+      "ReadWriteOnce"
+    ],
+    "resources": {
+      "requests": {
+        "storage": "2Gi"
+      }
+    },
+    "storageClassName": "longhorn-v1-workspace-rwo"
+  }
+}

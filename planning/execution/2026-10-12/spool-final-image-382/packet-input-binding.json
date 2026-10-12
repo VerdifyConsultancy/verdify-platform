@@ -1,0 +1,26 @@
+{
+  "accepted_recovery_commit": "b4eb826ab3efd4204b5ef8263caceac0f8f67887",
+  "compressed_image_layer_bytes": 83732889,
+  "compressed_layer_bytes_are_not_unpacked_storage": true,
+  "consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "consumer_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "execution_or_acceptance_claimed": false,
+  "fixture_sha256": "2d51ae37f5a64c346fb7586765cda9bb1dd65add528c1fab7c2b1ce2baa5378a",
+  "helper_sha256": "10140120cc3553129a736ec2e203b3d67a34bcd0a2c61e7bf92b437e72e0a19f",
+  "independent_reseal_review_commit": "e1a79f1925c34f4c52207fa3c46e6d5ae7b4eecc",
+  "inverse_sha256": "cc6fb8f3a543c9bf0d6dc9066f1b02937acea2413c69bd599fbaf3e8b613eea4",
+  "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+  "module_sha256": {
+    "ingestor.py": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+    "observation_spool.py": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+    "source_spool.py": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983"
+  },
+  "native_binding_sha256": "86baa61bb7ad19139ed904abb4dd616fd6f0852b8aac7cb7aebdb9276a7c7a64",
+  "payload_configmap_manifest_sha256": "78366b591b02ef2e219685dbcb1176e987dadab1bc8086b8afad578a2fa581ed",
+  "production_identity_source": "existing sole-release-owner post-sync receipt; no new production probe from this lane",
+  "production_ingestor_pod_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+  "production_promotion": "d43919e933eb1be69559be7566853ff69a64e903",
+  "release_owner_receipt_commit": "bd7f71de172540714567b1e78d3be85710add3ad",
+  "schema": "verdify-382-immutable-preparation-input-binding-v1"
+}

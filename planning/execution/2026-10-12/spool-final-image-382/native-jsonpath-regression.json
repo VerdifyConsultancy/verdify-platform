@@ -1,0 +1,53 @@
+{
+  "scope": "isolated Mac-local PostgreSQL predicate, no rehearsal/production connection",
+  "serverVersionNum": "160015",
+  "predicate": "jsonb_path_exists(convert_from(source_bundle_canonical,'UTF8')::jsonb,'$.**.receipt_id ? (@ == $receipt)',jsonb_build_object('receipt','11111111-2222-4333-8444-555555555555'::text)) OR jsonb_path_exists(convert_from(source_bundle_canonical,'UTF8')::jsonb,'$.**.source_receipt_id ? (@ == $receipt)',jsonb_build_object('receipt','11111111-2222-4333-8444-555555555555'::text))",
+  "cases": [
+    {
+      "case": "chain_match",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "case": "transition_match",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "case": "deep_match",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "case": "unrelated_receipt",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "case": "subject_id_only",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "case": "substring_is_not_match",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    },
+    {
+      "case": "empty_bundle",
+      "expected": false,
+      "actual": false,
+      "pass": true
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "tcpListen": false,
+  "targetAcceptanceClaimed": false
+}

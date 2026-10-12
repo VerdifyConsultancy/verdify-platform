@@ -1,0 +1,159 @@
+{
+  "execution_state": "not-executed",
+  "fixture_sha256": "2d51ae37f5a64c346fb7586765cda9bb1dd65add528c1fab7c2b1ce2baa5378a",
+  "packet_configmap": "verdify-s2-spool-382-packet-42858c05f6",
+  "packet_uncompressed_sha256": "78366b591b02ef2e219685dbcb1176e987dadab1bc8086b8afad578a2fa581ed",
+  "phases": [
+    {
+      "expected_local_queue_rows": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 0,
+        "diagnostics": 0,
+        "equipment": 0
+      },
+      "expected_native_process_exit": 0,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-unavailable",
+      "ordinal": 1,
+      "phase": "unavailable",
+      "phase_accepted": false,
+      "prepared_manifest": "job-1-unavailable.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-1",
+      "sql_witness_requires_previous_hashes_unchanged": false
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 0,
+        "equipment": 0
+      },
+      "expected_native_process_exit": 74,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-crash-climate",
+      "ordinal": 2,
+      "phase": "crash-climate",
+      "phase_accepted": false,
+      "prepared_manifest": "job-2-crash-climate.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-2",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 0
+      },
+      "expected_native_process_exit": 74,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-crash-observation",
+      "ordinal": 3,
+      "phase": "crash-observation",
+      "phase_accepted": false,
+      "prepared_manifest": "job-3-crash-observation.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-3",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_process_exit": 74,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-crash-equipment",
+      "ordinal": 4,
+      "phase": "crash-equipment",
+      "phase_accepted": false,
+      "prepared_manifest": "job-4-crash-equipment.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-4",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 0,
+        "diagnostics": 0,
+        "equipment": 0
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_process_exit": 0,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-replay",
+      "ordinal": 5,
+      "phase": "replay",
+      "phase_accepted": false,
+      "prepared_manifest": "job-5-replay.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-5",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 0,
+        "diagnostics": 0,
+        "equipment": 0
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_process_exit": 0,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-duplicate",
+      "ordinal": 6,
+      "phase": "duplicate",
+      "phase_accepted": false,
+      "prepared_manifest": "job-6-duplicate.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-6",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    },
+    {
+      "expected_local_queue_rows": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_owned_rows_per_ledger_and_corresponding_telemetry": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      },
+      "expected_native_process_exit": 0,
+      "expected_wrapper_exit": 0,
+      "job": "verdify-s2-spool-382-7fa4f802-conflict",
+      "ordinal": 7,
+      "phase": "conflict",
+      "phase_accepted": false,
+      "prepared_manifest": "job-7-conflict.prepared.json",
+      "required_owner_release_configmap": "verdify-s2-spool-382-release-7fa4f802-7",
+      "sql_witness_requires_previous_hashes_unchanged": true
+    }
+  ],
+  "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "schema": "verdify-382-final-image-seven-phase-preparation-v1",
+  "spool_pvc": "verdify-s2-spool-382-7fa4f802",
+  "temporary_auth_secret": "verdify-s2-spool-382-auth-7fa4f802"
+}

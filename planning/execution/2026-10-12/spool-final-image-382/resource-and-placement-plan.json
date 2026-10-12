@@ -1,0 +1,51 @@
+{
+  "allocation_state": "prepared-only-no-current-fit-grant",
+  "cached_placement": {
+    "fresh_cache_presence_unpacked_size_current_ram_obligations_and_NVMe_R2_placement_required": true,
+    "historical_build_pod_uid": "399688ed-1774-477b-aedf-d680a00f7a49",
+    "historical_cache_observation": "image built and registry verified at19:27Z on node7; cache is not current-admitted",
+    "image_pull_policy": "Never",
+    "new_image_build": false,
+    "proposed_node": "vm-k3s-node7"
+  },
+  "new_spool": {
+    "R2_incremental_physical_gib": 4,
+    "allocation_not_authorized_yet": true,
+    "claim_gib": 2,
+    "retain_by_default": true,
+    "storage_class": "longhorn-v1-workspace-rwo"
+  },
+  "retained_reseal_measurement": {
+    "duration_seconds": 47.225597,
+    "native_bytes_streamed": 2457973781,
+    "parser_peak_rss_kib": 511844,
+    "raw_rows_persisted": false,
+    "this_is_not_spool_replay_RTO": true
+  },
+  "serial_jobs": {
+    "active_deadline_seconds": 180,
+    "backoff_limit": 0,
+    "ephemeral_limit": "512Mi",
+    "ephemeral_request": "128Mi",
+    "limit_cpu": "1",
+    "limit_memory": "1Gi",
+    "max_simultaneous": 1,
+    "measured_job_peak_rss_kib": null,
+    "measurement": "wrapper records real child peak RSS/elapsed incl native74 crash; additionally owner captures Pod/cgroup/node pressure peak and database peak; no extrapolation from request",
+    "request_cpu": "250m",
+    "request_memory": "512Mi",
+    "spool_payload_limit_per_queue_bytes": 1048576,
+    "spool_rows_limit_per_queue": 20,
+    "tmp_emptyDir_limit": "64Mi"
+  },
+  "shared_obligations": "Refresh Retry/Storage current RAM/root/log/cache obligations before owner release; charge only shared physical backing; no unrelated Longhorn/build gate.",
+  "shared_target_existing": {
+    "already_allocated": true,
+    "backing": "passthrough worker NVMe distinct from Proxmox/root-filesystem thin backing",
+    "database_limits_total_memory_gib": 18,
+    "database_requests_total_memory_gib": 6,
+    "do_not_charge_existing_occupied_bytes_as_new_growth": true,
+    "logical_gib": 75,
+    "longhorn_R2_physical_gib": 150
+  }
+}

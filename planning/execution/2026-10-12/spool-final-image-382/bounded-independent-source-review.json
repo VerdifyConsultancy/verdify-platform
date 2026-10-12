@@ -1,0 +1,12 @@
+{
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "scope": "bounded static source patch + README/wrapper/phase plan/native SQL + crash-equipment manifest/CM",
+  "result": "no actionable defect",
+  "source_patch_review": "fixed current source/module/image/UID/cluster/systemid guards and exact canonical receipt references preserve strict authority",
+  "final_configmap": "verdify-s2-spool-382-packet-42858c05f6",
+  "payload_configmap_uncompressed_sha256": "78366b591b02ef2e219685dbcb1176e987dadab1bc8086b8afad578a2fa581ed",
+  "jobs_suspended": true,
+  "native_roles_cache_capacity": "explicitly unverified current admission prerequisites",
+  "tests_edits_target_calls_by_reviewer": false,
+  "execution_acceptance_claimed": false
+}

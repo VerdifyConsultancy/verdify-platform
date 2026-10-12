@@ -1,0 +1,19 @@
+{
+  "allowed": false,
+  "binding_sha256": "86baa61bb7ad19139ed904abb4dd616fd6f0852b8aac7cb7aebdb9276a7c7a64",
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "database_oid": 16447,
+  "fresh_baseline_exact": false,
+  "fresh_capacity_fit": false,
+  "fresh_isolation_verified": false,
+  "helper_sha256": "10140120cc3553129a736ec2e203b3d67a34bcd0a2c61e7bf92b437e72e0a19f",
+  "manifest_sha256": "2d51ae37f5a64c346fb7586765cda9bb1dd65add528c1fab7c2b1ce2baa5378a",
+  "owner_instruction": "EXAMPLE ONLY: capture current readbacks; create one immutable actual release per admitted serial phase, never blanket-release all Jobs",
+  "phase": "unavailable",
+  "previous_phase_accepted": false,
+  "primary_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "rw_service_uid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "sole_target_writer": "/root/runtime_inventory",
+  "system_identifier": "7693399121498484768"
+}
