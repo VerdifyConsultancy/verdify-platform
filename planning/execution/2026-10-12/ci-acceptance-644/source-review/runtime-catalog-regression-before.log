@@ -1,0 +1,26 @@
+test_stage_records_one_repository_receipt_for_both_exports (__main__.ExecutableImageExportTests.test_stage_records_one_repository_receipt_for_both_exports) ... FAIL
+
+======================================================================
+FAIL: test_stage_records_one_repository_receipt_for_both_exports (__main__.ExecutableImageExportTests.test_stage_records_one_repository_receipt_for_both_exports)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py", line 817, in test_stage_records_one_repository_receipt_for_both_exports
+    runtime_catalog.assert_called_once_with(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        "b" * 40, staged["candidate_releases"]["runtime"]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py", line 998, in assert_called_once_with
+    return self.assert_called_with(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/unittest/mock.py", line 986, in assert_called_with
+    raise AssertionError(_error_message()) from cause
+AssertionError: expected call not found.
+Expected: _updated_runtime_catalog('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', {'accepted_agents_revision': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'build_run': 'repo-build-agents-agent-dev-runtime-abcde', 'image_digest': 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 'installed_bytes_sha256': 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'workflow_observation': {'schema': 'agent-fleet.vallery.net/repo-build-workflow-observation/v1', 'namespace': 'agent-fleet-ci', 'name': 'repo-build-agents-agent-dev-runtime-abcde', 'uid': 'runtime-workflow-uid', 'resource_version': '12345', 'generation': 1, 'accepted_workflow_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'stable_pre_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'stable_post_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'spec_sha256': 'sha256:8888888888888888888888888888888888888888888888888888888888888888', 'status_sha256': 'sha256:7777777777777777777777777777777777777777777777777777777777777777', 'nodes_sha256': 'sha256:6666666666666666666666666666666666666666666666666666666666666666', 'outputs_sha256': 'sha256:5555555555555555555555555555555555555555555555555555555555555555'}})
+  Actual: _updated_runtime_catalog('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', {'accepted_agents_revision': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'build_run': 'repo-build-agents-agent-dev-runtime-abcde', 'image_digest': 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 'installed_bytes_sha256': 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'workflow_observation': {'schema': 'agent-fleet.vallery.net/repo-build-workflow-observation/v1', 'namespace': 'agent-fleet-ci', 'name': 'repo-build-agents-agent-dev-runtime-abcde', 'uid': 'runtime-workflow-uid', 'resource_version': '12345', 'generation': 1, 'accepted_workflow_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'stable_pre_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'stable_post_sha256': 'sha256:9999999999999999999999999999999999999999999999999999999999999999', 'spec_sha256': 'sha256:8888888888888888888888888888888888888888888888888888888888888888', 'status_sha256': 'sha256:7777777777777777777777777777777777777777777777777777777777777777', 'nodes_sha256': 'sha256:6666666666666666666666666666666666666666666666666666666666666666', 'outputs_sha256': 'sha256:5555555555555555555555555555555555555555555555555555555555555555'}})
+
+----------------------------------------------------------------------
+Ran 1 test in 0.364s
+
+FAILED (failures=1)

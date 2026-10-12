@@ -1,0 +1,172 @@
+{
+  "clauses": [
+    {
+      "clause": "exact-source-success",
+      "covered": "Current batch 8wkb8 UID a94200db-a899-45f8-95d1-80bea935a093 succeeded at exact cb21; qualified tree equals frozen 973. Five selected profiles published and all 74 registry/config/layer references independently verified by sole release owner.",
+      "evidence": "attended-release-evidence.json; source-review/source-review-matrix.json",
+      "limit": "This proves the attended batch with operator cleanup fences. It does not qualify unattended cleanup, automatic retry, concurrent promotion, product behavior or recovery.",
+      "next_safe_execution": "No repeated success build required.",
+      "status": "PASS_ATTENDED"
+    },
+    {
+      "clause": "path-aware-classification",
+      "covered": "Actual main classification selected api/mcp/ingestor/setpoint-server/lab-publisher out of eight. Generated owner registry/classifier source is authoritative. Planning/tests/pins do not rebuild applications; docs/ and site/docs remain actual image inputs.",
+      "evidence": "attended-release-evidence.json; source-review/offline-tests.json",
+      "limit": "Metadata-only source SHA differences do not require all-image rebuilds. Existing ORCH candidate has independently matched 28 inputs at older baked source.",
+      "next_safe_execution": "Reuse exact classification and release input receipts.",
+      "status": "PASS_SOURCE_AND_NATIVE"
+    },
+    {
+      "clause": "pin-commit-no-recursion",
+      "covered": "Authentic promotion54b98ee6 native Workflow kpkzx finished Succeeded with profiles[], all 8 application builds and actuator Skipped. Current promotion d439 classifier profiles[].",
+      "evidence": "historical-evidence.json; attended-release-evidence.json",
+      "limit": "Current d439 terminal native no-recursion event not reread by this lane. Historical event is valid evidence, not a promise of future absence.",
+      "next_safe_execution": "Reuse Retry current promotion native observation if already available; no additional build/event needed.",
+      "status": "PASS_HISTORICAL_NATIVE_AND_CURRENT_SOURCE"
+    },
+    {
+      "clause": "source-failure",
+      "covered": "Authenticated nonexistent40-SHA commit fetch failed128; native/broker Failed and durable terminal journal with 10 failed fetch attempts retained; no publication. Current reducer/tests deny failed success.",
+      "evidence": "historical-evidence.json; source-review/source-review-matrix.json",
+      "limit": "This is source-fetch failure, not a deliberate assertion failure. The wider ##4014 deliberate-test-failure criterion remains estate scope and is not invented as a new #644 gate.",
+      "next_safe_execution": "No new source-failure injection required for this bounded exercise.",
+      "status": "PASS_RETAINED_AUTHENTIC_EXERCISE"
+    },
+    {
+      "clause": "infrastructure-failure",
+      "covered": "Authentic h48bd source abafb7 failed trusted registry-capacity preflight before compile: signal-stale, blocked; no pin actuator. Current reducer fails closed on Failed/Error/unknown.",
+      "evidence": "historical-evidence.json; source-review/source-review-matrix.json",
+      "limit": "Argo phaseError is not mandated by original644 exercise clause. Later f48 fix-forward is a distinct source and gives no automatic retry credit.",
+      "next_safe_execution": "Keep exact failure and cause; no new live failure probe.",
+      "status": "PASS_RETAINED_AUTHENTIC_EXERCISE"
+    },
+    {
+      "clause": "native-cancellation",
+      "covered": "ExactUID authorized redundant native cancellation745q9 produced Failed/not_accepted. Oct11 exactUID native Terminate cancelled validation before checks, retained 0 running Pods.",
+      "evidence": "historical-evidence.json",
+      "limit": "This does not establish broker-supported authenticated cancellation/observation.",
+      "next_safe_execution": "Reuse retained native receipts; no duplicate cancellation.",
+      "status": "PASS_RETAINED_NATIVE_EXERCISE"
+    },
+    {
+      "clause": "authenticated-cancel-observation",
+      "covered": "Oct11 authentic before-Terminate observation accepted; post-Terminate observation rejected sealed content because spec.shutdown changed. Removing only shutdown privately/in-memory restored Failed observation. Current sealed snapshot/source boundaries are retained.",
+      "evidence": "historical-evidence.json; original planning/execution/2026-10-11/cancel-observation-seal-diagnosis.json",
+      "limit": "Do not ignore shutdown globally or weaken sealed-spec validation. A real authenticated owner-controlled cancel/terminal observation path is not proved.",
+      "next_safe_execution": "Owner source task: preserve exact sealed submission and permit only an authenticated, exactUID/CAS cancellation transition; test same/foreignUID, altered source/spec and terminal re-observation before any future live use.",
+      "status": "OPEN_OWNER_INTERFACE"
+    },
+    {
+      "clause": "missing-wrong-terminal-receipt",
+      "covered": "Current reducer tests reject missing classifier/UID/selected build/exact source/wrong digest and refuse failed/unknown/cancelled stages. Trusted fixed publisher emits success only after invocation custody and alias publication.",
+      "evidence": "source-review/source-review-matrix.json; source-review/offline-tests.json",
+      "limit": "No live receipt omission was injected. The local native expression evaluator was unavailable and its one test skipped; existing exact973/native caller receipts are separate evidence.",
+      "next_safe_execution": "No live receipt mutation/injection required; retain source and existing native receipts.",
+      "status": "PASS_SOURCE_FAIL_CLOSED"
+    },
+    {
+      "clause": "deployed-missing-artifact-consumer",
+      "covered": "Historical real-origin observer rejects absent 31e and accepts present cbdd. Historical deployed resume accepted succeeded journal with absent artifact. Owner #4763 client/broker availability code is merged; current source delivery contract is build-required with null candidate releases.",
+      "evidence": "historical-evidence.json; owner-delivery-source-state.json",
+      "limit": "Scoped current WorkflowTemplate adoption is not broker/runtime image consumer adoption. No current read-only authenticated missing/present resume pair was executed here.",
+      "next_safe_execution": "First bind actual broker/runtime source bytes and existing image/Workflow/native receipts. Once source adoption is attested, observe the retained absent/present operations through the actual authenticated repo identity; no new build, deletion, artifact fault or credential read is required for the observation pair.",
+      "status": "OPEN_ADOPTION_AND_ACTUAL_OBSERVATION"
+    },
+    {
+      "clause": "idempotent-request-replay",
+      "covered": "Same authenticated request retained same Workflow UID c67941c3-70fa-4ff6-bbf8-f2cc3bb5d772, same creation/handle, new_executionfalse. Existing source separates intentional retry purpose keys.",
+      "evidence": "historical-evidence.json; source-review/source-review-matrix.json",
+      "limit": "Historical ce239 image metadata limitations remain; no claim of final promotion from that build.",
+      "next_safe_execution": "Reuse exact replay receipt; do not duplicate a build.",
+      "status": "PASS_RETAINED_AUTHENTIC_EXERCISE"
+    },
+    {
+      "clause": "governed-same-source-recovery-retry",
+      "covered": "Retained broker 4d1 integrity failure followed by intentional same-source retry UID456ab7f0-86bf-4873-8040-9373b4e8514f eventually succeeded and produced 2fb digest.",
+      "evidence": "historical-evidence.json",
+      "limit": "Governed intentional recovery retry differs from automatic infrastructure retry. An early Running file is not terminal proof.",
+      "next_safe_execution": "Reuse final resume receipt and failed attempt; no duplicate recovery build.",
+      "status": "PASS_RETAINED_AUTHENTIC_EXERCISE"
+    },
+    {
+      "clause": "unattended-automatic-retry",
+      "covered": "Current sources bound validation retry/deadlines; builder invocations preserve unique Workflow custody tags, and reducer requires final terminal success. The latest batch was attended and operator-fenced.",
+      "evidence": "source-review/source-review-matrix.json; attended-release-evidence.json",
+      "limit": "Neither idempotent replay nor manual governed retry proves automatic infrastructure retry/cleanup safety.",
+      "next_safe_execution": "Future owning Fleet execution should exercise only the established bounded automatic-retry case and prior-attempt custody once, when that live scope is separately scheduled. No new global capacity/audit gate.",
+      "status": "NOT_PROVED"
+    },
+    {
+      "clause": "concurrent-candidate-promotion",
+      "covered": "Two real isolated local Git processes executed exact historical actuator tail: first ordinary push wins, second non-fast-forward rejects, winner and rollback unchanged; moved-source guard skips. Current source retains moved-main skip and non-force HEAD:main push.",
+      "evidence": "historical-evidence.json; source-review/source-review-matrix.json",
+      "limit": "Original exercise criterion does not explicitly require live overlap. Later owner discussions retain authenticated live overlap as unproved. Successful build reducer verdict does not prove pin promotion when moved-main skip exits0.",
+      "next_safe_execution": "Reuse exact source/nativeGit proof. Any future live overlap must be owner-scoped and cannot run alongside the sole active release writer; no race submitted by this lane.",
+      "status": "PASS_HISTORICAL_EXACT_SOURCE_LOCAL_GIT; LIVE_NOT_PROVED"
+    },
+    {
+      "clause": "builder-publisher-authority",
+      "covered": "Historical builderSA denial plus fresh 8 named validator/publisher checks deny production Secret reads, Pod creation, Deployment and Argo Application patch. Fixed publisher executes no repository input; Git candidate pin actuator is distinct from builder.",
+      "evidence": "historical-evidence.json; attended-release-evidence.json; source-review/source-review-matrix.json",
+      "limit": "Named Kubernetes authorization does not alone prove all GitHub/promoter privileges. Generic builder Pod retains minimal workflowtaskresults authority; full result-authority separation is not claimed.",
+      "next_safe_execution": "Keep current exact roles/mounts and builder/publisher boundaries; no production mutation probe/device connection required.",
+      "status": "PASS_BOUNDED_SOURCE_AND_NAMED_NATIVE_NEGATIVES"
+    },
+    {
+      "clause": "ordinary-validation-secrets-and-network",
+      "covered": "Actual repository-code validation container has automountfalse/noAPI or executor token/noGitHub or production credentials. Trusted fetch sidecar separately consumes Git credential. Historical ordinarySA Secret get/list denied and attributed CNI DB reject with alive target/Gitpositive retained.",
+      "evidence": "historical-evidence.json; attended-release-evidence.json; source-review/source-review-matrix.json",
+      "limit": "No device/OTA endpoint/authentication probe was made; source/mount/RBAC/network contracts are the bounded evidence.",
+      "next_safe_execution": "Reuse exact native mount and negative receipt; do not connect a second device client.",
+      "status": "PASS_BOUNDED_NATIVE_AND_SOURCE"
+    },
+    {
+      "clause": "immutable-consumer-rollback-pins",
+      "covered": "Reviewed d439 promotion binds candidate digests, all 7 current/previous release pins, exact prod render and before/after hashes, single ingestor/Recreate. Root reports exact d439 SyncedHealthy and singleton expected digest.",
+      "evidence": "attended-release-evidence.json",
+      "limit": "Runtime/live product acceptance remains Retry-owned and distinct from source/build. This lane did not run smoke/device or two-hour observation.",
+      "next_safe_execution": "Attach Retry final desired/running identity + real runtime acceptance receipt when complete; no second promotion/sync.",
+      "status": "PASS_REVIEWED_CURRENT_RECEIPT; RUNTIME_OWNER_PENDING"
+    },
+    {
+      "clause": "owner-link-and-current-branch-policy",
+      "covered": "Product644 links owner4014; superseding bounded #4763 merged b874 and current caller #4806 merged d86 adopted through scoped WFT-only operation. PR4747 and64bab remain preserved. Current product main policy measured: linear history; no required status/review, no effective rules/rulesets.",
+      "evidence": "contract-snapshot.json; current-branch-policy.json; attended-release-evidence.json",
+      "limit": "Whole#4014 estate completion, full shared application sync or merging old #4747 are not invented blanket #644 predecessors. Reliability remains incomplete, so this source lane adds no new branch policy.",
+      "next_safe_execution": "Root owns planning/issue disposition. Keep required-check rollout deferred until actual applicable reliability matrix is accepted.",
+      "status": "PASS_READBACK"
+    },
+    {
+      "clause": "runtime-catalog-source-label",
+      "covered": "Real stage accepts current broker d86 and older runtime b874 with 144 byte-identical COPY inputs, then incorrectly labels runtime catalog d86. Local one-argument correction binds requested runtime revision; original assertion fails and34 delivery tests pass, plus realGit corrected stage.",
+      "evidence": "owner-source-fix.json; owner-source-fix.patch; owner-source-fix.bundle; source-review/split-runtime-catalog-after.json",
+      "limit": "No closure comparison, catalog-conflict protection or shared-revision finalize boundary changed. No generated catalog/image/pin changed. Owner commit 6f1 local only; no owner remote branch/PR/nativeCI/build/deployment.",
+      "next_safe_execution": "Owning Agents writer can integrate exact source patch through its normal source-only checks after coordinating current owner head; not part of the completed Verdify release cohort.",
+      "status": "FIXED_LOCAL_TESTED_NOT_DELIVERED"
+    }
+  ],
+  "not_required_by_this_matrix": [
+    "Whole#4014 estate completion",
+    "Merging or rebasing preserved superseded mixed #4747",
+    "A broad shared CI Argo sync",
+    "A new build/capacity framework or global audit gate",
+    "New device/OTA fault probes",
+    "Repeating retained source/infra/native-cancel/idempotency exercises solely because they are historical"
+  ],
+  "remaining_finite_path": [
+    "Owning Agents source integration of bounded metadata fix, preserving exact source/candidate/rollback custody and current live holds.",
+    "Bind adopted broker/runtime bytes to existing delivery receipts, then read-only authenticate retained absent/present operation observation pair.",
+    "Resolve authenticated cancel/terminal-observe interface without weakening the sealed submission boundary.",
+    "Retain unattended retry and authenticated overlap as unproved until a separately coordinated finite owning Fleet execution; do not schedule them during Retry production work.",
+    "Reuse Retry final runtime/949/observation receipt; root decides issue/branch-policy disposition against the applicable scoped matrix."
+  ],
+  "schema": "verdify.ci-644-acceptance-clause-matrix/v1",
+  "scope": "Source/read-only/offline review after 07e7097e. No liveCI/controller/template/main/registry/build/Job/promotion/hardware/credential/custody/production mutation. Artifact branch publication only.",
+  "sources": {
+    "attended_receipt": "07e7097e30a93acd642b6b7a360194eb754b1287",
+    "owner": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+    "owner_local_fix": "6f1ebc36902e4bf9e6197aced2852d5653d32820",
+    "product": "d43919e933eb1be69559be7566853ff69a64e903"
+  },
+  "verdict": "OPEN; attended source/build/publication and retained scoped exercises are valid, but complete deployed-consumer/authenticated-cancel/unattended/runtime acceptance is not claimed."
+}

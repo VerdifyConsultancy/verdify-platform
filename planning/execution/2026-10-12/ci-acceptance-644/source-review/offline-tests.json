@@ -1,0 +1,106 @@
+{
+  "checkout": "/private/tmp/agents-ci-644-source-20261012",
+  "revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "commands": [
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_verdify_path_impact.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_verdify_publication_custody.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_verdify_binding_generations.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_verdify_native_expression.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_repo_build_source_closure.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_repo_build_workflowtemplate.py -v",
+    "/opt/homebrew/opt/python@3.14/bin/python3.14 /private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_repo_build_deadline_contract.py -v"
+  ],
+  "results": [
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_verdify_path_impact.py",
+      "sha256": "42c9d5af68c166a8aac6bf2e75fecbe5f61c5e912817fba4ff29a31fe21f1227",
+      "exit_code": 0,
+      "elapsed_seconds": 10.862,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_verdify_path_impact.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 33 tests in 10.742s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_verdify_publication_custody.py",
+      "sha256": "0f9c6118d1ed5088ce9d9936551ede5e81ccc6d8c82c9afbad1eb6a7738e4d93",
+      "exit_code": 0,
+      "elapsed_seconds": 2.295,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_verdify_publication_custody.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 5 tests in 2.198s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_verdify_binding_generations.py",
+      "sha256": "97f39c17ccd0ecb6343e1aa8182ffc7882a3dcc5a8f12e3986b073a6bdfc7488",
+      "exit_code": 0,
+      "elapsed_seconds": 0.141,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_verdify_binding_generations.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 4 tests in 0.051s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_verdify_native_expression.py",
+      "sha256": "6a12d15b878e26d241649568dc077c86a9c37c0cfe9d645dcefa3f25211e302c",
+      "exit_code": 0,
+      "elapsed_seconds": 0.058,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_verdify_native_expression.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 1 test in 0.000s",
+        "",
+        "OK (skipped=1)"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_repo_build_source_closure.py",
+      "sha256": "99c797c25887dd03b4459d4717da9aab2bfc66d0343b23369a92fba9da617013",
+      "exit_code": 0,
+      "elapsed_seconds": 0.091,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_repo_build_source_closure.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 6 tests in 0.031s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_repo_build_workflowtemplate.py",
+      "sha256": "b1bd71688ea9bb0d73fc165232d20ab444321d48ba6c7d8c8b8122d82d88757a",
+      "exit_code": 0,
+      "elapsed_seconds": 5.29,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_repo_build_workflowtemplate.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 61 tests in 5.217s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "script": "control-plane/agent-fleet-control/scripts/test_repo_build_deadline_contract.py",
+      "sha256": "0cb39a68169f7987e1ac72ca14709a28aeaaad843bd7a389e07fd33fe3bde13c",
+      "exit_code": 0,
+      "elapsed_seconds": 0.178,
+      "log": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/test_repo_build_deadline_contract.py.log",
+      "summary": [
+        "----------------------------------------------------------------------",
+        "Ran 3 tests in 0.088s",
+        "",
+        "OK"
+      ]
+    }
+  ]
+}

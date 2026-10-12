@@ -1,0 +1,11 @@
+test_base_owner_is_bound_to_exact_contract_and_dockerfile (__main__.RepoBuildSourceClosureTests.test_base_owner_is_bound_to_exact_contract_and_dockerfile) ... ok
+test_capture_is_canonical_and_post_test_mutation_fails (__main__.RepoBuildSourceClosureTests.test_capture_is_canonical_and_post_test_mutation_fails) ... ok
+test_dockerfile_symlink_and_malformed_source_identity_fail_closed (__main__.RepoBuildSourceClosureTests.test_dockerfile_symlink_and_malformed_source_identity_fail_closed) ... ok
+test_unqualified_profile_captures_only_typed_not_applicable_marker (__main__.RepoBuildSourceClosureTests.test_unqualified_profile_captures_only_typed_not_applicable_marker) ... ok
+test_vault_closure_binds_all_copied_roots_and_dependency_inputs (__main__.RepoBuildSourceClosureTests.test_vault_closure_binds_all_copied_roots_and_dependency_inputs) ... ok
+test_vault_source_aliases_base_drift_and_wrong_build_selection_fail_closed (__main__.RepoBuildSourceClosureTests.test_vault_source_aliases_base_drift_and_wrong_build_selection_fail_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.031s
+
+OK

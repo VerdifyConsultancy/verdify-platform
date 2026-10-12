@@ -1,0 +1,10 @@
+test_alias_failure_does_not_emit_success_receipt (__main__.PublicationCustodyTests.test_alias_failure_does_not_emit_success_receipt) ... ok
+test_invalid_uid_cannot_publish (__main__.PublicationCustodyTests.test_invalid_uid_cannot_publish) ... ok
+test_other_repository_keeps_existing_publication (__main__.PublicationCustodyTests.test_other_repository_keeps_existing_publication) ... ok
+test_same_source_distinct_invocations_keep_distinct_tags (__main__.PublicationCustodyTests.test_same_source_distinct_invocations_keep_distinct_tags) ... ok
+test_unique_custody_precedes_sha_alias (__main__.PublicationCustodyTests.test_unique_custody_precedes_sha_alias) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.198s
+
+OK

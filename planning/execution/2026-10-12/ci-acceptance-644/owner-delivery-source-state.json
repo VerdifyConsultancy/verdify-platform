@@ -1,0 +1,40 @@
+{
+  "candidate_releases": {
+    "broker": {
+      "accepted_agents_revision": null,
+      "build_run": null,
+      "image_digest": null,
+      "installed_bytes_sha256": null,
+      "workflow_observation": null
+    },
+    "runtime": {
+      "accepted_agents_revision": null,
+      "build_run": null,
+      "image_digest": null,
+      "installed_bytes_sha256": null,
+      "workflow_observation": null
+    }
+  },
+  "path": "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/live-readback-delivery.generated.json",
+  "required_source_bundles": {
+    "broker": "sha256:07b209ece87d47d7ea6f86d102c95c31ecc4da55e88e4127b03364119be39f58",
+    "runtime": "sha256:d3753addb0380c4c55669a8aad4d4477b0bd68ea10f4f977333c5056573c92f6"
+  },
+  "schema": "verdify.ci-644-owner-delivery-source-state/v1",
+  "scope": "Current immutable source declaration only. Source remains build-required with null candidate releases; bounded WFT adoption does not establish broker/runtime image consumer adoption.",
+  "source_file_sha256": "45c9d8b0be00adb600a5c01b243fe341283e4f2a0337eb03724a754e919000de",
+  "source_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "status": "build-required",
+  "superseded_releases": {
+    "broker": {
+      "accepted_agents_revision": "01ddd9c1489a8db966fe7a93d8c2c349663a3e1d",
+      "build_run": "repo-build-agents-agent-fleet-repo-aut-b0f8e58f3c719aede7b404f4",
+      "image_digest": "sha256:0a92a837099e65174ddf67b7282fd45a4822ccd1bef62f6cb21bcd5b069da06e"
+    },
+    "runtime": {
+      "accepted_agents_revision": "01ddd9c1489a8db966fe7a93d8c2c349663a3e1d",
+      "build_run": "repo-build-agents-agent-dev-runtime-35480171a68649b0b7159db6",
+      "image_digest": "sha256:77b4d17e97f4e6d8f79dfd4338da56c2478e51331c358b3148ac4a508a4d6afa"
+    }
+  }
+}

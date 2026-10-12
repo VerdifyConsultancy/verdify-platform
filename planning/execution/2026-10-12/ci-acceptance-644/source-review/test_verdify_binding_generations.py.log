@@ -1,0 +1,9 @@
+test_historical_and_qualified_generations_remain_byte_exact (__main__.BindingGenerationTests.test_historical_and_qualified_generations_remain_byte_exact) ... ok
+test_new_generations_are_immutable_and_historical_sources_retained (__main__.BindingGenerationTests.test_new_generations_are_immutable_and_historical_sources_retained) ... ok
+test_new_generations_preserve_active_authority (__main__.BindingGenerationTests.test_new_generations_preserve_active_authority) ... ok
+test_vault_successor_changes_only_template_and_reviewed_authority (__main__.BindingGenerationTests.test_vault_successor_changes_only_template_and_reviewed_authority) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.051s
+
+OK

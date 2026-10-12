@@ -1,0 +1,157 @@
+{
+  "schema": "verdify.ci-source-review/v1",
+  "source_checkout": "/private/tmp/agents-ci-644-source-20261012",
+  "source_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "scope": "read-only tracked source and existing offline tests; no live, network, credentials, or frozen-checkout Git ref mutations. One generated ignored bytecode file from a source-check subprocess was removed; source bytes and tracked Git state are unchanged.",
+  "sha256": {
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/verdify_path_impact.py": "da7f0c99ed9cffa3783613e7363918494621136943af56767c853af40b20fab1",
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/workflowtemplate-verdify-platform-ci.yaml": "aeccb19e3105627f5161bb625c1c3d502bf88e9540414797c992c7c277897980",
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/workflowtemplate-verdify-platform-pr-ci.yaml": "3331eaddec02c576403e686d6ecea598d65c55efa5dd756ef292b28271986a15",
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/workflowtemplate-repo-build.yaml": "f6dd3a33d1ece7aa8c4d7a5ec44e925b6877241ae3552543c5739df03ecb2b9e",
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/repo_build_source_closure.py": "343df385387f05562fea1a6f031bc70bbacb02aa2f723cd79619b355119dbe37",
+    "platform/kubernetes/ci/agent-fleet-ci/workflows/rbac-repo-auth-publishers.yaml": "124c4b7b0408e2c3889dfe51c2f669ef8598bf87cfa9dcc47d3331c8487d5db0",
+    "control-plane/agent-fleet-control/scripts/executable_image_delivery.py": "93ad294cfe67e18b40d22362144635fc2ab35db13526a46bcb6e46961854366d"
+  },
+  "matrix": [
+    {
+      "clause": "success and exact source",
+      "source": [
+        "verdify_path_impact.py:164-168",
+        "verdify_path_impact.py:301-395",
+        "workflowtemplate-verdify-platform-ci.yaml:81-211",
+        "workflowtemplate-repo-build.yaml:827-882,464-502"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_success_binds_source_digest_workflow_uid",
+        "ImpactTests.test_inexact_head_rejected",
+        "RepoBuildWorkflowTemplateTest.test_clone_emits_exact_source_revision_and_deterministic_utc_commit_time"
+      ],
+      "assessment": "Exact source checkout, trusted source outputs, workflow UID, succeeded selected build and immutable expected image path are checked. Source/offline verification is not running-image, deployment, or device acceptance."
+    },
+    {
+      "clause": "source failure",
+      "source": [
+        "workflowtemplate-verdify-platform-ci.yaml:254-258,523-541",
+        "workflowtemplate-verdify-platform-pr-ci.yaml:18,124-141,206-219",
+        "verdify_path_impact.py:399-412"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_source_failure_infrastructure_failure_cancel_are_not_success"
+      ],
+      "assessment": "Repository validation nonzero is not retried by the deadline/image-pull expression. Failed and unexpected terminal PR states publish failure, and reducer cannot accept them. Reducer Failed label defers exact-stage causality to native receipt; it does not independently distinguish every infrastructure shell error from a source error."
+    },
+    {
+      "clause": "infrastructure failure",
+      "source": [
+        "workflowtemplate-verdify-platform-ci.yaml:245-258",
+        "workflowtemplate-verdify-platform-pr-ci.yaml:133-141",
+        "verdify_path_impact.py:401-408"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_source_failure_infrastructure_failure_cancel_are_not_success",
+        "RepoBuildWorkflowTemplateTest.test_clone_retries_three_times_without_reminting_or_exposing_the_token"
+      ],
+      "assessment": "Bounded wedge retry, deadlines, and fail-closed phase reduction exist. No failure injection or native controller retry was performed in this lane."
+    },
+    {
+      "clause": "cancel",
+      "source": [
+        "verdify_path_impact.py:399-400",
+        "workflowtemplate-verdify-platform-pr-ci.yaml:206-219"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_source_failure_infrastructure_failure_cancel_are_not_success"
+      ],
+      "assessment": "Reducer explicitly marks Stop/Terminate as cancelled with not_accepted verdict. Native controller onExit/cancel reporting remains external acceptance evidence."
+    },
+    {
+      "clause": "missing or unknown receipt",
+      "source": [
+        "verdify_path_impact.py:328-398,405-412",
+        "workflowtemplate-verdify-platform-ci.yaml:221-225"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_missing_receipt_wrong_source_or_wrong_digest_cannot_false_green",
+        "NativePublicationExpressionTests.test_selected_skipped_and_missing_receipts"
+      ],
+      "assessment": "Missing workflow UID, classification receipt, selected build, exact-source output or expected immutable digest cannot pass. Native expression test was skipped locally because the pinned evaluator is unavailable; existing native receipts must cover that separately."
+    },
+    {
+      "clause": "retry and idempotency",
+      "source": [
+        "verdify_path_impact.py:352-395,405-408",
+        "workflowtemplate-repo-build.yaml:1364-1394"
+      ],
+      "existing_tests": [
+        "ReceiptTests.test_retry_requires_actual_terminal_success_not_earlier_failure",
+        "PublicationCustodyTests.test_same_source_distinct_invocations_keep_distinct_tags",
+        "PublicationCustodyTests.test_alias_failure_does_not_emit_success_receipt"
+      ],
+      "assessment": "Reducer credits the unique final named build, not prior attempt nodes; observation timeout remains pending/unknown. Same-source builds have invocation UID custody before compatibility SHA alias. These tests do not establish broker journal idempotency or webhook deduplication; broker tests exist separately and were not rerun."
+    },
+    {
+      "clause": "moved main and concurrent promotion",
+      "source": [
+        "workflowtemplate-verdify-platform-ci.yaml:678-685,719-770"
+      ],
+      "existing_tests": [
+        "WorkflowTests.test_only_affected_build_steps_and_partial_pins"
+      ],
+      "assessment": "Pin actuator skips a source that is no longer current main; final non-force HEAD:main push rejects an intervening branch advance. Unaffected five-image candidates stay unchanged. No current Verdify-platform behavioral race test was found or run; a successful reducer result does not prove promotion because superseded pin step can exit zero."
+    },
+    {
+      "clause": "builder and validator authority",
+      "source": [
+        "workflowtemplate-verdify-platform-ci.yaml:236-241,309-320,470-495,542-547",
+        "workflowtemplate-repo-build.yaml:871-882,887-998,1271-1405",
+        "repo_build_source_closure.py:286-313",
+        "rbac-repo-auth-publishers.yaml:1-6,25-34,59-83"
+      ],
+      "existing_tests": [
+        "WorkflowTests.test_validation_has_no_secret_mount_or_device_writer",
+        "RepoBuildWorkflowTemplateTest.test_registry_and_identity_credentials_have_exact_single_consumers",
+        "RepoBuildWorkflowTemplateTest.test_fixed_publisher_is_pinned_hardened_and_executes_no_repo_input",
+        "BindingGenerationTests.test_new_generations_preserve_active_authority",
+        "BindingGenerationTests.test_historical_and_qualified_generations_remain_byte_exact"
+      ],
+      "assessment": "Validation container has no Kubernetes token, publishing authority, GitHub credential, or writable classifier state. Shared builder test/Kaniko do not mount publication credentials or authoritative publisher-state; trusted fetch/publisher own exact source and final digest outputs. Generic Verdify closure rechecks Dockerfile only; comprehensive runtime closure applies to Cortex/Vault. Shared build pods still inherit minimal workflowtaskresults authority, unlike validator candidate/executor split; this source review does not claim all builder task-result authority is isolated."
+    }
+  ],
+  "tests_summary": {
+    "passed": 112,
+    "skipped": 1,
+    "failed": 0,
+    "manifest": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/offline-tests.json"
+  },
+  "bounded_findings": [
+    {
+      "id": "split-runtime-catalog-wrong-source-revision",
+      "severity": "metadata integrity",
+      "source": "control-plane/agent-fleet-control/scripts/executable_image_delivery.py:1887",
+      "observed": "stage passes broker source revision to _updated_runtime_catalog even when runtime has a separate accepted source revision. This records a wrong runtime source claim for legitimate byte-identical runtime closures.",
+      "proof": {
+        "tooling_broker_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+        "runtime_revision": "b874103a3b861537e02d1d2847029f2513c4c183",
+        "real_runtime_source_guard": "passed all three stage comparisons",
+        "runtime_inventory_count": 144,
+        "source_sha": "b54efdce24c74959526fdf971546a75860a71275e5535c995e06811461549e3f",
+        "stage_status": "staged",
+        "runtime_release_accepted_revision": "b874103a3b861537e02d1d2847029f2513c4c183",
+        "catalog_source_revision_actual": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+        "external_boundaries": "image, Workflow, native qualification and crane observations are fixtures; source guards, stage and catalog are real",
+        "receipt": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/split-runtime-catalog-probe.json",
+        "rerunnable_probe": "/private/tmp/verdify-ci-acceptance-644-20261012-evidence/source-review/split-runtime-catalog-probe.py"
+      },
+      "smallest_justified_fix": "Pass runtime_revision instead of revision to _updated_runtime_catalog at line1887; assert that argument equals the accepted runtime source in the existing stage test.",
+      "retained_boundary": "Leave current source COPY byte comparison and finalize one-shared-revision requirement intact. Full arbitrary historical-runtime and mixed-ready support is not implemented or proposed.",
+      "original_PR4763_finding": "Historical runtime with changed current client inputs remains rejected by design. Current exported/native expected bytes are current tooling ROOT, so relaxing one comparison would be incorrect. Source_bundle631-639, check_source1292-1295, historical compare1458-1463, existing SplitRoleSourceTests.test_runtime_uninstalled_input_drift_still_refuses at218-228."
+    }
+  ],
+  "evidence_limits": [
+    "No native evaluator fetched or built.",
+    "No live negative injection, cancel, retry, registry or promotion race executed.",
+    "Read-only reducer output is build evidence, not deployment or physical greenhouse acceptance."
+  ],
+  "offline_probe_count": 1,
+  "no_source_edits": true
+}

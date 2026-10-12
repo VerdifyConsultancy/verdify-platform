@@ -1,0 +1,8 @@
+test_both_publisher_wrappers_allow_queue_without_extending_standard_execution (__main__.BuildDeadlineContract.test_both_publisher_wrappers_allow_queue_without_extending_standard_execution) ... ok
+test_lease_refresh_keeps_identity_ownership_pressure_and_age_fences (__main__.BuildDeadlineContract.test_lease_refresh_keeps_identity_ownership_pressure_and_age_fences) ... ok
+test_prior_immutable_contracts_keep_exact_bytes_and_current_use_successors (__main__.BuildDeadlineContract.test_prior_immutable_contracts_keep_exact_bytes_and_current_use_successors) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.088s
+
+OK

@@ -1,0 +1,67 @@
+{
+  "branch": "codex/ci-runtime-source-label-20261012",
+  "custody": {
+    "build_or_live_mutation": false,
+    "bundle": "owner-source-fix.bundle",
+    "bundle_requires": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+    "bundle_sha256": "c91b05a4a0026aaed9498fe63f82360e40db3f321d80d1941b3918fb5e22898a",
+    "native_ci_submission": false,
+    "patch": "owner-source-fix.patch",
+    "patch_sha256": "8b7f7991d5bd8f79ef25665633f3b45c79f6fec903a382fc3427e16f4fd26ed4",
+    "remote_owner_push": false
+  },
+  "delivery_status": "Implemented and tested locally; exact owner source commit preserved in this evidence bundle. Not merged, CI-qualified or deployed.",
+  "finding": "A legitimate split stage with byte-identical runtime closure labels its runtime catalog with the broker revision.",
+  "fix": "Pass runtime_revision instead of revision to _updated_runtime_catalog; assert exact argument in the existing two-role stage test.",
+  "local_checkout": "/private/tmp/agents-ci-644-source-20261012",
+  "local_commit": "6f1ebc36902e4bf9e6197aced2852d5653d32820",
+  "owner_repository": "jvallery/agents",
+  "parent_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "real_git_reproducer": {
+    "receipt": "source-review/split-runtime-catalog-probe.json",
+    "runtime_revision": "b874103a3b861537e02d1d2847029f2513c4c183",
+    "runtime_source_inventory_count": 144,
+    "runtime_source_sha256": "b54efdce24c74959526fdf971546a75860a71275e5535c995e06811461549e3f",
+    "scope": "Source guard/catalog/stage real; external images, Workflows, native runtime and crane observations are fixtures.",
+    "tooling_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6"
+  },
+  "schema": "verdify.ci-644-owner-source-fix/v1",
+  "unchanged_boundaries": [
+    "All real per-role committed source closure comparisons",
+    "Runtime native source binding",
+    "Catalog conflicting-existing-binding rejection",
+    "Finalization still requires a shared accepted revision",
+    "No image, pin, release or generated catalog change"
+  ],
+  "upstream_review": "https://github.com/jvallery/agents/pull/4763#discussion_r4242083590",
+  "verification": {
+    "bundle_verify": "PASS; exact local commit and base prerequisite present",
+    "complete_executable_image_suite": {
+      "failed": 0,
+      "log": "source-review/runtime-catalog-regression-after.log",
+      "passed": 34,
+      "skipped": 0
+    },
+    "existing_workflow_authority_suite": {
+      "failed": 0,
+      "manifest": "source-review/offline-tests.json",
+      "native_evaluator_unavailable": true,
+      "passed": 112,
+      "skipped": 1
+    },
+    "git_diff_check": "PASS",
+    "new_assertion_against_original_code": {
+      "exit_code": 1,
+      "log": "source-review/runtime-catalog-regression-before.log",
+      "result": "expected runtime b*40 but actual broker a*40"
+    },
+    "real_git_after_fix": {
+      "no_live_calls": true,
+      "receipt": "source-review/split-runtime-catalog-after.json",
+      "runtime_closure_real_git_passed": true,
+      "runtime_inventory_count": 144,
+      "sha256": "a2d704a02b996219567dbfc0fe01e7162d949058bef47405308763ccb57b4406",
+      "stage_catalog_revision_equals_requested_runtime": true
+    }
+  }
+}

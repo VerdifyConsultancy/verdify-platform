@@ -1,0 +1,49 @@
+{
+  "capturedAt": "2026-10-12T19:49:48.928387+00:00",
+  "repository": "VerdifyConsultancy/verdify-platform",
+  "responses": {
+    "branchProtection": {
+      "exitCode": 0,
+      "value": {
+        "allow_deletions": {
+          "enabled": false
+        },
+        "allow_force_pushes": {
+          "enabled": false
+        },
+        "allow_fork_syncing": {
+          "enabled": false
+        },
+        "block_creations": {
+          "enabled": false
+        },
+        "enforce_admins": {
+          "enabled": false,
+          "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection/enforce_admins"
+        },
+        "lock_branch": {
+          "enabled": false
+        },
+        "required_conversation_resolution": {
+          "enabled": false
+        },
+        "required_linear_history": {
+          "enabled": true
+        },
+        "required_signatures": {
+          "enabled": false,
+          "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection/required_signatures"
+        },
+        "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection"
+      }
+    },
+    "effectiveRules": {
+      "exitCode": 0,
+      "value": []
+    },
+    "rulesets": {
+      "exitCode": 0,
+      "value": []
+    }
+  }
+}

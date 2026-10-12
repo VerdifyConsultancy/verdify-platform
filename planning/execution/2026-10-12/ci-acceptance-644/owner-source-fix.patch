@@ -1,0 +1,46 @@
+From 6f1ebc36902e4bf9e6197aced2852d5653d32820 Mon Sep 17 00:00:00 2001
+From: Jason Vallery <jason@vallery.net>
+Date: Mon, 12 Oct 2026 13:57:28 -0600
+Subject: [PATCH] fix(ci): retain runtime source revision in staged catalog
+
+Stage already binds the runtime receipt and native qualification to its requested revision. Use that same revision in runtime catalog metadata. Keep closure checks and finalization requirements unchanged.
+---
+ .../agent-fleet-control/scripts/executable_image_delivery.py | 2 +-
+ .../scripts/test_executable_image_delivery.py                | 5 ++++-
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/control-plane/agent-fleet-control/scripts/executable_image_delivery.py b/control-plane/agent-fleet-control/scripts/executable_image_delivery.py
+index 9e1e9c06f..8f6437163 100644
+--- a/control-plane/agent-fleet-control/scripts/executable_image_delivery.py
++++ b/control-plane/agent-fleet-control/scripts/executable_image_delivery.py
+@@ -1884,7 +1884,7 @@ def stage(
+     # One final coherent tool closure follows both exports and immediately
+     # precedes either persistent or stdout serialization of the staged record.
+     _validated_tool_bytes(crane, crane_receipt)
+-    catalog_path, catalog = _updated_runtime_catalog(revision, releases["runtime"])
++    catalog_path, catalog = _updated_runtime_catalog(runtime_revision, releases["runtime"])
+     if args.write:
+         catalog_path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
+         _write_contract(contract)
+diff --git a/control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py b/control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py
+index 9b156e68b..fb96702c7 100644
+--- a/control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py
++++ b/control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py
+@@ -807,13 +807,16 @@ esac
+             side_effect=lambda _contract: events.append("write"),
+         ):
+             with mock.patch.object(delivery, "_updated_runtime_catalog",
+-                                   return_value=(mock.Mock(), {})), mock.patch.object(
++                                   return_value=(mock.Mock(), {})) as runtime_catalog, mock.patch.object(
+                                        delivery, "_qualify_native_runtime", return_value={}) as native:
+                 staged = delivery.stage(arguments)
+         self.assertEqual(staged["status"], "staged")
+         self.assertEqual(staged["candidate_releases"]["broker"]["accepted_agents_revision"], "a" * 40)
+         self.assertEqual(staged["candidate_releases"]["runtime"]["accepted_agents_revision"], "b" * 40)
+         self.assertEqual(native.call_args.args[1], "b" * 40)
++        runtime_catalog.assert_called_once_with(
++            "b" * 40, staged["candidate_releases"]["runtime"]
++        )
+         self.assertEqual(staged["crane_receipt"], self.receipt)
+         self.assertEqual(
+             staged["crane_receipt_digest"], delivery._digest(self.receipt)

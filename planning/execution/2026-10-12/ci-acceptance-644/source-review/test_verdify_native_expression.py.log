@@ -1,0 +1,6 @@
+test_selected_skipped_and_missing_receipts (__main__.NativePublicationExpressionTests.test_selected_skipped_and_missing_receipts) ... skipped 'requires pinned native Argo evaluator'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK (skipped=1)

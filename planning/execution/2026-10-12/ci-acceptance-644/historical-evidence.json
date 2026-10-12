@@ -1,0 +1,164 @@
+{
+  "historical_product_source": "f48c6bf0257b25ed2820689154ca3502507129c6",
+  "matrix": [
+    {
+      "clause": "success",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/natural629rt-typed-terminal-receipt.json",
+          "sha256": "94ff65435c0f69841658956dc5d4038f2f64842809cea0a2fa45ca24e3bc4657"
+        }
+      ],
+      "original_status": "PASS live"
+    },
+    {
+      "clause": "source failure",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Users/jason/maintenance/verdify-s2-delivery-20261005/644/source-failure-qualified.json",
+          "sha256": "cd5b2917730c2512a4ced8f83041210e34e0ae08ba546307be3e75db03c1468e"
+        }
+      ],
+      "original_status": "PASS live"
+    },
+    {
+      "clause": "infrastructure failure",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/644-authentic-capacity-infrastructure-failure.json",
+          "sha256": "69d09ce6b7d63c717c33608f52513e33ca7a0322079aa6171c7a078020e6925b"
+        }
+      ],
+      "original_status": "PASS live actual precompile admission failure"
+    },
+    {
+      "clause": "cancellation",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Users/jason/maintenance/verdify-s2-delivery-20261005/644/verdify-platform-ci-745q9-cancelled-receipt.json",
+          "sha256": "5c7f37aa5c9cae2b193e14308d7b0df943c4f780b4745b94097a22b784aad225"
+        }
+      ],
+      "original_status": "PASS live"
+    },
+    {
+      "clause": "missing/wrong receipt",
+      "evidence": [],
+      "original_status": "PASS source guard; live omission not injected"
+    },
+    {
+      "clause": "idempotent retry",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Users/jason/maintenance/verdify-s2-delivery-20261005/644/ingestor-idempotent-retry-qualified.json",
+          "sha256": "38f5af8ec72cd66c2919f20f4eabef4c098136d456140954bebd81ef6d55a434"
+        },
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/consumer-broker 4d1-retry-resume.stdout",
+          "sha256": "fcd424df672c6971801cf083da68c2fa43c8e8bb180a22c5c6d5cc18456f2a1c"
+        }
+      ],
+      "original_status": "PASS live history"
+    },
+    {
+      "clause": "concurrent candidate/promotion",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/644-native-git-concurrency-proof.json",
+          "sha256": "ad67adbd7205bd60bdac509506a3e8b3dc9588d489c727d2e04b842afd6f0942"
+        }
+      ],
+      "original_status": "PASS exact-source/nativeGit LOCAL fixture; no live overlap claim"
+    },
+    {
+      "clause": "builder cannot deploy/promote",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Users/jason/maintenance/verdify-s2-delivery-20261005/644/live-rbac-negative-receipt.json",
+          "sha256": "f5f7c0dd4a6ccca96d9264edce64799caf498fd1534c8da3f215a33a9d31d289"
+        }
+      ],
+      "original_status": "PASS live RBAC/source boundary"
+    },
+    {
+      "clause": "ordinary validation cannot device/OTA/runtime Secrets",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/644-differential-validation-security.json",
+          "sha256": "b6e58e9fd5e688926af5d84199638903a8f345aa7f22cf5d4ff7a10d3fc9e0fa"
+        },
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/644-validator-cni-reject-counter-proof.json",
+          "sha256": "97fe9477865880e71cf4f50103ce88ca9741b3f747781670439ac92472dfd635"
+        }
+      ],
+      "original_status": "PASS live ordinary-SA Secret denial/token absence and attributed native network REJECT"
+    },
+    {
+      "clause": "missing registry artifact consumer/retry",
+      "evidence": [
+        {
+          "matches_retained_hash": true,
+          "original_local_path": "/Volumes/Work/verdify-s2-ci-20261006/artifact-observer-source-probe.json",
+          "sha256": "0c91c7a1456e1e716d735f7e781524b477e0edc2e5706fd6bf10237ccc3a74a1"
+        }
+      ],
+      "original_status": "PASS actualobserver/source; deployedresume NOT PASSED"
+    },
+    {
+      "clause": "owner declaration and delivery",
+      "evidence": [],
+      "original_status": "PROVISIONAL scoped; NOT SyncedHealthy"
+    }
+  ],
+  "native_no_recursion": {
+    "all_eight_application_builds_skipped": true,
+    "finished_at": "2026-10-06T09:58:38Z",
+    "observed_at": "2026-10-06T10:05:24.789207+00:00",
+    "phase": "Succeeded",
+    "pin_actuator_skipped": true,
+    "profiles": [],
+    "raw_snapshot_sha256": "2b050c04bf1ed5574a63212eb0898c562fe70966700c296422ab8b352a0a0635",
+    "scope": "Exact authentic event; no indefinite future no-build assertion.",
+    "source_revision": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+    "uid": "95ed9d6d-961e-4dce-abf1-0d79e41617ca",
+    "workflow": "verdify-platform-ci-kpkzx"
+  },
+  "october11_cancellation": [
+    {
+      "path": "planning/execution/2026-10-11/firmware-validation-cancel-receipt.json",
+      "sha256": "0ae70ed5ee6eb920132dcbace5a3579afe2073076ca90347ec155ea519b1530c",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/d43919e933eb1be69559be7566853ff69a64e903/planning/execution/2026-10-11/firmware-validation-cancel-receipt.json"
+    },
+    {
+      "path": "planning/execution/2026-10-11/cancel-observation-seal-diagnosis.json",
+      "sha256": "8a09c9fd2b736f54b168a43c3ef1ce57ad03c626327c8d336d37561ba1718637",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/d43919e933eb1be69559be7566853ff69a64e903/planning/execution/2026-10-11/cancel-observation-seal-diagnosis.json"
+    }
+  ],
+  "original_packet_at": "2026-10-06T09:51:31.003681+00:00",
+  "original_packet_sha256": "75a038a37e8feacde33f1a53ab24370099a058db8a2ccee8ab1987f747995a7b",
+  "owner_source": "64bab33c672d3f206be4a7adde29dd260affe199",
+  "precise_case_limits": {
+    "authority": "Actual named Secret/RBAC/token/network negatives retained; no device or OTA endpoint was probed.",
+    "cancellation": "Native exact-UID redundant cancellation rejects success. October 11 authenticated broker observation rejects mutated sealed content; no claim that authenticated cancellation observation works.",
+    "concurrency": "Two real local Git processes executed exact historical actuator tail: one ordinary push wins, non-fast-forward loser and moved-source skip preserve winner and rollback. No authenticated live overlap.",
+    "infrastructure_failure": "Authentic registry admission signal-stale before compile; native Failed, not required to be Argo Error. Fix-forward is distinct source, not automatic retry.",
+    "missing_artifact": "Historical real-origin observer distinguishes not_found and available. Deployed broker/client resume accepted absent artifact history at that time; new source guard is not proof of live adoption.",
+    "retry": "Same request replay retained the same Workflow UID; governed same-source recovery after an integrity failure eventually succeeded. Neither is automatic infrastructure retry qualification.",
+    "source_failure": "Authenticated absent commit fetch, exit 128 / Failed; not an intentionally failing application test."
+  },
+  "public_historical_receipts": "https://github.com/jvallery/agents/issues/4014#issuecomment-6013965828",
+  "schema": "verdify.ci-644-retained-evidence-index/v1",
+  "scope": "Retained receipts, not re-executed. Exact file hashes reverified locally. Only metadata selected below; no handle/credential or raw Workflow/log payload is republished."
+}

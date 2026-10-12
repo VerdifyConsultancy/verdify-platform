@@ -1,0 +1,82 @@
+{
+  "authority": "Root confirmed no duplicate active offline matrix implementer. Retry remains sole attended runtime/release writer. This lane performs source/local offline work and artifact publication only.",
+  "bounded_product_contract": "<!-- verdify-review-20261011:start -->\n## Current acceptance \u2014 October 11, 2026\n\n**Open \u2014 acceptance incomplete.** PARTIAL: PR960\u2013962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary.\n\n[Complete clause assessment](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-11/ISSUE-TRIAGE.md) \u00b7 [Current source/live evidence](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-11/STATUS.md) \u00b7 [S2 completion sprint](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-11/NEXT-SPRINT.md) \u00b7 [Execution goal](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-11/GOAL.md). The dated review supersedes older current-state claims, preserves their historical evidence, and changes no production control. Original acceptance below remains binding.\n<!-- verdify-review-20261011:end -->\n\n# Integrate exact-SHA, path-aware and device-safe delivery receipts\n\nCampaign: #775 \u00b7 Stage: **C4 \u2014 Delivery and runtime reliability** \u00b7 Priority: P1 \u00b7 Effort: L \u00b7 Accountable role: Platform lead.\n\nRoles are execution responsibilities, not a reassignment of existing GitHub assignees. This September 5 contract supersedes conflicting historical issue-body sequencing; prior comments and receipts remain evidence, not current-state assertions.\n\n## What\n\nMake Verdify validation, affected-image production, pin promotion and final Argo/runtime adoption diagnosable and immutable without duplicating fleet primitives.\n\n## Why\n\nOlder CI receipts were absent/opaque and builders/promoters were not cleanly separated. Docs, tests and activation-only changes should not rebuild every application image.\n\n## Baseline and remaining work\n\nEight registered image profiles and Quartz-only Lab are current; retired Astro work is complete and must not be recreated. Cross-repository fleet implementation remains owned by jvallery/agents#4014.\n\n## How / implementation strategy\n\n1. Rebaseline the owning jvallery/agents#4014 contract and the eight generated image profiles; implement common changes in their owning registry, not the managed .agent-fleet/ci.yaml mirror.\n2. Classify actual COPY/runtime inputs: top-level planning/docs and tests/pins validate without application rebuilds, but docs/ is an ingestor RAG/playbook input and site/docs is publisher input. Build only affected profiles through Kaniko/Zot and bind source\u2192digest\u2192promotion\u2192Argo\u2192running image; metadata-only Git SHA changes do not require rebuilding every image.\n3. Exercise success, source failure, infrastructure failure, cancel, missing receipt, retry and concurrent promotion. Add required checks/review protection only after the stable status producer passes its reliability matrix.\n\n## Source touchpoints\n\n- `.agent-fleet/ci.yaml`\n- `deploy/k8s`\n- `docs`\n- `Makefile`\n\n## Dependencies and scope\n\nParent: #775. Parentage is a roll-up, not a blocking dependency.\n\nNo issue-level predecessor. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied.\n\n## Acceptance and validation\n\n- [ ] Exact-SHA results are durable, redacted and actionable; no recursive builds from pin commits.\n- [ ] Builder cannot deploy/promote and ordinary validation cannot access device/OTA/runtime secrets; immutable digest consumer receipt identifies rollback pins.\n- [ ] Verdify integration and owning fleet dependency are linked; current branch policy is measured rather than copied from an August snapshot.\n\n## Delivery and real end-state verification\n\nUse a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.\n\n## Rollback and evidence preservation\n\nCapture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.\n\n## Decisions / physical boundary\n\nNone beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.\n\n## Child deliverables\n\n- [x] #322 \u2014 Replace remaining VM-era tests with current k3s delivery contracts\n- [ ] #304 \u2014 Provide reproducible least-authority firmware and database diagnostic tooling\n- [ ] #303 \u2014 Run real portable ESPHome compilation for declared firmware targets\n- [ ] #390 \u2014 Gate firmware releases on topology, cycling, runtime safety and rollback evidence\n- [x] #399 \u2014 Prove the HA grow-light writer remains within the single-writer contract\n\n## Campaign references\n\n[Implementation strategy](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/CAMPAIGN.md) \u00b7 [Full dependency graph](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/DEPENDENCIES.md) \u00b7 [Validated source](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/backlog.yaml) \u00b7 [September 5 evidence basis](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/EVIDENCE.md).\n\nOriginal issue bodies and metadata are retained in [the pre-rewrite snapshot](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/archive/2026-09-05/issues.json). Closed issues and existing comments are not rewritten. No production deployment, device change, random draw or experiment launch is performed by this planning sprint.\n",
+  "branch_policy": "Read at 2026-10-12T19:49:48Z: linear history true; required review/status fields absent, rulesets and effective rules empty. No policy mutation.",
+  "captured_at": "2026-10-12T20:00:13.260816+00:00",
+  "current_sources": {
+    "agents_main": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+    "caller_pr": "https://github.com/jvallery/agents/pull/4806",
+    "owner_successor_merge": "b874103a3b861537e02d1d2847029f2513c4c183",
+    "owner_successor_pr": "https://github.com/jvallery/agents/pull/4763",
+    "preserved_old_head": "64bab33c672d3f206be4a7adde29dd260affe199",
+    "preserved_old_pr": "https://github.com/jvallery/agents/pull/4747",
+    "verdify_main": "d43919e933eb1be69559be7566853ff69a64e903"
+  },
+  "owner_umbrella_limit": "Read complete owner issue and latest discussion; whole-estate catalog/ruleset/adoption completion is broader than Verdify 644 and is not made a blanket predecessor.",
+  "owner_umbrella_url": "https://github.com/jvallery/agents/issues/4014",
+  "schema": "verdify.ci-644-contract-readback/v1",
+  "sources": [
+    {
+      "file": "verdify-platform-644.json",
+      "latest_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/644#issuecomment-6129733578",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/644#issuecomment-6130206242",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/644#issuecomment-6130789569"
+      ],
+      "merge_commit": null,
+      "merged_at": null,
+      "snapshot_sha256": "00c5172ff030586b6adc37a3e793ec409add25a786dc260655c1cc36a18f8cf8",
+      "state": "OPEN",
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "updated_at": "2026-10-12T19:05:48Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644"
+    },
+    {
+      "file": "agents-4014.json",
+      "latest_comment_urls": [
+        "https://github.com/jvallery/agents/issues/4014#issuecomment-6013965828",
+        "https://github.com/jvallery/agents/issues/4014#issuecomment-6127345163",
+        "https://github.com/jvallery/agents/issues/4014#issuecomment-6131387105"
+      ],
+      "merge_commit": null,
+      "merged_at": null,
+      "snapshot_sha256": "837751e6d232d478af68fdc9d643fdefa3fd479b3511291d0efdd25c56ebba9a",
+      "state": "OPEN",
+      "title": "[Get-well] Make `jvallery/agents` the authoritative, least-privilege CI/CD control repo",
+      "updated_at": "2026-10-12T19:43:03Z",
+      "url": "https://github.com/jvallery/agents/issues/4014"
+    },
+    {
+      "file": "agents-4747.json",
+      "latest_comment_urls": [
+        "https://github.com/jvallery/agents/pull/4747#issuecomment-6013773760",
+        "https://github.com/jvallery/agents/pull/4747#issuecomment-6127532930",
+        "https://github.com/jvallery/agents/pull/4747#issuecomment-6128636480"
+      ],
+      "merge_commit": null,
+      "merged_at": null,
+      "snapshot_sha256": "ba79854d7534a68edee14044e5023fe6b1a3568265a6115be8886a705b9f9325",
+      "state": "OPEN",
+      "title": "Build only affected Verdify runtime images and contain validation",
+      "updated_at": "2026-10-12T16:47:28Z",
+      "url": "https://github.com/jvallery/agents/pull/4747"
+    },
+    {
+      "file": "agents-4763.json",
+      "latest_comment_urls": [
+        "https://github.com/jvallery/agents/pull/4763#issuecomment-6111184307",
+        "https://github.com/jvallery/agents/pull/4763#issuecomment-6115074675",
+        "https://github.com/jvallery/agents/pull/4763#issuecomment-6127536515"
+      ],
+      "merge_commit": {
+        "oid": "b874103a3b861537e02d1d2847029f2513c4c183"
+      },
+      "merged_at": "2026-10-12T15:21:45Z",
+      "snapshot_sha256": "11f7bec7094d02b2a545ddf95cd2f2cac8672bfd6f72b515813815485621416b",
+      "state": "MERGED",
+      "title": "fix(ci): bind Verdify source and publication custody on current main",
+      "updated_at": null,
+      "url": "https://github.com/jvallery/agents/pull/4763"
+    }
+  ]
+}

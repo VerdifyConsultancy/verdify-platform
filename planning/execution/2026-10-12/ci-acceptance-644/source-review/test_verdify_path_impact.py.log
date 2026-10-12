@@ -1,0 +1,39 @@
+test_actual_copied_test_fixture_is_runtime (__main__.ImpactTests.test_actual_copied_test_fixture_is_runtime) ... ok
+test_current_registry_profiles_match_adapter (__main__.ImpactTests.test_current_registry_profiles_match_adapter) ... ok
+test_docs_are_ingestor_runtime (__main__.ImpactTests.test_docs_are_ingestor_runtime) ... ok
+test_ignore_change_rebuilds_all (__main__.ImpactTests.test_ignore_change_rebuilds_all) ... ok
+test_inexact_head_rejected (__main__.ImpactTests.test_inexact_head_rejected) ... ok
+test_manual_release_or_planner_pins_validate (__main__.ImpactTests.test_manual_release_or_planner_pins_validate) ... ok
+test_metadata_only_readme_does_not_build (__main__.ImpactTests.test_metadata_only_readme_does_not_build) ... ok
+test_missing_base_builds_conservatively (__main__.ImpactTests.test_missing_base_builds_conservatively) ... fatal: bad object ffffffffffffffffffffffffffffffffffffffff
+ok
+test_original_pin_only_skips_before_recovery_lineage (__main__.ImpactTests.test_original_pin_only_skips_before_recovery_lineage) ... ok
+test_other_event_base_has_no_recovery_override (__main__.ImpactTests.test_other_event_base_has_no_recovery_override) ... ok
+test_pin_commit_skip_requires_exact_digest_only_diff (__main__.ImpactTests.test_pin_commit_skip_requires_exact_digest_only_diff) ... ok
+test_pin_diff_cannot_hide_runtime_digest_outside_images_block (__main__.ImpactTests.test_pin_diff_cannot_hide_runtime_digest_outside_images_block) ... ok
+test_planning_and_tests_validate_without_builds (__main__.ImpactTests.test_planning_and_tests_validate_without_builds) ... ok
+test_recovery_includes_unpublished_source_with_authentic_event_receipt (__main__.ImpactTests.test_recovery_includes_unpublished_source_with_authentic_event_receipt) ... ok
+test_recovery_invalid_next_main_lineage_fails_closed (__main__.ImpactTests.test_recovery_invalid_next_main_lineage_fails_closed) ... ok
+test_recovery_rejects_non_publication_checkpoint (__main__.ImpactTests.test_recovery_rejects_non_publication_checkpoint) ... ok
+test_recovery_rejects_unrelated_source_checkpoint (__main__.ImpactTests.test_recovery_rejects_unrelated_source_checkpoint) ... ok
+test_root_markdown_ignore_does_not_hide_copied_nested_markdown (__main__.ImpactTests.test_root_markdown_ignore_does_not_hide_copied_nested_markdown) ... ok
+test_shared_schema_hits_exact_consumers (__main__.ImpactTests.test_shared_schema_hits_exact_consumers) ... ok
+test_site_docs_are_lab_runtime (__main__.ImpactTests.test_site_docs_are_lab_runtime) ... ok
+test_source_removed_from_copy_still_builds_consumer (__main__.ImpactTests.test_source_removed_from_copy_still_builds_consumer) ... ok
+test_specific_firmware_contract_and_excluded_other_input (__main__.ImpactTests.test_specific_firmware_contract_and_excluded_other_input) ... ok
+test_unknown_copy_syntax_fails_conservatively (__main__.ImpactTests.test_unknown_copy_syntax_fails_conservatively) ... ok
+test_wildcard_does_not_cross_directory (__main__.ImpactTests.test_wildcard_does_not_cross_directory) ... ok
+test_missing_receipt_wrong_source_or_wrong_digest_cannot_false_green (__main__.ReceiptTests.test_missing_receipt_wrong_source_or_wrong_digest_cannot_false_green) ... ok
+test_network_policy_has_no_controller_ota_database_route (__main__.ReceiptTests.test_network_policy_has_no_controller_ota_database_route) ... ok
+test_public_receipt_omits_private_error_messages (__main__.ReceiptTests.test_public_receipt_omits_private_error_messages) ... ok
+test_retry_requires_actual_terminal_success_not_earlier_failure (__main__.ReceiptTests.test_retry_requires_actual_terminal_success_not_earlier_failure) ... ok
+test_source_failure_infrastructure_failure_cancel_are_not_success (__main__.ReceiptTests.test_source_failure_infrastructure_failure_cancel_are_not_success) ... ok
+test_success_binds_source_digest_workflow_uid (__main__.ReceiptTests.test_success_binds_source_digest_workflow_uid) ... ok
+test_finite_main_caller_separates_validation_and_builder_capacity (__main__.WorkflowTests.test_finite_main_caller_separates_validation_and_builder_capacity) ... ok
+test_only_affected_build_steps_and_partial_pins (__main__.WorkflowTests.test_only_affected_build_steps_and_partial_pins) ... ok
+test_validation_has_no_secret_mount_or_device_writer (__main__.WorkflowTests.test_validation_has_no_secret_mount_or_device_writer) ... ok
+
+----------------------------------------------------------------------
+Ran 33 tests in 10.742s
+
+OK
