@@ -1563,7 +1563,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: durable spool source, historical3000-event restart/node-loss witness, format/capacity tests and actual warning/clear receipts are published. Final-image committed seven-phase replay/crash/conflict, exact inverse and full data/sequence/study reseal remain unaccepted. Running ingestor differs from desired pin; qualify exact adopted source without fabricated confirmation. October12 contained proof b4eb826a/e1a79f19 supplies complete952/77/42/catalog inverse/reseal and ordinary authenticated consumers. This is not final-image seven-phase committed spool/crash/conflict or restart/node-loss acceptance; reuse one admitted target and current source, preserve fake-confirmation prohibitions. AdmissionreleasedafteractualLabpublication/sync23:24: existingsolecontainedwriterexecutes016e/d017onlyafterfreshfit/NULLrole/UIDguard;7serialsource-pinnedstages/exactinverse/full95277/42reseal; no prodmutation/newbuild/18stagingdeletion. Actualexecutionresultsnotyetclaimed.",
+      "baseline": "October11 review: PARTIAL: durable spool source, historical3000-event restart/node-loss witness, format/capacity tests and actual warning/clear receipts are published. Final-image committed seven-phase replay/crash/conflict, exact inverse and full data/sequence/study reseal remain unaccepted. Running ingestor differs from desired pin; qualify exact adopted source without fabricated confirmation. October12 contained proof b4eb826a/e1a79f19 supplies complete952/77/42/catalog inverse/reseal and ordinary authenticated consumers. This is not final-image seven-phase committed spool/crash/conflict or restart/node-loss acceptance; reuse one admitted target and current source, preserve fake-confirmation prohibitions. AdmissionreleasedafteractualLabpublication/sync23:24: existingsolecontainedwriterexecutes016e/d017onlyafterfreshfit/NULLrole/UIDguard;7serialsource-pinnedstages/exactinverse/full95277/42reseal; no prodmutation/newbuild/18stagingdeletion. Actualexecutionresultsnotyetclaimed. Superseding23:32blocker: freshactualadmissionpassedbutautomaticapprovalreviewREJECTEDprovision_two_null.pybeforeexecutionbecauseexacttemporarySecret/NULLLOGINpasswordmutationneedstrustedhumanapproval;rootreleaseinsufficient. NoSecret/password/PVC/Job/targetmutation. DirectJasonapprovalquestionpending;noindirectretry. Productionwindowandindependentsourcepreparationcontinue.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3254,7 +3254,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-12T23:24:01Z",
+    "reviewed_at": "2026-10-12T23:32:09Z",
     "source_revision": "9136f158641f918593df53471e3efe1792b7ad83",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3619,7 +3619,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Existing sole contained writer executes admitted final-image7phase packet afterfreshfit/NULLrole/UIDguard; retainfailures, exactcredential/fixture/sequenceinverse/full95277/42reseal; no production mutation.",
+        "next_action": "Await direct Jason decision on exact two-NULL temporary integration credential window rejected by automatic review; no bypass/setters/objects. If approved, refresh guards/fit and execute finite7phases/inverses/full95277/42reseal; otherwise retain ready packet and continue independent work.",
         "owner_role": "Data/platform lead"
       },
       {
