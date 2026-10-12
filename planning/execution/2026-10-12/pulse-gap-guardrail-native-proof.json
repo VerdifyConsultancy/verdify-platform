@@ -1,0 +1,36 @@
+{
+  "observed_at": "2026-10-12T19:58:53.114858+00:00",
+  "mister_pulse_gap_audit": [
+    {
+      "ts": "2026-10-12T19:55:41.453451+00:00",
+      "parameter": "mister_pulse_gap_s",
+      "requested": 33.75,
+      "applied": 30,
+      "reason": "vpd_high_moisture_guardrail",
+      "status": "held_by_guardrail",
+      "plan_id": "iris-20261012-0710",
+      "plan_ts": "2026-10-12T19:00:00+00:00"
+    },
+    {
+      "ts": "2026-10-12T19:56:34.101514+00:00",
+      "parameter": "mister_pulse_gap_s",
+      "requested": 33.75,
+      "applied": 30,
+      "reason": "vpd_high_moisture_guardrail",
+      "status": "held_by_guardrail",
+      "plan_id": "iris-20261012-0710",
+      "plan_ts": "2026-10-12T19:00:00+00:00"
+    },
+    {
+      "ts": "2026-10-12T19:57:40.79022+00:00",
+      "parameter": "mister_pulse_gap_s",
+      "requested": 33.75,
+      "applied": 30,
+      "reason": "vpd_high_moisture_guardrail",
+      "status": "held_by_guardrail",
+      "plan_id": "iris-20261012-0710",
+      "plan_ts": "2026-10-12T19:00:00+00:00"
+    }
+  ],
+  "pulse_gap_non_device_requests": []
+}

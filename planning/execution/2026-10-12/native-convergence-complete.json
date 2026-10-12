@@ -1,0 +1,537 @@
+{
+  "schema": "verdify-native-convergence-complete/v1",
+  "observed_at": "2026-10-12T19:58:15.952151+00:00",
+  "run_id": "f1a11599ed8c4b4fa9e92a66384a1e9d",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "pod": "verdify-ingestor-7666f97959-htjdk",
+  "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+  "session": "1798f4d876404e94a186019c26b522e7",
+  "generation": 1,
+  "stage_status": "complete",
+  "stage_sizes": [
+    12,
+    8
+  ],
+  "confirmed_native_request_count": 20,
+  "native_requests": [
+    {
+      "ts": "2026-10-12T19:55:41.400192+00:00",
+      "parameter": "cool_exit_hysteresis_f",
+      "value": 1.78,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.409621+00:00",
+      "parameter": "cool_stage2_over_high_f",
+      "value": 1.5250000000000001,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.413116+00:00",
+      "parameter": "dwell_gate_ms",
+      "value": 240000,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.416178+00:00",
+      "parameter": "min_fog_on_s",
+      "value": 63.75,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.419765+00:00",
+      "parameter": "mister_pulse_on_s",
+      "value": 48.75,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.423331+00:00",
+      "parameter": "mister_vpd_weight",
+      "value": 2.05,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.427931+00:00",
+      "parameter": "sw_cool_all_fans_at_high_enabled",
+      "value": 1,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.431278+00:00",
+      "parameter": "temp_hysteresis",
+      "value": 1.78,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.434009+00:00",
+      "parameter": "vpd_hysteresis",
+      "value": 0.1975,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.43783+00:00",
+      "parameter": "vpd_watch_dwell_s",
+      "value": 60,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.441559+00:00",
+      "parameter": "fog_escalation_kpa",
+      "value": 0.15,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:55:41.446159+00:00",
+      "parameter": "min_fog_off_s",
+      "value": 60,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.072584+00:00",
+      "parameter": "mister_all_delay_s",
+      "value": 84,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.076709+00:00",
+      "parameter": "mister_all_kpa",
+      "value": 1.154,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.080264+00:00",
+      "parameter": "mister_engage_delay_s",
+      "value": 42,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.083391+00:00",
+      "parameter": "mister_engage_kpa",
+      "value": 0.9540000000000001,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.086363+00:00",
+      "parameter": "vpd_target_south",
+      "value": 1.18,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.089894+00:00",
+      "parameter": "vpd_target_west",
+      "value": 1.08,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.092993+00:00",
+      "parameter": "vpd_target_east",
+      "value": 1.21,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-12T19:56:34.096229+00:00",
+      "parameter": "vpd_target_center",
+      "value": 1.09,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+      "expired_at": null
+    }
+  ],
+  "confirmation_seconds_max": 57.046054,
+  "confirmation_seconds_min": 47.331216,
+  "residual_candidates": [],
+  "current_readbacks": {
+    "band_track_fraction": 0.0,
+    "cold_vent_guard_delta_f": 8.0,
+    "cool_exit_hysteresis_f": 1.78,
+    "cool_stage2_exit_hysteresis_f": 1.0,
+    "cool_stage2_over_high_f": 1.524999976158142,
+    "direct_wet_stress_min_dew_margin_f": 8.0,
+    "direct_wet_stress_vpd_margin_kpa": 0.05000000074505806,
+    "dwell_gate_ms": 240000.0,
+    "enthalpy_close": 1.0,
+    "enthalpy_open": -2.0,
+    "fog_escalation_kpa": 0.15,
+    "heat_hysteresis": 1.0,
+    "min_fan_off_s": 90.0,
+    "min_fan_on_s": 120.0,
+    "min_fog_off_s": 60.0,
+    "min_fog_on_s": 63.0,
+    "min_heat_off_s": 180.0,
+    "min_heat_on_s": 120.0,
+    "min_vent_off_s": 60.0,
+    "min_vent_on_s": 60.0,
+    "mist_backoff_s": 600.0,
+    "mist_max_closed_vent_s": 600.0,
+    "mist_thermal_relief_s": 90.0,
+    "mister_all_delay_s": 84.0,
+    "mister_all_kpa": 1.154,
+    "mister_center_penalty": 0.5,
+    "mister_engage_delay_s": 42.0,
+    "mister_engage_kpa": 0.954,
+    "mister_min_off_s": 45.0,
+    "mister_pulse_gap_s": 30.0,
+    "mister_pulse_on_s": 48.0,
+    "mister_vpd_weight": 2.05,
+    "mister_water_budget_gal": 180.0,
+    "night_vpd_bias_kpa": 0.0,
+    "outdoor_staleness_max_s": 600.0,
+    "sw_cool_all_fans_at_high_enabled": 1.0,
+    "sw_direct_wet_gate_enabled": 1.0,
+    "sw_direct_wet_stress_override_enabled": 1.0,
+    "sw_dwell_gate_enabled": 1.0,
+    "sw_fog_closes_vent": 1.0,
+    "sw_mister_closes_vent": 0.0,
+    "sw_summer_vent_enabled": 1.0,
+    "temp_hysteresis": 1.7799999713897705,
+    "vent_exchange_fraction": 0.30000001192092896,
+    "vent_prefer_dp_delta_f": 3.0,
+    "vent_prefer_temp_delta_f": 4.0,
+    "vpd_hysteresis": 0.19750000536441803,
+    "vpd_target_center": 1.090000033378601,
+    "vpd_target_east": 1.2100000381469727,
+    "vpd_target_south": 1.1799999475479126,
+    "vpd_target_west": 1.08,
+    "vpd_watch_dwell_s": 60.0
+  },
+  "current_plan_rows": [
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "band_track_fraction",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "cold_vent_guard_delta_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 8.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "cool_exit_hysteresis_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.78
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "cool_stage2_exit_hysteresis_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "cool_stage2_over_high_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.5250000000000001
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "direct_wet_stress_min_dew_margin_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 8.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "direct_wet_stress_vpd_margin_kpa",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.05
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "dwell_gate_ms",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 240000.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "enthalpy_close",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "enthalpy_open",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": -2.0
+    },
+    {
+      "expires_at": "2026-10-13T00:49:29.984298+00:00",
+      "parameter": "fog_escalation_kpa",
+      "plan_id": "iris-oneshot-20261012-1249",
+      "ts": "2026-10-12T18:49:29.984298+00:00",
+      "value": 0.15
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "heat_hysteresis",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "min_fog_off_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 60.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "min_fog_on_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 63.75
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mist_backoff_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 600.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mist_max_closed_vent_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 600.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mist_thermal_relief_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 90.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_all_delay_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 84.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_all_kpa",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.154
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_engage_delay_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 42.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_engage_kpa",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.9540000000000001
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_pulse_gap_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 33.75
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_pulse_on_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 48.75
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_vpd_weight",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 2.05
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "mister_water_budget_gal",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 180.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "night_vpd_bias_kpa",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "outdoor_staleness_max_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 600.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_cool_all_fans_at_high_enabled",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_direct_wet_stress_override_enabled",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_dwell_gate_enabled",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_fog_closes_vent",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_mister_closes_vent",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "sw_summer_vent_enabled",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "temp_hysteresis",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 1.78
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "vent_exchange_fraction",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.3
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "vent_prefer_dp_delta_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 3.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "vent_prefer_temp_delta_f",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 4.0
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "vpd_hysteresis",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 0.1975
+    },
+    {
+      "expires_at": "2026-10-13T12:30:00+00:00",
+      "parameter": "vpd_watch_dwell_s",
+      "plan_id": "iris-20261012-0710",
+      "ts": "2026-10-12T19:00:00+00:00",
+      "value": 60.0
+    }
+  ],
+  "state_sha256": "14e160b880b1440a777e664c6a5093d9dbe36091ecafddf6b28129741433226e",
+  "approval_sha256": "dce68319c557d071f663b7ca11db0492d67232ea901e9e0a549f8d6cea5e9e04",
+  "preview_sha256": "79863a55e5cd835c3b1143bec41d5660e6dda8917393483578ec59d6747809a5",
+  "original_archive_sha256": "712b01b94c068029b5955542f77325ef250003bc5df7eb9bba3be316ce25763b",
+  "original_archive_preserved": true,
+  "native_db_outcomes_edited_by_operator": false,
+  "two_hour_window_complete": false
+}

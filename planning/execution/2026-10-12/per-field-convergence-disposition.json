@@ -1,0 +1,1189 @@
+{
+  "schema": "verdify-per-field-convergence-disposition/v1",
+  "observed_at": "2026-10-12T20:02:29.308183+00:00",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "pod_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+  "run_id": "f1a11599ed8c4b4fa9e92a66384a1e9d",
+  "initial_candidate_count": 21,
+  "native_confirmed": 20,
+  "native_guardrail_hold": 1,
+  "all_initial_candidates_have_disposition": true,
+  "per_field": [
+    {
+      "parameter": "vpd_target_south",
+      "first_final_source_preview_desired": 1.18,
+      "first_readback": 1.02,
+      "settled_current_readback": 1.1799999475479126,
+      "current_plan_row": null,
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.18,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.086363+00:00",
+        "parameter": "vpd_target_south",
+        "value": 1.18,
+        "source": "band",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "vpd_target_west",
+      "first_final_source_preview_desired": 1.09,
+      "first_readback": 0.78,
+      "settled_current_readback": 1.08,
+      "current_plan_row": null,
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.08,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.089894+00:00",
+        "parameter": "vpd_target_west",
+        "value": 1.08,
+        "source": "band",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "vpd_target_east",
+      "first_final_source_preview_desired": 1.21,
+      "first_readback": 0.97,
+      "settled_current_readback": 1.2100000381469727,
+      "current_plan_row": null,
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.21,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.092993+00:00",
+        "parameter": "vpd_target_east",
+        "value": 1.21,
+        "source": "band",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "vpd_target_center",
+      "first_final_source_preview_desired": 1.09,
+      "first_readback": 0.95,
+      "settled_current_readback": 1.090000033378601,
+      "current_plan_row": null,
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.09,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.096229+00:00",
+        "parameter": "vpd_target_center",
+        "value": 1.09,
+        "source": "band",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "cool_exit_hysteresis_f",
+      "first_final_source_preview_desired": 1.78,
+      "first_readback": 1.6,
+      "settled_current_readback": 1.78,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "cool_exit_hysteresis_f",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 1.78
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.78,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.400192+00:00",
+        "parameter": "cool_exit_hysteresis_f",
+        "value": 1.78,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "cool_stage2_over_high_f",
+      "first_final_source_preview_desired": 1.5250000000000001,
+      "first_readback": 1.7725,
+      "settled_current_readback": 1.524999976158142,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "cool_stage2_over_high_f",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 1.5250000000000001
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.5250000000000001,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.409621+00:00",
+        "parameter": "cool_stage2_over_high_f",
+        "value": 1.5250000000000001,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "dwell_gate_ms",
+      "first_final_source_preview_desired": 240000.0,
+      "first_readback": 210000.0,
+      "settled_current_readback": 240000.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "dwell_gate_ms",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 240000.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 240000.0,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.413116+00:00",
+        "parameter": "dwell_gate_ms",
+        "value": 240000,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "fog_escalation_kpa",
+      "first_final_source_preview_desired": 0.15,
+      "first_readback": 0.2,
+      "settled_current_readback": 0.15,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T00:49:29.984298+00:00",
+        "parameter": "fog_escalation_kpa",
+        "plan_id": "iris-oneshot-20261012-1249",
+        "ts": "2026-10-12T18:49:29.984298+00:00",
+        "value": 0.15
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 0.15,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.441559+00:00",
+        "parameter": "fog_escalation_kpa",
+        "value": 0.15,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "min_fog_off_s",
+      "first_final_source_preview_desired": 60.0,
+      "first_readback": 54.0,
+      "settled_current_readback": 60.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "min_fog_off_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 60.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 60.0,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.446159+00:00",
+        "parameter": "min_fog_off_s",
+        "value": 60,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "min_fog_on_s",
+      "first_final_source_preview_desired": 63.75,
+      "first_readback": 66.0,
+      "settled_current_readback": 63.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "min_fog_on_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 63.75
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 63.75,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.416178+00:00",
+        "parameter": "min_fog_on_s",
+        "value": 63.75,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_all_delay_s",
+      "first_final_source_preview_desired": 84.0,
+      "first_readback": 75.0,
+      "settled_current_readback": 84.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_all_delay_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 84.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 84.0,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.072584+00:00",
+        "parameter": "mister_all_delay_s",
+        "value": 84,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_all_kpa",
+      "first_final_source_preview_desired": 1.154,
+      "first_readback": 1.207,
+      "settled_current_readback": 1.154,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_all_kpa",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 1.154
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.154,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.076709+00:00",
+        "parameter": "mister_all_kpa",
+        "value": 1.154,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_engage_delay_s",
+      "first_final_source_preview_desired": 42.0,
+      "first_readback": 45.0,
+      "settled_current_readback": 42.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_engage_delay_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 42.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 42.0,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.080264+00:00",
+        "parameter": "mister_engage_delay_s",
+        "value": 42,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_engage_kpa",
+      "first_final_source_preview_desired": 0.9540000000000001,
+      "first_readback": 1.04,
+      "settled_current_readback": 0.954,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_engage_kpa",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 0.9540000000000001
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 0.9540000000000001,
+      "native_request": {
+        "ts": "2026-10-12T19:56:34.083391+00:00",
+        "parameter": "mister_engage_kpa",
+        "value": 0.9540000000000001,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:57:31.118638+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_pulse_gap_s",
+      "first_final_source_preview_desired": 33.75,
+      "first_readback": 30.0,
+      "settled_current_readback": 30.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_pulse_gap_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 33.75
+      },
+      "disposition": "explicit_existing_live_moisture_guardrail_hold",
+      "effective_desired": 30,
+      "native_guardrail_audit": {
+        "ts": "2026-10-12T19:57:40.79022+00:00",
+        "parameter": "mister_pulse_gap_s",
+        "requested": 33.75,
+        "applied": 30,
+        "reason": "vpd_high_moisture_guardrail",
+        "status": "held_by_guardrail",
+        "plan_id": "iris-20261012-0710",
+        "plan_ts": "2026-10-12T19:00:00+00:00"
+      },
+      "device_request_issued": false,
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_pulse_on_s",
+      "first_final_source_preview_desired": 48.75,
+      "first_readback": 33.0,
+      "settled_current_readback": 48.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_pulse_on_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 48.75
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 48.75,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.419765+00:00",
+        "parameter": "mister_pulse_on_s",
+        "value": 48.75,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "mister_vpd_weight",
+      "first_final_source_preview_desired": 2.05,
+      "first_readback": 1.7,
+      "settled_current_readback": 2.05,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "mister_vpd_weight",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 2.05
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 2.05,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.423331+00:00",
+        "parameter": "mister_vpd_weight",
+        "value": 2.05,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "sw_cool_all_fans_at_high_enabled",
+      "first_final_source_preview_desired": 1.0,
+      "first_readback": 0.0,
+      "settled_current_readback": 1.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "sw_cool_all_fans_at_high_enabled",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 1.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.0,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.427931+00:00",
+        "parameter": "sw_cool_all_fans_at_high_enabled",
+        "value": 1,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "temp_hysteresis",
+      "first_final_source_preview_desired": 1.78,
+      "first_readback": 1.6,
+      "settled_current_readback": 1.7799999713897705,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "temp_hysteresis",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 1.78
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 1.78,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.431278+00:00",
+        "parameter": "temp_hysteresis",
+        "value": 1.78,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "vpd_hysteresis",
+      "first_final_source_preview_desired": 0.1975,
+      "first_readback": 0.1875,
+      "settled_current_readback": 0.19750000536441803,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "vpd_hysteresis",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 0.1975
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 0.1975,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.434009+00:00",
+        "parameter": "vpd_hysteresis",
+        "value": 0.1975,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    },
+    {
+      "parameter": "vpd_watch_dwell_s",
+      "first_final_source_preview_desired": 60.0,
+      "first_readback": 52.0,
+      "settled_current_readback": 60.0,
+      "current_plan_row": {
+        "expires_at": "2026-10-13T12:30:00+00:00",
+        "parameter": "vpd_watch_dwell_s",
+        "plan_id": "iris-20261012-0710",
+        "ts": "2026-10-12T19:00:00+00:00",
+        "value": 60.0
+      },
+      "disposition": "confirmed_native_bounded_delivery",
+      "fresh_admitted_value": 60.0,
+      "native_request": {
+        "ts": "2026-10-12T19:55:41.43783+00:00",
+        "parameter": "vpd_watch_dwell_s",
+        "value": 60,
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "confirmed_at": "2026-10-12T19:56:28.777375+00:00",
+        "expired_at": null
+      },
+      "settled_readback_equivalent": true
+    }
+  ],
+  "historical_to_current_plan_transition": {
+    "kind": "Explicitly scoped restoration from preserved October6 halted authority to fresh effective October12 plan; historical plan is never replayed.",
+    "original_source": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "original_preview_at": "2026-10-06T23:43:24.277588+00:00",
+    "fresh_preview_at": "2026-10-12T19:54:48.262994+00:00",
+    "current_plan_row_count": 39,
+    "changed_plan_rows": [
+      {
+        "parameter": "band_track_fraction",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "band_track_fraction",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "band_track_fraction",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.0
+        }
+      },
+      {
+        "parameter": "cold_vent_guard_delta_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "cold_vent_guard_delta_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 8.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "cold_vent_guard_delta_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 8.0
+        }
+      },
+      {
+        "parameter": "cool_exit_hysteresis_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "cool_exit_hysteresis_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.6
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "cool_exit_hysteresis_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.78
+        }
+      },
+      {
+        "parameter": "cool_stage2_exit_hysteresis_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "cool_stage2_exit_hysteresis_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "cool_stage2_exit_hysteresis_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "cool_stage2_over_high_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "cool_stage2_over_high_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.7725000000000002
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "cool_stage2_over_high_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.5250000000000001
+        }
+      },
+      {
+        "parameter": "direct_wet_stress_min_dew_margin_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "direct_wet_stress_min_dew_margin_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 8.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "direct_wet_stress_min_dew_margin_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 8.0
+        }
+      },
+      {
+        "parameter": "direct_wet_stress_vpd_margin_kpa",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "direct_wet_stress_vpd_margin_kpa",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.05
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "direct_wet_stress_vpd_margin_kpa",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.05
+        }
+      },
+      {
+        "parameter": "dwell_gate_ms",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "dwell_gate_ms",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 210000.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "dwell_gate_ms",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 240000.0
+        }
+      },
+      {
+        "parameter": "enthalpy_close",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "enthalpy_close",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "enthalpy_close",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "enthalpy_open",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "enthalpy_open",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": -2.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "enthalpy_open",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": -2.0
+        }
+      },
+      {
+        "parameter": "fog_escalation_kpa",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "fog_escalation_kpa",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.2
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T00:49:29.984298+00:00",
+          "parameter": "fog_escalation_kpa",
+          "plan_id": "iris-oneshot-20261012-1249",
+          "ts": "2026-10-12T18:49:29.984298+00:00",
+          "value": 0.15
+        }
+      },
+      {
+        "parameter": "heat_hysteresis",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "heat_hysteresis",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "heat_hysteresis",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "min_fog_off_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "min_fog_off_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 54.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "min_fog_off_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 60.0
+        }
+      },
+      {
+        "parameter": "min_fog_on_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "min_fog_on_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 66.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "min_fog_on_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 63.75
+        }
+      },
+      {
+        "parameter": "mist_backoff_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mist_backoff_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 600.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mist_backoff_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 600.0
+        }
+      },
+      {
+        "parameter": "mist_max_closed_vent_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mist_max_closed_vent_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 600.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mist_max_closed_vent_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 600.0
+        }
+      },
+      {
+        "parameter": "mist_thermal_relief_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mist_thermal_relief_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 90.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mist_thermal_relief_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 90.0
+        }
+      },
+      {
+        "parameter": "mister_all_delay_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_all_delay_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 75.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_all_delay_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 84.0
+        }
+      },
+      {
+        "parameter": "mister_all_kpa",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_all_kpa",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.2069999999999999
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_all_kpa",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.154
+        }
+      },
+      {
+        "parameter": "mister_engage_delay_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_engage_delay_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 37.5
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_engage_delay_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 42.0
+        }
+      },
+      {
+        "parameter": "mister_engage_kpa",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_engage_kpa",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.057
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_engage_kpa",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.9540000000000001
+        }
+      },
+      {
+        "parameter": "mister_pulse_gap_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_pulse_gap_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 30.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_pulse_gap_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 33.75
+        }
+      },
+      {
+        "parameter": "mister_pulse_on_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_pulse_on_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 33.75
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_pulse_on_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 48.75
+        }
+      },
+      {
+        "parameter": "mister_vpd_weight",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_vpd_weight",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.7000000000000002
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_vpd_weight",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 2.05
+        }
+      },
+      {
+        "parameter": "mister_water_budget_gal",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "mister_water_budget_gal",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 180.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "mister_water_budget_gal",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 180.0
+        }
+      },
+      {
+        "parameter": "night_vpd_bias_kpa",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "night_vpd_bias_kpa",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "night_vpd_bias_kpa",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.0
+        }
+      },
+      {
+        "parameter": "outdoor_staleness_max_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "outdoor_staleness_max_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 600.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "outdoor_staleness_max_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 600.0
+        }
+      },
+      {
+        "parameter": "sw_cool_all_fans_at_high_enabled",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_cool_all_fans_at_high_enabled",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_cool_all_fans_at_high_enabled",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "sw_direct_wet_stress_override_enabled",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_direct_wet_stress_override_enabled",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_direct_wet_stress_override_enabled",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "sw_dwell_gate_enabled",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_dwell_gate_enabled",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_dwell_gate_enabled",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "sw_fog_closes_vent",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_fog_closes_vent",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_fog_closes_vent",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "sw_mister_closes_vent",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_mister_closes_vent",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_mister_closes_vent",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.0
+        }
+      },
+      {
+        "parameter": "sw_summer_vent_enabled",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "sw_summer_vent_enabled",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "sw_summer_vent_enabled",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.0
+        }
+      },
+      {
+        "parameter": "temp_hysteresis",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "temp_hysteresis",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 1.6
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "temp_hysteresis",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 1.78
+        }
+      },
+      {
+        "parameter": "vent_exchange_fraction",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "vent_exchange_fraction",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.3
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "vent_exchange_fraction",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.3
+        }
+      },
+      {
+        "parameter": "vent_prefer_dp_delta_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "vent_prefer_dp_delta_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 3.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "vent_prefer_dp_delta_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 3.0
+        }
+      },
+      {
+        "parameter": "vent_prefer_temp_delta_f",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "vent_prefer_temp_delta_f",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 4.0
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "vent_prefer_temp_delta_f",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 4.0
+        }
+      },
+      {
+        "parameter": "vpd_hysteresis",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "vpd_hysteresis",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 0.18749999999999994
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "vpd_hysteresis",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 0.1975
+        }
+      },
+      {
+        "parameter": "vpd_watch_dwell_s",
+        "historical_original_plan_row": {
+          "expires_at": "2026-10-09T23:30:00+00:00",
+          "parameter": "vpd_watch_dwell_s",
+          "plan_id": "iris-20261006-1737",
+          "ts": "2026-10-06T23:35:00+00:00",
+          "value": 52.5
+        },
+        "fresh_current_plan_row": {
+          "expires_at": "2026-10-13T12:30:00+00:00",
+          "parameter": "vpd_watch_dwell_s",
+          "plan_id": "iris-20261012-0710",
+          "ts": "2026-10-12T19:00:00+00:00",
+          "value": 60.0
+        }
+      }
+    ]
+  },
+  "scope_limit": "This proves recovery and the admitted current-plan transition. The two-hour final-source observation window remains incomplete."
+}

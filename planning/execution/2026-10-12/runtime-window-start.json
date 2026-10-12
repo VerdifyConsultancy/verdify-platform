@@ -1,0 +1,15 @@
+{
+  "schema": "verdify-runtime-window-intent/v1",
+  "started_at": "2026-10-12T20:01:30.886995+00:00",
+  "earliest_complete_at": "2026-10-12T22:01:30.886995+00:00",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "pod": "verdify-ingestor-7666f97959-htjdk",
+  "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+  "interval_seconds": 60,
+  "socket_census_every_samples": 10,
+  "scope": "Read-only evidence collection; no production/device mutation.",
+  "status": "Running; not yet qualified",
+  "collector_script_sha256": "cbf9abefc4704baaf3d7c94f492b7c67da67053f5d9d9b6d076446a6fa306543"
+}

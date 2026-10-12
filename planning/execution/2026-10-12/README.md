@@ -1,6 +1,18 @@
 # Verdify runtime delivery — October 12, 2026
 
-## Current delivery checkpoint — 19:42 UTC
+## Current delivery and convergence checkpoint — 20:03 UTC
+
+The combined cohort is deployed. The one full production sync at [promotion d43919e933eb1be69559be7566853ff69a64e903](https://github.com/VerdifyConsultancy/verdify-platform/commit/d43919e933eb1be69559be7566853ff69a64e903) ran 19:41:10–19:48:41 UTC with no resource selector and pruning disabled. All 128 resource results are Synced, all six fresh migration/bootstrap Job UIDs succeeded, and the Application is Synced and Healthy. All 15 Deployments are ready. The [runtime receipt](post-sync-runtime-qualification.json) verifies actual desired/running digests, cb21 source in both API/MCP replicas and the ingestor/setpoint server, and the existing orchestrator's actual baked 3fe6 source. The unchanged migration image executed as a fresh hook. Authenticated smoke passed 9/0; both MCP replicas expose the expected 23-tool inventory. Independent full-namespace socket censuses found exactly one ESP32 connection with zero unobservable Running Pods. The new sole ingestor UID 6509f094-062f-4f93-a9f7-7c56e1ee238a passed the five-minute schema watch with zero validation errors and zero restarts. Both Lab initializers passed their existing public-output guard, and the public site/status endpoint return 200. The actual publisher CronJob runs at minutes 5 and 35; the next scheduled run is separate publication evidence.
+
+The supported [confirmed-halt archive](confirmed-halt-archive.json) is now native and immutable. Original run 76d18133852b490680bce2639e6d8397, its raw halted state, expired approval, original Pod provenance and 12 independently confirmed native requests remain custody. Archive authority was installed once at 19:54:21 and granted no setters. A [distinct fresh admission](fresh-ordinary-admission.json), run f1a11599ed8c4b4fa9e92a66384a1e9d, was installed once at 19:55:30 under current source/session/generation, the complete current effective plan and current readbacks. The [native completion receipt](native-convergence-complete.json) verifies 20 actual requested/sent/confirmed outcomes in stages of 12 and 8, with maximum confirmation time 57.05s and zero residual candidates. No operator DB outcome edit, expired approval replay, broad push or cap increase occurred.
+
+[Every initial held field has a disposition](per-field-convergence-disposition.json): 20 were confirmed through the bounded native path. The remaining `mister_pulse_gap_s` retains planner 33.75 but effective/readback 30 under the existing live moisture guardrail; [native audit rows](pulse-gap-guardrail-native-proof.json) show `held_by_guardrail` with no device request. The original October 6 plan and all 39 distinct current October 12 plan rows are retained as separate provenance. This is the explicitly scoped historical-to-current recovery transition, not a fabricated future waypoint.
+
+The [one uninterrupted two-hour window](runtime-window-start.json) actually started **20:01:30.886995 UTC** and cannot complete before **22:01:30.886995 UTC**. Its first sample passed with all 20 requests confirmed, zero candidates, fresh 48, current heap 63.35 KiB and largest block 56 KiB. The collector is read-only and records the same Pod/source/digest, lease, Application health, fresh atomic 48, task age, native request batch sizes/confirmations and schema logs every minute, with full socket censuses every 10 samples and at endpoints. It does not silently restart a window. Sampling is bounded and does not claim continuous socket observation. Final smoke, native-history/per-field review and the completed window remain required before #949 can close.
+
+#644 and #949 remain open. The broader #644 unattended authority/failure/retry/cancel/concurrency matrix continues through its existing owner on an isolated offline lane; this successful attended delivery does not close it. The original 98/98 issue-update batch is complete and is not repeated. The existing coordinator heartbeat is the only automation and will wake this same runtime-writer chat on actual collector completion or meaningful failure. No additional production writer, firmware OTA, Gate P, experiment launch or production database cutover is introduced.
+
+## Historical delivery checkpoint — 19:42 UTC
 
 [PR #973](https://github.com/VerdifyConsultancy/verdify-platform/pull/973) and [Agents PR #4806](https://github.com/jvallery/agents/pull/4806) are merged and qualified. Verdify main `cb21fd3d3295aa8d7183f70b0d5ac82405410b1a` exactly matches the qualified PR source tree. All135 focused tests and the native PR gate passed; all14 required caller checks are accepted and archived. The reviewed one-template caller adoption is verified in [its receipt](caller-capacity-adoption.json); source, build, publication and runtime proof remain separate.
 
@@ -40,7 +52,7 @@ Jason's explicit continuous project-execution instruction resumes this lane. The
 
 The original **98/98 issue and PR updates are complete**, with exact remote-body readbacks and zero pending. The [final handoff journal](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/PUBLICATION-FOLLOWUP.md) records publication separately from unfinished product acceptance. Do not repeat these comments.
 
-## Current evidence
+## Historical evidence — 17:48 UTC
 
 - PR #973 is the canonical integrated cohort at `37fd6e4a3030471c4e2f397f50b7d6a3278e4276`, mergeable with exact-head native CI success. It contains #968/#970/#971. No duplicate component release is planned.
 - Production remains Synced/Healthy at `b5bdb3c65b243c230b7864fa81b95f926b2e68ff`; all15 Deployments are ready. The ingestor still runs `f48c6bf0257b25ed2820689154ca3502507129c6`. This is not #973 deployment proof.
@@ -50,7 +62,7 @@ The original **98/98 issue and PR updates are complete**, with exact remote-body
 
 See [fresh readback](fresh-readback.json), [recovery preflight](recovery-preflight.json), [current caller profile](current-main-caller-profile.json), [Physical owner qualification](physical-capacity-qualification.json) and [trusted adapter offline projection](current-main-impact-projection.json). The projection selects five serial builds: api, mcp, ingestor, setpoint-server and lab-publisher. Native next-main classification is still required. The final Physical receipt clarifies that all three eligible workers have more than60Gi physically unallocated; onlynode7 retains the inherited85-percent runway comparison margin after that growth. That comparison is not a new CI admission formula or mandatory threshold. Existing measured allocations are already included in free-space baselines and must not be charged again as new growth.
 
-## Finite delivery path
+## Historical delivery plan — superseded by the current checkpoint
 
 1. Fleet, Storage and Physical owners close actual caller admission:32Gi scratch request/60Gi limit,2Gi memory request/4Gi limit, one CPU request/three CPU limit per serial build;10Gi validation and its one permitted retry; injected containers, failed residue, pulls, cache, logs and backend release. Preserve original `l2lfz`/`xnbz7` failures and failed Pod UID `f12edac0-5fc2-4141-b2df-1c2a83110d98`. A completed Pod or nominal scheduler fit is not thin-pool release proof. The current selector admits nodes5–7; no required node7 affinity exists. Qualify the existing operation against intended placement and bounded actual growth/reuse, without inventing a global ledger or requiring an unrelated44-check campaign. Unclosed bytes remain unknown.
 2. Merge the integrated source once after supported admission. Capture actual final-source main classifier/build/publication outputs and the actuator's candidate pins. Account for coordinator planning-only main drift without rebuilding unchanged inputs gratuitously. Never hand-edit actuator-owned candidates.
@@ -58,13 +70,13 @@ See [fresh readback](fresh-readback.json), [recovery preflight](recovery-preflig
 4. Perform one exact-revision full no-prune Argo sync with no resource selector. Preserve migration/bootstrap/readiness hooks and immediately verify the operation selector is absent/empty. Verify exact SHA/digests, one writer and the five-minute schema-validation watch.
 5. Recapture final-source raw halt/approval custody, exact original native rows, current Pod/session/generation, full plan, fresh48 and one socket. Prepare/install the guarded archive-only `confirmed_halt_forward` v2 capability. Retain original history, then use a distinct fresh ordinary admission. Keep cap12 and genuine confirmation between stages. Qualify an authentic permitted transition and one uninterrupted two-hour final-source window.
 
-## Blocker and authority
+## Historical blocker and authority — 17:48 UTC
 
 Current blocker: supported whole-build workspace/physical/debt admission remains unaccepted. Fleet and Storage thread dispatch encountered an active-writer lock; the coordinator is routing the owner work, and Physical has the fresh caller packet. Registry GREEN alone does not resolve it. This is owner engineering work, not a request for Jason to waive a gate.
 
 Ordinary source-owned policy recovery is covered by Jason's execution instruction. No further discretionary decision is required unless fresh evidence changes the physical outcome. No cap increase, expired-approval replay, state deletion, second writer, GateP, OTA, randomized launch, DB cutover, credential rotation or unrelated infrastructure mutation is part of this lane. No source build, promotion, sync or recovery capability has been submitted by this resume checkpoint.
 
-## Main integration preparation
+## Historical main integration preparation
 
 The canonical PR still retains head37fd and its original native result. A separate linear local integration at `b915188466205d5f1816a382898c62d01d50d3bd` rebases that cohort onto main `8c9d563a69fa68501af112098e9d2e00947efe65`. It resolves only the planning backlog/manifest conflicts, preserves main's complete execution_plan and fresh #949/#964 records, and carries factual historical #644/#396/#643 progress. All nonplanning files match37fd exactly. The35 planning tests and all seven generated views pass; the trusted offline adapter still selects the same five images.
 

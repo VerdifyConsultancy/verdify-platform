@@ -1,0 +1,474 @@
+{
+  "schema": "verdify-post-sync-runtime-qualification/v1",
+  "promotion_revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "built_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "operation_started_at": "2026-10-12T19:41:10Z",
+  "operation_finished_at": "2026-10-12T19:48:41Z",
+  "operation_phase": "Succeeded",
+  "full_operation_no_selector": true,
+  "prune": false,
+  "resource_result_count": 128,
+  "all_resources_synced": true,
+  "fresh_hook_jobs": [
+    {
+      "name": "verdify-migrate",
+      "uid": "09162224-4ce7-4cdb-9f26-02c54f9704fc",
+      "start_time": "2026-10-12T19:41:28Z",
+      "completion_time": "2026-10-12T19:41:51Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-runtime-role-bootstrap",
+      "uid": "9ca82924-66c9-4af2-9767-c3480d5beee8",
+      "start_time": "2026-10-12T19:41:58Z",
+      "completion_time": "2026-10-12T19:42:03Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "uid": "e12bc180-94c4-41fc-ac09-f7c06f94b206",
+      "start_time": "2026-10-12T19:42:06Z",
+      "completion_time": "2026-10-12T19:42:16Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "uid": "62a29f42-39df-40dd-a9c9-13dadcfb5774",
+      "start_time": "2026-10-12T19:42:06Z",
+      "completion_time": "2026-10-12T19:42:11Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-six-runtime-role-bootstrap",
+      "uid": "b90f6b16-5d5c-4b8f-b1c3-b5b3c9de533c",
+      "start_time": "2026-10-12T19:42:22Z",
+      "completion_time": "2026-10-12T19:42:33Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+      ]
+    },
+    {
+      "name": "verdify-winter-archive-init",
+      "uid": "f4a35412-5b5b-4f4b-bdb5-9bd7fdc653a2",
+      "start_time": "2026-10-12T19:42:43Z",
+      "completion_time": "2026-10-12T19:43:03Z",
+      "succeeded": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      ]
+    }
+  ],
+  "runtime_pods": [
+    {
+      "name": "experiment-v2-freezer-85949ffc64-btlvg",
+      "uid": "cc69d935-a028-4f0a-8e79-085de53db0e1",
+      "created_at": "2026-10-12T19:42:44Z",
+      "containers": [
+        {
+          "name": "freezer",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:42:57Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "experiment-v2-lifecycle-59585db698-wnjgf",
+      "uid": "e81f47e2-fe36-47a8-82f6-93844c07d587",
+      "created_at": "2026-10-12T19:42:44Z",
+      "containers": [
+        {
+          "name": "lifecycle",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:42:57Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "experiment-v2-selector-b8cd5df99-f7fcp",
+      "uid": "7b7b0f17-9eae-4b08-9d18-7bfacba1314d",
+      "created_at": "2026-10-12T19:42:44Z",
+      "containers": [
+        {
+          "name": "selector",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:42:57Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-api-75c7959d86-9s6dm",
+      "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41",
+      "created_at": "2026-10-12T19:43:14Z",
+      "containers": [
+        {
+          "name": "api",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:43:29Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-api-75c7959d86-lgks6",
+      "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139",
+      "created_at": "2026-10-12T19:42:42Z",
+      "containers": [
+        {
+          "name": "api",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:42:56Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-ingestor-7666f97959-htjdk",
+      "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+      "created_at": "2026-10-12T19:48:42Z",
+      "containers": [
+        {
+          "name": "ingestor",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:49:01Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-lab-5c5bbc844c-5n88c",
+      "uid": "482c459a-e7fa-424d-9e8a-bea96bc15b74",
+      "created_at": "2026-10-12T19:42:42Z",
+      "containers": [
+        {
+          "name": "prepare-private-public-root",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://a693d48b7e60f7d2be6cba964c633c921ff957172e063076504b852d9a97e05d",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T19:45:14Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T19:43:19Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-lab-5c5bbc844c-gzwwm",
+      "uid": "fb898ea4-cbcd-41d8-a650-d8b43912cb3e",
+      "created_at": "2026-10-12T19:45:27Z",
+      "containers": [
+        {
+          "name": "prepare-private-public-root",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8890e9e6ab5cc8a079495bd2ea2832aabca9f5e7f872296a8bd4b950bb3e18d8",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://5561a77bb6e3be71222d84c34db1d8e206c400ac8e409383f9efe5b796e7005f",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T19:47:20Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T19:45:28Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp-799f47fbf6-kcf65",
+      "uid": "f51a55d8-5df8-4752-8a7e-ddabd4c81662",
+      "created_at": "2026-10-12T19:48:06Z",
+      "containers": [
+        {
+          "name": "mcp",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:48:20Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp-799f47fbf6-z6zh8",
+      "uid": "0f07ab7c-525d-4818-b63e-dd17b8ae7df3",
+      "created_at": "2026-10-12T19:47:34Z",
+      "containers": [
+        {
+          "name": "mcp",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:47:47Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-setpoint-server-b8bf9b5cb-54f5b",
+      "uid": "87138ad5-6412-479e-9054-d36c02622fe1",
+      "created_at": "2026-10-12T19:43:17Z",
+      "containers": [
+        {
+          "name": "setpoint-server",
+          "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+          "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+          "ready": true,
+          "restart_count": 0,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-12T19:43:32Z"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "all_deployments_ready_count": 15,
+  "smoke": {
+    "passed": 9,
+    "failed": 0,
+    "api_sha_and_digest_match": true,
+    "mcp_authenticated_replicas": 2,
+    "iris_tool_count_per_replica": 23,
+    "fresh_complete_atomic_cfg_fields": 48
+  },
+  "device_monitor": {
+    "running_pods_observed": 21,
+    "established_esp32_connections": 1,
+    "unobservable_pods": 0
+  },
+  "promotion_metadata_workflow": {
+    "name": "verdify-platform-ci-6lw28",
+    "uid": "f1688859-2a6d-4228-8c39-2098bb9a86b0",
+    "phase": "Succeeded",
+    "finished_at": "2026-10-12T19:50:21Z",
+    "classification": {
+      "base_revision": "d2f2c3a05584b8a8e77d4b6e0f8c71317d7f3c6f",
+      "mode": "validate",
+      "paths_sha256": "143640d19106c7a3b4e9dc1940d5c2627b7676b76fe4affd8554002ceaa26c6e",
+      "profiles": [],
+      "reasons": {},
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "d43919e933eb1be69559be7566853ff69a64e903"
+    },
+    "actual_pod_stage_count": 1,
+    "image_builds": 0
+  },
+  "limits": [
+    "Current production render contains five PreSync Jobs and one Sync Job; no Gate R activation or PostSync Job is present.",
+    "The existing orchestrator candidate retains source 3fe6abca313cd14a4e123dcc49bec26adf01c9d4, independently verified against equal build inputs; it is not labelled as freshly built cb21.",
+    "Fresh historical archive, new bounded admission and the two-hour convergence window remain separate acceptance evidence.",
+    "Successful attended delivery does not close the broader unattended #644 authority/failure/retry/cancel/concurrency matrix."
+  ],
+  "application_observed_at": "2026-10-12T19:50:07.628515+00:00",
+  "application_sync": "Synced",
+  "application_health": "Healthy",
+  "schema_watch": {
+    "observed_at": "2026-10-12T19:54:01.287792+00:00",
+    "pod": "verdify-ingestor-7666f97959-htjdk",
+    "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "since_time": "2026-10-12T19:49:01Z",
+    "elapsed_seconds": 300.287792,
+    "patterns": {
+      "ValidationError": 0,
+      "row failed schema validation": 0
+    },
+    "restart_count": 0,
+    "ready": true,
+    "log_bytes": 38084,
+    "log_sha256": "50968f6d977e33b2e33d114d2554ef7e332159e1f4c1998bd6e0844f811cd5cb",
+    "five_minute_watch_passed": true
+  },
+  "runtime_source_observations": {
+    "at": "2026-10-12T19:50:36.717489+00:00",
+    "sources": [
+      {
+        "pod": "verdify-api-75c7959d86-9s6dm",
+        "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41",
+        "container": "api",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-api-75c7959d86-9s6dm"
+        }
+      },
+      {
+        "pod": "verdify-api-75c7959d86-lgks6",
+        "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139",
+        "container": "api",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-api-75c7959d86-lgks6"
+        }
+      },
+      {
+        "pod": "verdify-ingestor-7666f97959-htjdk",
+        "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+        "container": "ingestor",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-ingestor-7666f97959-htjdk"
+        }
+      },
+      {
+        "pod": "verdify-mcp-799f47fbf6-kcf65",
+        "uid": "f51a55d8-5df8-4752-8a7e-ddabd4c81662",
+        "container": "mcp",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-mcp-799f47fbf6-kcf65"
+        }
+      },
+      {
+        "pod": "verdify-mcp-799f47fbf6-z6zh8",
+        "uid": "0f07ab7c-525d-4818-b63e-dd17b8ae7df3",
+        "container": "mcp",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-mcp-799f47fbf6-z6zh8"
+        }
+      },
+      {
+        "pod": "verdify-setpoint-server-b8bf9b5cb-54f5b",
+        "uid": "87138ad5-6412-479e-9054-d36c02622fe1",
+        "container": "setpoint-server",
+        "env": {
+          "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+          "GIT_SHA": null,
+          "HOSTNAME": "verdify-setpoint-server-b8bf9b5cb-54f5b"
+        }
+      }
+    ]
+  },
+  "orchestrator_runtime": {
+    "at": "2026-10-12T19:51:27.608927+00:00",
+    "pods": [
+      {
+        "pod": "experiment-v2-freezer-85949ffc64-btlvg",
+        "uid": "cc69d935-a028-4f0a-8e79-085de53db0e1",
+        "container": "freezer",
+        "source": "3fe6abca313cd14a4e123dcc49bec26adf01c9d4",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "ready": true,
+        "restart_count": 0
+      },
+      {
+        "pod": "experiment-v2-lifecycle-59585db698-wnjgf",
+        "uid": "e81f47e2-fe36-47a8-82f6-93844c07d587",
+        "container": "lifecycle",
+        "source": "3fe6abca313cd14a4e123dcc49bec26adf01c9d4",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "ready": true,
+        "restart_count": 0
+      },
+      {
+        "pod": "experiment-v2-selector-b8cd5df99-f7fcp",
+        "uid": "7b7b0f17-9eae-4b08-9d18-7bfacba1314d",
+        "container": "selector",
+        "source": "3fe6abca313cd14a4e123dcc49bec26adf01c9d4",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "ready": true,
+        "restart_count": 0
+      }
+    ]
+  },
+  "public_lab_http": {
+    "observed_at": "2026-10-12T19:53:10.776321+00:00",
+    "probes": [
+      {
+        "path": "/",
+        "status": 200,
+        "content_type": "text/html",
+        "bytes": 52446,
+        "sha256": "2e4fe5f0a76ee52c29be2c7bd8e83e2e6fd3a091919a24e4ac0fcba296fce92e",
+        "lab_marker_present": true
+      },
+      {
+        "path": "/_publication-status.json",
+        "status": 200,
+        "content_type": "application/json",
+        "bytes": 657,
+        "sha256": "eb52c0e1d6dd42265cb0c8280d9e8e0380a0733bab1d944c57127075f062b923",
+        "publication_keys": [
+          "last_attempt",
+          "last_contention_at_utc",
+          "last_success",
+          "schema_version",
+          "served_public_sha256"
+        ]
+      }
+    ]
+  }
+}
