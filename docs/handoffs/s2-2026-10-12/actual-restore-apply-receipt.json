@@ -1,0 +1,90 @@
+{
+  "version": "s2-integration-candidate-four-resource-apply-v1",
+  "candidate": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "application": "verdify-db-rehearsal-cluster",
+  "applicationUid": "97ff0f52-2691-4f07-9184-591d936e3a05",
+  "startedAt": "2026-10-12T18:32:58Z",
+  "finishedAt": "2026-10-12T18:33:00Z",
+  "operationPhase": "Succeeded",
+  "operationResources": [
+    {
+      "group": "postgresql.cnpg.io",
+      "kind": "Cluster",
+      "name": "verdify-cnpg-s2-integration",
+      "namespace": "verdify-db-rehearsal"
+    },
+    {
+      "group": "barmancloud.cnpg.io",
+      "kind": "ObjectStore",
+      "name": "verdify-cnpg-pitr-reader",
+      "namespace": "verdify-db-rehearsal"
+    },
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "name": "cnpg-s2-integration-runtime-client-only",
+      "namespace": "verdify-db-rehearsal"
+    },
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "name": "cnpg-s2-integration-runtime-client-ingress",
+      "namespace": "verdify-db-rehearsal"
+    }
+  ],
+  "resultResources": [
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "name": "cnpg-s2-integration-runtime-client-ingress",
+      "namespace": "verdify-db-rehearsal",
+      "status": "Synced",
+      "syncPhase": "Sync"
+    },
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "name": "cnpg-s2-integration-runtime-client-only",
+      "namespace": "verdify-db-rehearsal",
+      "status": "Synced",
+      "syncPhase": "Sync"
+    },
+    {
+      "group": "barmancloud.cnpg.io",
+      "kind": "ObjectStore",
+      "name": "verdify-cnpg-pitr-reader",
+      "namespace": "verdify-db-rehearsal",
+      "status": "Synced",
+      "syncPhase": "Sync"
+    },
+    {
+      "group": "postgresql.cnpg.io",
+      "kind": "Cluster",
+      "name": "verdify-cnpg-s2-integration",
+      "namespace": "verdify-db-rehearsal",
+      "status": "Synced",
+      "syncPhase": "Sync"
+    }
+  ],
+  "resultRevision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "sourceAndPolicyUnchanged": true,
+  "sourceTargetRevision": "main",
+  "manual": {
+    "enabled": false,
+    "prune": false,
+    "selfHeal": false
+  },
+  "submittedPrune": false,
+  "statusPruneOmittedFalseDefault": true,
+  "prunedResources": 0,
+  "hookResources": 0,
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "originalClusterRecreated": false,
+  "appStatePreserved": "manual; prune false; OutOfSync main comparison retained",
+  "helperAttempt": "initial helper assertion stopped when Argo omitted default false in status; independent readback verified exact four-resource success; no retry or resubmission",
+  "limits": [
+    "Argo apply success does not prove recovered database acceptance",
+    "production DB, device, image publication and credential values unchanged"
+  ],
+  "privateEvidence": "/private/tmp/verdify-replan-20261012/contained-recovery/actual-target/operation-20261012T183251Z"
+}

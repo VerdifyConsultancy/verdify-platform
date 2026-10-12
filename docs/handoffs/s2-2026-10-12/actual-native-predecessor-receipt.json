@@ -1,0 +1,106 @@
+{
+  "version": "s2-integration-native-predecessor-v1",
+  "capturedAt": "2026-10-12T18:35:45.730399+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "identity": {
+    "vector": "0.8.1",
+    "primary": true,
+    "database": "verdify_rehearsal",
+    "timescaledb": "2.25.2",
+    "cluster_name": "verdify-cnpg-s2-integration",
+    "database_oid": "16447",
+    "system_identifier": "7693399121498484768",
+    "server_version_num": 160013,
+    "timescaledb_max_background_workers": "0"
+  },
+  "fullWitnessSha256": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+  "exactSealed274Witness": true,
+  "capacityCapturedAt": "2026-10-12T18:32:58.278916+00:00",
+  "capacityFit": [
+    {
+      "name": "vm-k3s-node4",
+      "uid": "30dd9581-c902-44bb-ac58-98f9f9cf4571",
+      "host": "oro",
+      "requestMemoryHeadroomGi": 15.503991166129708,
+      "liveMemoryHeadroomGi": 43.09774116612971,
+      "cpuRequestHeadroom": 8.479999999999997,
+      "eligibleDisks": [
+        {
+          "disk": "nvme-s7u5nj0xa01267a",
+          "physicalHeadroomGi": 213.97582626342773,
+          "logicalHeadroomGi": 1114.5058898925781
+        },
+        {
+          "disk": "nvme-s7u5nj0xa16865a",
+          "physicalHeadroomGi": 253.13598251342773,
+          "logicalHeadroomGi": 1035.5332336425781
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node5",
+      "uid": "faa0d5b4-1699-4563-823a-f60e6ce9fc6d",
+      "host": "opal",
+      "requestMemoryHeadroomGi": 27.612382736988366,
+      "liveMemoryHeadroomGi": 36.649492111988366,
+      "cpuRequestHeadroom": 18.34,
+      "eligibleDisks": [
+        {
+          "disk": "nvme-s4p4ng0m103293d",
+          "physicalHeadroomGi": 161.72973251342773,
+          "logicalHeadroomGi": 825.2832336425781
+        },
+        {
+          "disk": "nvme-s59anj0n203499k",
+          "physicalHeadroomGi": 213.68285751342773,
+          "logicalHeadroomGi": 1055.6308898925781
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node6",
+      "uid": "e89285f7-9fd4-473c-91d2-db4b70f1a976",
+      "host": "ore",
+      "requestMemoryHeadroomGi": 21.740986863151193,
+      "liveMemoryHeadroomGi": 47.41188530065119,
+      "cpuRequestHeadroom": 21.62,
+      "eligibleDisks": [
+        {
+          "disk": "nvme-s4p4ng0m103292y",
+          "physicalHeadroomGi": 275.69440746307373,
+          "logicalHeadroomGi": 933.4095840454102
+        },
+        {
+          "disk": "nvme-s4p4ng0m105377e",
+          "physicalHeadroomGi": 157.92096996307373,
+          "logicalHeadroomGi": 1186.6322402954102
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node7",
+      "uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d",
+      "host": "onyx",
+      "requestMemoryHeadroomGi": 24.660357136279345,
+      "liveMemoryHeadroomGi": 37.916216511279345,
+      "cpuRequestHeadroom": 23.11,
+      "eligibleDisks": [
+        {
+          "disk": "nvme-s7u5nj0xa01246z",
+          "physicalHeadroomGi": 153.33112621307373,
+          "logicalHeadroomGi": 1061.6322402954102
+        }
+      ]
+    }
+  ],
+  "targetLogicalGi": 75,
+  "potentialR2Gi": 150,
+  "rootAndNvmeBackingSeparate": true,
+  "limits": [
+    "whole951 COPY still in progress at this receipt",
+    "275 bridge/native admission/ordinary authentication remain unproved",
+    "background worker suppression and catalog identity are verified; business recovery is not implied"
+  ]
+}
