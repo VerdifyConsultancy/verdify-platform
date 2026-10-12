@@ -1,0 +1,151 @@
+{
+  "schema": "verdify-965-owner-readonly-live-qualification/v1",
+  "observed_at": "2026-10-12T21:04:49.212781+00:00",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "promotion_revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "proposal_revision": "b1f1ae6376ab38f7a431d5da64ead9fa23a725e2",
+  "reader_sha256": "845be3754369eec5389a07908a597931585c8946af72350f56f18b60f76c769f",
+  "sql_sha256": "32cc316832bcf5e7f173c3922949c922b7ff74df5783539cb671f6c209a09665",
+  "api_replicas": [
+    {
+      "observed_at": "2026-10-12T21:04:49.145788+00:00",
+      "before": {
+        "pod": "verdify-api-75c7959d86-9s6dm",
+        "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41",
+        "container_id": "containerd://b5328d01d826b837a37144958c99222307f5573230bd04a19fe8ce51c675995e",
+        "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "restart_count": 0,
+        "ready": true
+      },
+      "after": {
+        "pod": "verdify-api-75c7959d86-9s6dm",
+        "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41",
+        "container_id": "containerd://b5328d01d826b837a37144958c99222307f5573230bd04a19fe8ce51c675995e",
+        "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "restart_count": 0,
+        "ready": true
+      },
+      "native_readback": {
+        "api_source_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+        "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+        "declared_501_without_200": true,
+        "live_POST_executed": false,
+        "method": "post",
+        "openapi_bytes": 196424,
+        "openapi_http_status": 200,
+        "openapi_sha256": "052ae605c56a98d30908d54733eb773df7585855abb0943b15c9b12209821825",
+        "physical_command_or_readback_qualified": false,
+        "response_codes": [
+          "422",
+          "501"
+        ],
+        "route": "/api/v1/greenhouses/{greenhouse_id}/lights/{circuit}/{action}",
+        "schema": "verdify-965-readonly-live-contract-v1"
+      }
+    },
+    {
+      "observed_at": "2026-10-12T21:04:48.921192+00:00",
+      "before": {
+        "pod": "verdify-api-75c7959d86-lgks6",
+        "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139",
+        "container_id": "containerd://ef86fe56d15f68e813974f10e5ac43acd6a8c2ecc2ab9a81b1435a0525c58b1d",
+        "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "restart_count": 0,
+        "ready": true
+      },
+      "after": {
+        "pod": "verdify-api-75c7959d86-lgks6",
+        "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139",
+        "container_id": "containerd://ef86fe56d15f68e813974f10e5ac43acd6a8c2ecc2ab9a81b1435a0525c58b1d",
+        "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "restart_count": 0,
+        "ready": true
+      },
+      "native_readback": {
+        "api_source_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+        "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+        "declared_501_without_200": true,
+        "live_POST_executed": false,
+        "method": "post",
+        "openapi_bytes": 196424,
+        "openapi_http_status": 200,
+        "openapi_sha256": "052ae605c56a98d30908d54733eb773df7585855abb0943b15c9b12209821825",
+        "physical_command_or_readback_qualified": false,
+        "response_codes": [
+          "422",
+          "501"
+        ],
+        "route": "/api/v1/greenhouses/{greenhouse_id}/lights/{circuit}/{action}",
+        "schema": "verdify-965-readonly-live-contract-v1"
+      }
+    }
+  ],
+  "history_bounds": {
+    "schema": "verdify-965-retained-light-history-bounds-v1",
+    "database": "verdify",
+    "observed_at": "2026-10-12T21:04:47.58336+00:00",
+    "schema_columns": [
+      {
+        "type": "timestamp with time zone",
+        "column": "ts"
+      },
+      {
+        "type": "text",
+        "column": "equipment"
+      },
+      {
+        "type": "boolean",
+        "column": "state"
+      },
+      {
+        "type": "text",
+        "column": "greenhouse_id"
+      }
+    ],
+    "retained_lights": [
+      {
+        "last_ts": "2026-10-12T21:04:40.296713+00:00",
+        "first_ts": "2024-11-17T13:00:01.747867+00:00",
+        "equipment": "grow_light_grow",
+        "greenhouse_id": "vallery",
+        "retained_rows": 43867,
+        "rows_at_or_before_prior_audit": 43488,
+        "rows_after_fixed_source_observation": 21,
+        "rows_between_prior_audit_and_fixed_source_observation": 358
+      },
+      {
+        "last_ts": "2026-10-12T21:04:40.296713+00:00",
+        "first_ts": "2024-11-17T13:00:01.846637+00:00",
+        "equipment": "grow_light_main",
+        "greenhouse_id": "vallery",
+        "retained_rows": 44011,
+        "rows_at_or_before_prior_audit": 43632,
+        "rows_after_fixed_source_observation": 21,
+        "rows_between_prior_audit_and_fixed_source_observation": 358
+      }
+    ],
+    "prior_audit_cutoff": "2026-10-11T15:33:39.925243Z",
+    "row_origin_classified": false,
+    "transaction_read_only": "on",
+    "fixed_source_observed_at": "2026-10-12T19:50:36.717489Z",
+    "history_or_study_rewritten": false,
+    "physical_runtime_or_resource_credit_qualified": false
+  },
+  "app_before_after_unchanged": true,
+  "runtime_cohort_changed": false,
+  "command_POST_executed": false,
+  "history_or_study_rewritten": false,
+  "physical_runtime_or_resource_credit_qualified": false,
+  "explicit_provenance_bounds": {
+    "totals": {
+      "retained_rows": 87878,
+      "rows_at_or_before_prior_audit": 87120,
+      "rows_between_prior_audit_and_fixed_source_observation": 716,
+      "rows_after_fixed_source_observation": 42
+    },
+    "known_API_origin_rows_lower_bound": 0,
+    "unclassified_origin_row_count_upper_bound": 87878,
+    "scope": "Row-count bounds only. No historical origin classification, physical duration/resource credit, assigned-day denominator or study outcome is inferred or rewritten. Later observations are not automatically authenticated by fixing the API."
+  },
+  "acceptance_scope": "Read-only exact-image disabled-route verification and aggregate history bounds complete. Existing source/ASGI/native-CI qualification is reused; no production POST or physical command was executed."
+}

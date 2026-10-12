@@ -1,0 +1,20 @@
+{
+  "proposal_revision": "b1f1ae6376ab38f7a431d5da64ead9fa23a725e2",
+  "files": [
+    {
+      "file": "history-bounds-readonly.sql",
+      "sha256": "32cc316832bcf5e7f173c3922949c922b7ff74df5783539cb671f6c209a09665",
+      "provider_exact_match": true
+    },
+    {
+      "file": "live-contract-readonly.py",
+      "sha256": "845be3754369eec5389a07908a597931585c8946af72350f56f18b60f76c769f",
+      "provider_exact_match": true
+    },
+    {
+      "file": "expected-live-contract.json",
+      "sha256": "71c2c40e3f24b307b1d08ca5183faf7ad5a994d188ec255598ee1fc449bd02fb",
+      "provider_exact_match": true
+    }
+  ]
+}
