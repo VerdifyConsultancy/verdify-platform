@@ -1,0 +1,30 @@
+{
+  "actionable_findings": [],
+  "limitations": [
+    "Review covered the offline normalization fix and its evidence only",
+    "No full-48 interlock, actual restored-data vertical, production deployment or physical proof was established"
+  ],
+  "recorded_at": "2026-10-12T18:04:39.961818+00:00",
+  "report_provenance": "coordinator-delivered reviewer result and completed agent status",
+  "reviewed_commit": "1ac661fbd9a86ddca31c8ee39020e8adc896471f",
+  "reviewer": "independent read-only GitHub inventory worker",
+  "schema": "verdify-639-independent-read-only-review-20261012-v1",
+  "source_sha256": {
+    "planning/execution/2026-10-12/scientific-readiness/reproduce_native.py": "a2a622f5450d0fef6ebec2f655a78f6a4ca7d9cce13bbaf92d4d2f091a6c42b4",
+    "scripts/component_prefix_replay.py": "9928eb686fde1db38fbf5d3dda50c9bff029eaafd33625287bd1e53d57fc062a",
+    "scripts/prepare_component_prefix_replay.py": "f00c474df7ca2f86df7022b1c52c3d5f9324a7fddd9b91d89ad812a0fa70ea4a",
+    "scripts/verify_component_proof_packet.py": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
+    "tests/test_component_prefix_replay.py": "22bb239d67c58265722712da3678b86b5452ec1a542bb29e0cb0fd526fe98b03",
+    "tests/test_prepare_component_prefix_replay.py": "d5458df30040375fc7c6bab0e85468a188c0a5c64bb5c7a3aabc7ea4a0ab064e",
+    "tests/test_verify_component_proof_packet.py": "aa68dcee33e21e7b539998c1d98041f5b03ff4549bb5bc2f4cf0d081b77fafe5"
+  },
+  "verified": [
+    "New path-equivalence, changed-input and breach regression reran successfully",
+    "All 27 native evidence hashes recomputed exactly from retained raw output",
+    "Both canonical full-corpus replay packets matched; raw temporary paths differed",
+    "Binary, source, corpus, policy and exit-status identity remained bound",
+    "All 32 prefixes remained unproven at 27/48; all_pass false; no qualified order revision",
+    "46 prefix tests and 304 preparation/proof-consumer tests had zero failures, errors or skips",
+    "Recorded source hashes matched reviewed source files"
+  ]
+}
