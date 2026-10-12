@@ -1,0 +1,77 @@
+{
+  "version": "s2-integration-native275-preparation-v1",
+  "preparedAt": "2026-10-12T18:10:27.701405+00:00",
+  "sourceHead": "38efbd834a08577b124e3aff7f122697b9f04f71",
+  "uncommittedCorrection": "keep original source-pinned C0 S2 profile before existing exact integration guard remap",
+  "target": "verdify-cnpg-s2-integration",
+  "database": "verdify_rehearsal",
+  "expectedDatabaseOid": 16447,
+  "originalWitness": {
+    "path": "/Volumes/Work/verdify-s2-cnpg-20261006/current275-native-preparation-once/s2-before.json",
+    "bytes": 44929390,
+    "sha256": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e"
+  },
+  "migration": {
+    "path": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql",
+    "sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4"
+  },
+  "outputs": [
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/integration-bridge-rollback.sql",
+      "bytes": 34690504,
+      "sha256": "9e405d9631ee8dd0aa8ad4dc8fab0e30ae742d9062d29714c198b91b3c4d671e"
+    },
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/integration-full-witness-read-only.sql",
+      "bytes": 249252,
+      "sha256": "0b11d8e7f8f4512a352ad4da16b7341ad2b2d8651ed2beb9de16e46309f7f66b"
+    },
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/integration-native-identity-read-only.sql",
+      "bytes": 1089,
+      "sha256": "5f70109945a58d2402dd2a07005c56dc85d811ef01b38bdb73cbf4016c8cb870"
+    }
+  ],
+  "executed": false,
+  "targetCreated": false,
+  "targetUid": null,
+  "primaryPodUid": null,
+  "rwServiceUid": null,
+  "systemIdentifier": null,
+  "remainingExecutionPrerequisites": [
+    "final delivered source revision",
+    "current physical-backed owner capacity allocation and release coordination",
+    "fresh raw target/Pod/PVC/PV/Service UID binding",
+    "actual native database OID/system identifier/image/placement readback"
+  ],
+  "preserved": [
+    "original sealed274 witness",
+    "original failed target evidence",
+    "whole952/77/42seals",
+    "original migration275 bytes"
+  ],
+  "limits": [
+    "emitted rollback/read-only SQL only; no cluster connection",
+    "bootstrap peer owner transition is not ordinary LOGIN authentication proof",
+    "installation still requires actual rollback record plus independently reviewed post-witness hashes"
+  ],
+  "publicationRoute": "independent source branch only; PR969 head remains38ef; finalcohort sole releaseowner",
+  "qualifiedSourceFiles": {
+    "scripts/cnpg-current275-transition.py": "04b135ac1c0abeef32f9adf4d4e0d963b7b2a98b691cdef0437b2d30049ec7f3",
+    "scripts/cnpg-s2-integration-current275-transition.py": "bf184ce2c570eb961d06fce5b532c616cd65fb29a16d5f08ea4f4dcae8e2c270",
+    "tests/test_cnpg_s2_integration_recovery.py": "cb0707e3575b407134eb60040025619db912174260d8d6299c5ecfe2a1289b3f"
+  },
+  "nativeTests": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "95",
+      "time": "36.813",
+      "timestamp": "2026-10-12T12:08:56.143677-06:00",
+      "hostname": "jasons-mbp-4.home.vallery.net"
+    }
+  ],
+  "nativeTestsXmlSha256": "f1bbf694f9fbe9117144d6b482b63a47152109b35ded5a83dcf44ccb8a5b9f53"
+}
