@@ -1,0 +1,328 @@
+{
+  "started_at": "2026-10-12T17:51:32.151087+00:00",
+  "mutations": [
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/milestones/33",
+      "method": "PATCH",
+      "number": 33,
+      "at": "2026-10-12T17:51:33.010542+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/milestones",
+      "method": "POST",
+      "number": 34,
+      "at": "2026-10-12T17:51:43.487592+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/milestones",
+      "method": "POST",
+      "number": 35,
+      "at": "2026-10-12T17:51:53.924804+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/milestones",
+      "method": "POST",
+      "number": 36,
+      "at": "2026-10-12T17:52:04.401332+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/milestones",
+      "method": "POST",
+      "number": 37,
+      "at": "2026-10-12T17:52:15.143402+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/303",
+      "method": "PATCH",
+      "number": 303,
+      "at": "2026-10-12T17:52:26.653665+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/304",
+      "method": "PATCH",
+      "number": 304,
+      "at": "2026-10-12T17:52:38.187843+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/317",
+      "method": "PATCH",
+      "number": 317,
+      "at": "2026-10-12T17:52:49.399086+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/386",
+      "method": "PATCH",
+      "number": 386,
+      "at": "2026-10-12T17:53:00.561993+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/390",
+      "method": "PATCH",
+      "number": 390,
+      "at": "2026-10-12T17:53:11.642303+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/419",
+      "method": "PATCH",
+      "number": 419,
+      "at": "2026-10-12T17:53:23.582749+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/587",
+      "method": "PATCH",
+      "number": 587,
+      "at": "2026-10-12T17:53:34.938280+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/588",
+      "method": "PATCH",
+      "number": 588,
+      "at": "2026-10-12T17:53:46.571657+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/639",
+      "method": "PATCH",
+      "number": 639,
+      "at": "2026-10-12T17:53:57.890362+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/640",
+      "method": "PATCH",
+      "number": 640,
+      "at": "2026-10-12T17:54:09.190524+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/641",
+      "method": "PATCH",
+      "number": 641,
+      "at": "2026-10-12T17:54:20.466395+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/642",
+      "method": "PATCH",
+      "number": 642,
+      "at": "2026-10-12T17:54:32.069577+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/749",
+      "method": "PATCH",
+      "number": 749,
+      "at": "2026-10-12T17:54:43.508037+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/782",
+      "method": "PATCH",
+      "number": 782,
+      "at": "2026-10-12T17:54:54.671650+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/783",
+      "method": "PATCH",
+      "number": 783,
+      "at": "2026-10-12T17:55:06.204060+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/801",
+      "method": "PATCH",
+      "number": 801,
+      "at": "2026-10-12T17:55:17.621315+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/802",
+      "method": "PATCH",
+      "number": 802,
+      "at": "2026-10-12T17:55:28.732094+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/963",
+      "method": "PATCH",
+      "number": 963,
+      "at": "2026-10-12T17:55:40.122062+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/965",
+      "method": "PATCH",
+      "number": 965,
+      "at": "2026-10-12T17:55:51.352157+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/949",
+      "method": "PATCH",
+      "number": 949,
+      "at": "2026-10-12T17:56:02.819638+00:00"
+    },
+    {
+      "endpoint": "repos/VerdifyConsultancy/verdify-platform/issues/775/comments",
+      "method": "POST",
+      "number": null,
+      "at": "2026-10-12T17:56:14.128010+00:00"
+    }
+  ],
+  "readbacks": [
+    {
+      "milestone": 33,
+      "title": "S2 \u2014 Recoverability and reliable delivery (October 2026)",
+      "description_exact": true
+    },
+    {
+      "milestone": 34,
+      "title": "S3 \u2014 Source truth, portable validation and prospective design",
+      "description_exact": true
+    },
+    {
+      "milestone": 35,
+      "title": "S4 \u2014 Current readiness and integrated qualification",
+      "description_exact": true
+    },
+    {
+      "milestone": 36,
+      "title": "S5 \u2014 Immutable lock, launch and first real outcome",
+      "description_exact": true
+    },
+    {
+      "milestone": 37,
+      "title": "Release safety and estate adoption follow-through",
+      "description_exact": true
+    },
+    {
+      "issue": 303,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 304,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 317,
+      "milestone": 37,
+      "verified": true
+    },
+    {
+      "issue": 382,
+      "milestone": 33,
+      "verified": true
+    },
+    {
+      "issue": 386,
+      "milestone": 37,
+      "verified": true
+    },
+    {
+      "issue": 390,
+      "milestone": 37,
+      "verified": true
+    },
+    {
+      "issue": 396,
+      "milestone": 33,
+      "verified": true
+    },
+    {
+      "issue": 419,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 587,
+      "milestone": 35,
+      "verified": true
+    },
+    {
+      "issue": 588,
+      "milestone": 36,
+      "verified": true
+    },
+    {
+      "issue": 639,
+      "milestone": 35,
+      "verified": true
+    },
+    {
+      "issue": 640,
+      "milestone": 36,
+      "verified": true
+    },
+    {
+      "issue": 641,
+      "milestone": 35,
+      "verified": true
+    },
+    {
+      "issue": 642,
+      "milestone": 36,
+      "verified": true
+    },
+    {
+      "issue": 643,
+      "milestone": 33,
+      "verified": true
+    },
+    {
+      "issue": 644,
+      "milestone": 33,
+      "verified": true
+    },
+    {
+      "issue": 749,
+      "milestone": 35,
+      "verified": true
+    },
+    {
+      "issue": 782,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 783,
+      "milestone": 35,
+      "verified": true
+    },
+    {
+      "issue": 801,
+      "milestone": 37,
+      "verified": true
+    },
+    {
+      "issue": 802,
+      "milestone": 37,
+      "verified": true
+    },
+    {
+      "issue": 949,
+      "milestone": 33,
+      "verified": true
+    },
+    {
+      "issue": 963,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 965,
+      "milestone": 34,
+      "verified": true
+    },
+    {
+      "issue": 949,
+      "priority": "P0",
+      "verified": true
+    }
+  ],
+  "status": "complete",
+  "campaign_comment": {
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6129692329",
+    "id": 6129692329,
+    "body_sha256": "0ab8f37036c6ca5a017066ee888cb74798e1766670890073e190eec5c933e63c",
+    "exact_readback": true
+  },
+  "milestones": {
+    "S2": 33,
+    "S3": 34,
+    "S4": 35,
+    "S5": 36,
+    "RELEASE": 37
+  },
+  "completed_at": "2026-10-12T17:56:14.700200+00:00"
+}

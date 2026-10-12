@@ -1,0 +1,28 @@
+{
+  "commit": "8c9d563a69fa68501af112098e9d2e00947efe65",
+  "checked_at": "2026-10-12T17:54:42.309793+00:00",
+  "files": [
+    {
+      "path": "planning/reviews/2026-10-12/README.md",
+      "sha256": "7fcc02b1098425ed1704bee65f2506a17e8654f9a9488090a1de82e27793385e",
+      "provider_byte_exact": true
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "sha256": "63661ad5f7f61c38619295d0a7739756a1d86667b8561709c1d988a73e269651",
+      "provider_byte_exact": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "sha256": "708dc907ec1cd7e9dffae9a416fc02be54cf7e1f8ddc8dec590cdd1b3d073e7b",
+      "provider_byte_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-12/DEPENDENCIES.md",
+      "sha256": "125acd51fa7cb9d71c9e8741996843171e073756e9e8d91cfa1d3ef9c7af588d",
+      "provider_byte_exact": true
+    }
+  ],
+  "main_at_readback": "8c9d563a69fa68501af112098e9d2e00947efe65",
+  "head_is_remote_main": true
+}

@@ -1,5 +1,5 @@
 {
-  "phase": "source prepared; native sprint metadata publication next",
+  "phase": "delivered: source and native sprint metadata published and read back",
   "review_base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
   "checks": {
     "planning_tests_passed": 35,
@@ -23,7 +23,44 @@
   "parallel_workers": {
     "release_runtime": "existing Retry chat01a12b3b-f57c-7ab0-bdcc-3cdba80e82c3, soleproductionwriter",
     "science_readiness": "codex/scientific-readiness-20261012",
-    "contained_recovery": "codex/contained-recovery-20261012"
+    "contained_recovery": "codex/contained-recovery-20261012",
+    "science_first_durable_commit": "71eb01791ef467841e83e2065a27db71ec82fc01",
+    "recovery_first_durable_commit": "87e1693ffc0c8b599696e98319ef01fc7f302ef6"
   },
-  "native_metadata_readback": "pending next publication phase"
+  "native_metadata_readback": {
+    "receipt": "native-metadata-publication.json",
+    "mutations": 26,
+    "verified_objects": 30,
+    "campaign_comment": {
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6129692329",
+      "id": 6129692329,
+      "body_sha256": "0ab8f37036c6ca5a017066ee888cb74798e1766670890073e190eec5c933e63c",
+      "exact_readback": true
+    },
+    "milestones": {
+      "S2": {
+        "number": 33,
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/33"
+      },
+      "S3": {
+        "number": 34,
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/34"
+      },
+      "S4": {
+        "number": 35,
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/35"
+      },
+      "S5": {
+        "number": 36,
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/36"
+      },
+      "RELEASE": {
+        "number": 37,
+        "url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/37"
+      }
+    }
+  },
+  "verified_at": "2026-10-12T17:56:39.491661+00:00",
+  "source_evidence_commit": "8c9d563a69fa68501af112098e9d2e00947efe65",
+  "source_provider_readback": "source-publication-readback.json"
 }
