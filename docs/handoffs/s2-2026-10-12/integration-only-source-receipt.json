@@ -1,0 +1,95 @@
+{
+  "schema": "verdify-contained-recovery-integration-only-source-v1",
+  "base_pr969_head": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+  "no_hooks": true,
+  "no_secrets": true,
+  "only_cluster": "verdify-cnpg-s2-integration",
+  "no_original_initdb_or_archive_writer": true,
+  "render_sha256": "1c8adaf41301c4fcc405dff2639e6975e0d369f1b03b1e5356382fa8ed668a9b",
+  "rendered_objects": [
+    {
+      "kind": "ObjectStore",
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-pitr-reader"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-integration-runtime-client-ingress"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-integration-runtime-client-only"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-runtime-client-ingress"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-runtime-client-only"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "deny-all-rehearsal"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-rehearsal-isolation"
+    },
+    {
+      "kind": "Cluster",
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-integration"
+    }
+  ],
+  "exact_delivery_resource_vector": [
+    {
+      "group": "postgresql.cnpg.io",
+      "kind": "Cluster",
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-s2-integration"
+    },
+    {
+      "group": "barmancloud.cnpg.io",
+      "kind": "ObjectStore",
+      "namespace": "verdify-db-rehearsal",
+      "name": "verdify-cnpg-pitr-reader"
+    },
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-integration-runtime-client-only"
+    },
+    {
+      "group": "networking.k8s.io",
+      "kind": "NetworkPolicy",
+      "namespace": "verdify-db-rehearsal",
+      "name": "cnpg-s2-integration-runtime-client-ingress"
+    }
+  ],
+  "focused_tests": {
+    "modules": [
+      "test_cnpg_s2_integration_recovery",
+      "test_cnpg_rehearsal",
+      "test_cnpg_pitr_pair",
+      "test_cnpg_s2_pitr_pair"
+    ],
+    "passed": 44,
+    "skipped": 0
+  },
+  "target_created": false,
+  "owner_reservation_admission": "pending; must cover150Gi physical +6Gi requestedRAM +3domains together with current CI caller/worker-hostthin/sharedgrowth",
+  "historical_source_files_preserved": [
+    "cluster.yaml",
+    "s2-cluster.yaml",
+    "object-store.yaml",
+    "scheduled-backup.yaml"
+  ]
+}
