@@ -1,0 +1,11 @@
+{
+  "observed_at": "2026-10-12T19:04:20.560694+00:00",
+  "pull_request": 973,
+  "merged_at": "2026-10-12T19:01:20Z",
+  "qualified_head": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "merged_sha": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "qualified_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "merged_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "trees_exact": true,
+  "main_at_readback": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+}
