@@ -36,26 +36,33 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-publisher
 spec:
-  schedule: "*/10 * * * *"
-  # A run may legitimately cross the next ten-minute boundary while rebuilding
-  # the cache. Do not replay that missed tick after the active Job exits: doing
-  # so creates a permanent catch-up chain when runtime is just over ten minutes.
+  # Every 30 minutes at :05/:35 (was */10; 2026-10-11 cluster CronJob cadence
+  # review). Each run is a full DB export + Quartz rebuild (median ~8 min), so
+  # */10 kept a 250m/512Mi publisher busy ~80% of the time on the Lab node. The
+  # public Lab site tolerates 30 min of staleness; :05/:35 stays clear of the
+  # :02/:32 matview refresh on the same DB.
+  schedule: "5,35 * * * *"
+  # Do not replay a tick missed because the previous run was still active:
+  # doing so creates a permanent catch-up chain when runtime nears the period.
   startingDeadlineSeconds: 30
   # Re-enabled after the repaired image passed its production recovery canary
   # on 2026-07-11: one bounded attempt per step, 323 pages emitted, all S3
   # deltas completed, and the database restart count remained unchanged.
   suspend: false
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 5
   jobTemplate:
     spec:
+      # Keep finished Jobs (and their pods/logs) for an hour, then reap them.
+      ttlSecondsAfterFinished: 3600
       # Init validates the served cache locally (one canonical scan on a warm
       # tree). S3 synchronization and the Quartz rebuild run in the publisher,
       # not init. Allow cold synchronization/rebuild without letting a disconnected generator retain the
       # DB or cache PVC indefinitely. Forbid concurrency still prevents overlap
-      # with the ten-minute schedule while a run is active.
-      activeDeadlineSeconds: 1800
+      # with the schedule while a run is active. The deadline stays below the
+      # 30 minute period so a wedged run is gone before the next tick fires.
+      activeDeadlineSeconds: 1500
       # A failed publisher can leave its canceled/disconnected PostgreSQL query
       # running until the backend reaches a send boundary. Retrying the pod in
       # the same Job then overlaps another full export despite Forbid at the

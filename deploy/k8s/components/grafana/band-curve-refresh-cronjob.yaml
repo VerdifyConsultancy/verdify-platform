@@ -1,6 +1,14 @@
-# Refreshes mv_band_curve (migration 167) every 10 min so Grafana compliance
-# panels read the pre-computed deterministic solar band / per-zone VPD target
-# curves instead of calling fn_crop_band_value live.
+# Refreshes mv_band_curve (migration 167), mv_equipment_runtime_daily
+# (migration 200) and mv_daily_kpi (migration 203) twice an hour so Grafana
+# compliance panels and fn_planner_scorecard read pre-computed snapshots
+# instead of the live views that OOM'd the DB on 2026-07-14/15.
+#
+# Cadence (2026-10-11 cluster CronJob cadence review; was */10): :02 and :32
+# UTC. America/Denver is a whole-hour UTC offset in both MST and MDT, so the
+# :02 run always lands two minutes after local midnight and a completed local
+# day becomes snapshot-complete as fast as it did under */10. Mid-day values
+# are up to ~30 min stale, which suits the daily views and Grafana panels and
+# cuts the CONCURRENTLY refresh scans on the single DB by two thirds.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -9,7 +17,7 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
 spec:
-  schedule: "*/10 * * * *"
+  schedule: "2,32 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3

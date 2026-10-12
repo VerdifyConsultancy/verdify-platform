@@ -69,7 +69,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: writer-watchdog
 spec:
-  schedule: "*/2 * * * *"
+  # Every 5 minutes (was */2; 2026-10-11 cluster CronJob cadence review).
+  # This is the ONLY writer-death alert path, so never slower than */5:
+  # worst-case detection is the 180 s lease threshold plus one 5 minute period
+  # (~8 min). Any loop/Deployment replacement must alert on its own death.
+  schedule: "*/5 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3

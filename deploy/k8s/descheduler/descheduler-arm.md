@@ -1,5 +1,14 @@
 # HA-1.9 (#234) — descheduler: deploy (dry-run), PROVE exclusion, gated enforce
 
+> **Historical record (updated 2026-10-11).** Every step below was completed:
+> GATE 6 of #234 armed enforce mode on 2026-06-08, and the Step 4 patch was
+> re-applied after the 2026-07-28 maintenance proofs. `cronjob.yaml` now carries
+> the enforce args itself (no `--dry-run`, VP-01 #802), so `STAGED-enforce-patch.yaml`
+> was removed and the "EXPECT: contains --dry-run" check in Step 1 no longer
+> holds. Apply CronJob changes with `kubectl apply -f deploy/k8s/descheduler/cronjob.yaml`
+> after `kubectl diff -f` shows only the intended fields. The Rollback section
+> (re-add `--dry-run`) still applies.
+
 **Status:** Step 1 (dry-run) is laptop-root-autonomous (evicts nothing). Steps 3–4
 (relabel + enforce flip) are **GATED — root executor** (they mutate live pods).
 **Tracks:** #234 · **Epic:** #225 · **Design:** §2.4.
