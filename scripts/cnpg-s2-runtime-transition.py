@@ -25,6 +25,13 @@ CLUSTER = "verdify-cnpg-s2"
 t.operator.CLUSTER = CLUSTER
 
 
+def emit_sql(before, **options):
+    sql = t.emit_sql(before, **options)
+    marker = "SET LOCAL statement_timeout='120s';"
+    t.c0.require(sql.count(marker) == 1, "S2 native transaction budget shape changed")
+    return sql.replace(marker, marker + "\nSET LOCAL jit=off;", 1)
+
+
 def read_bound(path, expected):
     raw = path.read_bytes()
     t.c0.require(hashlib.sha256(raw).hexdigest() == expected, "exact S2 input custody mismatch")
@@ -58,13 +65,13 @@ def main():
         binding = read_bound(args.binding, args.binding_sha256)
         t.validate_inputs(source, before, binding)
         if args.mode == "qualify":
-            content = t.emit_sql(before)
+            content = emit_sql(before)
         else:
             record, sha = t.read_transition_record(args.qualification, version=t.VERSION, mode="rollback-qualification")
             t.c0.require(sha == args.qualification_sha256, "native rollback record custody mismatch")
             post = t.checked_qualification(before, record)
             if args.mode == "install":
-                content = t.emit_sql(before, reviewed_post=post, qualification_sha256=sha)
+                content = emit_sql(before, reviewed_post=post, qualification_sha256=sha)
             else:
                 actual, actual_sha = t.read_transition_record(args.installation, version=t.VERSION, mode="install")
                 t.c0.require(
