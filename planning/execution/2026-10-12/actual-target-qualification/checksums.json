@@ -1,8 +1,9 @@
 {
   "algorithm": "sha256",
   "files": {
-    "README.md": "1c65a11722dd50542f212f240a9be65e5cf72e4ed6d5a180569eeb680cd60b42",
+    "README.md": "ce030c0eb68cae932c4cb6d4912c5dc061dbc66b25f1f2ae92d4980e1ff4f3c1",
     "actual-image-source-compatibility.json": "b4847f8d0b225f9ecb72033977c2cad015e1f333266acacbf0eaa019b1728458",
+    "actual-readonly-independent-review.json": "0e352405ed125b73c5d16e0c793d9e61916ed9c0b9afdecef36821f13977995e",
     "cached-image-source-comparison.json": "2a43cdf9f551104323c28b460b1d4ca49dc309154e983fad2f5c67d79f6a6747",
     "credential-reference-plan.json": "4550996934d55e1c24afdd68114c60911118ae29f3fea8f31b85d48876bcd267",
     "fixture_check.py": "91bde81a29391f1654cadfff7cd0ff18726c31684ade42fe9416e9ab35515c9c",

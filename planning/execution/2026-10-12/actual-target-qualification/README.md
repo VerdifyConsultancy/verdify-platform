@@ -1,5 +1,35 @@
 # #639 / #587: actual-target SQL seam packet
 
+## Actual bounded result and exact reseal
+
+`actual-readonly-independent-review.json` records the completed offline review
+of the recovery owner's native receipts. Both actual LOGINS passed their exact
+function-only source attestation, three protected-table SELECT denials and real
+frozen read-only consumer/parser. Their native stdout matches the receipts, and
+the Job/Pod/image/source-overlay/payload/custody identities agree. The executor
+OFF worker made zero SQL acquisitions and preserved the existing 98 recovery
+debts. The lifecycle retry succeeded after two credential-free TCP refusals,
+then one authenticated connection; it retained the restored experiment's
+closed/shadow/OFF state, lease 19 and zero open exposures. The original failed
+lifecycle attempt is preserved.
+
+The owner's inverse is independently bound to the baseline: all eight role
+metadata records, 77 sequence states and copied-history rows match byte for
+byte. The complete hash records for 952 tables and 9,699,553 rows and stream hash equal
+the prefixture baseline; all 42 study table records are equal; the full catalog
+record equals the post-admission baseline. All 19 temporary objects, including
+two target-only Secrets, have successful exact-UID-precondition deletion
+receipts. Final health records three Ready database instances, six healthy
+two-replica volumes, no temporary runners/payloads and an idle manual Argo
+Application (`OutOfSync`/`Healthy`, source `main`). This lane performed no
+target call, write or runner replay while reviewing those receipts.
+
+This completes the bounded actual read-only seam and inverse/reseal check.
+It does not complete #639/#587 acceptance: state transitions and fault paths,
+HTTP/ASGI/operator-token routes, authentic scientific inputs and physical
+execution remain separate. Native treatment coverage remains **27/48 UNPROVEN**;
+the #367 firmware change remains source-only in the next cohort, with no OTA.
+
 ## Preserved first attempt and bounded lifecycle transport correction
 
 The owner actually ran the original packet serially. The executor's real LOGIN,
@@ -361,7 +391,7 @@ these two fields: there was no grant/ownership/schema change to undo.
 Delete the task-created source/packet ConfigMaps only by recorded UIDs after
 all consuming Jobs and sessions are closed. Delete the task-created credential Secret only by its exact recorded UID; if it
 pre-existed, preserve it and use its prior custody/inverse instead. Compare the
-full 952-object/current275 witness, all 77 sequences, all42 study tables, role and
+full 952-object/current275 witness, all 77 sequences, all 42 study tables, role and
 native/storage identities against the admitted baseline, then run the owner's
 existing reseal sequence and prove no qualification sessions/Jobs/network
 exception/temporary LOGIN/password posture remains. Read-only proof predicts
