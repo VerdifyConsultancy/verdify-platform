@@ -42,8 +42,12 @@ spec:
         app.kubernetes.io/component: db-backup
     spec:
       backoffLimit: 2
-      # Reap the Job 24h after it finishes so completed backups don't pile up.
-      ttlSecondsAfterFinished: 86400
+      # A hung dump must not hold the Forbid slot into the next night's run
+      # (typical runtime ~2 min; this bounds all attempts together).
+      activeDeadlineSeconds: 3600
+      # Reap the Job 48h after it finishes, so a failed run is still there to
+      # inspect after a weekend.
+      ttlSecondsAfterFinished: 172800
       template:
         metadata:
           labels:

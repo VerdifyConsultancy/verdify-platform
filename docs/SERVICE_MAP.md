@@ -87,8 +87,8 @@ and `tests/test_ha_light_writer_boundary.py` before changing any route.
 | DB watchdog | `deploy/k8s/overlays/prod/db-watchdog.yaml` | Prod overlay | Narrow CronJob that can delete only `verdify-db-0` after a specific DB mount/config CrashLoop signature. |
 | HA gap backfill | `deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml` | Prod overlay | Hourly HA recorder gap reconciliation; writes missing telemetry rows only. |
 | Gather script mount | `deploy/k8s/components/ingestor-gather-script/` | Prod overlay | ConfigMap delivery for `scripts/gather-plan-context.sh` into the ingestor image. |
-| Grafana band curve refresh | `deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml` | Prod overlay (via grafana component) | LIVE — refreshes the `mv_band_curve` matview every 10 minutes (`*/10`); timer-based, not anchor-change-triggered (audit D12). |
-| Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Prod overlay with lab site | Regenerates lab.verdify.ai content every 10 minutes from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
+| Grafana band curve refresh | `deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml` | Prod overlay (via grafana component) | LIVE — refreshes the `mv_band_curve`, `mv_equipment_runtime_daily` and `mv_daily_kpi` matviews at :02 and :32 (`2,32 * * * *`); timer-based, not anchor-change-triggered (audit D12). |
+| Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Prod overlay with lab site | Regenerates lab.verdify.ai content every 30 minutes (:05 and :35) from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
 | Firmware twin | `deploy/k8s/components/firmware-twin/` | Component only; not referenced by current prod overlay | Read-only shadow path with live-prod schema/user gates. |
 | Umami analytics | `deploy/k8s/components/umami/` | Component only; not referenced by current prod overlay | Residual analytics tier, explicitly not wired into prod yet. |
 

@@ -1322,7 +1322,7 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
 
     publisher_container = publisher_spec["containers"][0]
     publisher_env = {item["name"]: item.get("value") for item in publisher_container["env"]}
-    assert cronjob["spec"]["schedule"] == "*/10 * * * *"
+    assert cronjob["spec"]["schedule"] == "5,35 * * * *"
     assert cronjob["spec"]["concurrencyPolicy"] == "Forbid"
     assert cronjob["spec"]["startingDeadlineSeconds"] == 30
     assert publisher_env["LAB_WORK_ROOT"] == "/work/publisher"
@@ -1331,7 +1331,10 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     job_deadline = cronjob["spec"]["jobTemplate"]["spec"]["activeDeadlineSeconds"]
     assert step_timeout == 180
     assert rebuild_timeout == 300
-    assert job_deadline == 1800
+    assert job_deadline == 1500
+    # A wedged run must end before the next 30-minute tick fires.
+    assert job_deadline < 30 * 60
+    assert cronjob["spec"]["jobTemplate"]["spec"]["ttlSecondsAfterFinished"] == 3600
     assert step_timeout < rebuild_timeout < job_deadline
     assert job_deadline >= 2 * (step_timeout + rebuild_timeout)
 

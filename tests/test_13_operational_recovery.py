@@ -86,6 +86,22 @@ def test_prod_db_watchdog_is_narrowly_scoped():
     assert "I/O error|could not open configuration file" in src
 
 
+def test_prod_watchdogs_run_at_least_every_five_minutes():
+    """The writer watchdog is the only writer-death alert path (2026-07-11 P0).
+
+    The 2026-10-11 cadence review slowed both watchdogs from */2 to every five
+    minutes to cut cluster Job churn; never slower than that, and keep their
+    finished Jobs reaped quickly.
+    """
+    writer = Path("deploy/k8s/overlays/prod/writer-watchdog.yaml").read_text()
+    db = Path("deploy/k8s/overlays/prod/db-watchdog.yaml").read_text()
+    assert 'schedule: "*/5 * * * *"' in writer
+    assert 'schedule: "1-59/5 * * * *"' in db
+    for src in (writer, db):
+        assert "concurrencyPolicy: Forbid" in src
+        assert "ttlSecondsAfterFinished: 600" in src
+
+
 def test_ha_gap_backfill_script_is_bounded_and_idempotent():
     src = Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
     assert 'parser.add_argument("--apply"' in src

@@ -19,6 +19,9 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 1
+      # Bound both attempts (typical run ~30-60 s). A wedged active Job on
+      # 2026-07-11 blocked every later capture under Forbid.
+      activeDeadlineSeconds: 900
       ttlSecondsAfterFinished: 86400
       template:
         metadata:
