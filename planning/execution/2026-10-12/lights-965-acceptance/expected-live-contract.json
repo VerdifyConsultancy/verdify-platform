@@ -1,0 +1,25 @@
+{
+  "api_source_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+  "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+  "expected_API_Pods": [
+    {
+      "name": "verdify-api-75c7959d86-9s6dm",
+      "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41"
+    },
+    {
+      "name": "verdify-api-75c7959d86-lgks6",
+      "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139"
+    }
+  ],
+  "expected_running_digest": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+  "forbidden_success_response": "200",
+  "identity_wrapper": "Retry binds unchanged native Pod UID/container/imageID/restarts before and after; no replacement or command POST",
+  "live_path": "/app/main.py",
+  "method": "post",
+  "promotion_revision": "d43919e933eb1be69559be7566853ff69a64e903",
+  "read_only_in_container": "Python -I -S standard-library file/AST/hash readers and one GET http://127.0.0.1:8080/openapi.json only; no app import/startup, environment read, credentials, DB or device call",
+  "required_response": "501",
+  "route": "/api/v1/greenhouses/{greenhouse_id}/lights/{circuit}/{action}",
+  "schema": "verdify-965-expected-live-contract-v1",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+}

@@ -1,0 +1,224 @@
+{
+  "acceptance": [
+    {
+      "assessment": "source-and-exact-owner-adoption-supported; route-specific live readonly check prepared",
+      "basis": "Authenticated valid requests deliberately501 with no accepted command or DB acquisition; no second writer.",
+      "clause": 1
+    },
+    {
+      "assessment": "API intent-write path removed; physical truth of retained or prospective observations not inferred",
+      "basis": "Exact unchanged control_lights function has no DB/device calls. Existing actual-observation and HA confirmation/failure paths retained; no physical command sent.",
+      "clause": 2
+    },
+    {
+      "assessment": "existing-focused-and-native-CI-supported",
+      "basis": "14 actual-ASGI route/auth/input/OpenAPI cases; disabled route uses timeout-if-touched DB and never acquires it. Existing78-test focused set/nativeCI retained, no new delivery/timeout transport claimed.",
+      "clause": 3
+    },
+    {
+      "assessment": "exact-owner-source/digest/config adoption-supported; final GET/function-hash receipt pending",
+      "basis": "d439 promotion runs API built cb21 on both bound Pods. No live POST or physical command is necessary for supported disabled-path acceptance.",
+      "clause": 4
+    },
+    {
+      "assessment": "existing-audit-explicitly-bounded; one current aggregate closure query prepared",
+      "basis": "Rows lack origin identity. Preserve all history; no row classification/rewrite/assigned-day denominator or physical resource credit. Source introduction April9,2026 is not deployment time or proof for imported older data.",
+      "clause": 5
+    }
+  ],
+  "existing_qualified_tests": {
+    "CI_gate_includes": "tests/test_api_light_command_boundary.py",
+    "finished_at": "2026-10-12T18:27:46Z",
+    "focused_count_reported": 78,
+    "native_CI_context": "Verdify Platform / Argo PR CI",
+    "native_Workflow_UID": "b354a1c2-3d99-4a22-b4e3-17184152d2ac",
+    "native_final_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "new_route_regression_cases": 14,
+    "new_tests_or_reruns_this_lane": false,
+    "source": "https://github.com/VerdifyConsultancy/verdify-platform/pull/970",
+    "state": "success"
+  },
+  "historical_audit": {
+    "API_origin_rows_lower_bound": 0,
+    "API_origin_rows_upper_bound_at_that_snapshot": 87120,
+    "bound_meaning": "worst-case unclassified row count only; neither confirmed API contamination nor a duration/resource/effect bound",
+    "columns": [
+      {
+        "column": "ts",
+        "type": "timestamp with time zone"
+      },
+      {
+        "column": "equipment",
+        "type": "text"
+      },
+      {
+        "column": "state",
+        "type": "boolean"
+      },
+      {
+        "column": "greenhouse_id",
+        "type": "text"
+      }
+    ],
+    "existing_rows_or_study_denominators_rewritten": false,
+    "observed_at": "2026-10-11T15:33:39.925243+00:00",
+    "receipt_path": "planning/execution/2026-10-11/lights-965-retained-history-audit.json",
+    "receipt_sha256": "e77a3d4404cadba222d1466f5aae659cf29981e2b8f102a9dca16dfc656efb7b",
+    "retained_light_rows": 87120,
+    "streams": [
+      {
+        "equipment": "grow_light_grow",
+        "first_ts": "2024-11-17T13:00:01.747867+00:00",
+        "greenhouse_id": "vallery",
+        "last_ts": "2026-10-11T15:33:03.882962+00:00",
+        "rows": 43488,
+        "rows_7d": 2026
+      },
+      {
+        "equipment": "grow_light_main",
+        "first_ts": "2024-11-17T13:00:01.846637+00:00",
+        "greenhouse_id": "vallery",
+        "last_ts": "2026-10-11T15:33:03.882962+00:00",
+        "rows": 43632,
+        "rows_7d": 2019
+      }
+    ],
+    "verified_physical_runtime_resource_credit_supported": false,
+    "writer_source_request_identity_present": false
+  },
+  "historical_logs": {
+    "any_scan_bound_reached": false,
+    "coverage": [
+      {
+        "bound_reached": false,
+        "bytes": 9067041,
+        "created_at": "2026-10-06T01:02:57Z",
+        "lines": 90587,
+        "log_source": "kubectl current-container logs only; rotation limits historical coverage",
+        "matching_light_posts": [],
+        "pod": "verdify-api-64d768b666-8pjhm",
+        "requested_since_hours": 168,
+        "retained_first_log_at": "2026-10-05T19:03:17.349723394-06:00",
+        "retained_last_log_at": "2026-10-11T09:34:03.131416842-06:00",
+        "uid": "8538fc30-9037-419d-9613-253d4232b276"
+      },
+      {
+        "bound_reached": false,
+        "bytes": 9062469,
+        "created_at": "2026-10-06T01:03:33Z",
+        "lines": 90540,
+        "log_source": "kubectl current-container logs only; rotation limits historical coverage",
+        "matching_light_posts": [],
+        "pod": "verdify-api-64d768b666-rhmph",
+        "requested_since_hours": 168,
+        "retained_first_log_at": "2026-10-05T19:03:52.897351355-06:00",
+        "retained_last_log_at": "2026-10-11T09:34:02.248139048-06:00",
+        "uid": "59303fd5-09eb-4e0f-a8f3-dd0ae168a436"
+      }
+    ],
+    "limits": "current-container retained access logs only; no absence claim before first retained line, after last captured line or in rotated/missing histories",
+    "matching_light_POSTs": 0,
+    "receipt_path": "planning/execution/2026-10-11/lights-965-current-container-log-audit.json",
+    "receipt_sha256": "20f14950d192be9d1317dcd2186cd6d1a897df0b19efe4bed324e75e399b425b",
+    "scanned_bytes": 18129510,
+    "scanned_lines": 181127
+  },
+  "issue": "https://github.com/VerdifyConsultancy/verdify-platform/issues/965",
+  "limits": [
+    "no production DB/API probe by this lane",
+    "no live POST, device/setpoint/Secret/environment read or historical rewrite",
+    "no new product source/build/test rerun",
+    "all historical rows remain unclassified absent independent provenance",
+    "27/48 UNPROVEN and physical acceptance remain separate",
+    "#963 OTA and #367 firmware source remain outside this cohort"
+  ],
+  "missing_readonly_packet": {
+    "executed_by_this_lane": false,
+    "history_query": "history-bounds-readonly.sql",
+    "history_query_sha256": "32cc316832bcf5e7f173c3922949c922b7ff74df5783539cb671f6c209a09665",
+    "live_contract_reader": "live-contract-readonly.py",
+    "live_contract_reader_sha256": "845be3754369eec5389a07908a597931585c8946af72350f56f18b60f76c769f",
+    "owner_execution": "Retry only after coordinator relay and before/after native UID/image binding; reuse newer equivalent receipts if already available"
+  },
+  "owner_delivery": {
+    "API_pods": [
+      {
+        "containers": [
+          {
+            "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+            "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+            "name": "api",
+            "ready": true,
+            "restart_count": 0,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-12T19:43:29Z"
+              }
+            }
+          }
+        ],
+        "created_at": "2026-10-12T19:43:14Z",
+        "name": "verdify-api-75c7959d86-9s6dm",
+        "uid": "39ac115a-f590-4c53-8430-3a0abc7efc41"
+      },
+      {
+        "containers": [
+          {
+            "actual_image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+            "desired_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+            "name": "api",
+            "ready": true,
+            "restart_count": 0,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-12T19:42:56Z"
+              }
+            }
+          }
+        ],
+        "created_at": "2026-10-12T19:42:42Z",
+        "name": "verdify-api-75c7959d86-lgks6",
+        "uid": "7eff6e6d-462d-48b8-9420-5e6be61ea139"
+      }
+    ],
+    "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+    "built_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "operation_finished_at": "2026-10-12T19:48:41Z",
+    "promotion_revision": "d43919e933eb1be69559be7566853ff69a64e903",
+    "receipt_commit": "bd7f71de172540714567b1e78d3be85710add3ad",
+    "receipts": {
+      "attended-build-batch.json": "01e4a58e024fd0fa4d41487f1d2b7d94df597dd980fbf6846bd477a99ef7db83",
+      "final-pr-native-qualification.json": "7e3f3d2ab7b84eefdf39388d2d215d41b08239423b5a2f2fb130dc40f2bf5819",
+      "post-sync-runtime-qualification.json": "96ccad64fbe777b15ad9f3b617866e5d92888349287696aea2e60782176ad268",
+      "reviewed-promotion.json": "d627200c738f5c54e702cad188b04d14a16173e7d7bc8b7c7f2ea01a62e8abe1"
+    }
+  },
+  "schema": "verdify-965-acceptance-history-provenance-v1",
+  "source_bindings": [
+    {
+      "API_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+      "focused_test_file_sha256": "cda9a338d523e352d6614383d61d891098be0a2641f91bd6197e1c1bc6f4160f",
+      "source": "9ec13506c68d28029fe1109cc86cbe777239e0e6"
+    },
+    {
+      "API_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+      "focused_test_file_sha256": "cda9a338d523e352d6614383d61d891098be0a2641f91bd6197e1c1bc6f4160f",
+      "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347"
+    },
+    {
+      "API_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+      "focused_test_file_sha256": "cda9a338d523e352d6614383d61d891098be0a2641f91bd6197e1c1bc6f4160f",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+    },
+    {
+      "API_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "control_lights_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+      "focused_test_file_sha256": "cda9a338d523e352d6614383d61d891098be0a2641f91bd6197e1c1bc6f4160f",
+      "source": "d43919e933eb1be69559be7566853ff69a64e903"
+    }
+  ],
+  "status": "bounded-source-and-owner-adoption-reviewed; missing-readonly-contract-and-current-history-query-prepared"
+}
