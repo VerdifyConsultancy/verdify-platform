@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-12T17:38:10Z** against source `b5bdb3c65b243c230b7864fa81b95f926b2e68ff`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **64 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-12T20:22:00Z** against source `d43919e933eb1be69559be7566853ff69a64e903`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **64 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,11 +27,11 @@ Exit: Current #949 authentic convergence and exact-source #644 delivery; full #3
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal. |
-| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback. |
-| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours. |
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Prepare final-source seven-phase committed spool/crash/conflict qualification against the single admitted sealed target; no fabricated device confirmation. |
+| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Reuse107case/8role/reseal proof; qualify remaining actual runtime endpoint/pool-close/production adoption boundaries without unsolicited credential rotation. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Finish ownerPR4807 native qualification; retain18-clause matrix and prepare remaining authenticated source/artifact/cancel/retry/concurrency execution without mutating production during observation. |
+| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | After actual terminal two-hour receipt, sole Retry owner verifies final smoke, full field/native history/stage-vector cap proof and natural publication; close only passed acceptance. |
 
 ## S3 — Source truth, portable validation and prospective design
 
@@ -44,9 +44,9 @@ Exit: #965 no false observed light history; #963 compatible source and explicitl
 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | Platform lead | 6–12 | Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly. |
 | [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | Platform lead | 4–8 | Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments. |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
-| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision. |
+| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
-| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Platform lead | 4–8 | Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command. |
+| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Platform lead | 4–8 | Existing scientific worker completes bounded deployed-contract and affected-history provenance packet; noPOST, device action or broad historical rewrite. |
 
 ## S4 — Current readiness and integrated qualification
 

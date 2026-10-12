@@ -672,7 +672,7 @@
         "research/planner-efficacy/switchback/v2_analysis.py",
         "research/planner-efficacy/switchback/v2_selector.py"
       ],
-      "baseline": "October11 review: INCOMPLETE: data-truth predecessors have historical accepted receipts, but qualified physical targets/contributors, empirical covariance/joint power, exact endpoint window and prospective seasonal choice remain unaccepted. No draw/assignment exists; choose the justified season/question before lock.",
+      "baseline": "October11 review: INCOMPLETE: data-truth predecessors have historical accepted receipts, but qualified physical targets/contributors, empirical covariance/joint power, exact endpoint window and prospective seasonal choice remain unaccepted. No draw/assignment exists; choose the justified season/question before lock. October12 finite measurement packet5c288576 retains accepted warm exploratory30-pair/60-day/18-hour candidate. Authentic physical panel/target provenance and prospective complete-day continuity/context are missing; no justified numerical/calendar rerun, fabricated input, random draw or power claim.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -931,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary.",
+      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary. October12 execution: qualified973 tree merged ascb21; five affected images built/registry-verified, d439 full-hook production adoption and runtime smoke passed. Remaining18-clause source/native matrix retained at95e2f6ef. Isolated owner source-label fix AgentsPR4807 head6f1ebc369 is in ordinary required native qualification; no live adoption or unattended retry/concurrency acceptance claimed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1563,7 +1563,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: durable spool source, historical3000-event restart/node-loss witness, format/capacity tests and actual warning/clear receipts are published. Final-image committed seven-phase replay/crash/conflict, exact inverse and full data/sequence/study reseal remain unaccepted. Running ingestor differs from desired pin; qualify exact adopted source without fabricated confirmation.",
+      "baseline": "October11 review: PARTIAL: durable spool source, historical3000-event restart/node-loss witness, format/capacity tests and actual warning/clear receipts are published. Final-image committed seven-phase replay/crash/conflict, exact inverse and full data/sequence/study reseal remain unaccepted. Running ingestor differs from desired pin; qualify exact adopted source without fabricated confirmation. October12 contained proof b4eb826a/e1a79f19 supplies complete952/77/42/catalog inverse/reseal and ordinary authenticated consumers. This is not final-image seven-phase committed spool/crash/conflict or restart/node-loss acceptance; reuse one admitted target and current source, preserve fake-confirmation prohibitions.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1599,7 +1599,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover.",
+      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover. October12 contained proof: one admitted native target, committed275/separate admission,107 ordinary allowed/denied cases and two scientific read-only consumers passed; exact952 relations/9,699,553rows,77sequences,42study/catalog/8NULLroles resealed. Immutable b4eb826a plus independent e1a79f19. Failover/PITR/RPO/RTO and exact cutover packet remain separate; no production DB cutover.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1671,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof.",
+      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof. October12 contained proof b4eb826a/e1a79f19: six real LOGIN duties107 allowed/denied cases plus executor/lifecycle read-only seams; all8NULLcredentials/77sequences/952relations/42study/catalog restored,19 temporary objects removed. Production workload role adoption, endpoint reversal/pool-close/health boundaries remain separate; no production credential rotation.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2953,7 +2953,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "October12 read-only evidence: halted run76d18133852b490680bce2639e6d8397 remains bound to an expired October7 approval and an old pod/source/generation. Current Iris plans exist but no confirmed plan-sourced write after October6; preserve cap12 and original custody. Current ready workloads do not establish policy convergence.",
+      "baseline": "October12 read-only evidence: halted run76d18133852b490680bce2639e6d8397 remains bound to an expired October7 approval and an old pod/source/generation. Current Iris plans exist but no confirmed plan-sourced write after October6; preserve cap12 and original custody. Current ready workloads do not establish policy convergence. October12 execution: d439 production Synced/Healthy after full no-prune sync; fresh run f1a11599 completed20 requests in12+8 stages with original halt/approval preserved and one explicit guardrail hold. Two-hour source/digest window20:01:30.886995–earliest22:01:30.886995UTC is running; final elapsed/native-history/field review remains pending. Evidence branch bd7f71de; do not close before terminal owner verification.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3214,7 +3214,7 @@
         "tests",
         "ingestor/tasks/ha.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR970), unmerged/unadopted at review. Running API still contains the false intent→observation behavior. Deliver once with the integrated cohort and retain exact provenance/negative tests. October12 execution: PR970 correction is included in merged973/cb21 and d439 production API adoption. Source/negative tests retained; bounded read-only history provenance and final contract acceptance are next unblocked work, assigned to existing scientific worker. No livePOST or historical rewrite authorized by this packet.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3247,15 +3247,15 @@
         "firmware/greenhouse/controls.yaml",
         "ingestor/entity_map.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted. October12 execution: merged973/cb21 compatible ingestor source is deployed in d439. Firmware source/portable compile/replay qualification retained; live firmware remains unchanged and separately authorized OTA/HA recovery acceptance is still incomplete.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-12T17:38:10Z",
-    "source_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "reviewed_at": "2026-10-12T20:22:00Z",
+    "source_revision": "d43919e933eb1be69559be7566853ff69a64e903",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
     "open_issues": [
@@ -3620,7 +3620,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal.",
+        "next_action": "Prepare final-source seven-phase committed spool/crash/conflict qualification against the single admitted sealed target; no fabricated device confirmation.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3644,7 +3644,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery.",
+        "next_action": "Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3788,7 +3788,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal.",
+        "next_action": "Reuse107case/8role/reseal proof; qualify remaining actual runtime endpoint/pool-close/production adoption boundaries without unsolicited credential rotation.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3796,7 +3796,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback.",
+        "next_action": "Finish ownerPR4807 native qualification; retain18-clause matrix and prepare remaining authenticated source/artifact/cancel/retry/concurrency execution without mutating production during observation.",
         "owner_role": "Platform lead"
       },
       {
@@ -3836,7 +3836,7 @@
         "sprint": "S3",
         "hours_min": 12,
         "hours_max": 20,
-        "next_action": "Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision.",
+        "next_action": "Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design.",
         "owner_role": "Evidence/data lead"
       },
       {
@@ -3900,7 +3900,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 12,
-        "next_action": "Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours.",
+        "next_action": "After actual terminal two-hour receipt, sole Retry owner verifies final smoke, full field/native history/stage-vector cap proof and natural publication; close only passed acceptance.",
         "owner_role": "Platform lead"
       },
       {
@@ -3916,7 +3916,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command.",
+        "next_action": "Existing scientific worker completes bounded deployed-contract and affected-history provenance packet; noPOST, device action or broad historical rewrite.",
         "owner_role": "Platform lead"
       }
     ]
