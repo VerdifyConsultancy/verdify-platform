@@ -1,5 +1,6 @@
 {
   "base_commit": "64586987b76f7e0fba7982d582b06184ff9966bf",
+  "broader_issue_acceptance_complete": false,
   "checks": {
     "firmware_check": {
       "command": [
@@ -40,6 +41,16 @@
       "historical_rows": 296698,
       "invariant_violations": 0
     },
+    "make_firmware_replay": {
+      "diagnostic_only_rows": 0,
+      "divergent_rows": 0,
+      "exit_code": 0,
+      "limitation": "replay_emit does not execute the changed outer relay wrapper",
+      "new_ref": "bc35137017b49deac04495c11ef88b48086c5802",
+      "old_ref": "64586987b76f7e0fba7982d582b06184ff9966bf",
+      "rows": 296698,
+      "threshold_pct": 0
+    },
     "make_firmware_replay_worktree": {
       "diagnostic_only_rows": 0,
       "divergent_rows": 0,
@@ -73,6 +84,7 @@
       "format_check": true
     }
   },
+  "dependency_preserved": 390,
   "deployed_source_applicability": {
     "live_physical_reproduction": false,
     "pre_fix_controls_equal_deployed_source": true,
@@ -106,6 +118,7 @@
     "gzip_sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b",
     "unchanged": true
   },
+  "issue": 367,
   "live_db_writes": false,
   "native_historical_replay": {
     "field_count": 48,
@@ -118,11 +131,47 @@
   },
   "post_fix_controls_sha256": "3f37614eff7e10fc52193d6bc2d3619d268feecb6dde1eceb2ffc9dda9ed6f50",
   "receipt_archives": {
+    "firmware-check.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 113959,
+      "raw_sha256": "a074f683eb342060036623b57dc8995c5c891f3d102c9f570b8430181c3334ff"
+    },
+    "firmware-invariants.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 7188,
+      "raw_sha256": "a60cd4a8c8e28c7681898f9e4f5ba1dc6b6974bb3c001c023041055278d53884"
+    },
+    "firmware-replay-committed.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 2642,
+      "raw_sha256": "d0ab7c43a75af41b00e4c610908ec63b155d8537c9720f9ec8219785f2163f0d"
+    },
+    "firmware-replay-worktree.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 1831,
+      "raw_sha256": "a8beb45e66fd94c5f1e1a2f6d224ebc2376de619890aa72d16f22b139b0de4a0"
+    },
+    "focused-regressions.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 160,
+      "raw_sha256": "f9ec72206bea32fbfa22f05fb67fd582774e404618f631536048d24fe80cc5c6"
+    },
     "focused-regressions.xml.gz": {
       "encoding": "gzip",
       "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
       "raw_bytes": 20836,
       "raw_sha256": "3d06efb4b857cb8a348e55e2558f59ebbe0b0e327d4f5850e0ff710df6066521"
+    },
+    "policy-native-replay.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 6185,
+      "raw_sha256": "914b652d56ad02b2341a2027694fca8e7d761bb9c801d86172e4ecc6e33bbc6a"
     },
     "relay-dwell-after-native-source.cpp.gz": {
       "encoding": "gzip",
@@ -130,11 +179,23 @@
       "raw_bytes": 11117,
       "raw_sha256": "d43867a45ee4cf9250200bc41782b61545474747ef333fb0ac4a221e1980bd4f"
     },
+    "relay-dwell-after-snapshot-and-legacy.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 160,
+      "raw_sha256": "20f5f27046a7bba4f1632529723920cb0714405e7c436f83ff72626e3a37131b"
+    },
     "relay-dwell-after-snapshot-and-legacy.xml.gz": {
       "encoding": "gzip",
       "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
       "raw_bytes": 13376,
       "raw_sha256": "f91af070638ae3bf7ca757004fb0dfb8016f246ae11459e10fea9479dda2e56d"
+    },
+    "relay-dwell-before-snapshot-and-legacy.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 116554,
+      "raw_sha256": "c3a608de95b8832e89c10bf7ae3d16d733dee6b13b00c3585fe47234b8a97d94"
     },
     "relay-dwell-before-snapshot-and-legacy.xml.gz": {
       "encoding": "gzip",
@@ -142,11 +203,23 @@
       "raw_bytes": 232281,
       "raw_sha256": "6d3280f88bea08684214a9575a9c1698e683ff1e54d785779e9cbe86a8b09e9f"
     },
+    "relay-dwell-before.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 44498,
+      "raw_sha256": "c4fef66dd547e7503a282707888dfc8a6723edf5e2c4a0b2a7428b0e78e1f3d5"
+    },
     "relay-dwell-before.xml.gz": {
       "encoding": "gzip",
       "purpose": "Preserve exact raw native/JUnit bytes through text-normalizing Git hooks",
       "raw_bytes": 84876,
       "raw_sha256": "571a4e98d24f17e1f06c9c28d9d1217cc133d14a580db53d4e7f89219dc4b271"
+    },
+    "test-firmware.log.gz": {
+      "encoding": "gzip",
+      "purpose": "Preserve exact raw native or redacted compiler log through Git ignores/text hooks",
+      "raw_bytes": 23531,
+      "raw_sha256": "4566504e573171de1b53ffa15e238a43a27d78f52c71a14649c35d1ed7b61cf7"
     }
   },
   "red_test": {
@@ -156,6 +229,7 @@
     "tests": 42
   },
   "schema": "verdify-native-relay-dwell-source-readiness-v1",
+  "source_commit": "bc35137017b49deac04495c11ef88b48086c5802",
   "source_files": {
     "firmware/greenhouse/controls.yaml": "3f37614eff7e10fc52193d6bc2d3619d268feecb6dde1eceb2ffc9dda9ed6f50",
     "firmware/policy_consumer_manifest.json": "9011610eb915a86034fc678453aee92ef0a59439555b7b16c85e926a8aa9073d",

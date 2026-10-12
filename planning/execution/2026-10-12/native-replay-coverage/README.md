@@ -1,4 +1,9 @@
-# Native relay dwell source fix — #587 / #639
+# Native relay dwell source fix — #367
+
+This bounded defect belongs to the existing anti-chatter/dwell-contract issue
+#367. Its broader acceptance and dependency on #390 remain open and unchanged.
+The source evidence also informs #587/#639 executor readiness; it does not
+close those issues or create a duplicate firmware workstream.
 
 The historical replay's 27/48 ceiling exposed a real firmware consumer defect:
 `RelayMeta R` initialized all eight relay dwell limits once, although `pol()`
@@ -22,6 +27,8 @@ same way, including across the uint32 millisecond rollover.
 
 - Base: `64586987b76f7e0fba7982d582b06184ff9966bf`. This branch is separate
   from the frozen PR #973 runtime cohort and contains no deployment change.
+- Verified firmware source commit:
+  `bc35137017b49deac04495c11ef88b48086c5802`.
 - Reported deployed firmware: source
   `620a218a93cf24ca1e1b49dfed617cc97de7d258`, version
   `2026.10.2.0637.620a218a-wifi-bound`. Its `controls.yaml` is byte-identical
@@ -48,14 +55,15 @@ same way, including across the uint32 millisecond rollover.
 | `make test-firmware` | Pass: 273 vector, 251 engine, 30 recovery, 14 injection, 288 greenhouse checks; historical replay passes |
 | `make firmware-invariants` | 296,698 rows, zero invariant violations |
 | `make firmware-replay-worktree OLD=64586987...` | 296,698 rows, zero decision/diagnostic differences, threshold 0 |
+| `make firmware-replay OLD=64586987... NEW=bc351370...` | 296,698 rows, zero decision/diagnostic differences, threshold 0 |
 | `make firmware-check` | ESPHome 2026.6.5 ESP32 compile succeeds; no upload |
 | Consumer manifest and Ruff | Pass; manifest changes are 55 line offsets of +11 |
 | Independent read-only review | No actionable findings; independently reran all 84 native cases |
 
 `readiness.json` records source, corpus and check provenance. Raw native
 receipts, JUnit results, extracted native C++ and fragment hashes are retained
-beside it. JUnit XML and extracted C++ use lossless gzip archives to preserve
-their original bytes through Git text-normalization hooks. ESPHome output was
+beside it. Logs, JUnit XML and extracted C++ use lossless gzip archives to
+preserve their original bytes through Git ignores and text-normalization hooks. ESPHome output was
 redacted in memory before retention; its build
 receipt records artifact hashes. Compiled firmware binaries remain local and
 are neither a release nor an accepted rollback artifact.
@@ -124,3 +132,4 @@ ESPHOME_BIN=/path/to/esphome-2026.6.5 SECRETS_SRC=/existing/private/secrets.yaml
 
 These commands compile and replay only. Runtime integration, firmware release
 and any attended OTA remain with the designated release owner.
+No reduction in observed chatter or physical acceptance is claimed.
