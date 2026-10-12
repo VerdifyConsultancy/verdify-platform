@@ -1,0 +1,16 @@
+{
+  "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "files": {
+    "api/main.py": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+    "ingestor/tasks/component_experiment.py": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+    "ingestor/esp32_push.py": "dd2020ac1df41a3622ab6d516a66ac11662cafde36c72d76251a4dabe6ddf5d1",
+    "ingestor/shared.py": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+    "ingestor/entity_map.py": "24b29cfcdd155feeb5c4512c7173b849262da3c0564038c1c86ac3e83f168bb7",
+    "verdify_schemas/experiment_config.py": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7",
+    "scripts/qualify-restored-runtime-duties.py": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
+    "db/migrations/264-facility-safe-closure-startup-handoff.sql": "406f284c941e599d142c336ce0a9afec1efd46d108d06c2f8069d0a08d7b1dc3",
+    "scripts/qualify-v2-restored-interface.sql": "7d163e3e21b22408aa8d405a34633a673a154c88edc87eb60d155aec017f1c26",
+    "deploy/k8s/components/experiment-v2-credential-bootstrap/README.md": "d43dd2ca9dea02e3a7c9914eef6df59fa710064a21e5cfec321bc3d6f3697096",
+    "db/migrations/tests/test-264-facility-safe-closure-startup-handoff.sql": "d1c8f8e6d01834d565fe0ca5e1e74731f9141706d8a3e9e6dd5937af675eba7d"
+  }
+}

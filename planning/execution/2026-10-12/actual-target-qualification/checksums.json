@@ -1,0 +1,23 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "README.md": "2fda9377067664517645162383374e773daca660981c3857d93a099f05a4e278",
+    "credential-reference-plan.json": "4550996934d55e1c24afdd68114c60911118ae29f3fea8f31b85d48876bcd267",
+    "fixture_check.py": "91bde81a29391f1654cadfff7cd0ff18726c31684ade42fe9416e9ab35515c9c",
+    "frozen-target-binding.py": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
+    "packet-tests.xml.gz": "c37b9e2bf8a80900c0cee2e7fa887677f3e63491db0843bc0f4902eb5b993f60",
+    "private-pg-receipt.json": "28375e31bff9ef1a7b24f05b82885978428680249fa90f98a4ef64092c1dc82a",
+    "probe.py": "394904c36fdf25def55104401199b7e34c8bbab041b7eabc336de62535a38a24",
+    "provision-guard.sql": "57cc5e75113c5288e1fe3ab134fd281580aa087e807ebecc9f57551fa046eee4",
+    "readiness.json": "bcd7ccb8275ac8fbef46e46fe2b1fc821c01a4d3b84a81e549009869c39df711",
+    "review.md": "facfdcb799232c322d65cb804f637bcf4d399ebbb5a7d3b299547ded45bc8bdb",
+    "role-and-scope-metadata-readonly-274-or275.sql": "8544a8066af40980fc5705bea9846ec2a5588bc6cdef3fe579d6384bae66df41",
+    "role-contract.json": "ed6d223f75903fff1a9f51ad50e46bf79defb0130e33cf7b47ceb07a9dec88f4",
+    "sequence-custody-readonly-274-or275.sql": "0cd3df314f5bf63c26a55db80fe5e4e8b19e94e42e498db96b96e09133361745",
+    "source-hashes.json": "99f96a769f299e686b90e51bc2132e4e3e1f244c01242c0ad1b7db24398c80d2",
+    "source-tests.xml.gz": "c2cd54ac3020c119bba8411f12abb42a6e1dc3892dca1197751b389cf8ca3a6e",
+    "starting-role-metadata.json": "d97972437edfa172daa8381084b14a0497e2b9a2d1419cf14c197666345fee48",
+    "study42-pre275-derivation.json": "066dfb2fa5afd1f6db4d3397e0ac27430890cc972037bd4813f7bb133bc9b1bc",
+    "test_probe.py": "a694426239b57c22a3202459d1086a1701b654d921c5f35af92f1846bcfd1ca9"
+  }
+}

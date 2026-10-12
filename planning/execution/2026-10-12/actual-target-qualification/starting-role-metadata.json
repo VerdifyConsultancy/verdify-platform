@@ -1,0 +1,101 @@
+{
+  "source_custody": "/private/tmp/verdify-replan-20261012/contained-recovery/actual-target/starting-role-metadata",
+  "records": [
+    {
+      "kind": "two-role-starting-posture",
+      "roles": [
+        {
+          "name": "verdify_experiment_component_executor",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_lifecycle",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_component_executor_login",
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": true,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [
+            {
+              "role": "verdify_experiment_component_executor",
+              "admin_option": false
+            }
+          ],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_lifecycle_login",
+          "inherit": true,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": true,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [
+            {
+              "role": "verdify_experiment_lifecycle",
+              "admin_option": false
+            }
+          ],
+          "replication": false,
+          "password_is_null": true
+        },
+        {
+          "name": "verdify_experiment_v2_owner",
+          "inherit": false,
+          "createdb": false,
+          "bypassrls": false,
+          "can_login": false,
+          "superuser": false,
+          "createrole": false,
+          "memberships": [],
+          "replication": false,
+          "password_is_null": true
+        }
+      ],
+      "ledger_max": 274,
+      "database_oid": "16447",
+      "system_identifier": "7693399121498484768"
+    },
+    {
+      "kind": "existing-component-bindings",
+      "experiments": [
+        {
+          "status": "draft",
+          "device_ids": [
+            "esp32-vallery"
+          ],
+          "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+          "admission_state": "closed",
+          "execution_phase": "shadow",
+          "lease_generation": 19,
+          "component_enabled": false
+        }
+      ]
+    }
+  ],
+  "receipt_sha256": "4cacee6b5b59c7db09b063e819c3541c3c2fc8e2d000d6829d361dcacfe8e07b",
+  "role_mutation_by_this_lane": false
+}

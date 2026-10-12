@@ -1,0 +1,41 @@
+{
+  "schema": "verdify-actual-target-sql-seam-preparation-v1",
+  "source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "target": "verdify-cnpg-s2-integration",
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "database_oid": 16447,
+  "system_identifier": "7693399121498484768",
+  "actual_target_role_metadata": "owner-read274 verified, both LOGINtrue/passwordNULL, exact sole no-admin memberships",
+  "existing_component_experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+  "device_id": "esp32-vallery",
+  "credentials": "target-only password-only step prepared; not provisioned by this lane",
+  "actual_target_authentication": false,
+  "actual_target_behavioral_qualification_complete": false,
+  "physical_execution_qualified": false,
+  "native_treatment_fields": "27/48 UNPROVEN",
+  "tests": {
+    "source-tests.xml": {
+      "tests": 307,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "packet-tests.xml": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "fixture_native_checks": 10,
+  "fixture_study_rows_created": 0,
+  "independent_review": "guard cleanup/release/source-hash/count and image-layout/logging findings corrected; no target action",
+  "remaining": [
+    "owner current275 native admission and serialized release",
+    "matching qualified frozen-source API and ingestor image identities",
+    "two target-only passwords/reference installation and actual restricted-login authentication",
+    "read-only actual startup/status seam receipts then exact null-password inverse and952/77/42reseal",
+    "full native48/two-fresh-epoch/fault/recovery/physical/alert acceptance remains separate",
+    "authentic contributor, calibration, target, as-of forecast, selector, equipment and covariance inputs still needed; fixed30June1-July302027candidate unchanged"
+  ]
+}
