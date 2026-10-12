@@ -63,6 +63,44 @@ def test_public_text_redacts_non_public_crop_references():
     assert policy.PUBLIC_CROP_REDACTION in rendered
 
 
+@pytest.mark.parametrize("measurement", ["None%", "NaN%", "-Infinity °F", "inf kPa", "'.nan' ppm"])
+def test_daily_summary_missing_measurements_remain_explicit_and_pass_guard(monkeypatch, tmp_path, measurement):
+    module = load_generate_daily_plan()
+    note = f"Tree looks healthy, but soil moisture is reported as {measurement}, which needs verification."
+    monkeypatch.setattr(
+        module,
+        "db_query_json",
+        lambda _sql: [
+            {
+                "name": "Lime Tree",
+                "zone": "west",
+                "avg_health": 0.9,
+                "obs_count": 1,
+                "notes": [note],
+                "crop_catalog_slug": "lime",
+            }
+        ],
+    )
+    rendered = module.generate_daily_summary_section(
+        {"temp_min": 60, "temp_max": 80, "temp_avg": 70}, [], date(2026, 10, 12)
+    )
+    assert "soil moisture is reported as unavailable, which needs verification." in rendered
+    assert module.public_text("Moisture 40.6%; none recorded; nanotechnology") == (
+        "Moisture 40.6%; none recorded; nanotechnology"
+    )
+
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check-public-output.py"
+    spec = importlib.util.spec_from_file_location("plan_output_guard_under_test", script_path)
+    assert spec and spec.loader
+    guard = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = guard
+    spec.loader.exec_module(guard)
+    (tmp_path / "plan.md").write_text(rendered)
+    assert guard.scan_root(tmp_path) == []
+    (tmp_path / "plan.md").write_text(note)
+    assert any(finding.reason == "invalid-rendered-value" for finding in guard.scan_root(tmp_path))
+
+
 def test_daily_summary_omits_non_public_crop_health(monkeypatch):
     module = load_generate_daily_plan()
     policy = output_policy
