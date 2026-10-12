@@ -1,0 +1,90 @@
+{
+  "files": {
+    "bridge-install-staged/execution.sql": {
+      "sha256": "2bd781ddf0df8a31b00e74019321223ec4343bdf33d959990639af18d1f7b49d",
+      "bytes": 68876133
+    },
+    "bridge-install-staged/native.stdout": {
+      "sha256": "7304d98b47571e78fcfeb70bafdb435ae33a65315fa4455cd6d08bdad0c561a1",
+      "bytes": 71033692
+    },
+    "bridge-install-staged/native.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "bridge-install-staged/record.json": {
+      "sha256": "fe2afb4657c611cee719742c3eb6d11fd34d604266b2969231f985b102e9d22a",
+      "bytes": 94419803
+    },
+    "bridge-install-staged/post-witness.json": {
+      "sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+      "bytes": 44929705
+    },
+    "bridge-install-staged/receipt.json": {
+      "sha256": "e1c688eda6958d3662d1dbc17f7811bc61c350d5c990a87449f5e60fc987ce13",
+      "bytes": 1109
+    },
+    "admission-rollback-staged/execution.sql": {
+      "sha256": "691094fd38d2ded0fe6aac9838742799f05d0b029637dec3d4cc13e969667575",
+      "bytes": 34713726
+    },
+    "admission-rollback-staged/native.stdout": {
+      "sha256": "650916faac4b9f5e4233a3643702b976e2cb35e2c2a6f5431fb9f0426818a4d3",
+      "bytes": 71044079
+    },
+    "admission-rollback-staged/native.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "admission-rollback-staged/record.json": {
+      "sha256": "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac",
+      "bytes": 94433938
+    },
+    "admission-rollback-staged/post-witness.json": {
+      "sha256": "36647f1abd5fefaa4aab8a71905bcf77e8754d8acec83c90d53d1661775e6965",
+      "bytes": 44942966
+    },
+    "admission-rollback-staged/receipt.json": {
+      "sha256": "ef9ef5920702a70ec144c25c2f5bb9e687d4ecfdb43b00dfcae20fd23a8bf53c",
+      "bytes": 905
+    },
+    "admission-install-staged/execution.sql": {
+      "sha256": "271acb61936a2ee2fb3407f50a728b7cbe8c4aee855637d1dcf2fedd5cbfb421",
+      "bytes": 68913737
+    },
+    "admission-install-staged/native.stdout": {
+      "sha256": "58172398aa5a2392b33c294ad77d3e639f5627eaf8185ecccb7c54034d07d671",
+      "bytes": 71044064
+    },
+    "admission-install-staged/native.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "admission-install-staged/record.json": {
+      "sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+      "bytes": 94433923
+    },
+    "admission-install-staged/post-witness.json": {
+      "sha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+      "bytes": 44942966
+    },
+    "admission-install-staged/receipt.json": {
+      "sha256": "8e9b5cb198edf70f40e4a3af8c210b65f6fe10b330f29b34713b40a75cbc8b0a",
+      "bytes": 889
+    }
+  },
+  "retainedBytes": 803731635,
+  "fileCount": 18,
+  "allExpectedHashesMatch": true,
+  "deletedFiles": 0,
+  "rootStillPresent": true,
+  "capturedAt": "2026-10-12T19:38:28.277207+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "privatePodRoot": "/controller/run/contained-recovery-20261012",
+  "deletionAttemptExecuted": false,
+  "rejection": "Automatic approval review rejected permanent deletion of eighteen remote primary staging files, requiring a specific Jason custody-deletion decision. No retry or workaround performed.",
+  "databaseOrPVCMutation": false,
+  "privateMacRecordsRetained": true,
+  "durableAcceptanceHead": "3ac73f9bf42d3c776823c5ebdc425110a507da9f"
+}

@@ -1,0 +1,145 @@
+{
+  "actual_seams": [
+    {
+      "Job_UID": "28a71cdb-9b74-4ebc-b582-9f50df9da53b",
+      "Pod_UID": "9ec19962-78ef-4eb4-9ea0-9e37fdb2a923",
+      "catalog_attestation_fields": 19,
+      "consumer": {
+        "consumer_acquisitions": 1,
+        "off_worker": {
+          "bundle_id": null,
+          "disposition": "idle",
+          "reason": "component_capability_off",
+          "setter_calls": 0,
+          "work_id": null
+        },
+        "off_worker_sql_acquisitions": 0,
+        "startup_attestation": {
+          "active_experiment_count": 0,
+          "attestation_reason": "facility_safe_closure",
+          "attested_at": "2026-10-12 19:15:18.270643+00:00",
+          "current_lease_generation": 19,
+          "device_id": "esp32-vallery",
+          "experiment_authority_active": false,
+          "facility_authority_yielded": true,
+          "hold_required": false,
+          "open_exposure_count": 0,
+          "recovery_pending_count": 98,
+          "requested_experiment_id": null,
+          "scope_resolved": true,
+          "scoped_experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+        }
+      },
+      "duty": "executor",
+      "exit_code": 0,
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:a3492427afab2978d05409f70dbe6342fd4a4cc6cd2bdd2769173bf078f24344",
+      "native_stdout_equals_receipt": true,
+      "node": "vm-k3s-node5",
+      "protected_select_denials": 3,
+      "raw_stdout_sha256": "37982616234ad936c8b1b34a6cacdec34c331c3521e3f7d8f407115c7d2181d0",
+      "receipt_sha256": "4d93e0b44a8d9541e33a11ad4b54c9116d25fd20dbb6a69ca054e570ce1f375c",
+      "restart_count": 0
+    },
+    {
+      "Job_UID": "09d46aa8-707f-4d0a-b298-eef831c9bec5",
+      "Pod_UID": "f4e98a61-fdc6-45e8-98fe-2b5ead916b86",
+      "catalog_attestation_fields": 19,
+      "consumer": {
+        "admission_state": "closed",
+        "component_capability_mode": "off",
+        "consumer_acquisitions": 1,
+        "environment_admissible": false,
+        "environment_gate_reason": "component_capability_off",
+        "execution_phase": "shadow",
+        "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+        "http_authentication_qualified": false,
+        "lease_generation": 19,
+        "open_exposures": 0,
+        "status_parser": "passed"
+      },
+      "duty": "lifecycle",
+      "exit_code": 0,
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "native_stdout_equals_receipt": true,
+      "node": "vm-k3s-node5",
+      "protected_select_denials": 3,
+      "raw_stdout_sha256": "62ec90fcb25f59f3574e257d9ecae4c1bdb08f3363d35d604b07b35bca7072f7",
+      "receipt_sha256": "366f4ca3f72e6966b7ab5b5a766dd71bfc618fc2e7617eacc5dd86508341b145",
+      "restart_count": 0
+    }
+  ],
+  "consumer_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "correction_packet_commit": "e4e4bac22b21cd76601d433fa0199129b6e3f18d",
+  "final_reseal": {
+    "Argo": {
+      "active_operation": false,
+      "automatic_sync_enabled": false,
+      "health": "Healthy",
+      "source_targetRevision": "main",
+      "sync_status": "OutOfSync"
+    },
+    "catalog_record_byte_equal_post_admission_baseline": true,
+    "catalog_record_sha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+    "cleanup_receipt_sha256": "805a1606bd34ca594851b31542330a49169a86e2766dc17ab35f2b883a924398",
+    "exact_UID_precondition_deletions": 19,
+    "final_target_health_receipt_sha256": "a137967aac2d65fb7d7ad4b0022c96523552b8bdd401765beb053268dfbc4b0d",
+    "healthy_two_replica_volumes": 6,
+    "raw_rows_exported_or_persisted": false,
+    "ready_database_instances": 3,
+    "study42_all_table_hash_records_equal_prefixture": true,
+    "study42_receipt_sha256": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0",
+    "study42_table_count": 42,
+    "target_only_Secrets_deleted": 2,
+    "temporary_runners_and_payloads_absent": true,
+    "whole952_all_table_hash_records_equal_prefixture": true,
+    "whole952_execution_receipt_sha256": "015c88ce90349cfee855dab02f1e9ea7ec648aa5eead6c3cfef542e848e4febb",
+    "whole952_receipt_sha256": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8",
+    "whole952_row_count": 9699553,
+    "whole952_stream_sha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+    "whole952_table_count": 952
+  },
+  "first_failed_lifecycle_preserved": true,
+  "fresh_custody_release": {
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "name": "verdify-cnpg-s2-v2-ready-custody-20261012",
+    "nativeBindingSha256": "160a6c14011670ce530fd89d607eb9d259c442ff39b28f48640e096d25c93222",
+    "packetCommit": "e4e4bac22b21cd76601d433fa0199129b6e3f18d",
+    "parentReleaseSha256": "e966d477724277182802755d9a5339dc442239b040c39772cfc19a8cf503a9d8",
+    "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "stageReleaseSha256": "7fdec2401d040fb347d6fce4ac486bda37e044bdb6dea58ea64a5e13e6cd3382",
+    "uid": "8463936a-b05d-4b39-93d3-3169a52ce025"
+  },
+  "independent_inverse_review": {
+    "copied_history_sha256": "46696d760f190934d563b489f3e73bb8413549e1a72013de60fae47792385329",
+    "password_inverse_receipt_sha256": "2c15486ec08495cff63eb5e22babfbccf4e71b4b77de5bc3abd0190438e516af",
+    "role_record_sha256": "35f6df173e20202b73b6fee44923f14953bae9a3de1020edaadd7ffc54543084",
+    "sequence_readback_receipt_sha256": "0a7785236b9bf75a50e7d7b2547211345d8c4fc412355d424cbca996a49be4a8",
+    "sequence_record_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+    "starting_and_final_77_sequence_states_byte_equal": true,
+    "starting_and_final_8_role_metadata_byte_equal": true,
+    "starting_and_final_copied_history_rows_byte_equal": true
+  },
+  "limits": [
+    "actual readonly SQL seam qualification only",
+    "system identifier and admission are externally owner-bound, not read independently by these LOGINS",
+    "HTTP/ASGI/token-route and full behavioral/physical acceptance unproved",
+    "27/48 UNPROVEN; authentic scientific inputs remain required"
+  ],
+  "remaining_outside_this_bounded_result": [
+    "complete executor/lifecycle state-transition and fault-path behavioral acceptance",
+    "HTTP/ASGI/operator-token-route acceptance",
+    "authentic scientific panel/crop/target/pre-boundary/equipment-day inputs",
+    "21 missing native treatment dimensions;27/48 UNPROVEN",
+    "firmware367 remains nextcohort/source-only; noOTA or physical proof"
+  ],
+  "review_method": "offline independent native receipt/raw-stdout/Job/Pod/source-payload/custody binding; no target calls or reruns",
+  "schema": "verdify-v2-actual-readonly-independent-review-v1",
+  "status": "actual-readonly-seams-and-exact-inverse-reseal-independently-reviewed-pass",
+  "transport_payload": {
+    "credentialValuesInPayload": false,
+    "manifestSha256": "03567e5f5d7e187b63c678476ca26a197f4fca984d4cf6f5cb865be869c43c8c",
+    "name": "verdify-cnpg-s2-v2-readonly-transport-a88966d1",
+    "probeSha256": "a88966d10273ac7b3d1797af98e243437c81b4d25f16f1cf878513b0f8e15c13",
+    "uid": "14acb4fe-8cba-46a6-ac0f-a8402330d535"
+  }
+}

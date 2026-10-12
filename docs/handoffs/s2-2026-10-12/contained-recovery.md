@@ -205,3 +205,27 @@ Receipts: [index](actual-qualification-receipts-index.json),
 [study42](actual-final-study42-derivation.json),
 [temporary cleanup](actual-temporary-object-cleanup.json),
 [final target health](actual-final-target-health.json).
+
+
+The independent science review is durably preserved at
+[e1a79f19](https://github.com/VerdifyConsultancy/verdify-platform/blob/e1a79f1925c34f4c52207fa3c46e6d5ae7b4eecc/planning/execution/2026-10-12/actual-target-qualification/actual-readonly-independent-review.json)
+and copied exactly in [the local review receipt](actual-readonly-independent-review.json).
+It verifies the actual source/identity/authentication seams and all final reseals
+without another target call or test rerun.
+
+The 18 task-owned staged SQL/catalog-output files remain on the primary under
+`/controller/run/contained-recovery-20261012`, totaling 803,731,635 bytes. Automatic
+approval review rejected their permanent deletion before execution, stating that a
+specific Jason custody-deletion decision is required. No deletion or workaround
+ran. A subsequent READ ONLY inventory verified all 18 expected file hashes, zero
+removed files and the same primary UID; see
+[retained staging](actual-retained-private-staging.json). The durable source,
+metadata receipts and private Mac native catalog copies are retained too. This
+occupied temporary root-filesystem space is separate from the target's Longhorn
+NVMe PVC allocation. The rejected optional artifact cleanup does not change the
+completed native/authentication/data reseal; it must not be represented as freed
+shared root headroom.
+
+This finite verification is complete. The target remains healthy and resealed;
+production/cutover, authenticated full product applications, HTTP behavior,
+physical behavior and the missing native harness fields remain separate work.

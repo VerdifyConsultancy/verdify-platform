@@ -122,7 +122,20 @@
     {
       "path": "actual-authenticated-retained-failures.json",
       "sha256": "622796265a7d0e3b8b2cf64289691e1d48b5bc75fe4cdf647ca89cd26601472d"
+    },
+    {
+      "path": "actual-readonly-independent-review.json",
+      "sha256": "0e352405ed125b73c5d16e0c793d9e61916ed9c0b9afdecef36821f13977995e"
+    },
+    {
+      "path": "actual-retained-private-staging.json",
+      "sha256": "6007323b9e19c677356e9b26c818b0920314b8e0aa43863d0b1d5b4bbe08c01a"
     }
   ],
-  "rawRowsOrCredentialValuesIncluded": false
+  "rawRowsOrCredentialValuesIncluded": false,
+  "independentReview": {
+    "branch": "codex/actual-target-qualification-20261012",
+    "head": "e1a79f1925c34f4c52207fa3c46e6d5ae7b4eecc",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e1a79f1925c34f4c52207fa3c46e6d5ae7b4eecc/planning/execution/2026-10-12/actual-target-qualification/actual-readonly-independent-review.json"
+  }
 }
