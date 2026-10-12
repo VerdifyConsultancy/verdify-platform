@@ -416,6 +416,12 @@ switch:
             return;
           }
 
+    # ESPHome switch callbacks deduplicate identical states: this runs only
+    # on an OFF transition (also conservatively at startup), not repeated OFF.
+    on_turn_off:
+      - lambda: |-
+          id(last_off_west_ms) = millis();
+
   - platform: gpio
     id: west_wall_mister_fertilized
     name: "Mister • West Wall (Fert.)"
@@ -477,6 +483,12 @@ switch:
             return;
           }
 
+    # ESPHome switch callbacks deduplicate identical states: this runs only
+    # on an OFF transition (also conservatively at startup), not repeated OFF.
+    on_turn_off:
+      - lambda: |-
+          id(last_off_south_ms) = millis();
+
   - platform: gpio
     id: wall_drips
     name: "Drip • Wall"
@@ -512,6 +524,12 @@ switch:
             ESP_LOGE("irrig","Blocked non-climate center-mister relay ON");
             return;
           }
+
+    # ESPHome switch callbacks deduplicate identical states: this runs only
+    # on an OFF transition (also conservatively at startup), not repeated OFF.
+    on_turn_off:
+      - lambda: |-
+          id(last_off_center_ms) = millis();
 
   - platform: gpio
     id: center_drips_fertilized
