@@ -217,6 +217,10 @@ async def actual_probe(args):
     release_sha = hashlib.sha256(release).hexdigest()
     component, api, binding = load_sources(duty=args.duty, layout=getattr(args, "layout", "checkout"))
     address, binding_sha = binding.target_binding(args.native_binding.read_bytes(), args.cluster_uid)
+    # Reuse the frozen ordinary-duty runner's credential-free bounded TCP
+    # readiness. A newly admitted Pod can precede network-policy propagation.
+    # This is not authentication and never retries a credentialed connection.
+    transport_attempts = await binding.wait_target_transport(HOST)
     # Only now read the consumed Secret value. No credential argument, DSN,
     # Secret API call, owner proxy, SET ROLE or SET SESSION AUTHORIZATION.
     password = os.environ["QUALIFICATION_DB_PASSWORD"]
@@ -285,6 +289,8 @@ async def actual_probe(args):
             "identity": identity,
             "cluster_uid": args.cluster_uid,
             "native_binding_sha256": binding_sha,
+            "transport_readiness_attempts": transport_attempts,
+            "transport_readiness_is_authentication": False,
             "admission_sha256": args.admission_sha256,
             "stage_release_sha256": release_sha,
             "owner_system_identifier": args.system_identifier,

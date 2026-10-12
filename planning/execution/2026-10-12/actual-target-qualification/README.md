@@ -1,5 +1,61 @@
 # #639 / #587: actual-target SQL seam packet
 
+## Preserved first attempt and bounded lifecycle transport correction
+
+The owner actually ran the original packet serially. The executor's real LOGIN,
+function-only attestation and read-only startup/parser seam passed. The first
+lifecycle Job `462f5c28-f270-4277-b2ca-33d397dd4f8e`, Pod
+`2972fef0-4daa-459b-934b-48c65d3dbc81`, failed once with
+`ConnectionRefusedError`; its receipt and native objects remain in owner custody.
+No successful lifecycle qualification is inferred from that attempt.
+
+Offline inspection found one immediate `asyncpg.connect` to the fixed target.
+The API lifespan/default pool is not called, and the status consumer uses the
+pinned connection and wraps SQL exceptions as `HTTPException`. The uncaught
+error is consistent with the initial transport connection; its underlying
+network-policy/startup cause is not independently established.
+
+The current `probe.py` adds only the frozen binding helper's existing
+`wait_target_transport(HOST)` after binding checks and **before reading the
+password**. It waits at most ten seconds using credential-free TCP, as the six
+passing ordinary-duty Jobs already did. TCP readiness is explicitly not
+authentication. The authenticated connection remains single-shot. Five focused
+fixture regressions passed (no failures/errors/skips), covering transport
+failure before credential read, no retry after authentication failure for each
+duty, and authenticated-connection cleanup. Product source, source/import
+hashes, both overlays, roles, grants and all qualification thresholds are unchanged.
+
+`lifecycle-transport-correction.json` binds the preserved failure, exact new
+payload hashes and one owner-only guarded lifecycle attempt. The original
+`runtime-packet.configmap.json.gz`, both original prepared Jobs and
+`jobs-prepared.json` retain the original payload/manifests; their historical
+`probe.py` bytes intentionally differ from the corrected current file. The new
+immutable packet is `verdify-cnpg-s2-v2-readonly-transport-a88966d1`, and the
+distinct Job is `verdify-v2-readonly-lifecycle-transport-20261012`.
+
+The owner creates a fresh immutable custody/release ConfigMap named
+`verdify-cnpg-s2-v2-ready-custody-20261012`, binding the same actual native
+identity, corrected packet/probe hashes and parent release
+`e966d477724277182802755d9a5339dc442239b040c39772cfc19a8cf503a9d8`.
+Use the existing single credential window; no executor rerun, reprovisioning,
+grant repair or source algorithm change is needed. After the one lifecycle
+attempt, the owner retains its exact UID/image/receipt even on failure and
+performs the exact NULL-password/five-sequence inverse and whole952/77/42 reseal.
+
+```sh
+# Sole recovery writer only, after fresh custody/release verification.
+gzip -dc "$PACKET/runtime-packet-transport.configmap.json.gz" |
+  kubectl --context vallery -n verdify-db-rehearsal create -f -
+kubectl --context vallery -n verdify-db-rehearsal create \
+  -f "$PACKET/job-lifecycle-transport.prepared.json"
+```
+
+This packet lane made no actual-target call or cluster mutation. The following
+preparation history remains retained; its original unsubmitted descriptions
+describe the point at which those manifests were prepared. No HTTP/ASGI route,
+physical execution or full behavioral acceptance is proved. Native treatment
+coverage remains **27/48 UNPROVEN**.
+
 Prepared against frozen PR973 source `3d9f31e8274d131e1bb2178bd9edb24cf66eb347`.
 This is a bounded execution packet for the **one** admitted
 `verdify-cnpg-s2-integration` target, not another restore or study fixture.

@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "files": {
-    "README.md": "2bca297063ab6adcf85d802da6404c309c795fb91833b002288196938597c255",
+    "README.md": "1c65a11722dd50542f212f240a9be65e5cf72e4ed6d5a180569eeb680cd60b42",
     "actual-image-source-compatibility.json": "b4847f8d0b225f9ecb72033977c2cad015e1f333266acacbf0eaa019b1728458",
     "cached-image-source-comparison.json": "2a43cdf9f551104323c28b460b1d4ca49dc309154e983fad2f5c67d79f6a6747",
     "credential-reference-plan.json": "4550996934d55e1c24afdd68114c60911118ae29f3fea8f31b85d48876bcd267",
@@ -9,17 +9,20 @@
     "frozen-target-binding.py": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
     "import-manifest.json": "e43f880c5874f990a27f57382fe1f457fab4935236365020953c8c50eb606713",
     "job-executor.prepared.json": "0d958af4102ca176307b68b35165f99197c92d77018398f1c1d24e0773877cb2",
+    "job-lifecycle-transport.prepared.json": "d03c63a38d0d6580be63a7d10a564d4c749fc2e81c619c1d42a5b66941888760",
     "job-lifecycle.prepared.json": "278c149dd61d18f64b4d20617ec58a96f980f2a0ed558c66fb7c1ad91e96e4f2",
     "jobs-prepared.json": "17f30aa0ea0099c560da87be5e97f9486af87dd41f08a14b2263a57a3e649d97",
+    "lifecycle-transport-correction.json": "d6b39eb0c1ac8c4262b067d72890500de57537d479d387e58fbf62eb0db88e90",
     "owner-auth-job-review.json": "949faccc6bf984c2a3073cc8c8107084b7693ee3d5795f11d9e1f3e24da45a38",
     "packet-tests.xml.gz": "2394cb80af8268701a5216af298f1c4f8b11c538fe16b5c8c4096dbcdd136a63",
     "private-pg-receipt.json": "58c0f0e2d92fe51c02950f19c09618afe0594a9ad4d21f8b61cbd3604e50ee1e",
-    "probe.py": "b06c0391ff7794c50ebcb4d390bc94b78a6ccea5ffaeb1d4c30b378366e57031",
+    "probe.py": "a88966d10273ac7b3d1797af98e243437c81b4d25f16f1cf878513b0f8e15c13",
     "provision-guard.sql": "57cc5e75113c5288e1fe3ab134fd281580aa087e807ebecc9f57551fa046eee4",
     "readiness.json": "74b37f671941f08abccf1d8c8d1ac808f76acc817d2635f3fce6620031275182",
     "review.md": "884485d0141c2f4159bab13208f584c10a2799b9d79e34c0c149098bab55eb8b",
     "role-and-scope-metadata-readonly-274-or275.sql": "8544a8066af40980fc5705bea9846ec2a5588bc6cdef3fe579d6384bae66df41",
     "role-contract.json": "ed6d223f75903fff1a9f51ad50e46bf79defb0130e33cf7b47ceb07a9dec88f4",
+    "runtime-packet-transport.configmap.json.gz": "5917c52b9d68a0cde820089d22fc10d0c9a63578895eba0950ef42737c6fa180",
     "runtime-packet.configmap.json.gz": "09430f84c24ec7c2fc6315f51655c6c188552170ad35da8684c03dcd4a26f405",
     "sequence-custody-readonly-274-or275.sql": "0cd3df314f5bf63c26a55db80fe5e4e8b19e94e42e498db96b96e09133361745",
     "source-hashes.json": "ae9c3ce97ca5b03e24926a648c83b48475d307a3246c43444dc8c990579a9ce8",
@@ -29,6 +32,7 @@
     "source-tests.xml.gz": "c2cd54ac3020c119bba8411f12abb42a6e1dc3892dca1197751b389cf8ca3a6e",
     "starting-role-metadata.json": "d97972437edfa172daa8381084b14a0497e2b9a2d1419cf14c197666345fee48",
     "study42-pre275-derivation.json": "066dfb2fa5afd1f6db4d3397e0ac27430890cc972037bd4813f7bb133bc9b1bc",
-    "test_probe.py": "fac0763775fa59ec1a6afd2477b4fa1de9d96f1b8574bbd0016f7405d763a493"
+    "test_probe.py": "459b34714005de42502dd5787985c2935a16adb36f862cf348ba79ac5285af3f",
+    "transport-tests.xml.gz": "391c483c4f4c0cb0f599f46f956d7643a57861a85481df37658179cd459089f8"
   }
 }

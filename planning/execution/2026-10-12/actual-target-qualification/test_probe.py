@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import asyncpg
 import pytest
@@ -79,6 +80,15 @@ async def test_production_binding_stops_before_credential_or_connection(prepared
 @pytest.mark.asyncio
 async def test_transaction_start_failure_always_closes_authenticated_connection(prepared, monkeypatch):
     calls = []
+    component, api, binding = probe.load_sources(duty=prepared.duty)
+
+    async def wait_transport(host):
+        assert host == probe.HOST
+        calls.append("credential-free-ready")
+        return ["connected"]
+
+    monkeypatch.setattr(binding, "wait_target_transport", wait_transport)
+    monkeypatch.setattr(probe, "load_sources", lambda **kwargs: (component, api, binding))
 
     class Transaction:
         async def start(self):
@@ -105,7 +115,60 @@ async def test_transaction_start_failure_always_closes_authenticated_connection(
     monkeypatch.setattr(asyncpg, "connect", connect)
     with pytest.raises(RuntimeError, match="transaction start failure"):
         await probe.actual_probe(prepared)
-    assert calls == ["fixture-connect", "closed"]
+    assert calls == ["credential-free-ready", "fixture-connect", "closed"]
+
+
+@pytest.mark.parametrize("duty", ["executor", "lifecycle"])
+@pytest.mark.asyncio
+async def test_transport_timeout_stops_before_credential_read_or_authentication(prepared, monkeypatch, duty):
+    prepared.duty = duty
+    prepared.experiment_id = prepared.cluster_uid if duty == "lifecycle" else None
+    calls = []
+
+    async def wait_transport(host):
+        assert host == probe.HOST
+        calls.append("credential-free-wait")
+        raise TimeoutError("fixture bounded transport timeout")
+
+    binding = SimpleNamespace(
+        target_binding=lambda *args: ("fixture-only", "a" * 64), wait_target_transport=wait_transport
+    )
+    monkeypatch.setattr(probe, "load_sources", lambda **kwargs: (None, None, binding))
+    monkeypatch.delenv("QUALIFICATION_DB_PASSWORD", raising=False)
+    monkeypatch.setattr(asyncpg, "connect", lambda **kwargs: pytest.fail("authentication before readiness"))
+    with pytest.raises(TimeoutError, match="bounded transport"):
+        await probe.actual_probe(prepared)
+    assert calls == ["credential-free-wait"]
+
+
+@pytest.mark.parametrize("duty", ["executor", "lifecycle"])
+@pytest.mark.asyncio
+async def test_ready_transport_does_not_retry_failed_authentication(prepared, monkeypatch, duty):
+    prepared.duty = duty
+    prepared.experiment_id = prepared.cluster_uid if duty == "lifecycle" else None
+    calls = []
+
+    async def wait_transport(host):
+        assert host == probe.HOST
+        calls.append("credential-free-ready")
+        return ["ConnectionRefusedError", "connected"]
+
+    async def connect(**kwargs):
+        assert kwargs["host"] == probe.HOST
+        assert kwargs["user"] == probe.LOGINS[duty]
+        assert kwargs["server_settings"]["default_transaction_read_only"] == "on"
+        calls.append("one-authenticated-connect")
+        raise asyncpg.InvalidPasswordError("fixture authentication rejected")
+
+    binding = SimpleNamespace(
+        target_binding=lambda *args: ("fixture-only", "a" * 64), wait_target_transport=wait_transport
+    )
+    monkeypatch.setattr(probe, "load_sources", lambda **kwargs: (None, None, binding))
+    monkeypatch.setenv("QUALIFICATION_DB_PASSWORD", "unit-fixture-never-sent")
+    monkeypatch.setattr(asyncpg, "connect", connect)
+    with pytest.raises(asyncpg.InvalidPasswordError):
+        await probe.actual_probe(prepared)
+    assert calls == ["credential-free-ready", "one-authenticated-connect"]
 
 
 def test_exact_component_module_import_avoids_scheduler_and_config_package():
