@@ -1,0 +1,35 @@
+{
+  "version": "s2-integration-full951-input-preparation-v1",
+  "preparedAt": "2026-10-12T18:13:30.948175+00:00",
+  "target": "verdify-cnpg-s2-integration",
+  "emittedOnly": true,
+  "executed": false,
+  "targetUid": null,
+  "protocolTag": "S2COPY_BOUNDARY_ececa7060c6f",
+  "tableCount": 951,
+  "baseline": {
+    "receipt": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-a-b-recovery-proposal-once/a-full951-copy/receipt.json",
+    "sha256": "0d7bbd6a42cb5e0a7ec89153710eff6240f6ec6f155a1bb41e7a3bbcbdd6f912",
+    "rows": 9699549,
+    "originalBaselineEqual": true
+  },
+  "originalCaptureSha256": "a42d2fd970a2e53ff5ea4dfb2cf43958643107b4f8d2c93be2c5c0c717fb11b6",
+  "outputs": [
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/integration-full951-read-only.sql",
+      "bytes": 429437,
+      "sha256": "3c27ff4bc85c728f28edd0c036da8c5b5a07c499bfa156c8bf2e4276598b1bd4"
+    },
+    {
+      "path": "/private/tmp/verdify-replan-20261012/contained-recovery/native275-prepared/integration-full951-headers.json",
+      "bytes": 379287,
+      "sha256": "d439f890cdd56231c1b76387e400838db90b72665395d4c0cc08d55063a78f59"
+    }
+  ],
+  "preservedFailure": "full-frozen-recovery-copy-s2-pre275-after-rollback-once/receipt.json remains failed and is not used as a new accepted baseline",
+  "limits": [
+    "new raw target/primaryPod UID binding required before execution",
+    "read-only predecessor rowsets only; actual951 response must contain every ordered relation marker and one terminal marker",
+    "post275/native-admission controlled ledger/receipt deltas remain independently witnessed; no replacement of old seals"
+  ]
+}

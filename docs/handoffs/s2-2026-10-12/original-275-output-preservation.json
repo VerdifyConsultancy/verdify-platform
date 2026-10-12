@@ -1,0 +1,24 @@
+{
+  "version": "current275-original-output-preservation-v1",
+  "capturedAt": "2026-10-12T18:12:06.200584+00:00",
+  "oldSource": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+  "newSource": "89e76357a8579101a17e56b1951f40c3a227aad4",
+  "beforeWitnessSha256": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+  "migrationSha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+  "emittedOnly": true,
+  "executed": false,
+  "targets": [
+    {
+      "name": "verdify-cnpg-s2",
+      "bytes": 34690441,
+      "oldAndNewByteIdentical": true,
+      "sha256": "17da769c0af74ef6cc7738ef60f4459fd4869a9acbcee98599c83e5fc0bbe5d7"
+    },
+    {
+      "name": "verdify-cnpg-s2-pitr-b-frozen",
+      "bytes": 34690497,
+      "oldAndNewByteIdentical": true,
+      "sha256": "23d9358bbea833c97b7bb0c363ee02a3a4cd4bdfba37f8984dc1a506dd1c56a6"
+    }
+  ]
+}
