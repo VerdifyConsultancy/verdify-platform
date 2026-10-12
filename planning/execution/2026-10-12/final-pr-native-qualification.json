@@ -1,0 +1,141 @@
+{
+  "schema": "verdify.native-pr-qualification/v1",
+  "observed_at": "2026-10-12T18:28:13.036507+00:00",
+  "source_revision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "base_revision": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+  "pr": {
+    "baseRefOid": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+    "headRefOid": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "mergeStateStatus": "CLEAN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/973"
+  },
+  "workflow": {
+    "name": "verdify-platform-pr-ci-4lfwv",
+    "uid": "b354a1c2-3d99-4a22-b4e3-17184152d2ac",
+    "phase": "Succeeded",
+    "started_at": "2026-10-12T18:16:20Z",
+    "finished_at": "2026-10-12T18:27:46Z",
+    "pods": [
+      {
+        "node_id": "verdify-platform-pr-ci-4lfwv-230599806",
+        "display_name": "report(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-12T18:27:26Z",
+        "finished_at": "2026-10-12T18:27:38Z"
+      },
+      {
+        "node_id": "verdify-platform-pr-ci-4lfwv-2760597894",
+        "display_name": "validate(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-12T18:16:40Z",
+        "finished_at": "2026-10-12T18:27:22Z"
+      },
+      {
+        "node_id": "verdify-platform-pr-ci-4lfwv-3648062361",
+        "display_name": "report-pending(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-12T18:16:20Z",
+        "finished_at": "2026-10-12T18:16:32Z"
+      },
+      {
+        "node_id": "verdify-platform-pr-ci-4lfwv-881395435",
+        "display_name": "trusted-precheck",
+        "phase": "Succeeded",
+        "started_at": "2026-10-12T18:16:20Z",
+        "finished_at": "2026-10-12T18:16:26Z"
+      }
+    ]
+  },
+  "commit_status": [
+    {
+      "id": 56162772901,
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "success",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "created_at": "2026-10-12T18:27:36Z",
+      "updated_at": "2026-10-12T18:27:36Z",
+      "target_url": null
+    }
+  ],
+  "classification": {
+    "base_revision": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+    "mode": "build",
+    "paths_sha256": "1d40b5630e7af9c0a5b3d3ecc9e4ade0b9bceea54d217cb91151d3ad87240a74",
+    "profiles": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "api": [
+        "api/main.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "ingestor": [
+        "docs/SERVICE_MAP.md",
+        "docs/handoffs/s2-2026-10-12/archive-custody-recheck.json",
+        "docs/handoffs/s2-2026-10-12/archive-recheck-job.json",
+        "docs/handoffs/s2-2026-10-12/contained-recovery-receipt.json",
+        "docs/handoffs/s2-2026-10-12/contained-recovery.md",
+        "docs/handoffs/s2-2026-10-12/integration-only-source-receipt.json",
+        "docs/handoffs/s2-2026-10-12/live-reader-policy-readback.json",
+        "docs/handoffs/s2-2026-10-12/native275-preparation-receipt.json",
+        "docs/handoffs/s2-2026-10-12/physical-backing-summary.json",
+        "docs/runbooks/api-light-command-boundary.md",
+        "docs/runbooks/cnpg/s2-contained-integration-recovery.md",
+        "docs/runbooks/moisture-telemetry-state-boundary.md",
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/cnpg-current275-transition.py",
+        "scripts/cnpg-s2-integration-current275-transition.py",
+        "scripts/component_prefix_replay.py",
+        "scripts/k3s-smoke.sh",
+        "scripts/qualify-restored-runtime-duties.py",
+        "scripts/qualify-s2-integration-runtime-duties.py",
+        "scripts/render-cnpg-rehearsal.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "lab-publisher": [
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/cnpg-current275-transition.py",
+        "scripts/cnpg-s2-integration-current275-transition.py",
+        "scripts/component_prefix_replay.py",
+        "scripts/k3s-smoke.sh",
+        "scripts/qualify-restored-runtime-duties.py",
+        "scripts/qualify-s2-integration-runtime-duties.py",
+        "scripts/render-cnpg-rehearsal.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "mcp": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "setpoint-server": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ]
+    },
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347"
+  },
+  "local_focused_tests": 135,
+  "local_focused_skips": 0,
+  "production_delivery": false,
+  "main_image_build_submitted": false,
+  "remaining_caller_issue": "Owner-source qualified placement or cross-eligible actual peak bound, with attended stage cleanup readback; actual Strict permits suspend/resume but no caller PodSpecPatch/NodeSelector override."
+}

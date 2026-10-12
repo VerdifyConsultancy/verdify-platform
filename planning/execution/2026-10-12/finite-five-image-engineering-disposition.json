@@ -1,0 +1,190 @@
+{
+  "schema": "verdify-finite-image-batch-engineering-disposition-v1",
+  "reported_at": "2026-10-12T18:21:12.301341+00:00",
+  "scope": "Read-only engineering disposition for release-owner actual finite five-image caller. No build or infrastructure mutation.",
+  "source": {
+    "head": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "native_pr_validation": "4lfwv (owner reported; not reread)",
+    "selected_images": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "selection_authority": "Current owner supplied; exact3d9f Dockerfile source read locally. Older37fd classifier packet remains historical, not final-head execution proof.",
+    "prior969_future_validation_growth_gib": 0,
+    "prior969_note": "Owner reports succeeded. Current occupied residue remains in actual baseline, not new future growth."
+  },
+  "disposition": "No VM resize,300GiB thin reservation or mandatory stagewise TRIM is justified. A bounded serial batch is feasible on existing capacity. Current automatic caller does not establish a completed5-stage peak/release bound: its60GiB eviction ceiling can exceed actual guest imagefs pressure margins, and success starts the next stage without checking cleanup. Engineering completion requires the release owner to bound or observe the actual guest peak and cleanup lag, including shared incremental growth.",
+  "caller": {
+    "build_ephemeral_request_gib": 32,
+    "build_ephemeral_limit_gib": 60,
+    "workdir_emptydir_limit_gib": 20,
+    "workdir_included_not_added_to32_or60": true,
+    "publisher_state_mib": 16,
+    "memory_request_gib": 2,
+    "memory_limit_gib": 4,
+    "eligible_nodes": [
+      "vm-k3s-node5",
+      "vm-k3s-node6",
+      "vm-k3s-node7"
+    ],
+    "node7_required": false,
+    "serial_build_steps": 5,
+    "pod_gc": "OnPodSuccess",
+    "build_retry": null,
+    "kaniko_persistent_cache_enabled": false,
+    "kaniko_cleanup_flag_present": false,
+    "cleanup_note": "No --cache=true or persistent cache volume was found. --compressed-caching=false does not enable cache. --cleanup is absent; per-Pod workdir and writable-root lifecycle, not an extra persistent Kaniko cache reservation, is relevant. PodGC is asynchronous and not a next-stage capacity fence."
+  },
+  "live_runtime_policy": {
+    "imagefs_soft_available_percent": 20,
+    "soft_grace_period": "5m",
+    "imagefs_hard_available_percent": 15,
+    "nodefs_soft_available_percent": 15,
+    "nodefs_hard_available_percent": 10,
+    "image_gc_high_used_percent": 75,
+    "image_gc_low_used_percent": 65,
+    "logs_max_size": "10Mi",
+    "logs_max_files": 5,
+    "volume_stats_period": "1m",
+    "sync_frequency": "1m",
+    "interpretation": "These are existing live configz settings, not new85%-thin or Longhorn gates. Eviction/periodic accounting is not a synchronous write quota or guaranteed limit overshoot bound."
+  },
+  "current_node_comparison": [
+    {
+      "node": "vm-k3s-node5",
+      "host": "opal",
+      "guest_sample_at": "2026-10-12T18:18:46Z",
+      "guest_available_gib": 99.20491790771484,
+      "shared_root_imagefs_capacity_gib": 347.6791763305664,
+      "headroom_above_live_soft20_percent_free_gib": 29.669082641601562,
+      "headroom_above_live_hard15_percent_free_gib": 47.05304145812988,
+      "remaining_soft_headroom_after_total32gib_stage_gib": -2.3309173583984375,
+      "remaining_soft_headroom_after_total60gib_stage_gib": -30.330917358398438,
+      "guest_memory_available_gib": 49.04098892211914,
+      "host_sample_at": "2026-10-12T18:18:56.011121+00:00",
+      "host_mem_available_gib": 5.439754486083984,
+      "host_pool_unallocated_gib_approx": 99.72000000000004,
+      "host_pool_data_percent": "75.07",
+      "host_pool_metadata_percent": "3.07"
+    },
+    {
+      "node": "vm-k3s-node6",
+      "host": "ore",
+      "guest_sample_at": "2026-10-12T18:18:55Z",
+      "guest_available_gib": 101.07066345214844,
+      "shared_root_imagefs_capacity_gib": 285.6840629577637,
+      "headroom_above_live_soft20_percent_free_gib": 43.9338508605957,
+      "headroom_above_live_hard15_percent_free_gib": 58.21805400848389,
+      "remaining_soft_headroom_after_total32gib_stage_gib": 11.933850860595697,
+      "remaining_soft_headroom_after_total60gib_stage_gib": -16.066149139404303,
+      "guest_memory_available_gib": 58.668052673339844,
+      "host_sample_at": "2026-10-12T18:18:55.559956+00:00",
+      "host_mem_available_gib": 3.8884811401367188,
+      "host_pool_unallocated_gib_approx": 102.54150585937498,
+      "host_pool_data_percent": "69.65",
+      "host_pool_metadata_percent": "2.98"
+    },
+    {
+      "node": "vm-k3s-node7",
+      "host": "onyx",
+      "guest_sample_at": "2026-10-12T18:18:52Z",
+      "guest_available_gib": 111.3642463684082,
+      "shared_root_imagefs_capacity_gib": 308.9316177368164,
+      "headroom_above_live_soft20_percent_free_gib": 49.57792282104492,
+      "headroom_above_live_hard15_percent_free_gib": 65.02450370788574,
+      "remaining_soft_headroom_after_total32gib_stage_gib": 17.577922821044922,
+      "remaining_soft_headroom_after_total60gib_stage_gib": -10.422077178955078,
+      "guest_memory_available_gib": 50.034061431884766,
+      "host_sample_at": "2026-10-12T18:18:55.975409+00:00",
+      "host_mem_available_gib": 14.51153564453125,
+      "host_pool_unallocated_gib_approx": 122.92290156249997,
+      "host_pool_data_percent": "64.76",
+      "host_pool_metadata_percent": "2.72"
+    }
+  ],
+  "onyx_physical_geometry": {
+    "observed_at": "2026-10-12T18:19:38.864232+00:00",
+    "pool_gib": 348.81640625,
+    "declared_thin_virtual_total_gib": 320.0078125,
+    "unallocated_if_all_declared_thin_virtual_bytes_mapped_gib": 28.80859375,
+    "thin_lvs": [
+      {
+        "lv": "vm-326-cloudinit",
+        "virtual_gib": 0.00390625,
+        "origin": ""
+      },
+      {
+        "lv": "vm-326-disk-0",
+        "virtual_gib": 320.0,
+        "origin": ""
+      },
+      {
+        "lv": "vm-326-disk-1",
+        "virtual_gib": 0.00390625,
+        "origin": ""
+      }
+    ],
+    "condition": "Current declared geometry stays unchanged; no new snapshots, LVs or unrelated storage allocation. Metadata pool health is a separate observed metric.",
+    "correction": "Without new snapshots, overwriting an already mapped thin block does not allocate another block. Guest filesystem reuse can occur without TRIM. Thus5serial60GiB limits are not300GiB future host growth and scheduled TRIM need not be made a prerequisite."
+  },
+  "exact_unclosed_components": [
+    {
+      "component": "Peak guest filesystem consumption and time-to-reclaim per stage",
+      "reason": "60GiB configured ceiling exceeds existing soft pressure headroom on5/6/7;32GiB nominal stage fits current6/7, with11.934/17.578GiB remaining before new runtime image pulls, executor/logs, overshoot and concurrent growth. Node5 has only29.669GiB soft headroom.",
+      "owner": "Verdify release caller / Agents repo-build owner",
+      "smallest_resolution": "Bound total actual Pod/root peak plus incremental ancillary/other growth below current eligible-node pressure headroom, or use a qualified eligible placement and attended stage handoff that confirms prior Pod/workdir/writable-root cleanup and checks root availability before advancing. Do not lower kubelet thresholds or resize VMs."
+    },
+    {
+      "component": "Automatic next-stage transition before cleanup/readback",
+      "reason": "OnPodSuccess schedules garbage collection, while serial workflow completion permits next stage; successful Pod deletion alone does not certify completed root reclamation. An attended observer cannot guarantee a pause that the caller does not implement.",
+      "owner": "Verdify release caller / Agents workflow owner",
+      "smallest_resolution": "Use the existing workflow operation surface to hold between stages, or add a small stage completion/readback fence in the owning caller. Observe guest root and relevant physical domain deltas; on Onyx, mandatory thin-data return/TRIM is unnecessary because total virtual geometry already fits."
+    },
+    {
+      "component": "Incremental registry publication",
+      "reason": "Storage is repairing shared preflight/publish guards in the existing lane; not requalified or granted here.",
+      "owner": "Storage registry guard owner",
+      "smallest_resolution": "Use repaired current guards for this finite release; no duplicate native Longhorn ledger or RAG44 requirement."
+    }
+  ],
+  "debt_accounting": "Existing physical occupied residue/cache/logs/upperdirs are already in baseline. Only unconsumed future writes and cleanup-lag accumulation are new demand. Baseline changes from17:46 to18:18 demonstrate concurrent growth, not attribution to Verdify: Onyx data61.29% to64.76%. No old32GiB reservation is charged as fresh physical growth merely because its Pod object remains.",
+  "limits_of_source_size_evidence": "The five source Dockerfiles use Python-slim or Node-bookworm-slim and ordinary apt/pip/npm steps; this is not a measured compressed, unpacked or peak upperdir byte bound. A Dockerfile package range and20GiB archive/workdir limit do not independently prove final peak.",
+  "operational_recommendation": "Concentrate the finite qualification on peak guest consumption and stage cleanup. Node7 has the most guest/runtime/host-memory margin and intrinsically fitting backing geometry; node6 also has nominal32GiB guest margin. The actual caller remains eligible on node5, whose soft margin is smaller than32GiB. A source-owned placement or cross-eligible bound is the caller decision. No new global planning/admission gate is proposed.",
+  "mutation_performed": false,
+  "builds_or_image_pulls_performed": false,
+  "primary_reference_urls": [
+    "https://kubernetes.io/docs/concepts/storage/ephemeral-storage/",
+    "https://github.com/GoogleContainerTools/kaniko/blob/main/README.md#flag---cleanup",
+    "https://docs.kernel.org/admin-guide/device-mapper/thin-provisioning.html"
+  ],
+  "evidence": [
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/caller-scratch-lifecycle-live-20261012T1818Z.json",
+      "sha256": "77699052f5dc9fa80e17d57086795c86bb1ecdfec99dedb4311305bb023b2caa",
+      "bytes": 36562
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/finite-batch-guest-runtime-20261012T1820Z.json",
+      "sha256": "ea0751910084fbd229de0bfacd28f4f18d555164707e157c87b1656e5fa52309",
+      "bytes": 8407
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/finite-batch-host-physical-20261012T1820Z.json",
+      "sha256": "ec4dc9c91a10ed1445e072959286a12bc885ab911010a8d07679ef5e6bc08223",
+      "bytes": 1679
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/finite-batch-thin-mapping-20261012T1821Z.json",
+      "sha256": "e317377092f237d909218104f716a11b369d7ccee9fa6f472309b9c02d3e0a78",
+      "bytes": 6957
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/exact-3d9f-build-instructions.json",
+      "sha256": "59e11e8831d27b3edb055168a60d3032fb2f9027fd7189498866d4e39fc770dd",
+      "bytes": 6555
+    }
+  ]
+}

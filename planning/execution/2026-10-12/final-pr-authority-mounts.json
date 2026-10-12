@@ -1,0 +1,118 @@
+{
+  "pod": "verdify-platform-pr-ci-4lfwv-validate-2760597894",
+  "uid": "68b1e1a9-80b8-4170-a05d-960b4000ccce",
+  "service_account": "native-ci-candidate",
+  "automount": false,
+  "containers": [
+    {
+      "name": "wait",
+      "mounts": [
+        {
+          "volume": "exec-sa-token",
+          "type": "Secret:native-ci-executor.service-account-token",
+          "path": "/var/run/secrets/kubernetes.io/serviceaccount",
+          "readonly": true
+        },
+        {
+          "volume": "impact-state",
+          "type": "emptyDir",
+          "path": "/mainctrfs/impact",
+          "readonly": false
+        },
+        {
+          "volume": "validate-workspace",
+          "type": "emptyDir",
+          "path": "/mainctrfs/workspace",
+          "readonly": false
+        },
+        {
+          "volume": "tmp-dir-argo",
+          "type": "emptyDir",
+          "path": "/tmp",
+          "readonly": false
+        },
+        {
+          "volume": "var-run-argo",
+          "type": "emptyDir",
+          "path": "/var/run/argo",
+          "readonly": false
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "mounts": [
+        {
+          "volume": "impact-state",
+          "type": "emptyDir",
+          "path": "/impact",
+          "readonly": true
+        },
+        {
+          "volume": "validate-workspace",
+          "type": "emptyDir",
+          "path": "/workspace",
+          "readonly": false
+        },
+        {
+          "volume": "var-run-argo",
+          "type": "emptyDir",
+          "path": "/var/run/argo",
+          "readonly": false
+        }
+      ]
+    },
+    {
+      "name": "init",
+      "mounts": [
+        {
+          "volume": "exec-sa-token",
+          "type": "Secret:native-ci-executor.service-account-token",
+          "path": "/var/run/secrets/kubernetes.io/serviceaccount",
+          "readonly": true
+        },
+        {
+          "volume": "var-run-argo",
+          "type": "emptyDir",
+          "path": "/var/run/argo",
+          "readonly": false
+        }
+      ]
+    },
+    {
+      "name": "fetch-validate-context",
+      "mounts": [
+        {
+          "volume": "verdify-path-impact",
+          "type": "ConfigMap:agent-fleet-verdify-path-impact-v2",
+          "path": "/opt/verdify-ci",
+          "readonly": true
+        },
+        {
+          "volume": "impact-state",
+          "type": "emptyDir",
+          "path": "/impact",
+          "readonly": false
+        },
+        {
+          "volume": "validate-workspace",
+          "type": "emptyDir",
+          "path": "/workspace",
+          "readonly": false
+        },
+        {
+          "volume": "github-app",
+          "type": "Secret:agent-fleet-ci-github-app",
+          "path": "/var/run/secrets/github-app",
+          "readonly": true
+        },
+        {
+          "volume": "var-run-argo",
+          "type": "emptyDir",
+          "path": "/var/run/argo",
+          "readonly": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "observed_at": "2026-10-12T18:19:13.401860+00:00",
+  "checks": [
+    {
+      "service_account": "native-ci-candidate",
+      "verb": "get",
+      "resource": "secrets",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "native-ci-candidate",
+      "verb": "create",
+      "resource": "pods",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "native-ci-candidate",
+      "verb": "patch",
+      "resource": "deployments.apps",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "native-ci-candidate",
+      "verb": "patch",
+      "resource": "applications.argoproj.io",
+      "namespace": "argocd",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "verdify-platform-ci-publisher",
+      "verb": "get",
+      "resource": "secrets",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "verdify-platform-ci-publisher",
+      "verb": "create",
+      "resource": "pods",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "verdify-platform-ci-publisher",
+      "verb": "patch",
+      "resource": "deployments.apps",
+      "namespace": "verdify-prod",
+      "allowed": "no",
+      "returncode": 1
+    },
+    {
+      "service_account": "verdify-platform-ci-publisher",
+      "verb": "patch",
+      "resource": "applications.argoproj.io",
+      "namespace": "argocd",
+      "allowed": "no",
+      "returncode": 1
+    }
+  ],
+  "limitation": "Named Kubernetes authorization checks only. GitHub publication/promoter authority and fault/concurrency matrix remain separate."
+}
