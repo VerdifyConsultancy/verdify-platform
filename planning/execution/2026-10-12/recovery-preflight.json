@@ -1,0 +1,10 @@
+{
+  "kind": "read-only supported recovery preflight, not admission",
+  "completed": 12,
+  "native_exact_confirmed": 12,
+  "untouched_baseline_count": 39,
+  "readback_mismatches": [],
+  "original_custody_valid": true,
+  "production_state_mutated": false,
+  "local_manifest_installed": false
+}
