@@ -1,0 +1,72 @@
+{
+  "verified_at": "2026-10-12T15:52:50.813049+00:00",
+  "custody_method": "Git-only encrypted assets on private ROOT Agents handoff branch; no release/API mutation",
+  "remote_repository": "jvallery/agents",
+  "remote_commit": "3e5c82f3dea43a47c7f452b9b0ce6ae6bdc789a1",
+  "url": "https://github.com/jvallery/agents/tree/3e5c82f3dea43a47c7f452b9b0ce6ae6bdc789a1/docs/handoffs/shutdown-20261012/verdify-private-custody",
+  "full_context": {
+    "ciphertext_bytes": 221678616,
+    "ciphertext_sha256": "0d1c2bc72037697dfbf0bbbe53e4c9924eb9cd76265e4b666878de057856a7fc",
+    "parts": [
+      {
+        "file": "verdify-full-context.tar.gz.age.part-001",
+        "bytes": 47185920,
+        "sha256": "2dee0fab9840f1ecd5567de3aab8a3fb6736a9e00855e4ab9d6013011d47847b",
+        "remote_git_blob": "1ed488c856333c93272a22f4cc6400790c72a56f",
+        "local_git_blob": "1ed488c856333c93272a22f4cc6400790c72a56f",
+        "remote_blob_exact": true
+      },
+      {
+        "file": "verdify-full-context.tar.gz.age.part-002",
+        "bytes": 47185920,
+        "sha256": "06b725a2037302d39250fd4d6d46bafc1b762d02c86f88ed688c7aa4e5309479",
+        "remote_git_blob": "359337a031bb2f6c8225bee75a4b2c8881ae8a48",
+        "local_git_blob": "359337a031bb2f6c8225bee75a4b2c8881ae8a48",
+        "remote_blob_exact": true
+      },
+      {
+        "file": "verdify-full-context.tar.gz.age.part-003",
+        "bytes": 47185920,
+        "sha256": "4afcc2f632f92addd6b6edbdf9795f17b53cbf3b34785da16315bbbfa1c6293c",
+        "remote_git_blob": "8e20967c5258e2f0690c4670af435570a78dc48c",
+        "local_git_blob": "8e20967c5258e2f0690c4670af435570a78dc48c",
+        "remote_blob_exact": true
+      },
+      {
+        "file": "verdify-full-context.tar.gz.age.part-004",
+        "bytes": 47185920,
+        "sha256": "0788aabed3c18791a2b8e50629ca0c97a1cbd342baa7bcfe9fdd6fc940bf8a94",
+        "remote_git_blob": "6d91c04244a17e948d5cc08a77fb03a94fa68210",
+        "local_git_blob": "6d91c04244a17e948d5cc08a77fb03a94fa68210",
+        "remote_blob_exact": true
+      },
+      {
+        "file": "verdify-full-context.tar.gz.age.part-005",
+        "bytes": 32934936,
+        "sha256": "eadf30cd8bfaff345a6f2189085b065f61ba8765180518a1355b6f5f9cf9970d",
+        "remote_git_blob": "fc6eb65374a5193f2ab0c71127edfe6ff2b493d6",
+        "local_git_blob": "fc6eb65374a5193f2ab0c71127edfe6ff2b493d6",
+        "remote_blob_exact": true
+      }
+    ],
+    "local_decrypt_tar_validation": {
+      "passed": true,
+      "entries": 14293
+    },
+    "all_remote_git_blob_identities_exact": true
+  },
+  "final_checkpoint": {
+    "file": "verdify-final-checkpoint-20261012.tar.gz.age",
+    "ciphertext_bytes": 2939784,
+    "ciphertext_sha256": "bf657ba6a4bd0c7b0bf4f205230f9dbc33fa5e6dadd85128e0532857a0d93f57",
+    "remote_git_blob": "7ed7b2852ff31c94c1a83add1e66f23cbd02ea50",
+    "remote_git_blob_exact": true,
+    "local_decrypt_tar_validation": {
+      "passed": true,
+      "entries": 427
+    }
+  },
+  "root_independent_download_reassembly_decryption": "pending ROOT final proof; separately owned, not claimed complete here",
+  "private_key_included": false,
+  "release_upload": "cancelled; this exact private Git custody replaces the draft-release path"
+}

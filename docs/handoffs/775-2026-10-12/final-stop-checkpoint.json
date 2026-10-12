@@ -9,6 +9,7 @@
   "build_merge_sync_ota_experiments": "not resumed",
   "original_sources": "all466remote refs exact and38original WIP files unchanged",
   "production_services": "left running",
-  "pending_context_custody": "ROOT private Agents Git-only encrypted custody underway; release upload cancelled",
-  "local_scratch": "derived ciphertext split copy retained, superseded; no public archive branch pushed"
+  "pending_context_custody": "ROOT private Git custody pushed; all6 ciphertext remote blob identities verified; ROOT fresh download/decrypt proof separately pending",
+  "local_scratch": "derived ciphertext split copy retained, superseded; no public archive branch pushed",
+  "owner_state": "PAUSED and STOP after final Git receipt"
 }
