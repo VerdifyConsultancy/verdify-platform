@@ -558,7 +558,30 @@ class CompiledInvariantInterlock(InterlockProbe):
         )
         path.unlink(missing_ok=True)
         self.runs += 1
-        evidence = _sha256_bytes((proc.stdout + proc.stderr).encode())
+        # Coverage stdout includes the random temporary policy-state filename.
+        # Keep raw subprocess output intact for diagnosis, but bind evidence to
+        # input bytes rather than their location. Include JSON-escaped paths for
+        # workdirs with quotes, backslashes or non-ASCII characters.
+        stdout, stderr = proc.stdout, proc.stderr
+        for filename, marker in ((str(path), "<policy-state>"), (str(self.corpus_path), "<disturbance-corpus>")):
+            representations = {filename, json.dumps(filename)[1:-1], json.dumps(filename, ensure_ascii=False)[1:-1]}
+            for representation in sorted(representations, key=len, reverse=True):
+                stdout = stdout.replace(representation, marker)
+                stderr = stderr.replace(representation, marker)
+        evidence = _sha256_bytes(
+            canonical_json(
+                {
+                    "schema": "verdify-component-prefix-native-evidence-v1",
+                    "binary_sha256": self.binary_sha256,
+                    "harness_source_sha256": self.source_sha256,
+                    "corpus_sha256": self.corpus_sha256,
+                    "policy_state_sha256": policy_state_sha256,
+                    "exit_code": proc.returncode,
+                    "stdout": stdout,
+                    "stderr": stderr,
+                }
+            ).encode()
+        )
         try:
             coverage = parse_coverage_payload(proc.stdout)
         except PrefixReplayError as exc:

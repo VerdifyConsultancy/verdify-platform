@@ -10,6 +10,7 @@ pins the real coverage arithmetic instead.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -430,6 +431,71 @@ def test_compiled_policy_template_declares_an_exact_27_of_48_ceiling() -> None:
     coverage = tool.policy_template_injection_coverage(template)
     assert coverage == frozenset(injectable)
     assert len(set(CANONICAL_FIELD_ORDER) - coverage) == 21
+
+
+def test_native_evidence_replays_across_workdirs_without_losing_input_or_breach_identity(
+    tmp_path, monkeypatch, profiles
+) -> None:
+    """A random policy filename must not change otherwise identical evidence."""
+    raw_outputs = []
+    breaches = 0
+    covered = frozenset(CANONICAL_FIELD_ORDER[:27])
+
+    def native_run(command, **_kwargs):
+        policy_path = Path(command[2].split("=", 1)[1])
+        coverage = {
+            "schema": "verdify-replay-invariants-coverage-v1",
+            "field_count": 48,
+            "injectable_count": 27,
+            "imposed_count": 27,
+            "full_coverage": False,
+            "full_injectable_coverage": True,
+            "rows": 128,
+            "status": "ok",
+            "policy_state": str(policy_path),
+            "policy_state_sha256": hashlib.sha256(policy_path.read_bytes()).hexdigest(),
+            "invariant_violations": breaches,
+            "distinct_invariants": breaches,
+            "imposed": {name: {"source": "policy_state", "rows": 128} for name in covered},
+            "unimposed": {name: "external consumer" for name in set(CANONICAL_FIELD_ORDER) - covered},
+        }
+        stdout = (
+            "native invariant summary\n" + tool._COVERAGE_MARKER + " " + json.dumps(coverage, ensure_ascii=False) + "\n"
+        )
+        raw_outputs.append(stdout)
+        return tool.subprocess.CompletedProcess(command, int(breaches > 0), stdout=stdout, stderr="")
+
+    monkeypatch.setattr(tool.subprocess, "run", native_run)
+
+    def run(directory, state, *, corpus_sha256="c" * 64):
+        workdir = tmp_path / directory
+        workdir.mkdir()
+        probe = tool.CompiledInvariantInterlock(
+            binary=workdir / "replay_invariants",
+            corpus_path=workdir / "replay-corpus.tsv",
+            row_count=128,
+            coverage=covered,
+            workdir=workdir,
+            binary_sha256="a" * 64,
+            source_sha256="b" * 64,
+            corpus_sha256=corpus_sha256,
+        )
+        case = tool.PrefixCase("baseline-witness", "activation", 0, state, (), ())
+        return probe.verdict(case)
+
+    first = run("one", profiles["baseline"])
+    second = run('two"é\\path', profiles["baseline"])
+    assert raw_outputs[0] != raw_outputs[1], "raw diagnostics retain their actual temporary paths"
+    assert first.evidence_sha256 == second.evidence_sha256
+    assert first.verdict == second.verdict == tool.UNPROVEN
+    changed_policy = run("other-policy", profiles["moderate"])
+    changed_corpus = run("other-corpus", profiles["baseline"], corpus_sha256="d" * 64)
+    assert changed_policy.evidence_sha256 != first.evidence_sha256
+    assert changed_corpus.evidence_sha256 != first.evidence_sha256
+    breaches = 2
+    unsafe = run("native-breach", profiles["baseline"])
+    assert unsafe.verdict == tool.UNSAFE
+    assert unsafe.evidence_sha256 != first.evidence_sha256
 
 
 def test_coverage_record_parser_requires_one_machine_record() -> None:

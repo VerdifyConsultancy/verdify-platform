@@ -1,0 +1,65 @@
+{
+  "actual_native_replay_command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python planning/execution/2026-10-12/scientific-readiness/reproduce_native.py --output <distinct-output-file>",
+  "actual_native_runs_per_workdir": 27,
+  "all_prefixes_remain_unproven": true,
+  "before_regression_exit_code": 1,
+  "before_regression_log": "prefix-regression-before.json",
+  "before_regression_log_sha256": "6f11a2f6453bc81975ef661936002d1a9520570d6f0cf5c12e4b2c2f7944b3c6",
+  "before_regression_raw_output_sha256": "5b190e3abd4ed512189c7986d6568f18b023df49747354c9f4b999b45bc93e58",
+  "canonical_source_witness_sha256": "9b567b7e128b58a780dc4201fe26a35e1445ded8aa18e63c8aad8f92e79ebb7f",
+  "committed_treatment_prefixes_per_workdir": 32,
+  "corpus_rows_per_native_run": 296698,
+  "covered_field_count": 27,
+  "first_packet_commit": "71eb01791ef467841e83e2065a27db71ec82fc01",
+  "groups": [
+    {
+      "command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest tests/test_component_prefix_replay.py -q --junitxml=planning/execution/2026-10-12/scientific-readiness/prefix-replay-fix-junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 46
+      },
+      "junit_file": "prefix-replay-fix-junit.xml",
+      "junit_sha256": "7b12b45a91dbd277bf267fb7834d05c1d238391da4288a4c98c510eff0b5983f",
+      "name": "prefix_fix",
+      "source_files": [
+        "tests/test_component_prefix_replay.py"
+      ]
+    },
+    {
+      "command": "PYTHONPATH=.:research/planner-efficacy VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null python -m pytest tests/test_prepare_component_prefix_replay.py tests/test_verify_component_proof_packet.py -q --junitxml=planning/execution/2026-10-12/scientific-readiness/proof-consumers-junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 304
+      },
+      "junit_file": "proof-consumers-junit.xml",
+      "junit_sha256": "34d8a550b35209cae3af34a89471b62e377a0bf4c0c26a435484a045f7551cc5",
+      "name": "proof_consumers",
+      "source_files": [
+        "tests/test_prepare_component_prefix_replay.py",
+        "tests/test_verify_component_proof_packet.py"
+      ]
+    }
+  ],
+  "independent_native_workdirs": 2,
+  "issues_closed": [],
+  "production_runtime_changed": false,
+  "protocol_changed": false,
+  "qualified_order_revision": null,
+  "raw_output_preserved": true,
+  "schema": "verdify-639-native-evidence-reproducibility-fix-20261012-v1",
+  "source_base_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "source_sha256": {
+    "planning/execution/2026-10-12/scientific-readiness/reproduce_native.py": "a2a622f5450d0fef6ebec2f655a78f6a4ca7d9cce13bbaf92d4d2f091a6c42b4",
+    "scripts/component_prefix_replay.py": "9928eb686fde1db38fbf5d3dda50c9bff029eaafd33625287bd1e53d57fc062a",
+    "scripts/prepare_component_prefix_replay.py": "f00c474df7ca2f86df7022b1c52c3d5f9324a7fddd9b91d89ad812a0fa70ea4a",
+    "scripts/verify_component_proof_packet.py": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
+    "tests/test_component_prefix_replay.py": "22bb239d67c58265722712da3678b86b5452ec1a542bb29e0cb0fd526fe98b03",
+    "tests/test_prepare_component_prefix_replay.py": "d5458df30040375fc7c6bab0e85468a188c0a5c64bb5c7a3aabc7ea4a0ab064e",
+    "tests/test_verify_component_proof_packet.py": "aa68dcee33e21e7b539998c1d98041f5b03ff4549bb5bc2f4cf0d081b77fafe5"
+  },
+  "uncovered_field_count": 21
+}
