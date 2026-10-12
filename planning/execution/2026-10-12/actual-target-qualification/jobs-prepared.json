@@ -10,7 +10,13 @@
       "image_pull_policy": "Never",
       "job_name": "verdify-v2-readonly-executor-20261012",
       "manifest": "job-executor.prepared.json",
-      "manifest_sha256": "d3ad05c933eff3999f7f69b5cfab31d6063929c774a1594387bbbd64cd50fd50",
+      "manifest_sha256": "0d958af4102ca176307b68b35165f99197c92d77018398f1c1d24e0773877cb2",
+      "required_network_policy_labels": {
+        "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+        "app.kubernetes.io/part-of": "verdify",
+        "verdify.ai/qualification-duty": "executor",
+        "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+      },
       "source_overlay_configMap": "verdify-v2-executor-source-3d9f31e8",
       "submitted": false,
       "target_only_secret_key": "executor"
@@ -23,7 +29,13 @@
       "image_pull_policy": "Never",
       "job_name": "verdify-v2-readonly-lifecycle-20261012",
       "manifest": "job-lifecycle.prepared.json",
-      "manifest_sha256": "7890a0110333c2a255bb593358c69eafa1a758e5fcb17b0f44eaa76c8b47b273",
+      "manifest_sha256": "278c149dd61d18f64b4d20617ec58a96f980f2a0ed558c66fb7c1ad91e96e4f2",
+      "required_network_policy_labels": {
+        "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+        "app.kubernetes.io/part-of": "verdify",
+        "verdify.ai/qualification-duty": "lifecycle",
+        "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+      },
       "source_overlay_configMap": "verdify-v2-lifecycle-source-3d9f31e8",
       "submitted": false,
       "target_only_secret_key": "lifecycle"

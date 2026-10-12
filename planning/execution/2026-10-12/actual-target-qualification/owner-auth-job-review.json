@@ -6,8 +6,14 @@
   "job_validation": "fourruntimefilesbyteequalcommita032;exactpinneddigest/readonlymounts/oneSecretkey/node5/120s/backoff0/noSA-token verified",
   "logging": "statement/error/duration/parameter and pgstat utility tracking disabled before non-echoing password setters",
   "method": "local source/JSON/decoded immutable payload inspection only",
+  "owner_network_policy_finding": "Two app labels required by actual client egress/DB ingress selectors were missing in first prepared Jobs; corrected in both metadata and Pod templates before submission.",
   "pgstat_documentation": "https://www.postgresql.org/docs/16/pgstatstatements.html#PGSTATSTATEMENTS-CONFIG-PARAMS",
   "remaining_actionable_findings": [],
+  "required_network_labels": {
+    "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+    "app.kubernetes.io/part-of": "verdify",
+    "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+  },
   "schema": "verdify-owner-auth-job-preparation-review-v1",
   "setter_scope": "owner8rolewindow;scienceJobsconsumeonlytheirtwoSecretkeys;one atomic initial password-only transaction, noLOGIN/grant/schema repair",
   "setter_sha256": "b44b2adfde1d6e7d21254cad65bb04320d4082658e2b90bcaef9431c8a5124e7",

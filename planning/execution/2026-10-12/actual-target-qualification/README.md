@@ -184,7 +184,10 @@ Both images were captured on `vm-k3s-node5`; each Job is pinned there with
 credentials or a build. Each overrides the image's normal app entrypoint with
 the one-shot probe, has a120-second deadline/backoff0, nonroot UID1000,
 read-only root/packet/custody/source mounts, dropped capabilities and no SA
-token. Only the corresponding `executor` or `lifecycle` key of the target-only
+token. Both Job and Pod labels include `app.kubernetes.io/part-of: verdify`,
+`app.kubernetes.io/component: cnpg-s2-runtime-qualification` and the exact
+qualification target, matching the actual client-egress/DB-ingress selectors.
+Only the corresponding `executor` or `lifecycle` key of the target-only
 Secret is injected. There is no production credential, other consumer, HTTP
 server, clock runner or device/provider command.
 
