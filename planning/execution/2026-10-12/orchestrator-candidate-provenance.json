@@ -1,0 +1,130 @@
+{
+  "schema": "verdify.existing-orchestrator-candidate-provenance/v1",
+  "manifest_digest": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+  "config_digest": "sha256:481cfb245f951a4a36f765cf28550b417659dcee51c77737d6a37061930c3bf5",
+  "labels": {
+    "org.opencontainers.image.revision": "3fe6abca313cd14a4e123dcc49bec26adf01c9d4",
+    "org.opencontainers.image.source": "https://github.com/VerdifyConsultancy/verdify-platform"
+  },
+  "source_env": [
+    "VERDIFY_GIT_SHA=3fe6abca313cd14a4e123dcc49bec26adf01c9d4",
+    "VERDIFY_BUILD_TIME=unknown"
+  ],
+  "verified_frozen_application_head": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "docker_copy_source_closure_equal": true,
+  "input_files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "441049214598c7e162e23d3bd471057a7ee6d86eda2b9cfc404c4b847faa36ed"
+    },
+    {
+      "path": "deploy/k8s/components/hermes-iris/hermes-config.yaml",
+      "sha256": "a9b59b1c46bb1b7daa2eade392b4de99679b9630607558035d1625fd2b69321b"
+    },
+    {
+      "path": "experiment_orchestrator/Dockerfile",
+      "sha256": "53a21487b661d55b609788d630666899e7d0ec46a01d01a1c7b2859dcbf03a9b"
+    },
+    {
+      "path": "experiment_orchestrator/__init__.py",
+      "sha256": "2adc55839a5ca1129ab41d5308f20fd02ee7ca7af974dcc8f4669f5210fc1fea"
+    },
+    {
+      "path": "experiment_orchestrator/__main__.py",
+      "sha256": "804540d2b4e85d10869607d6e0ffda66000b82232df1472565dc7ea34d996574"
+    },
+    {
+      "path": "experiment_orchestrator/contracts.py",
+      "sha256": "bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b"
+    },
+    {
+      "path": "experiment_orchestrator/database.py",
+      "sha256": "095bd575975ce1003c967645d5fb3f8d212f9e96b2bb20b42bfd6c42975875bb"
+    },
+    {
+      "path": "experiment_orchestrator/launch_artifacts.py",
+      "sha256": "77569b1381cf8440257d7de73ce7a8ea71663057487470e623979baeb3683d2b"
+    },
+    {
+      "path": "experiment_orchestrator/launch_control.py",
+      "sha256": "46ccbcbba371165f860b47563efc9f67e30374df72b0d5e62b0083d7a1f3fa09"
+    },
+    {
+      "path": "experiment_orchestrator/outcome.py",
+      "sha256": "da264c907e70b5a1a017bbb0c4c0c3024dc37d3a0a8f09e5bb0a978121fde36c"
+    },
+    {
+      "path": "experiment_orchestrator/preflight.py",
+      "sha256": "fd89d868df185ad7ca202e2b8dba4ecc6ab323d83c816f4bdb5043dbfbe16cf1"
+    },
+    {
+      "path": "experiment_orchestrator/provider.py",
+      "sha256": "3eabdd7a5707d8bbe91b27b3b84472f4b8ab8f6a72227c501ead69d5590fb8d0"
+    },
+    {
+      "path": "experiment_orchestrator/readiness.py",
+      "sha256": "d2a60ab2ba7a6010209feceb66dbb0df769f8e656a306e1d0b32f97778421a15"
+    },
+    {
+      "path": "experiment_orchestrator/requirements.txt",
+      "sha256": "82b31a7a75588b76945bd7b18152d788386c76e7e9ec49db17a7f5d6bae6487d"
+    },
+    {
+      "path": "experiment_orchestrator/runtime.py",
+      "sha256": "c4c46cf7adeec0e02fd1e71bc29b84e035ea732cfaa5ff9619eb049898fe0932"
+    },
+    {
+      "path": "experiment_orchestrator/safe_logging.py",
+      "sha256": "64d20c90cf318c5286551043a587bfc35fb6ee43ddae190c20751efb59518131"
+    },
+    {
+      "path": "experiment_orchestrator/service.py",
+      "sha256": "1c15a7c3f3a616725787ecf550ecddcef0342d3f6a14cfc2bd83c067ea55673d"
+    },
+    {
+      "path": "experiment_orchestrator/settings.py",
+      "sha256": "de9c1f9783d97ff97e9adac0b0706b9b7371db9d228d632ec2d5d7d6006191ec"
+    },
+    {
+      "path": "experiment_orchestrator/stores.py",
+      "sha256": "5facd584c6fe769477b78fd0238c46edcd7fd94409f5e1da7fef6ed3d81eb320"
+    },
+    {
+      "path": "ingestor/tasks/component_experiment.py",
+      "sha256": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50"
+    },
+    {
+      "path": "research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
+      "sha256": "7edd2f506e94c3aed11bf1ece5ba8ed1a2e5451c001c5f18d616682f69444fd1"
+    },
+    {
+      "path": "research/planner-efficacy/switchback/v2_outcomes.py",
+      "sha256": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40"
+    },
+    {
+      "path": "research/planner-efficacy/switchback/v2_selector.py",
+      "sha256": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431"
+    },
+    {
+      "path": "scripts/experiment_v2_proof_packet.py",
+      "sha256": "8d4f85847eaf9a6816c261747bda0c400dd91685f657bda3018f308e3e0569a3"
+    },
+    {
+      "path": "scripts/experiment_v2_readiness_guard.py",
+      "sha256": "dd4c3b3bbece9638a801fa0a49f0c54e1d1798555e48c40083109dc9333a0d0b"
+    },
+    {
+      "path": "scripts/mcp-security-acceptance.py",
+      "sha256": "333f9ba148e81fd26a2f7184b0add5dfdf59f83ffab643b9b5c37ee3b7ee5f78"
+    },
+    {
+      "path": "scripts/verify_component_proof_packet.py",
+      "sha256": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1"
+    },
+    {
+      "path": "tests/fixtures/experiment-v2-readiness/base-proof.json",
+      "sha256": "939863db21fb4a1ac829d45eb3827508498f36f7e02d0140974a976e0faeb688"
+    }
+  ],
+  "acceptance_scope": "Existing immutable candidate retains baked3fe source; no claim of a new3d9 image build. No additional affected image build required by unchanged COPY inputs."
+}

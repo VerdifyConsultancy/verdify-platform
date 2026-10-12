@@ -1,0 +1,41 @@
+{
+  "schema": "verdify.attended-caller-adoption/v1",
+  "recorded_at": "2026-10-12T19:01:17.343737+00:00",
+  "owner_pr": {
+    "headRefOid": "4f030b93c4ad883ccfe59991bbfcbd5a24a75a10",
+    "mergeCommit": {
+      "oid": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6"
+    },
+    "mergedAt": "2026-10-12T18:59:29Z",
+    "state": "MERGED",
+    "url": "https://github.com/jvallery/agents/pull/4806"
+  },
+  "native_ci": {
+    "context": "fleet-ci/native",
+    "state": "success",
+    "id": 56164693949,
+    "created_at": "2026-10-12T18:59:04Z",
+    "accepted_checks": 14,
+    "required_checks": 14
+  },
+  "application_uid": "a4695af0-fcff-4c97-a53b-ef5f6c6e1643",
+  "app_spec_preserved": true,
+  "held_app_target_revision": "5dc375bd7c8bcd8eb16413cdc722c4ef05a1d003",
+  "sync_started_at": "2026-10-12T18:59:50Z",
+  "sync_finished_at": "2026-10-12T19:00:04Z",
+  "sync_resources": [
+    {
+      "group": "argoproj.io",
+      "kind": "WorkflowTemplate",
+      "name": "verdify-platform-ci",
+      "namespace": "agent-fleet-ci"
+    }
+  ],
+  "sync_result_revision": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "prune": false,
+  "workflowtemplate_uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+  "workflowtemplate_resource_version": "265885581",
+  "workflowtemplate_spec_sha256": "d822b24c557c1e64ecb0adef2f4be5550e6b84c918e968512d05dd254894e052",
+  "exact_reviewed_spec": true,
+  "scope": "One hook-free infrastructure WorkflowTemplate; no Verdify production sync or image build."
+}

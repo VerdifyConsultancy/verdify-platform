@@ -1,0 +1,206 @@
+{
+  "schema": "verdify-prepared40gi-finite-fit-disposition-v1",
+  "reported_at": "2026-10-12T18:55:11.524485+00:00",
+  "disposition": "Prepared one-at-a-time40GiB stage has current node7 guest, scheduler and backing-storage fit, conditional on actual adoption and attended stage/release fence.10.679523GiB remains above the existing imagefs soft threshold for all other incremental root growth and accounting overshoot. Concurrent nativeCI future growth is not allocated by this read; whole simultaneous limit envelopes do not fit.",
+  "prepared_profile": {
+    "owner_reported_pr": 4806,
+    "owner_reported_head_prefix": "4f030b93",
+    "status": "prepared nativeCI running; adoption not assumed",
+    "validation_node": "vm-k3s-node6",
+    "validation_ephemeral_gib": 10,
+    "build_node": "vm-k3s-node7",
+    "build_ephemeral_request_gib": 32,
+    "build_ephemeral_limit_gib": 40,
+    "workdir_included_gib": 20,
+    "build_memory_request_gib": 2,
+    "build_memory_limit_gib": 4,
+    "serial_and_attended_suspend_fence": "owner-supplied prepared profile with typed Argo proof; not executed by this read"
+  },
+  "adoption_readback": {
+    "live_template": {
+      "name": "verdify-platform-ci",
+      "uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+      "resource_version": "263652253",
+      "pod_gc": {
+        "strategy": "OnPodSuccess"
+      },
+      "template_placement": [
+        {
+          "name": "main",
+          "nodeSelector": null,
+          "affinity": null
+        },
+        {
+          "name": "validate",
+          "nodeSelector": null,
+          "affinity": null
+        },
+        {
+          "name": "pin-digests",
+          "nodeSelector": null,
+          "affinity": null
+        }
+      ]
+    },
+    "adoption_of_prepared_profile_verified": false,
+    "note": "Live template remains old RV263652253 without prepared node7 builder placement. Owner reported PR4806 head4f030b93 is in nativeCI; that source and typed-merge proof are supplied inputs, not asserted live deployment."
+  },
+  "fresh_snapshot": {
+    "captured_at": "2026-10-12T18:50:50.961432+00:00",
+    "node_stats_time": "2026-10-12T18:50:38Z",
+    "node": {
+      "name": "vm-k3s-node7",
+      "uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d",
+      "resource_version": "265868624",
+      "boot_id": "92a8f726-f7da-4016-8cb9-da554a12e12e",
+      "unschedulable": false,
+      "taints": [],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      },
+      "runner_eligible": "true",
+      "allocatable": {
+        "cpu": "47",
+        "memory": "94424484500",
+        "ephemeral-storage": "294246551058"
+      },
+      "active_assigned_pod_count": 128,
+      "active_assigned_requests": {
+        "cpu": "24.395",
+        "memory": "63675826176",
+        "ephemeral-storage": "109890764800"
+      },
+      "request_headroom": {
+        "cpu": "22.605",
+        "memory": "30748658324",
+        "ephemeral-storage": "184355786258"
+      }
+    },
+    "root_and_imagefs_same_counters": true,
+    "guest_available_gib": 112.46584701538086,
+    "guest_capacity_gib": 308.9316177368164,
+    "live_imagefs_soft_available_percent": 20,
+    "live_imagefs_soft_grace_period": "5m",
+    "live_imagefs_hard_available_percent": 15,
+    "imagefs_soft_headroom_gib": 50.67952346801758,
+    "imagefs_hard_headroom_gib": 66.1261043548584,
+    "after_one_total40gib_stage_soft_headroom_gib": 10.679523468017578,
+    "after_one_total40gib_stage_hard_headroom_gib": 26.1261043548584,
+    "after_one_total32gib_nominal_stage_soft_headroom_gib": 18.679523468017578,
+    "guest_memory_available_gib": 49.54439163208008,
+    "memory_signal_capacity_inferred_gib": 99.93294906616211,
+    "memory_headroom_above_live_soft15_percent_gib": 34.554449272155765,
+    "memory_headroom_above_live_hard10_percent_gib": 39.551096725463864,
+    "memory_signal_capacity_note": "Derived from kubelet memory.available+workingSet; no new VM RAM reservation."
+  },
+  "caller_accounting": "The40GiB stage allowance includes20GiB workdir, Pod writable layers and Pod-local logs in overall Pod ephemeral accounting. Do not charge20GiB or those already-included writes again. Additional shared runtime-image cache growth, external writes, periodic-eviction overshoot, cleanup lag and other owners unconsumed writes draw from10.679523GiB remainder at the full40GiB comparison.32GiB is a request, not actual guaranteed consumption.40GiB is an eviction limit, not a synchronous write quota.",
+  "competing_active_ci_at_capacity_capture": [
+    {
+      "workflow": "native-ci-035c84b1aa947341573715661f7094bfe8528bca",
+      "pod": "native-ci-035c84b1aa947341573715661f7094bfe8528bca-candidate-medium-800247410",
+      "pod_uid": "b163402f-dd53-40fa-b9cc-1fd5c91b28c4",
+      "phase_at_capacity_capture": "Running",
+      "workflow_phase_at_identity_read": "Running",
+      "ephemeral_request_gib": 8.0,
+      "ephemeral_declared_limit_gib": 40.0,
+      "ephemeral_used_gib_at_capacity_capture": 0.16764450073242188,
+      "declared_nominal_unconsumed_tail_gib": 39.83235549926758,
+      "interpretation": "Declared ceiling comparison only, not measured future demand; successful workflow has zero future writer tail, while current residue remains occupied baseline."
+    },
+    {
+      "workflow": "native-ci-4596da4fb4a137ed07e50db2640adab535fc332f",
+      "pod": "native-ci-4596da4fb4a137ed07e50db2640adab535fc332f-candidate-small-2879159990",
+      "pod_uid": "349583b4-f08e-459f-b694-7880c5885b05",
+      "phase_at_capacity_capture": "Running",
+      "workflow_phase_at_identity_read": "Succeeded",
+      "ephemeral_request_gib": 8.0,
+      "ephemeral_declared_limit_gib": 40.0,
+      "ephemeral_used_gib_at_capacity_capture": 0.3875389099121094,
+      "declared_nominal_unconsumed_tail_gib": 0,
+      "interpretation": "Declared ceiling comparison only, not measured future demand; successful workflow has zero future writer tail, while current residue remains occupied baseline."
+    }
+  ],
+  "competing_ci_identity_read_at": "2026-10-12T18:52:42.779083+00:00",
+  "ci_tail_disposition": "Small workflow4596 subsequently Succeeded, so future writer tail0. Medium035c remains Running with declared40GiB ceiling,\u22480.168GiB already occupied, hence\u224839.832GiB nominal unconsumed ceiling. That full additional ceiling exceeds the10.680GiB remainder of a40GiB Verdify stage; current actual future tail may be far smaller. This is a concrete node7 shared-growth condition, not a requirement to idle allCI or charge occupied bytes twice.",
+  "other_in_flight_workflows": {
+    "names": [
+      "native-ci-035c84b1aa947341573715661f7094bfe8528bca",
+      "native-ci-4596da4fb4a137ed07e50db2640adab535fc332f",
+      "native-ci-49c9da82f05e3b902c0f93dba120ed6b5d03d714",
+      "native-ci-8d85ad449bf34794cda00b188acb4e6c4edb7af5",
+      "native-ci-a814ec4ae0ad2493e1121cb0c04d31e08d70ff50",
+      "native-ci-archive-upload-2b7c20919f939b68e0dab22fbaf512a8",
+      "native-ci-ee80e1531bc9959edf973e5f6a367ce7feff521c"
+    ],
+    "unassigned_active_pod_count_at_pod_snapshot": 0,
+    "note": "Workflow and Pod reads are separate close-in-time API snapshots, not atomic or reserved. Additional sourceCI/upload workflows may subsequently schedule; no absence of all future competition is asserted."
+  },
+  "contained_restore_on_node7": {
+    "pod": "verdify-cnpg-s2-integration-2",
+    "uid": "81790e3e-7f0a-4655-9595-83bf2c95f635",
+    "request_gib": 2.0,
+    "limit_gib": 6.0,
+    "current_working_set_gib": 0.1096954345703125,
+    "incremental_to_declared_limit_gib": 5.8903045654296875,
+    "current_ephemeral_used_gib": 0.08348846435546875,
+    "accounting_note": "This replica and its2GiB request are already included in node7 live baseline/request headroom. Do not add all3 replicas/18GiB limits to node7. Persistent data is owner-reported separate NVMe; no new worker-root data charge is inferred."
+  },
+  "memory_comparison": "49.544392GiB guest available and28.636920GiB scheduler request headroom;4GiB builder ceiling and local restore growth do not show a necessary RAM blocker. Other existing workloads are memory-overcommitted by limits; aggregate limits are not a physical commitment or a fresh allocation.",
+  "host_backing": {
+    "observed_at": "2026-10-12T18:50:39.715556+00:00",
+    "boot_id": "ccd561fe-7e3a-491a-b32b-a58df62075dd",
+    "host_memory_available_gib": 14.247299194335938,
+    "thin_data_percent": "61.82",
+    "thin_metadata_percent": "2.70",
+    "physical_unallocated_gib_approx": 133.17810390625,
+    "remaining_if_all_declared_virtual_bytes_mapped_gib": 28.80859375,
+    "thin_snapshot_origins": [
+      "",
+      "",
+      ""
+    ],
+    "note": "Current declared geometry unchanged and fits pool; no300GiB accumulation or mandatory TRIM requirement. No85%-thin or nativeLonghorn gate introduced."
+  },
+  "shared_growth_observation": {
+    "previous_root_sample": "2026-10-12T18:18:52Z",
+    "previous_root_available_gib": 111.3642463684082,
+    "current_net_root_available_change_gib": 1.1016006469726562,
+    "meaning": "Net1.101601GiB more available than prior sample; this is not a bound on future write rate and is not attributed to any one owner."
+  },
+  "finite_operating_limits": [
+    "Adopt the exact prepared node7/40GiB/fenced caller before relying on this profile; old live caller still permits broader placement and60GiB.",
+    "At full40GiB stage allowance, other new root usage plus periodic accounting overshoot must stay within10.679523GiB to preserve the existing20% soft signal at this snapshot. Hard15% comparison leaves26.126104GiB. Actual smaller stage peaks leave correspondingly more room.",
+    "At the existing attended suspend fence, use measured prior Pod/workdir/root cleanup and current node7 root/shared-demand readback before resuming. Guest-space reuse suffices; mandatory thin-data return or manual trim is unnecessary under the captured geometry.",
+    "Account the one currently running medium nativeCI incremental tail and any newly arrivingCI/archive Pod; coordination or a measured small tail is sufficient, without a global allCI-idle requirement.",
+    "Registry publication remains governed by repaired Storage-owned pre/publish guards; their completed112-second build is owner-supplied evidence, not re-executed here."
+  ],
+  "read_only": true,
+  "vm_or_node_mutation": false,
+  "cleanup_or_image_pull_or_build": false,
+  "passive_polling": false,
+  "evidence": [
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/prepared-40gi-node7-live-refresh-20261012T1849Z.json",
+      "sha256": "6a94ee7a645a5e6315b1de171d0c492fb4c379609142f1be96ee892e96076a7f",
+      "bytes": 229566
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/prepared-40gi-onyx-physical-20261012T1849Z.json",
+      "sha256": "e5d29e01a2789deb33e3cd52399dfd8f9bdea603c69ef0f78c19237edf08ae0b",
+      "bytes": 1201
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/prepared-40gi-competing-ci-template-resources.json",
+      "sha256": "0ba876ca658d94b1531212f38086389d6508d39bee0435e28f63db7312d757c8",
+      "bytes": 18219
+    },
+    {
+      "path": "/Users/jason/maintenance/verdify-build-capacity-20261012/prepared-40gi-competing-ci-identities.json",
+      "sha256": "4873f7c448f677849c9288b54945c7f6650944b5ff3878d9509cd76f9b470111",
+      "bytes": 714
+    }
+  ]
+}

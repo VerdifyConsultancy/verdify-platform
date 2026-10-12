@@ -1,0 +1,62 @@
+{
+  "schema": "verdify.attended-main-start/v1",
+  "application_pr": {
+    "headRefOid": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "mergeCommit": {
+      "oid": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+    },
+    "mergedAt": "2026-10-12T19:01:20Z",
+    "state": "MERGED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/973"
+  },
+  "qualified_pr_tree": "7888b2dd03c2b97c1b27dc5bb7e2882bdbb4d6de",
+  "merged_tree_identical": true,
+  "workflow": {
+    "name": "verdify-platform-ci-8wkb8",
+    "uid": "a94200db-a899-45f8-95d1-80bea935a093",
+    "revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+  },
+  "suspended_at": "2026-10-12T19:01:27Z",
+  "state_at_capture": "validation fetch running; no builders advanced",
+  "validation_pod": {
+    "name": "verdify-platform-ci-8wkb8-validate-632154190",
+    "uid": "5b374a45-c143-43db-8280-28692d592b8c",
+    "node": "vm-k3s-node6",
+    "affinity": {
+      "nodeAffinity": {
+        "requiredDuringSchedulingIgnoredDuringExecution": {
+          "nodeSelectorTerms": [
+            {
+              "matchExpressions": [
+                {
+                  "key": "kubernetes.io/hostname",
+                  "operator": "In",
+                  "values": [
+                    "vm-k3s-node6"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "service_account": "native-ci-candidate",
+    "automount": false,
+    "main_resources": {
+      "limits": {
+        "cpu": "2",
+        "ephemeral-storage": "10Gi",
+        "memory": "4Gi"
+      },
+      "requests": {
+        "cpu": "500m",
+        "ephemeral-storage": "10Gi",
+        "memory": "768Mi"
+      }
+    }
+  },
+  "image_builds_complete": false,
+  "production_sync_submitted": false,
+  "recovery_capability_installed": false
+}
