@@ -1,3 +1,9 @@
+## Runtime window stopped — October 12, 22:13 UTC
+
+The original two-hour collector stopped at 21:09:31 UTC after 68 successful samples when Argo became Degraded. It did not complete the intended 22:01:30 end. Two scheduled Lab publisher Jobs rejected an invalid missing measurement in stored Gemini Vision prose; the guarded publication path retained the last validated public tree. The sole ingestor remains ready at the original cb21/c6cc source/digest and UID, with zero restarts and completed convergence. No diagnosis-time sync, authority edit or device mutation occurred.
+
+[Failure receipt](runtime-window-failure.json) preserves the attempt, exact cause, private custody hashes and limits. [PR #974](https://github.com/VerdifyConsultancy/verdify-platform/pull/974) has 73 focused tests passing; native validation is running. The supported classifier requires ingestor and Lab image builds because both copy scripts, but only the Lab release pin will be promoted. #949 stays open pending recovery and a valid final exact-source window receipt. Earlier window-running checkpoints below are historical.
+
 # Verdify runtime delivery — October 12, 2026
 
 ## Additional read-only acceptance — 21:04 UTC

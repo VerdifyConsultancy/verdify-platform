@@ -1,0 +1,90 @@
+{
+  "schema": "verdify-runtime-window-failure/v1",
+  "captured_at": "2026-10-12T22:14:14.306539+00:00",
+  "attempt": {
+    "schema": "verdify-runtime-window-result/v1",
+    "started_at": "2026-10-12T20:01:30.886995+00:00",
+    "earliest_complete_at": "2026-10-12T22:01:30.886995+00:00",
+    "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+    "revision": "d43919e933eb1be69559be7566853ff69a64e903",
+    "pod": "verdify-ingestor-7666f97959-htjdk",
+    "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "process_id": 82600,
+    "interval_seconds": 60,
+    "socket_census_every_samples": 10,
+    "scope": "Read-only evidence collection; no production/device mutation.",
+    "status": "needs-review",
+    "stopped_at": "2026-10-12T21:09:31.499305+00:00",
+    "sample_count": 68,
+    "error": "AssertionError()",
+    "acceptance_issue_closed": false,
+    "production_mutated": false
+  },
+  "last_successful_sample": {
+    "observed_at": "2026-10-12T21:08:31.122809+00:00",
+    "completed_at": "2026-10-12T21:08:32.413974+00:00",
+    "sample_index": 68,
+    "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+    "revision": "d43919e933eb1be69559be7566853ff69a64e903",
+    "pod": "verdify-ingestor-7666f97959-htjdk",
+    "uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "restart_count": 0,
+    "session": "1798f4d876404e94a186019c26b522e7",
+    "generation": 1,
+    "application_sync": "Synced",
+    "application_health": "Healthy",
+    "native_status_counts": {
+      "confirmed": 37
+    },
+    "schema_error_counts": {
+      "ValidationError": 0,
+      "row failed schema validation": 0
+    }
+  },
+  "failure_assertion": "Argo Application must be Synced and Healthy; exact revision assertion passed immediately before health assertion.",
+  "cause": {
+    "component": "Lab publisher",
+    "job_uids": [
+      "34bf6887-7491-4ce1-bf90-f29c8de4de86",
+      "549a0563-9906-4552-b51a-feb66cf3d64b"
+    ],
+    "class": "generator_or_build_failure",
+    "guard_finding": "invalid-rendered-value",
+    "route": "/plans/2026-10-12",
+    "origin": "Stored Gemini Vision prose rendered a missing soil-moisture measurement as None%.",
+    "last_validated_public_tree": "preserved by failed-closed publication path; freshness not yet qualified"
+  },
+  "recovery": {
+    "pull_request": "https://github.com/VerdifyConsultancy/verdify-platform/pull/974",
+    "source": "8f6ff04e971f2a9a6a23278c43a1984a9a798133",
+    "behavior": "Render missing or nonfinite measured values in public plan prose as unavailable; preserve observations and guard.",
+    "focused_tests_passed": 73,
+    "baseline_limitations": [
+      "Two dashboard assertions in test_15_lab_site_followup.py fail identically on current main.",
+      "Local make site-doctor cannot access the legacy VM vault path."
+    ],
+    "offline_affected_copy_profiles": [
+      "ingestor",
+      "lab-publisher"
+    ],
+    "promotion_scope": "Lab publisher only; preserve live ingestor release pin and pod specification.",
+    "native_pr_validation": "running; image build/promotion/live recovery not yet complete"
+  },
+  "acceptance": {
+    "two_hour_window_passed": false,
+    "source_mutated": false,
+    "production_mutated_during_diagnosis": false,
+    "issue949_closed": false,
+    "new_window_started": false,
+    "sampling_gap": "Original collector stopped at 21:09:31; no continuous-sampling claim beyond that point.",
+    "cap_proof": "Use retained native stage vectors and exact request joins; per-row timestamps are not batch boundaries."
+  },
+  "private_evidence_hashes": {
+    "runtime-window-result.json": "f6d7e8dacba45887d81c85bd98392a4ee862800ab158b6f5d513f151183e5def",
+    "runtime-window-latest.json": "18685dd58247c5f35f87ce344f0fc6bdc8056df5e2255849b8eb76cd10e2cd85",
+    "runtime-window-console.log": "871207c054e5b5da9f6d39176c3764f7ab12412e0d9bfc5aa6bb1a157b87b471",
+    "lab-publisher-invalid-plan-private-custody.json": "22af1caf379480c0929bae3f9e44795c230522c7279b748772a91931b336aafd"
+  }
+}
