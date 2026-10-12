@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-10-12T23:26:26.686606+00:00",
+  "node": "vm-k3s-node7",
+  "command": "sudo -n k3s ctr -n k8s.io images check",
+  "exitCode": 1,
+  "header": "REF                                                                                                                                                             TYPE                                                      DIGEST                                                                  STATUS             SIZE                UNPACKED ",
+  "matchingRows": [
+    "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f                                application/vnd.docker.distribution.manifest.v2+json      sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f complete (18/18)   79.9 MiB/79.9 MiB   true",
+    "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f                                                                                         application/vnd.docker.distribution.manifest.v2+json      sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f complete (18/18)   79.9 MiB/79.9 MiB   true"
+  ],
+  "error": "time=\"2026-10-12T17:26:24-06:00\" level=error msg=\"unable to check unpack for registry.vallery.net/vallery/gravity-worker-acquisition@sha256:247e23777e2577c981b5ed94d3ab99923174299a8c09374fed384da9acaf8e8c\" error=\"unexpected media type application/octet-stream for sha256:247e23777e2577c981b5ed94d3ab99923174299a8c09374fed384da9acaf8e8c: not found\"\nctr: unable to check unpack for registry.vallery.net/vallery/gravity-worker-acquisition@sha256:247e23777e2577c981b5ed94d3ab99923174299a8c09374fed384da9a",
+  "imagesPulledOrUnpacked": false
+}

@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-10-12T23:26:28.365184+00:00",
+  "host": "onyx",
+  "vmid": 326,
+  "lvsExitCode": 0,
+  "qmExitCode": 0,
+  "readOnly": true,
+  "lvs": {
+    "report": [
+      {
+        "lv": [
+          {
+            "vg_name": "pve",
+            "lv_name": "data",
+            "lv_size": "374538764288",
+            "data_percent": "62.59",
+            "metadata_percent": "2.71",
+            "pool_lv": "",
+            "devices": "data_tdata(0)"
+          },
+          {
+            "vg_name": "pve",
+            "lv_name": "root",
+            "lv_size": "103079215104",
+            "data_percent": "",
+            "metadata_percent": "",
+            "pool_lv": "",
+            "devices": "/dev/nvme2n1p3(2048)"
+          },
+          {
+            "vg_name": "pve",
+            "lv_name": "swap",
+            "lv_size": "8589934592",
+            "data_percent": "",
+            "metadata_percent": "",
+            "pool_lv": "",
+            "devices": "/dev/nvme2n1p3(0)"
+          },
+          {
+            "vg_name": "pve",
+            "lv_name": "vm-326-cloudinit",
+            "lv_size": "4194304",
+            "data_percent": "9.38",
+            "metadata_percent": "",
+            "pool_lv": "data",
+            "devices": ""
+          },
+          {
+            "vg_name": "pve",
+            "lv_name": "vm-326-disk-0",
+            "lv_size": "343597383680",
+            "data_percent": "68.23",
+            "metadata_percent": "",
+            "pool_lv": "data",
+            "devices": ""
+          },
+          {
+            "vg_name": "pve",
+            "lv_name": "vm-326-disk-1",
+            "lv_size": "4194304",
+            "data_percent": "14.06",
+            "metadata_percent": "",
+            "pool_lv": "data",
+            "devices": ""
+          }
+        ]
+      }
+    ],
+    "log": []
+  },
+  "vmRootFields": {
+    "cores": "12",
+    "memory": "106496",
+    "name": "vm-k3s-node7",
+    "scsi0": "local-lvm:vm-326-disk-0,discard=on,iothread=1,size=320G,ssd=1"
+  }
+}

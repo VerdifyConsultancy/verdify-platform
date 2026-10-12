@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-12T23:28:40.910033+00:00",
+  "finishedAt": "2026-10-12T23:28:41.662249+00:00",
+  "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "exitCode": 0,
+  "sqlSha256": "8c9d36760b2da9442197480c70647fbd10f8086c92aa99c41f689e9a15de4916",
+  "stdoutSha256": "0175e98e752398dd61c93d3e9d54cfb24ca7b887dd07989a4bd2a78d3721094a",
+  "stderrBytes": 0
+}

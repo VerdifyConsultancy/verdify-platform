@@ -1,0 +1,7 @@
+{
+  "soleTargetWriter": "/root/runtime_inventory",
+  "ownerRelease": "Root explicit NEW_TASK RELEASE #382 shared target window after Retry same9136 fullsync Succeeded23:22:42 and readonly collector23:24:01.920752",
+  "productionWriter": "Retry",
+  "allowedScope": "existing d017 finite same-target twoNULL credential window, reviewed2Gi spool4GiR2,seven serial phases,exact inverse952/77/42/native reseal,UID cleanup",
+  "noProductionOrMainOrControllerOrPinChange": true
+}

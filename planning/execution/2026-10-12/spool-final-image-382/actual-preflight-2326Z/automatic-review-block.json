@@ -1,0 +1,16 @@
+{
+  "schema": "verdify382-automatic-review-block-v1",
+  "recordedAt": "2026-10-12T23:32:07.498534+00:00",
+  "action": "python3 /private/tmp/verdify-382-execution-20261012T2324Z/provision_two_null.py",
+  "reason": "This action creates a Kubernetes Secret and provisions passwords for database LOGIN roles; the exact credential mutation is not authorized by trusted user content, despite assistant-issued approvals.",
+  "reviewerInstruction": "Do not bypass through a workaround or indirect execution. Check trusted authorization or request approval.",
+  "helperExecuted": false,
+  "secretCreated": false,
+  "passwordsChanged": false,
+  "pvcCreated": false,
+  "jobCreated": false,
+  "allocationGiB": 0,
+  "nativePhasesExecuted": 0,
+  "directHumanAuthorizationLookup": "Latest10 root turns contain only assistant/tool releases; awaiting exact human turn or explicit approval via coordinator",
+  "sourceChecksUnchanged": true
+}

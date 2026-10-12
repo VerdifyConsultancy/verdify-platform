@@ -1,0 +1,13 @@
+{
+  "recordSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "nativeStdoutBytes": 35527066,
+  "recordBytes": 44942966,
+  "credentialValuesSelected": false,
+  "productRowsExported": false,
+  "startedAt": "2026-10-12T23:28:30.683753+00:00",
+  "finishedAt": "2026-10-12T23:28:40.486857+00:00",
+  "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "sqlSha256": "0b11d8e7f8f4512a352ad4da16b7341ad2b2d8651ed2beb9de16e46309f7f66b",
+  "exitCode": 0,
+  "exactAcceptedCatalog": true
+}

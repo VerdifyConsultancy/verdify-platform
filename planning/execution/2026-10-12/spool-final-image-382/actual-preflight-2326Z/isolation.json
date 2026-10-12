@@ -1,0 +1,91 @@
+{
+  "currentPolicySpecsExactAccepted": true,
+  "selectedPolicies": [
+    {
+      "metadata": {
+        "name": "cnpg-s2-integration-runtime-client-only",
+        "namespace": "verdify-db-rehearsal",
+        "uid": "ed9f2a3b-7d47-45aa-b1bb-b503ec110a94",
+        "creationTimestamp": "2026-10-12T18:32:59Z",
+        "deletionTimestamp": null,
+        "resourceVersion": "265831433"
+      },
+      "spec": {
+        "egress": [
+          {
+            "ports": [
+              {
+                "port": 5432,
+                "protocol": "TCP"
+              }
+            ],
+            "to": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "cnpg.io/cluster": "verdify-cnpg-s2-integration"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "ports": [
+              {
+                "port": 53,
+                "protocol": "TCP"
+              },
+              {
+                "port": 53,
+                "protocol": "UDP"
+              }
+            ],
+            "to": [
+              {
+                "namespaceSelector": {
+                  "matchLabels": {
+                    "kubernetes.io/metadata.name": "kube-system"
+                  }
+                },
+                "podSelector": {
+                  "matchLabels": {
+                    "k8s-app": "kube-dns"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "podSelector": {
+          "matchLabels": {
+            "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+            "app.kubernetes.io/part-of": "verdify",
+            "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+          }
+        },
+        "policyTypes": [
+          "Ingress",
+          "Egress"
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "deny-all-rehearsal",
+        "namespace": "verdify-db-rehearsal",
+        "uid": "bdd627d5-6c2b-49dc-9a0b-bfb0d3ac7230",
+        "creationTimestamp": "2026-10-01T14:30:18Z",
+        "deletionTimestamp": null,
+        "resourceVersion": "234764721"
+      },
+      "spec": {
+        "podSelector": {},
+        "policyTypes": [
+          "Ingress",
+          "Egress"
+        ]
+      }
+    }
+  ],
+  "liveConnectivityProbe": false
+}
