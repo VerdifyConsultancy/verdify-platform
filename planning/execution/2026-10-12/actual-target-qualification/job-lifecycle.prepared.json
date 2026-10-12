@@ -1,0 +1,192 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "annotations": {
+      "verdify.ai/consumer-source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+      "verdify.ai/execution-state": "prepared-not-submitted-owner-stage-release-required",
+      "verdify.ai/packet-commit": "a032258257b7b2428e4c88ce7763fd040f513fba"
+    },
+    "labels": {
+      "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+    },
+    "name": "verdify-v2-readonly-lifecycle-20261012",
+    "namespace": "verdify-db-rehearsal"
+  },
+  "spec": {
+    "activeDeadlineSeconds": 120,
+    "backoffLimit": 0,
+    "completions": 1,
+    "parallelism": 1,
+    "template": {
+      "metadata": {
+        "labels": {
+          "verdify.ai/qualification-duty": "lifecycle",
+          "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "args": [
+              "/qualification/packet/probe.py",
+              "--execute",
+              "--duty",
+              "lifecycle",
+              "--layout",
+              "api-image",
+              "--native-binding",
+              "/qualification/custody/native-binding.json",
+              "--cluster-uid",
+              "b087a146-58c5-4d98-8054-09094d22ecfe",
+              "--database-oid",
+              "16447",
+              "--system-identifier",
+              "7693399121498484768",
+              "--admission-sha256",
+              "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+              "--stage-release",
+              "/qualification/custody/owner-stage-release.txt",
+              "--device-id",
+              "esp32-vallery",
+              "--experiment-id",
+              "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+            ],
+            "command": [
+              "python"
+            ],
+            "env": [
+              {
+                "name": "VERDIFY_DEVICE_WRITE_ENABLED",
+                "value": "0"
+              },
+              {
+                "name": "VERDIFY_COMPONENT_EXPERIMENT_ENABLED",
+                "value": "off"
+              },
+              {
+                "name": "VERDIFY_ACTIVE_EXPERIMENT_ID",
+                "value": ""
+              },
+              {
+                "name": "VERDIFY_POLICY_VECTOR_MODE",
+                "value": "off"
+              },
+              {
+                "name": "PYTHONDONTWRITEBYTECODE",
+                "value": "1"
+              },
+              {
+                "name": "PYTHONUNBUFFERED",
+                "value": "1"
+              },
+              {
+                "name": "QUALIFICATION_DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "lifecycle",
+                    "name": "verdify-cnpg-s2-v2-qualification-auth",
+                    "optional": false
+                  }
+                }
+              }
+            ],
+            "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+            "imagePullPolicy": "Never",
+            "name": "readonly-consumer",
+            "resources": {
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "readOnlyRootFilesystem": true
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/qualification/packet",
+                "name": "packet",
+                "readOnly": true
+              },
+              {
+                "mountPath": "/qualification/custody",
+                "name": "custody",
+                "readOnly": true
+              },
+              {
+                "mountPath": "/app/main.py",
+                "name": "source-overlay",
+                "readOnly": true,
+                "subPath": "main.py"
+              },
+              {
+                "mountPath": "/app/verdify_schemas/telemetry.py",
+                "name": "source-overlay",
+                "readOnly": true,
+                "subPath": "telemetry.py"
+              }
+            ]
+          }
+        ],
+        "enableServiceLinks": false,
+        "nodeSelector": {
+          "kubernetes.io/hostname": "vm-k3s-node5"
+        },
+        "restartPolicy": "Never",
+        "securityContext": {
+          "runAsGroup": 1000,
+          "runAsNonRoot": true,
+          "runAsUser": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 292,
+              "name": "verdify-cnpg-s2-v2-readonly-packet-a0322582"
+            },
+            "name": "packet"
+          },
+          {
+            "configMap": {
+              "defaultMode": 292,
+              "name": "verdify-v2-lifecycle-source-3d9f31e8"
+            },
+            "name": "source-overlay"
+          },
+          {
+            "configMap": {
+              "defaultMode": 292,
+              "items": [
+                {
+                  "key": "native-binding.json",
+                  "path": "native-binding.json"
+                },
+                {
+                  "key": "owner-stage-release.txt",
+                  "path": "owner-stage-release.txt"
+                }
+              ],
+              "name": "verdify-cnpg-s2-integration-qualification-custody-20261012"
+            },
+            "name": "custody"
+          }
+        ]
+      }
+    }
+  }
+}

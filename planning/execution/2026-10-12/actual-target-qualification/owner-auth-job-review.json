@@ -1,0 +1,15 @@
+{
+  "actual_target_action": false,
+  "failure_boundary": "transport ambiguity requires fresh owner metadata and exact inverse; falsepasswordsProvisionedalone is not rollback proof",
+  "guard_checks": "native peer postgres, actual UID externally guarded,OID/systemid,275ledger,admission3,8NULL-passwordLOGINroles/sole memberships and46scientificfunction owners/grants",
+  "guard_sha256": "5295aeeae37e6db41ae73edad6f2e532f8f4578fb3cde71df15c63dbc52174f8",
+  "job_validation": "fourruntimefilesbyteequalcommita032;exactpinneddigest/readonlymounts/oneSecretkey/node5/120s/backoff0/noSA-token verified",
+  "logging": "statement/error/duration/parameter and pgstat utility tracking disabled before non-echoing password setters",
+  "method": "local source/JSON/decoded immutable payload inspection only",
+  "pgstat_documentation": "https://www.postgresql.org/docs/16/pgstatstatements.html#PGSTATSTATEMENTS-CONFIG-PARAMS",
+  "remaining_actionable_findings": [],
+  "schema": "verdify-owner-auth-job-preparation-review-v1",
+  "setter_scope": "owner8rolewindow;scienceJobsconsumeonlytheirtwoSecretkeys;one atomic initial password-only transaction, noLOGIN/grant/schema repair",
+  "setter_sha256": "b44b2adfde1d6e7d21254cad65bb04320d4082658e2b90bcaef9431c8a5124e7",
+  "tests_rerun": false
+}

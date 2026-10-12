@@ -168,6 +168,53 @@ image's old `.pyc` cannot bypass a verified source overlay. A fresh subprocess
 regression checks that isolation. No new image build is required for this
 bounded seam. The release owner independently delivers final production images.
 
+### Prepared owner-only Jobs
+
+`jobs-prepared.json` binds two literal `batch/v1` manifests:
+`job-executor.prepared.json` and `job-lifecycle.prepared.json`. They name the
+actual Cluster UID/OID/system identifier, admission-record SHA256
+`1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa`,
+existing device and restored experiment UUID. They remain **unsubmitted**.
+The runtime packet ConfigMap payload contains exactly four files from packet
+commit `a032258257b7b2428e4c88ce7763fd040f513fba`, is immutable and has its
+compressed/uncompressed/file hashes recorded in `jobs-prepared.json`.
+
+Both images were captured on `vm-k3s-node5`; each Job is pinned there with
+`imagePullPolicy: Never` to reuse that exact local image without registry
+credentials or a build. Each overrides the image's normal app entrypoint with
+the one-shot probe, has a120-second deadline/backoff0, nonroot UID1000,
+read-only root/packet/custody/source mounts, dropped capabilities and no SA
+token. Only the corresponding `executor` or `lifecycle` key of the target-only
+Secret is injected. There is no production credential, other consumer, HTTP
+server, clock runner or device/provider command.
+
+The owner creates its **immutable custody ConfigMap** named
+`verdify-cnpg-s2-integration-qualification-custody-20261012`, containing
+`native-binding.json` and its actual nonempty `owner-stage-release.txt`. These
+contents are external owner custody, not fabricated by this packet or approved
+merely by a filename. Its release may explicitly cover both duties under the
+owner's serial execution. Record its UID and byte hashes, check current native
+binding, and review the existing target-only NetworkPolicy for DB and necessary
+DNS. After the full952/77/42 baseline and password-only stage are accepted, the
+sole writer may create the immutable packet, then execute strictly serially:
+
+```sh
+# Sole recovery writer only; prerequisite/source/custody readbacks precede this.
+gzip -dc "$PACKET/runtime-packet.configmap.json.gz" |
+  kubectl --context vallery -n verdify-db-rehearsal create -f -
+kubectl --context vallery -n verdify-db-rehearsal create \
+  -f "$PACKET/job-executor.prepared.json"
+# Record actual Job/Pod/image/ConfigMap UIDs, collect/verify the receipt, close
+# and remove this exact Job UID; only then release the lifecycle stage.
+kubectl --context vallery -n verdify-db-rehearsal create \
+  -f "$PACKET/job-lifecycle.prepared.json"
+```
+
+Never use `apply` to replace an existing task name, run both stages together,
+or treat a successful Job as full #639/#587 acceptance. The owner retains the
+receipt and exact object identities, performs the two-role inverse, removes
+only recorded task-created objects, then independently reseals952/77/42.
+
 Run default preparation first; it checks hashes without reading a credential or
 opening a connection:
 

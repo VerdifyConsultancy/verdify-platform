@@ -45,5 +45,6 @@
     "frozen_union_inputs": 48,
     "avoids_tasks_config_imports": true,
     "stale_image_bytecode_reads_prevented": true
-  }
+  },
+  "prepared_jobs": "exact executor/lifecycle Jobs and4-file immutable runtime packet, ownerCMnames; unsubmitted"
 }

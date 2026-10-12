@@ -1,0 +1,67 @@
+{
+  "admission_record_sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "consumer_source": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "jobs": [
+    {
+      "actual_Job_Pod_ConfigMap_Secret_UIDs": null,
+      "cached_node": "vm-k3s-node5",
+      "custody_configMap_proposed_name": "verdify-cnpg-s2-integration-qualification-custody-20261012",
+      "duty": "executor",
+      "image_pull_policy": "Never",
+      "job_name": "verdify-v2-readonly-executor-20261012",
+      "manifest": "job-executor.prepared.json",
+      "manifest_sha256": "d3ad05c933eff3999f7f69b5cfab31d6063929c774a1594387bbbd64cd50fd50",
+      "source_overlay_configMap": "verdify-v2-executor-source-3d9f31e8",
+      "submitted": false,
+      "target_only_secret_key": "executor"
+    },
+    {
+      "actual_Job_Pod_ConfigMap_Secret_UIDs": null,
+      "cached_node": "vm-k3s-node5",
+      "custody_configMap_proposed_name": "verdify-cnpg-s2-integration-qualification-custody-20261012",
+      "duty": "lifecycle",
+      "image_pull_policy": "Never",
+      "job_name": "verdify-v2-readonly-lifecycle-20261012",
+      "manifest": "job-lifecycle.prepared.json",
+      "manifest_sha256": "7890a0110333c2a255bb593358c69eafa1a758e5fcb17b0f44eaa76c8b47b273",
+      "source_overlay_configMap": "verdify-v2-lifecycle-source-3d9f31e8",
+      "submitted": false,
+      "target_only_secret_key": "lifecycle"
+    }
+  ],
+  "owner": "sole contained recovery owner",
+  "owner_prerequisites": [
+    "complete952/77/42baseline and actual native binding refreshed",
+    "target-only password setter reviewed/applied and credentials retained privately",
+    "immutable packet and exact two-file overlays created with recorded UIDs",
+    "owner custody ConfigMap created immutable with actual raw native binding and explicit nonempty serialized stage-release file",
+    "existing target-only NetworkPolicy permits only bound integration DB+requiredDNS",
+    "exact Job name absent; create one stage, collect/authenticate/read receipt, close and remove exact UID before releasing next stage"
+  ],
+  "packet_source_commit": "a032258257b7b2428e4c88ce7763fd040f513fba",
+  "reuse_boundaries": [
+    "no main app or HTTP server starts",
+    "no device/provider/production credential",
+    "no actual target action or Job creation by packet lane",
+    "no source/firmware/release change",
+    "no connected-clock runner or study allocations",
+    "27/48 UNPROVEN; physical and fullbehavioral acceptance remain unproved"
+  ],
+  "runtime_packet_configMap": {
+    "files": {
+      "frozen-target-binding.py": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
+      "import-manifest.json": "e43f880c5874f990a27f57382fe1f457fab4935236365020953c8c50eb606713",
+      "probe.py": "b06c0391ff7794c50ebcb4d390bc94b78a6ccea5ffaeb1d4c30b378366e57031",
+      "source-hashes.json": "ae9c3ce97ca5b03e24926a648c83b48475d307a3246c43444dc8c990579a9ce8"
+    },
+    "immutable": true,
+    "manifest": "runtime-packet.configmap.json.gz",
+    "manifest_gzip_sha256": "09430f84c24ec7c2fc6315f51655c6c188552170ad35da8684c03dcd4a26f405",
+    "manifest_uncompressed_bytes": 43112,
+    "manifest_uncompressed_sha256": "59bbcc35247f6f6bfdd25cd632ad82d95a18e5f0e4834e0f082a137eaa827adc",
+    "name": "verdify-cnpg-s2-v2-readonly-packet-a0322582",
+    "namespace": "verdify-db-rehearsal"
+  },
+  "schema": "verdify-contained-v2-readonly-jobs-preparation-v1",
+  "state": "prepared-not-submitted"
+}
