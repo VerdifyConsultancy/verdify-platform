@@ -22,6 +22,29 @@ owning HA/setpoint writer and actual-observation paths are retained. A disabled
 route has no delivery-success or timeout fallback to qualify, and no physical
 command is necessary to establish this supported disabled result.
 
+## Final result — October 12, 2026
+
+All five #965 clauses support completion of the intentionally disabled API
+route. The owner’s exact read-only probes match the published proposal: both
+API Pod/container/digest identities stayed unchanged and Ready at restart 0,
+the running file and function hashes match cb21, and live OpenAPI declares 501
+without 200. The existing 14 ASGI cases, 78 focused tests and final-source native
+CI are reused; no production POST, physical command or additional test was run.
+
+The current aggregate is **87,878 retained light rows**: 87,120 from the original
+audit, 716 between that audit and the fixed-source observation, and 42 afterward.
+**All 87,878 remain origin-uncertain, bounded 0..87,878.** The 42 later rows are
+not automatically authenticated or credited by fixing the API. No historical
+row, physical duration/resource quantity, assigned-day denominator or study
+outcome was classified, inferred or rewritten. The original audit and limited
+log coverage below remain retained evidence.
+
+`final-owner-receipt-match.json` independently matches both stable replicas,
+probe hashes and provider-committed receipt bytes. The public receipt preserves
+all private original fields and adds explicit bounds/acceptance annotations
+supported by the actual aggregate. There is no material mismatch. The original
+prepared checks below have now been executed by the owner, not this lane.
+
 ## Honest historical bounds
 
 The checksum-verified October11 audit counted **87,120 retained light rows**:
@@ -48,11 +71,13 @@ new false intent from this route; it does not retroactively authenticate old
 rows or automatically certify every subsequent observation. Physical claims
 still require authentic source-bound observation under the existing claim rules.
 
-## Only the missing read-only checks
+## Owner-executed bounded read-only checks
 
-The coordinator relays these exact files/hashes to Retry, the sole production
-owner, before execution. This packet lane has made no production DB/API probe.
-Reuse newer equivalent owner receipts if they already exist.
+The coordinator relayed these exact files/hashes to Retry, the sole production
+owner, who executed them at 21:04:47–49Z on October 12. This packet lane made no
+production DB/API probe or test rerun. The owner receipt is committed at
+`0c6ea9a859d1810762eb7619c2fc4bb10337993e`; `final-owner-receipt-match.json`
+records the independent content/hash/identity comparison.
 
 - `history-bounds-readonly.sql`: one repeatable-read READ ONLY aggregate/schema
   query with a 10-second statement timeout and ROLLBACK. It refreshes retained
@@ -74,7 +99,8 @@ native focused tests, exact deployed source and read-only live schema proves
 the disabled contract without executing a production command. It makes no
 physical readback, full-history provenance or resource-credit claim.
 
-The five clause assessments and remaining receipt gaps are explicit in
-`acceptance.json`. Issue/sprint publication remains with the coordinator.
+The final five clause assessments are complete for the disabled-route scope in
+`acceptance.json`. The coordinator reported #965 CLOSED at 21:09:12Z; this lane
+made no issue comment, checkbox, closure or sprint mutation.
 #963 OTA, the later #367 firmware change and **27/48 UNPROVEN** native coverage
 remain outside this result.

@@ -1,31 +1,74 @@
 {
   "acceptance": [
     {
-      "assessment": "source-and-exact-owner-adoption-supported; route-specific live readonly check prepared",
-      "basis": "Authenticated valid requests deliberately501 with no accepted command or DB acquisition; no second writer.",
+      "assessment": "complete-for-disabled-API-route-scope",
+      "basis": "Exact adopted source and both stable replicas match the qualified disabled route: valid authenticated501/no accepted command or DB acquisition, live OpenAPI501/no200; no second writer.",
       "clause": 1
     },
     {
-      "assessment": "API intent-write path removed; physical truth of retained or prospective observations not inferred",
-      "basis": "Exact unchanged control_lights function has no DB/device calls. Existing actual-observation and HA confirmation/failure paths retained; no physical command sent.",
+      "assessment": "complete-for-disabled-API-route-scope",
+      "basis": "The API intent-write path is absent in exact running code. Existing actual-observation and HA confirmation/failure paths remain. This scoped acceptance does not certify all history or every prospective physical observation.",
       "clause": 2
     },
     {
-      "assessment": "existing-focused-and-native-CI-supported",
-      "basis": "14 actual-ASGI route/auth/input/OpenAPI cases; disabled route uses timeout-if-touched DB and never acquires it. Existing78-test focused set/nativeCI retained, no new delivery/timeout transport claimed.",
+      "assessment": "complete-for-disabled-API-route-scope",
+      "basis": "Existing14 actual-ASGI route/auth/input/OpenAPI cases and78 focused/native-CI qualification reused with identical source bytes. Disabled route never acquires the timeout-if-touched DB; no new transport success/timeout semantics or test rerun claimed.",
       "clause": 3
     },
     {
-      "assessment": "exact-owner-source/digest/config adoption-supported; final GET/function-hash receipt pending",
-      "basis": "d439 promotion runs API built cb21 on both bound Pods. No live POST or physical command is necessary for supported disabled-path acceptance.",
+      "assessment": "complete-for-disabled-API-route-scope",
+      "basis": "Owner source/digest/config promotion receipt plus exact stable Pod/container/image and source/function hashes and live GET OpenAPI501/no200 match on both replicas. No production POST or physical command was required or performed.",
       "clause": 4
     },
     {
-      "assessment": "existing-audit-explicitly-bounded; one current aggregate closure query prepared",
-      "basis": "Rows lack origin identity. Preserve all history; no row classification/rewrite/assigned-day denominator or physical resource credit. Source introduction April9,2026 is not deployment time or proof for imported older data.",
+      "assessment": "complete-for-disabled-API-route-scope",
+      "basis": "Current READONLY aggregate bounds87,878 retained rows as origin-uncertain0..87,878, including42later rows; prior87,120 plus716gap plus42later. Logs only support their retained interval. No origin labels/history rewrite/assigned-day denominator or resource credit inferred.",
       "clause": 5
     }
   ],
+  "current_history_bounds": {
+    "API_origin_rows_lower_bound": 0,
+    "after_fixed_source_observation_rows": 42,
+    "gap_to_fixed_source_observation_rows": 716,
+    "history_study_denominators_or_outcomes_rewritten": false,
+    "later42_authenticated_or_credited": false,
+    "meaning": "All retained rows remain origin-uncertain. These are row-count bounds only, not fabricated-row counts, physical duration/resource/effect bounds or retrospective outcome evidence.",
+    "observed_at": "2026-10-12T21:04:47.58336+00:00",
+    "physical_runtime_or_resource_credit_qualified": false,
+    "prior_audit_rows": 87120,
+    "retained_rows": 87878,
+    "row_origin_classified": false,
+    "stream_counts": [
+      {
+        "equipment": "grow_light_grow",
+        "first_ts": "2024-11-17T13:00:01.747867+00:00",
+        "greenhouse_id": "vallery",
+        "last_ts": "2026-10-12T21:04:40.296713+00:00",
+        "retained_rows": 43867,
+        "rows_after_fixed_source_observation": 21,
+        "rows_at_or_before_prior_audit": 43488,
+        "rows_between_prior_audit_and_fixed_source_observation": 358
+      },
+      {
+        "equipment": "grow_light_main",
+        "first_ts": "2024-11-17T13:00:01.846637+00:00",
+        "greenhouse_id": "vallery",
+        "last_ts": "2026-10-12T21:04:40.296713+00:00",
+        "retained_rows": 44011,
+        "rows_after_fixed_source_observation": 21,
+        "rows_at_or_before_prior_audit": 43632,
+        "rows_between_prior_audit_and_fixed_source_observation": 358
+      }
+    ],
+    "unclassified_origin_row_count_upper_bound": 87878
+  },
+  "disposition": {
+    "broader_physical_and_scientific_issues_not_closed": true,
+    "coordinator_reported_closed_at": "2026-10-12T21:09:12Z",
+    "coordinator_reported_state": "CLOSED",
+    "issue_mutation_by_this_lane": false,
+    "recommendation": "close965 for the accepted disabled response with explicit unclassified-history/resource-credit exclusions"
+  },
   "existing_qualified_tests": {
     "CI_gate_includes": "tests/test_api_light_command_boundary.py",
     "finished_at": "2026-10-12T18:27:46Z",
@@ -37,6 +80,20 @@
     "new_tests_or_reruns_this_lane": false,
     "source": "https://github.com/VerdifyConsultancy/verdify-platform/pull/970",
     "state": "success"
+  },
+  "final_owner_readonly_qualification": {
+    "exact_source_and_function_hashes_match": true,
+    "independent_receipt_match": "final-owner-receipt-match.json",
+    "independent_receipt_match_sha256": "8c8715eb79a78078d9e68cc269eb6e2a81c3c174dd49d9f0056306ee9ae4ab5d",
+    "live_OpenAPI_501_without200": true,
+    "observed_at": "2026-10-12T21:04:49.212781+00:00",
+    "production_POST_executed": false,
+    "receipt_path": "planning/execution/2026-10-12/lights965-owner-readonly-qualification.json",
+    "receipt_sha256": "d397fe4c53c6d3a305fd4c92cabbe55dfa7518c6966ca9bc3e7fc9559c1c2e88",
+    "source_commit": "0c6ea9a859d1810762eb7619c2fc4bb10337993e",
+    "stable_API_replicas": 2,
+    "target_calls_by_packet_lane": 0,
+    "test_reruns_by_packet_lane": 0
   },
   "historical_audit": {
     "API_origin_rows_lower_bound": 0,
@@ -138,7 +195,8 @@
     "history_query_sha256": "32cc316832bcf5e7f173c3922949c922b7ff74df5783539cb671f6c209a09665",
     "live_contract_reader": "live-contract-readonly.py",
     "live_contract_reader_sha256": "845be3754369eec5389a07908a597931585c8946af72350f56f18b60f76c769f",
-    "owner_execution": "Retry only after coordinator relay and before/after native UID/image binding; reuse newer equivalent receipts if already available"
+    "owner_execution": "Retry only after coordinator relay and before/after native UID/image binding; reuse newer equivalent receipts if already available",
+    "status": "executed-by-Retry-owner-and-independently-matched; no remaining receipt gap"
   },
   "owner_delivery": {
     "API_pods": [
@@ -220,5 +278,5 @@
       "source": "d43919e933eb1be69559be7566853ff69a64e903"
     }
   ],
-  "status": "bounded-source-and-owner-adoption-reviewed; missing-readonly-contract-and-current-history-query-prepared"
+  "status": "complete-for-disabled-API-route-scope; coordinator-closed965"
 }

@@ -1,0 +1,40 @@
+{
+  "command_POST_executed": false,
+  "disposition": "All five clauses support completion of the intentionally disabled API route; broader physical/resource/history-origin claims remain excluded.",
+  "expected_source_function_and_live_OpenAPI_match": true,
+  "history_totals": {
+    "retained_rows": 87878,
+    "rows_after_fixed_source_observation": 42,
+    "rows_at_or_before_prior_audit": 87120,
+    "rows_between_prior_audit_and_fixed_source_observation": 716
+  },
+  "later42_origin_authenticated": false,
+  "live_API_file_sha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+  "live_OpenAPI_sha256": "052ae605c56a98d30908d54733eb773df7585855abb0943b15c9b12209821825",
+  "live_function_sha256": "3d1f98536731f9c1824e88aab6635910398f5ed5b8809b08c52ff37ae3cd1af0",
+  "method": "offline metadata/hash/content comparison only; no target probe or test rerun",
+  "origin_row_count_bound": [
+    0,
+    87878
+  ],
+  "owner_receipt_commit": "0c6ea9a859d1810762eb7619c2fc4bb10337993e",
+  "physical_runtime_or_resource_credit_qualified": false,
+  "private_original_fields_equal_public": true,
+  "private_original_receipt_sha256": "0a97265163c644d5738895fc9b1da6d1f622bce2ec1d521b9b72fd96c309e261",
+  "proposal_revision": "b1f1ae6376ab38f7a431d5da64ead9fa23a725e2",
+  "provider_commit_exact_bytes_verified": true,
+  "provider_probe_readback_sha256": "8c78e14808a8590b9a0ca734bbbbdf56d96cad0cd437cd04113296ee2c4dc845",
+  "public_additions": [
+    "acceptance_scope",
+    "explicit_provenance_bounds"
+  ],
+  "public_additions_independently_supported_by_native_aggregate": true,
+  "public_owner_receipt_sha256": "d397fe4c53c6d3a305fd4c92cabbe55dfa7518c6966ca9bc3e7fc9559c1c2e88",
+  "result": "PASS",
+  "retained_history_or_study_rewritten": false,
+  "runtime_cohort_changed": false,
+  "schema": "verdify-965-independent-owner-receipt-match-v1",
+  "stable_API_replicas": 2,
+  "target_calls_by_this_lane": 0,
+  "test_reruns_by_this_lane": 0
+}
