@@ -1,0 +1,50 @@
+{
+  "after": {
+    "actual_native_runs_per_replay": 27,
+    "canonical_source_witness_byte_identical": true,
+    "canonical_source_witness_sha256": "9b567b7e128b58a780dc4201fe26a35e1445ded8aa18e63c8aad8f92e79ebb7f",
+    "cases_per_replay": 32,
+    "corpus_rows_per_native_run": 296698,
+    "covered_fields": 27,
+    "independent_workdirs": true,
+    "qualified_order_revision": null,
+    "raw_bundle_sha256": [
+      "5ea1b877326bdb1639de403895307e357ae393c64e8f2d6b5d141c634789e9e9",
+      "ed99b902fd6a2f3ecb29c86a9ac7204a71f04d827fb6481230553bd1903b64c1"
+    ],
+    "raw_output_bundles_differ_with_temporary_paths": true,
+    "raw_stdout_preserved_in": [
+      "native-prefix-source-replay.json",
+      "native-prefix-source-replay-repeat.json"
+    ],
+    "source_sha256": "9928eb686fde1db38fbf5d3dda50c9bff029eaafd33625287bd1e53d57fc062a",
+    "uncovered_fields": 21
+  },
+  "before": {
+    "evidence_identity_equal": false,
+    "raw_stdout_changes_only_with_temporary_policy_path": true,
+    "runs": [
+      {
+        "binary_sha256": "00962b37c4c9cc48f73376034ef3f1b279b0e717f470142029b296d3ddfa048b",
+        "corpus_sha256": "61254bed97d8910fc3ed3946231423a7a5ab1130c3db5b07e1a8a767ba5f838a",
+        "evidence_sha256": "45e15b572444ceda8ec4f7b5e4c2fe531657377a386bf7d9108a4814be420936",
+        "policy_state_sha256": "ca941a6a4440e9d3fa121b56aeb494df25ed18ec1510eecbba9fbeef40b45aef",
+        "raw_stdout_sha256": "45e15b572444ceda8ec4f7b5e4c2fe531657377a386bf7d9108a4814be420936",
+        "verdict": "unproven",
+        "workdir_label": "a"
+      },
+      {
+        "binary_sha256": "00962b37c4c9cc48f73376034ef3f1b279b0e717f470142029b296d3ddfa048b",
+        "corpus_sha256": "61254bed97d8910fc3ed3946231423a7a5ab1130c3db5b07e1a8a767ba5f838a",
+        "evidence_sha256": "81b228eaf1eac090ccf8bb054ef873eb3508a1bb0db760acc958057a184c6310",
+        "policy_state_sha256": "ca941a6a4440e9d3fa121b56aeb494df25ed18ec1510eecbba9fbeef40b45aef",
+        "raw_stdout_sha256": "81b228eaf1eac090ccf8bb054ef873eb3508a1bb0db760acc958057a184c6310",
+        "verdict": "unproven",
+        "workdir_label": "b"
+      }
+    ],
+    "same_binary_corpus_policy_bytes": true,
+    "source_sha256": "982242a1f694f55f566e48366cc42d7b899ab91ee163f6d9d5b98ba16d3caa8f"
+  },
+  "scope": "actual compiled native evidence; all results remain 27/48 unproven"
+}

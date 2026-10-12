@@ -2,7 +2,7 @@
 
 This is the first bounded execution packet for [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) and [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), based on `b5bdb3c65b243c230b7864fa81b95f926b2e68ff`. It contributes source evidence to [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783). It does not close these issues or qualify a deployment, physical experiment or integrated restored-data execution.
 
-**Completed:** 621 existing focused tests passed; all three immutable historical input hashes and eight current warm-analysis contract hashes verified; fixed-30 numerical scenarios reproduced twice each; current native harness compiled and its actual coverage ceiling reproduced. No runtime source defect was found in this bounded work. The added calculator and receipts change no runtime, protocol, release pin or deployment.
+**Completed:** 621 existing focused tests passed; all three immutable historical input hashes and eight current warm-analysis contract hashes verified; fixed-30 numerical scenarios reproduced twice each; current native harness compiled and its actual coverage ceiling reproduced. Follow-up native execution found and fixed an offline evidence reproducibility defect. The calculators, receipts and digest fix change no runtime, protocol, release pin or deployment.
 
 ## #782: authentic input eligibility and fixed-30 analysis
 
@@ -39,6 +39,16 @@ The three JUnit files preserve exact executed test cases. `qualification-summary
 
 The actual C++ probe compiled against the current source and a bounded 128-row corpus, then exited **1 as expected**: **27/48 policy fields injectable**, with 21 uncovered fields including seven treatment fields. `native-harness-coverage.log` and `.json` preserve the exact missing list and source/binary/corpus hashes. The probe executed zero prefix safety runs and yielded no qualified `ORDER_REVISION`. Full-coverage Python replay tests explicitly use test doubles; their passing arithmetic does not remove this native ceiling.
 
+## #639: concrete offline reproducibility fix
+
+The follow-up executed all **32 committed activation/rollback prefixes** through the actual compiled core against the full **296,698-row corpus**. The 27 distinct complete policy states required 27 native runs. No covered-core invariant breach occurred; fixed order, grid/clamp validity, idempotency and exact target landing passed. Every prefix remains **unproven** because coverage is 27/48, and no qualified order revision is emitted. This does not supply candidate compiled-default/current-state recovery or external ESPHome consumer evidence.
+
+The replay tool previously hashed raw stdout containing a random temporary `policy_state` filename. Two actual 128-row runs with identical binary, corpus and policy bytes produced different evidence hashes solely because their workdirs differed. The new source fix normalizes only known policy/corpus input paths for the digest and explicitly binds policy, corpus, binary/source bytes and exit status in a versioned domain. Raw native stdout/stderr remain intact and are retained in this packet. Existing partial-coverage and breach decisions are unchanged; old partial native evidence hashes must be regenerated under the new digest domain.
+
+The meaningful new regression failed before the fix, then passed. It proves workdir equivalence including a quoted Unicode/backslash path, changed-policy/corpus hash sensitivity, preservation of raw diagnostic paths and fail-closed unsafe handling. The updated prefix suite passed **46 tests** and the preparation/proof-consumer suites passed **304 tests**. These are additional runs alongside the baseline qualification, with overlap explicitly retained rather than counted as new test coverage.
+
+After the fix, **two independent full native replays** produced byte-identical canonical source-witness evidence, SHA-256 `9b567b7e128b58a780dc4201fe26a35e1445ded8aa18e63c8aad8f92e79ebb7f`. `native-prefix-source-replay.json` and `native-prefix-source-replay-repeat.json` retain all raw native output plus exact per-prefix evidence and source dependencies. The temporary paths intentionally differ in the raw diagnostics and are excluded only from semantic evidence identity. `native-evidence-path-reproduction.json` records the before/after comparison; `source-fix-manifest.json` binds the changed tool, regression, calculator, commands and results. The original `source-manifest.json` continues to describe the first baseline test run.
+
 ## Next useful work and remaining decisions
 
 1. **#782:** authenticate the actual north/east/west probe contributors, calibration/provenance and crop-target revision; then use authentic prospective as-of forecasts/once-daily selector/equipment receipts to estimate the actual 18-hour endpoints, missingness and carryover where support exists. Historical route data cannot manufacture those physical facts. Keep missing empirical quantities null and the accepted exploratory claim bounded to climate noninferiority plus nine-state control burden.
@@ -59,3 +69,13 @@ python planning/execution/2026-10-12/scientific-readiness/reproduce.py \
 ```
 
 The exact selected pytest invocations and native probe command are recorded in `qualification-summary.json`. A tampered private-input negative check must fail before analysis; its result is included there. `SHA256SUMS` binds the packet files; `source-manifest.json` binds the reused implementation/test sources. A new Python/compiler environment may produce different numerical/binary bytes and must be recorded honestly.
+
+The native source witness uses only committed profiles/corpus and a local compiler:
+
+```sh
+VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null \
+python planning/execution/2026-10-12/scientific-readiness/reproduce_native.py \
+  --output "$REPLAY_OUTPUT/native-prefix-source-replay.json"
+```
+
+Run it again in a fresh process with a separate output file. Compare canonical JSON with `raw_native_runs` excluded; retain those raw arrays for diagnosis. Successful reproduction remains an unproven partial native witness, with `all_pass=false` and `qualified_order_revision=null`.

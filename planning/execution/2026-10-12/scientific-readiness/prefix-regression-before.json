@@ -1,0 +1,5 @@
+{
+  "exit_code": 1,
+  "raw_pytest_output": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_native_evidence_replays_across_workdirs_without_losing_input_or_breach_identity _\ntests/test_component_prefix_replay.py:487: in test_native_evidence_replays_across_workdirs_without_losing_input_or_breach_identity\n    assert first.evidence_sha256 == second.evidence_sha256\nE   AssertionError: assert '7cf4f26d24f3...a834bee37b1da' == 'f9ca3f62bfaa...745ed5abd0e78'\nE     \nE     - f9ca3f62bfaa3036978d5b5f9def770dbc50497c158bd9533e1745ed5abd0e78\nE     + 7cf4f26d24f3fd4bba6c8586c0deb9d7d49432c7450f4f15c9ea834bee37b1da\n=========================== short test summary info ============================\nFAILED tests/test_component_prefix_replay.py::test_native_evidence_replays_across_workdirs_without_losing_input_or_breach_identity\n",
+  "raw_pytest_output_sha256": "5b190e3abd4ed512189c7986d6568f18b023df49747354c9f4b999b45bc93e58"
+}
