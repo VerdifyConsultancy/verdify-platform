@@ -80,7 +80,8 @@
     "outcome": "unaccepted",
     "actual_caller_packet": "current-main-caller-profile.json",
     "whole_operation_debt": "unclosed; no cache/image/log/retry tail assumed zero",
-    "placement": "Physical owner reports only node7/Onyx nominal60Gi envelope within85% thin boundary;82.71Gi runway before new validation/pulls/cache/log growth. No build grant."
+    "placement": "Current selector admits nodes5\u20137; all three have >60Gi physically unallocated. Onlynode7 retains the inherited85percent runway comparison margin after60Gi.85percent is not an established newCIgate. Full lifetimegrowth/reuse and sharedobligations remain unclosed; no wholeoperation grant inferred.",
+    "physical_owner_receipt": "physical-capacity-qualification.json"
   },
   "boundaries": {
     "release_writer": "Verdify runtime delivery chat only",
