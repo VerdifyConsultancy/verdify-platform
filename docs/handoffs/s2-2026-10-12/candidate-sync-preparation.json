@@ -1,0 +1,191 @@
+{
+  "version": "s2-candidate-sync-preparation-v1",
+  "preparedAt": "2026-10-12T18:28:32.730204+00:00",
+  "candidateRevision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+  "candidateRecoveryRenderSha256": "1c8adaf41301c4fcc405dff2639e6975e0d369f1b03b1e5356382fa8ed668a9b",
+  "application": {
+    "name": "verdify-db-rehearsal-cluster",
+    "uid": "97ff0f52-2691-4f07-9184-591d936e3a05",
+    "source": {
+      "path": "deploy/k8s/cnpg/rehearsal/cluster",
+      "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+      "targetRevision": "main"
+    },
+    "syncPolicy": {
+      "automated": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "syncOptions": [
+        "CreateNamespace=false",
+        "ServerSideApply=true"
+      ]
+    },
+    "observedSync": "OutOfSync",
+    "project": "app-verdify-cnpg-rehearsal"
+  },
+  "project": {
+    "uid": "36286046-6e80-4849-a705-37b8befdb01d",
+    "sourceRepos": [
+      "https://github.com/VerdifyConsultancy/verdify-platform.git"
+    ],
+    "destinations": [
+      {
+        "namespace": "verdify-db-rehearsal",
+        "server": "https://kubernetes.default.svc"
+      }
+    ],
+    "namespaceResourceWhitelist": [
+      {
+        "group": "postgresql.cnpg.io",
+        "kind": "Cluster"
+      },
+      {
+        "group": "postgresql.cnpg.io",
+        "kind": "Backup"
+      },
+      {
+        "group": "postgresql.cnpg.io",
+        "kind": "ScheduledBackup"
+      },
+      {
+        "group": "barmancloud.cnpg.io",
+        "kind": "ObjectStore"
+      },
+      {
+        "group": "networking.k8s.io",
+        "kind": "NetworkPolicy"
+      },
+      {
+        "group": "",
+        "kind": "ConfigMap"
+      },
+      {
+        "group": "",
+        "kind": "Service"
+      },
+      {
+        "group": "",
+        "kind": "PersistentVolumeClaim"
+      },
+      {
+        "group": "batch",
+        "kind": "Job"
+      }
+    ],
+    "syncWindows": []
+  },
+  "installedRevisionFieldDescription": "Revision is the revision (Git) or chart version (Helm) which to sync the application to; if omitted, uses app spec revision.",
+  "serverDryRun": {
+    "passed": true,
+    "operation": {
+      "initiatedBy": {
+        "username": "codex-contained-recovery-20261012"
+      },
+      "sync": {
+        "prune": false,
+        "resources": [
+          {
+            "group": "postgresql.cnpg.io",
+            "kind": "Cluster",
+            "name": "verdify-cnpg-s2-integration",
+            "namespace": "verdify-db-rehearsal"
+          },
+          {
+            "group": "barmancloud.cnpg.io",
+            "kind": "ObjectStore",
+            "name": "verdify-cnpg-pitr-reader",
+            "namespace": "verdify-db-rehearsal"
+          },
+          {
+            "group": "networking.k8s.io",
+            "kind": "NetworkPolicy",
+            "name": "cnpg-s2-integration-runtime-client-only",
+            "namespace": "verdify-db-rehearsal"
+          },
+          {
+            "group": "networking.k8s.io",
+            "kind": "NetworkPolicy",
+            "name": "cnpg-s2-integration-runtime-client-ingress",
+            "namespace": "verdify-db-rehearsal"
+          }
+        ],
+        "revision": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347"
+      }
+    },
+    "sourceAndPolicyUnchanged": true,
+    "subsequentLiveReadNoOperation": true,
+    "targetAllocation": false
+  },
+  "capacityObservation": {
+    "capturedAt": "2026-10-12T18:23:35.906887+00:00",
+    "currentPendingPodCount": 0,
+    "eligibleHosts": 4,
+    "conservativeNvmeHeadroomGi": 1416.0053224563599,
+    "perNodeNvmeHeadroomGi": {
+      "vm-k3s-node4": 467.20946502685547,
+      "vm-k3s-node5": 346.99462127685547,
+      "vm-k3s-node6": 434.00600242614746,
+      "vm-k3s-node7": 167.79523372650146
+    },
+    "targetRequestedRamGi": 6,
+    "targetAggregateLimitRamGi": 18,
+    "targetLogicalDataWalGi": 75,
+    "targetPotentialR2Gi": 150,
+    "imageAlreadyCachedOnAllEligibleWorkers": true,
+    "plannedSerialLegacyBuilder": {
+      "eligibleNodes": [
+        "vm-k3s-node5",
+        "vm-k3s-node6",
+        "vm-k3s-node7"
+      ],
+      "cpuRequest": 1,
+      "ramRequestGi": 2,
+      "cpuLimit": 3,
+      "ramLimitGi": 4,
+      "scratchRequestGi": 32,
+      "scratchLimitGi": 60,
+      "executorInitCpuRequest": 0.1,
+      "executorInitRamRequestMi": 128,
+      "executorInitCpuLimit": 0.5,
+      "executorInitRamLimitMi": 512,
+      "selfOverlap": false,
+      "nvmeBudgetIsSeparate": true
+    }
+  },
+  "nativeCiObservation": {
+    "sha": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "state": "pending",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "description": "Verdify Platform in-cluster PR validation started",
+        "state": "pending",
+        "target_url": null,
+        "updated_at": "2026-10-12T18:16:30Z"
+      }
+    ]
+  },
+  "executed": false,
+  "targetCreated": false,
+  "remainingPredicates": [
+    "exact candidate Verdify Platform / Argo PR CI SUCCESS",
+    "fresh applicable capacity/placement/shared-obligation fit",
+    "fresh unchanged reader/isolation identity and idle Application",
+    "UID/source/policy/resourceVersion guarded exact4-object operation"
+  ],
+  "notPrerequisites": [
+    "main merge merely as process",
+    "production image publication",
+    "unrelated native-CI scratch ledger gate"
+  ],
+  "privateEvidenceSha256": {
+    "candidate-sync-dryrun.json": "dfb537e2e80e9bd35b9c97522caf72120c6fb4209fa957fbe61a9cd85a78637f",
+    "candidate-sync-dryrun-patch.json": "77c714593dbf1a94929e99c1457525ad537f1783bfb259a902f03d7df5427bfe",
+    "candidate-argo-policy-before.json": "695a1b42a583e9fa195113bdb7ea20b49c3c007671b6a206cd724998f0e368e1",
+    "candidate-capacity-current.json": "e8247dbf9e6b2a1efcd573052610ca5732f909a4b4fa3653f47d9efae217c438",
+    "candidate-capacity-fit.json": "c834bca379fd41b02d502d0bbcf755d874e18d0d40f0938167e00d0b8815fbfa",
+    "candidate-node-allocation-authoritative.json": "0c50fb0a4a4199dc6672546842b3888778df1ba12df8a1ca15251042d09b5b54"
+  }
+}
