@@ -1,0 +1,2091 @@
+{
+  "admission": {
+    "has_new_command_hash": false,
+    "has_old_command_hash": false,
+    "identity": {
+      "name": "agent-fleet-repo-ci-submit",
+      "namespace": null,
+      "resourceVersion": "265293629",
+      "uid": "0d413127-d2b2-4edc-a1f0-058972fe70dd"
+    },
+    "note": "Command hashes are not literal CEL fields; use effective mounted broker policy checks below. Neither hash-string search is an admission verdict.",
+    "spec_sha256": "da565559226b9b1b5d7b726bd6820bd7f25b09aaccd4b6415c9774c145338050"
+  },
+  "artifact_repository": {
+    "annotations": {
+      "agent-fleet.vallery.net/default-repository": "none \u2014 opt-in via artifactRepositoryRef",
+      "agent-fleet.vallery.net/issue": "3061",
+      "argocd.argoproj.io/tracking-id": "agent-fleet-ci-workflows:/ConfigMap:agent-fleet-ci/artifact-repositories"
+    },
+    "identity": {
+      "name": "artifact-repositories",
+      "namespace": "agent-fleet-ci",
+      "resourceVersion": "196344868",
+      "uid": "f2da566b-4940-4d69-95c1-9150801791ad"
+    },
+    "repositories": {
+      "garage-hdd-v1": {
+        "archiveLogs": true,
+        "s3": {
+          "bucket": "agent-fleet-ci-evidence",
+          "endpoint": "garage-s3-hdd-svc.network-infra.svc.cluster.local:3910",
+          "keyFormat": "{{workflow.parameters.repo}}/{{workflow.creationTimestamp.Y}}/{{workflow.creationTimestamp.m}}/{{workflow.creationTimestamp.d}}/{{workflow.name}}/{{workflow.uid}}/{{pod.name}}",
+          "region": "garage"
+        }
+      }
+    }
+  },
+  "boundary": "Read-only native metadata; no Secret GET/data, environment values, tokens, logs, exec, mutation or submission.",
+  "broker_deployment": {
+    "container_images": [
+      {
+        "image": "registry.vallery.net/jvallery/agents-agent-fleet-repo-auth-broker@sha256:e58454df3b408da5f74455021d2e57791e375e5a216572050dcf5a47f91b20aa",
+        "name": "broker"
+      }
+    ],
+    "identity": {
+      "name": "agent-fleet-ci-submission-broker",
+      "namespace": "agent-fleet-repo-auth",
+      "resourceVersion": "261036011",
+      "uid": "1cf19cea-c3b2-4a6a-affc-c7036d0037d0"
+    },
+    "policy_configmap": "agent-fleet-ci-submission-broker-policy-hf4mfd7c42"
+  },
+  "broker_policy": {
+    "identities": {
+      "system:serviceaccount:agent-fleet-runners:repo-verdifyconsultancy-verdify-platform-sa": {
+        "activation": "enabled",
+        "checks": [
+          {
+            "command_sha256": "305825effcaec9b86646027b9c5c4c5ba83089b7e1b9456309b297b80ddf1235",
+            "image": null,
+            "name": "platform-static"
+          },
+          {
+            "command_sha256": "a10378068b662b4fcd98746509e0f87d9c424f858e0e9830413bfe466aa99575",
+            "image": null,
+            "name": "platform-tests"
+          },
+          {
+            "command_sha256": "ff037f796f004d87c68170d20316aaf10ef99704029fdb198e323276e86da6ee",
+            "image": null,
+            "name": "campaign-qualification"
+          },
+          {
+            "command_sha256": "65662a00ebb71838352eeb135de7bb77566c008547a2fabdd8ae018a9df3506e",
+            "image": null,
+            "name": "firmware-logic"
+          },
+          {
+            "command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
+            "image": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+            "name": "firmware-secretless-compile"
+          }
+        ],
+        "namespace": "agent-fleet-runners",
+        "pod_name": "repo-verdifyconsultancy-verdify-platform-0",
+        "registry_generation": "c90f7616e61ae7447cff117619783dc2523dab5ae1b092fcab7b5177b5635d8e",
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "repository_id": "gh-1247193937",
+        "validation_sha256": "76b6b09e96a8f1fcc4c54d06646198669fc1b3e9ec5922ec3ffdfa9a03504561",
+        "workflowTemplateRef": {
+          "name": "repo-validate"
+        }
+      }
+    },
+    "identity": {
+      "name": "agent-fleet-ci-submission-broker-policy-hf4mfd7c42",
+      "namespace": "agent-fleet-repo-auth",
+      "resourceVersion": "261033604",
+      "uid": "093fe2dd-caab-46d1-bec6-154ad0e22163"
+    },
+    "policy_bytes_sha256": "eed2bc10add9674838584d4c68504744757701e643ccc291aa73e1b041d5495c"
+  },
+  "capture_notes": [
+    "One earlier named ConfigMap GET returned NotFound because owner distribution uses a generated hash suffix. This supplemental capture resolves the effective mounted object from the existing broker Deployment; no policy action occurred.",
+    "RBAC enumeration includes RoleBindings in all namespaces plus ClusterRoleBindings, not merely the two caller/runner namespaces."
+  ],
+  "controller_defaults": {
+    "identity": {
+      "name": "argo-workflows-workflow-controller-configmap",
+      "namespace": "agent-fleet-ci",
+      "resourceVersion": "159307828",
+      "uid": "54278b9d-6d7c-47ea-8179-6ba9f9d8843f"
+    },
+    "keys": [
+      "workflowDefaults",
+      "workflowRestrictions",
+      "nodeEvents",
+      "workflowEvents",
+      "failedPodRestart"
+    ],
+    "selected": {
+      "archiveLogs": null,
+      "artifactRepository": null,
+      "artifactRepositoryRef": null,
+      "podGCGracePeriodSeconds": null,
+      "workflowDefaults": {
+        "spec": {
+          "podGC": {
+            "strategy": "OnPodCompletion"
+          },
+          "ttlStrategy": {
+            "secondsAfterCompletion": 86400,
+            "secondsAfterFailure": 172800
+          }
+        }
+      }
+    }
+  },
+  "controllers": [
+    {
+      "configmaps": [
+        {
+          "data_keys": [
+            "config"
+          ],
+          "identity": {
+            "name": "argo-workflows-workflow-controller-configmap",
+            "namespace": "agent-fleet-ci",
+            "resourceVersion": "159307828",
+            "uid": "54278b9d-6d7c-47ea-8179-6ba9f9d8843f"
+          },
+          "selected_nonsecret_config": {}
+        }
+      ],
+      "identity": {
+        "name": "argo-workflows-workflow-controller",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "263745824",
+        "uid": "c5940cbb-4529-4a4b-acc4-4560b43fb7b6"
+      }
+    }
+  ],
+  "eligible_nodes": [
+    {
+      "architecture": "amd64",
+      "identity": {
+        "name": "vm-k3s-node5",
+        "namespace": null,
+        "resourceVersion": "266314168",
+        "uid": "faa0d5b4-1699-4563-823a-f60e6ce9fc6d"
+      },
+      "osImage": "Ubuntu 24.04.4 LTS",
+      "taints": [],
+      "unschedulable": false
+    },
+    {
+      "architecture": "amd64",
+      "identity": {
+        "name": "vm-k3s-node6",
+        "namespace": null,
+        "resourceVersion": "266315552",
+        "uid": "e89285f7-9fd4-473c-91d2-db4b70f1a976"
+      },
+      "osImage": "Ubuntu 24.04.4 LTS",
+      "taints": [],
+      "unschedulable": false
+    },
+    {
+      "architecture": "amd64",
+      "identity": {
+        "name": "vm-k3s-node7",
+        "namespace": null,
+        "resourceVersion": "266313567",
+        "uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d"
+      },
+      "osImage": "Ubuntu 24.04.4 LTS",
+      "taints": [],
+      "unschedulable": false
+    }
+  ],
+  "matching_pods": [
+    {
+      "automountServiceAccountToken": false,
+      "containerStatus": [
+        {
+          "containerID": "containerd://beb7749becc80853976ed53962fdbc576989652102605c46bfa9a3a3bddc8433",
+          "imageID": "gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+          "name": "kaniko-build",
+          "ready": false,
+          "restartCount": 0
+        }
+      ],
+      "containers": [
+        {
+          "env_names": [
+            "REVISION",
+            "GH_TOKEN"
+          ],
+          "image": "curlimages/curl:8.12.1",
+          "name": "fetch-source",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "512Mi"
+            },
+            "requests": {
+              "cpu": "100m",
+              "memory": "128Mi"
+            }
+          },
+          "securityContext": null,
+          "type": "initContainers",
+          "volumeMounts": [
+            {
+              "mountPath": "/workspace",
+              "name": "workspace"
+            }
+          ]
+        },
+        {
+          "env_names": [
+            "REVISION"
+          ],
+          "image": "gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+          "name": "kaniko-build",
+          "resources": {
+            "limits": {
+              "cpu": "2",
+              "ephemeral-storage": "40Gi",
+              "memory": "4Gi"
+            },
+            "requests": {
+              "cpu": "1",
+              "ephemeral-storage": "16Gi",
+              "memory": "2Gi"
+            }
+          },
+          "securityContext": null,
+          "type": "containers",
+          "volumeMounts": [
+            {
+              "mountPath": "/workspace",
+              "name": "workspace"
+            },
+            {
+              "mountPath": "/kaniko/.docker",
+              "name": "zot-auth",
+              "readOnly": true
+            }
+          ]
+        }
+      ],
+      "hostNetwork": false,
+      "identity": {
+        "name": "repo-collateral-smb-build-51c547e-mhppx",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "253931310",
+        "uid": "511102e0-ebce-4b94-826e-ecadecd0acb1"
+      },
+      "labels": {
+        "batch.kubernetes.io/controller-uid": "8c751262-0e4b-40b7-aa8b-1c32738d08f0",
+        "batch.kubernetes.io/job-name": "repo-collateral-smb-build-51c547e",
+        "controller-uid": "8c751262-0e4b-40b7-aa8b-1c32738d08f0",
+        "job-name": "repo-collateral-smb-build-51c547e",
+        "topology.kubernetes.io/zone": "oro"
+      },
+      "nodeName": "vm-k3s-node4",
+      "phase": "Succeeded",
+      "securityContext": {},
+      "serviceAccountName": "argo-ci-workflow",
+      "volumes": [
+        {
+          "emptyDir": {},
+          "name": "workspace"
+        },
+        {
+          "name": "zot-auth",
+          "secret_name": "zot-svc-jvallery-ci-dockerconfig"
+        }
+      ]
+    },
+    {
+      "automountServiceAccountToken": true,
+      "containerStatus": [
+        {
+          "containerID": "containerd://67e84e2fab2e2c472cd30fcf6241ee0e99016336f8ab98f94017ffd40a354255",
+          "imageID": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:4bf022d0760e160b122dc47964d5883d1ecaaaf597ed26a6a706cde448b038d5",
+          "name": "inference-client",
+          "ready": true,
+          "restartCount": 0
+        },
+        {
+          "containerID": "containerd://5aa91b43791db8a04f04a0ff4d836edbdb6b9e9d77fb3b8fe3aaf292a2ecf25e",
+          "imageID": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:6ddeb3672758f231318aa12bb67302a09ac8a53dddb32f1891003d630cebbfba",
+          "name": "repo-pod",
+          "ready": true,
+          "restartCount": 0
+        }
+      ],
+      "containers": [
+        {
+          "env_names": [],
+          "image": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:4bf022d0760e160b122dc47964d5883d1ecaaaf597ed26a6a706cde448b038d5",
+          "name": "bootstrap-repo-storage",
+          "resources": {
+            "limits": {
+              "ephemeral-storage": "64Mi",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "ephemeral-storage": "16Mi",
+              "memory": "16Mi"
+            }
+          },
+          "securityContext": null,
+          "type": "initContainers",
+          "volumeMounts": [
+            {
+              "mountPath": "/mnt/repo-data",
+              "name": "data"
+            },
+            {
+              "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+              "name": "kube-api-access-mllkf",
+              "readOnly": true
+            }
+          ]
+        },
+        {
+          "env_names": [
+            "REPO_FULL_NAME",
+            "AGENT_USERS",
+            "SCRATCH",
+            "TMPDIR",
+            "TMP",
+            "TEMP",
+            "AGENT_FLEET_TELEMETRY_ENDPOINT",
+            "AGENT_FLEET_TELEMETRY_INGEST_KEY",
+            "AGENT_FLEET_MCP_CALLBACK_TOKEN_FILE",
+            "AGENT_FLEET_CONTAINER_DIGEST",
+            "REPO_COLLATERAL_ROOT",
+            "REPO_INBOX",
+            "REPO_OUTBOX",
+            "REPO_COLLATERAL_GID",
+            "REPO_COLLATERAL_ENVIRONMENT",
+            "REPO_COLLATERAL_NFS_SERVER",
+            "REPO_COLLATERAL_NFS_EXPORT",
+            "AGENT_FLEET_INFERENCE_PROXY_URL",
+            "KUBECONFIG",
+            "AGENT_KUBECONFIG_PATH",
+            "AGENT_KUBECONFIG_MODE",
+            "AGENT_KUBE_NAMESPACE",
+            "AGENT_KUBE_DEFAULT_NAMESPACE",
+            "AGENT_KUBE_NAMESPACES"
+          ],
+          "image": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:6ddeb3672758f231318aa12bb67302a09ac8a53dddb32f1891003d630cebbfba",
+          "name": "repo-pod",
+          "resources": {
+            "limits": {
+              "cpu": "4",
+              "ephemeral-storage": "20Gi",
+              "memory": "8Gi"
+            },
+            "requests": {
+              "cpu": "100m",
+              "ephemeral-storage": "2Gi",
+              "memory": "256Mi"
+            }
+          },
+          "securityContext": {
+            "capabilities": {
+              "add": [
+                "NET_BIND_SERVICE",
+                "SETUID",
+                "SETGID",
+                "CHOWN",
+                "DAC_OVERRIDE",
+                "FOWNER",
+                "KILL",
+                "SYS_CHROOT",
+                "AUDIT_WRITE"
+              ],
+              "drop": [
+                "ALL"
+              ]
+            }
+          },
+          "type": "containers",
+          "volumeMounts": [
+            {
+              "mountPath": "/workspace/verdify-platform",
+              "name": "data",
+              "subPath": "worktree"
+            },
+            {
+              "mountPath": "/var/lib/agent-state",
+              "name": "data",
+              "subPath": "config"
+            },
+            {
+              "mountPath": "/home/agent",
+              "name": "data",
+              "subPath": "home"
+            },
+            {
+              "mountPath": "/tmp",
+              "name": "agent-tmp"
+            },
+            {
+              "mountPath": "/workspace/verdify-platform/scratch/tmp",
+              "name": "agent-tmp"
+            },
+            {
+              "mountPath": "/etc/agent-fleet",
+              "name": "repo-verdifyconsultancy-verdify-platform-layout",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/bootstrap/ssh",
+              "name": "ssh-authorized-keys",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/var/run/agent-fleet-bootstrap/ssh",
+              "name": "bootstrap-ssh-credential",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/run/agent",
+              "name": "agent-run"
+            },
+            {
+              "mountPath": "/var/run/agent-fleet-repo-auth",
+              "name": "repo-auth",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/run/agent-github-auth",
+              "name": "agent-github-auth-lock"
+            },
+            {
+              "mountPath": "/run/agent-fleet-controller",
+              "name": "controller-callback"
+            },
+            {
+              "mountPath": "/var/run/agent-fleet-controller-auth",
+              "name": "controller-callback-auth",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/home/agent/.ssh",
+              "name": "agent-ssh"
+            },
+            {
+              "mountPath": "/collateral",
+              "name": "collateral"
+            },
+            {
+              "mountPath": "/opt/research-vault",
+              "name": "research-vault-client",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/var/run/secrets/research-vault/client",
+              "name": "research-vault-identity",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+              "name": "kube-api-access-mllkf",
+              "readOnly": true
+            }
+          ]
+        },
+        {
+          "env_names": [],
+          "image": "registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:4bf022d0760e160b122dc47964d5883d1ecaaaf597ed26a6a706cde448b038d5",
+          "name": "inference-client",
+          "resources": {
+            "limits": {
+              "ephemeral-storage": "64Mi",
+              "memory": "192Mi"
+            },
+            "requests": {
+              "cpu": "5m",
+              "ephemeral-storage": "16Mi",
+              "memory": "32Mi"
+            }
+          },
+          "securityContext": {
+            "allowPrivilegeEscalation": false,
+            "capabilities": {
+              "drop": [
+                "ALL"
+              ]
+            },
+            "readOnlyRootFilesystem": true,
+            "runAsGroup": 65532,
+            "runAsNonRoot": true,
+            "runAsUser": 65532
+          },
+          "type": "containers",
+          "volumeMounts": [
+            {
+              "mountPath": "/var/run/agent-fleet-inference/tls",
+              "name": "inference-client-tls",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+              "name": "kube-api-access-mllkf",
+              "readOnly": true
+            }
+          ]
+        }
+      ],
+      "hostNetwork": false,
+      "identity": {
+        "name": "repo-verdifyconsultancy-verdify-platform-0",
+        "namespace": "agent-fleet-runners",
+        "resourceVersion": "263474585",
+        "uid": "30ccac0c-b5d1-4674-b07f-37f0baad56f0"
+      },
+      "labels": {
+        "agent-fleet.vallery.net/repo": "verdifyconsultancy-verdify-platform",
+        "agent-fleet.vallery.net/topology": "pod-per-repo",
+        "app.kubernetes.io/name": "repo-verdifyconsultancy-verdify-platform",
+        "app.kubernetes.io/part-of": "agent-fleet",
+        "apps.kubernetes.io/pod-index": "0",
+        "controller-revision-hash": "repo-verdifyconsultancy-verdify-platform-79bdcfb7b6",
+        "statefulset.kubernetes.io/pod-name": "repo-verdifyconsultancy-verdify-platform-0",
+        "topology.kubernetes.io/zone": "opal"
+      },
+      "nodeName": "vm-k3s-node5",
+      "phase": "Running",
+      "securityContext": {
+        "seccompProfile": {
+          "type": "RuntimeDefault"
+        },
+        "supplementalGroups": [
+          2000017
+        ]
+      },
+      "serviceAccountName": "repo-verdifyconsultancy-verdify-platform-sa",
+      "volumes": [
+        {
+          "name": "data",
+          "persistentVolumeClaim": {
+            "claimName": "data-repo-verdifyconsultancy-verdify-platform-0"
+          }
+        },
+        {
+          "configMap": {
+            "defaultMode": 420,
+            "name": "repo-verdifyconsultancy-verdify-platform-layout"
+          },
+          "name": "repo-verdifyconsultancy-verdify-platform-layout"
+        },
+        {
+          "configMap": {
+            "defaultMode": 292,
+            "name": "repo-verdifyconsultancy-verdify-platform-ssh-authorized-keys-pub",
+            "optional": true
+          },
+          "name": "ssh-authorized-keys"
+        },
+        {
+          "name": "bootstrap-ssh-credential",
+          "secret_name": "agent-ssh"
+        },
+        {
+          "name": "collateral",
+          "persistentVolumeClaim": {
+            "claimName": "collateral-1247193937-a999f61da355"
+          }
+        },
+        {
+          "emptyDir": {
+            "medium": "Memory"
+          },
+          "name": "agent-run"
+        },
+        {
+          "name": "repo-auth",
+          "projected": {
+            "defaultMode": 420,
+            "sources": [
+              {
+                "serviceAccountToken": {
+                  "audience": "agent-fleet-repo-github-auth",
+                  "expirationSeconds": 600,
+                  "path": "token"
+                }
+              },
+              {
+                "serviceAccountToken": {
+                  "audience": "agent-fleet-ci-submit",
+                  "expirationSeconds": 600,
+                  "path": "ci-token"
+                }
+              },
+              {
+                "configMap": {
+                  "items": [
+                    {
+                      "key": "ca.crt",
+                      "path": "ca.crt"
+                    }
+                  ],
+                  "name": "agent-fleet-repo-auth-ca"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "emptyDir": {
+            "medium": "Memory",
+            "sizeLimit": "1Mi"
+          },
+          "name": "agent-github-auth-lock"
+        },
+        {
+          "emptyDir": {
+            "medium": "Memory",
+            "sizeLimit": "64Ki"
+          },
+          "name": "controller-callback"
+        },
+        {
+          "name": "controller-callback-auth",
+          "projected": {
+            "defaultMode": 420,
+            "sources": [
+              {
+                "serviceAccountToken": {
+                  "audience": "agent-fleet-controller-callback",
+                  "expirationSeconds": 600,
+                  "path": "token"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "emptyDir": {
+            "medium": "Memory"
+          },
+          "name": "agent-ssh"
+        },
+        {
+          "emptyDir": {
+            "sizeLimit": "16Gi"
+          },
+          "name": "agent-tmp"
+        },
+        {
+          "configMap": {
+            "defaultMode": 365,
+            "items": [
+              {
+                "key": "capture-authority.json",
+                "path": "capture-authority.json"
+              },
+              {
+                "key": "client.json",
+                "path": "client.json"
+              },
+              {
+                "key": "collateral.json",
+                "path": "collateral.json"
+              }
+            ],
+            "name": "research-vault-client-685964cfafd228fa1dea46ac"
+          },
+          "name": "research-vault-client"
+        },
+        {
+          "name": "research-vault-identity",
+          "projected": {
+            "defaultMode": 292,
+            "sources": [
+              {
+                "serviceAccountToken": {
+                  "audience": "research-vault",
+                  "expirationSeconds": 600,
+                  "path": "token"
+                }
+              },
+              {
+                "configMap": {
+                  "items": [
+                    {
+                      "key": "ca.crt",
+                      "path": "ca.crt"
+                    }
+                  ],
+                  "name": "research-vault-internal-ca-public"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "inference-client-tls",
+          "secret_name": "inference-client-gh-1247193937-v1"
+        },
+        {
+          "name": "kube-api-access-mllkf",
+          "projected": {
+            "defaultMode": 420,
+            "sources": [
+              {
+                "serviceAccountToken": {
+                  "expirationSeconds": 3607,
+                  "path": "token"
+                }
+              },
+              {
+                "configMap": {
+                  "items": [
+                    {
+                      "key": "ca.crt",
+                      "path": "ca.crt"
+                    }
+                  ],
+                  "name": "kube-root-ca.crt"
+                }
+              },
+              {
+                "downwardAPI": {
+                  "items": [
+                    {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      },
+                      "path": "namespace"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "network_policies": {
+    "agent-fleet-ci": [
+      {
+        "identity": {
+          "name": "fleet-pg-parent-1f65e6b-root",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "179663996",
+          "uid": "6b14be74-06b3-4977-8518-53e575f10ebf"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "fleet-pg-test": "fleet-pg-parent-1f65e6b-root"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "fleet-pg-regression-root-20260916",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "179182436",
+          "uid": "3e8c6a4f-3ba4-4612-aedb-e2d2c2b98010"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "fleet-pg-test": "fleet-pg-regression-root-20260916"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "native-ci-controller",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "230876184",
+          "uid": "e9ddd54b-5ca2-4553-af07-1b70c14688f0"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "native-ci.vallery.net/network": "controller"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "native-ci-image-coordinator-egress",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "175501505",
+          "uid": "9acf0a0b-c73f-4f0b-8fcc-74d23423a0e2"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "native-ci.vallery.net/network": "image-coordinator"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "native-ci-source-egress",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "230876261",
+          "uid": "5d002608-2ef5-4def-8c17-d7bc2f13d367"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "native-ci.vallery.net/network": "source"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "registry-capacity-exact-egress",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "196344703",
+          "uid": "92cc6213-1765-43f3-9207-3b4be59bd9d2"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "agent-fleet.vallery.net/network-profile": "registry-capacity"
+            }
+          },
+          "policyTypes": [
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-rag-pg-custody-backup-20260906",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "160227111",
+          "uid": "84ba445f-054c-4106-a396-fbc0197f35a0"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "custody-backup-fixture": "repo-rag-pg-custody-backup-20260906"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-rag-pg-frozen-ocr-policy-20260913",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "173597075",
+          "uid": "fc1974e7-5ad1-4123-894a-fb534eac4a45"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "app.kubernetes.io/name": "repo-rag-pg-frozen-ocr-policy-20260913",
+              "research-vault.vallery.net/qualification": "search-corpus"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-rag-pg-release-fixtures-20260914",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "174511014",
+          "uid": "6adb8677-31b9-4a93-886d-5afc7bcd4005"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "app.kubernetes.io/name": "repo-rag-pg-release-fixtures-20260914",
+              "research-vault.vallery.net/qualification": "search-corpus"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-rag-pg-release-scram-v5-20260914",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "175093524",
+          "uid": "98b07e42-e011-4cb8-959b-9060955d0763"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "app.kubernetes.io/name": "repo-rag-pg-release-scram-v5-20260914",
+              "research-vault.vallery.net/qualification": "search-corpus"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-rag-pg-template-runtime-20260906",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "160174328",
+          "uid": "683364f5-6498-4a5f-892e-23b966776eab"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "root-template-fixture": "repo-rag-pg-template-runtime-20260906"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "verdify-validation-egress",
+          "namespace": "agent-fleet-ci",
+          "resourceVersion": "246474438",
+          "uid": "5c3a2b31-bb91-4bc7-849a-165f733bb518"
+        },
+        "spec": {
+          "podSelector": {
+            "matchLabels": {
+              "verdify-ci.vallery.net/validation": "true"
+            }
+          },
+          "policyTypes": [
+            "Ingress",
+            "Egress"
+          ]
+        }
+      }
+    ],
+    "agent-fleet-runners": [
+      {
+        "identity": {
+          "name": "repo-verdifyconsultancy-verdify-platform-collateral-egress",
+          "namespace": "agent-fleet-runners",
+          "resourceVersion": "183839753",
+          "uid": "1cb2523f-6541-4df5-a882-18db0f70e13b"
+        },
+        "spec": {
+          "egress": [
+            {
+              "ports": [
+                {
+                  "endPort": 110,
+                  "port": 1,
+                  "protocol": "TCP"
+                },
+                {
+                  "endPort": 2048,
+                  "port": 112,
+                  "protocol": "TCP"
+                },
+                {
+                  "endPort": 65535,
+                  "port": 2050,
+                  "protocol": "TCP"
+                },
+                {
+                  "endPort": 110,
+                  "port": 1,
+                  "protocol": "UDP"
+                },
+                {
+                  "endPort": 2048,
+                  "port": 112,
+                  "protocol": "UDP"
+                },
+                {
+                  "endPort": 65535,
+                  "port": 2050,
+                  "protocol": "UDP"
+                },
+                {
+                  "endPort": 110,
+                  "port": 1,
+                  "protocol": "SCTP"
+                },
+                {
+                  "endPort": 2048,
+                  "port": 112,
+                  "protocol": "SCTP"
+                },
+                {
+                  "endPort": 65535,
+                  "port": 2050,
+                  "protocol": "SCTP"
+                }
+              ]
+            }
+          ],
+          "podSelector": {
+            "matchLabels": {
+              "app.kubernetes.io/name": "repo-verdifyconsultancy-verdify-platform"
+            }
+          },
+          "policyTypes": [
+            "Egress"
+          ]
+        }
+      },
+      {
+        "identity": {
+          "name": "repo-verdifyconsultancy-verdify-platform-ingress",
+          "namespace": "agent-fleet-runners",
+          "resourceVersion": "47194967",
+          "uid": "375689fd-6acf-4177-b831-f671990c341e"
+        },
+        "spec": {
+          "ingress": [
+            {
+              "ports": [
+                {
+                  "port": 22,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2201,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2202,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2203,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2204,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2205,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2206,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2207,
+                  "protocol": "TCP"
+                },
+                {
+                  "port": 2208,
+                  "protocol": "TCP"
+                }
+              ]
+            },
+            {
+              "from": [
+                {
+                  "namespaceSelector": {
+                    "matchLabels": {
+                      "kubernetes.io/metadata.name": "agent-fleet-dashboard"
+                    }
+                  }
+                }
+              ],
+              "ports": [
+                {
+                  "port": 18789,
+                  "protocol": "TCP"
+                }
+              ]
+            }
+          ],
+          "podSelector": {
+            "matchLabels": {
+              "app.kubernetes.io/name": "repo-verdifyconsultancy-verdify-platform"
+            }
+          },
+          "policyTypes": [
+            "Ingress"
+          ]
+        }
+      }
+    ]
+  },
+  "network_policy_counts_observed": {
+    "agent-fleet-ci": 12,
+    "agent-fleet-runners": 67
+  },
+  "network_policy_scope_note": "Curated matching actual caller policies plus all12 generic-namespace selectors; no NetworkPolicy with an empty selector was present. Generic future Pod must be checked for admission-injected labels before claiming effective isolation.",
+  "observed_at": "2026-10-12T23:12:28.191595+00:00",
+  "role_bindings": [
+    {
+      "identity": {
+        "name": "agent-fleet-registry-capacity-signal-readers",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "223242826",
+        "uid": "0f8dfaa8-4791-45bd-b4ba-aa8108cb9ad3"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "agent-fleet-registry-capacity-signal-reader"
+      },
+      "role_identity": {
+        "name": "agent-fleet-registry-capacity-signal-reader",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "196344936",
+        "uid": "a414ffce-ca62-46c7-8a8a-0a1d9bbf7e96"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resourceNames": [
+            "agent-fleet-registry-capacity-signal",
+            "agent-fleet-registry-integrity-signal"
+          ],
+          "resources": [
+            "configmaps"
+          ],
+          "verbs": [
+            "get"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "argo-ci-workflow",
+          "namespace": "agent-fleet-ci"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "name": "argo-workflows-workflow",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "11405245",
+        "uid": "bc169aa5-fe19-4095-9e1c-4e7e7c15a4ee"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "argo-workflows-workflow"
+      },
+      "role_identity": {
+        "name": "argo-workflows-workflow",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "11405219",
+        "uid": "49532d4a-3ec7-4571-a481-66bb8378bbc7"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            "argoproj.io"
+          ],
+          "resources": [
+            "workflowtaskresults"
+          ],
+          "verbs": [
+            "create",
+            "patch"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "argo-ci-workflow"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-descheduler-native-authority-v2",
+        "namespace": "verdify-descheduler",
+        "resourceVersion": "143657269",
+        "uid": "a96c9893-1a9b-4ea5-b698-38a75fb0650d"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-descheduler-native-authority-v2"
+      },
+      "role_identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-descheduler-native-authority-v2",
+        "namespace": "verdify-descheduler",
+        "resourceVersion": "143656954",
+        "uid": "cd4f4fd8-ef2f-4a5b-8c0f-109a686f2f19"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "configmaps",
+            "pods",
+            "services"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/log",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "daemonsets",
+            "deployments",
+            "replicasets",
+            "statefulsets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale",
+            "replicasets/scale",
+            "statefulsets/scale"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "cronjobs",
+            "jobs"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resources": [
+            "ingresses",
+            "networkpolicies"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "repo-verdifyconsultancy-verdify-platform-sa",
+          "namespace": "agent-fleet-runners"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-edge-native-authority-v2",
+        "namespace": "verdify-edge",
+        "resourceVersion": "143657200",
+        "uid": "514ec912-d959-4051-a442-dd293f94e69b"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-edge-native-authority-v2"
+      },
+      "role_identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-edge-native-authority-v2",
+        "namespace": "verdify-edge",
+        "resourceVersion": "143656979",
+        "uid": "208e3dfa-6f03-4d8c-8ca7-2af20dcf56db"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "configmaps",
+            "pods",
+            "services"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/log",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "daemonsets",
+            "deployments",
+            "replicasets",
+            "statefulsets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale",
+            "replicasets/scale",
+            "statefulsets/scale"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "cronjobs",
+            "jobs"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resources": [
+            "ingresses",
+            "networkpolicies"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "repo-verdifyconsultancy-verdify-platform-sa",
+          "namespace": "agent-fleet-runners"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-platform-native-authority-v2",
+        "namespace": "verdify-platform",
+        "resourceVersion": "143657300",
+        "uid": "05feafd0-bdf0-4ad1-8d4c-e968bf3f6ebc"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-platform-native-authority-v2"
+      },
+      "role_identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-platform-native-authority-v2",
+        "namespace": "verdify-platform",
+        "resourceVersion": "143656920",
+        "uid": "8e93a821-6fe4-4089-9824-a4fc8f51b033"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "configmaps",
+            "pods",
+            "services"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/log",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "daemonsets",
+            "deployments",
+            "replicasets",
+            "statefulsets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale",
+            "replicasets/scale",
+            "statefulsets/scale"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "cronjobs",
+            "jobs"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resources": [
+            "ingresses",
+            "networkpolicies"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "repo-verdifyconsultancy-verdify-platform-sa",
+          "namespace": "agent-fleet-runners"
+        }
+      ]
+    },
+    {
+      "identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-prod-native-authority-v2",
+        "namespace": "verdify-prod",
+        "resourceVersion": "143657292",
+        "uid": "8e1bac14-300c-47d4-b73d-5d4d532355fe"
+      },
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-prod-native-authority-v2"
+      },
+      "role_identity": {
+        "name": "VerdifyConsultancy-verdify-platform-claude-verdify-prod-native-authority-v2",
+        "namespace": "verdify-prod",
+        "resourceVersion": "143656929",
+        "uid": "304f985b-0f0e-4fae-be0c-cd37157ced78"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "configmaps",
+            "pods",
+            "services"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods/log",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "daemonsets",
+            "deployments",
+            "replicasets",
+            "statefulsets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments/scale",
+            "replicasets/scale",
+            "statefulsets/scale"
+          ],
+          "verbs": [
+            "get",
+            "patch",
+            "update"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "cronjobs",
+            "jobs"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "autoscaling"
+          ],
+          "resources": [
+            "horizontalpodautoscalers"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "networking.k8s.io"
+          ],
+          "resources": [
+            "ingresses",
+            "networkpolicies"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "policy"
+          ],
+          "resources": [
+            "poddisruptionbudgets"
+          ],
+          "verbs": [
+            "create",
+            "delete",
+            "get",
+            "list",
+            "patch",
+            "update",
+            "watch"
+          ]
+        }
+      ],
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "repo-verdifyconsultancy-verdify-platform-sa",
+          "namespace": "agent-fleet-runners"
+        }
+      ]
+    }
+  ],
+  "schema": "verdify-declared-compile-metadata/v1",
+  "service_accounts": [
+    {
+      "automountServiceAccountToken": null,
+      "identity": {
+        "name": "argo-ci-workflow",
+        "namespace": "agent-fleet-ci",
+        "resourceVersion": "94352590",
+        "uid": "dbc671a7-ff56-4e3e-994e-77aa859da05a"
+      },
+      "imagePullSecret_names": [
+        "zot-origin-cluster-pull"
+      ]
+    },
+    {
+      "automountServiceAccountToken": null,
+      "identity": {
+        "name": "repo-verdifyconsultancy-verdify-platform-sa",
+        "namespace": "agent-fleet-runners",
+        "resourceVersion": "39867885",
+        "uid": "58890bc9-08ef-47cd-aa01-a1af2bba5487"
+      },
+      "imagePullSecret_names": []
+    }
+  ],
+  "supplement_observed_at": "2026-10-12T23:16:25.334600+00:00",
+  "workflowtemplate": {
+    "activeDeadlineSeconds": 14400,
+    "archiveLogs": null,
+    "artifactRepositoryRef": null,
+    "automountServiceAccountToken": null,
+    "identity": {
+      "name": "repo-validate",
+      "namespace": "agent-fleet-ci",
+      "resourceVersion": "245870896",
+      "uid": "bd537c3d-28ef-4b40-924c-cfa08696f6c4"
+    },
+    "podGC": {
+      "deleteDelayDuration": "60s",
+      "strategy": "OnPodCompletion"
+    },
+    "run_check": {
+      "activeDeadlineSeconds": 6000,
+      "container": {
+        "environment_names": [
+          "HOME",
+          "FLEET_CI_BASE_REVISION",
+          "FLEET_CI_HEAD_REVISION",
+          "CHECK_NAME",
+          "CHECK_CMD_B64"
+        ],
+        "image": "{{inputs.parameters.image}}",
+        "resources": {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "12Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "ephemeral-storage": "4Gi",
+            "memory": "1Gi"
+          }
+        },
+        "securityContext": {
+          "allowPrivilegeEscalation": false,
+          "capabilities": {
+            "drop": [
+              "ALL"
+            ]
+          },
+          "runAsGroup": 1001,
+          "runAsNonRoot": true,
+          "runAsUser": 1001
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/workspace",
+            "name": "workspace"
+          }
+        ]
+      },
+      "initContainers": [
+        {
+          "environment_names": [
+            "REPO_URL",
+            "REVISION",
+            "BASE_REVISION"
+          ],
+          "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "mirrorVolumeMounts": true,
+          "name": "fetch-context",
+          "volumeMounts": [
+            {
+              "mountPath": "/var/run/secrets/github-app",
+              "name": "github-app",
+              "readOnly": true
+            }
+          ]
+        }
+      ],
+      "inputs": {
+        "parameters": [
+          {
+            "name": "repo"
+          },
+          {
+            "name": "revision"
+          },
+          {
+            "default": "",
+            "name": "base_revision"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "command_b64"
+          },
+          {
+            "name": "image"
+          }
+        ]
+      },
+      "name": "run-check",
+      "nodeSelector": {
+        "agentfleet.vallery.net/runner-eligible": "true"
+      },
+      "outputs": {
+        "parameters": [
+          {
+            "name": "result",
+            "valueFrom": {
+              "path": "/workspace/result.json"
+            }
+          },
+          {
+            "name": "test-report",
+            "valueFrom": {
+              "default": "",
+              "path": "/workspace/ci-test-report.json"
+            }
+          }
+        ]
+      },
+      "retryStrategy": {
+        "expression": "asInt(lastRetry.duration) < 600",
+        "limit": "1",
+        "retryPolicy": "Always"
+      },
+      "synchronization": {
+        "semaphores": [
+          {
+            "configMapKeyRef": {
+              "key": "repo-validate",
+              "name": "agent-fleet-ci-concurrency"
+            }
+          }
+        ]
+      },
+      "timeout": "12000s",
+      "volumes": [
+        {
+          "emptyDir": {
+            "sizeLimit": "12Gi"
+          },
+          "name": "workspace"
+        },
+        {
+          "name": "github-app",
+          "secret": {
+            "defaultMode": 256,
+            "secretName": "agent-fleet-ci-github-app"
+          }
+        }
+      ]
+    },
+    "serviceAccountName": "argo-ci-workflow",
+    "spec_sha256": "5a56d220273480c41a92cef7b262cd8db1a8eb24783fe7f7e0a741c9508011f3",
+    "ttlStrategy": {
+      "secondsAfterCompletion": 86400,
+      "secondsAfterFailure": 172800
+    }
+  }
+}

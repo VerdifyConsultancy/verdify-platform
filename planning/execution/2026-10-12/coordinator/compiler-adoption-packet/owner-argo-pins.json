@@ -1,0 +1,184 @@
+{
+  "applications": [
+    {
+      "health": {
+        "lastTransitionTime": "2026-08-11T17:24:50Z",
+        "status": "Healthy"
+      },
+      "identity": {
+        "name": "agent-fleet-ci-admission",
+        "namespace": "argocd",
+        "resourceVersion": "266331263",
+        "uid": "1b353430-9a42-48ac-8e44-a9d18a9ad3a8"
+      },
+      "source": {
+        "path": "platform/kubernetes/ci/agent-fleet-ci/admission",
+        "repoURL": "https://github.com/jvallery/agents.git",
+        "targetRevision": "e13f79ee1e76889cdab575370347991d11892c9a"
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "agent-fleet-ci",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "path": "platform/kubernetes/ci/agent-fleet-ci/admission",
+            "repoURL": "https://github.com/jvallery/agents.git",
+            "targetRevision": "e13f79ee1e76889cdab575370347991d11892c9a"
+          }
+        },
+        "revision": "e13f79ee1e76889cdab575370347991d11892c9a",
+        "status": "OutOfSync"
+      },
+      "syncPolicy": {
+        "automated": {
+          "enabled": false,
+          "prune": false,
+          "selfHeal": false
+        },
+        "syncOptions": [
+          "CreateNamespace=false",
+          "ServerSideApply=true"
+        ]
+      }
+    },
+    {
+      "health": {
+        "lastTransitionTime": "2026-10-12T06:33:00Z",
+        "status": "Healthy"
+      },
+      "identity": {
+        "name": "agent-fleet-ci-workflows",
+        "namespace": "argocd",
+        "resourceVersion": "266331810",
+        "uid": "a4695af0-fcff-4c97-a53b-ef5f6c6e1643"
+      },
+      "source": {
+        "kustomize": {
+          "patches": [
+            {
+              "patch": "$patch: delete\napiVersion: argoproj.io/v1alpha1\nkind: Sensor\nmetadata:\n  name: agent-fleet-event-ci",
+              "target": {
+                "group": "argoproj.io",
+                "kind": "Sensor",
+                "name": "agent-fleet-event-ci",
+                "version": "v1alpha1"
+              }
+            },
+            {
+              "patch": "$patch: delete\napiVersion: argoproj.io/v1alpha1\nkind: EventSource\nmetadata:\n  name: github-app",
+              "target": {
+                "group": "argoproj.io",
+                "kind": "EventSource",
+                "name": "github-app",
+                "version": "v1alpha1"
+              }
+            }
+          ]
+        },
+        "path": "platform/kubernetes/ci/agent-fleet-ci/workflows",
+        "repoURL": "https://github.com/jvallery/agents.git",
+        "targetRevision": "5dc375bd7c8bcd8eb16413cdc722c4ef05a1d003"
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "agent-fleet-ci",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "kustomize": {
+              "patches": [
+                {
+                  "patch": "$patch: delete\napiVersion: argoproj.io/v1alpha1\nkind: Sensor\nmetadata:\n  name: agent-fleet-event-ci",
+                  "target": {
+                    "group": "argoproj.io",
+                    "kind": "Sensor",
+                    "name": "agent-fleet-event-ci",
+                    "version": "v1alpha1"
+                  }
+                },
+                {
+                  "patch": "$patch: delete\napiVersion: argoproj.io/v1alpha1\nkind: EventSource\nmetadata:\n  name: github-app",
+                  "target": {
+                    "group": "argoproj.io",
+                    "kind": "EventSource",
+                    "name": "github-app",
+                    "version": "v1alpha1"
+                  }
+                }
+              ]
+            },
+            "path": "platform/kubernetes/ci/agent-fleet-ci/workflows",
+            "repoURL": "https://github.com/jvallery/agents.git",
+            "targetRevision": "5dc375bd7c8bcd8eb16413cdc722c4ef05a1d003"
+          }
+        },
+        "revision": "5dc375bd7c8bcd8eb16413cdc722c4ef05a1d003",
+        "status": "OutOfSync"
+      },
+      "syncPolicy": {
+        "automated": {
+          "enabled": false,
+          "prune": false,
+          "selfHeal": false
+        },
+        "syncOptions": [
+          "CreateNamespace=true",
+          "ServerSideApply=true",
+          "SkipDryRunOnMissingResource=true"
+        ]
+      }
+    },
+    {
+      "health": {
+        "lastTransitionTime": "2026-10-11T04:40:41Z",
+        "status": "Healthy"
+      },
+      "identity": {
+        "name": "agent-fleet-repo-auth-local-staging",
+        "namespace": "argocd",
+        "resourceVersion": "266333650",
+        "uid": "41404eae-2dc1-440c-a851-0fd5017e971f"
+      },
+      "source": {
+        "kustomize": {
+          "images": [
+            "registry.vallery.net/jvallery/agents-agent-fleet-repo-auth-broker@sha256:e58454df3b408da5f74455021d2e57791e375e5a216572050dcf5a47f91b20aa"
+          ]
+        },
+        "path": "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker",
+        "repoURL": "https://github.com/jvallery/agents.git",
+        "targetRevision": "445baa4bf42cae97aeff840d168f88a0d6baa10c"
+      },
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "agent-fleet-repo-auth",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "kustomize": {
+              "images": [
+                "registry.vallery.net/jvallery/agents-agent-fleet-repo-auth-broker@sha256:e58454df3b408da5f74455021d2e57791e375e5a216572050dcf5a47f91b20aa"
+              ]
+            },
+            "path": "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker",
+            "repoURL": "https://github.com/jvallery/agents.git",
+            "targetRevision": "445baa4bf42cae97aeff840d168f88a0d6baa10c"
+          }
+        },
+        "revision": "445baa4bf42cae97aeff840d168f88a0d6baa10c",
+        "status": "OutOfSync"
+      },
+      "syncPolicy": {
+        "syncOptions": [
+          "CreateNamespace=false"
+        ]
+      }
+    }
+  ],
+  "boundary": "Read-only Application native metadata; no refresh/sync/apply.",
+  "observed_at": "2026-10-12T23:21:18.954917+00:00"
+}

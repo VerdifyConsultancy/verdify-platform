@@ -1,0 +1,206 @@
+{
+  "base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "boundary": "Immutable source inventory only; no landing tree or native plan mutation, controller action, test or CI run.",
+  "generated_drift_4807_first": [],
+  "generated_drift_4808_first": [
+    "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/ci-submission-policy/policy.json",
+    "control-plane/agent-fleet-control/manifests/repo-ci-specs/generated/gh-1247193937.yaml",
+    "control-plane/agent-fleet-control/manifests/repo-identity-policy/generated.json",
+    "platform/kubernetes/ci/agent-fleet-ci/admission/ci-submission-admission.generated.yaml"
+  ],
+  "inventory_scope_note": "Local source path-filter calculation is not the complete published native plan. The actual owner receipt binds43 source execution Workflows; local count must not replace actual plan/receipt.",
+  "path_overlap": [],
+  "pr4807": {
+    "head": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+    "paths": [
+      "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/delivery_stage_runner.py",
+      "control-plane/agent-fleet-control/scripts/executable_image_delivery.py",
+      "control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py"
+    ],
+    "required_checks": {
+      "agent-fleet-dashboard.yml": [
+        "dashboard unit tests (parallel) (0)",
+        "dashboard unit tests (parallel) (1)",
+        "dashboard unit tests (parallel) (2)",
+        "dashboard unit tests (parallel) (3)",
+        "dashboard-ci-summary",
+        "detect relevant paths",
+        "is every unit test wired into CI?",
+        "regen scripts run under the runtime's Python (3.11)",
+        "validate dashboard app and manifests"
+      ],
+      "agent-sessions.yml": [
+        "validate and render agent sessions"
+      ],
+      "cnpg-backup-policy.yml": [
+        "cnpg-backup-policy"
+      ],
+      "secret-scan.yml": [
+        "gitleaks"
+      ]
+    }
+  },
+  "pr4808": {
+    "head": "4da25e696a993407ad81350b97e5ae961ee4d266",
+    "paths": [
+      "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/ci-submission-policy/policy.json",
+      "control-plane/agent-fleet-control/manifests/repo-ci-specs/generated/gh-1247193937.yaml",
+      "control-plane/agent-fleet-control/manifests/repo-identity-policy/generated.json",
+      "control-plane/agent-fleet-control/registry/repos/gh-1247193937.yaml",
+      "control-plane/agent-fleet-control/scripts/test_render_ci_submission_admission.py",
+      "docs/ci/verdify-secretless-firmware.md",
+      "docs/receipts/verdify-compiler-provenance-20261012/README.md",
+      "docs/receipts/verdify-compiler-provenance-20261012/SHA256SUMS",
+      "docs/receipts/verdify-compiler-provenance-20261012/source-qualification.json",
+      "platform/kubernetes/ci/agent-fleet-ci/admission/ci-submission-admission.generated.yaml"
+    ],
+    "required_checks": {
+      "agent-fleet-dashboard.yml": [
+        "dashboard unit tests (parallel) (0)",
+        "dashboard unit tests (parallel) (1)",
+        "dashboard unit tests (parallel) (2)",
+        "dashboard unit tests (parallel) (3)",
+        "dashboard-ci-summary",
+        "detect relevant paths",
+        "is every unit test wired into CI?",
+        "regen scripts run under the runtime's Python (3.11)",
+        "validate dashboard app and manifests"
+      ],
+      "agent-sessions.yml": [
+        "validate and render agent sessions"
+      ],
+      "cnpg-backup-policy.yml": [
+        "cnpg-backup-policy"
+      ],
+      "repo-rag-service.yml": [
+        "retained content-safe source evidence",
+        "shared-only and no static-token path"
+      ],
+      "secret-scan.yml": [
+        "gitleaks"
+      ],
+      "validate-project-yaml.yml": [
+        "validate"
+      ]
+    }
+  },
+  "schema": "owner-pr-composition-assessment/v1",
+  "shared_check_actual_4808_binding": [
+    {
+      "check_id": "check-80f90660ecc0dc084e6ca8ee",
+      "name": "dashboard unit tests (parallel) (0)",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-da51065c2e47ad081836ba55",
+      "name": "dashboard unit tests (parallel) (1)",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-7e632488ee7267763b93e5de",
+      "name": "dashboard unit tests (parallel) (2)",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-da57e7799cb99db02fb546e3",
+      "name": "dashboard unit tests (parallel) (3)",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-0a8a9c680352b3871ecf75dc",
+      "name": "regen scripts run under the runtime's Python (3.11)",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-98deac7481420febdf727b59",
+      "name": "validate dashboard app and manifests",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-fleet-dashboard.yml"
+    },
+    {
+      "check_id": "check-1e795b0465ebfd608d4c7353",
+      "name": "validate and render agent sessions",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "agent-sessions.yml"
+    },
+    {
+      "check_id": "check-692d9eb8856dd414b891ac88",
+      "name": "cnpg-backup-policy",
+      "present_in_4808_actual_native_snapshot": true,
+      "workflow": "cnpg-backup-policy.yml"
+    }
+  ],
+  "shared_required_checks_4807_first": [
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (0)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (1)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (2)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (3)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "regen scripts run under the runtime's Python (3.11)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "validate dashboard app and manifests"
+    ],
+    [
+      "agent-sessions.yml",
+      "validate and render agent sessions"
+    ],
+    [
+      "cnpg-backup-policy.yml",
+      "cnpg-backup-policy"
+    ]
+  ],
+  "shared_required_checks_4808_first": [
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (0)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (1)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (2)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "dashboard unit tests (parallel) (3)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "regen scripts run under the runtime's Python (3.11)"
+    ],
+    [
+      "agent-fleet-dashboard.yml",
+      "validate dashboard app and manifests"
+    ],
+    [
+      "agent-sessions.yml",
+      "validate and render agent sessions"
+    ],
+    [
+      "cnpg-backup-policy.yml",
+      "cnpg-backup-policy"
+    ]
+  ]
+}
