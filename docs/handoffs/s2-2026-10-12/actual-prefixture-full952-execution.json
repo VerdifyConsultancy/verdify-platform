@@ -1,0 +1,55 @@
+{
+  "startedAt": "2026-10-12T19:02:35.114468+00:00",
+  "finishedAt": "2026-10-12T19:03:21.508287+00:00",
+  "exitCode": 0,
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "sqlSha256": "503e0a5e637de2927ad4ea33c41296ffb5e0acc96df9cf0f69a3b44c48a65ad7",
+  "headersSha256": "6a103872e38e31607ef242437230110ddfc11ef1b09164276123721c77a7c1e7",
+  "parserSourceSha256": "297f733c4923d98e40fad807aea54cdd045bc783a40c43b6f58a1f39eb3b3294",
+  "rawRowsExported": false,
+  "rawRowsPersisted": false,
+  "stderrBytes": 0,
+  "complete": true,
+  "terminalMarkerVerified": true,
+  "tableCount": 952,
+  "rowCount": 9699553,
+  "original951PreservedExceptControlledMetadata": true,
+  "nativeStreamBytes": 2457973781,
+  "nativeStreamSha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+  "parserPeakRssKiB": 513084,
+  "exactOriginalRelations": 949,
+  "controlledMetadataDeltas": [
+    {
+      "header": "COPY public.runtime_ordinary_login_attestation_receipts (login_name, boundary_sha256, captured_at) FROM stdin;",
+      "before": {
+        "copy_header": "COPY public.runtime_ordinary_login_attestation_receipts (login_name, boundary_sha256, captured_at) FROM stdin;",
+        "rows": 2,
+        "row_multiset_sha256": "ce5f6ddeb2e2e43c43e66e9150d66bb5e94b3cd1aa0fde6e9e10302f0ec744f8"
+      },
+      "after": {
+        "copy_header": "COPY public.runtime_ordinary_login_attestation_receipts (login_name, boundary_sha256, captured_at) FROM stdin;",
+        "rows": 2,
+        "row_multiset_sha256": "ed108191dccb499f2e021bfc816f779c3e11259466de0554723ab8765670f2e9"
+      }
+    },
+    {
+      "header": "COPY public.schema_migrations (filename, source, seq, sha256, applied_at, stamp_method, duration_ms, applied_by) FROM stdin;",
+      "before": {
+        "copy_header": "COPY public.schema_migrations (filename, source, seq, sha256, applied_at, stamp_method, duration_ms, applied_by) FROM stdin;",
+        "rows": 282,
+        "row_multiset_sha256": "fb9ad6a63af60163559d42fc3db48a4fb38d6697bea16d245398282c48014218"
+      },
+      "after": {
+        "copy_header": "COPY public.schema_migrations (filename, source, seq, sha256, applied_at, stamp_method, duration_ms, applied_by) FROM stdin;",
+        "rows": 283,
+        "row_multiset_sha256": "587e19666a5c7d20f9d5daf0a0416382dfed1917d2bb42670d204467fdc8fbef"
+      }
+    }
+  ],
+  "newNativeAdmissionRelation": {
+    "copy_header": "COPY public.cnpg_s2_275_runtime_receipts (login_name, boundary_sha256, qualification_sha256) FROM stdin;",
+    "rows": 3,
+    "row_multiset_sha256": "a4a854e7415e5d6ffcc3c340ecdedb0e136b7150fefa9c555482a0728e4b0bb4"
+  }
+}

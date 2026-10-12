@@ -100,3 +100,39 @@ The [complete951 COPY receipt](actual-full951-pre275-copy.json) verifies every o
 All77 sequence states [equal the retained frozen-A baseline](actual-pre275-sequence-receipt.json). The [42-study derivation](actual-study42-pre275-derivation.json) finds the exact complete COPY header/count/SHA256 for every retained study table and confirms each historical42-capture row count; it does not equate the older MD5 serialization to COPY SHA256. The three historical admission receipt rows remain captured separately.
 
 The [actual275 rollback qualification](actual275-rollback-receipt.json) produced the exact expected7089e3bc post-witness. An [independent witness after rollback](actual275-after-rollback-receipt.json) still equals the sealed274 predecessor6d896a5d. This proves rollback qualification, while the committed275 bridge and separate native admission remain in progress. The [scientific-role metadata](actual-scientific-role-metadata.json) shows the two pre-existing scientific logins retain exact memberships and null passwords; no credentials/grants have been changed. The restored component remains draft/shadow/closed with component execution disabled.
+
+
+## Committed275 and separate native admission, 18:49–19:03 UTC
+
+The first committed bridge attempt reached its uncommitted result emission but
+blocked the duplex SQL/result pipe. The exact owned backend1253, transaction
+start18:40:17.526105Z, database/application/last-query/state and local client
+were rebound before terminating only that session. A fresh read proved it gone
+and275 uncommitted; the [independent full witness](actual275-after-abort-receipt.json)
+again equaled sealed274. The [abort receipt](actual275-transport-abort.json) and
+private failed attempt remain preserved. The correction changed transport only:
+exact same reviewed SQL SHA2bd781dd was staged by hash inside the UID-bound Pod,
+then `psql -f` wrote private local output and returned only metadata.
+
+The [committed275 receipt](actual275-installed-receipt.json) and
+[independent readback](actual275-installed-independent-receipt.json) both bind
+post-witness7089e3bc. The separate native admission [rollback review](actual-admission-rollback-source-review.json)
+preserved every pre-existing identity/catalog/grant fact; its independent
+rollback witness remained exactly7089e3bc. The [actual install](actual-admission-installed-receipt.json)
+then passed the existing source validator, permitting only the enumerated new
+receipt relation/index/constraint OID differences from rollback qualification.
+An [independent full read](actual-admission-installed-independent-receipt.json)
+equals installed4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5.
+The native admission record SHA is1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa.
+
+The [complete prefixture952 receipt](actual-prefixture-full952-copy.json)
+contains9,699,553rows, with all ordered and terminal markers verified and no raw
+row export/persistence. Relative to the accepted original951,949relations are
+exact; only the ledger's one275 row and the two ordinary canonical receipt
+updates changed. The new native receipt relation has exactly three rows. This
+is a controlled successor baseline, not replacement of the old951 seal.
+[All77 sequences](actual-prefixture-sequence-receipt.json) and
+[all42 study tables](actual-prefixture-study42-derivation.json) remain exact.
+Temporary target-only password provisioning, actual ordinary authentication/
+rollback duty behavior, scientific READ ONLY consumers and final inverses/reseals
+are the next finite checks. Production remains untouched by this lane.

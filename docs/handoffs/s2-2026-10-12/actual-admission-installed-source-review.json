@@ -1,0 +1,26 @@
+{
+  "nativeRecordSha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "postWitnessSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "ddlSha256": "5560063282fa55cb70cee4501846473d26341f0b3770db84e7b5e1ef7b2921ef",
+  "sourceValidateInstalledPostPassed": true,
+  "exactNativeBeforeEqualsIndependent275": true,
+  "compressedMetadataBytes": 5770751,
+  "databaseRowValuesExported": false,
+  "credentialValuesExported": false,
+  "allPriorFactsPreserved": true,
+  "newObjectAllowlist": {
+    "relations": [
+      "public.cnpg_s2_275_runtime_receipts"
+    ],
+    "indexes": [
+      "public.cnpg_s2_275_runtime_receipts_pkey"
+    ],
+    "constraints": [
+      "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_pkey",
+      "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_login_name_check",
+      "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_boundary_sha256_check",
+      "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_qualification_sha256_check"
+    ],
+    "triggers": []
+  }
+}

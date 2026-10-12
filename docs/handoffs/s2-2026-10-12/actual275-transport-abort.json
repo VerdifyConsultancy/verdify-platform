@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-12T18:47:27.930896+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "podUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "ownedNativeBackend": 1253,
+  "ownedXactStart": "2026-10-12T18:40:17.526105+00:00",
+  "ownedLocalKubectl": 90196,
+  "terminatedOnlyProvedUncommittedResultBlockedSession": true,
+  "freshIndependentPgStatSnapshot": true,
+  "committed275": false,
+  "owned_backend_terminated": true
+}

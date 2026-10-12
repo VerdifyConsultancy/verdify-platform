@@ -1,0 +1,38 @@
+{
+  "startedAt": "2026-10-12T18:49:27.883127+00:00",
+  "finishedAt": "2026-10-12T18:49:57.142521+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "localProcessExitCode": 0,
+  "compressedInputBytes": 5524356,
+  "sqlSha256": "2bd781ddf0df8a31b00e74019321223ec4343bdf33d959990639af18d1f7b49d",
+  "transport": "source SQL staged by exact SHA; psql -f with local Pod output; only metadata returned",
+  "sourceChanged": false,
+  "native": {
+    "exitCode": 0,
+    "sqlSha256": "2bd781ddf0df8a31b00e74019321223ec4343bdf33d959990639af18d1f7b49d",
+    "stdoutSha256": "7304d98b47571e78fcfeb70bafdb435ae33a65315fa4455cd6d08bdad0c561a1",
+    "stdoutBytes": 71033692,
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrBytes": 0,
+    "privatePodPath": "/controller/run/contained-recovery-20261012/bridge-install-staged",
+    "recordSha256": "fe2afb4657c611cee719742c3eb6d11fd34d604266b2969231f985b102e9d22a",
+    "postWitnessSha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+    "recordKeys": [
+      "mode",
+      "cluster",
+      "version",
+      "post_witness",
+      "before_witness",
+      "migration_sha256",
+      "qualified_payload_sha256"
+    ],
+    "recordMetadata": {
+      "mode": "install",
+      "cluster": "verdify-cnpg-s2-integration",
+      "version": "cnpg-s2-integration-current275-additive-transition-v1",
+      "migration_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "qualified_payload_sha256": "1f7301618a35f06c4bb61c348c763533fd9840c5b2d162e1e15e7ed0b067edd3"
+    }
+  }
+}

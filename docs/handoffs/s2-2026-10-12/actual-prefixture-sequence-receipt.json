@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-10-12T19:02:36.378257+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "sequenceCount": 77,
+  "sequenceSha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+  "sequenceExactFrozenA": true,
+  "copiedHistoricalReceiptRows": 3,
+  "copiedReceiptSha256": "46696d760f190934d563b489f3e73bb8413549e1a72013de60fae47792385329",
+  "exitCode": 0,
+  "roleOrSequenceWrites": false
+}

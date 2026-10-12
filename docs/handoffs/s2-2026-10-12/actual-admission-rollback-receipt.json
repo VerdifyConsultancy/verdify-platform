@@ -1,0 +1,34 @@
+{
+  "startedAt": "2026-10-12T18:53:39.013337+00:00",
+  "finishedAt": "2026-10-12T18:54:03.345477+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "localProcessExitCode": 0,
+  "compressedInputBytes": 2786137,
+  "sqlSha256": "691094fd38d2ded0fe6aac9838742799f05d0b029637dec3d4cc13e969667575",
+  "transport": "source SQL staged by exact SHA; psql -f with local Pod output; only metadata returned",
+  "sourceChanged": false,
+  "native": {
+    "exitCode": 0,
+    "sqlSha256": "691094fd38d2ded0fe6aac9838742799f05d0b029637dec3d4cc13e969667575",
+    "stdoutSha256": "650916faac4b9f5e4233a3643702b976e2cb35e2c2a6f5431fb9f0426818a4d3",
+    "stdoutBytes": 71044079,
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrBytes": 0,
+    "privatePodPath": "/controller/run/contained-recovery-20261012/admission-rollback-staged",
+    "recordSha256": "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac",
+    "postWitnessSha256": "36647f1abd5fefaa4aab8a71905bcf77e8754d8acec83c90d53d1661775e6965",
+    "recordKeys": [
+      "mode",
+      "version",
+      "ddl_sha256",
+      "post_witness",
+      "before_witness"
+    ],
+    "recordMetadata": {
+      "mode": "rollback-qualification",
+      "version": "cnpg-physical-runtime-transition-v1",
+      "ddl_sha256": "5560063282fa55cb70cee4501846473d26341f0b3770db84e7b5e1ef7b2921ef"
+    }
+  }
+}
