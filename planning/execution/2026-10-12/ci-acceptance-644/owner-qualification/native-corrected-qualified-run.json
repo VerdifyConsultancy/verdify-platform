@@ -1,0 +1,946 @@
+{
+  "checks": [
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-0a8a9c680352b3871ecf75dc",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "de1c2787811bfd9b99359ee401593a2f37058570a7f507b7042e58681f1059e1",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429567,
+        "manifest_sha256": "3ed37d27c9171a1302a79f006fb8d3254759a2e8f873bc8e881c5b61e9056b57",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "944aa61c-0e22-423e-aa02-7ef2f2529edc",
+        "readback_verified_at": 1791837613,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429567,
+            "manifest_sha256": "3ed37d27c9171a1302a79f006fb8d3254759a2e8f873bc8e881c5b61e9056b57",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/80d83d8c-6592-4030-a96d-f76dd0395d46/944aa61c-0e22-423e-aa02-7ef2f2529edc/check-0a8a9c680352b3871ecf75dc/attempt-13/3ed37d27c9171a1302a79f006fb8d3254759a2e8f873bc8e881c5b61e9056b57",
+            "profile": "check-results",
+            "readback_verified_at": 1791837613,
+            "receipt_sha256": "6fa8f37e8a664473c3430714a03352ec82e439a23565f77f1d3f197547bebe5c",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "80d83d8c-6592-4030-a96d-f76dd0395d46"
+      },
+      "check_id": "check-0a8a9c680352b3871ecf75dc",
+      "observation": {
+        "check_id": "check-0a8a9c680352b3871ecf75dc",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:39:20Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "944aa61c-0e22-423e-aa02-7ef2f2529edc",
+        "workflow_uid": "80d83d8c-6592-4030-a96d-f76dd0395d46"
+      },
+      "state": "archived",
+      "workflow_uid": "80d83d8c-6592-4030-a96d-f76dd0395d46"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-1e795b0465ebfd608d4c7353",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "172caf3634becea75c7c9bac48ab417b785cc9a3943e5ead2fe13e5852a01ee5",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429567,
+        "manifest_sha256": "f18e9ec12f12ea139aa4359cf255a9a1f39f87c9cee3d060c0fa7aef0c583e6b",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "440cc14c-b674-4e35-9ae1-96a63e626362",
+        "readback_verified_at": 1791837613,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429567,
+            "manifest_sha256": "f18e9ec12f12ea139aa4359cf255a9a1f39f87c9cee3d060c0fa7aef0c583e6b",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/2545afb9-136c-47fa-a8b0-834fb4f50585/440cc14c-b674-4e35-9ae1-96a63e626362/check-1e795b0465ebfd608d4c7353/attempt-13/f18e9ec12f12ea139aa4359cf255a9a1f39f87c9cee3d060c0fa7aef0c583e6b",
+            "profile": "check-results",
+            "readback_verified_at": 1791837613,
+            "receipt_sha256": "56cd2ecdb501e14f6bdd986adfe0c36e85d4c6548a8381c149e81b382b5018a7",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "2545afb9-136c-47fa-a8b0-834fb4f50585"
+      },
+      "check_id": "check-1e795b0465ebfd608d4c7353",
+      "observation": {
+        "check_id": "check-1e795b0465ebfd608d4c7353",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:39:22Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "440cc14c-b674-4e35-9ae1-96a63e626362",
+        "workflow_uid": "2545afb9-136c-47fa-a8b0-834fb4f50585"
+      },
+      "state": "archived",
+      "workflow_uid": "2545afb9-136c-47fa-a8b0-834fb4f50585"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-692d9eb8856dd414b891ac88",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "ce0b05a24afb5bd0c0475644e4ee347bb05b51208da01c09c87ee09b18f13ce7",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429514,
+        "manifest_sha256": "dfa6624ba354b391f882872418fd3d66420e4c93eddb92c8423a9bb7f9e2e5fd",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "2cd31915-56aa-4898-a2ba-6b6f46a663d6",
+        "readback_verified_at": 1791837562,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429514,
+            "manifest_sha256": "dfa6624ba354b391f882872418fd3d66420e4c93eddb92c8423a9bb7f9e2e5fd",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/c8011d32-9410-4ff8-a05f-d67acaf3b2d4/2cd31915-56aa-4898-a2ba-6b6f46a663d6/check-692d9eb8856dd414b891ac88/attempt-13/dfa6624ba354b391f882872418fd3d66420e4c93eddb92c8423a9bb7f9e2e5fd",
+            "profile": "check-results",
+            "readback_verified_at": 1791837562,
+            "receipt_sha256": "9c8b2e8ca918276243860a26e2f5d3c32f96d93018592db7f1fe40271562f7c7",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "c8011d32-9410-4ff8-a05f-d67acaf3b2d4"
+      },
+      "check_id": "check-692d9eb8856dd414b891ac88",
+      "observation": {
+        "check_id": "check-692d9eb8856dd414b891ac88",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:38:23Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "2cd31915-56aa-4898-a2ba-6b6f46a663d6",
+        "workflow_uid": "c8011d32-9410-4ff8-a05f-d67acaf3b2d4"
+      },
+      "state": "archived",
+      "workflow_uid": "c8011d32-9410-4ff8-a05f-d67acaf3b2d4"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-7e632488ee7267763b93e5de",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "ed50329e6951579fc3b76063586ac9f7b07a65a34b3ee64fa4de0b03ec3e8a77",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429756,
+        "manifest_sha256": "e7636a70c9bf22137286696cc30aefc30af01868baec7d4a196a1292d2ae8290",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "a338d510-fa51-4bd2-a827-b50621c6dd9f",
+        "readback_verified_at": 1791837797,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429756,
+            "manifest_sha256": "e7636a70c9bf22137286696cc30aefc30af01868baec7d4a196a1292d2ae8290",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/93871ff1-4b69-4fa6-9f37-42988d64eb64/a338d510-fa51-4bd2-a827-b50621c6dd9f/check-7e632488ee7267763b93e5de/attempt-13/e7636a70c9bf22137286696cc30aefc30af01868baec7d4a196a1292d2ae8290",
+            "profile": "check-results",
+            "readback_verified_at": 1791837797,
+            "receipt_sha256": "5e08e86aef8c19d9599c1e4845757e12e18fb3d525b7efb8834d971f670004f2",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "93871ff1-4b69-4fa6-9f37-42988d64eb64"
+      },
+      "check_id": "check-7e632488ee7267763b93e5de",
+      "observation": {
+        "check_id": "check-7e632488ee7267763b93e5de",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:42:29Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "a338d510-fa51-4bd2-a827-b50621c6dd9f",
+        "workflow_uid": "93871ff1-4b69-4fa6-9f37-42988d64eb64"
+      },
+      "state": "archived",
+      "workflow_uid": "93871ff1-4b69-4fa6-9f37-42988d64eb64"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-80f90660ecc0dc084e6ca8ee",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "ac52017fbf817f12e5e5900bf825c9fa6cdd7904c8f1ee5c30c9562969d4db42",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429700,
+        "manifest_sha256": "a15b2af5030ef2e52178039e1292dbe8dab113828cdec1e7adcee68c20e288de",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "bbe1fc1e-85e3-404c-a8df-efad764a050c",
+        "readback_verified_at": 1791837751,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429700,
+            "manifest_sha256": "a15b2af5030ef2e52178039e1292dbe8dab113828cdec1e7adcee68c20e288de",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/87908828-2463-4133-8437-918e5b733aec/bbe1fc1e-85e3-404c-a8df-efad764a050c/check-80f90660ecc0dc084e6ca8ee/attempt-13/a15b2af5030ef2e52178039e1292dbe8dab113828cdec1e7adcee68c20e288de",
+            "profile": "check-results",
+            "readback_verified_at": 1791837751,
+            "receipt_sha256": "d7b7407c9810946fa3c6de5a15db66884c9b2bbd38520683968aabc20c50ba5a",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "87908828-2463-4133-8437-918e5b733aec"
+      },
+      "check_id": "check-80f90660ecc0dc084e6ca8ee",
+      "observation": {
+        "check_id": "check-80f90660ecc0dc084e6ca8ee",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:41:35Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "bbe1fc1e-85e3-404c-a8df-efad764a050c",
+        "workflow_uid": "87908828-2463-4133-8437-918e5b733aec"
+      },
+      "state": "archived",
+      "workflow_uid": "87908828-2463-4133-8437-918e5b733aec"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-85f608e55ee6f4ec570a4095",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "60502567db6eb4f335c13d1f80d6bf0eb3b7814cc33010dc275011499f75589c",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429426,
+        "manifest_sha256": "8cc73b629b2b64e7a5d9995d64110419f46dfe4f113c7c43d7165a49da6da0d6",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "f65373a0-030b-4751-9c8e-a084cf4330ec",
+        "readback_verified_at": 1791837490,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429426,
+            "manifest_sha256": "8cc73b629b2b64e7a5d9995d64110419f46dfe4f113c7c43d7165a49da6da0d6",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/6c5f9f5d-b018-42d8-a822-5b4012c44787/f65373a0-030b-4751-9c8e-a084cf4330ec/check-85f608e55ee6f4ec570a4095/attempt-13/8cc73b629b2b64e7a5d9995d64110419f46dfe4f113c7c43d7165a49da6da0d6",
+            "profile": "check-results",
+            "readback_verified_at": 1791837490,
+            "receipt_sha256": "b6778cafd148b658444a49fcf900f04986705d28caadf32ec77e6e2b713de797",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "6c5f9f5d-b018-42d8-a822-5b4012c44787"
+      },
+      "check_id": "check-85f608e55ee6f4ec570a4095",
+      "observation": {
+        "check_id": "check-85f608e55ee6f4ec570a4095",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:36:27Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "f65373a0-030b-4751-9c8e-a084cf4330ec",
+        "workflow_uid": "6c5f9f5d-b018-42d8-a822-5b4012c44787"
+      },
+      "state": "archived",
+      "workflow_uid": "6c5f9f5d-b018-42d8-a822-5b4012c44787"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-98deac7481420febdf727b59",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "0670e2f4c1e4a8fb3932708e39615e7164b6acd95a77eed77fc30382b46daa5e",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429559,
+        "manifest_sha256": "526ecfa8907e23c69398f7d94b376924bbb47f300c040c6cae0d4dee549131b9",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "c5caeeb0-82b3-4990-b1f7-1efc8ebb4292",
+        "readback_verified_at": 1791837593,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429559,
+            "manifest_sha256": "526ecfa8907e23c69398f7d94b376924bbb47f300c040c6cae0d4dee549131b9",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/c589ef03-ab9d-40b9-b561-7f1bcb524143/c5caeeb0-82b3-4990-b1f7-1efc8ebb4292/check-98deac7481420febdf727b59/attempt-13/526ecfa8907e23c69398f7d94b376924bbb47f300c040c6cae0d4dee549131b9",
+            "profile": "check-results",
+            "readback_verified_at": 1791837593,
+            "receipt_sha256": "a3f958f1209dceed45211734a7fdc7db17e999f25f8eaaba8f8dfdc5e998fa69",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "c589ef03-ab9d-40b9-b561-7f1bcb524143"
+      },
+      "check_id": "check-98deac7481420febdf727b59",
+      "observation": {
+        "check_id": "check-98deac7481420febdf727b59",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:38:38Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "c5caeeb0-82b3-4990-b1f7-1efc8ebb4292",
+        "workflow_uid": "c589ef03-ab9d-40b9-b561-7f1bcb524143"
+      },
+      "state": "archived",
+      "workflow_uid": "c589ef03-ab9d-40b9-b561-7f1bcb524143"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-9d4bb1ad6777c7a94264e5de",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "c19bda7b321a3d14176d7118459d19e75f0634fde1b2da54987d4edf5ec31063",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429659,
+        "manifest_sha256": "3a8b6cb453615ba96a4b91a747fbaf4056490512de00ba784db9d5fd1a72e08c",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "41eb86db-4695-493e-81f8-9a2a27606bfa",
+        "readback_verified_at": 1791837752,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429659,
+            "manifest_sha256": "3a8b6cb453615ba96a4b91a747fbaf4056490512de00ba784db9d5fd1a72e08c",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/e0c1adb7-5b3a-4c4d-9d9e-2b8985b18fd4/41eb86db-4695-493e-81f8-9a2a27606bfa/check-9d4bb1ad6777c7a94264e5de/attempt-13/3a8b6cb453615ba96a4b91a747fbaf4056490512de00ba784db9d5fd1a72e08c",
+            "profile": "check-results",
+            "readback_verified_at": 1791837698,
+            "receipt_sha256": "34203047c9eb3cfad32df6ccbf4a3ea03aa974face20c8484de59704c734ab71",
+            "validation_conclusion": "success"
+          },
+          {
+            "archived": true,
+            "artifact_count": 2,
+            "complete": true,
+            "expires_at": 1794429694,
+            "manifest_sha256": "bdc08cf41f9abc3db6966ed3ac27cb5a194650ad987965fd5901c219901c95d0",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/e0c1adb7-5b3a-4c4d-9d9e-2b8985b18fd4/41eb86db-4695-493e-81f8-9a2a27606bfa/check-9d4bb1ad6777c7a94264e5de/attempt-13/bdc08cf41f9abc3db6966ed3ac27cb5a194650ad987965fd5901c219901c95d0",
+            "profile": "secret-scan",
+            "readback_verified_at": 1791837752,
+            "receipt_sha256": "10dc6f47b8e2fbc7222f089905c461e8b9718f97c9b7b02222382905f93eacfd",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "e0c1adb7-5b3a-4c4d-9d9e-2b8985b18fd4"
+      },
+      "check_id": "check-9d4bb1ad6777c7a94264e5de",
+      "observation": {
+        "check_id": "check-9d4bb1ad6777c7a94264e5de",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:40:25Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "41eb86db-4695-493e-81f8-9a2a27606bfa",
+        "workflow_uid": "e0c1adb7-5b3a-4c4d-9d9e-2b8985b18fd4"
+      },
+      "state": "archived",
+      "workflow_uid": "e0c1adb7-5b3a-4c4d-9d9e-2b8985b18fd4"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-bea2afae8e08df537b9ac23d",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "c573567d46af03b322777cad07466cb6b1f687230381dd9c02f187c2f977fa67",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429515,
+        "manifest_sha256": "1593d8693a69bb430658aad4b76c5d21b623ccd716ae86e0ffe4400cb18b53d1",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "04186a94-a9a4-490a-9b46-bb08bfbd4329",
+        "readback_verified_at": 1791837562,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429515,
+            "manifest_sha256": "1593d8693a69bb430658aad4b76c5d21b623ccd716ae86e0ffe4400cb18b53d1",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/f01ac219-b074-428b-a257-af0cb2551a59/04186a94-a9a4-490a-9b46-bb08bfbd4329/check-bea2afae8e08df537b9ac23d/attempt-13/1593d8693a69bb430658aad4b76c5d21b623ccd716ae86e0ffe4400cb18b53d1",
+            "profile": "check-results",
+            "readback_verified_at": 1791837562,
+            "receipt_sha256": "23750bca9b9f6383d20ba797d9b6c1bc06d4b46c8bf81810b858fc9ed5e34082",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "f01ac219-b074-428b-a257-af0cb2551a59"
+      },
+      "check_id": "check-bea2afae8e08df537b9ac23d",
+      "observation": {
+        "check_id": "check-bea2afae8e08df537b9ac23d",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:38:25Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "04186a94-a9a4-490a-9b46-bb08bfbd4329",
+        "workflow_uid": "f01ac219-b074-428b-a257-af0cb2551a59"
+      },
+      "state": "archived",
+      "workflow_uid": "f01ac219-b074-428b-a257-af0cb2551a59"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-c701d84af8135116b8e49ed5",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "c05f67f9e5b4cfc4c1804b9d70efe44e1573255d96c5acc85e4836badaf5b6e9",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429872,
+        "manifest_sha256": "8987e58aa52e7f26d950ff970db209d5669682dafedd361d709a16fd1c480f01",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "280c557f-9ce9-49b5-a679-f341ebfc82f1",
+        "readback_verified_at": 1791837922,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429872,
+            "manifest_sha256": "8987e58aa52e7f26d950ff970db209d5669682dafedd361d709a16fd1c480f01",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/35d49c47-9d47-4b64-b901-c0be6f102362/280c557f-9ce9-49b5-a679-f341ebfc82f1/check-c701d84af8135116b8e49ed5/attempt-13/8987e58aa52e7f26d950ff970db209d5669682dafedd361d709a16fd1c480f01",
+            "profile": "check-results",
+            "readback_verified_at": 1791837922,
+            "receipt_sha256": "274b4215c9bdb20fa71884893455cc2e86b88704a591cf44121e33f0ec9f1b6f",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "35d49c47-9d47-4b64-b901-c0be6f102362"
+      },
+      "check_id": "check-c701d84af8135116b8e49ed5",
+      "observation": {
+        "check_id": "check-c701d84af8135116b8e49ed5",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:44:28Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "280c557f-9ce9-49b5-a679-f341ebfc82f1",
+        "workflow_uid": "35d49c47-9d47-4b64-b901-c0be6f102362"
+      },
+      "state": "archived",
+      "workflow_uid": "35d49c47-9d47-4b64-b901-c0be6f102362"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-da51065c2e47ad081836ba55",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "679a10afe75098cc23e639336586e442687604de7e79fccdbb44bc3e2a4d43c7",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429851,
+        "manifest_sha256": "8db5b3a63938585e53bef97f86969547e957cc16a2d9afed371865952290f3bc",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "c435e99c-2e43-4eae-b627-e876b382803f",
+        "readback_verified_at": 1791837923,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429851,
+            "manifest_sha256": "8db5b3a63938585e53bef97f86969547e957cc16a2d9afed371865952290f3bc",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/d7fdd53d-a9a4-4183-8db6-f08273c49f8f/c435e99c-2e43-4eae-b627-e876b382803f/check-da51065c2e47ad081836ba55/attempt-13/8db5b3a63938585e53bef97f86969547e957cc16a2d9afed371865952290f3bc",
+            "profile": "check-results",
+            "readback_verified_at": 1791837923,
+            "receipt_sha256": "a23ec1604337412517122f868411147ab95bb33658d6802c240ebcbbdf26778a",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "d7fdd53d-a9a4-4183-8db6-f08273c49f8f"
+      },
+      "check_id": "check-da51065c2e47ad081836ba55",
+      "observation": {
+        "check_id": "check-da51065c2e47ad081836ba55",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:44:04Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "c435e99c-2e43-4eae-b627-e876b382803f",
+        "workflow_uid": "d7fdd53d-a9a4-4183-8db6-f08273c49f8f"
+      },
+      "state": "archived",
+      "workflow_uid": "d7fdd53d-a9a4-4183-8db6-f08273c49f8f"
+    },
+    {
+      "archive": {
+        "archived": true,
+        "catalog_sha256": "95d2f079ece629151b7cd4f9b1f6ea7891aed02e8e43efb5e3bb4ce7453656bc",
+        "check_id": "check-da57e7799cb99db02fb546e3",
+        "checkout_kind": "merge-result",
+        "complete": true,
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "dispatch_sha256": "eefbf1f67aa092d06fae52c603a01b8ee0a19860ea6aa1bbeff310aff60b8973",
+        "exit_code": 0,
+        "expired": false,
+        "expires_at": 1794429843,
+        "manifest_sha256": "38bf99482595241804b04458d264eb3eae95621e9dc90c3fc97a8430055576c0",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "6986dcda-2b97-4054-9905-73239b6d10c4",
+        "readback_verified_at": 1791837880,
+        "receipts": [
+          {
+            "archived": true,
+            "artifact_count": 1,
+            "complete": true,
+            "expires_at": 1794429843,
+            "manifest_sha256": "38bf99482595241804b04458d264eb3eae95621e9dc90c3fc97a8430055576c0",
+            "prefix": "native-ci/v1/1151956309/11e4f761-deb0-5a36-ba8f-7005360d190c/d286273f-86d5-440d-bffd-bc4862fff95a/6986dcda-2b97-4054-9905-73239b6d10c4/check-da57e7799cb99db02fb546e3/attempt-13/38bf99482595241804b04458d264eb3eae95621e9dc90c3fc97a8430055576c0",
+            "profile": "check-results",
+            "readback_verified_at": 1791837880,
+            "receipt_sha256": "ff29c0ed16ae17f5051ad44bfaedc28561f508c59ed9c972f79131db8bdde20c",
+            "validation_conclusion": "success"
+          }
+        ],
+        "source_identity_basis": "trusted-dispatch-contract",
+        "tested_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+        "validation_conclusion": "success",
+        "workflow_uid": "d286273f-86d5-440d-bffd-bc4862fff95a"
+      },
+      "check_id": "check-da57e7799cb99db02fb546e3",
+      "observation": {
+        "check_id": "check-da57e7799cb99db02fb546e3",
+        "context": {
+          "attempt": 13,
+          "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+          "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+          "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+          "repository_id": "1151956309",
+          "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+          "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+        },
+        "exit_code": 0,
+        "finished_at": "2026-10-12T20:43:47Z",
+        "phase": "Succeeded",
+        "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+        "producer_image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2",
+        "producer_pod_uid": "6986dcda-2b97-4054-9905-73239b6d10c4",
+        "workflow_uid": "d286273f-86d5-440d-bffd-bc4862fff95a"
+      },
+      "state": "archived",
+      "workflow_uid": "d286273f-86d5-440d-bffd-bc4862fff95a"
+    }
+  ],
+  "event_key": "df091115bc7ee52289273bd461820cdf62ae370fe915a0d6f1892423a79c0ac7",
+  "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+  "plan": {
+    "changed_paths_sha256": "cb408ed3ae51f14e8da4f2f11f761af37da50ee6ff1662811874e6910b803783",
+    "context": {
+      "attempt": 13,
+      "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+      "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+      "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+      "repository_id": "1151956309",
+      "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+      "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+    },
+    "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+    "pull_number": 4807,
+    "repository": "jvallery/agents",
+    "required_checks": [
+      {
+        "check_id": "check-80f90660ecc0dc084e6ca8ee",
+        "name": "dashboard unit tests (parallel) (0)",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-da51065c2e47ad081836ba55",
+        "name": "dashboard unit tests (parallel) (1)",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-7e632488ee7267763b93e5de",
+        "name": "dashboard unit tests (parallel) (2)",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-da57e7799cb99db02fb546e3",
+        "name": "dashboard unit tests (parallel) (3)",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-c701d84af8135116b8e49ed5",
+        "name": "dashboard-ci-summary",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-85f608e55ee6f4ec570a4095",
+        "name": "detect relevant paths",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-bea2afae8e08df537b9ac23d",
+        "name": "is every unit test wired into CI?",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-0a8a9c680352b3871ecf75dc",
+        "name": "regen scripts run under the runtime's Python (3.11)",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-98deac7481420febdf727b59",
+        "name": "validate dashboard app and manifests",
+        "workflow": "agent-fleet-dashboard.yml"
+      },
+      {
+        "check_id": "check-1e795b0465ebfd608d4c7353",
+        "name": "validate and render agent sessions",
+        "workflow": "agent-sessions.yml"
+      },
+      {
+        "check_id": "check-692d9eb8856dd414b891ac88",
+        "name": "cnpg-backup-policy",
+        "workflow": "cnpg-backup-policy.yml"
+      },
+      {
+        "check_id": "check-9d4bb1ad6777c7a94264e5de",
+        "name": "gitleaks",
+        "workflow": "secret-scan.yml"
+      }
+    ],
+    "schema": "fleet-native-ci-plan/v1",
+    "source_event_sha256": "25f5ff0e75efeab003f9fff7d58219404c9c3dff3ec10527bbb6a19d554ea3a4"
+  },
+  "publication": {
+    "key": "9834806a6799f4551ee7e287a6b485dd1a7dc72b2533ac3688f5835017587c47",
+    "receipt": {
+      "actor_id": 310756381,
+      "context": "fleet-ci/native",
+      "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+      "key": "9834806a6799f4551ee7e287a6b485dd1a7dc72b2533ac3688f5835017587c47",
+      "state": "success",
+      "status_id": 56171776095
+    },
+    "state": "published"
+  },
+  "verdict": {
+    "accepted": [
+      "check-80f90660ecc0dc084e6ca8ee",
+      "check-da51065c2e47ad081836ba55",
+      "check-7e632488ee7267763b93e5de",
+      "check-da57e7799cb99db02fb546e3",
+      "check-c701d84af8135116b8e49ed5",
+      "check-85f608e55ee6f4ec570a4095",
+      "check-bea2afae8e08df537b9ac23d",
+      "check-0a8a9c680352b3871ecf75dc",
+      "check-98deac7481420febdf727b59",
+      "check-1e795b0465ebfd608d4c7353",
+      "check-692d9eb8856dd414b891ac88",
+      "check-9d4bb1ad6777c7a94264e5de"
+    ],
+    "accepted_count": 12,
+    "context": {
+      "attempt": 13,
+      "base_sha": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+      "head_sha": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+      "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+      "repository_id": "1151956309",
+      "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+      "source_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e"
+    },
+    "failures": [],
+    "pending": [],
+    "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+    "publish_success": true,
+    "required_count": 12,
+    "schema": "fleet-native-ci-verdict/v1",
+    "state": "success"
+  }
+}

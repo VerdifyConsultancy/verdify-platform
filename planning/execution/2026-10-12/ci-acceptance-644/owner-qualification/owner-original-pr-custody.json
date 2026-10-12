@@ -1,0 +1,52 @@
+{
+  "auto_merge": null,
+  "base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "changed_files": [
+    {
+      "bytes": 86701,
+      "path": "control-plane/agent-fleet-control/scripts/executable_image_delivery.py",
+      "sha256": "f8950104f61531bd3880081ea38a1c9e6a9e22cf3477423afde90de8b2ca2254"
+    },
+    {
+      "bytes": 43172,
+      "path": "control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py",
+      "sha256": "e58a2a62cf13f6008032ea36935829780a2201a8e1b0e6739ea9c9b0a953603a"
+    }
+  ],
+  "ci_submission": "Existing trusted native controller automatic discovery; no manual broker/build submission.",
+  "current_controller_settings": {
+    "deployment_ready": 1,
+    "max_inflight": 10,
+    "max_inflight_ceiling": 14,
+    "merge_flow": {
+      "main_verify": "shadow",
+      "merge": "observe"
+    },
+    "override": null
+  },
+  "fresh_owner_coordination": "Root explicitly released added native source CI load hold; no duplicate active source-label implementer or matching open PR found.",
+  "merge_or_live_adoption_authorized": false,
+  "mergeable": true,
+  "pr": "https://github.com/jvallery/agents/pull/4807",
+  "pr_number": 4807,
+  "quota_readback": {
+    "pods_hard": "80",
+    "pods_used": "24",
+    "requests_cpu_hard": "52",
+    "requests_cpu_used": "2650m",
+    "requests_memory_hard": "52Gi",
+    "requests_memory_used": "7552Mi",
+    "resource_version": "265998989"
+  },
+  "required_native_status": "fleet-ci/native",
+  "schema": "verdify.ci-644-owner-pr-custody/v1",
+  "source_head": "6f1ebc36902e4bf9e6197aced2852d5653d32820",
+  "source_or_tests_changed_since95e2": false,
+  "source_tests_reused": {
+    "delivery": 34,
+    "native_evaluator_skips": 1,
+    "workflow_authority": 112
+  },
+  "state": "open",
+  "verified_at": "2026-10-12T20:13:38.607902+00:00"
+}

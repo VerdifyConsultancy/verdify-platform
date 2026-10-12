@@ -1,0 +1,22 @@
+{
+  "auto_merge": null,
+  "base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "head": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+  "mergeable": true,
+  "merged": false,
+  "native_statuses": [
+    {
+      "context": "fleet-ci/native",
+      "created_at": "2026-10-12T20:46:41Z",
+      "description": "Native CI success 9834806a6799f4551ee7e287a6b485dd1a7dc72b2533ac3688f5835017587c47",
+      "id": 56171776095,
+      "state": "success",
+      "target_url": null,
+      "updated_at": "2026-10-12T20:46:41Z"
+    }
+  ],
+  "pr": "https://github.com/jvallery/agents/pull/4807",
+  "schema": "verdify.ci644-owner-qualified-provider/v1",
+  "state": "open",
+  "verified_at": "2026-10-12T20:47:23.931361+00:00"
+}

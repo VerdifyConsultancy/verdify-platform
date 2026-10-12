@@ -1,0 +1,110 @@
+{
+  "base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "files": {
+    "dashboard-delivery-step-after.log": {
+      "bytes": 99,
+      "sha256": "71bb61656e40cce8e1c3af97a7e62f7c5f9663ecb14a86cce99e9ad0ef2c893d"
+    },
+    "native-corrected-qualified-run.json": {
+      "bytes": 46525,
+      "sha256": "c18dbc838b69153f34eb6bb1e79f7af90d3af7e66dea1c3f2bdf70ef9bf2bc09"
+    },
+    "native-original-failed-run.json": {
+      "bytes": 36703,
+      "sha256": "d5e6d234c0d0fe43ef9d68aa44c34b58c2b7ec6f45ae8594c300a739ca67b6f5"
+    },
+    "owner-corrected-provider-readback.json": {
+      "bytes": 1331,
+      "sha256": "6840b8f837e3b6b3961f44d928a20e93037a29183b324a0c6921d356c1a80bf5"
+    },
+    "owner-final-provider-custody.json": {
+      "bytes": 705,
+      "sha256": "ee8bc150888c5fab863b77af9cb708ced8e4bf43f888776775fe3c664b1337f8"
+    },
+    "owner-original-pr-custody.json": {
+      "bytes": 1808,
+      "sha256": "58850ac5bf1bf804d735a362d6cc33963401938181815579582d564e12cf2e76"
+    },
+    "owner-source-qualified.bundle": {
+      "bytes": 10725,
+      "sha256": "dded748b6f1e1bd1de0906e838e6518ef156ab01135c9a73f80738ac2c17697b"
+    },
+    "stage-authority-after.log": {
+      "bytes": 600,
+      "sha256": "c08fabc29b752f4d7b5b25137f022150f5acaa1f04f48ff2ba989b4de9d3dff5"
+    },
+    "stage-authority-before.log": {
+      "bytes": 1600,
+      "sha256": "ed0022bb00fdb896ddbeea8470733e2967a63061bce3e015ff3715713c683fa1"
+    },
+    "stage-authority-boundary-after.log": {
+      "bytes": 126,
+      "sha256": "005775256ccabfabbf17e1b6c0ec6eff92533264fe8862e9987b15442295b9f9"
+    },
+    "trusted-source-companion.patch.gz": {
+      "bytes": 715,
+      "sha256": "4add34542d6ba4c91ec97dca87ecf5b8d864303f6c2eb73adef731bc232c5f59"
+    }
+  },
+  "fix": "Refresh only EXECUTABLE_DELIVERY exact trusted-byte digest after the bounded source-label correction. Keep strict byte comparison, source guards and generated immutable ConfigMap mechanics.",
+  "focused_checks": {
+    "affected_native_step_tests_after": 35,
+    "direct_authority_tests_after": 3,
+    "direct_authority_tests_before": "1 error,2pass",
+    "generated_artifact_change": "No committed generated ConfigMap; content-addressed name/reference follows source at render.",
+    "manifest_security_subtests_after": 6,
+    "manifest_security_tests_after": 3,
+    "native_catalog_change": "None: no workflow/job/env/defaults or source capsule inputs changed.",
+    "offline_broker_kustomize_render": "PASS"
+  },
+  "manual_cancel_or_retry_submitted": false,
+  "merge_or_adoption_authorized": false,
+  "normal_native": {
+    "accepted_count": 12,
+    "archives_complete": 12,
+    "failures": [],
+    "github_status": {
+      "context": "fleet-ci/native",
+      "created_at": "2026-10-12T20:46:41Z",
+      "description": "Native CI success 9834806a6799f4551ee7e287a6b485dd1a7dc72b2533ac3688f5835017587c47",
+      "id": 56171776095,
+      "state": "success",
+      "target_url": null,
+      "updated_at": "2026-10-12T20:46:41Z"
+    },
+    "mechanism": "Existing automatic native discovery;300s debounce; no manual duplicate or cancellation.",
+    "operation_id": "11e4f761-deb0-5a36-ba8f-7005360d190c",
+    "plan_sha256": "ec8ece625c17229d72df00de3411e77eb88b6175a30acfb29c6c874604d117ea",
+    "required_count": 12,
+    "run_id": "c0f037a6-db99-50d0-a505-5bc6cb97598e",
+    "schema": "fleet-native-ci-verdict/v1",
+    "source_merge_sha": "2d07c9a42852498bd1e3e1c0375a1d239942297e",
+    "state": "success"
+  },
+  "original_head": "6f1ebc36902e4bf9e6197aced2852d5653d32820",
+  "original_native_failure": {
+    "archive_complete": true,
+    "archive_verified_get": {
+      "manifest_sha256": "7052482ddf370f7057e865a48e54b14cb72c30af83703a4a1c6ff2ca24839137",
+      "summary_bytes": 820,
+      "summary_sha256": "188fa20406df6dd9a5848cae2cc427063fea89ed3bce5a094264f866ceb8ac8e"
+    },
+    "claim_limit": "Archive summary records trusted failure only, not a failed step. Private diagnostics remain on exact custody PVC; no new reader Pod created. Local exact-source reproduction independently identifies stale program authority.",
+    "exit_code": 1,
+    "failed_check": "check-98deac7481420febdf727b59",
+    "finished_at": "2026-10-12T20:20:20Z",
+    "name": "validate dashboard app and manifests",
+    "operation_id": "841abdf3-a75b-5737-931a-d51e7c3b0332",
+    "producer_pod_uid": "c33f2e33-8716-48f3-9533-06349c6256ec",
+    "workflow_uid": "b8994141-66e3-4588-80c9-8c542d645b72"
+  },
+  "patch_uncompressed": {
+    "bytes": 1358,
+    "reason": "gzip preserves exact git-format-patch bytes against repository whitespace/EOF hooks.",
+    "sha256": "5e5f572698d8bed61e9b1dd2b724a835b52c2d7ba701d22d025d093b315011f0"
+  },
+  "pr": "https://github.com/jvallery/agents/pull/4807",
+  "production_window": "Source/PR qualification only; Retry remains sole production/release writer.",
+  "schema": "verdify.ci644-owner-native-companion/v1",
+  "source_head": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c"
+}

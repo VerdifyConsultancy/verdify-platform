@@ -1,0 +1,8 @@
+test_changed_tooling_is_authorized_by_exact_bytes (test_delivery_stage_reuse.ReuseTests.test_changed_tooling_is_authorized_by_exact_bytes) ... ok
+test_mismatched_build_expectations_reject_before_source_credentials (test_delivery_stage_reuse.ReuseTests.test_mismatched_build_expectations_reject_before_source_credentials) ... ok
+test_tooling_checkout_and_unchanged_image_revision_are_distinct (test_delivery_stage_reuse.ReuseTests.test_tooling_checkout_and_unchanged_image_revision_are_distinct) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK

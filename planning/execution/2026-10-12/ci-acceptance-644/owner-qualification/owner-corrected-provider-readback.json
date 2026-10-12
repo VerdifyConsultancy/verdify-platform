@@ -1,0 +1,33 @@
+{
+  "base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "files": [
+    {
+      "bytes": 35804,
+      "exact": true,
+      "github_blob": "bbcb637b1e96cde22867d1eb793c5638f0601dce",
+      "path": "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/delivery_stage_runner.py",
+      "sha256": "6b29440b16a359652cc589482430566b6a25a8642ce39af58e9d8a7aac61a575"
+    },
+    {
+      "bytes": 86701,
+      "exact": true,
+      "github_blob": "8f643716306ac23b295dca0407e2911765a4e771",
+      "path": "control-plane/agent-fleet-control/scripts/executable_image_delivery.py",
+      "sha256": "f8950104f61531bd3880081ea38a1c9e6a9e22cf3477423afde90de8b2ca2254"
+    },
+    {
+      "bytes": 43172,
+      "exact": true,
+      "github_blob": "fb96702c70d683c8bd6daee287e70c4c72d18e02",
+      "path": "control-plane/agent-fleet-control/scripts/test_executable_image_delivery.py",
+      "sha256": "e58a2a62cf13f6008032ea36935829780a2201a8e1b0e6739ea9c9b0a953603a"
+    }
+  ],
+  "head": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+  "live_adoption_authorized": false,
+  "merge_authorized": false,
+  "parent": "6f1ebc36902e4bf9e6197aced2852d5653d32820",
+  "pr": "https://github.com/jvallery/agents/pull/4807",
+  "schema": "verdify.ci644-corrected-owner-source-readback/v1",
+  "verified_at": "2026-10-12T20:31:22.693526+00:00"
+}

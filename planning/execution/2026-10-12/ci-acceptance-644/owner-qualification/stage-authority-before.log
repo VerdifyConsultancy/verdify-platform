@@ -1,0 +1,19 @@
+test_changed_tooling_is_authorized_by_exact_bytes (test_delivery_stage_reuse.ReuseTests.test_changed_tooling_is_authorized_by_exact_bytes) ... ERROR
+test_mismatched_build_expectations_reject_before_source_credentials (test_delivery_stage_reuse.ReuseTests.test_mismatched_build_expectations_reject_before_source_credentials) ... ok
+test_tooling_checkout_and_unchanged_image_revision_are_distinct (test_delivery_stage_reuse.ReuseTests.test_tooling_checkout_and_unchanged_image_revision_are_distinct) ... ok
+
+======================================================================
+ERROR: test_changed_tooling_is_authorized_by_exact_bytes (test_delivery_stage_reuse.ReuseTests.test_changed_tooling_is_authorized_by_exact_bytes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/scripts/test_delivery_stage_reuse.py", line 24, in test_changed_tooling_is_authorized_by_exact_bytes
+    self.assertEqual(runner._trusted_program(ROOT, name), ROOT / name)
+                     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/private/tmp/agents-ci-644-source-20261012/control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/delivery_stage_runner.py", line 676, in _trusted_program
+    raise StageError("stage program bytes differ from deployment authority")
+delivery_stage_reuse.StageError: stage program bytes differ from deployment authority
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.003s
+
+FAILED (errors=1)
