@@ -1,0 +1,11 @@
+{
+  "observed_at": "2026-10-12T18:49:59.836924+00:00",
+  "baseline_receipt_sha256": "0d7bbd6a42cb5e0a7ec89153710eff6240f6ec6f155a1bb41e7a3bbcbdd6f912",
+  "actual_receipt_sha256": "53f48ad8688409cc38cb1fc24cd207ae81ec02e80fb760dd7d3847327e699fdc",
+  "all_table_records_byte_value_exact": true,
+  "relations": 951,
+  "rows": 9699549,
+  "study_derivation_records": 42,
+  "target_row_reread_or_export": false,
+  "primary_pod_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad"
+}
