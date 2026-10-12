@@ -1,0 +1,23 @@
+{
+  "schema": "verdify-contained-recovery-live-prerequisite-readback-v1",
+  "capturedAt": "2026-10-12T18:01:26.183402+00:00",
+  "reader_objectstore": {
+    "name": "verdify-cnpg-pitr-reader",
+    "uid": "e6dd97f3-3323-4155-b339-c984734b3d18",
+    "spec_exact": true,
+    "spec_sha256": "83b134f5116d08a7f47076745c6b9feee22c5b756af13cb95074dd4083a74dff"
+  },
+  "policies": [
+    {
+      "name": "deny-all-rehearsal",
+      "uid": "bdd627d5-6c2b-49dc-9a0b-bfb0d3ac7230",
+      "spec_exact": true
+    },
+    {
+      "name": "verdify-cnpg-rehearsal-isolation",
+      "uid": "be675f81-54bc-4786-a53d-bcdbf7542e64",
+      "spec_exact": true
+    }
+  ],
+  "secret_data_read": false
+}

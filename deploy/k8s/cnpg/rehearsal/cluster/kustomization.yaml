@@ -1,10 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- cluster.yaml
-- s2-cluster.yaml
-- object-store.yaml
-- scheduled-backup.yaml
+# Historical initdb/archive-writer profiles remain in their source files only.
+# The live rehearsal is absent; render only the contained reader-only recovery.
+- pitr-reader-object-store.yaml
 - verdify-cnpg-rehearsal-isolation.yaml
 - deny-all-rehearsal.yaml
 - cnpg-s2-runtime-client-policy.yaml

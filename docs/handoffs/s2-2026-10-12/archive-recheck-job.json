@@ -1,0 +1,110 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "verdify-cnpg-s2-archive-recheck-20261012",
+    "namespace": "verdify-db-rehearsal",
+    "labels": {
+      "app.kubernetes.io/component": "cnpg-s2-archive-reader",
+      "app.kubernetes.io/part-of": "verdify",
+      "verdify.ai/qualification-target": "verdify-cnpg-s2"
+    },
+    "annotations": {
+      "verdify.ai/source-reader-job-uid": "15d24651-192b-407f-8236-8392e458ff85",
+      "verdify.ai/source-commit": "ac89df3e24f5dd34b6d1c145a300eb908b1519a8",
+      "verdify.ai/reader-script-sha256": "21565744721ee3cf82daf5676862457d39cd48c6a796fdfea7ef5a0aec9d6edd"
+    }
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 180,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "cnpg-s2-archive-reader",
+          "app.kubernetes.io/part-of": "verdify",
+          "verdify.ai/qualification-target": "verdify-cnpg-s2"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "command": [
+              "python3",
+              "-c",
+              "\nimport boto3,os,json,hashlib,logging,sys\nlogging.disable(logging.CRITICAL)\ntry:\n expected=json.loads(os.environ['EXPECTED_ARCHIVE'])\n s=boto3.client('s3',endpoint_url='https://s3-hdd.vallery.net')\n bucket='verdify-cnpg-rehearsal';prefix='postgresql/verdify-cnpg-s2/'\n objects=[]\n for page in s.get_paginator('list_objects_v2').paginate(Bucket=bucket,Prefix=prefix):\n  objects.extend(page.get('Contents',[]))\n base=[x for x in objects if x['Key'].startswith(prefix+'base/'+expected['backup_id']+'/')]\n assert base and any(x['Key'].endswith('/backup.info') for x in base)\n assert any('.tar' in x['Key'] for x in base)\n heads=[]\n for x in base:\n  h=s.head_object(Bucket=bucket,Key=x['Key']);assert h['ContentLength']==x['Size'] and x['Size']>0\n  heads.append({'key':x['Key'],'bytes':h['ContentLength']})\n required=base\n for wal in expected['wal_names']:\n  matches=[x for x in objects if x['Key'].startswith(prefix+'wals/') and x['Key'].rsplit('/',1)[-1] in (wal,wal+'.gz')]\n  assert len(matches)==1\n  required.extend(matches)\n receipts=[]\n for x in required:\n  r=s.get_object(Bucket=bucket,Key=x['Key']);h=hashlib.sha256();n=0\n  for block in r['Body'].iter_chunks(2*1024*1024):h.update(block);n+=len(block)\n  assert n==x['Size'] and n>0\n  receipts.append({'key':x['Key'],'bytes':n,'sha256':h.hexdigest()})\n print(json.dumps({'schema':'cnpg-s2-independent-archive-reader-v1','server_name':'verdify-cnpg-s2',\n  'backup_uid':expected['backup_uid'],'backup_id':expected['backup_id'],'required_wals':expected['wal_names'],\n  'base_object_heads':heads,'retrieved':receipts,'reader_only_secret_ref':True,'complete':True}),flush=True)\nexcept Exception as e:\n print(json.dumps({'schema':'cnpg-s2-independent-archive-reader-v1','complete':False,'error_type':type(e).__name__}),flush=True)\n sys.exit(1)\n"
+            ],
+            "env": [
+              {
+                "name": "EXPECTED_ARCHIVE",
+                "value": "{\"backup_id\": \"20261006T052358\", \"backup_uid\": \"8e3c2874-f16c-4ca2-b85d-09629910ac64\", \"wal_names\": [\"000000010000000100000072\", \"000000010000000100000073\", \"000000010000000100000074\"]}"
+              },
+              {
+                "name": "AWS_ACCESS_KEY_ID",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "AWS_ACCESS_KEY_ID",
+                    "name": "verdify-cnpg-rehearsal-s3-reader"
+                  }
+                }
+              },
+              {
+                "name": "AWS_SECRET_ACCESS_KEY",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "AWS_SECRET_ACCESS_KEY",
+                    "name": "verdify-cnpg-rehearsal-s3-reader"
+                  }
+                }
+              },
+              {
+                "name": "AWS_DEFAULT_REGION",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "AWS_DEFAULT_REGION",
+                    "name": "verdify-cnpg-rehearsal-s3-region"
+                  }
+                }
+              }
+            ],
+            "image": "ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar:v0.14.0@sha256:9880817c285c7afa4d195da2145064d21907405489ed6ec39abe59b1feb558a4",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "reader",
+            "resources": {
+              "limits": {
+                "memory": "256Mi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "64Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File"
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "restartPolicy": "Never",
+        "schedulerName": "default-scheduler",
+        "securityContext": {
+          "runAsGroup": 26,
+          "runAsNonRoot": true,
+          "runAsUser": 26,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 30
+      }
+    }
+  }
+}
