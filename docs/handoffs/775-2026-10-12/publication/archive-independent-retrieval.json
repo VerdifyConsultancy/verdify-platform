@@ -1,0 +1,162 @@
+{
+  "schema": "root.independent-private-retrieval/2",
+  "verified_at": "2026-10-12T15:53:12.593398+00:00",
+  "scope": {
+    "ci_invoked": false,
+    "github_content_mutations": false,
+    "build_or_deploy_invoked": false,
+    "production_actions": false,
+    "keys_exported_printed_or_copied": false,
+    "plaintext_values_printed": false,
+    "plaintext_materialized_to_disk": false,
+    "original_worktree_or_index_mutated": false,
+    "originals_deleted": false,
+    "proves": "independent GitHub ciphertext retrieval, exact ciphertext verification, authenticated decryption and complete archive traversal using the existing Mac identity",
+    "does_not_prove": "Mac/key-loss recovery or a full registry restore"
+  },
+  "result": "PASS",
+  "metadata_clarified_at": "2026-10-12T15:53:57.553039+00:00",
+  "archives": [
+    {
+      "archive": "verdify",
+      "source": {
+        "repository": "jvallery/agents",
+        "remote_url": "https://github.com/jvallery/agents.git",
+        "exact_commit": "9cfcb0f8b52a2daf8c84caedde2d140f47c73f54",
+        "exact_commit_fetched_and_verified": true,
+        "manifest_path": "docs/handoffs/shutdown-20261012/verdify-private-custody/manifest.json",
+        "ciphertext_source_path": null,
+        "retrieval_method": "fresh bare Git, depth-1 exact SHA fetch, selective remote promisor blob retrieval"
+      },
+      "ciphertext": {
+        "bytes": 221678616,
+        "sha256": "0d1c2bc72037697dfbf0bbbe53e4c9924eb9cd76265e4b666878de057856a7fc",
+        "parts": [
+          {
+            "part": 1,
+            "bytes": 47185920,
+            "sha256": "2dee0fab9840f1ecd5567de3aab8a3fb6736a9e00855e4ab9d6013011d47847b",
+            "verified": true
+          },
+          {
+            "part": 2,
+            "bytes": 47185920,
+            "sha256": "06b725a2037302d39250fd4d6d46bafc1b762d02c86f88ed688c7aa4e5309479",
+            "verified": true
+          },
+          {
+            "part": 3,
+            "bytes": 47185920,
+            "sha256": "4afcc2f632f92addd6b6edbdf9795f17b53cbf3b34785da16315bbbfa1c6293c",
+            "verified": true
+          },
+          {
+            "part": 4,
+            "bytes": 47185920,
+            "sha256": "0788aabed3c18791a2b8e50629ca0c97a1cbd342baa7bcfe9fdd6fc940bf8a94",
+            "verified": true
+          },
+          {
+            "part": 5,
+            "bytes": 32934936,
+            "sha256": "eadf30cd8bfaff345a6f2189085b065f61ba8765180518a1355b6f5f9cf9970d",
+            "verified": true
+          }
+        ],
+        "part_count": 5,
+        "all_part_hashes_verified": true,
+        "assembled_bytes_and_sha256_verified": true,
+        "manifest_parts_only": true
+      },
+      "decryption": {
+        "age_authenticated_decryption_succeeded": true,
+        "existing_mac_identity_used_without_export": true,
+        "plaintext_materialized_to_disk": false,
+        "compressed_bytes": 221624320,
+        "compressed_sha256": "96c13a9375c1491477dd479bdacd5fcdf08e21bee0e261f16264c810d7c1dc23",
+        "compressed_expected_bytes_verified": false,
+        "compressed_expected_hash_verified": false,
+        "format": "gzip/tar",
+        "decoder": "Python gzip",
+        "decompression_completed_successfully": true
+      },
+      "tar": {
+        "physical_entries": 28586,
+        "appledouble_sidecar_entries": 14293,
+        "logical_entries_excluding_appledouble": 14293,
+        "regular_files": 25864,
+        "regular_file_bytes": 1710037078,
+        "logical_regular_files_excluding_appledouble": 11571,
+        "logical_regular_bytes_excluding_appledouble": 1707707319,
+        "non_file_non_directory_entries": 3,
+        "every_regular_file_hashed": true,
+        "member_metadata_inventory_sha256": "0fa8a31bc6ff07178fc5323e43f90fa8f337b7d12bf791e9819c1e7714f94e93",
+        "expected_logical_entry_count_verified": true,
+        "declared_root_file_count": null,
+        "declared_root_plaintext_bytes": null,
+        "root_regular_count_matches_declared": null,
+        "root_regular_bytes_match_declared": null,
+        "embedded_custody_input_manifest_count": 0
+      }
+    },
+    {
+      "archive": "verdify-final-checkpoint",
+      "source": {
+        "repository": "jvallery/agents",
+        "remote_url": "https://github.com/jvallery/agents.git",
+        "exact_commit": "3e5c82f3dea43a47c7f452b9b0ce6ae6bdc789a1",
+        "exact_commit_fetched_and_verified": true,
+        "manifest_path": null,
+        "ciphertext_source_path": "docs/handoffs/shutdown-20261012/verdify-private-custody/verdify-final-checkpoint-20261012.tar.gz.age",
+        "retrieval_method": "fresh bare Git, depth-1 exact SHA fetch, selective remote promisor blob retrieval"
+      },
+      "ciphertext": {
+        "bytes": 2939784,
+        "sha256": "bf657ba6a4bd0c7b0bf4f205230f9dbc33fa5e6dadd85128e0532857a0d93f57",
+        "parts": [
+          {
+            "part": 1,
+            "bytes": 2939784,
+            "sha256": "bf657ba6a4bd0c7b0bf4f205230f9dbc33fa5e6dadd85128e0532857a0d93f57",
+            "verified": true
+          }
+        ],
+        "part_count": 1,
+        "all_part_hashes_verified": true,
+        "assembled_bytes_and_sha256_verified": true,
+        "manifest_parts_only": false
+      },
+      "decryption": {
+        "age_authenticated_decryption_succeeded": true,
+        "existing_mac_identity_used_without_export": true,
+        "plaintext_materialized_to_disk": false,
+        "compressed_bytes": 2938880,
+        "compressed_sha256": "72fbdc097171cd8f327e1e021ab6c9cd6edcaa4a73d2a2c0a2867ce07dc9014b",
+        "compressed_expected_bytes_verified": false,
+        "compressed_expected_hash_verified": false,
+        "format": "gzip/tar",
+        "decoder": "Python gzip",
+        "decompression_completed_successfully": true
+      },
+      "tar": {
+        "physical_entries": 854,
+        "appledouble_sidecar_entries": 427,
+        "logical_entries_excluding_appledouble": 427,
+        "regular_files": 847,
+        "regular_file_bytes": 14615081,
+        "logical_regular_files_excluding_appledouble": 420,
+        "logical_regular_bytes_excluding_appledouble": 14545480,
+        "non_file_non_directory_entries": 0,
+        "every_regular_file_hashed": true,
+        "member_metadata_inventory_sha256": "a2ac57d787fe0f89d5b603a8064e37782ecdcd385ffdf70f536d605f0ba2988d",
+        "expected_logical_entry_count_verified": true,
+        "declared_root_file_count": null,
+        "declared_root_plaintext_bytes": null,
+        "root_regular_count_matches_declared": null,
+        "root_regular_bytes_match_declared": null,
+        "embedded_custody_input_manifest_count": 0
+      }
+    }
+  ],
+  "root_receipt_url": "https://github.com/jvallery/agents/blob/in-progress/shutdown-20261012-root-handoff/docs/handoffs/shutdown-20261012/verification/verdify-private-independent-retrieval.json"
+}

@@ -4,6 +4,10 @@
 
 This branch is custody, not a deployable release. Resume only on Jason's explicit instruction and refresh all time-sensitive evidence first.
 
+## Publication follow-up
+
+Jason subsequently authorized finishing the issue updates. [Current publication-only follow-up](PUBLICATION-FOLLOWUP.md) records that phase separately from the original stopped snapshot; implementation remains paused. ROOT's independent encrypted-archive retrieval/decryption proof has now passed.
+
 ## Scope and acceptance
 
 The full assigned campaign is preserved: **91 issues (64 open/27 closed history) plus7 open PRs =98 GitHub items**. [ITEMS.md](ITEMS.md) and [item-review.json](item-review.json) record current evidence, unproved clauses, blockers, next steps and source refs per item. Historical acceptance remains bounded; no issue is reopened or closed solely by shutdown. S2 remains **2/7 accepted** (#964/#953); remaining#644/#949/#396/#382/#643. C0–C8 remain incomplete.

@@ -1,0 +1,16 @@
+{
+  "observed_at": "2026-10-12T16:03:53.109839+00:00",
+  "phase": "Jason authorized finish issue updates/resume; publication only",
+  "verified": 5,
+  "pending": 93,
+  "total": 98,
+  "writer": "not started; no active publisher or timer",
+  "lease": "none; coordinated hold until ROOT-agreed named lease",
+  "proposed_cooldown_window": "Not before16:44UTC; proposal only, no timer or authorization inferred from elapsed time",
+  "prepared_command": "python3 /Users/jason/maintenance/verdify-paused-20261012/publish_item_updates_resumed.py",
+  "publisher_sha256": "bfdbacaa80e1ae54b25997b88435502cc22c3904401dd2b65f8f12dbc6b90742",
+  "minimum_seconds_between_content_writes": 10,
+  "first_mutation_error": "STOP; save headers, no automatic retry/probe",
+  "deduplication": "paginated GET marker+exact body, durable created-comment IDs and exact GET readback",
+  "scope": "original93pending only; implementation/build/deploy/device changes stay paused"
+}
