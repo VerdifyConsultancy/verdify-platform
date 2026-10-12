@@ -19,6 +19,23 @@ from tasks import confirmation, dispatcher  # noqa: E402
 
 
 @pytest.mark.parametrize(
+    ("parameter", "source_value", "command_value"),
+    [
+        ("temp_low", 72.24, 72.0),
+        ("temp_high", 78.25, 78.5),
+        ("vpd_low", 0.83, 0.85),
+        ("vpd_high", 1.225, 1.25),
+        ("vpd_target_south", 1.18, 1.2),
+        ("vpd_target_west", 1.12, 1.1),
+        ("vpd_target_east", 1.025, 1.05),
+        ("vpd_target_center", 0.73, 0.75),
+    ],
+)
+def test_crop_policy_commands_use_firmware_number_steps(parameter, source_value, command_value):
+    assert dispatcher._snap_crop_setter_command(parameter, source_value) == command_value
+
+
+@pytest.mark.parametrize(
     ("parameter", "observed", "desired", "equivalent"),
     [
         ("mister_vpd_weight", 0.75, 0.75, True),

@@ -5,6 +5,8 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from decimal import Decimal, ROUND_HALF_UP
+
 from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
 from esp32_push import (
     DeviceCommandOutcome,
@@ -92,6 +94,28 @@ _RECONNECT_SAFETY_CANDIDATES = (
 _CURRENT_READBACK_PARAMS = frozenset(CFG_READBACK_MAP.values()) | frozenset(SETPOINT_MAP.values())
 RECONNECT_UNOBSERVED_RESTORE_PARAMS = frozenset(_RECONNECT_SAFETY_CANDIDATES - _CURRENT_READBACK_PARAMS)
 MAX_RECONNECT_COMMANDS = 12
+
+_CROP_SETTER_STEPS: dict[str, Decimal] = {
+    "temp_low": Decimal("0.5"),
+    "temp_high": Decimal("0.5"),
+    "vpd_low": Decimal("0.05"),
+    "vpd_high": Decimal("0.05"),
+    "vpd_target_south": Decimal("0.05"),
+    "vpd_target_west": Decimal("0.05"),
+    "vpd_target_east": Decimal("0.05"),
+    "vpd_target_center": Decimal("0.05"),
+}
+
+
+def _snap_crop_setter_command(param: str, value: float) -> float:
+    """Round a crop-policy command to its ESPHome Number entity step.
+
+    The DB crop band and per-zone targets stay continuous for scientific
+    scoring. Only the value sent to the device is quantized.
+    """
+    step = _CROP_SETTER_STEPS[param]
+    ticks = (Decimal(str(value)) / step).to_integral_value(rounding=ROUND_HALF_UP)
+    return float(ticks * step)
 
 
 def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -> None:
@@ -898,7 +922,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                         )
                 else:
                     val = float(source_row[param])
-                val = round(val, 1 if param.startswith("temp") else 2)
+                val = _snap_crop_setter_command(param, val)
                 if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
                     continue
                 changes.append((param, val))
@@ -908,7 +932,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # anchor curves, so these become informational under anchors mode.
         if zone_row:
             for param in ("vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"):
-                val = round(float(zone_row[param]), 2)
+                val = _snap_crop_setter_command(param, float(zone_row[param]))
                 if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
                     continue
                 changes.append((param, val))
