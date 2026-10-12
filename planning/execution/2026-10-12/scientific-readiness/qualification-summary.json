@@ -77,8 +77,9 @@
   "real_sql_role_login_witness": false,
   "schema": "verdify-scientific-readiness-20261012-v1",
   "source_fix_follow_up": {
+    "independent_review_actionable_findings": 0,
     "manifest": "source-fix-manifest.json",
-    "manifest_sha256": "3c74eed545d8df58843432bf9e7439e3449f77ce47bddf6f76afc5de0bab5400",
+    "manifest_sha256": "1543941dfb4083550ba2521cc000d1f209cbbdb2eb116675e5717ab70dda5321",
     "native_full48_qualified": false,
     "preparation_and_proof_consumers_passed": 304,
     "updated_prefix_suite_passed": 46

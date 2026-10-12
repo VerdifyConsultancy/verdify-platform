@@ -45,6 +45,12 @@
     }
   ],
   "independent_native_workdirs": 2,
+  "independent_review": {
+    "actionable_findings": 0,
+    "file": "independent-review.json",
+    "reviewed_commit": "1ac661fbd9a86ddca31c8ee39020e8adc896471f",
+    "sha256": "60c94190e898a7b091f6a63b5c1865285d959f9c881646043ac737d76c3b6e62"
+  },
   "issues_closed": [],
   "production_runtime_changed": false,
   "protocol_changed": false,
