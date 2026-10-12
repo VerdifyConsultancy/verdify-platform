@@ -48,10 +48,14 @@ One old Documents/iCloud worktree (`verdify-782-winter-collector-source-f77`) ca
 
 ## Evidence custody and verification
 
-Readable source/runtime/CI receipts are in[evidence](evidence). Complete operational context, original source/failure/policy/approval custody and the full maintenance capture are preserved as an **age-encrypted GitHub draft-release asset**; final asset ID/download/SHA/decryption verification appear in`custody-assets.json` after upload. Existing operator key `/Users/jason/.config/sops/age/keys.txt` decrypts it; the private key and plaintext credential values are never committed. A GitHub artifact alone is not an independent site-loss recovery guarantee.
+Readable source/runtime/CI receipts are in[evidence](evidence). Complete operational context, original source/failure/policy/approval custody and the full maintenance capture are preserved locally in a validated **age-encrypted archive; GitHub draft-release upload is pending the shared write window**. Final asset ID/download/SHA/decryption verification will appear in`custody-assets.json` after upload. The local ciphertext is 221,678,616 bytes, SHA256`0d1c2bc72037697dfbf0bbbe53e4c9924eb9cd76265e4b666878de057856a7fc`; decryption and full tar validation passed across 14,293 entries. This is not yet remote custody of the encrypted archive. Existing operator key `/Users/jason/.config/sops/age/keys.txt` decrypts it; the private key and plaintext credential values are never committed. A GitHub artifact alone is not an independent site-loss recovery guarantee.
 
 Every item-update body and remote readback is indexed in`item-update-verification.json` after publication. Final audit records exact remote refs, full item coverage, encrypted upload/download/decryption, unchanged originals and terminal owned processes. Shutdown completion means preservation/stop, **not** completion of the greenhouse campaign.
 
 ## GitHub publication checkpoint
 
 All98 items have completed written reviews and prepared updates in[item-update-payloads](item-update-payloads). Five item comments were POST/GET verified before ROOT reported a global secondary content-write limit. The comment writer was terminated;93 remain queued in[item-update-queue.json](item-update-queue.json). Await the single-writer window before completing those custody-only updates. This checkpoint is not a claim that all98 comments are published yet.
+
+## Status refresh at 15:42:43 UTC
+
+[Authoritative readback](status-refresh-20261012.json) confirms production Synced/Healthy at b5 with the last full operation Succeeded, all 15 Deployments ready, node7 Ready and schedulable, and unchanged open scope of 64 issues and 7 PRs. Node7 cordoning is not the current blocker. No new source-cohort build/promotion/full sync/runtime qualification occurred. Remaining handoff work is 93 item-comment publications, encrypted archive upload/download/decryption proof, and final remote audit. GitHub content writes remain held under ROOT serialization; source and review payloads are already pushed. No Jason decision is needed to finish the authorized handoff. Implementation remains paused.

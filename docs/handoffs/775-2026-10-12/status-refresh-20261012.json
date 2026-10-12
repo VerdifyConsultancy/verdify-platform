@@ -1,0 +1,253 @@
+{
+  "observed_at": "2026-10-12T15:42:43.221529+00:00",
+  "argo": {
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "verdify-prod",
+          "server": "https://kubernetes.default.svc"
+        },
+        "ignoreDifferences": [
+          {
+            "group": "apps",
+            "jsonPointers": [
+              "/spec/volumeClaimTemplates/0/spec/volumeMode",
+              "/spec/volumeClaimTemplates/0/status"
+            ],
+            "kind": "StatefulSet",
+            "name": "verdify-db",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-lab-site-cache",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-hermes-iris-data-portable-20260801",
+            "namespace": "verdify-prod"
+          }
+        ],
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+      "status": "Synced"
+    },
+    "health": {
+      "lastTransitionTime": "2026-10-11T22:25:51Z",
+      "status": "Healthy"
+    },
+    "operation_phase": "Succeeded",
+    "finished": "2026-10-12T00:30:05Z"
+  },
+  "deployments": [
+    {
+      "name": "experiment-v2-freezer",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "experiment-v2-lifecycle",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "experiment-v2-selector",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-api",
+      "replicas": 2,
+      "ready": 2
+    },
+    {
+      "name": "verdify-db-backup-exporter",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-grafana",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-grafana-render-cache",
+      "replicas": 2,
+      "ready": 2
+    },
+    {
+      "name": "verdify-hermes-iris",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-ingestor",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-lab",
+      "replicas": 2,
+      "ready": 2
+    },
+    {
+      "name": "verdify-mcp",
+      "replicas": 2,
+      "ready": 2
+    },
+    {
+      "name": "verdify-mqtt",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-planner",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-setpoint-server",
+      "replicas": 1,
+      "ready": 1
+    },
+    {
+      "name": "verdify-traefik",
+      "replicas": 2,
+      "ready": 2
+    }
+  ],
+  "nodes": [
+    {
+      "name": "vm-k3s-node1",
+      "unschedulable": true,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node2",
+      "unschedulable": true,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node3",
+      "unschedulable": true,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node4",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node5",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node6",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node7",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "vm-k3s-node8",
+      "unschedulable": false,
+      "ready": "True"
+    }
+  ],
+  "github_open": {
+    "total_open": 71,
+    "issues": 64,
+    "prs": 7,
+    "numbers": [
+      973,
+      971,
+      970,
+      969,
+      968,
+      965,
+      963,
+      949,
+      855,
+      802,
+      801,
+      787,
+      786,
+      785,
+      784,
+      783,
+      782,
+      775,
+      774,
+      751,
+      750,
+      749,
+      644,
+      643,
+      642,
+      641,
+      640,
+      639,
+      638,
+      606,
+      588,
+      587,
+      586,
+      581,
+      434,
+      430,
+      428,
+      419,
+      412,
+      410,
+      398,
+      396,
+      390,
+      386,
+      382,
+      379,
+      378,
+      370,
+      369,
+      368,
+      367,
+      361,
+      359,
+      350,
+      324,
+      317,
+      304,
+      303,
+      299,
+      298,
+      297,
+      296,
+      245,
+      218,
+      75,
+      52,
+      51,
+      45,
+      31,
+      16,
+      14
+    ]
+  }
+}
