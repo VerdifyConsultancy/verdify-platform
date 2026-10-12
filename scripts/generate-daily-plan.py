@@ -110,6 +110,15 @@ def _sql_literal(value: object) -> str:
 def public_text(value: object) -> str:
     """Scrub implementation names and avoid Quartz dollar-sign math parsing."""
     text = redact_non_public_crop_references(value)
+    # Stored vision/planner prose can contain a missing measurement such as
+    # "None%". Keep that uncertainty explicit without presenting it as a value.
+    text = re.sub(
+        r"(?<![A-Za-z0-9_])['\"]?(?:none|[+-]?(?:nan|inf(?:inity)?|\.(?:nan|inf)))['\"]?"
+        r"\s*(?:%|°[CF]|kPa|Pa|ppm|k?W(?:h)?|m?L|gal(?:lons?)?|kg|lb|oz)(?![A-Za-z0-9_])",
+        "unavailable",
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r"iris-hermes-validation", "iris-validation", text, flags=re.IGNORECASE)
     text = re.sub(r"\bHermes\b", "planning gateway", text)
     text = re.sub(r"\bhermes\b", "planner-gateway", text)
