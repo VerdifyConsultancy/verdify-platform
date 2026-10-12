@@ -1,0 +1,71 @@
+{
+  "startedAt": "2026-10-12T22:08:41.653480+00:00",
+  "finishedAt": "2026-10-12T22:08:43.857545+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "sqlSha256": "e056719dd09e50aeb7f1324a0f88b946b7c2765948e59a18df3bea820fa3d846",
+  "exitCode": 0,
+  "stdoutSha256": "7491ff29805e16ee7f938bb9bb83f6309dcf87a7ea1e03122f20e3d4dfe1c9fa",
+  "stderrBytes": 0,
+  "scope": "native postgres peer READ ONLY metadata; no ordinary authentication/fixture/credential setter/Secret read/full-data rescan",
+  "passwordOrVerifierValuesSelected": false,
+  "sequenceCount": 77,
+  "sequence77ExactAccepted": true,
+  "roles": [
+    {
+      "role": "verdify_experiment_v2_equipment_source_collector_login",
+      "login": true,
+      "super": false,
+      "inherit": true,
+      "create_db": false,
+      "bypass_rls": false,
+      "create_role": false,
+      "memberships": [
+        {
+          "role": "verdify_experiment_equipment_source_collector",
+          "set_option": true,
+          "admin_option": false,
+          "inherit_option": true
+        }
+      ],
+      "replication": false,
+      "password_null": true
+    },
+    {
+      "role": "verdify_ingestor_runtime_login",
+      "login": true,
+      "super": false,
+      "inherit": true,
+      "create_db": false,
+      "bypass_rls": false,
+      "create_role": false,
+      "memberships": [
+        {
+          "role": "verdify_ingestor_runtime",
+          "set_option": true,
+          "admin_option": false,
+          "inherit_option": true
+        }
+      ],
+      "replication": false,
+      "password_null": true
+    }
+  ],
+  "identity": {
+    "kind": "identity",
+    "vector": "0.8.1",
+    "primary": true,
+    "database": "verdify_rehearsal",
+    "backend_pid": 10040,
+    "timescaledb": "2.25.2",
+    "cluster_name": "verdify-cnpg-s2-integration",
+    "database_oid": "16447",
+    "system_identifier": "7693399121498484768",
+    "server_version_num": 160013,
+    "transaction_read_only": "on",
+    "timescaledb_max_background_workers": "0"
+  },
+  "activeSessions": [],
+  "year2000Chunks": []
+}

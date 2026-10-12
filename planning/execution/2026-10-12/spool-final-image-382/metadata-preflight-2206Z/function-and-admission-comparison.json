@@ -1,0 +1,89 @@
+{
+  "acceptedMetadataCopyMultisetSha256": "a4a854e7415e5d6ffcc3c340ecdedb0e136b7150fefa9c555482a0728e4b0bb4",
+  "exact": true,
+  "functions": [
+    {
+      "acl": "{verdify=X/verdify,verdify_ingestor_runtime=X/verdify}",
+      "comparable_accepted_direct_hash": "42a61f78f7a11b6bb6e5a99814df7c053c9dc5d49ba8df32c88ace6f7017be10",
+      "config": [
+        "search_path=pg_catalog, public, pg_temp",
+        "TimeZone=UTC"
+      ],
+      "definition_sha256": "42a61f78f7a11b6bb6e5a99814df7c053c9dc5d49ba8df32c88ace6f7017be10",
+      "direct_hash_exact_when_comparable": true,
+      "owner": "verdify",
+      "security_definer": true,
+      "signature": "public.fn_record_climate_source_event(uuid,timestamp with time zone,text,uuid,bigint,jsonb,jsonb)"
+    },
+    {
+      "acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}",
+      "comparable_accepted_direct_hash": null,
+      "config": [
+        "search_path=public, pg_temp",
+        "TimeZone=UTC"
+      ],
+      "definition_sha256": "97e02827e29c050fd1d84c82d8cdd7b2995328d3b0fca8eb5be7582c6954cd74",
+      "direct_hash_exact_when_comparable": null,
+      "owner": "verdify_experiment_v2_owner",
+      "security_definer": true,
+      "signature": "public.fn_record_equipment_counter_sample(uuid,timestamp with time zone,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)"
+    },
+    {
+      "acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}",
+      "comparable_accepted_direct_hash": null,
+      "config": [
+        "search_path=public, pg_temp",
+        "TimeZone=UTC"
+      ],
+      "definition_sha256": "8d7b9e12d8aa4af3dc90f61de22d1d37c246dcd20bac4952fb388033bb430f42",
+      "direct_hash_exact_when_comparable": null,
+      "owner": "verdify_experiment_v2_owner",
+      "security_definer": true,
+      "signature": "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)"
+    },
+    {
+      "acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}",
+      "comparable_accepted_direct_hash": null,
+      "config": [
+        "search_path=public, pg_temp",
+        "TimeZone=UTC"
+      ],
+      "definition_sha256": "d6571de25040eeee5cea0fc2c5701273dc1fd7fe448ef3141c5ce6212e15a0d4",
+      "direct_hash_exact_when_comparable": null,
+      "owner": "verdify_experiment_v2_owner",
+      "security_definer": true,
+      "signature": "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)"
+    },
+    {
+      "acl": "{verdify=X/verdify,verdify_ingestor_runtime=X/verdify}",
+      "comparable_accepted_direct_hash": "f20ad07ef7ff300d212066d8ee7c9f904addf08a9e87c900936b45ca97e89aa5",
+      "config": [
+        "search_path=pg_catalog, public, pg_temp",
+        "TimeZone=UTC"
+      ],
+      "definition_sha256": "f20ad07ef7ff300d212066d8ee7c9f904addf08a9e87c900936b45ca97e89aa5",
+      "direct_hash_exact_when_comparable": true,
+      "owner": "verdify",
+      "security_definer": true,
+      "signature": "public.fn_record_observational_source_event(uuid,text,timestamp with time zone,text,uuid,bigint,jsonb)"
+    }
+  ],
+  "nativeAdmissionMetadataCopyMultisetSha256": "a4a854e7415e5d6ffcc3c340ecdedb0e136b7150fefa9c555482a0728e4b0bb4",
+  "nativeAdmissionRows": [
+    [
+      "verdify_api_runtime_login",
+      "1fc0d802b94b0e87b28a46662c17c80203075ae4caf3c13c6c73cb5f4256430c",
+      "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"
+    ],
+    [
+      "verdify_ingestor_runtime_login",
+      "6bae416d783bd87bf9ebf1cea3c9feecc392bdb14644acd78abc6961405b0480",
+      "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"
+    ],
+    [
+      "verdify_mcp_runtime_login",
+      "ff0b3b40487e50e5a9b398ee6243a66ba7decb7e7f76b637657d733bfbca1f5e",
+      "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"
+    ]
+  ]
+}

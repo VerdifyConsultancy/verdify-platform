@@ -1,0 +1,46 @@
+{
+  "startedAt": "2026-10-12T22:13:17.189318+00:00",
+  "finishedAt": "2026-10-12T22:13:18.398618+00:00",
+  "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "sqlSha256": "1564caa34c1936e6f299bcd79396efe92a3510e6221476aca88bfc3359ea7fb5",
+  "exitCode": 0,
+  "stdoutSha256": "6a028f9db60b4419c5b58fe1fd647812f048faec733d7a7404a61614ed356ad0",
+  "stderrBytes": 0,
+  "ledgerProjectionCount": 283,
+  "ledgerProjectionExactAccepted": true,
+  "triggerComparisons": [
+    {
+      "key": "public.climate.trg_climate_solar_position",
+      "native_metadata_exact": true,
+      "definition_exact": true,
+      "function_metadata_exact": true,
+      "exact": true
+    },
+    {
+      "key": "public.equipment_state.\"RI_ConstraintTrigger_c_176982\"",
+      "native_metadata_exact": true,
+      "definition_exact": true,
+      "function_metadata_exact": true,
+      "exact": true
+    },
+    {
+      "key": "public.equipment_state.\"RI_ConstraintTrigger_c_176983\"",
+      "native_metadata_exact": true,
+      "definition_exact": true,
+      "function_metadata_exact": true,
+      "exact": true
+    },
+    {
+      "key": "public.equipment_state_source_receipts.trg_equipment_state_source_receipts_immutable",
+      "native_metadata_exact": true,
+      "definition_exact": true,
+      "function_metadata_exact": true,
+      "exact": true
+    }
+  ],
+  "allFourNativeTriggersExact": true,
+  "scope": "bounded native catalog metadata only; no password/value selection, product rows, whole-data scan, fixtures or setters"
+}

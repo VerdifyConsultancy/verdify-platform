@@ -1,0 +1,130 @@
+{
+  "credentialDecisionRequired": null,
+  "credentialNextStep": "After root load/window admission only: provision target-only temporary passwords for these two starting-NULL LOGINs using existing private pattern; exact PASSWORD NULL plus original LOGIN=true inverse, no membership/grant change. No production credential rotation/Secret read.",
+  "currentCache": {
+    "CRIReportedImageBytes": 83744706,
+    "futureImagePullOrUnpackGrowthGiB": 0,
+    "globalCheckLimitation": "exit1 is attributed to an unrelated gravity-worker-acquisition image; the two exact Verdify rows are complete18/18 and unpackedtrue; no claim about every cached image",
+    "globalContainerdCheckExit": 1,
+    "node7AlreadyUnpacked": true,
+    "node7ConfigDigest": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+    "node7ContentComplete18of18": true,
+    "node7ExactManifestDigestPresent": true
+  },
+  "declaredFutureSharedObligations": [
+    {
+      "accounting": "This future root/CRI obligation is separate from proposed 4Gi Longhorn NVMe replica growth; no existing cache or 150Gi database double charge",
+      "declaredRootRunwayGiB": 40,
+      "exactFutureRamAndCleanupPeakNotEstablishedByThisMetadataStep": true,
+      "heldAction": "No #382 allocation, Job, credential, pull, reservation or build; retain release-owner runway",
+      "includedInEarlierPodSum": false,
+      "node": "vm-k3s-node7",
+      "owner": "Retry",
+      "provenance": "Trusted root relay of sole release owner Retry; later than 22:06 resource snapshot",
+      "reportedAt": "2026-10-12T22:17Z",
+      "reserveOrBuildGrantedByThisReceipt": false,
+      "work": "PR974 attended ingestor and lab-publisher two-image build plus CRI cleanup"
+    }
+  ],
+  "identity": {
+    "allExactAccepted": true,
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "databaseOid": 16447,
+    "primaryAddress": "10.42.6.178",
+    "primaryPodUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+    "serverVersionNum": 160013,
+    "systemIdentifier": "7693399121498484768"
+  },
+  "inverseBaseline": {
+    "acceptedDataAndStudyReceiptsRetained": true,
+    "acceptedFull952ReceiptSha256": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8",
+    "acceptedFull952Relations": 952,
+    "acceptedFull952Rows": 9699553,
+    "acceptedStudy42ReceiptSha256": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0",
+    "currentAdmissionMetadataCopyMultisetSha256ExactAccepted": true,
+    "currentAdmissionMetadataRows": 3,
+    "currentClimateAndObservationalFunctionDefinitionHashesExactAccepted": true,
+    "currentFourNativeTriggerMetadataExactAccepted": true,
+    "currentIngestorBoundaryEqualsAcceptedAdmission": true,
+    "currentLedger283ProjectionExactAccepted": true,
+    "currentOtherDatabaseSessions": 0,
+    "currentSequence77ExactAccepted": true,
+    "currentYear2000Chunks": 0,
+    "fixtureRowsRescanned": false,
+    "whole952OrStudy42Rescanned": false
+  },
+  "metadataPreflightReady": true,
+  "nativeAuthenticationOrFullCollectorRoleAttestationClaimed": false,
+  "nativeReadOnly": true,
+  "newObjectsOrCredentialsAllocated": false,
+  "nextSafeExecution": "Retain this prepared packet and Retry node7 runway. After root releases one coordinated finite target window, refresh time-sensitive predicates and execute the same-target target-only temporary credential/spool/serial-phase path with exact inverses and952/77/42 reseal. No Jason decision is missing.",
+  "observationsFrom": "2026-10-12T22:06:32.832962+00:00",
+  "observationsThrough": "2026-10-12T22:16:10.607279+00:00",
+  "preparedPacketCommit": "016e7155beb4f73525ca67de77e9e7f96e92d67b",
+  "remainingPredicate": "Root coordinates Retry PR974 node7 40Gi root/CRI runway and actual future shared RAM/log/cache/cleanup peak before granting any target allocation, credential window or phase. No such execution is admitted by this metadata-only step. Refresh time-sensitive identity, isolation and source/cache predicates at actual release; retained952/42 custody is not a new row scan.",
+  "resourceFit": {
+    "actualNewAllocatedGiB": 0,
+    "cachedNode7SchedulerPointInTimeFit": true,
+    "distinctEligibleReplicaDomains": [
+      "vm-k3s-node4",
+      "vm-k3s-node5",
+      "vm-k3s-node6",
+      "vm-k3s-node7"
+    ],
+    "existing150GiBNotDoubleCharged": true,
+    "futureReservationOrGuaranteedWorstCaseFitClaimed": false,
+    "newBoundedRootGrowthGiB": 0.5,
+    "newRunnerLimitMemoryGiB": 1,
+    "newRunnerRequestMemoryGiB": 0.5,
+    "newSpoolLogicalGiB": 2,
+    "node7ActualMemoryAvailableGiB": 49.377410888671875,
+    "node7MemoryRequestHeadroomGiB": 26.277544636279345,
+    "node7RootAvailableGiB": 110.81274795532227,
+    "onyxPhysicalRootThinFreeGiBApprox": 121.911333984375,
+    "potentialR2IncrementalPhysicalGiB": 4
+  },
+  "roles": [
+    {
+      "bypass_rls": false,
+      "create_db": false,
+      "create_role": false,
+      "inherit": true,
+      "login": true,
+      "memberships": [
+        {
+          "admin_option": false,
+          "inherit_option": true,
+          "role": "verdify_experiment_equipment_source_collector",
+          "set_option": true
+        }
+      ],
+      "password_null": true,
+      "replication": false,
+      "role": "verdify_experiment_v2_equipment_source_collector_login",
+      "super": false
+    },
+    {
+      "bypass_rls": false,
+      "create_db": false,
+      "create_role": false,
+      "inherit": true,
+      "login": true,
+      "memberships": [
+        {
+          "admin_option": false,
+          "inherit_option": true,
+          "role": "verdify_ingestor_runtime",
+          "set_option": true
+        }
+      ],
+      "password_null": true,
+      "replication": false,
+      "role": "verdify_ingestor_runtime_login",
+      "super": false
+    }
+  ],
+  "schema": "verdify-382-metadata-only-preflight-v1",
+  "sourceOrProductionChanged": false,
+  "targetExecutionAdmitted": false
+}

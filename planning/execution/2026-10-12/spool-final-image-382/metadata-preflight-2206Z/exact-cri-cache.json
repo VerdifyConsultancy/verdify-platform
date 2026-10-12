@@ -1,0 +1,74 @@
+{
+  "scope": "read-only CRI image metadata; no image pull/build/start/inspect config/env",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "nodes": [
+    {
+      "node": "vm-k3s-node4",
+      "sshExitCode": 0,
+      "evidence": {
+        "capturedAt": "2026-10-12T22:09:38.283566+00:00",
+        "command": "sudo -n k3s crictl images --output json",
+        "exitCode": 0,
+        "imageCount": 184,
+        "exactMatches": [],
+        "digestOnlyMatches": []
+      }
+    },
+    {
+      "node": "vm-k3s-node5",
+      "sshExitCode": 0,
+      "evidence": {
+        "capturedAt": "2026-10-12T22:09:43.377761+00:00",
+        "command": "sudo -n k3s crictl images --output json",
+        "exitCode": 0,
+        "imageCount": 157,
+        "exactMatches": [
+          {
+            "id": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+            "repoTags": [],
+            "repoDigests": [
+              "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+            ],
+            "size": "83744706",
+            "pinned": false
+          }
+        ],
+        "digestOnlyMatches": []
+      }
+    },
+    {
+      "node": "vm-k3s-node6",
+      "sshExitCode": 0,
+      "evidence": {
+        "capturedAt": "2026-10-12T22:09:35.689837+00:00",
+        "command": "sudo -n k3s crictl images --output json",
+        "exitCode": 0,
+        "imageCount": 96,
+        "exactMatches": [],
+        "digestOnlyMatches": []
+      }
+    },
+    {
+      "node": "vm-k3s-node7",
+      "sshExitCode": 0,
+      "evidence": {
+        "capturedAt": "2026-10-12T22:09:40.448283+00:00",
+        "command": "sudo -n k3s crictl images --output json",
+        "exitCode": 0,
+        "imageCount": 145,
+        "exactMatches": [
+          {
+            "id": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+            "repoTags": [],
+            "repoDigests": [
+              "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f"
+            ],
+            "size": "83744706",
+            "pinned": false
+          }
+        ],
+        "digestOnlyMatches": []
+      }
+    }
+  ]
+}

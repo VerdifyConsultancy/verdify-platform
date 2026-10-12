@@ -1,0 +1,86 @@
+{
+  "files": [
+    {
+      "bytes": 7801,
+      "path": "README.md",
+      "sha256": "0c2d7d58f16daaccc523a55aa02e26c01847bc663ef5f561463190ba9a53df0b"
+    },
+    {
+      "bytes": 97610,
+      "path": "accepted-metadata-baseline.sanitized.json",
+      "sha256": "40d4a82c842c9ea0753745048d1953507bb3304e092974e3e4d4a35a154fda3d"
+    },
+    {
+      "bytes": 5956,
+      "path": "admission-ready.NOT-ADMITTED.json",
+      "sha256": "4b1008f6d91fd5a9c87549e9e82b6cf3579a808f5a29e13473c5e98b6207f498"
+    },
+    {
+      "bytes": 1638,
+      "path": "catalog-comparison-receipt.json",
+      "sha256": "280d1b4d56a989f54a153ff7a56612e15fada7fadd4bef9125d9828489f333f6"
+    },
+    {
+      "bytes": 1643,
+      "path": "catalog-comparison.readonly.sql",
+      "sha256": "1564caa34c1936e6f299bcd79396efe92a3510e6221476aca88bfc3359ea7fb5"
+    },
+    {
+      "bytes": 48254,
+      "path": "catalog-comparison.stdout.txt",
+      "sha256": "6a028f9db60b4419c5b58fe1fd647812f048faec733d7a7404a61614ed356ad0"
+    },
+    {
+      "bytes": 38648,
+      "path": "cluster-isolation-metadata.json",
+      "sha256": "03a16ea3d537b74514f52572f356f6bea80cc9a17abb4045b3cb349cb91ca645"
+    },
+    {
+      "bytes": 22293,
+      "path": "current-incremental-fit.json",
+      "sha256": "a8be2dd85b8d85193cfefb4b4bc66c69edf53f220e54d49c2a124727514c4972"
+    },
+    {
+      "bytes": 2357,
+      "path": "exact-cri-cache.json",
+      "sha256": "103a39aea0772d16a34f8f6306d0420b5bfe1b0bccb2cc48ff33ae26b41d201d"
+    },
+    {
+      "bytes": 4131,
+      "path": "function-and-admission-comparison.json",
+      "sha256": "5f99ab685b05891e5f4800f1b40e37531de81dfb868dbec649162c0d62da257f"
+    },
+    {
+      "bytes": 2175,
+      "path": "native-metadata-receipt.json",
+      "sha256": "fc940b03aec3382f05fa38934c2440aec92dbeffe67e607f1398aa449bae729a"
+    },
+    {
+      "bytes": 13977,
+      "path": "native-metadata.json",
+      "sha256": "fbe4eff073efe87677ef98177da48aa99481141fab17005730a0ec85a5b8462a"
+    },
+    {
+      "bytes": 5516,
+      "path": "native-metadata.readonly.sql",
+      "sha256": "e056719dd09e50aeb7f1324a0f88b946b7c2765948e59a18df3bea820fa3d846"
+    },
+    {
+      "bytes": 12924,
+      "path": "native-metadata.stdout.txt",
+      "sha256": "7491ff29805e16ee7f938bb9bb83f6309dcf87a7ea1e03122f20e3d4dfe1c9fa"
+    },
+    {
+      "bytes": 1770,
+      "path": "node7-existing-image-unpacked.json",
+      "sha256": "944e631ea6ee934abc7ccdc929482375dbaea3c281ac0861652aac115236d4d6"
+    },
+    {
+      "bytes": 1993,
+      "path": "node7-host-thin-metadata.json",
+      "sha256": "ab182c05aa3c5812a3a2092e0f858e17063cd3e68da42843cff8d5b4de96a7eb"
+    }
+  ],
+  "preparedPacketCommit": "016e7155beb4f73525ca67de77e9e7f96e92d67b",
+  "schema": "verdify-382-metadata-only-preflight-checksums-v1"
+}

@@ -1,0 +1,87 @@
+{"kind": "identity", "vector": "0.8.1", "primary": true, "database": "verdify_rehearsal", "backend_pid": 10040, "timescaledb": "2.25.2", "cluster_name": "verdify-cnpg-s2-integration", "database_oid": "16447", "system_identifier": "7693399121498484768", "server_version_num": 160013, "transaction_read_only": "on", "timescaledb_max_background_workers": "0"}
+{"kind": "role_posture", "roles": [{"role": "verdify_experiment_v2_equipment_source_collector_login", "login": true, "super": false, "inherit": true, "create_db": false, "bypass_rls": false, "create_role": false, "memberships": [{"role": "verdify_experiment_equipment_source_collector", "set_option": true, "admin_option": false, "inherit_option": true}], "replication": false, "password_null": true}, {"role": "verdify_ingestor_runtime_login", "login": true, "super": false, "inherit": true, "create_db": false, "bypass_rls": false, "create_role": false, "memberships": [{"role": "verdify_ingestor_runtime", "set_option": true, "admin_option": false, "inherit_option": true}], "replication": false, "password_null": true}]}
+{"kind": "ordinary_ingestor_boundary", "sha256": "6bae416d783bd87bf9ebf1cea3c9feecc392bdb14644acd78abc6961405b0480"}
+{"kind": "functions", "functions": [{"acl": "{verdify=X/verdify,verdify_ingestor_runtime=X/verdify}", "owner": "verdify", "config": ["search_path=pg_catalog, public, pg_temp", "TimeZone=UTC"], "signature": "fn_record_climate_source_event(uuid,timestamp with time zone,text,uuid,bigint,jsonb,jsonb)", "security_definer": true, "definition_sha256": "42a61f78f7a11b6bb6e5a99814df7c053c9dc5d49ba8df32c88ace6f7017be10"}, {"acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}", "owner": "verdify_experiment_v2_owner", "config": ["search_path=public, pg_temp", "TimeZone=UTC"], "signature": "fn_record_equipment_counter_sample(uuid,timestamp with time zone,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)", "security_definer": true, "definition_sha256": "97e02827e29c050fd1d84c82d8cdd7b2995328d3b0fca8eb5be7582c6954cd74"}, {"acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}", "owner": "verdify_experiment_v2_owner", "config": ["search_path=public, pg_temp", "TimeZone=UTC"], "signature": "fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)", "security_definer": true, "definition_sha256": "8d7b9e12d8aa4af3dc90f61de22d1d37c246dcd20bac4952fb388033bb430f42"}, {"acl": "{verdify_experiment_v2_owner=X/verdify_experiment_v2_owner,verdify_experiment_equipment_source_collector=X/verdify_experiment_v2_owner}", "owner": "verdify_experiment_v2_owner", "config": ["search_path=public, pg_temp", "TimeZone=UTC"], "signature": "fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)", "security_definer": true, "definition_sha256": "d6571de25040eeee5cea0fc2c5701273dc1fd7fe448ef3141c5ce6212e15a0d4"}, {"acl": "{verdify=X/verdify,verdify_ingestor_runtime=X/verdify}", "owner": "verdify", "config": ["search_path=pg_catalog, public, pg_temp", "TimeZone=UTC"], "signature": "fn_record_observational_source_event(uuid,text,timestamp with time zone,text,uuid,bigint,jsonb)", "security_definer": true, "definition_sha256": "f20ad07ef7ff300d212066d8ee7c9f904addf08a9e87c900936b45ca97e89aa5"}]}
+{"kind": "immutable_trigger", "enabled": "O", "function_sha256": "9097ac8f3913fb8fb7fca031fe8649f607943d35cf1b6b10265b11c2018f2d3e"}
+{"275": [{"seq": 275, "sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4", "source": "db/migrations", "filename": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql", "stamp_method": "runner"}], "kind": "migration_metadata", "max_seq": 275, "source_migrations": 282, "ledger_row_hashes_sha256": "a3aa6d6ce089e6b9cebd74e3b560e039ab7746ed1df828f8eaae549cc48df587"}
+{"kind": "native_admission_metadata", "rows": [["verdify_api_runtime_login", "1fc0d802b94b0e87b28a46662c17c80203075ae4caf3c13c6c73cb5f4256430c", "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"], ["verdify_ingestor_runtime_login", "6bae416d783bd87bf9ebf1cea3c9feecc392bdb14644acd78abc6961405b0480", "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"], ["verdify_mcp_runtime_login", "ff0b3b40487e50e5a9b398ee6243a66ba7decb7e7f76b637657d733bfbca1f5e", "7ad77910e380c467b6045ebf0a3df1f62b64b95c0fc0321f8f91bea8d73244ac"]]}
+{"kind": "active_sessions", "sessions": []}
+{"kind": "year2000_chunk_inventory", "chunks": []}
+{"kind": "sequence_count", "count": 77}
+{"kind": "sequence", "name": "_timescaledb_catalog.bgw_job_id_seq", "is_called": true, "last_value": 1024}
+{"kind": "sequence", "name": "_timescaledb_catalog.chunk_column_stats_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "_timescaledb_catalog.chunk_constraint_name", "is_called": true, "last_value": 1009}
+{"kind": "sequence", "name": "_timescaledb_catalog.chunk_id_seq", "is_called": true, "last_value": 1108}
+{"kind": "sequence", "name": "_timescaledb_catalog.continuous_agg_migrate_plan_step_step_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "_timescaledb_catalog.dimension_id_seq", "is_called": true, "last_value": 62}
+{"kind": "sequence", "name": "_timescaledb_catalog.dimension_slice_id_seq", "is_called": true, "last_value": 925}
+{"kind": "sequence", "name": "_timescaledb_catalog.hypertable_id_seq", "is_called": true, "last_value": 72}
+{"kind": "sequence", "name": "_timescaledb_catalog.tablespace_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "_timescaledb_internal.bgw_job_stat_history_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.alert_log_id_seq", "is_called": true, "last_value": 12548}
+{"kind": "sequence", "name": "public.consumables_log_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.control_transition_ledger_ledger_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.crop_assignment_revisions_revision_id_seq", "is_called": true, "last_value": 10}
+{"kind": "sequence", "name": "public.crop_band_anchors_id_seq", "is_called": true, "last_value": 264}
+{"kind": "sequence", "name": "public.crop_catalog_id_seq", "is_called": true, "last_value": 56}
+{"kind": "sequence", "name": "public.crop_events_id_seq", "is_called": true, "last_value": 94}
+{"kind": "sequence", "name": "public.crop_target_profile_revisions_revision_id_seq", "is_called": true, "last_value": 288}
+{"kind": "sequence", "name": "public.crop_target_profiles_id_seq", "is_called": true, "last_value": 4320}
+{"kind": "sequence", "name": "public.crop_tasks_id_seq", "is_called": true, "last_value": 20}
+{"kind": "sequence", "name": "public.crops_id_seq", "is_called": true, "last_value": 15}
+{"kind": "sequence", "name": "public.daily_checklist_log_id_seq", "is_called": true, "last_value": 772}
+{"kind": "sequence", "name": "public.daily_checklist_template_id_seq", "is_called": true, "last_value": 20}
+{"kind": "sequence", "name": "public.daily_climate_metric_revisions_revision_id_seq", "is_called": true, "last_value": 3260}
+{"kind": "sequence", "name": "public.data_gaps_id_seq", "is_called": true, "last_value": 390}
+{"kind": "sequence", "name": "public.dli_validity_intervals_id_seq", "is_called": true, "last_value": 1}
+{"kind": "sequence", "name": "public.equipment_aliases_id_seq", "is_called": true, "last_value": 3}
+{"kind": "sequence", "name": "public.equipment_assets_id_seq", "is_called": true, "last_value": 119}
+{"kind": "sequence", "name": "public.equipment_id_seq", "is_called": true, "last_value": 116}
+{"kind": "sequence", "name": "public.experiment_events_event_id_seq", "is_called": true, "last_value": 218}
+{"kind": "sequence", "name": "public.experiment_v2_bundle_attempts_attempt_id_seq", "is_called": true, "last_value": 560}
+{"kind": "sequence", "name": "public.experiment_v2_component_outcomes_component_outcome_id_seq", "is_called": true, "last_value": 6263}
+{"kind": "sequence", "name": "public.experiment_v2_runtime_generations_generation_event_id_seq", "is_called": true, "last_value": 225}
+{"kind": "sequence", "name": "public.experiment_v2_work_events_work_event_id_seq", "is_called": true, "last_value": 323}
+{"kind": "sequence", "name": "public.fixed_panel_contributor_revisions_revision_id_seq", "is_called": true, "last_value": 9}
+{"kind": "sequence", "name": "public.fixed_panel_native_day_receipts_receipt_id_seq", "is_called": true, "last_value": 1}
+{"kind": "sequence", "name": "public.fixed_panel_native_source_bindings_binding_id_seq", "is_called": true, "last_value": 2}
+{"kind": "sequence", "name": "public.fixed_panel_target_revisions_revision_id_seq", "is_called": true, "last_value": 3}
+{"kind": "sequence", "name": "public.forecast_action_log_id_seq", "is_called": true, "last_value": 115183}
+{"kind": "sequence", "name": "public.forecast_action_rules_id_seq", "is_called": true, "last_value": 9}
+{"kind": "sequence", "name": "public.harvests_id_seq", "is_called": true, "last_value": 2}
+{"kind": "sequence", "name": "public.image_observations_id_seq", "is_called": true, "last_value": 726}
+{"kind": "sequence", "name": "public.irrigation_log_id_seq", "is_called": true, "last_value": 375}
+{"kind": "sequence", "name": "public.irrigation_schedule_id_seq", "is_called": true, "last_value": 186}
+{"kind": "sequence", "name": "public.lab_results_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.maintenance_log_id_seq", "is_called": true, "last_value": 11}
+{"kind": "sequence", "name": "public.nutrient_recipes_id_seq", "is_called": true, "last_value": 33}
+{"kind": "sequence", "name": "public.observations_id_seq", "is_called": true, "last_value": 1826}
+{"kind": "sequence", "name": "public.openclaw_interaction_log_id_seq", "is_called": true, "last_value": 1178}
+{"kind": "sequence", "name": "public.physical_crop_band_revisions_revision_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.plan_delivery_log_id_seq", "is_called": true, "last_value": 6002}
+{"kind": "sequence", "name": "public.planner_lessons_id_seq", "is_called": true, "last_value": 326}
+{"kind": "sequence", "name": "public.planner_trigger_ledger_id_seq", "is_called": true, "last_value": 1053172}
+{"kind": "sequence", "name": "public.playbook_content_id_seq", "is_called": true, "last_value": 124}
+{"kind": "sequence", "name": "public.policy_delivery_attempts_attempt_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.policy_device_snapshots_snapshot_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.positions_id_seq", "is_called": true, "last_value": 576}
+{"kind": "sequence", "name": "public.pressure_groups_id_seq", "is_called": true, "last_value": 12}
+{"kind": "sequence", "name": "public.public_contact_submissions_id_seq", "is_called": true, "last_value": 15}
+{"kind": "sequence", "name": "public.resource_coefficients_id_seq", "is_called": true, "last_value": 16}
+{"kind": "sequence", "name": "public.route_only_crop_band_publications_publication_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.sensors_id_seq", "is_called": true, "last_value": 114}
+{"kind": "sequence", "name": "public.shelves_id_seq", "is_called": true, "last_value": 60}
+{"kind": "sequence", "name": "public.slack_alert_actions_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.slack_alert_runbooks_id_seq", "is_called": true, "last_value": 37}
+{"kind": "sequence", "name": "public.slack_command_audit_id_seq", "is_called": true, "last_value": 2630}
+{"kind": "sequence", "name": "public.slack_notification_events_id_seq", "is_called": true, "last_value": 31}
+{"kind": "sequence", "name": "public.slack_user_roles_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.soil_moisture_targets_id_seq", "is_called": true, "last_value": 3}
+{"kind": "sequence", "name": "public.succession_plan_id_seq", "is_called": false, "last_value": 1}
+{"kind": "sequence", "name": "public.switches_id_seq", "is_called": true, "last_value": 96}
+{"kind": "sequence", "name": "public.treatments_id_seq", "is_called": true, "last_value": 4}
+{"kind": "sequence", "name": "public.utility_cost_id_seq", "is_called": true, "last_value": 3708}
+{"kind": "sequence", "name": "public.verdify_embeddings_id_seq", "is_called": true, "last_value": 8608}
+{"kind": "sequence", "name": "public.water_meter_events_id_seq", "is_called": true, "last_value": 210038}
+{"kind": "sequence", "name": "public.water_systems_id_seq", "is_called": true, "last_value": 52}
+{"kind": "sequence", "name": "public.zones_id_seq", "is_called": true, "last_value": 30}

@@ -1,0 +1,1284 @@
+{
+  "capturedAt": "2026-10-12T22:06:32.832962+00:00",
+  "cluster": {
+    "metadata": {
+      "creationTimestamp": "2026-10-12T18:33:00Z",
+      "deletionTimestamp": null,
+      "name": "verdify-cnpg-s2-integration",
+      "namespace": "verdify-db-rehearsal",
+      "resourceVersion": "265842165",
+      "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+    },
+    "parameters": null,
+    "provisioner": null,
+    "reclaimPolicy": null,
+    "spec": {
+      "affinity": {
+        "enablePodAntiAffinity": true,
+        "nodeSelector": {
+          "agentfleet.vallery.net/control-plane": "false",
+          "storage.vallery.net/longhorn": "true"
+        },
+        "podAntiAffinityType": "required",
+        "topologyKey": "topology.vallery.net/proxmox-host"
+      },
+      "imageName": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+      "instances": 3,
+      "primaryUpdateStrategy": "unsupervised",
+      "resources": {
+        "limits": {
+          "memory": "6Gi"
+        },
+        "requests": {
+          "cpu": "500m",
+          "memory": "2Gi"
+        }
+      },
+      "storage": {
+        "resizeInUseVolumes": true,
+        "size": "20Gi",
+        "storageClass": "longhorn-v1-rwo"
+      },
+      "walStorage": {
+        "resizeInUseVolumes": true,
+        "size": "5Gi",
+        "storageClass": "longhorn-v1-rwo"
+      }
+    },
+    "status": {
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-12T18:35:06Z",
+          "message": "A single, unique system ID was found across reporting instances.",
+          "reason": "Unique",
+          "status": "True",
+          "type": "ConsistentSystemID"
+        },
+        {
+          "lastTransitionTime": "2026-10-12T18:38:28Z",
+          "message": "Cluster is Ready",
+          "reason": "ClusterIsReady",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2026-10-12T18:35:06Z",
+          "message": "Continuous archiving is working",
+          "reason": "ContinuousArchivingSuccess",
+          "status": "True",
+          "type": "ContinuousArchiving"
+        }
+      ],
+      "currentPrimary": "verdify-cnpg-s2-integration-1",
+      "instances": 3,
+      "instancesStatus": {
+        "healthy": [
+          "verdify-cnpg-s2-integration-1",
+          "verdify-cnpg-s2-integration-2",
+          "verdify-cnpg-s2-integration-3"
+        ]
+      },
+      "phase": "Cluster in healthy state",
+      "readyInstances": 3,
+      "targetPrimary": "verdify-cnpg-s2-integration-1"
+    },
+    "subsets": null,
+    "volumeBindingMode": null
+  },
+  "databasePods": [
+    {
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      ],
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/instance": "verdify-cnpg-s2-integration",
+        "app.kubernetes.io/managed-by": "cloudnative-pg",
+        "app.kubernetes.io/name": "postgresql",
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/version": "16",
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceName": "verdify-cnpg-s2-integration-1",
+        "cnpg.io/instanceRole": "primary",
+        "cnpg.io/podRole": "instance",
+        "role": "primary",
+        "topology.kubernetes.io/zone": "opal"
+      },
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:34:56Z",
+        "deletionTimestamp": null,
+        "name": "verdify-cnpg-s2-integration-1",
+        "namespace": "verdify-db-rehearsal",
+        "resourceVersion": "265836495",
+        "uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad"
+      },
+      "node": "vm-k3s-node5",
+      "ownerReferences": [
+        {
+          "apiVersion": "postgresql.cnpg.io/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2-integration",
+          "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+        }
+      ],
+      "resources": [
+        {
+          "name": "postgres",
+          "resources": {
+            "limits": {
+              "memory": "6Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            }
+          }
+        }
+      ],
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:35:04Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:35:04Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:35:13Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:35:13Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:34:56Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "allocatedResources": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            },
+            "containerID": "containerd://6dd6227a6ff95586acf2936d0ad09742957a9b0f56e53bcbb3da0be2e60ec239",
+            "image": "sha256:9adb05d3bfb00a9234204814a7e08e30076090508c46b64b463c420ad58af861",
+            "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+            "lastState": {},
+            "name": "postgres",
+            "ready": true,
+            "resources": {
+              "limits": {
+                "memory": "6Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "2Gi"
+              }
+            },
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-12T18:35:05Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 26,
+                "supplementalGroups": [
+                  26,
+                  101
+                ],
+                "uid": 26
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/var/lib/postgresql/data",
+                "name": "pgdata"
+              },
+              {
+                "mountPath": "/run",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/controller",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/dev/shm",
+                "name": "shm"
+              },
+              {
+                "mountPath": "/var/lib/postgresql/wal",
+                "name": "pg-wal"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-c2txg",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "phase": "Running",
+        "podIP": "10.42.6.178"
+      }
+    },
+    {
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      ],
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/instance": "verdify-cnpg-s2-integration",
+        "app.kubernetes.io/managed-by": "cloudnative-pg",
+        "app.kubernetes.io/name": "postgresql",
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/version": "16",
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceName": "verdify-cnpg-s2-integration-2",
+        "cnpg.io/instanceRole": "replica",
+        "cnpg.io/podRole": "instance",
+        "role": "replica",
+        "topology.kubernetes.io/zone": "onyx"
+      },
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:37:01Z",
+        "deletionTimestamp": null,
+        "name": "verdify-cnpg-s2-integration-2",
+        "namespace": "verdify-db-rehearsal",
+        "resourceVersion": "265840072",
+        "uid": "81790e3e-7f0a-4655-9595-83bf2c95f635"
+      },
+      "node": "vm-k3s-node7",
+      "ownerReferences": [
+        {
+          "apiVersion": "postgresql.cnpg.io/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2-integration",
+          "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+        }
+      ],
+      "resources": [
+        {
+          "name": "postgres",
+          "resources": {
+            "limits": {
+              "memory": "6Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            }
+          }
+        }
+      ],
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:37:04Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:37:05Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:37:14Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:37:14Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:37:01Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "allocatedResources": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            },
+            "containerID": "containerd://4d38fce6f77e580bbc5b0aaaaa24c229e82a7d411630518ed34bf95a316bf712",
+            "image": "sha256:9adb05d3bfb00a9234204814a7e08e30076090508c46b64b463c420ad58af861",
+            "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+            "lastState": {},
+            "name": "postgres",
+            "ready": true,
+            "resources": {
+              "limits": {
+                "memory": "6Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "2Gi"
+              }
+            },
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-12T18:37:05Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 26,
+                "supplementalGroups": [
+                  26,
+                  101
+                ],
+                "uid": 26
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/var/lib/postgresql/data",
+                "name": "pgdata"
+              },
+              {
+                "mountPath": "/run",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/controller",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/dev/shm",
+                "name": "shm"
+              },
+              {
+                "mountPath": "/var/lib/postgresql/wal",
+                "name": "pg-wal"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-7w2gs",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "phase": "Running",
+        "podIP": "10.42.5.151"
+      }
+    },
+    {
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      ],
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/instance": "verdify-cnpg-s2-integration",
+        "app.kubernetes.io/managed-by": "cloudnative-pg",
+        "app.kubernetes.io/name": "postgresql",
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/version": "16",
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceName": "verdify-cnpg-s2-integration-3",
+        "cnpg.io/instanceRole": "replica",
+        "cnpg.io/podRole": "instance",
+        "role": "replica",
+        "topology.kubernetes.io/zone": "ore"
+      },
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:38:10Z",
+        "deletionTimestamp": null,
+        "name": "verdify-cnpg-s2-integration-3",
+        "namespace": "verdify-db-rehearsal",
+        "resourceVersion": "265842097",
+        "uid": "53a071c6-0889-4b04-8c94-714ad98f9d7b"
+      },
+      "node": "vm-k3s-node6",
+      "ownerReferences": [
+        {
+          "apiVersion": "postgresql.cnpg.io/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2-integration",
+          "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+        }
+      ],
+      "resources": [
+        {
+          "name": "postgres",
+          "resources": {
+            "limits": {
+              "memory": "6Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            }
+          }
+        }
+      ],
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:38:18Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:38:19Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:38:27Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:38:27Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-12T18:38:10Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "allocatedResources": {
+              "cpu": "500m",
+              "memory": "2Gi"
+            },
+            "containerID": "containerd://e83b3dcd9ab6bdb1bd4383a481d98b250b65ea47b6fa6e7a6ae17dc91ebbf8a7",
+            "image": "sha256:9adb05d3bfb00a9234204814a7e08e30076090508c46b64b463c420ad58af861",
+            "imageID": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+            "lastState": {},
+            "name": "postgres",
+            "ready": true,
+            "resources": {
+              "limits": {
+                "memory": "6Gi"
+              },
+              "requests": {
+                "cpu": "500m",
+                "memory": "2Gi"
+              }
+            },
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-12T18:38:19Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 26,
+                "supplementalGroups": [
+                  26,
+                  101
+                ],
+                "uid": 26
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/var/lib/postgresql/data",
+                "name": "pgdata"
+              },
+              {
+                "mountPath": "/run",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/controller",
+                "name": "scratch-data"
+              },
+              {
+                "mountPath": "/dev/shm",
+                "name": "shm"
+              },
+              {
+                "mountPath": "/var/lib/postgresql/wal",
+                "name": "pg-wal"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-84b4c",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "phase": "Running",
+        "podIP": "10.42.3.223"
+      }
+    }
+  ],
+  "fullRawSnapshotPublished": false,
+  "matchingPolicyUnionScope": "ingress denied; egress only same-namespace integration CNPG TCP5432 and kube-system/kube-dns TCP/UDP53",
+  "rawPrivateMetadataSha256": "b32ff91f24ebf70297bc7e19322a51bdb2aca8c9818b435cc4a69e9e5957b46a",
+  "rehearsalArgoApp": {
+    "metadata": {
+      "creationTimestamp": "2026-10-01T13:24:14Z",
+      "deletionTimestamp": null,
+      "name": "verdify-db-rehearsal-cluster",
+      "namespace": "argocd",
+      "resourceVersion": "266191317",
+      "uid": "97ff0f52-2691-4f07-9184-591d936e3a05"
+    },
+    "operationState": {
+      "finishedAt": "2026-10-12T18:33:00Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-12T18:32:58Z"
+    },
+    "pendingOperation": false,
+    "source": {
+      "path": "deploy/k8s/cnpg/rehearsal/cluster",
+      "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+      "targetRevision": "main"
+    },
+    "status": {
+      "health": {
+        "lastTransitionTime": "2026-10-12T18:38:29Z",
+        "status": "Healthy"
+      },
+      "reconciledAt": "2026-10-12T22:04:51Z",
+      "sync": {
+        "comparedTo": {
+          "destination": {
+            "namespace": "verdify-db-rehearsal",
+            "server": "https://kubernetes.default.svc"
+          },
+          "source": {
+            "path": "deploy/k8s/cnpg/rehearsal/cluster",
+            "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+            "targetRevision": "main"
+          }
+        },
+        "revision": "d43919e933eb1be69559be7566853ff69a64e903",
+        "status": "OutOfSync"
+      }
+    },
+    "syncPolicy": {
+      "automated": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "syncOptions": [
+        "CreateNamespace=false",
+        "ServerSideApply=true"
+      ]
+    }
+  },
+  "rwEndpoints": {
+    "metadata": {
+      "creationTimestamp": "2026-10-12T18:33:00Z",
+      "deletionTimestamp": null,
+      "name": "verdify-cnpg-s2-integration-rw",
+      "namespace": "verdify-db-rehearsal",
+      "resourceVersion": "265836498",
+      "uid": "c1a0ed45-907e-4d09-83b2-6d1bc43aab27"
+    },
+    "parameters": null,
+    "provisioner": null,
+    "reclaimPolicy": null,
+    "spec": {},
+    "status": {},
+    "subsets": [
+      {
+        "addresses": [
+          {
+            "ip": "10.42.6.178",
+            "nodeName": "vm-k3s-node5",
+            "targetRef": {
+              "kind": "Pod",
+              "name": "verdify-cnpg-s2-integration-1",
+              "namespace": "verdify-db-rehearsal",
+              "uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad"
+            }
+          }
+        ],
+        "ports": [
+          {
+            "name": "postgres",
+            "port": 5432,
+            "protocol": "TCP"
+          }
+        ]
+      }
+    ],
+    "volumeBindingMode": null
+  },
+  "rwService": {
+    "metadata": {
+      "creationTimestamp": "2026-10-12T18:33:00Z",
+      "deletionTimestamp": null,
+      "name": "verdify-cnpg-s2-integration-rw",
+      "namespace": "verdify-db-rehearsal",
+      "resourceVersion": "265831506",
+      "uid": "f374b4dd-9ebc-453d-a561-fab081479106"
+    },
+    "parameters": null,
+    "provisioner": null,
+    "reclaimPolicy": null,
+    "spec": {
+      "clusterIP": "10.43.159.236",
+      "ports": [
+        {
+          "name": "postgres",
+          "port": 5432,
+          "protocol": "TCP",
+          "targetPort": 5432
+        }
+      ],
+      "selector": {
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceRole": "primary"
+      },
+      "type": "ClusterIP"
+    },
+    "status": {},
+    "subsets": null,
+    "volumeBindingMode": null
+  },
+  "selectedPreparedRunnerPolicies": [
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:32:59Z",
+        "deletionTimestamp": null,
+        "name": "cnpg-s2-integration-runtime-client-only",
+        "namespace": "verdify-db-rehearsal",
+        "resourceVersion": "265831433",
+        "uid": "ed9f2a3b-7d47-45aa-b1bb-b503ec110a94"
+      },
+      "spec": {
+        "egress": [
+          {
+            "ports": [
+              {
+                "port": 5432,
+                "protocol": "TCP"
+              }
+            ],
+            "to": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "cnpg.io/cluster": "verdify-cnpg-s2-integration"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "ports": [
+              {
+                "port": 53,
+                "protocol": "TCP"
+              },
+              {
+                "port": 53,
+                "protocol": "UDP"
+              }
+            ],
+            "to": [
+              {
+                "namespaceSelector": {
+                  "matchLabels": {
+                    "kubernetes.io/metadata.name": "kube-system"
+                  }
+                },
+                "podSelector": {
+                  "matchLabels": {
+                    "k8s-app": "kube-dns"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "podSelector": {
+          "matchLabels": {
+            "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+            "app.kubernetes.io/part-of": "verdify",
+            "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+          }
+        },
+        "policyTypes": [
+          "Ingress",
+          "Egress"
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-01T14:30:18Z",
+        "deletionTimestamp": null,
+        "name": "deny-all-rehearsal",
+        "namespace": "verdify-db-rehearsal",
+        "resourceVersion": "234764721",
+        "uid": "bdd627d5-6c2b-49dc-9a0b-bfb0d3ac7230"
+      },
+      "spec": {
+        "podSelector": {},
+        "policyTypes": [
+          "Ingress",
+          "Egress"
+        ]
+      }
+    }
+  ],
+  "storageclass": {
+    "metadata": {
+      "creationTimestamp": "2026-08-11T20:57:39Z",
+      "deletionTimestamp": null,
+      "name": "longhorn-v1-workspace-rwo",
+      "namespace": null,
+      "resourceVersion": "142504587",
+      "uid": "bd5661d7-57ab-4328-9b45-6714bf3f71bc"
+    },
+    "parameters": {
+      "dataEngine": "v1",
+      "dataLocality": "disabled",
+      "diskSelector": "plane-longhorn",
+      "fsType": "ext4",
+      "nodeSelector": "plane-longhorn",
+      "numberOfReplicas": "2",
+      "recurringJobSelector": "[{\"name\":\"standard\",\"isGroup\":true}]",
+      "replicaAutoBalance": "disabled",
+      "replicaSoftAntiAffinity": "disabled",
+      "staleReplicaTimeout": "30"
+    },
+    "provisioner": "driver.longhorn.io",
+    "reclaimPolicy": "Retain",
+    "spec": {},
+    "status": {},
+    "subsets": null,
+    "volumeBindingMode": "WaitForFirstConsumer"
+  },
+  "targetVolumes": [
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:35:13Z",
+        "deletionTimestamp": null,
+        "name": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+        "namespace": "longhorn-system",
+        "resourceVersion": "265945881",
+        "uid": "e749ed7e-522b-486e-b1f3-31664571bfa0"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node7",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "5368709120"
+      },
+      "status": {
+        "actualSize": 390889472,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:14Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:14Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:14Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:14Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node7",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-2-wal",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-2",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:37:14Z",
+        "deletionTimestamp": null,
+        "name": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+        "namespace": "longhorn-system",
+        "resourceVersion": "265938931",
+        "uid": "124e706a-7035-411d-a28e-8eaab3a4578e"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node6",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "5368709120"
+      },
+      "status": {
+        "actualSize": 355155968,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node6",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-3-wal",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-3",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:35:13Z",
+        "deletionTimestamp": null,
+        "name": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+        "namespace": "longhorn-system",
+        "resourceVersion": "266195327",
+        "uid": "49174bfd-645b-4723-a405-cd6c26f3bd81"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node7",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "21474836480"
+      },
+      "status": {
+        "actualSize": 4155617280,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:15Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:35:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node7",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-2",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-2",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:33:01Z",
+        "deletionTimestamp": null,
+        "name": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+        "namespace": "longhorn-system",
+        "resourceVersion": "266195234",
+        "uid": "9573f600-48dd-4238-b8aa-7a46f2becf49"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node5",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "21474836480"
+      },
+      "status": {
+        "actualSize": 4241862656,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node5",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-1",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-1",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:37:14Z",
+        "deletionTimestamp": null,
+        "name": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+        "namespace": "longhorn-system",
+        "resourceVersion": "265945299",
+        "uid": "287f8539-cda4-4c82-8697-8284801aa8de"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node6",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "21474836480"
+      },
+      "status": {
+        "actualSize": 4130938880,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:37:15Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node6",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-3",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-3",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    },
+    {
+      "metadata": {
+        "creationTimestamp": "2026-10-12T18:33:01Z",
+        "deletionTimestamp": null,
+        "name": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+        "namespace": "longhorn-system",
+        "resourceVersion": "265947247",
+        "uid": "2961da22-0ba0-4856-8815-580163e7c1a9"
+      },
+      "spec": {
+        "diskSelector": [
+          "plane-longhorn"
+        ],
+        "nodeID": "vm-k3s-node5",
+        "nodeSelector": [
+          "plane-longhorn"
+        ],
+        "numberOfReplicas": 2,
+        "size": "5368709120"
+      },
+      "status": {
+        "actualSize": 492449792,
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-12T18:33:02Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ],
+        "currentNodeID": "vm-k3s-node5",
+        "kubernetesStatus": {
+          "lastPVCRefAt": "",
+          "lastPodRefAt": "",
+          "namespace": "verdify-db-rehearsal",
+          "pvName": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+          "pvStatus": "Bound",
+          "pvcName": "verdify-cnpg-s2-integration-1-wal",
+          "workloadsStatus": [
+            {
+              "podName": "verdify-cnpg-s2-integration-1",
+              "podStatus": "Running",
+              "workloadName": "verdify-cnpg-s2-integration",
+              "workloadType": "Cluster"
+            }
+          ]
+        },
+        "robustness": "healthy",
+        "state": "attached"
+      }
+    }
+  ],
+  "terminalHistoricalPodCounts": {
+    "Failed": 3,
+    "Succeeded": 4
+  }
+}
