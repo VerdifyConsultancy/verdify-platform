@@ -51,3 +51,7 @@ One old Documents/iCloud worktree (`verdify-782-winter-collector-source-f77`) ca
 Readable source/runtime/CI receipts are in[evidence](evidence). Complete operational context, original source/failure/policy/approval custody and the full maintenance capture are preserved as an **age-encrypted GitHub draft-release asset**; final asset ID/download/SHA/decryption verification appear in`custody-assets.json` after upload. Existing operator key `/Users/jason/.config/sops/age/keys.txt` decrypts it; the private key and plaintext credential values are never committed. A GitHub artifact alone is not an independent site-loss recovery guarantee.
 
 Every item-update body and remote readback is indexed in`item-update-verification.json` after publication. Final audit records exact remote refs, full item coverage, encrypted upload/download/decryption, unchanged originals and terminal owned processes. Shutdown completion means preservation/stop, **not** completion of the greenhouse campaign.
+
+## GitHub publication checkpoint
+
+All98 items have completed written reviews and prepared updates in[item-update-payloads](item-update-payloads). Five item comments were POST/GET verified before ROOT reported a global secondary content-write limit. The comment writer was terminated;93 remain queued in[item-update-queue.json](item-update-queue.json). Await the single-writer window before completing those custody-only updates. This checkpoint is not a claim that all98 comments are published yet.
