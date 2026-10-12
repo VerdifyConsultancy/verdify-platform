@@ -470,5 +470,15 @@
         ]
       }
     ]
+  },
+  "selected_live_writer_policy_mode": {
+    "observed_at": "2026-10-12T20:07:36.193583+00:00",
+    "selected_live_mode_readback": {
+      "HOSTNAME": "verdify-ingestor-7666f97959-htjdk",
+      "VERDIFY_GIT_SHA": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "VERDIFY_DEVICE_WRITE_ENABLED": "1",
+      "VERDIFY_AUTONOMOUS_POLICY_STAGING": "1"
+    },
+    "read_only": true
   }
 }

@@ -11,5 +11,6 @@
   "socket_census_every_samples": 10,
   "scope": "Read-only evidence collection; no production/device mutation.",
   "status": "Running; not yet qualified",
-  "collector_script_sha256": "cbf9abefc4704baaf3d7c94f492b7c67da67053f5d9d9b6d076446a6fa306543"
+  "collector_script_sha256": "cbf9abefc4704baaf3d7c94f492b7c67da67053f5d9d9b6d076446a6fa306543",
+  "review_note": "Native database request timestamps are per row. Validate actual stage command counts using retained writer stage_parameters and native request joins, not timestamp-equality groups."
 }
