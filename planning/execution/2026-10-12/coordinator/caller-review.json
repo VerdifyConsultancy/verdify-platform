@@ -1,0 +1,29 @@
+{
+  "observed_at": "2026-10-12T18:43:15.586873+00:00",
+  "pull_request": "https://github.com/jvallery/agents/pull/4806",
+  "head": "4f030b93c4ad883ccfe59991bbfcbd5a24a75a10",
+  "review": "No actionable issue found in bounded caller diff",
+  "verified": [
+    "Both proof YAML hashes equal exact reviewed source",
+    "Nine recorded stages: node6 validation and eight conditional node7 builders",
+    "Independent focused placement/resource/serial unittest passed",
+    "Shared builder unchanged; classifier, Strict and auth boundaries preserved"
+  ],
+  "test_attempts": [
+    {
+      "runner": "default python pytest",
+      "outcome": "Unavailable: pytest not installed; no test executed"
+    },
+    {
+      "runner": "existing Verdify virtualenv unittest",
+      "outcome": "PASS: 1 focused regression"
+    }
+  ],
+  "remaining": [
+    "Required fleet-ci/native at exact source",
+    "Exact merged-revision selective WorkflowTemplate adoption",
+    "Fresh current capacity including restored clone and pin actuator",
+    "Actual Pod fields and attended stage suspension/cleanup readback"
+  ],
+  "production_mutation_by_reviewer": false
+}
