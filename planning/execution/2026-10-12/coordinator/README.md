@@ -1,0 +1,33 @@
+# Verdify coordinator execution ledger
+
+## October 12, 18:08 UTC / 12:08 Mountain
+
+The 40-hour weekly engineering capacity remains shared across three lanes. The inventory and sprint publication are complete; this ledger records changed execution facts rather than repeating the audit. No production change or experiment activation is claimed.
+
+| Lane | Current source / evidence | Next concrete outcome |
+|---|---|---|
+| Runtime/release | Existing “Retry” chat `01a12b3b-f57c-7ab0-bdcc-3cdba80e82c3` is the sole main/build/promotion/production writer. PR973 still has original head `37fd6e4a3030471c4e2f397f50b7d6a3278e4276`; its successful native status belongs to that original head. Main is `c8bcb589f3815f21e31f11b82ca7653f58129532`. Rebased source, recovery and the bounded replay fix are being combined locally. | Qualify the final exact source once, then one affected-image build/promotion/full-hook sync and authentic #949 recovery. Final submission is held for the concrete recovery CLI defect below. |
+| Contained recovery | PR969 and `codex/contained-recovery-20261012` both have head `38efbd834a08577b124e3aff7f122697b9f04f71`; original `ac89df3e24f5dd34b6d1c145a300eb908b1519a8` remains retrievable. Archive-only Job `40f2d3fe-708c-42df-8232-f273082e0cba` completed at 17:59:41 UTC, reading the full 619,166,118-byte base tar and all three required WALs. Historical backup.info/WAL sizes and hashes match. No target allocation or restore occurred. | Fix the real integration CLI's rejected cluster profile, preserving S2 behavior; use an unmocked emitter regression. Resolve current physical capacity accounting, then create only the supported integration target and bind actual new identities. |
+| Scientific/readiness | `codex/scientific-readiness-20261012` at `64586987b76f7e0fba7982d582b06184ff9966bf`. The bounded evidence-hash fix is `1ac661fbd9a86ddca31c8ee39020e8adc896471f`; it preserves raw output and binary/source/corpus/policy/exit-status identity while normalizing known temporary paths. 46 prefix tests and 304 preparation/proof-consumer tests passed. Independent review recomputed all 27 native hashes and found no actionable issue. Two full replay packets are identical. | Include the qualified bounded fix in the current source cohort. Investigate genuine native coverage separately in `codex/native-replay-coverage-20261012`; do not add that later work to the current release. Reuse the one restored SQL target when available. |
+
+All 32 scientific prefixes remain **UNPROVEN at 27/48 coverage** with no qualified order revision. Missing corpus dimensions and empirical study inputs remain explicit. A possible relay-dwell source defect is being reproduced using actual YAML fragments; it is not yet claimed as a live physical diagnosis, and no OTA is authorized by this ledger.
+
+The actual live build template has eight conditional serial build steps. Its trusted Docker/COPY closure selects five affected images for the prepared runtime cohort; that count is separate from the five actuator-promoted pins. A separate PR969 merge would additionally build two overlapping images. The source is therefore being combined into one final build, while recovery acceptance remains separate. Do not merge/build PR969 independently.
+
+Storage reports green publication and an initialized reservation ledger. The newer native Longhorn controller access path is distinct from the supported legacy root-filesystem/emptyDir build caller; an unrelated controller denial is not an admission gate for that caller. Account for Longhorn NVMe recovery allocation separately from build root/ephemeral storage unless exact backing proves a shared device. Count shared RAM, incremental image/cache/log growth and existing obligations once. The inherited 85% thin-pool comparison is not a new admission rule.
+
+PR969's native CI status was pending at 18:03:21 UTC. The recovery worker submitted no workflow directly; identify any automatic validation consumer before cancellation or replacement. The sole release writer coordinates shared CI and current capacity controls. No broad shared-app sync, production DB cutover, expired approval replay, command-cap increase or second device writer is permitted by this coordination decision.
+
+No new user decision is needed for the current bounded source fixes and ordinary authorized recovery. Prepare concrete packets for any later physical, OTA, randomized launch, DB cutover, credential, purchase or destructive-custody decision.
+
+[GitHub head/status readback](github-readback.json). Updated operational facts belong in subsequent dated entries; retain this capture and failed attempts.
+
+## Recovery CLI correction qualified after the capture
+
+The real-emitter defect is fixed in `89e76357a8579101a17e56b1951f40c3a227aad4`, pushed and provider-verified only on `codex/contained-recovery-20261012`. PR969's head remains `38efbd834a08577b124e3aff7f122697b9f04f71`, avoiding another independent PR validation event. The release owner can cherry-pick the one correction into the prepared combined source and resume final qualification.
+
+The correction preserves the source-pinned S2 witness profile until the existing exact guard is remapped to the admitted integration target. The target whitelist, private historical module, source/migration hashes and seals remain unchanged. All 95 focused native/private-PostgreSQL tests passed without skips, and the actual 44,929,390-byte sealed predecessor produced rollback-only SQL. The coordinator independently reviewed the changed logic and reran the unmocked emission regression successfully.
+
+The worker also established exact backing from current worker and hypervisor metadata: root/k3s/kubelet use QEMU thin-backed guest disks; Longhorn NVMe uses separate passed-through physical devices. The 150 GiB replicated recovery allocation is therefore separate from root-thin capacity; shared RAM and incremental image/cache/log growth still need current accounting. [Immutable recovery packet](https://github.com/VerdifyConsultancy/verdify-platform/blob/89e76357a8579101a17e56b1951f40c3a227aad4/docs/handoffs/s2-2026-10-12/contained-recovery.md).
+
+No restored target, production rollout, policy convergence or issue closure is claimed by these source/evidence results.
