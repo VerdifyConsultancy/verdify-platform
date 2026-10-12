@@ -1,0 +1,1718 @@
+{
+  "worktree": "/Users/jason/Documents/Codex/verdify-782-winter-collector-source-f77",
+  "head": "f77ef0005b8cf211130eebbd4b54d881d14c335a",
+  "index_records": 1767,
+  "tracked": 1767,
+  "mtime_size_mismatches": [
+    {
+      "path": ".agent-fleet/ci.yaml",
+      "index": {
+        "mtime_ns": 1790573976796090771,
+        "size": 3629,
+        "index_flags": "0"
+      },
+      "actual_size": 3629,
+      "actual_mtime_ns": 1790573976796090841,
+      "dataless": false
+    },
+    {
+      "path": ".dockerignore",
+      "index": {
+        "mtime_ns": 1790573976796304646,
+        "size": 5838,
+        "index_flags": "0"
+      },
+      "actual_size": 5838,
+      "actual_mtime_ns": 1790573976796304702,
+      "dataless": false
+    },
+    {
+      "path": ".editorconfig",
+      "index": {
+        "mtime_ns": 1790573976796481021,
+        "size": 344,
+        "index_flags": "0"
+      },
+      "actual_size": 344,
+      "actual_mtime_ns": 1790573976796481132,
+      "dataless": false
+    },
+    {
+      "path": ".env.example",
+      "index": {
+        "mtime_ns": 1790573976796544771,
+        "size": 4143,
+        "index_flags": "0"
+      },
+      "actual_size": 4143,
+      "actual_mtime_ns": 1790573976796544790,
+      "dataless": false
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "index": {
+        "mtime_ns": 1790573976796633772,
+        "size": 83,
+        "index_flags": "0"
+      },
+      "actual_size": 83,
+      "actual_mtime_ns": 1790573976796633720,
+      "dataless": false
+    },
+    {
+      "path": ".gitignore",
+      "index": {
+        "mtime_ns": 1790573976796810647,
+        "size": 1501,
+        "index_flags": "0"
+      },
+      "actual_size": 1501,
+      "actual_mtime_ns": 1790573976796810626,
+      "dataless": false
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "index": {
+        "mtime_ns": 1790573976796874355,
+        "size": 1248,
+        "index_flags": "0"
+      },
+      "actual_size": 1248,
+      "actual_mtime_ns": 1790573976796874284,
+      "dataless": false
+    },
+    {
+      "path": ".sops.yaml",
+      "index": {
+        "mtime_ns": 1790573976797067313,
+        "size": 1058,
+        "index_flags": "0"
+      },
+      "actual_size": 1058,
+      "actual_mtime_ns": 1790573976797067403,
+      "dataless": false
+    },
+    {
+      "path": ".stignore",
+      "index": {
+        "mtime_ns": 1790573976797125189,
+        "size": 1017,
+        "index_flags": "0"
+      },
+      "actual_size": 1017,
+      "actual_mtime_ns": 1790573976797125101,
+      "dataless": false
+    },
+    {
+      "path": "ACCESS_MATRIX.md",
+      "index": {
+        "mtime_ns": 1790573976797314397,
+        "size": 3989,
+        "index_flags": "0"
+      },
+      "actual_size": 3989,
+      "actual_mtime_ns": 1790573976797314405,
+      "dataless": false
+    },
+    {
+      "path": "AGENTS.md",
+      "index": {
+        "mtime_ns": 1790573976797565564,
+        "size": 19743,
+        "index_flags": "0"
+      },
+      "actual_size": 19743,
+      "actual_mtime_ns": 1790573976797565460,
+      "dataless": false
+    },
+    {
+      "path": "ARGOCD.md",
+      "index": {
+        "mtime_ns": 1790573976797776689,
+        "size": 3978,
+        "index_flags": "0"
+      },
+      "actual_size": 3978,
+      "actual_mtime_ns": 1790573976797776699,
+      "dataless": false
+    },
+    {
+      "path": "EPICS.md",
+      "index": {
+        "mtime_ns": 1790573976797954981,
+        "size": 13064,
+        "index_flags": "0"
+      },
+      "actual_size": 13064,
+      "actual_mtime_ns": 1790573976797955036,
+      "dataless": false
+    },
+    {
+      "path": "HISTORY.md",
+      "index": {
+        "mtime_ns": 1790573976798173606,
+        "size": 19798,
+        "index_flags": "0"
+      },
+      "actual_size": 19798,
+      "actual_mtime_ns": 1790573976798173666,
+      "dataless": false
+    },
+    {
+      "path": "LANES.md",
+      "index": {
+        "mtime_ns": 1790573976798238523,
+        "size": 21010,
+        "index_flags": "0"
+      },
+      "actual_size": 21010,
+      "actual_mtime_ns": 1790573976798238515,
+      "dataless": false
+    },
+    {
+      "path": "MILESTONES.md",
+      "index": {
+        "mtime_ns": 1790573976798307898,
+        "size": 8161,
+        "index_flags": "0"
+      },
+      "actual_size": 8161,
+      "actual_mtime_ns": 1790573976798307895,
+      "dataless": false
+    },
+    {
+      "path": "Makefile",
+      "index": {
+        "mtime_ns": 1790573976798518273,
+        "size": 36729,
+        "index_flags": "0"
+      },
+      "actual_size": 36729,
+      "actual_mtime_ns": 1790573976798518180,
+      "dataless": false
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "index": {
+        "mtime_ns": 1790573976798615731,
+        "size": 8241,
+        "index_flags": "0"
+      },
+      "actual_size": 8241,
+      "actual_mtime_ns": 1790573976798615694,
+      "dataless": false
+    },
+    {
+      "path": "README.md",
+      "index": {
+        "mtime_ns": 1790573976798780482,
+        "size": 4935,
+        "index_flags": "0"
+      },
+      "actual_size": 4935,
+      "actual_mtime_ns": 1790573976798780441,
+      "dataless": false
+    },
+    {
+      "path": "SLACK.md",
+      "index": {
+        "mtime_ns": 1790573976798980023,
+        "size": 8528,
+        "index_flags": "0"
+      },
+      "actual_size": 8528,
+      "actual_mtime_ns": 1790573976798979997,
+      "dataless": false
+    },
+    {
+      "path": "SPRINTS.md",
+      "index": {
+        "mtime_ns": 1790573976799040565,
+        "size": 3271,
+        "index_flags": "0"
+      },
+      "actual_size": 3271,
+      "actual_mtime_ns": 1790573976799040555,
+      "dataless": false
+    },
+    {
+      "path": "api/Dockerfile",
+      "index": {
+        "mtime_ns": 1790573976799279024,
+        "size": 5425,
+        "index_flags": "0"
+      },
+      "actual_size": 5425,
+      "actual_mtime_ns": 1790573976799278974,
+      "dataless": false
+    },
+    {
+      "path": "api/main.py",
+      "index": {
+        "mtime_ns": 1790573976800079024,
+        "size": 274631,
+        "index_flags": "0"
+      },
+      "actual_size": 274631,
+      "actual_mtime_ns": 1790573976800079107,
+      "dataless": false
+    },
+    {
+      "path": "api/requirements.txt",
+      "index": {
+        "mtime_ns": 1790573976800320691,
+        "size": 727,
+        "index_flags": "0"
+      },
+      "actual_size": 727,
+      "actual_mtime_ns": 1790573976800320625,
+      "dataless": false
+    },
+    {
+      "path": "catalog-info.yaml",
+      "index": {
+        "mtime_ns": 1790573976800382441,
+        "size": 1492,
+        "index_flags": "0"
+      },
+      "actual_size": 1492,
+      "actual_mtime_ns": 1790573976800382375,
+      "dataless": false
+    },
+    {
+      "path": "config/ai.yaml",
+      "index": {
+        "mtime_ns": 1790573976800481566,
+        "size": 5033,
+        "index_flags": "0"
+      },
+      "actual_size": 5033,
+      "actual_mtime_ns": 1790573976800481557,
+      "dataless": false
+    },
+    {
+      "path": "config/zones.yaml",
+      "index": {
+        "mtime_ns": 1790573976800543941,
+        "size": 2607,
+        "index_flags": "0"
+      },
+      "actual_size": 2607,
+      "actual_mtime_ns": 1790573976800544023,
+      "dataless": false
+    },
+    {
+      "path": "db/Dockerfile.migrate",
+      "index": {
+        "mtime_ns": 1790573976800649483,
+        "size": 2565,
+        "index_flags": "0"
+      },
+      "actual_size": 2565,
+      "actual_mtime_ns": 1790573976800649404,
+      "dataless": false
+    },
+    {
+      "path": "db/apply-migrations.sh",
+      "index": {
+        "mtime_ns": 1790573976800734983,
+        "size": 11799,
+        "index_flags": "0"
+      },
+      "actual_size": 11799,
+      "actual_mtime_ns": 1790573976800734996,
+      "dataless": false
+    },
+    {
+      "path": "db/init/01-schema.sql",
+      "index": {
+        "mtime_ns": 1790573976800855692,
+        "size": 21356,
+        "index_flags": "0"
+      },
+      "actual_size": 21356,
+      "actual_mtime_ns": 1790573976800855636,
+      "dataless": false
+    },
+    {
+      "path": "db/ledger/backfill_ledger.sql",
+      "index": {
+        "mtime_ns": 1790573976801013900,
+        "size": 37999,
+        "index_flags": "0"
+      },
+      "actual_size": 37999,
+      "actual_mtime_ns": 1790573976801013946,
+      "dataless": false
+    },
+    {
+      "path": "db/ledger/schema_migrations.sql",
+      "index": {
+        "mtime_ns": 1790573976801097567,
+        "size": 6768,
+        "index_flags": "0"
+      },
+      "actual_size": 6768,
+      "actual_mtime_ns": 1790573976801097631,
+      "dataless": false
+    },
+    {
+      "path": "db/migrate.sh",
+      "index": {
+        "mtime_ns": 1790573976801161317,
+        "size": 4603,
+        "index_flags": "0"
+      },
+      "actual_size": 4603,
+      "actual_mtime_ns": 1790573976801161289,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/000-fresh-schema-hypertable-repair.sql",
+      "index": {
+        "mtime_ns": 1790573976801245359,
+        "size": 1780,
+        "index_flags": "0"
+      },
+      "actual_size": 1780,
+      "actual_mtime_ns": 1790573976801245450,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/002-derived-metrics.sql",
+      "index": {
+        "mtime_ns": 1790573976801298525,
+        "size": 2249,
+        "index_flags": "0"
+      },
+      "actual_size": 2249,
+      "actual_mtime_ns": 1790573976801298618,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/003-create-crops.sql",
+      "index": {
+        "mtime_ns": 1790573976801352900,
+        "size": 1095,
+        "index_flags": "0"
+      },
+      "actual_size": 1095,
+      "actual_mtime_ns": 1790573976801352977,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/004-create-crop-events.sql",
+      "index": {
+        "mtime_ns": 1790573976801404359,
+        "size": 697,
+        "index_flags": "0"
+      },
+      "actual_size": 697,
+      "actual_mtime_ns": 1790573976801404476,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/005-create-observations.sql",
+      "index": {
+        "mtime_ns": 1790573976801459942,
+        "size": 999,
+        "index_flags": "0"
+      },
+      "actual_size": 999,
+      "actual_mtime_ns": 1790573976801460027,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/006-create-treatments.sql",
+      "index": {
+        "mtime_ns": 1790573976801512734,
+        "size": 931,
+        "index_flags": "0"
+      },
+      "actual_size": 931,
+      "actual_mtime_ns": 1790573976801512718,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/007-create-harvests.sql",
+      "index": {
+        "mtime_ns": 1790573976801570151,
+        "size": 518,
+        "index_flags": "0"
+      },
+      "actual_size": 518,
+      "actual_mtime_ns": 1790573976801570177,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/008-create-energy.sql",
+      "index": {
+        "mtime_ns": 1790573976801625401,
+        "size": 384,
+        "index_flags": "0"
+      },
+      "actual_size": 384,
+      "actual_mtime_ns": 1790573976801625490,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/009-create-weather-forecast.sql",
+      "index": {
+        "mtime_ns": 1790573976801679817,
+        "size": 524,
+        "index_flags": "0"
+      },
+      "actual_size": 524,
+      "actual_mtime_ns": 1790573976801679849,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/010-create-equipment-assets.sql",
+      "index": {
+        "mtime_ns": 1790573976801732776,
+        "size": 860,
+        "index_flags": "0"
+      },
+      "actual_size": 860,
+      "actual_mtime_ns": 1790573976801732778,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/011-create-nutrient-recipes.sql",
+      "index": {
+        "mtime_ns": 1790573976801785693,
+        "size": 736,
+        "index_flags": "0"
+      },
+      "actual_size": 736,
+      "actual_mtime_ns": 1790573976801785707,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/012-create-lab-results.sql",
+      "index": {
+        "mtime_ns": 1790573976801839651,
+        "size": 655,
+        "index_flags": "0"
+      },
+      "actual_size": 655,
+      "actual_mtime_ns": 1790573976801839590,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/013-alter-climate-new-columns.sql",
+      "index": {
+        "mtime_ns": 1790573976801894026,
+        "size": 1840,
+        "index_flags": "0"
+      },
+      "actual_size": 1840,
+      "actual_mtime_ns": 1790573976801893949,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/014-alter-daily-summary.sql",
+      "index": {
+        "mtime_ns": 1790573976801963151,
+        "size": 781,
+        "index_flags": "0"
+      },
+      "actual_size": 781,
+      "actual_mtime_ns": 1790573976801963090,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/015-create-views.sql",
+      "index": {
+        "mtime_ns": 1790573976802024651,
+        "size": 4249,
+        "index_flags": "0"
+      },
+      "actual_size": 4249,
+      "actual_mtime_ns": 1790573976802024602,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/016-create-functions.sql",
+      "index": {
+        "mtime_ns": 1790573976802088318,
+        "size": 2194,
+        "index_flags": "0"
+      },
+      "actual_size": 2194,
+      "actual_mtime_ns": 1790573976802088260,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/017-ha-sensors.sql",
+      "index": {
+        "mtime_ns": 1790573976802157568,
+        "size": 566,
+        "index_flags": "0"
+      },
+      "actual_size": 566,
+      "actual_mtime_ns": 1790573976802157640,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/018-coverage-gaps.sql",
+      "index": {
+        "mtime_ns": 1790573976802232276,
+        "size": 1909,
+        "index_flags": "0"
+      },
+      "actual_size": 1909,
+      "actual_mtime_ns": 1790573976802232265,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/020-runtime-costs.sql",
+      "index": {
+        "mtime_ns": 1790573976802305193,
+        "size": 2891,
+        "index_flags": "0"
+      },
+      "actual_size": 2891,
+      "actual_mtime_ns": 1790573976802305221,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/021-sensor-registry.sql",
+      "index": {
+        "mtime_ns": 1790573976802369068,
+        "size": 777,
+        "index_flags": "0"
+      },
+      "actual_size": 777,
+      "actual_mtime_ns": 1790573976802369117,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/022-esp32-logs.sql",
+      "index": {
+        "mtime_ns": 1790573976802502568,
+        "size": 603,
+        "index_flags": "0"
+      },
+      "actual_size": 603,
+      "actual_mtime_ns": 1790573976802502632,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/023-sensor-registry-enhance.sql",
+      "index": {
+        "mtime_ns": 1790573976802557068,
+        "size": 1150,
+        "index_flags": "0"
+      },
+      "actual_size": 1150,
+      "actual_mtime_ns": 1790573976802556991,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/024-sensor-staleness-view.sql",
+      "index": {
+        "mtime_ns": 1790573976802633485,
+        "size": 5326,
+        "index_flags": "0"
+      },
+      "actual_size": 5326,
+      "actual_mtime_ns": 1790573976802633523,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/025-alert-log.sql",
+      "index": {
+        "mtime_ns": 1790573976802702276,
+        "size": 2469,
+        "index_flags": "0"
+      },
+      "actual_size": 2469,
+      "actual_mtime_ns": 1790573976802702188,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/026-registry-solar-staleness.sql",
+      "index": {
+        "mtime_ns": 1790573976802772485,
+        "size": 7589,
+        "index_flags": "0"
+      },
+      "actual_size": 7589,
+      "actual_mtime_ns": 1790573976802772521,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/027-rename-outdoor-ppfd.sql",
+      "index": {
+        "mtime_ns": 1790573976802828277,
+        "size": 1273,
+        "index_flags": "0"
+      },
+      "actual_size": 1273,
+      "actual_mtime_ns": 1790573976802828311,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/028-weather-station-table.sql",
+      "index": {
+        "mtime_ns": 1790573976802889860,
+        "size": 1603,
+        "index_flags": "0"
+      },
+      "actual_size": 1603,
+      "actual_mtime_ns": 1790573976802889823,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/029-alert-log-upgrade.sql",
+      "index": {
+        "mtime_ns": 1790573976802961693,
+        "size": 2969,
+        "index_flags": "0"
+      },
+      "actual_size": 2969,
+      "actual_mtime_ns": 1790573976802961587,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/030-utility-cost-consumables.sql",
+      "index": {
+        "mtime_ns": 1790573976803020193,
+        "size": 1774,
+        "index_flags": "0"
+      },
+      "actual_size": 1774,
+      "actual_mtime_ns": 1790573976803020238,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/031-setpoint-plan.sql",
+      "index": {
+        "mtime_ns": 1790573976803081485,
+        "size": 1689,
+        "index_flags": "0"
+      },
+      "actual_size": 1689,
+      "actual_mtime_ns": 1790573976803081512,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/031-setpoint-schedule.sql",
+      "index": {
+        "mtime_ns": 1790573976803146527,
+        "size": 2492,
+        "index_flags": "0"
+      },
+      "actual_size": 2492,
+      "actual_mtime_ns": 1790573976803146600,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/032-irrigation-tables.sql",
+      "index": {
+        "mtime_ns": 1790573976803205735,
+        "size": 3614,
+        "index_flags": "0"
+      },
+      "actual_size": 3614,
+      "actual_mtime_ns": 1790573976803205728,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/033-forecast-expand.sql",
+      "index": {
+        "mtime_ns": 1790573976803259985,
+        "size": 1902,
+        "index_flags": "0"
+      },
+      "actual_size": 1902,
+      "actual_mtime_ns": 1790573976803260087,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/034-forecast-accumulate.sql",
+      "index": {
+        "mtime_ns": 1790573976803319902,
+        "size": 4915,
+        "index_flags": "0"
+      },
+      "actual_size": 4915,
+      "actual_mtime_ns": 1790573976803319931,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/035-setpoint-rename.sql",
+      "index": {
+        "mtime_ns": 1790573976803378610,
+        "size": 2353,
+        "index_flags": "0"
+      },
+      "actual_size": 2353,
+      "actual_mtime_ns": 1790573976803378582,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/036-merge-orphan-outdoor.sql",
+      "index": {
+        "mtime_ns": 1790573976803451902,
+        "size": 3334,
+        "index_flags": "0"
+      },
+      "actual_size": 3334,
+      "actual_mtime_ns": 1790573976803452014,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/037-setpoint-compliance.sql",
+      "index": {
+        "mtime_ns": 1790573976803521819,
+        "size": 3611,
+        "index_flags": "0"
+      },
+      "actual_size": 3611,
+      "actual_mtime_ns": 1790573976803521871,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/038-legacy-param-cleanup.sql",
+      "index": {
+        "mtime_ns": 1790573976803584944,
+        "size": 1103,
+        "index_flags": "0"
+      },
+      "actual_size": 1103,
+      "actual_mtime_ns": 1790573976803585052,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/039-staleness-health-rebuild.sql",
+      "index": {
+        "mtime_ns": 1790573976803667027,
+        "size": 11719,
+        "index_flags": "0"
+      },
+      "actual_size": 11719,
+      "actual_mtime_ns": 1790573976803667068,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/040-daily-summary-climate-cols.sql",
+      "index": {
+        "mtime_ns": 1790573976803737694,
+        "size": 1511,
+        "index_flags": "0"
+      },
+      "actual_size": 1511,
+      "actual_mtime_ns": 1790573976803737640,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/041-planning-architecture.sql",
+      "index": {
+        "mtime_ns": 1790573976804173153,
+        "size": 12434,
+        "index_flags": "0"
+      },
+      "actual_size": 12434,
+      "actual_mtime_ns": 1790573976804173231,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/042-weekly-monthly-summary.sql",
+      "index": {
+        "mtime_ns": 1790573976804248736,
+        "size": 9373,
+        "index_flags": "0"
+      },
+      "actual_size": 9373,
+      "actual_mtime_ns": 1790573976804248809,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/043-water-fix-correlation.sql",
+      "index": {
+        "mtime_ns": 1790573976804310444,
+        "size": 2397,
+        "index_flags": "0"
+      },
+      "actual_size": 2397,
+      "actual_mtime_ns": 1790573976804310560,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/044-water-cap.sql",
+      "index": {
+        "mtime_ns": 1790573976804368986,
+        "size": 778,
+        "index_flags": "0"
+      },
+      "actual_size": 778,
+      "actual_mtime_ns": 1790573976804368972,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/045-daily-checklist.sql",
+      "index": {
+        "mtime_ns": 1790573976804431278,
+        "size": 4607,
+        "index_flags": "0"
+      },
+      "actual_size": 4607,
+      "actual_mtime_ns": 1790573976804431200,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/046-checklist-completion.sql",
+      "index": {
+        "mtime_ns": 1790573976804490320,
+        "size": 235,
+        "index_flags": "0"
+      },
+      "actual_size": 235,
+      "actual_mtime_ns": 1790573976804490327,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/047-matview-refresh-cron.sql",
+      "index": {
+        "mtime_ns": 1790573976804542695,
+        "size": 700,
+        "index_flags": "0"
+      },
+      "actual_size": 700,
+      "actual_mtime_ns": 1790573976804542779,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/048-relay-stuck-exclude-config.sql",
+      "index": {
+        "mtime_ns": 1790573976804607070,
+        "size": 1935,
+        "index_flags": "0"
+      },
+      "actual_size": 1935,
+      "actual_mtime_ns": 1790573976804607152,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/049-operator-views.sql",
+      "index": {
+        "mtime_ns": 1790573976804665236,
+        "size": 9210,
+        "index_flags": "0"
+      },
+      "actual_size": 9210,
+      "actual_mtime_ns": 1790573976804665327,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/050-operator-improvements.sql",
+      "index": {
+        "mtime_ns": 1790573976804722278,
+        "size": 4182,
+        "index_flags": "0"
+      },
+      "actual_size": 4182,
+      "actual_mtime_ns": 1790573976804722309,
+      "dataless": false
+    },
+    {
+      "path": "db/migrations/109-planner-trigger-ledger.sql",
+      "index": {
+        "mtime_ns": 1790573976809123240,
+        "size": 10713,
+        "index_flags": "0"
+      },
+      "actual_size": 10713,
+      "actual_mtime_ns": 1790573976809123277,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/128-lighting-traceability-confirmed-state.sql",
+      "index": {
+        "mtime_ns": 1790573976810533783,
+        "size": 12154,
+        "index_flags": "0"
+      },
+      "actual_size": 12154,
+      "actual_mtime_ns": 1790573976810533761,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/153-pipeline-health-weather-station-dark-sources.sql",
+      "index": {
+        "mtime_ns": 1790573976812914118,
+        "size": 14812,
+        "index_flags": "0"
+      },
+      "actual_size": 14812,
+      "actual_mtime_ns": 1790573976812914133,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/218-planner-required-failure-history.sql",
+      "index": {
+        "mtime_ns": 1790573976823316877,
+        "size": 13441,
+        "index_flags": "0"
+      },
+      "actual_size": 13441,
+      "actual_mtime_ns": 1790573976823316812,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/229-experiment-v2-recovery-failure-boundary.sql",
+      "index": {
+        "mtime_ns": 1790573976824255669,
+        "size": 2614,
+        "index_flags": "0"
+      },
+      "actual_size": 2614,
+      "actual_mtime_ns": 1790573976824255704,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/tests/fixtures/active-equipment-state-inventory-2026-07-09.sql",
+      "index": {
+        "mtime_ns": 1790573976828471340,
+        "size": 3868,
+        "index_flags": "0"
+      },
+      "actual_size": 3868,
+      "actual_mtime_ns": 1790573976828471422,
+      "dataless": true
+    },
+    {
+      "path": "db/migrations/tests/test-255-fixed-panel-crop-assignment-lineage.sql",
+      "index": {
+        "mtime_ns": 1790573976834854178,
+        "size": 5634,
+        "index_flags": "0"
+      },
+      "actual_size": 5634,
+      "actual_mtime_ns": 1790573976834854125,
+      "dataless": true
+    },
+    {
+      "path": "docs/firmware-pre-ota-traceability-2026-05-23.md",
+      "index": {
+        "mtime_ns": 1790573976871535042,
+        "size": 7897,
+        "index_flags": "0"
+      },
+      "actual_size": 7897,
+      "actual_mtime_ns": 1790573976871535062,
+      "dataless": true
+    },
+    {
+      "path": "docs/security/database-credential-rotation-closeout-2026-07-10.md",
+      "index": {
+        "mtime_ns": 1790573976886336887,
+        "size": 3634,
+        "index_flags": "0"
+      },
+      "actual_size": 3634,
+      "actual_mtime_ns": 1790573976886336803,
+      "dataless": true
+    },
+    {
+      "path": "docs/site-content-map.md",
+      "index": {
+        "mtime_ns": 1790573976886514138,
+        "size": 18452,
+        "index_flags": "0"
+      },
+      "actual_size": 18452,
+      "actual_mtime_ns": 1790573976886514186,
+      "dataless": true
+    },
+    {
+      "path": "firmware/.gitignore",
+      "index": {
+        "mtime_ns": 1790573976890942516,
+        "size": 170,
+        "index_flags": "0"
+      },
+      "actual_size": 170,
+      "actual_mtime_ns": 1790573976890942573,
+      "dataless": false
+    },
+    {
+      "path": "firmware/greenhouse/external_sensors.yaml",
+      "index": {
+        "mtime_ns": 1790573976893104601,
+        "size": 12755,
+        "index_flags": "0"
+      },
+      "actual_size": 12755,
+      "actual_mtime_ns": 1790573976893104553,
+      "dataless": true
+    },
+    {
+      "path": "firmware/test/.gitignore",
+      "index": {
+        "mtime_ns": 1790573976896515604,
+        "size": 548,
+        "index_flags": "0"
+      },
+      "actual_size": 548,
+      "actual_mtime_ns": 1790573976896515607,
+      "dataless": false
+    },
+    {
+      "path": "ingestor/ai_config.py",
+      "index": {
+        "mtime_ns": 1790573976960326157,
+        "size": 4246,
+        "index_flags": "0"
+      },
+      "actual_size": 4246,
+      "actual_mtime_ns": 1790573976960326194,
+      "dataless": true
+    },
+    {
+      "path": "planning/__init__.py",
+      "index": {
+        "mtime_ns": 1790573976978408172,
+        "size": 0,
+        "index_flags": "0"
+      },
+      "actual_size": 0,
+      "actual_mtime_ns": 1790573976978408098,
+      "dataless": true
+    },
+    {
+      "path": "planning/evidence/collection-manifest.json",
+      "index": {
+        "mtime_ns": 1790573976982183217,
+        "size": 43103,
+        "index_flags": "0"
+      },
+      "actual_size": 43103,
+      "actual_mtime_ns": 1790573976982183218,
+      "dataless": true
+    },
+    {
+      "path": "research/planner-efficacy/.gitignore",
+      "index": {
+        "mtime_ns": 1790573976983558843,
+        "size": 58,
+        "index_flags": "0"
+      },
+      "actual_size": 58,
+      "actual_mtime_ns": 1790573976983558893,
+      "dataless": false
+    },
+    {
+      "path": "research/planner-efficacy/wetting-incident-2026-09-04-causal-v3.md",
+      "index": {
+        "mtime_ns": 1790573976996408937,
+        "size": 10769,
+        "index_flags": "0"
+      },
+      "actual_size": 10769,
+      "actual_mtime_ns": 1790573976996408939,
+      "dataless": true
+    },
+    {
+      "path": "scripts/publish-daily-plan.sh",
+      "index": {
+        "mtime_ns": 1790573977012273950,
+        "size": 228,
+        "index_flags": "0"
+      },
+      "actual_size": 228,
+      "actual_mtime_ns": 1790573977012274026,
+      "dataless": true
+    },
+    {
+      "path": "scripts/verdify-db.sh",
+      "index": {
+        "mtime_ns": 1790573977017615413,
+        "size": 2550,
+        "index_flags": "0"
+      },
+      "actual_size": 2550,
+      "actual_mtime_ns": 1790573977017615318,
+      "dataless": true
+    },
+    {
+      "path": "scripts/verify_component_proof_packet.py",
+      "index": {
+        "mtime_ns": 1790573977018150372,
+        "size": 16082,
+        "index_flags": "0"
+      },
+      "actual_size": 16082,
+      "actual_mtime_ns": 1790573977018150329,
+      "dataless": true
+    },
+    {
+      "path": "site/docs/plugins/CustomOgImages.md",
+      "index": {
+        "mtime_ns": 1790573977030406798,
+        "size": 12239,
+        "index_flags": "0"
+      },
+      "actual_size": 12239,
+      "actual_mtime_ns": 1790573977030406713,
+      "dataless": true
+    },
+    {
+      "path": "tests/test_03_ingestor.py",
+      "index": {
+        "mtime_ns": 1790573977105445277,
+        "size": 26813,
+        "index_flags": "0"
+      },
+      "actual_size": 26813,
+      "actual_mtime_ns": 1790573977105445384,
+      "dataless": true
+    },
+    {
+      "path": "tests/test_release_dockerfile_base_pins.py",
+      "index": {
+        "mtime_ns": 1790573977130869132,
+        "size": 1339,
+        "index_flags": "0"
+      },
+      "actual_size": 1339,
+      "actual_mtime_ns": 1790573977130869150,
+      "dataless": true
+    },
+    {
+      "path": "tests/test_scorecard_semantics.py",
+      "index": {
+        "mtime_ns": 1790573977132493716,
+        "size": 12905,
+        "index_flags": "0"
+      },
+      "actual_size": 12905,
+      "actual_mtime_ns": 1790573977132493734,
+      "dataless": true
+    }
+  ],
+  "resident_content_checks": [
+    {
+      "path": ".agent-fleet/ci.yaml",
+      "oid": "ec9102891e1d1cd939d4baeef297c9ad8315d509",
+      "expected": "ec9102891e1d1cd939d4baeef297c9ad8315d509",
+      "exact": true
+    },
+    {
+      "path": ".dockerignore",
+      "oid": "4fcf1138d237e921fcdc748598d6afa8a6939148",
+      "expected": "4fcf1138d237e921fcdc748598d6afa8a6939148",
+      "exact": true
+    },
+    {
+      "path": ".editorconfig",
+      "oid": "32e8fe73675f08a76589d6402dd1f47c898d26db",
+      "expected": "32e8fe73675f08a76589d6402dd1f47c898d26db",
+      "exact": true
+    },
+    {
+      "path": ".env.example",
+      "oid": "2ea43862eddb0ad6b621849cd77d3918188d9df1",
+      "expected": "2ea43862eddb0ad6b621849cd77d3918188d9df1",
+      "exact": true
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "oid": "a3cdba5342348ad328a1c3bc1b9b17ce969c201b",
+      "expected": "a3cdba5342348ad328a1c3bc1b9b17ce969c201b",
+      "exact": true
+    },
+    {
+      "path": ".gitignore",
+      "oid": "e1631dd5c85956030fb07c63b955212d96cea788",
+      "expected": "e1631dd5c85956030fb07c63b955212d96cea788",
+      "exact": true
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "oid": "cc97c649075f429477ba7cb2deafdfbaf310f522",
+      "expected": "cc97c649075f429477ba7cb2deafdfbaf310f522",
+      "exact": true
+    },
+    {
+      "path": ".sops.yaml",
+      "oid": "2cd8cb23ae6732548b2750658ff08eb8752d1423",
+      "expected": "2cd8cb23ae6732548b2750658ff08eb8752d1423",
+      "exact": true
+    },
+    {
+      "path": ".stignore",
+      "oid": "c18476fc614379b2ef736fc541b36466d8acea3c",
+      "expected": "c18476fc614379b2ef736fc541b36466d8acea3c",
+      "exact": true
+    },
+    {
+      "path": "ACCESS_MATRIX.md",
+      "oid": "b1eec0e98cbab0760d04e472d42b53d2a2e354bd",
+      "expected": "b1eec0e98cbab0760d04e472d42b53d2a2e354bd",
+      "exact": true
+    },
+    {
+      "path": "AGENTS.md",
+      "oid": "d713ecd716fee9da95381e8a686a863f58b3906f",
+      "expected": "d713ecd716fee9da95381e8a686a863f58b3906f",
+      "exact": true
+    },
+    {
+      "path": "ARGOCD.md",
+      "oid": "ae938f5435af1d1edf820fc660c34631f1b7c23e",
+      "expected": "ae938f5435af1d1edf820fc660c34631f1b7c23e",
+      "exact": true
+    },
+    {
+      "path": "EPICS.md",
+      "oid": "33d19bf28cf773aeeec0b84d644daba90687fdd7",
+      "expected": "33d19bf28cf773aeeec0b84d644daba90687fdd7",
+      "exact": true
+    },
+    {
+      "path": "HISTORY.md",
+      "oid": "23476f372a0accdd1b69fdb40aa3e07f2a55b569",
+      "expected": "23476f372a0accdd1b69fdb40aa3e07f2a55b569",
+      "exact": true
+    },
+    {
+      "path": "LANES.md",
+      "oid": "4345cd0064e116401e6096ea6e9ea0a94cd29ce0",
+      "expected": "4345cd0064e116401e6096ea6e9ea0a94cd29ce0",
+      "exact": true
+    },
+    {
+      "path": "MILESTONES.md",
+      "oid": "1f9cb122cd90ab02c3c40cd46058a55aa42e38fd",
+      "expected": "1f9cb122cd90ab02c3c40cd46058a55aa42e38fd",
+      "exact": true
+    },
+    {
+      "path": "Makefile",
+      "oid": "a949a7f04c7800f08aa4ed8ccf58aa691c4841dd",
+      "expected": "a949a7f04c7800f08aa4ed8ccf58aa691c4841dd",
+      "exact": true
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "oid": "356e4c61a4d7767128a72919040a5b26973309ff",
+      "expected": "356e4c61a4d7767128a72919040a5b26973309ff",
+      "exact": true
+    },
+    {
+      "path": "README.md",
+      "oid": "2f9ebb39c8ce4994a0b0048dd7aa7693489cb1cb",
+      "expected": "2f9ebb39c8ce4994a0b0048dd7aa7693489cb1cb",
+      "exact": true
+    },
+    {
+      "path": "SLACK.md",
+      "oid": "020d8024105f35a30ba6e3721408dae471e2c4ed",
+      "expected": "020d8024105f35a30ba6e3721408dae471e2c4ed",
+      "exact": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "oid": "08c5ffa8caccfe7391f6bdbc0bccf2a050c1feb8",
+      "expected": "08c5ffa8caccfe7391f6bdbc0bccf2a050c1feb8",
+      "exact": true
+    },
+    {
+      "path": "api/Dockerfile",
+      "oid": "b0b11cf3c3bda53c803397352f2496da84d3907e",
+      "expected": "b0b11cf3c3bda53c803397352f2496da84d3907e",
+      "exact": true
+    },
+    {
+      "path": "api/main.py",
+      "oid": "01d440f1abfce904d78c84bcd0f623fdec836d68",
+      "expected": "01d440f1abfce904d78c84bcd0f623fdec836d68",
+      "exact": true
+    },
+    {
+      "path": "api/requirements.txt",
+      "oid": "5498f8aa622c72137fa68e675eeead80f0429d1b",
+      "expected": "5498f8aa622c72137fa68e675eeead80f0429d1b",
+      "exact": true
+    },
+    {
+      "path": "catalog-info.yaml",
+      "oid": "f706bc297e216dd19d557a051aab83f83f7b88f9",
+      "expected": "f706bc297e216dd19d557a051aab83f83f7b88f9",
+      "exact": true
+    },
+    {
+      "path": "config/ai.yaml",
+      "oid": "0be350bc3605fe0fe740e4104eea58dfe29a0278",
+      "expected": "0be350bc3605fe0fe740e4104eea58dfe29a0278",
+      "exact": true
+    },
+    {
+      "path": "config/zones.yaml",
+      "oid": "f02dd50e00c26866e49e707398ad41e056b752d6",
+      "expected": "f02dd50e00c26866e49e707398ad41e056b752d6",
+      "exact": true
+    },
+    {
+      "path": "db/Dockerfile.migrate",
+      "oid": "963e13bc1c8e67fc75bc35ca2831c42053b7e666",
+      "expected": "963e13bc1c8e67fc75bc35ca2831c42053b7e666",
+      "exact": true
+    },
+    {
+      "path": "db/apply-migrations.sh",
+      "oid": "f8de2c31ba5dabddd56344c5b60513558fe1762e",
+      "expected": "f8de2c31ba5dabddd56344c5b60513558fe1762e",
+      "exact": true
+    },
+    {
+      "path": "db/init/01-schema.sql",
+      "oid": "5d9056d6bcf38360075426960cee8a4e7f0f5335",
+      "expected": "5d9056d6bcf38360075426960cee8a4e7f0f5335",
+      "exact": true
+    },
+    {
+      "path": "db/ledger/backfill_ledger.sql",
+      "oid": "ece7f3178404228f35fe1893d58f9bf57a0faa59",
+      "expected": "ece7f3178404228f35fe1893d58f9bf57a0faa59",
+      "exact": true
+    },
+    {
+      "path": "db/ledger/schema_migrations.sql",
+      "oid": "f2983f1cc2fdf6433233419763deab6f9574161b",
+      "expected": "f2983f1cc2fdf6433233419763deab6f9574161b",
+      "exact": true
+    },
+    {
+      "path": "db/migrate.sh",
+      "oid": "96cda6fc11222885a15a25ff2d51dffeba756ac3",
+      "expected": "96cda6fc11222885a15a25ff2d51dffeba756ac3",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/000-fresh-schema-hypertable-repair.sql",
+      "oid": "6aebd067130058870b4441786afdf3cb981f30a7",
+      "expected": "6aebd067130058870b4441786afdf3cb981f30a7",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/002-derived-metrics.sql",
+      "oid": "2ed2509337797f167b4224f16c085d458cf3b4ee",
+      "expected": "2ed2509337797f167b4224f16c085d458cf3b4ee",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/003-create-crops.sql",
+      "oid": "b25462a83f7345f828fef806f9800d373af50d33",
+      "expected": "b25462a83f7345f828fef806f9800d373af50d33",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/004-create-crop-events.sql",
+      "oid": "57fe9c54f31f7ec84786baa856efccfc4b0b6a9c",
+      "expected": "57fe9c54f31f7ec84786baa856efccfc4b0b6a9c",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/005-create-observations.sql",
+      "oid": "00325f96b3e8c1f297e39bcd590e362f154622d6",
+      "expected": "00325f96b3e8c1f297e39bcd590e362f154622d6",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/006-create-treatments.sql",
+      "oid": "f2b2083b2642febeb7f93f559442ffeb323cd0d3",
+      "expected": "f2b2083b2642febeb7f93f559442ffeb323cd0d3",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/007-create-harvests.sql",
+      "oid": "6e75c748298853d05de1fe301b63c3c13514e0d3",
+      "expected": "6e75c748298853d05de1fe301b63c3c13514e0d3",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/008-create-energy.sql",
+      "oid": "87e39b3289ede8eaa61a9d5c940219d856529761",
+      "expected": "87e39b3289ede8eaa61a9d5c940219d856529761",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/009-create-weather-forecast.sql",
+      "oid": "e63276800b71ce08b9bdb92e0161757ddee61439",
+      "expected": "e63276800b71ce08b9bdb92e0161757ddee61439",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/010-create-equipment-assets.sql",
+      "oid": "5dc8776aee022d5b5d3ab2332b2c060b1f02c9e8",
+      "expected": "5dc8776aee022d5b5d3ab2332b2c060b1f02c9e8",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/011-create-nutrient-recipes.sql",
+      "oid": "109118e3aaea064b2ddfa5acef8201166e77910f",
+      "expected": "109118e3aaea064b2ddfa5acef8201166e77910f",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/012-create-lab-results.sql",
+      "oid": "828bb46e4762a80b2fc92fe2f9962abe7f88868d",
+      "expected": "828bb46e4762a80b2fc92fe2f9962abe7f88868d",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/013-alter-climate-new-columns.sql",
+      "oid": "262b03dbfe9b726a7ad5f397dbd7b03d4ce1f766",
+      "expected": "262b03dbfe9b726a7ad5f397dbd7b03d4ce1f766",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/014-alter-daily-summary.sql",
+      "oid": "3f4a8078e4a4d6bd2328320296080b5342037c5f",
+      "expected": "3f4a8078e4a4d6bd2328320296080b5342037c5f",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/015-create-views.sql",
+      "oid": "02d4899c713a82d5d41fdcc2256b9de9c96496eb",
+      "expected": "02d4899c713a82d5d41fdcc2256b9de9c96496eb",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/016-create-functions.sql",
+      "oid": "c2d3d5f8a1e4c8032e49cf5edee9619ee668aabb",
+      "expected": "c2d3d5f8a1e4c8032e49cf5edee9619ee668aabb",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/017-ha-sensors.sql",
+      "oid": "cf97794b2780765b7f725f5d6d337d7a49544cad",
+      "expected": "cf97794b2780765b7f725f5d6d337d7a49544cad",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/018-coverage-gaps.sql",
+      "oid": "763a2a8be5865207229aca93d85fab460c71af4e",
+      "expected": "763a2a8be5865207229aca93d85fab460c71af4e",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/020-runtime-costs.sql",
+      "oid": "69609dd04ea4937262997c9a373cfa9a56109bee",
+      "expected": "69609dd04ea4937262997c9a373cfa9a56109bee",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/021-sensor-registry.sql",
+      "oid": "dfda739cfbeae1b862cb4440b347f5064fdf522a",
+      "expected": "dfda739cfbeae1b862cb4440b347f5064fdf522a",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/022-esp32-logs.sql",
+      "oid": "da348a0a6931298cbe1a82a9157ac7bda76c6f3b",
+      "expected": "da348a0a6931298cbe1a82a9157ac7bda76c6f3b",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/023-sensor-registry-enhance.sql",
+      "oid": "553bd32992fdecb756bde4469c83b004a3aaf3c4",
+      "expected": "553bd32992fdecb756bde4469c83b004a3aaf3c4",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/024-sensor-staleness-view.sql",
+      "oid": "38a155761b9998f8ca42a39f11af485ff7622489",
+      "expected": "38a155761b9998f8ca42a39f11af485ff7622489",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/025-alert-log.sql",
+      "oid": "481d26e844485c39bb62a767013f3dff5fcff85f",
+      "expected": "481d26e844485c39bb62a767013f3dff5fcff85f",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/026-registry-solar-staleness.sql",
+      "oid": "9bffed80d45af205817d47ba4ca09fe82e0d8a0a",
+      "expected": "9bffed80d45af205817d47ba4ca09fe82e0d8a0a",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/027-rename-outdoor-ppfd.sql",
+      "oid": "0909b58633ae9961eab0381a2aea6ec2981ff471",
+      "expected": "0909b58633ae9961eab0381a2aea6ec2981ff471",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/028-weather-station-table.sql",
+      "oid": "733bf4c164de4c49ffdd550518cd41e36e761f66",
+      "expected": "733bf4c164de4c49ffdd550518cd41e36e761f66",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/029-alert-log-upgrade.sql",
+      "oid": "21b6b704660364f46146fe8e2321795487392a9c",
+      "expected": "21b6b704660364f46146fe8e2321795487392a9c",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/030-utility-cost-consumables.sql",
+      "oid": "893cd29a7034e38cb6933ffdca3bb1a413825537",
+      "expected": "893cd29a7034e38cb6933ffdca3bb1a413825537",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/031-setpoint-plan.sql",
+      "oid": "40799291864582ece1d1bbc51d2c000d3be111ed",
+      "expected": "40799291864582ece1d1bbc51d2c000d3be111ed",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/031-setpoint-schedule.sql",
+      "oid": "c1da1618609f81649ad6c9502f9b5a3e6f535e93",
+      "expected": "c1da1618609f81649ad6c9502f9b5a3e6f535e93",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/032-irrigation-tables.sql",
+      "oid": "f3bda7c94203d42f492ee0ba27a74962dcf93da8",
+      "expected": "f3bda7c94203d42f492ee0ba27a74962dcf93da8",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/033-forecast-expand.sql",
+      "oid": "2053ff30c31e1cc5bc5d335da8250a09e5853242",
+      "expected": "2053ff30c31e1cc5bc5d335da8250a09e5853242",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/034-forecast-accumulate.sql",
+      "oid": "173ca0199c2fa0b3322f2b43f06ec0128e2e1b60",
+      "expected": "173ca0199c2fa0b3322f2b43f06ec0128e2e1b60",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/035-setpoint-rename.sql",
+      "oid": "bed751c834a01248297772b12cf192fd899b4740",
+      "expected": "bed751c834a01248297772b12cf192fd899b4740",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/036-merge-orphan-outdoor.sql",
+      "oid": "fe73d45b8eb8471c0429905541b6f597ec3ca80b",
+      "expected": "fe73d45b8eb8471c0429905541b6f597ec3ca80b",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/037-setpoint-compliance.sql",
+      "oid": "538261fc8d67a9c96e80f355f66402fdfbf458aa",
+      "expected": "538261fc8d67a9c96e80f355f66402fdfbf458aa",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/038-legacy-param-cleanup.sql",
+      "oid": "8817bbf5a4d6a611e60dfae3f3bf1bf87d476e2a",
+      "expected": "8817bbf5a4d6a611e60dfae3f3bf1bf87d476e2a",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/039-staleness-health-rebuild.sql",
+      "oid": "761885330b6763ae81831793267a0335c9b25d4c",
+      "expected": "761885330b6763ae81831793267a0335c9b25d4c",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/040-daily-summary-climate-cols.sql",
+      "oid": "67a27812963a1f937ce56b65a1312ea6b2c722ed",
+      "expected": "67a27812963a1f937ce56b65a1312ea6b2c722ed",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/041-planning-architecture.sql",
+      "oid": "2f57841a051b43f99517f8a80ffe8024daaf75d8",
+      "expected": "2f57841a051b43f99517f8a80ffe8024daaf75d8",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/042-weekly-monthly-summary.sql",
+      "oid": "baaf4c8b810be6b20769274d0e3452d1416aecb2",
+      "expected": "baaf4c8b810be6b20769274d0e3452d1416aecb2",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/043-water-fix-correlation.sql",
+      "oid": "e42b4027e89d6151e14b20105fee16f2e32c5a31",
+      "expected": "e42b4027e89d6151e14b20105fee16f2e32c5a31",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/044-water-cap.sql",
+      "oid": "4de3e472935aab5828ae005f64feac38f6ca2b81",
+      "expected": "4de3e472935aab5828ae005f64feac38f6ca2b81",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/045-daily-checklist.sql",
+      "oid": "bd654f63ed9275f4751e9721ccc87eeb95c8a49e",
+      "expected": "bd654f63ed9275f4751e9721ccc87eeb95c8a49e",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/046-checklist-completion.sql",
+      "oid": "17b4249b9cf3b727f5f3c8fce01a0f30afb509cc",
+      "expected": "17b4249b9cf3b727f5f3c8fce01a0f30afb509cc",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/047-matview-refresh-cron.sql",
+      "oid": "534ee625753454c60b2dbc07330aa5fa794c255e",
+      "expected": "534ee625753454c60b2dbc07330aa5fa794c255e",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/048-relay-stuck-exclude-config.sql",
+      "oid": "44680495d0b1b4e4911e0772231c7da83380371d",
+      "expected": "44680495d0b1b4e4911e0772231c7da83380371d",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/049-operator-views.sql",
+      "oid": "a6bd75080523551464162aca809374768117f50b",
+      "expected": "a6bd75080523551464162aca809374768117f50b",
+      "exact": true
+    },
+    {
+      "path": "db/migrations/050-operator-improvements.sql",
+      "oid": "a12428cc9254b6a32c117f5c13f8ee73c96eaf97",
+      "expected": "a12428cc9254b6a32c117f5c13f8ee73c96eaf97",
+      "exact": true
+    },
+    {
+      "path": "firmware/.gitignore",
+      "oid": "d8b4157aef93a9ac611766077b969c9f87628941",
+      "expected": "d8b4157aef93a9ac611766077b969c9f87628941",
+      "exact": true
+    },
+    {
+      "path": "firmware/test/.gitignore",
+      "oid": "9776eb364642f45b5bc92825af05cd1c9c625675",
+      "expected": "9776eb364642f45b5bc92825af05cd1c9c625675",
+      "exact": true
+    },
+    {
+      "path": "research/planner-efficacy/.gitignore",
+      "oid": "54985f9e18c168c57ed0d42e5cd71cc6dc7c1331",
+      "expected": "54985f9e18c168c57ed0d42e5cd71cc6dc7c1331",
+      "exact": true
+    }
+  ],
+  "placeholder_count": 1681,
+  "staged_diff_empty": true,
+  "untracked_source_empty": true,
+  "caveat": "Ordinary status blocks hydrating iCloud FileProvider placeholders. Dataless files assessed from index vs current logical mtime/size; resident bytes hashed. No cache eviction or source mutation."
+}

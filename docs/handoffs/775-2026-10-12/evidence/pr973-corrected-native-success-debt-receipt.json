@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-10-12T01:21:31.897634+00:00",
+  "source": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "workflow": "verdify-platform-pr-ci-nscxp",
+  "uid": "6274cba6-cfbc-48bb-bed3-ad9c97668bfd",
+  "phase": "Succeeded",
+  "startedAt": "2026-10-12T01:08:54Z",
+  "finishedAt": "2026-10-12T01:20:10Z",
+  "original_deadline": "2026-10-12T02:08:54Z",
+  "validation_attempts": 1,
+  "failed_error_nodes": [],
+  "retained_pods": [],
+  "other_active_verdify_workflows": [],
+  "github_context": "Verdify Platform / Argo PR CI",
+  "github_state": "success",
+  "github_status_created": "2026-10-12T01:19:59Z",
+  "log_sha256": "e878ec4912acc137b05baade94e9e5de345fd41875243ab3f2ee1703867c183c",
+  "full_gate": "ALL GATES GREEN; subprocess exitnil; Linux publication tests mandatory",
+  "runtime_effect": "No mainmerge/imagepublication/promotion/sync orOTA",
+  "debt_disposition": "Originalfutureworkterminal; Podresidue aslisted; persistentnativecache/physicalallocationnotzeroed. Node7failed60Gi andotherestateunknown remainseparate."
+}

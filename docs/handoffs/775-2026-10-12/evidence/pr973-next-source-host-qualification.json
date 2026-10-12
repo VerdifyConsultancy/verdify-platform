@@ -1,0 +1,40 @@
+{
+  "observed_at": "2026-10-12T01:00:09.165235+00:00",
+  "source": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "source_fix": "32da7baa",
+  "working_tree_clean": true,
+  "offline_full_gate": "PASS with explicit Mac/dependency skips; native exacthead gate stillrequired",
+  "focused_smoke_monitor": "23PASS with selectedinterpreter underotherwisebaseonlyPATH",
+  "firmware_replay": {
+    "rows": 296698,
+    "actuator_divergence": 0,
+    "diagnostic_divergence": 0,
+    "missing_setpoint_columns": 6
+  },
+  "logs": {
+    "pr973-integrated-selected-python-host-ci.log": {
+      "sha256": "d19648a7716c18e1b18da7c5681649ea08b62b11e0c8e9a99b22ac2f1e7a455b",
+      "bytes": 38747
+    },
+    "pr973-selected-python-focused-after.log": {
+      "sha256": "475bcfb56b286d857c4310602373e306e2cb722ad6df6053d0e1aff939c18220",
+      "bytes": 80
+    },
+    "pr973-selected-python-full-host-ci.log": {
+      "sha256": "500b03913b1457c3131a7c0377ef58d87952d85ba025c25224696447ace2891a",
+      "bytes": 24878
+    },
+    "pr973-thin-path-g10-before-fix.log": {
+      "sha256": "2def419fa5a7d1cf7e90b41ae10131c509d09f8c0c29e3479d39b8a8bf776b91",
+      "bytes": 2417
+    }
+  },
+  "retained_failures": [
+    "originalnativevfd2dfailedat12ac3G10dependencyimportfailures",
+    "basePythonPATHfocusedbeforefixsmokefailed",
+    "fullthinPATHafterfixG10passedbutunsupportedMacBash3failedothergates"
+  ],
+  "source_pushed": false,
+  "runtime_effect": "none"
+}

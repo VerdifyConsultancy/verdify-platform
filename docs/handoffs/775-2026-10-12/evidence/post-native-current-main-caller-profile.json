@@ -1,0 +1,308 @@
+{
+  "observed_at": "2026-10-12T01:24:32.874133+00:00",
+  "kind": "Current actual canonical caller inventory; NOT main-build admission",
+  "source": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+  "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+  "identities": [
+    {
+      "name": "verdify-platform-ci",
+      "uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+      "resourceVersion": "263652253",
+      "spec_sha256": "179623898d7bb28ef1dde2d5f496c6fc76423513289c263bd1e475ddc74ab54e"
+    },
+    {
+      "name": "repo-build",
+      "uid": "32ef5b95-c391-460e-ba7f-ee68a7d9f76e",
+      "resourceVersion": "246728488",
+      "spec_sha256": "e194d8c5339f8db04ddf7b6b7a7a0b00b3f69815fc92e7067e286592b378cf44"
+    }
+  ],
+  "main_affinity": null,
+  "main_deadline": 7200,
+  "main_pod_gc": {
+    "strategy": "OnPodSuccess"
+  },
+  "main_retry": null,
+  "main_ttl": {
+    "secondsAfterCompletion": 86400,
+    "secondsAfterFailure": 172800
+  },
+  "serial_expected_selected_build_steps": [
+    {
+      "step": "build-api",
+      "templateRef": {
+        "name": "repo-build",
+        "template": "build"
+      },
+      "when": "'{{steps.classify-push.outputs.parameters.api}}' == 'true'",
+      "profile": {
+        "image": "verdifyconsultancy/verdify-api",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "60Gi"
+      }
+    },
+    {
+      "step": "build-mcp",
+      "templateRef": {
+        "name": "repo-build",
+        "template": "build"
+      },
+      "when": "'{{steps.classify-push.outputs.parameters.mcp}}' == 'true'",
+      "profile": {
+        "image": "verdifyconsultancy/verdify-mcp",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "60Gi"
+      }
+    },
+    {
+      "step": "build-ingestor",
+      "templateRef": {
+        "name": "repo-build",
+        "template": "build"
+      },
+      "when": "'{{steps.classify-push.outputs.parameters.ingestor}}' == 'true'",
+      "profile": {
+        "image": "verdifyconsultancy/verdify-ingestor",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "60Gi"
+      }
+    },
+    {
+      "step": "build-setpoint-server",
+      "templateRef": {
+        "name": "repo-build",
+        "template": "build"
+      },
+      "when": "'{{steps.classify-push.outputs.parameters.setpoint-server}}' == 'true'",
+      "profile": {
+        "image": "verdifyconsultancy/verdify-setpoint-server",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "60Gi"
+      }
+    },
+    {
+      "step": "build-lab-publisher",
+      "templateRef": {
+        "name": "repo-build",
+        "template": "build"
+      },
+      "when": "'{{steps.classify-push.outputs.parameters.lab-publisher}}' == 'true'",
+      "profile": {
+        "image": "verdifyconsultancy/verdify-lab-publisher-k3s",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "60Gi"
+      }
+    }
+  ],
+  "build_template_retry": null,
+  "build_template_selector": {
+    "agentfleet.vallery.net/runner-eligible": "true"
+  },
+  "build_template_affinity": null,
+  "build_template_pod_spec_patch": "affinity: {{= inputs.parameters.kaniko_ephemeral_request == '50Gi' ? '{\"nodeAffinity\":{\"requiredDuringSchedulingIgnoredDuringExecution\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"agentfleet.vallery.net/heavy-build-headroom\",\"operator\":\"In\",\"values\":[\"true\"]}]}]},\"preferredDuringSchedulingIgnoredDuringExecution\":[{\"weight\":100,\"preference\":{\"matchExpressions\":[{\"key\":\"kubernetes.io/hostname\",\"operator\":\"In\",\"values\":[\"vm-k3s-node5\",\"vm-k3s-node7\"]}]} }]} }' : '{}' }}\n# Kubernetes starts this clock at Pod startTime, after scheduler admission.\n# The existing admission-owned heavy profile is exactly 50Gi scratch;\n# no caller-selected timeout parameter is introduced.\nactiveDeadlineSeconds: {{= inputs.parameters.kaniko_ephemeral_request == '50Gi' ? 7200 : 3600 }}\ninitContainers:\n  - name: test\n    resources:\n      requests:\n        cpu: \"{{inputs.parameters.test_cpu_request}}\"\n        memory: \"{{inputs.parameters.test_memory_request}}\"\n      limits:\n        cpu: \"{{inputs.parameters.test_cpu_limit}}\"\n        memory: \"{{inputs.parameters.test_memory_limit}}\"\n  - name: kaniko-build\n    resources:\n      requests:\n        cpu: \"{{inputs.parameters.kaniko_cpu_request}}\"\n        memory: \"{{inputs.parameters.kaniko_memory_request}}\"\n        ephemeral-storage: \"{{inputs.parameters.kaniko_ephemeral_request}}\"\n      limits:\n        cpu: \"{{inputs.parameters.kaniko_cpu_limit}}\"\n        memory: \"{{inputs.parameters.kaniko_memory_limit}}\"\n        ephemeral-storage: \"{{inputs.parameters.kaniko_ephemeral_limit}}\"\n",
+  "nonbuild_stages": [
+    {
+      "stage": "validate",
+      "activeDeadlineSeconds": 1500,
+      "retryStrategy": {
+        "expression": "lastRetry.message matches '(?i)(deadline|image ?pull)'",
+        "limit": "1",
+        "retryPolicy": "Always"
+      },
+      "regular": {
+        "limits": {
+          "cpu": "2",
+          "ephemeral-storage": "10Gi",
+          "memory": "4Gi"
+        },
+        "requests": {
+          "cpu": "500m",
+          "ephemeral-storage": "10Gi",
+          "memory": "768Mi"
+        }
+      },
+      "init": [
+        {
+          "name": "fetch-validate-context",
+          "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "resources": null
+        }
+      ]
+    },
+    {
+      "stage": "pin-digests",
+      "activeDeadlineSeconds": null,
+      "retryStrategy": null,
+      "regular": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "256Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "64Mi"
+        }
+      },
+      "init": [
+        {
+          "name": "mint-publisher-token",
+          "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "resources": null
+        }
+      ]
+    }
+  ],
+  "build_images": [
+    {
+      "name": "registry-capacity-preflight",
+      "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+      "resources": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "64Mi"
+        },
+        "requests": {
+          "cpu": "10m",
+          "memory": "32Mi"
+        }
+      }
+    },
+    {
+      "name": "fetch-context",
+      "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+      "resources": null
+    },
+    {
+      "name": "capture-build-inputs",
+      "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+      "resources": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        },
+        "requests": {
+          "cpu": "10m",
+          "memory": "32Mi"
+        }
+      }
+    },
+    {
+      "name": "test",
+      "image": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+      "resources": {
+        "limits": {
+          "cpu": "1500m",
+          "memory": "4Gi"
+        },
+        "requests": {
+          "cpu": "500m",
+          "memory": "1Gi"
+        }
+      }
+    },
+    {
+      "name": "verify-build-inputs",
+      "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+      "resources": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "64Mi"
+        },
+        "requests": {
+          "cpu": "10m",
+          "memory": "32Mi"
+        }
+      }
+    },
+    {
+      "name": "kaniko-build",
+      "image": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+      "resources": {
+        "limits": {
+          "cpu": "3",
+          "ephemeral-storage": "60Gi",
+          "memory": "16Gi"
+        },
+        "requests": {
+          "cpu": "1",
+          "ephemeral-storage": "32Gi",
+          "memory": "2Gi"
+        }
+      }
+    },
+    {
+      "name": "registry-capacity-publish-gate",
+      "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+      "resources": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "64Mi"
+        },
+        "requests": {
+          "cpu": "10m",
+          "memory": "32Mi"
+        }
+      }
+    },
+    {
+      "name": "main",
+      "image": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+      "resources": {
+        "limits": {
+          "cpu": "1",
+          "memory": "1Gi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      }
+    }
+  ],
+  "remaining_owner_qualification": [
+    "supported actual caller placement; shared WorkflowTemplate top placement not inherited through templateRef",
+    "wholeworkflow footprint: possible retained first validation retry10Gi plus current standard build60Gi, all other stages/images/logs and delayed/native reclaim; do not count successGC as immediate thin reclaim",
+    "recurring fresh registry signal, protected-set parity and publication consumer acceptance"
+  ],
+  "no_allocation_or_patch": true
+}

@@ -1,0 +1,144 @@
+{
+  "observed_at": "2026-10-12T01:05:22.073648+00:00",
+  "workflow": "verdify-platform-ci-xnbz7",
+  "uid": "c8714c74-93a8-48d0-a3a5-f0377fbaca58",
+  "phase": "Failed",
+  "finishedAt": "2026-10-12T00:56:59Z",
+  "message": "child 'verdify-platform-ci-xnbz7-3206582954' failed",
+  "retained_pods": [
+    {
+      "name": "verdify-platform-ci-xnbz7-build-3206582954",
+      "uid": "f12edac0-5fc2-4141-b2df-1c2a83110d98",
+      "node": "vm-k3s-node7",
+      "phase": "Failed",
+      "deletionTimestamp": null,
+      "containers": [
+        {
+          "name": "init",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://fa2af1d145230a9d963168501148c292e007e45198f95554ea524a899e787d0b",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:24Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:24Z"
+            }
+          },
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+        },
+        {
+          "name": "registry-capacity-preflight",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://f340efc1adee5452dc24ab61d0d7f9f89e1ff9f025c40b36bf945ac948b1b264",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:31Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:26Z"
+            }
+          },
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de"
+        },
+        {
+          "name": "fetch-context",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://4462fa1ffcb0cf89bc7bc3eb237f26f533471b9658216ebd25af2ca5678867ef",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:47Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:32Z"
+            }
+          },
+          "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28"
+        },
+        {
+          "name": "capture-build-inputs",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://661da44d50e5c7bd0bf25d25abecc0d32ccbacd1f3de9d71cd9cbf5491dc4f6b",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:50Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:48Z"
+            }
+          },
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de"
+        },
+        {
+          "name": "test",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://753c2b47bf7c70718d949029ed9427b173a6229f134f8cf2dbe3f29750cd7f2b",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:52Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:52Z"
+            }
+          },
+          "imageID": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed"
+        },
+        {
+          "name": "verify-build-inputs",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://4d2001e3f3ba48c53239e35513fc34b71f4bf42d551b1a2026ee3a40ae46a567",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:50:56Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:50:53Z"
+            }
+          },
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de"
+        },
+        {
+          "name": "kaniko-build",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://488fbead43316e6a8fe109a58addaf51c67a862c45747fd0e4bad0ecd1865bd5",
+              "exitCode": 0,
+              "finishedAt": "2026-10-12T00:52:44Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-12T00:51:09Z"
+            }
+          },
+          "imageID": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e"
+        },
+        {
+          "name": "registry-capacity-publish-gate",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://91b373eeedcca65f015fba43e0bc4ba6f9379991e06437cb3b782afc39bd5ef4",
+              "exitCode": 1,
+              "finishedAt": "2026-10-12T00:56:51Z",
+              "message": "agent-fleet-capacity-preflight-v2:eyJleHBlY3RlZCI6eyJjYXBhY2l0eV9jb250cmFjdF9pZCI6IjVlOGE5N2IzNmFjZWUzMTNhOTY4NmE2MjFlNmRiMGY4ZDAyZTY4OWU0YmQyZTQxNDFkYzFlODZiMjVhMDMzNmUiLCJtYXhfYWdlX3NlY29uZHMiOjMwMCwibWluX2ZyZWVfYnl0ZXMiOjE1MDMyMzg1NTM2MCwicHJvdGVjdGVkX2NvdW50IjoyOTAsInByb3RlY3RlZF9jdXJyZW50X2NvdW50IjozNiwicHJvdGVjdGVkX2dlbmVyYXRpb24iOjE1NiwicHJvdGVjdGVkX21heF9hZ2Vfc2Vjb25kcyI6NjA0ODAwLCJwcm90ZWN0ZWRfcm9sbGJhY2tfY291bnQiOjI1NCwicHJvdGVjdGVkX3NldF9oYXNoIjoiMzA4YWFmM2Q0YjM1YzA4OGY4MWQ2OTUxMWNjZTE1ZWQ4NjBkM2I4OTg2Mzk0YjRkOTZkNjE5YWE1Mjg2M2E3MyJ9LCJnYXRlIjoicHVibGlzaCIsIm9ic2VydmVkIjp7fSwib3V0Y29tZSI6ImJsb2NrZWQiLCJyZWFzb24iOiJzaWduYWwtc3RhbGUiLCJzY2hlbWEiOiJhZ2VudC1mbGVldC5yZWdpc3RyeS1jYXBhY2l0eS1wcmVmbGlnaHQtcmVjZWlwdC8yIn0",
+              "reason": "Error",
+              "startedAt": "2026-10-12T00:52:46Z"
+            }
+          },
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de"
+        },
+        {
+          "name": "main",
+          "state": {
+            "waiting": {
+              "reason": "PodInitializing"
+            }
+          },
+          "imageID": ""
+        },
+        {
+          "name": "wait",
+          "state": {
+            "waiting": {
+              "reason": "PodInitializing"
+            }
+          },
+          "imageID": ""
+        }
+      ]
+    }
+  ],
+  "other_active_verdify": [],
+  "debt": "Terminalworkflow hasno futureoriginalPods/pinactuator; retainedfailednode7Pod32Gi request/60Gi limit STILLcharged plusnativeimage/cacheallocationUNKNOWN. No storage-residue discharge/cleanup inferred. OtherestatefuturedebtUNKNOWN."
+}

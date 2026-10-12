@@ -1,0 +1,68 @@
+{
+  "observed_at": "2026-10-12T01:25:36.397865+00:00",
+  "kind": "Offline current immutable trusted-adapter projection; NOT actual next-main classification/build receipt",
+  "adapter": {
+    "name": "agent-fleet-verdify-path-impact-v2",
+    "uid": "00804c64-c8f5-4532-b0cf-ce3e360f1eca",
+    "immutable": true,
+    "sha256": "da7f0c99ed9cffa3783613e7363918494621136943af56767c853af40b20fab1"
+  },
+  "result": {
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+    "base_revision": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+    "mode": "build",
+    "profiles": [
+      "api",
+      "mcp",
+      "ingestor",
+      "setpoint-server",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "api": [
+        "api/main.py",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "mcp": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "ingestor": [
+        "docs/SERVICE_MAP.md",
+        "docs/runbooks/api-light-command-boundary.md",
+        "docs/runbooks/moisture-telemetry-state-boundary.md",
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/k3s-smoke.sh",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "setpoint-server": [
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ],
+      "lab-publisher": [
+        "firmware/greenhouse/controls.yaml",
+        "ingestor/entity_map.py",
+        "ingestor/ingestor.py",
+        "scripts/ci-local.sh",
+        "scripts/k3s-smoke.sh",
+        "verdify_schemas/control_band_wire.py",
+        "verdify_schemas/telemetry.py",
+        "verdify_schemas/tests/test_moisture_telemetry.py"
+      ]
+    },
+    "paths_sha256": "e50859d3dea993d226c6114adaefc3a6c08a5fcf0ef9f60772e119f952b857c1"
+  },
+  "caller_profile": "post-native-current-main-caller-profile.json",
+  "caller_profile_sha256": "f5205db8270cdddc742e24606c52be7d4c2ace2c055e72783d28f5784b462b81",
+  "source_native_ci": "Succeeded exact37fd; notmainbuildrelease"
+}

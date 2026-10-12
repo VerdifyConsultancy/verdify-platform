@@ -1,0 +1,455 @@
+[
+  {
+    "worktree": "/Users/jason/repos/verdify-platform",
+    "original_head": "910562e13b0fb5c2d155b98bd8c8d6d81b65a3c8",
+    "original_branch": "refs/heads/main",
+    "source_paths": [],
+    "excluded_runtime_paths": [
+      ".kube/cache/discovery/192.168.30.31_6443/acme.cert-manager.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/actions.github.com/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/admissionregistration.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/apiextensions.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/apiregistration.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/apps/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/argoproj.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/authentication.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/authorization.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/autoscaling/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/autoscaling/v2/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/backup.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/barmancloud.cnpg.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/batch/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/cdi.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/cert-manager.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/certificates.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/clone.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/clone.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/coordination.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/discovery.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/events.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/export.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/export.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/extensions.higress.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/flowcontrol.apiserver.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/forklift.cdi.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/groupsnapshot.storage.k8s.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/helm.cattle.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/hub.traefik.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/instancetype.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/k3s.cattle.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/k8s.cni.cncf.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/k8s.mariadb.com/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/kubevirt.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/kubevirt.io/v1alpha3/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/longhorn.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/longhorn.io/v1beta2/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/metallb.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/metallb.io/v1beta2/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/metrics.k8s.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/migrations.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/monitoring.coreos.com/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/monitoring.coreos.com/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/networking.higress.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/networking.istio.io/v1alpha3/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/networking.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/node.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/policy/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/pool.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/pool.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/postgresql.cnpg.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/rbac.authorization.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/resource.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/scheduling.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/servergroups.json",
+      ".kube/cache/discovery/192.168.30.31_6443/snapshot.kubevirt.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/snapshot.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/snapshot.storage.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/storage.k8s.io/v1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/traefik.io/v1alpha1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/upload.cdi.kubevirt.io/v1beta1/serverresources.json",
+      ".kube/cache/discovery/192.168.30.31_6443/v1/serverresources.json",
+      ".kube/cache/http/312d71999da80e2ebb074e0c52b5ca992cc066be401d31a5f07ba345ab39c456",
+      ".kube/cache/http/f574733d8ca7658ea44571ba33ed0e0b2f4708cf08beb24ff4321b9b945e4329"
+    ],
+    "disposition": "Only reproducible runtime/cache files; no incomplete source"
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+    "original_head": "e1dd50c1d2c1ec23fe81c1131c3e93139180e81f",
+    "original_branch": null,
+    "source_paths": [
+      "deploy/k8s/components/grafana/generated/dashboards-cm-0.yaml",
+      "grafana/dashboards/site-home.json",
+      "verdify_schemas/views.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "d31e316e73c3656f05aef6293e0865e52ca319b0",
+    "tree": "e17fe0a74387e041b02359e977077fa9834ac2f1",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-371-integration-review-20260928",
+    "verified_files": [
+      {
+        "path": "deploy/k8s/components/grafana/generated/dashboards-cm-0.yaml",
+        "sha256": "c1ece8f86eec6b6bacabe71a29e41303344a0fd8406e44a9f4edcbc0b6a167ee"
+      },
+      {
+        "path": "grafana/dashboards/site-home.json",
+        "sha256": "c41b40dc21626af183dc42d83b517069fa4919958924225b1ec78b29635103e0"
+      },
+      {
+        "path": "verdify_schemas/views.py",
+        "sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-782-gatep-reseal-20260928",
+    "original_head": "eb90085cc27f8028c2c1a069129a5e45a6f32f9b",
+    "original_branch": "refs/heads/agent/782-gatep-reseal-20260928",
+    "source_paths": [
+      "scripts/probe-256-rollback-only.py",
+      "scripts/probe-ordinary-boundary-catalog.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "c82701509139bcea20158f5e010a25629a29dc34",
+    "tree": "9651df975b0fe957e625bfd7e790e01f4d8d2784",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-782-gatep-reseal-20260928",
+    "verified_files": [
+      {
+        "path": "scripts/probe-256-rollback-only.py",
+        "sha256": "7ded0d82ca9c014e944d30b4920f73e03ad9fd547bf5c2b8ffee6b41ca2ef456"
+      },
+      {
+        "path": "scripts/probe-ordinary-boundary-catalog.py",
+        "sha256": "1536a0cc5405601a4a7411f704b2b585b77db22678fb5e304baeac0dba693fa9"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-s2-cnpg-20261005",
+    "original_head": "79607ff2e8d218cac81317a0ab94f0cb3b863eee",
+    "original_branch": "refs/heads/s2/cnpg-20261005",
+    "source_paths": [
+      "scripts/cnpg-s2-runtime-transition.py",
+      "scripts/cnpg-target-runtime-transition.py",
+      "db/migrations/275-lighting-minutes-policy-bounded-jit.sql"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "b0b6b6087a005009ec5f9eed09ac6f9f5608dca5",
+    "tree": "04b60d3da7d10999ba6a4efbe93ccc5f6b588901",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-s2-cnpg-20261005",
+    "verified_files": [
+      {
+        "path": "scripts/cnpg-s2-runtime-transition.py",
+        "sha256": "c13872f1e1deb212f4dd58ee72e64204333390fdbbccc5a0ad283cec76d3cf22"
+      },
+      {
+        "path": "scripts/cnpg-target-runtime-transition.py",
+        "sha256": "86ef1f483faad3594cd5d9555217870875313dbc5c980e90a56c454050fffaa5"
+      },
+      {
+        "path": "db/migrations/275-lighting-minutes-policy-bounded-jit.sql",
+        "sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-s2-iris-20261005",
+    "original_head": "f70e8edba7e2c358611ffe566db22cd739fc1a3f",
+    "original_branch": "refs/heads/s2/iris-20261005",
+    "source_paths": [
+      "db/migrations/276-lighting-snapshot-indexed-latest.sql"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "93cf537fd3d9f3f28e72cfe7daad47a8b2cb132f",
+    "tree": "ca596dcd4bc5b3e885c148ab67d3ae5066b773a9",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-s2-iris-20261005",
+    "verified_files": [
+      {
+        "path": "db/migrations/276-lighting-snapshot-indexed-latest.sql",
+        "sha256": "5b51041f3df3dad09fbedf41fb24a9996b649e2082d694495e47d1cd0dd4d375"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+    "original_head": "d665c67ae4b6c763859415c55bd44ea2efc97000",
+    "original_branch": "refs/heads/work/396-cnpg-current-storage",
+    "source_paths": [
+      "deploy/k8s/cnpg/docs/PROD-CNPG-MIGRATION-RUNBOOK.md",
+      "deploy/k8s/cnpg/image/Dockerfile",
+      "scripts/ci-local.sh",
+      "docs/runbooks/cnpg-alongside-rehearsal.md",
+      "scripts/render-cnpg-rehearsal.py",
+      "tests/test_cnpg_rehearsal.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "59b0393db7b60f45eb20118f3c674d853464617b",
+    "tree": "d9a9f7fc7f41463a66862589e165781a977b4b4d",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-396-cnpg-current-storage-20261001",
+    "verified_files": [
+      {
+        "path": "deploy/k8s/cnpg/docs/PROD-CNPG-MIGRATION-RUNBOOK.md",
+        "sha256": "4dab290a8f4b9d284a69c73d1dc37117cbf630cacaa789307d15fee472128635"
+      },
+      {
+        "path": "deploy/k8s/cnpg/image/Dockerfile",
+        "sha256": "f6bf43c3ad45932eeef2fe3d3af5f9573dcabdaf38b9a240f05fa9172e10f5f1"
+      },
+      {
+        "path": "scripts/ci-local.sh",
+        "sha256": "6dd4ed3084245ed6c3b5615f455e5c42c9c4a5681a8ff3b416d276cf2e8214ac"
+      },
+      {
+        "path": "docs/runbooks/cnpg-alongside-rehearsal.md",
+        "sha256": "d0d767e045bb62062bfe640e96e20ba2cd0736fa78fdf0355e33682d83ca732c"
+      },
+      {
+        "path": "scripts/render-cnpg-rehearsal.py",
+        "sha256": "dbaff949571eafe3d7582f0f33c2575cdc48bb4cf24151f5833acaee566965e4"
+      },
+      {
+        "path": "tests/test_cnpg_rehearsal.py",
+        "sha256": "33012362378081897e0e4970b4262db20d15f9546ec9c24775dace7de60639b5"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-644-promotion-receipt-20260930",
+    "original_head": "a6ed0105bd836625dc1c364b56c7e84e8014d9a9",
+    "original_branch": "refs/heads/fix/644-promotion-receipt-20260930",
+    "source_paths": [
+      "SOURCE-RECEIPT.md",
+      "uv.lock"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "4809678a4cbe78130c94b45c68b279d2f705b443",
+    "tree": "e7e4fd449d37d17927f3bc040d7a868180a777af",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-644-promotion-receipt-20260930",
+    "verified_files": [
+      {
+        "path": "SOURCE-RECEIPT.md",
+        "sha256": "8040c545fd6ad37b635aca12ed83094e9b21bfecaa5d0ae6f7a0982daeb3f2fa"
+      },
+      {
+        "path": "uv.lock",
+        "sha256": "6a7ae98bc8334ba47871e17df8f0d2ba4abd224b4a896e98731b694367e0db64"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-c1-consumer-manifest-20260930",
+    "original_head": "f8680a07695d882ae06788e030d1014740fa2249",
+    "original_branch": "refs/heads/fix/c1-consumer-manifest-20260930",
+    "source_paths": [
+      "firmware/policy_consumer_manifest.json"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "88195485270e59b93d3ad7761894172db00fd62f",
+    "tree": "7beb2dee8634a6f7f75281aabaee1d8fa588d6ba",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-c1-consumer-manifest-20260930",
+    "verified_files": [
+      {
+        "path": "firmware/policy_consumer_manifest.json",
+        "sha256": "74c0bbd350d414c1d03d778324098f9b8e89a02b2642e126e75466589eeb4b4d"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+    "original_head": "86e07ee4aac04a748267dd4fae3b8124f48a9aab",
+    "original_branch": "refs/heads/fix/climate-intent-grid-20260929",
+    "source_paths": [
+      "ingestor/tasks/dispatcher.py",
+      "tests/test_05_dispatcher.py",
+      "verdify_schemas/climate_intent.py",
+      "verdify_schemas/component_executor.py",
+      "verdify_schemas/tests/test_climate_intent.py",
+      "verdify_schemas/entity_grid.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "2e81047bc60d928aea48340c30f4e43c15031700",
+    "tree": "5885e7ea73a032af67fe547b0348ec663f3349bd",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-climate-intent-grid-20260929",
+    "verified_files": [
+      {
+        "path": "ingestor/tasks/dispatcher.py",
+        "sha256": "b2874382600c663d81877383f0d9653eb3e7459817b58b4cb922de17ac1b01e1"
+      },
+      {
+        "path": "tests/test_05_dispatcher.py",
+        "sha256": "6f21c057297fa2a49fb1845fdd3ee1705b9b312ccfc37a4c4036624e59449863"
+      },
+      {
+        "path": "verdify_schemas/climate_intent.py",
+        "sha256": "a3535114718388a71ec3632120aef2dfeefe152ea4ee03876018bf0dd9cf9b5c"
+      },
+      {
+        "path": "verdify_schemas/component_executor.py",
+        "sha256": "53814b3cf7b5f16c5dfd675cc7794d93210a340c48c5d3a99cac975ce7d7ca40"
+      },
+      {
+        "path": "verdify_schemas/tests/test_climate_intent.py",
+        "sha256": "1f25287c4710c817205ed815eb0cd06409480b423b1e1779e2a9ac1d51c32e8e"
+      },
+      {
+        "path": "verdify_schemas/entity_grid.py",
+        "sha256": "5f834e772fd4b16858ec114a58fc64e5598b47367af21b2c5a3b77b01ff4c5db"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+    "original_head": "df591af33570d1077bf19cd92305e85bc99258c5",
+    "original_branch": "refs/heads/fix/cnpg-band-time-projection-20261002",
+    "source_paths": [
+      "scripts/cnpg-physical-runtime-transition.py",
+      "tests/test_cnpg_physical_runtime_transition.py",
+      "scripts/cnpg-band-trace-time-projection.py",
+      "tests/fixtures/cnpg_band_trace_time_projection/source-native-properties.json"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "bfd1f1be5d112eb176f7fd9df8ff7057576b3138",
+    "tree": "036160d1c40e06140203ff6375193ac78d0564d8",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-cnpg-band-time-projection-20261002",
+    "verified_files": [
+      {
+        "path": "scripts/cnpg-physical-runtime-transition.py",
+        "sha256": "f519dfb864dff2130096f6f60fc1dbdb34c94234d2d1b069e6551ec55d93cc2d"
+      },
+      {
+        "path": "tests/test_cnpg_physical_runtime_transition.py",
+        "sha256": "8658f8c9100a013a49a0eecbe9fe6345835fc736c7a4fc32091c8de9fc8def9c"
+      },
+      {
+        "path": "scripts/cnpg-band-trace-time-projection.py",
+        "sha256": "e52652cbe8fd87ef932d7c38c74a544dc2258d5d9626866749af943490e0a7af"
+      },
+      {
+        "path": "tests/fixtures/cnpg_band_trace_time_projection/source-native-properties.json",
+        "sha256": "c32a030fdef7b443b5b11744e3e22772d0b58038ed0c9b966635b2f478efe8de"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-existing-target-recovery-20261001",
+    "original_head": "7acce17d947a0fb6436f5da1882a299b9920a267",
+    "original_branch": "refs/heads/fix/cnpg-existing-target-recovery-20261001",
+    "source_paths": [
+      "scripts/cnpg-existing-target-recovery.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "026b9b2766950c1372eb97b6f56b9dbca70a0251",
+    "tree": "1f9de8ae1ff2595bacf47bdca9869833c86a6fa3",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-cnpg-existing-target-recovery-20261001",
+    "verified_files": [
+      {
+        "path": "scripts/cnpg-existing-target-recovery.py",
+        "sha256": "075cd7f792033f4e074ed4a4f343a93f932fdfc98da557016cb2d223366e4be6"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+    "original_head": "e3ee6c813072605206f25f1c205bb30af98db4ec",
+    "original_branch": "refs/heads/work/396-physical-runtime-profile-20261001",
+    "source_paths": [
+      "scripts/cnpg-target-runtime-transition.py",
+      "docs/runbooks/cnpg/physical-runtime-admission.md",
+      "scripts/cnpg-physical-runtime-transition.py",
+      "tests/test_cnpg_physical_runtime_transition.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "6d58d8ec2e7f3668e7bf71ae4ba59f1db428ce86",
+    "tree": "eed20881f6d8212d3b7caaf7dfa17e3709abcdad",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-cnpg-physical-runtime-profile-20261001",
+    "verified_files": [
+      {
+        "path": "scripts/cnpg-target-runtime-transition.py",
+        "sha256": "43598d55a7cb96d3139b97ec9459cbb15cc1907f6999622d65ab52415b6fe7e4"
+      },
+      {
+        "path": "docs/runbooks/cnpg/physical-runtime-admission.md",
+        "sha256": "bce30f01d9885b6b0e0ea62689eeaa3964c22337e0af47e7599d3c8b3913f9ac"
+      },
+      {
+        "path": "scripts/cnpg-physical-runtime-transition.py",
+        "sha256": "65d8afe36daf8779d2d240a08f22cc49da3bcd898c1207cfcbcb02c9a67d0fcf"
+      },
+      {
+        "path": "tests/test_cnpg_physical_runtime_transition.py",
+        "sha256": "948d037bb355b294ced3f1bc44b9ac86e6e506556f10d62982a2633da27df4a6"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-final-expiry-delivery-20261001",
+    "original_head": "346bc4d5f22b5b4e68e47b1dba4a5f350a0305b2",
+    "original_branch": null,
+    "source_paths": [],
+    "excluded_runtime_paths": [
+      ".venv"
+    ],
+    "disposition": "Only reproducible runtime/cache files; no incomplete source"
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-heartbeat-root-delivery-20261001",
+    "original_head": "e3b73d0c34e0db4ebb84ae287ae1cb52d25d14ca",
+    "original_branch": null,
+    "source_paths": [],
+    "excluded_runtime_paths": [
+      ".venv"
+    ],
+    "disposition": "Only reproducible runtime/cache files; no incomplete source"
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+    "original_head": "efaa4b677034bb759563b0bfb44723030f83a326",
+    "original_branch": "refs/heads/work/irrigation-stop-safety-20261002",
+    "source_paths": [
+      "firmware/greenhouse/controls.yaml",
+      "firmware/greenhouse/hardware.yaml",
+      "scripts/ci-local.sh",
+      "tests/test_irrigation_stop_edges.py"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "992d506f3b4c6ce280379c3079f6bf939e4ad96b",
+    "tree": "8482f7457cd2283ff7367c11fc5dbae04d331f31",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-irrigation-source-audit-20261002",
+    "verified_files": [
+      {
+        "path": "firmware/greenhouse/controls.yaml",
+        "sha256": "1de8b8e5f6655c51aabb9571f2f56dada1ea99f696a14dd625d287c907887037"
+      },
+      {
+        "path": "firmware/greenhouse/hardware.yaml",
+        "sha256": "a967bc7401d737e3d133116297d4f4c3b7b865603d32ae00c332a6a7c91c2668"
+      },
+      {
+        "path": "scripts/ci-local.sh",
+        "sha256": "d5de17b0b50794a2d176a5d28c39265750033948a1399eb2fb509887c9eaae80"
+      },
+      {
+        "path": "tests/test_irrigation_stop_edges.py",
+        "sha256": "14dddbc2dbb0a5917ce0c1d3ebed24b41a6e8c3023ae217ef554f01e3577876e"
+      }
+    ]
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-sso-rollback-proof-20261001",
+    "original_head": "b3b68e378a953b45ce41ca088bdc9fd9792daa01",
+    "original_branch": null,
+    "source_paths": [
+      "deploy/k8s/components/grafana/grafana.yaml"
+    ],
+    "excluded_runtime_paths": [],
+    "snapshot": "99ea1811b44bc5df1f54c7164231c0e8944310f2",
+    "tree": "848138cfaf2d4d240c8cb41fa8b2d190a0e77b48",
+    "custody_ref": "refs/heads/in-progress/paused-20261012/wip-verdify-sso-rollback-proof-20261001",
+    "verified_files": [
+      {
+        "path": "deploy/k8s/components/grafana/grafana.yaml",
+        "sha256": "d00e576e24776dbdfff8bc6c2f65a42895c7b4cb07fd49e3e3eec8d508a29cb2"
+      }
+    ]
+  }
+]
