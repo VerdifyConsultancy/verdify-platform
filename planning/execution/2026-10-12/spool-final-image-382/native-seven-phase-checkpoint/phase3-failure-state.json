@@ -1,0 +1,16 @@
+{
+  "schema": "verdify382-phase3-uncommitted-transport-failure-v1",
+  "jobTerminal": true,
+  "childFailure": "ConnectionRefusedError",
+  "childExit": 1,
+  "expectedCrashExit": 74,
+  "postFailureNativeRecordExactPreviousAccepted": true,
+  "nativeRecordSha256": "e6fa659d2f7c1cc0a2d83d9d890d1fdb96c2910ca4c34bb558245d4e4024e95e",
+  "climateLedgerAndTelemetryRows": 1,
+  "diagnosticsLedgerAndTelemetryRows": 0,
+  "equipmentLedgerAndTelemetryRows": 0,
+  "allOriginalLocalQueuesStillOne": true,
+  "replayExecuted": false,
+  "originalAttemptPreserved": true,
+  "smallestNextCorrection": "credential-free bounded TCP readiness before child; single authenticated connect and exact SQL/source remain unchanged"
+}

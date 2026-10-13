@@ -1,0 +1,7 @@
+# Final-image finite spool qualification
+
+This source/result packet reuses the single admitted restored integration target and exact deployed c6cc/cb21 ingestor image. The helper, fixture and native binding remain byte-identical. The wrapper records stopped-child SQLite UUID/payload/format/integrity and resources, then adds the previously supported credential-free bounded TCP readiness wait before the single authenticated child. Eighteen focused offline regressions and normal owner-config Ruff formatting/checks pass.
+
+The first cached-image attempt started no container; its NULL inverse, four exact UID cleanups and952/77/42/catalog reseal completed. Kubernetes1.35 verifies cached private-image access even with Never policy. The corrected Jobs reference the existing target-local zot-origin-cluster-pull; Pod UID events confirm the exact image was already present and accessible, with no pull. A later phase3 ConnectionRefused attempt is preserved; independent native state was exactly the prior accepted phase2 state before the distinct readiness correction.
+
+Native phases and final fixture/password/sequence/chunk inverse/reseal are recorded separately after execution. This packet does not claim physical node loss, multiple-event FIFO, fresh device confirmation, production rollout or whole issue382 completion. Private human approval and admission transcripts and credential values/verifiers are excluded.

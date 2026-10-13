@@ -1,0 +1,15 @@
+{
+  "check": "ruff check --config <owner pyproject.toml> <wrapper> <test>",
+  "check_exit_code": 0,
+  "check_output": "All checks passed!",
+  "config": "/private/tmp/verdify-spool-final-image-382-20261012/pyproject.toml",
+  "config_sha256": "03d1418db4164843856843da67de3304c3799b910f07feb293a753e4242e19d9",
+  "format_exit_code": 0,
+  "normal_format": "ruff format --config <owner pyproject.toml> <wrapper> <test>; wrapper final pass unchanged, test reformatted",
+  "rerun_after_freeze": false,
+  "source_sha256": {
+    "phase-owner-wrapper.py": "83bf9cc2ec903c8ed2be2ca5e54fb7a420410d4f2bc3c0d6cf2c60b593f6c56a",
+    "test_phase_owner_wrapper.py": "aef6e0c124d72709c1aa5cf713f6b616e68f45d7b27e00de03b96f3fff01ce82"
+  },
+  "tool": "/Users/jason/repos/verdify-platform/.venv/bin/ruff"
+}

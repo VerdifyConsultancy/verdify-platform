@@ -1,0 +1,159 @@
+{
+  "frozen": true,
+  "frozen_transport_function_ast_sha256": "f205aeb0de7072548c41d1bec5de94ee47856ff444f9a31131c862c3a18261a9",
+  "frozen_transport_source": "scripts/qualify-restored-runtime-duties.py",
+  "frozen_transport_source_sha256": "6605e4d8eb1071bf68668d03565b9a4307be8ff11951aa95e4051a8265826719",
+  "limits": [
+    "Only finite isolated native spool qualification; no production/image/controller/device delivery claim."
+  ],
+  "lint_format_receipt_sha256": "dec31b3b14d17a599f83e1b8fe726122cee7c4419bccd352a2376cb4613634d1",
+  "readiness_contract": {
+    "after": "validate_release",
+    "authentication_attempted": false,
+    "before": "child startup and child credential reads",
+    "child_or_sql_retries_added": false,
+    "child_started_at_readiness_receipt": false,
+    "failure_attempts": "unavailable; exact frozen function raises without returning its local attempts list",
+    "failure_receipt": "structured type-only error, readonly queues, fixed resource metadata, exit1, no child",
+    "host_environment_key": "DB_HOST",
+    "port": 5432,
+    "sql_attempted": false,
+    "timeout_seconds": 10
+  },
+  "remaining_phase_manifests": [
+    {
+      "changed_paths": [
+        "/metadata/name",
+        "/spec/template/spec/containers/0/env/15/valueFrom/configMapKeyRef/name",
+        "/spec/template/spec/volumes/0/configMap/name",
+        "/spec/template/spec/volumes/1/configMap/name"
+      ],
+      "file": "job-3-crash-observation.prepared.json",
+      "job_name": "verdify-s2-spool-382-7fa4f802-crash-observation-ready",
+      "ordinal": 3,
+      "phase": "crash-observation",
+      "prepared_sha256": "c18c33d0f40a451762b00daf1be1cb32d55894464d57ef9932b936122e0a2539",
+      "release_configmap_name": "verdify-s2-spool-382-release-7fa4f802-3-ready",
+      "source_sha256": "cfde221d459d433640f911968bdfcf9ddb3ccd1e35583b6492248a772893787e"
+    },
+    {
+      "changed_paths": [
+        "/metadata/name",
+        "/spec/template/spec/containers/0/env/15/valueFrom/configMapKeyRef/name",
+        "/spec/template/spec/volumes/0/configMap/name",
+        "/spec/template/spec/volumes/1/configMap/name"
+      ],
+      "file": "job-4-crash-equipment.prepared.json",
+      "job_name": "verdify-s2-spool-382-7fa4f802-crash-equipment-ready",
+      "ordinal": 4,
+      "phase": "crash-equipment",
+      "prepared_sha256": "d22958fd2fac1a2ccd3cffff5494df43144adea0a343b599be30218440256517",
+      "release_configmap_name": "verdify-s2-spool-382-release-7fa4f802-4-ready",
+      "source_sha256": "463b40ab2ec11ded68e02231240f07e9634387e630410c093cc3013373c2fdcd"
+    },
+    {
+      "changed_paths": [
+        "/metadata/name",
+        "/spec/template/spec/containers/0/env/15/valueFrom/configMapKeyRef/name",
+        "/spec/template/spec/volumes/0/configMap/name",
+        "/spec/template/spec/volumes/1/configMap/name"
+      ],
+      "file": "job-5-replay.prepared.json",
+      "job_name": "verdify-s2-spool-382-7fa4f802-replay-ready",
+      "ordinal": 5,
+      "phase": "replay",
+      "prepared_sha256": "f78f342724637dd4f40fb2d28f728ab765bdef27065a9a0008a7ddf53b92e031",
+      "release_configmap_name": "verdify-s2-spool-382-release-7fa4f802-5-ready",
+      "source_sha256": "dd4bc9f331b98ea8759889fb91e63f9befe439da9e92e7601ab079cf2289342e"
+    },
+    {
+      "changed_paths": [
+        "/metadata/name",
+        "/spec/template/spec/containers/0/env/15/valueFrom/configMapKeyRef/name",
+        "/spec/template/spec/volumes/0/configMap/name",
+        "/spec/template/spec/volumes/1/configMap/name"
+      ],
+      "file": "job-6-duplicate.prepared.json",
+      "job_name": "verdify-s2-spool-382-7fa4f802-duplicate-ready",
+      "ordinal": 6,
+      "phase": "duplicate",
+      "prepared_sha256": "281cd1a3c7470ebc8c4a6fc77d00d35c28896b01b7bf08dc43a24cd9f5900d62",
+      "release_configmap_name": "verdify-s2-spool-382-release-7fa4f802-6-ready",
+      "source_sha256": "541a609866d29be33cc33493db3e1ebee1ec8044a000ee3a4c185d6884092238"
+    },
+    {
+      "changed_paths": [
+        "/metadata/name",
+        "/spec/template/spec/containers/0/env/15/valueFrom/configMapKeyRef/name",
+        "/spec/template/spec/volumes/0/configMap/name",
+        "/spec/template/spec/volumes/1/configMap/name"
+      ],
+      "file": "job-7-conflict.prepared.json",
+      "job_name": "verdify-s2-spool-382-7fa4f802-conflict-ready",
+      "ordinal": 7,
+      "phase": "conflict",
+      "prepared_sha256": "fcac310797f3be04ee854479ceacc66a62ae0d2e64b9dfd5246fa724681bd88c",
+      "release_configmap_name": "verdify-s2-spool-382-release-7fa4f802-7-ready",
+      "source_sha256": "8f0e9180590ce4bbcef201b69db595c7e875e15d06b31fb994e2249b25eb9b2f"
+    }
+  ],
+  "runtime_configmap_changed_paths": [
+    "/data/phase-owner-wrapper.py",
+    "/metadata/name"
+  ],
+  "runtime_configmap_name": "verdify-s2-spool-382-packet-83bf9cc2ec-ready",
+  "runtime_configmap_sha256": "1a2f5c5c6c9cbaa8e2a15be07a3c4489e3b50b5746fe6ed5a4322efee8e82dcf",
+  "schema": "verdify-382-bounded-transport-correction-v1",
+  "source_wrapper_sha256": "5769feb51ec171b0c523641c04377c762b2fcc389e589e0082e5e8b7abb4536b",
+  "state": "frozen-local-prepared-not-submitted",
+  "static_assertions": {
+    "all_suspended_backoff_zero": true,
+    "no_target_calls_or_object_creation": true,
+    "only_wrapper_payload_changed": true,
+    "original_child_subprocess_timing_resource_queue_tail_ast_exact": true,
+    "prior_phase1_2_and_failed_phase3_original_artifacts_untouched": true,
+    "release_and_three_capture_functions_unchanged": true,
+    "remaining_five_manifests_only_four_refs_and_names_changed": true,
+    "transport_function_ast_exact": true
+  },
+  "tests": {
+    "all_test_methods": [
+      "CgroupReceiptTests.test_empty_or_over_bound_counter_is_unavailable",
+      "CgroupReceiptTests.test_fixed_metadata_only_paths_missing_is_explicit",
+      "QueueReceiptTests.test_corrupt_file_is_retained_and_error_contains_no_payload",
+      "QueueReceiptTests.test_empty_acked_queues_are_captured_without_repopulation",
+      "QueueReceiptTests.test_expected_crash_exit_emits_queue_receipt_and_preserves_timing",
+      "QueueReceiptTests.test_expected_exit_with_missing_queue_fails_wrapper",
+      "QueueReceiptTests.test_expected_replay_exit_captures_empty_queues",
+      "QueueReceiptTests.test_missing_files_are_not_created",
+      "QueueReceiptTests.test_noncanonical_run_path_refused_without_creating_files",
+      "QueueReceiptTests.test_owner_release_binds_exact_wrapper_bytes_and_refuses_tamper",
+      "QueueReceiptTests.test_readiness_emits_before_one_child_and_child_timing_starts_after_wait",
+      "QueueReceiptTests.test_readiness_failure_prevents_child_and_captures_queues_read_only",
+      "QueueReceiptTests.test_readonly_uri_and_query_only_prevent_writes",
+      "QueueReceiptTests.test_real_source_schema_exact_payload_hash_source_order_read_only",
+      "QueueReceiptTests.test_schema_drift_refused",
+      "QueueReceiptTests.test_unexpected_native_exit_still_captures_queues_and_fails",
+      "QueueReceiptTests.test_unknown_format_refused_without_repair",
+      "QueueReceiptTests.test_wait_target_transport_ast_matches_frozen_runtime_duties"
+    ],
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 -B /private/tmp/verdify-382-transport-prep/test_phase_owner_wrapper.py",
+    "count": 18,
+    "exit_code": 0,
+    "log_sha256": "2bd84f619709d3284132bbe55e9597885f233d2ecd80dceb7cf0cf862d8602fc",
+    "new_test_methods": [
+      "QueueReceiptTests.test_readiness_emits_before_one_child_and_child_timing_starts_after_wait",
+      "QueueReceiptTests.test_readiness_failure_prevents_child_and_captures_queues_read_only",
+      "QueueReceiptTests.test_wait_target_transport_ast_matches_frozen_runtime_duties"
+    ],
+    "prior_15_test_method_asts_preserved": true,
+    "scope": "synthetic temporary SQLite plus mocked readiness and subprocess; no real target/network/credentials/consumer/helper execution",
+    "test_source_sha256": "aef6e0c124d72709c1aa5cf713f6b616e68f45d7b27e00de03b96f3fff01ce82"
+  },
+  "unchanged_other_payloads_sha256": {
+    "fixture-manifest.json": "2d51ae37f5a64c346fb7586765cda9bb1dd65add528c1fab7c2b1ce2baa5378a",
+    "native-binding.json": "86baa61bb7ad19139ed904abb4dd616fd6f0852b8aac7cb7aebdb9276a7c7a64",
+    "qualify-ingestor-committed-spool.py": "10140120cc3553129a736ec2e203b3d67a34bcd0a2c61e7bf92b437e72e0a19f"
+  },
+  "wrapper_sha256": "83bf9cc2ec903c8ed2be2ca5e54fb7a420410d4f2bc3c0d6cf2c60b593f6c56a"
+}
