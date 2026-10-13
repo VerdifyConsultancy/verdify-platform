@@ -1,0 +1,42 @@
+{
+  "observed_at": "2026-10-12T18:08:34.144480+00:00",
+  "pull_requests": [
+    {
+      "number": 973,
+      "state": "open",
+      "head": "37fd6e4a3030471c4e2f397f50b7d6a3278e4276",
+      "head_ref": "sprint/s2-resumed-20261011",
+      "base": "b5bdb3c65b243c230b7864fa81b95f926b2e68ff",
+      "mergeable": null,
+      "updated_at": "2026-10-12T16:51:12Z",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "success",
+          "description": "Verdify Platform in-cluster PR validation passed",
+          "target_url": null,
+          "updated_at": "2026-10-12T01:19:59Z"
+        }
+      ]
+    },
+    {
+      "number": 969,
+      "state": "open",
+      "head": "38efbd834a08577b124e3aff7f122697b9f04f71",
+      "head_ref": "fix/s2-contained-integration-recovery-20261011",
+      "base": "d8068b7cac2f162153bc0d0a4377fc21eae974be",
+      "mergeable": true,
+      "updated_at": "2026-10-12T18:03:09Z",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "pending",
+          "description": "Verdify Platform in-cluster PR validation started",
+          "target_url": null,
+          "updated_at": "2026-10-12T18:03:21Z"
+        }
+      ]
+    }
+  ],
+  "main": "c8bcb589f3815f21e31f11b82ca7653f58129532"
+}

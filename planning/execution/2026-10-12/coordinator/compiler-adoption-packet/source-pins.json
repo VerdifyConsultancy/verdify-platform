@@ -1,0 +1,61 @@
+{
+  "boundary": "Future values intentionally null. No source adoption, compilation, controller/WFT, production, OTA, database/device, Secret read or credential mutation.",
+  "compiler_image_index": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+  "esphome": "2026.6.5",
+  "execution_in_this_preparation": false,
+  "future_native_operation_handle": null,
+  "future_owner_adopted_revision": null,
+  "future_product_distribution_commit": null,
+  "native_4808_receipt_sha256": "5379ec53be45f550a7bfcd08b10dfd89ffc4d1151e843fd9a6b2871376e90d1d",
+  "neighbor_pr": 4807,
+  "neighbor_source_head": "f5d21bdb50bb3b108d3ddaf356a543c633836a1c",
+  "new_command_sha256": "7a5ea7e8bf29e453e4861a3fb016b89b5e6697e5c80a182186f07152ba6da269",
+  "new_registry_generation": "823066b84c5c0d5e835396888ed1db9009bde8bca6fc22b979cd154ade0a3bdb",
+  "old_command_sha256": "919f7bcc44dd64c26c15f51d914de156c0337379c23db5167bac254f2350d45b",
+  "owner_base": "d86ecb84ae55d35fbdf395ec9a5c866625bbbde6",
+  "owner_pr": 4808,
+  "owner_repository": "jvallery/agents",
+  "owner_source_head": "4da25e696a993407ad81350b97e5ae961ee4d266",
+  "prepared_at": "2026-10-12T23:23:08.765639+00:00",
+  "product_ci_mirror": {
+    "bytes": 10970,
+    "git_blob_oid": "e532694ea8730808ae96baf54b4e3d357625e12e",
+    "sha256": "ca48b00656b979abc16922adcfecf9b02d893890a1ce86061c81cabfc7b3feef"
+  },
+  "product_source_observed": "9136f158641f918593df53471e3efe1792b7ad83",
+  "schema": "verdify-303-304-adoption-pins/v1",
+  "selected_native_amd64_manifest_digest": null,
+  "source_files": [
+    {
+      "bytes": 19336,
+      "git_blob_oid": "4328e9fa49cb8f5a5f446e8e8b43897210c96b79",
+      "path": "control-plane/agent-fleet-control/registry/repos/gh-1247193937.yaml",
+      "sha256": "5c19999695de78faa22b9fba758e701149ae490805ae7970f8efcd6bccfe2156"
+    },
+    {
+      "bytes": 13080,
+      "git_blob_oid": "a8ef556623d50e071a5d48bf94da09ffd530fab2",
+      "path": "control-plane/agent-fleet-control/manifests/repo-ci-specs/generated/gh-1247193937.yaml",
+      "sha256": "af3fecfe17783aebc5473b3642fedec33c5aa754d2b009bac65aa56402871f8c"
+    },
+    {
+      "bytes": 264943,
+      "git_blob_oid": "1ecc704a7ab3f9055d416eea616bd496a2d24ba2",
+      "path": "control-plane/agent-fleet-control/manifests/agent-fleet-repo-auth-broker/ci-submission-policy/policy.json",
+      "sha256": "41f83fe3d043d9241ad5162f0c9432b4a26adedd655f81ea7f8a0af190e62113"
+    },
+    {
+      "bytes": 625510,
+      "git_blob_oid": "2b3b330aed06c15b1ee3fc8e406fc9f25e5f5b04",
+      "path": "platform/kubernetes/ci/agent-fleet-ci/admission/ci-submission-admission.generated.yaml",
+      "sha256": "b1e5111fc979358e8470e0f122604ea3b16bb3ba7e542ab9c5299dc30c348193"
+    },
+    {
+      "bytes": 42044,
+      "git_blob_oid": "42c3c35da53dc67099a554987dc7311251f8016d",
+      "path": "control-plane/agent-fleet-control/manifests/repo-identity-policy/generated.json",
+      "sha256": "d6d1514c29dac7a4a3a019bc5067a016c6958934e6b4a3db3f9fb0af0e03ff0f"
+    }
+  ],
+  "unchanged_firmware_tree": "c4a85e4b9d38e667545df9524f52110418d1f1b1"
+}

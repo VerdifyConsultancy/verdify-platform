@@ -2,12 +2,12 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-12T17:38:10Z** against source `b5bdb3c65b243c230b7864fa81b95f926b2e68ff`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **64 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T01:47:39Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| S2 — Recoverability and reliable delivery (October 2026) | sprint | 36–68 | 80 | [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382), [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) |
-| S3 — Source truth, portable validation and prospective design | sprint | 38–72 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963), [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) |
+| S2 — Recoverability and reliable delivery (October 2026) | sprint | 22–44 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
+| S3 — Source truth, portable validation and prospective design | sprint | 34–64 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
 | PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
@@ -21,17 +21,15 @@ Sprint allocations may cover bounded preparation. Full issue acceptance still de
 
 ## S2 — Recoverability and reliable delivery (October 2026)
 
-Kind: sprint. Capacity: 80 engineering hours. Goal: Finish the five remaining S2 outcomes using one release lane and one independent contained recovery lane.
+Kind: sprint. Capacity: 80 engineering hours. Goal: Finish the three remaining S2 outcomes: contained restore/runtime-role acceptance and reliable source delivery.
 
-Exit: Current #949 authentic convergence and exact-source #644 delivery; full #396/#382/#643 restore, event and runtime-role clauses sealed. Historical #964/#953 acceptance retained.
+Exit: Complete remaining #396/#643 restored-data/runtime-role clauses and #644 authenticated source/artifact/cancel/retry/concurrency delivery. October12 #949 exact-source autonomous convergence and #382 declared spool boundaries are accepted; historical #964/#953 retained.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Seal final adopted-image event replay/crash/conflict, restart/node-loss and format inverse; no fabricated device confirmations; finish the whole-data reseal. |
-| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse current-275 seals and independent PR969; finish a contained admitted restore, real endpoint reversal, whole-data/77-sequence/42-study reseal and measured recovery. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Prove each actual runtime login allow/deny, endpoint reversal, pool-close and rollback with the same final recovery target and reseal. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Qualify the current supported owner/build path, deliver canonical PR973 once, and bind actual source→build→digest→promotion→full hooks→running consumer/rollback. |
-| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | Use the current halted-run custody and supported fresh ordinary recovery; preserve expired approval and cap12, then seal one authentic final-source transition and two steady hours. |
+| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Published24c94dd4 integration-target readonly API/ingestor/MCP pool renderer prep;61offlinechecks/oldprofilesbyteequal. Admit serial native pool seam only after fresh exact cache/credential scope; sixconsumer A→B→A semantics remain unproved. Reuse107-case/eightrole/fullreseal evidence. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | OwnerPR4807 f5d required native12/12 SUCCESS; hold merge/adoption during production window. Afterwards coordinate4807-first/4808 combined tuple qualification and remaining authenticated artifact/cancel/retry/concurrency clauses using the existing18-clause matrix. |
 
 ## S3 — Source truth, portable validation and prospective design
 
@@ -44,9 +42,8 @@ Exit: #965 no false observed light history; #963 compatible source and explicitl
 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | Platform lead | 6–12 | Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly. |
 | [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | Platform lead | 4–8 | Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments. |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
-| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Execute the existing selector replay/power work on immutable eligible inputs; choose prospective seasonal scope/18-hour endpoint and publish the concrete pre-draw scientific decision. |
+| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
-| [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Platform lead | 4–8 | Deliver the integrated unsupported light command boundary; prove requests do not write observed history and audit historical provenance without a live physical command. |
 
 ## S4 — Current readiness and integrated qualification
 
@@ -56,8 +53,8 @@ Exit: #749/#639/#587/#783 complete current original clauses, reusing closed #747
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 8–12 | Qualify lifecycle/kill-switch/blinded visibility with actual allowed/denied boundaries and preserved experiment ledger. |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Execute remaining current executor/fault/full-state recovery clauses on a safe contained target; no device actuation by a fixture. |
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 8–12 | Source-only20-case ASGI lifecycle packet prepared with SERIALIZABLE always-rollback outer transaction and componentOFF/zero exposure. Execute only in a released, specifically authorized isolated credential window; preserve missing authentic locked/armed/readiness inputs. |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Source-only frozen-consumer callback packet prepared for contained runtime_context parsing with writer lease false; after sealed #382 and an explicitly scoped target credential window, execute genuine remaining safe behavior clauses. Keep27/48 unproven and full recovery/physical acceptance separate. |
 | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | Runtime/release lead | 6–10 | Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision. |
 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies. |
 | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) | Runtime/release lead | 12–20 | Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal. |

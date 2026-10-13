@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-12T23:35:44.512960+00:00",
+  "source": "direct user send_user_message_question_reply in coordinator chat",
+  "question_call_id": "call_ZFfaflq1lhrG7EXvu9EStQPX",
+  "answer": "Approve temporary isolated credentials",
+  "scope": {
+    "namespace": "verdify-db-rehearsal",
+    "cluster": "verdify-cnpg-s2-integration",
+    "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "logins": [
+      "verdify_ingestor_runtime_login",
+      "verdify_experiment_v2_equipment_source_collector_login"
+    ],
+    "secret": "verdify-s2-spool-382-auth-7fa4f802",
+    "temporary_passwords": true,
+    "seven_spool_checks": true,
+    "inverse": "restore both PASSWORD NULL and remove temporary Secret after verification",
+    "production_credentials": "untouched"
+  },
+  "prior_rejection_retained": "618897e82101425fe04dfea0b82ea46f9d4aa007",
+  "execution_result": "not implied by approval"
+}

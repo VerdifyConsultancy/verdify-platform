@@ -1,0 +1,12 @@
+{
+  "issue": 367,
+  "source_head": "3ebba10e2890ad536fcdf99beeb52aa18d4ec983",
+  "source_commit": "bc35137017b49deac04495c11ef88b48086c5802",
+  "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6130117468",
+  "comment_id": 6130117468,
+  "body_sha256": "3387ef3510bc6e6e9c4c09d672e394f504b0225e3994285c4d74f4d73f86cf6b",
+  "exact_readback": true,
+  "verified_at": "2026-10-12T18:23:34.957502+00:00",
+  "status_priority_dependencies_mutated": false,
+  "runtime_mutation": false
+}

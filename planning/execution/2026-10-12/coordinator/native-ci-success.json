@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-10-12T18:31:30.800062+00:00",
+  "pull_request": {
+    "number": 973,
+    "head": "3d9f31e8274d131e1bb2178bd9edb24cf66eb347",
+    "state": "open",
+    "merged": false,
+    "head_ref": "sprint/s2-resumed-20261011"
+  },
+  "main": "c8bcb589f3815f21e31f11b82ca7653f58129532",
+  "statuses": [
+    {
+      "id": 56162772901,
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "success",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "updated_at": "2026-10-12T18:27:36Z",
+      "target_url": null
+    }
+  ]
+}
