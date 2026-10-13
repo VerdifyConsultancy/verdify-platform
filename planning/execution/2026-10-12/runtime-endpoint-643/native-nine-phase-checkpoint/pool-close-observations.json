@@ -1,0 +1,155 @@
+[
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:40:02.886498+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:39:50.991296+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "mcp",
+    "phase": "a-initial",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:40:36.026837+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:40:26.215425+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "mcp",
+    "phase": "b-direct-primary",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:40:56.018744+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:40:46.060795+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "mcp",
+    "phase": "a-restored",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:41:20.644816+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:41:08.780237+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "api",
+    "phase": "a-initial",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:41:46.034417+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:41:33.692536+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "api",
+    "phase": "b-direct-primary",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:42:25.423054+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:42:11.705067+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "api",
+    "phase": "a-restored",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:42:57.235939+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:42:43.42743+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "ingestor",
+    "phase": "a-initial",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:43:09.830471+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:42:58.148695+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "ingestor",
+    "phase": "b-direct-primary",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T19:43:22.392791+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T19:43:10.733752+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "ingestor",
+    "phase": "a-restored",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  }
+]

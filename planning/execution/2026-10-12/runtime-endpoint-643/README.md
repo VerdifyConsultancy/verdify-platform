@@ -38,3 +38,8 @@ The three prepared API/ingestor/MCP pools have now passed their serial single-en
 ## Remaining configuration definition — October13
 
 [One-target reversal protocol](remaining-one-target-protocol/README.md) defines the smallest supported startup/configuration A→B→A route on the same integration database, the current fixed-DNS renderer gap and a focused shared nine-job source renderer. It performs no native/credential action and preserves42e791 as the completed three-pool checkpoint. Production adoption and other consumer duties remain distinct.
+
+
+## Actual nine-phase checkpoint — October13UTC
+
+[Actual nine-phase route reversal](native-nine-phase-checkpoint/README.md) now proves all three consumers ServiceDNS→exactboundprimaryIP→originalDNS using9freshserialREADONLYprocesses, awaitedclose/zero-other-client boundaries, exact3NULLinverse/catalog and21UIDcleanup. Sourcecdd87583 and earlier42e791 remain preserved; production/wholeapplication adoption and distinctdatabase cutover are separate claims.

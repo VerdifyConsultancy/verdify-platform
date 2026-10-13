@@ -1,0 +1,177 @@
+{
+  "finishedAt": "2026-10-13T19:45:53.295480+00:00",
+  "objects": [
+    {
+      "deleted": true,
+      "kind": "Secret",
+      "name": "verdify-cnpg-s2-integration-api-client-auth",
+      "returnedUid": "e4446584-3e99-4074-9579-d9a222925e85",
+      "uid": "e4446584-3e99-4074-9579-d9a222925e85",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Secret",
+      "name": "verdify-cnpg-s2-integration-ingestor-client-auth",
+      "returnedUid": "1c524f0f-675e-4453-b03d-d7a7759ad92c",
+      "uid": "1c524f0f-675e-4453-b03d-d7a7759ad92c",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Secret",
+      "name": "verdify-cnpg-s2-integration-mcp-client-auth",
+      "returnedUid": "776a6bf8-3cab-4404-abaf-03a0cb0672c5",
+      "uid": "776a6bf8-3cab-4404-abaf-03a0cb0672c5",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp1-9cj4f",
+      "returnedUid": "bfd2f9b2-7549-402e-8644-6f2f89454f2a",
+      "uid": "bfd2f9b2-7549-402e-8644-6f2f89454f2a",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp1",
+      "returnedUid": "00c4831d-a922-48a8-ac7e-e68449b36c3a",
+      "uid": "00c4831d-a922-48a8-ac7e-e68449b36c3a",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp2-ss6xq",
+      "returnedUid": "9614470c-b0f2-4545-a52c-6452f6c621dc",
+      "uid": "9614470c-b0f2-4545-a52c-6452f6c621dc",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp2",
+      "returnedUid": "f8353879-d63d-4b05-95c7-1b6831124e48",
+      "uid": "f8353879-d63d-4b05-95c7-1b6831124e48",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp3-z9cc4",
+      "returnedUid": "f5910375-cf80-45e4-ab6d-7087a120f9f9",
+      "uid": "f5910375-cf80-45e4-ab6d-7087a120f9f9",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp3",
+      "returnedUid": "6e8739a7-85ee-42cf-b4d7-9db24765adff",
+      "uid": "6e8739a7-85ee-42cf-b4d7-9db24765adff",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-api-20261013api1-zf9xx",
+      "returnedUid": "7565513c-230c-4cfa-b483-e8a8215ce8cd",
+      "uid": "7565513c-230c-4cfa-b483-e8a8215ce8cd",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-api-20261013api1",
+      "returnedUid": "fdf1c0f9-0d0b-49a1-a644-213f175db399",
+      "uid": "fdf1c0f9-0d0b-49a1-a644-213f175db399",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-api-20261013api2-99zjr",
+      "returnedUid": "98a5d778-3bd3-456c-8048-776df7b970d7",
+      "uid": "98a5d778-3bd3-456c-8048-776df7b970d7",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-api-20261013api2",
+      "returnedUid": "23c8358d-3c5f-4efc-953d-91c68e079fe0",
+      "uid": "23c8358d-3c5f-4efc-953d-91c68e079fe0",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-api-20261013api3-54s48",
+      "returnedUid": "b5ba1166-9659-444c-888f-e3cc4bafb0dc",
+      "uid": "b5ba1166-9659-444c-888f-e3cc4bafb0dc",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-api-20261013api3",
+      "returnedUid": "379d4f03-5c10-4427-a395-06705e7aee24",
+      "uid": "379d4f03-5c10-4427-a395-06705e7aee24",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor1-xbmlg",
+      "returnedUid": "d7bdfdfa-f6b5-4bde-aa7a-4aaa6aee73aa",
+      "uid": "d7bdfdfa-f6b5-4bde-aa7a-4aaa6aee73aa",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor1",
+      "returnedUid": "cdeb5f95-a79c-43c8-b563-4f9dc69b7e30",
+      "uid": "cdeb5f95-a79c-43c8-b563-4f9dc69b7e30",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor2-5bnvk",
+      "returnedUid": "81608051-6b8c-4b63-b513-5457e3556824",
+      "uid": "81608051-6b8c-4b63-b513-5457e3556824",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor2",
+      "returnedUid": "7c54a5c6-e8c5-446f-a16e-c3b816b4f45b",
+      "uid": "7c54a5c6-e8c5-446f-a16e-c3b816b4f45b",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Pod",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor3-z9lcw",
+      "returnedUid": "486437b4-83ca-47a7-a40f-42cd577ca705",
+      "uid": "486437b4-83ca-47a7-a40f-42cd577ca705",
+      "uidPrecondition": true
+    },
+    {
+      "deleted": true,
+      "kind": "Job",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor3",
+      "returnedUid": "3c7bd082-3d80-471c-83be-81838801b6a7",
+      "uid": "3c7bd082-3d80-471c-83be-81838801b6a7",
+      "uidPrecondition": true
+    }
+  ],
+  "oldEvidencePvcAndCustodyRetained": true,
+  "productionChanged": false,
+  "secretGETOrLIST": false,
+  "startedAt": "2026-10-13T19:45:51.290904+00:00"
+}

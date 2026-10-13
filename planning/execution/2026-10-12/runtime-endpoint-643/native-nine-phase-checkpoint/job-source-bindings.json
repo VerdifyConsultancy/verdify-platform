@@ -1,0 +1,344 @@
+[
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "mcp",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:40:00Z",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp1",
+      "startTime": "2026-10-13T19:39:51Z",
+      "succeeded": 1,
+      "uid": "00c4831d-a922-48a8-ac7e-e68449b36c3a"
+    },
+    "nativeReceiptSha256": "a6da586a89f165f749abe760bb6a89a78640e048edd6a90cbdeec8dcaaf5a91f",
+    "nativeStdoutSha256": "f58b0db2e0dc5f4e2ccefe348564ebb6fd35aaf2dd6abfede675d8f562a73ecd",
+    "originalApprovedManifestSha256": "22750af7aff94e32d0f5c986190de3a90457618f5dcc9f731d2ac2cbb4ff3cce",
+    "phase": "a-initial",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:39:58Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "jobOwnerUid": "00c4831d-a922-48a8-ac7e-e68449b36c3a",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp1-9cj4f",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:39:52Z",
+      "uid": "bfd2f9b2-7549-402e-8644-6f2f89454f2a"
+    },
+    "reportedLastCheckoutBackendPid": 62643,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "10.42.6.178",
+    "consumer": "mcp",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:40:35Z",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp2",
+      "startTime": "2026-10-13T19:40:26Z",
+      "succeeded": 1,
+      "uid": "f8353879-d63d-4b05-95c7-1b6831124e48"
+    },
+    "nativeReceiptSha256": "ff78f100229f965cf82cd18cff44726fb3d6ee764e3b564c446c13923bb718c8",
+    "nativeStdoutSha256": "5deff19831e6859577c16c51fc2eed459766c7f8c3c46ce214fb45a46051cf61",
+    "originalApprovedManifestSha256": "349ff3a560d1f9356498fa578efde028074eee83b741383d1e4d97e6031e94ef",
+    "phase": "b-direct-primary",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:40:32Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "jobOwnerUid": "f8353879-d63d-4b05-95c7-1b6831124e48",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp2-ss6xq",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:40:27Z",
+      "uid": "9614470c-b0f2-4545-a52c-6452f6c621dc"
+    },
+    "reportedLastCheckoutBackendPid": 62679,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "mcp",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:40:54Z",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp3",
+      "startTime": "2026-10-13T19:40:46Z",
+      "succeeded": 1,
+      "uid": "6e8739a7-85ee-42cf-b4d7-9db24765adff"
+    },
+    "nativeReceiptSha256": "330c2ca86be4e8b1acbcce225607bfc85893f6d89846fbe830151212bde59623",
+    "nativeStdoutSha256": "7264a13740eb5c1eb1cc18dfe6e74f877cd842a953a3bb9e8aa8d875b69cc8f4",
+    "originalApprovedManifestSha256": "3f8638caa9ee8ba774304dc2cf60cbac24fa2f9b29663d63d2150fcb7c34cffa",
+    "phase": "a-restored",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:40:52Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "jobOwnerUid": "6e8739a7-85ee-42cf-b4d7-9db24765adff",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013mcp3-z9cc4",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:40:47Z",
+      "uid": "f5910375-cf80-45e4-ab6d-7087a120f9f9"
+    },
+    "reportedLastCheckoutBackendPid": 62711,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "api",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:41:17Z",
+      "name": "cnpg-s2-integration-runtime-api-20261013api1",
+      "startTime": "2026-10-13T19:41:09Z",
+      "succeeded": 1,
+      "uid": "fdf1c0f9-0d0b-49a1-a644-213f175db399"
+    },
+    "nativeReceiptSha256": "3ebbd5e5b81c5f7861cfafc3c16057e09acb5c6a6c9a16a4a5ffd067eb34d8b2",
+    "nativeStdoutSha256": "c81d875e888312513d9ddce69b6fb980702665f5f3adb8b0a416299c3065d760",
+    "originalApprovedManifestSha256": "49d47cdc86cbce17c1d50e4aacffdb40bc0a62f7ab6cde5a8273d0289a97db1c",
+    "phase": "a-initial",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:41:15Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "jobOwnerUid": "fdf1c0f9-0d0b-49a1-a644-213f175db399",
+      "name": "cnpg-s2-integration-runtime-api-20261013api1-zf9xx",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:41:10Z",
+      "uid": "7565513c-230c-4cfa-b483-e8a8215ce8cd"
+    },
+    "reportedLastCheckoutBackendPid": 62746,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "10.42.6.178",
+    "consumer": "api",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:41:43Z",
+      "name": "cnpg-s2-integration-runtime-api-20261013api2",
+      "startTime": "2026-10-13T19:41:34Z",
+      "succeeded": 1,
+      "uid": "23c8358d-3c5f-4efc-953d-91c68e079fe0"
+    },
+    "nativeReceiptSha256": "f67239787beec31f0a49a1b329b2b25c77e196295c4b4e47b210d9c7ef67f246",
+    "nativeStdoutSha256": "b30341d0a2d4b474013fdf7d687864513c05a5ae56b2cd7d87a761d51aaa2298",
+    "originalApprovedManifestSha256": "a9bf100c45ef71288e45089933c05078e0f05314340c503e1e5699e40fac33f0",
+    "phase": "b-direct-primary",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:41:40Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "jobOwnerUid": "23c8358d-3c5f-4efc-953d-91c68e079fe0",
+      "name": "cnpg-s2-integration-runtime-api-20261013api2-99zjr",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:41:35Z",
+      "uid": "98a5d778-3bd3-456c-8048-776df7b970d7"
+    },
+    "reportedLastCheckoutBackendPid": 62780,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "api",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:42:23Z",
+      "name": "cnpg-s2-integration-runtime-api-20261013api3",
+      "startTime": "2026-10-13T19:42:12Z",
+      "succeeded": 1,
+      "uid": "379d4f03-5c10-4427-a395-06705e7aee24"
+    },
+    "nativeReceiptSha256": "2057bcb4c59a770b9f4f7a8b80ffd98d6415e2fe5b01bc00f3649cb024467556",
+    "nativeStdoutSha256": "db722e928ac7e72617a2ec137480e597b75eac503b5799ed0154f84013697e4e",
+    "originalApprovedManifestSha256": "8b50a55854c579862a050e8fa832ae54d2c779529a75e537db81f2bbeedac333",
+    "phase": "a-restored",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:42:20Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "jobOwnerUid": "379d4f03-5c10-4427-a395-06705e7aee24",
+      "name": "cnpg-s2-integration-runtime-api-20261013api3-54s48",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:42:12Z",
+      "uid": "b5ba1166-9659-444c-888f-e3cc4bafb0dc"
+    },
+    "reportedLastCheckoutBackendPid": 62819,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "ingestor",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:42:55Z",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor1",
+      "startTime": "2026-10-13T19:42:43Z",
+      "succeeded": 1,
+      "uid": "cdeb5f95-a79c-43c8-b563-4f9dc69b7e30"
+    },
+    "nativeReceiptSha256": "4cbf518b9598415254015220cb6154965bc18e6cd1bdbad1529f48e2f9dfe19c",
+    "nativeStdoutSha256": "79db5cddb808cfecbf0168d2af099713357a6cdb4bc50d20c62fc9eff423cfa5",
+    "originalApprovedManifestSha256": "2503516ad6854734ea172fec000875658bdb044c0245f5f4f3b3d2ee7f99d132",
+    "phase": "a-initial",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:42:51Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "jobOwnerUid": "cdeb5f95-a79c-43c8-b563-4f9dc69b7e30",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor1-xbmlg",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:42:45Z",
+      "uid": "d7bdfdfa-f6b5-4bde-aa7a-4aaa6aee73aa"
+    },
+    "reportedLastCheckoutBackendPid": 62856,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "10.42.6.178",
+    "consumer": "ingestor",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:43:08Z",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor2",
+      "startTime": "2026-10-13T19:42:58Z",
+      "succeeded": 1,
+      "uid": "7c54a5c6-e8c5-446f-a16e-c3b816b4f45b"
+    },
+    "nativeReceiptSha256": "aaafa6f55af5ec807def8284fa92e9e9855bcb2276d3becacaf678eb8e0d6eeb",
+    "nativeStdoutSha256": "cf214552012b0fe66d5c35718b3ae626303b778ce073eb04db57ff1dbc68f78c",
+    "originalApprovedManifestSha256": "841fc6be3c239b83d41cccce3a32023eac09ed9831c275a2aec46629e3ffa943",
+    "phase": "b-direct-primary",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:43:06Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "jobOwnerUid": "7c54a5c6-e8c5-446f-a16e-c3b816b4f45b",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor2-5bnvk",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:42:59Z",
+      "uid": "81608051-6b8c-4b63-b513-5457e3556824"
+    },
+    "reportedLastCheckoutBackendPid": 62879,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "configuredHost": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+    "consumer": "ingestor",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T19:43:20Z",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor3",
+      "startTime": "2026-10-13T19:43:11Z",
+      "succeeded": 1,
+      "uid": "3c7bd082-3d80-471c-83be-81838801b6a7"
+    },
+    "nativeReceiptSha256": "00eeb33466c33851d58740139b38ee17cb972c27a9cd9d37001ac622c91a3416",
+    "nativeStdoutSha256": "695a4cc7cf8c9d39ef5f65e3d11863592cbcd5bf988f726de55fe6917b60e268",
+    "originalApprovedManifestSha256": "96189fd0d8821d641a76892cd13f006c353311282a5473f6570ce93f608992f7",
+    "phase": "a-restored",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T19:43:17Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "jobOwnerUid": "3c7bd082-3d80-471c-83be-81838801b6a7",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013ingestor3-z9lcw",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T19:43:11Z",
+      "uid": "486437b4-83ca-47a7-a40f-42cd577ca705"
+    },
+    "reportedLastCheckoutBackendPid": 62928,
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+      "operatorSource": "cdd8758379fe4c431f41a73c821fd85c93fc8f2f"
+    }
+  }
+]

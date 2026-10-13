@@ -1,0 +1,46 @@
+{
+  "configured_host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+  "consumer": "api",
+  "consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+  "consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "endpoint_mode": "rw-service",
+  "hot_query_row_count": 1,
+  "identity": {
+    "backend_address": "10.42.6.178",
+    "backend_address_raw": "10.42.6.178/32",
+    "backend_pid": 62746,
+    "cluster_name": "verdify-cnpg-s2-integration",
+    "current_user": "verdify_api_runtime_login",
+    "database": "verdify_rehearsal",
+    "default_read_only": "on",
+    "replica": false,
+    "server_version": "160013",
+    "session_user": "verdify_api_runtime_login",
+    "transaction_read_only": "on"
+  },
+  "password_authentication": "actual asyncpg TCP pool login",
+  "pool_checkout_count": 2,
+  "pool_close_awaited": true,
+  "profile_sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "reversal_phase": "a-initial",
+  "service_process_started": false,
+  "status": "passed",
+  "target_binding_sha256": "9370d24136a6292b978630c689ca8f60ad346a4efde5468ee7c3e0b47fd58de4",
+  "transport_attempts": [
+    {
+      "finished_at": "2026-10-13T19:41:13.231241+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:41:13.207359+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:41:13.489754+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "connected",
+      "port": 5432,
+      "started_at": "2026-10-13T19:41:13.481588+00:00"
+    }
+  ],
+  "transport_readiness_is_authentication": false
+}

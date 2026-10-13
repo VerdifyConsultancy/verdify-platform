@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-10-13T19:45:53.994098+00:00",
+  "cluster": {
+    "instances": 3,
+    "name": "verdify-cnpg-s2-integration",
+    "readyInstances": 3,
+    "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+  },
+  "database": "verdify_rehearsal",
+  "databaseOid": "16447",
+  "networkPoliciesUnchanged": true,
+  "newJobPodsAbsentFromEndingNamespaceRead": true,
+  "oldNamespaceEvidencePodCountRetained": 10,
+  "primary": {
+    "ip": "10.42.6.178",
+    "name": "verdify-cnpg-s2-integration-1",
+    "restartCount": 0,
+    "uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad"
+  },
+  "productionTouched": false,
+  "runtimeAdmissionRows": 3,
+  "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+  "schema": 275,
+  "serverVersion": "160013",
+  "systemIdentifier": "7693399121498484768",
+  "threePasswordsNull": true,
+  "zeroOtherClients": true
+}

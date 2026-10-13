@@ -1,0 +1,107 @@
+[
+  {
+    "aInitialAndRestoredNonsecretConfigurationSha256": "ccd963453fa9d4970f759e4ac02315dc1d0a07eba27fac716a3ce3b8e3e4643e",
+    "allLegsAwaitedCloseAndZeroClients": true,
+    "consumer": "api",
+    "exactOriginalHostPortDatabaseLoginCredentialReferenceImageAndBindingRestored": true,
+    "freshProcessesAndPools": true,
+    "hosts": [
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "10.42.6.178",
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local"
+    ],
+    "jobUids": [
+      "fdf1c0f9-0d0b-49a1-a644-213f175db399",
+      "23c8358d-3c5f-4efc-953d-91c68e079fe0",
+      "379d4f03-5c10-4427-a395-06705e7aee24"
+    ],
+    "oneLongLivedPoolReconnectClaimed": false,
+    "phaseAndJobReceiptIdentifiersIntentionallyDiffer": true,
+    "phases": [
+      "a-initial",
+      "b-direct-primary",
+      "a-restored"
+    ],
+    "podUids": [
+      "7565513c-230c-4cfa-b483-e8a8215ce8cd",
+      "98a5d778-3bd3-456c-8048-776df7b970d7",
+      "b5ba1166-9659-444c-888f-e3cc4bafb0dc"
+    ],
+    "reportedLastCheckoutBackendPids": [
+      62746,
+      62780,
+      62819
+    ],
+    "samePrimaryAndDatabaseThroughout": true
+  },
+  {
+    "aInitialAndRestoredNonsecretConfigurationSha256": "83c8abae0c1f9b5d08f27c846ee89ce46319cf4cb7171694130cb22791e201c0",
+    "allLegsAwaitedCloseAndZeroClients": true,
+    "consumer": "ingestor",
+    "exactOriginalHostPortDatabaseLoginCredentialReferenceImageAndBindingRestored": true,
+    "freshProcessesAndPools": true,
+    "hosts": [
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "10.42.6.178",
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local"
+    ],
+    "jobUids": [
+      "cdeb5f95-a79c-43c8-b563-4f9dc69b7e30",
+      "7c54a5c6-e8c5-446f-a16e-c3b816b4f45b",
+      "3c7bd082-3d80-471c-83be-81838801b6a7"
+    ],
+    "oneLongLivedPoolReconnectClaimed": false,
+    "phaseAndJobReceiptIdentifiersIntentionallyDiffer": true,
+    "phases": [
+      "a-initial",
+      "b-direct-primary",
+      "a-restored"
+    ],
+    "podUids": [
+      "d7bdfdfa-f6b5-4bde-aa7a-4aaa6aee73aa",
+      "81608051-6b8c-4b63-b513-5457e3556824",
+      "486437b4-83ca-47a7-a40f-42cd577ca705"
+    ],
+    "reportedLastCheckoutBackendPids": [
+      62856,
+      62879,
+      62928
+    ],
+    "samePrimaryAndDatabaseThroughout": true
+  },
+  {
+    "aInitialAndRestoredNonsecretConfigurationSha256": "d6600198d35582d90f8ed2e5bc04b10f65e1fc83f957da9b67deb5b7a85813a9",
+    "allLegsAwaitedCloseAndZeroClients": true,
+    "consumer": "mcp",
+    "exactOriginalHostPortDatabaseLoginCredentialReferenceImageAndBindingRestored": true,
+    "freshProcessesAndPools": true,
+    "hosts": [
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "10.42.6.178",
+      "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local"
+    ],
+    "jobUids": [
+      "00c4831d-a922-48a8-ac7e-e68449b36c3a",
+      "f8353879-d63d-4b05-95c7-1b6831124e48",
+      "6e8739a7-85ee-42cf-b4d7-9db24765adff"
+    ],
+    "oneLongLivedPoolReconnectClaimed": false,
+    "phaseAndJobReceiptIdentifiersIntentionallyDiffer": true,
+    "phases": [
+      "a-initial",
+      "b-direct-primary",
+      "a-restored"
+    ],
+    "podUids": [
+      "bfd2f9b2-7549-402e-8644-6f2f89454f2a",
+      "9614470c-b0f2-4545-a52c-6452f6c621dc",
+      "f5910375-cf80-45e4-ab6d-7087a120f9f9"
+    ],
+    "reportedLastCheckoutBackendPids": [
+      62643,
+      62679,
+      62711
+    ],
+    "samePrimaryAndDatabaseThroughout": true
+  }
+]

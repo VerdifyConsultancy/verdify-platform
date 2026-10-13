@@ -1,0 +1,74 @@
+{
+  "configured_host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+  "consumer": "ingestor",
+  "consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "endpoint_mode": "rw-service",
+  "hot_query_row_count": 1,
+  "identity": {
+    "backend_address": "10.42.6.178",
+    "backend_address_raw": "10.42.6.178/32",
+    "backend_pid": 62856,
+    "cluster_name": "verdify-cnpg-s2-integration",
+    "current_user": "verdify_ingestor_runtime_login",
+    "database": "verdify_rehearsal",
+    "default_read_only": "on",
+    "replica": false,
+    "server_version": "160013",
+    "session_user": "verdify_ingestor_runtime_login",
+    "transaction_read_only": "on"
+  },
+  "password_authentication": "actual asyncpg TCP pool login",
+  "pool_checkout_count": 2,
+  "pool_close_awaited": true,
+  "profile_sha256": "1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa",
+  "reversal_phase": "a-initial",
+  "service_process_started": false,
+  "status": "passed",
+  "target_binding_sha256": "9370d24136a6292b978630c689ca8f60ad346a4efde5468ee7c3e0b47fd58de4",
+  "transport_attempts": [
+    {
+      "finished_at": "2026-10-13T19:42:49.036968+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:49.013735+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:42:49.294469+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:49.287361+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:42:49.552514+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:49.545039+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:42:49.808761+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:49.803092+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:42:50.066240+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "ConnectionRefusedError",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:50.059339+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T19:42:50.325972+00:00",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "outcome": "connected",
+      "port": 5432,
+      "started_at": "2026-10-13T19:42:50.316830+00:00"
+    }
+  ],
+  "transport_readiness_is_authentication": false
+}

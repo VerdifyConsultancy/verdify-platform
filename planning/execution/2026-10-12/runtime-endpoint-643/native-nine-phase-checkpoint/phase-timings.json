@@ -1,0 +1,117 @@
+{
+  "firstJobStart": "2026-10-13T19:39:51Z",
+  "firstToLastNativeWindowSeconds": 209.0,
+  "lastJobCompletion": "2026-10-13T19:43:20Z",
+  "maxJobWallSeconds": 12.0,
+  "meaning": "actual warm cached sequential Job/container timings, including Kubernetes/owner gaps; not DB restore RTO/RPO or production latency claim",
+  "phases": [
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:40:02.886498+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:39:50.991296+00:00",
+      "consumer": "mcp",
+      "containerFinish": "2026-10-13T19:39:58Z",
+      "containerStart": "2026-10-13T19:39:52Z",
+      "containerWallSeconds": 6.0,
+      "jobCompletion": "2026-10-13T19:40:00Z",
+      "jobStart": "2026-10-13T19:39:51Z",
+      "jobWallSeconds": 9.0,
+      "phase": "a-initial"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:40:36.026837+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:40:26.215425+00:00",
+      "consumer": "mcp",
+      "containerFinish": "2026-10-13T19:40:32Z",
+      "containerStart": "2026-10-13T19:40:27Z",
+      "containerWallSeconds": 5.0,
+      "jobCompletion": "2026-10-13T19:40:35Z",
+      "jobStart": "2026-10-13T19:40:26Z",
+      "jobWallSeconds": 9.0,
+      "phase": "b-direct-primary"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:40:56.018744+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:40:46.060795+00:00",
+      "consumer": "mcp",
+      "containerFinish": "2026-10-13T19:40:52Z",
+      "containerStart": "2026-10-13T19:40:47Z",
+      "containerWallSeconds": 5.0,
+      "jobCompletion": "2026-10-13T19:40:54Z",
+      "jobStart": "2026-10-13T19:40:46Z",
+      "jobWallSeconds": 8.0,
+      "phase": "a-restored"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:41:20.644816+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:41:08.780237+00:00",
+      "consumer": "api",
+      "containerFinish": "2026-10-13T19:41:15Z",
+      "containerStart": "2026-10-13T19:41:10Z",
+      "containerWallSeconds": 5.0,
+      "jobCompletion": "2026-10-13T19:41:17Z",
+      "jobStart": "2026-10-13T19:41:09Z",
+      "jobWallSeconds": 8.0,
+      "phase": "a-initial"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:41:46.034417+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:41:33.692536+00:00",
+      "consumer": "api",
+      "containerFinish": "2026-10-13T19:41:40Z",
+      "containerStart": "2026-10-13T19:41:35Z",
+      "containerWallSeconds": 5.0,
+      "jobCompletion": "2026-10-13T19:41:43Z",
+      "jobStart": "2026-10-13T19:41:34Z",
+      "jobWallSeconds": 9.0,
+      "phase": "b-direct-primary"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:42:25.423054+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:42:11.705067+00:00",
+      "consumer": "api",
+      "containerFinish": "2026-10-13T19:42:20Z",
+      "containerStart": "2026-10-13T19:42:12Z",
+      "containerWallSeconds": 8.0,
+      "jobCompletion": "2026-10-13T19:42:23Z",
+      "jobStart": "2026-10-13T19:42:12Z",
+      "jobWallSeconds": 11.0,
+      "phase": "a-restored"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:42:57.235939+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:42:43.42743+00:00",
+      "consumer": "ingestor",
+      "containerFinish": "2026-10-13T19:42:51Z",
+      "containerStart": "2026-10-13T19:42:45Z",
+      "containerWallSeconds": 6.0,
+      "jobCompletion": "2026-10-13T19:42:55Z",
+      "jobStart": "2026-10-13T19:42:43Z",
+      "jobWallSeconds": 12.0,
+      "phase": "a-initial"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:43:09.830471+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:42:58.148695+00:00",
+      "consumer": "ingestor",
+      "containerFinish": "2026-10-13T19:43:06Z",
+      "containerStart": "2026-10-13T19:42:59Z",
+      "containerWallSeconds": 7.0,
+      "jobCompletion": "2026-10-13T19:43:08Z",
+      "jobStart": "2026-10-13T19:42:58Z",
+      "jobWallSeconds": 10.0,
+      "phase": "b-direct-primary"
+    },
+    {
+      "afterNativeZeroClientsAt": "2026-10-13T19:43:22.392791+00:00",
+      "beforeNativeZeroClientsAt": "2026-10-13T19:43:10.733752+00:00",
+      "consumer": "ingestor",
+      "containerFinish": "2026-10-13T19:43:17Z",
+      "containerStart": "2026-10-13T19:43:11Z",
+      "containerWallSeconds": 6.0,
+      "jobCompletion": "2026-10-13T19:43:20Z",
+      "jobStart": "2026-10-13T19:43:11Z",
+      "jobWallSeconds": 9.0,
+      "phase": "a-restored"
+    }
+  ]
+}
