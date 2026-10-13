@@ -1,0 +1,234 @@
+{
+  "schema": "verdify-generated-ci-mirror-delivery/v1",
+  "observed_at": "2026-10-13T16:19:43.626343+00:00",
+  "distribution_commit": "82195c1b6ada500e254acca27018278597498a69",
+  "parent": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a",
+  "canonical_snapshot": "41004f24f7e43386f3c2f69002e8d07c8d74d629",
+  "frozen_eight_files": [
+    {
+      "path": "LANES.md",
+      "git_blob": "b7b655e16ef90555d281867f80abddeaca3852f7",
+      "sha256": "b71e5d18e34913bbd6e1dfffefc69f0ab397417b4f645921fb121442971ffb9d",
+      "bytes": 29417,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "MILESTONES.md",
+      "git_blob": "4af3cad092633ee358c5680a8e3af7b24ef49ffb",
+      "sha256": "562bf9615e73b665bc7740ac69e12c36eb456415528128ef1c2df0c11caeca8e",
+      "bytes": 15254,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "git_blob": "a9df090ab2737a313ac3661ce098326eec6df369",
+      "sha256": "f810f687ad040d360ca8ae52fee29a6b08b92571c03c43e190a0afec05b9837f",
+      "bytes": 15277,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "git_blob": "ed0ce6e6ccf313cbd7c666853d30bc008e4834e9",
+      "sha256": "e0b084b435e5b45c72f5307a46f44d614db3b52f5a0b4676a3aa83945b00107b",
+      "bytes": 33020,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "git_blob": "a97d4d7fdd1fc498b0ec7ab597bf3383e081e831",
+      "sha256": "3a1cc28456c481773d0d0ed89f1477ec2db713c9173bfe90182c084fc0335504",
+      "bytes": 301080,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/README.md",
+      "git_blob": "a47d6f857220cff255df0e76155d7f5da6d761b3",
+      "sha256": "9c6c14e755de8a46def0b5cc062fa57beb6db044af02d8f25e41f0ee5cf34e7b",
+      "bytes": 82821,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "git_blob": "86b9d220d0213fd46d60f229b0db52e0b9378f49",
+      "sha256": "3cbd7973156fe1342a507ed069dd0e15c1462f741b6de73cc4615afdcb6c987c",
+      "bytes": 28708,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": ".agent-fleet/ci.yaml",
+      "git_blob": "a8ef556623d50e071a5d48bf94da09ffd530fab2",
+      "sha256": "af3fecfe17783aebc5473b3642fedec33c5aa754d2b009bac65aa56402871f8c",
+      "bytes": 13080,
+      "provider_bytes_exact": true
+    }
+  ],
+  "normal_local_validation": {
+    "planning_tests_passed": 35,
+    "schema_issues": 88,
+    "stages": 9,
+    "dependency_edges": 76,
+    "planning_views_checked": 7,
+    "commit_hooks_passed": true
+  },
+  "firmware_tree": "c4a85e4b9d38e667545df9524f52110418d1f1b1",
+  "render_byte_identical": true,
+  "render_sha256": "158eceaf02c0b98ed10c03699ed5dd81b57bdc51292a06cf7c736975fe3fd721",
+  "no_product_deploy_pin_changes": true,
+  "native_ci": {
+    "name": "verdify-platform-ci-9l5f5",
+    "uid": "32b09b0d-ac24-43a0-b052-dca35e0d58f2",
+    "phase": "Succeeded",
+    "started_at": "2026-10-13T16:06:34Z",
+    "finished_at": "2026-10-13T16:15:50Z",
+    "classification": {
+      "base_revision": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a",
+      "mode": "validate",
+      "paths_sha256": "910b8516393e3a7cd9b563190aae7396fd98076d8ca8257f53275ccf1170cf2c",
+      "profiles": [],
+      "reasons": {},
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "82195c1b6ada500e254acca27018278597498a69"
+    },
+    "executed_pod_nodes": [
+      {
+        "name": "verdify-platform-ci-9l5f5[0].classify-push(0)",
+        "display": "classify-push(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T16:06:34Z",
+        "finished_at": "2026-10-13T16:15:39Z"
+      }
+    ],
+    "executed_builder_count": 0,
+    "postcompletion_pod_inventory": [],
+    "pod_gc_note": "Completed Pods may be collected; actual validation Pod identity was captured before completion and terminal workflow retains its executed node.",
+    "validation_pod_before_gc": {
+      "name": "verdify-platform-ci-9l5f5-validate-3149320867",
+      "uid": "f8df42fe-7044-444b-a5fe-69a94ed9aa7d",
+      "node": "vm-k3s-node6",
+      "phase_at_capture": "Running",
+      "images": [
+        "quay.io/argoproj/argoexec:v4.0.5",
+        "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+        "quay.io/argoproj/argoexec:v4.0.5",
+        "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779"
+      ]
+    },
+    "classification_before_completion": {
+      "base_revision": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a",
+      "mode": "validate",
+      "paths_sha256": "910b8516393e3a7cd9b563190aae7396fd98076d8ca8257f53275ccf1170cf2c",
+      "profiles": [],
+      "reasons": {},
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "82195c1b6ada500e254acca27018278597498a69"
+    }
+  },
+  "runtime": {
+    "revision": "82195c1b6ada500e254acca27018278597498a69",
+    "sync": "Synced",
+    "health": "Degraded",
+    "all15_deployments_ready": true,
+    "all15_deployment_specs_and_uids_unchanged": true,
+    "pod_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "container_id": "containerd://17e8ac1b5dfa3f0fc92cbffcbf500909d5e88dc178ca9aec5fec7a655d4a95ac",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+    "restart_count": 0,
+    "app_spec_and_last_operation_unchanged": true,
+    "no_new_sync": true,
+    "last_sync_started_at": "2026-10-12T23:21:27Z",
+    "last_sync_finished_at": "2026-10-12T23:22:46Z",
+    "healthy_acceptance_passed": false,
+    "health_transition_at": "2026-10-13T16:07:03Z"
+  },
+  "owner_adoption_receipt_sha256": "a246bd7316fab48f20cf19e11633583c26e1ef2418bc96bb3895f6f6fd3c7b54",
+  "owner_merged_source": "c4a0af432ede5cf60bd8cf0566d3b1b257675b8a",
+  "owner_qualified_source": "8390198a696b8e3205dbfebb0ee2becf402fd1db",
+  "owner_main_advisory": {
+    "status_id": 56236230519,
+    "state": "error",
+    "reason": "drift-commit-not-healthy",
+    "fresh_full_execution": false
+  },
+  "registered_compiler_submitted_here": false,
+  "shared_ci_handback": "Release CI to existing coordinator with nativeCI Succeeded and zero builders; disclose Synced/Degraded Lab publication limitation. Registered amd64/full-main qualification is separate from Lab recovery.",
+  "owner_failure_history_preserved": {
+    "broker_initial45s_observation_timeout": "broker-rollout-initial-observation.txt",
+    "broker_final_rollout_ready": "broker-rollout-final.txt",
+    "stager_initial_exit_code": 3,
+    "stager_initial_reason": "repo-auth broker health check failed",
+    "stager_initial_private_log_sha256": "3714824c72f3090dada6d007d64865ecdc31872ca4c87bffa3c84be65ffe81e9",
+    "stager_current_restart_count": 1,
+    "stager_subsequent_automatic_restart_ready": true,
+    "manual_retry_or_failure_bypass": false
+  },
+  "lab_publication_limitation": {
+    "state": "publication failed; production health Degraded",
+    "last_successful_time": "2026-10-13T03:44:11Z",
+    "error": "ValueError: invalid publication receipt in lab-publish-receipt.py:_load",
+    "actual_failed_jobs": [
+      {
+        "name": "verdify-lab-publisher-29865095",
+        "uid": "a83c6164-64ec-4db6-a811-eaaf05af1968",
+        "created_at": "2026-10-13T15:35:00Z",
+        "status": {
+          "conditions": [
+            {
+              "lastProbeTime": "2026-10-13T15:37:07Z",
+              "lastTransitionTime": "2026-10-13T15:37:07Z",
+              "message": "Job has reached the specified backoff limit",
+              "reason": "BackoffLimitExceeded",
+              "status": "True",
+              "type": "FailureTarget"
+            },
+            {
+              "lastProbeTime": "2026-10-13T15:37:07Z",
+              "lastTransitionTime": "2026-10-13T15:37:07Z",
+              "message": "Job has reached the specified backoff limit",
+              "reason": "BackoffLimitExceeded",
+              "status": "True",
+              "type": "Failed"
+            }
+          ],
+          "failed": 1,
+          "ready": 0,
+          "startTime": "2026-10-13T15:35:00Z",
+          "terminating": 0,
+          "uncountedTerminatedPods": {}
+        }
+      },
+      {
+        "name": "verdify-lab-publisher-29865125",
+        "uid": "260a017c-68ea-4aad-9494-77823457216c",
+        "created_at": "2026-10-13T16:05:00Z",
+        "status": {
+          "conditions": [
+            {
+              "lastProbeTime": "2026-10-13T16:07:02Z",
+              "lastTransitionTime": "2026-10-13T16:07:02Z",
+              "message": "Job has reached the specified backoff limit",
+              "reason": "BackoffLimitExceeded",
+              "status": "True",
+              "type": "FailureTarget"
+            },
+            {
+              "lastProbeTime": "2026-10-13T16:07:02Z",
+              "lastTransitionTime": "2026-10-13T16:07:02Z",
+              "message": "Job has reached the specified backoff limit",
+              "reason": "BackoffLimitExceeded",
+              "status": "True",
+              "type": "Failed"
+            }
+          ],
+          "failed": 1,
+          "ready": 0,
+          "startTime": "2026-10-13T16:05:00Z",
+          "terminating": 0,
+          "uncountedTerminatedPods": {}
+        }
+      }
+    ],
+    "failure_exists_before_distribution_event": true,
+    "no_recovery_action_in_frozen_window": true,
+    "scope": "Separate Lab incident, not a passing production-health acceptance. Source/render/pins and all15 Deployment specs remain unchanged."
+  }
+}
