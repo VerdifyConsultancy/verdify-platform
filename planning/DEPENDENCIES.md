@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-12/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 88-issue/76-edge campaign graph is retained below.
+The [current reviewed native graph](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-12/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 89-issue/76-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -61,6 +61,7 @@ flowchart TD
     i964["#964 Recover failed production promotion and schedulable Lab/ba"]
     i965["#965 Separate API grow-light command intent from observed equip"]
     i963["#963 Bound moisture-exchange state and preserve structured cons"]
+    i976["#976 Qualify safe recovery of Lab publication receipt metadata"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 Durability program: recoverable backups, measured RPO/RTO "]

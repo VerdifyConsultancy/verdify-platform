@@ -231,7 +231,7 @@
       "blocked_by": [
         964
       ],
-      "body_sha256": "3e65182980d104c0608ff1d83f9df91ea0d86601d0c7e7666f2e7ccd79436055"
+      "body_sha256": "69e0889b257d85c5c13da941b211d9cfac687480782ed601db00022cfa764b62"
     },
     {
       "key": "322",
@@ -249,7 +249,7 @@
       "stage": "C4",
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "bc32011c3d45db6c61baa5747a6f330dd0662a9505338b1e133152a912100f2b"
+      "body_sha256": "c3ae89db62f136bab4f14790f058badb725eff60b08d25694cd9b3812056535f"
     },
     {
       "key": "303",
@@ -261,7 +261,7 @@
         304,
         322
       ],
-      "body_sha256": "c0253f059ad85ae5d54d30e4093e8ef798ae0586271bf33c9ba2be8db1e872a0"
+      "body_sha256": "1ac91b657cfe4ed3217ec28804665bda61f36a3a15eef20196933995929aaaf3"
     },
     {
       "key": "390",
@@ -302,7 +302,7 @@
       "stage": "C4",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "8761c633fc53977aec3e3c8b789e06202171a30f204810adba51fb1e4b13bf77"
+      "body_sha256": "144857710671c1a1fd13b3ac7e2649cfeae2c694ba8512de3b873a14127bbd79"
     },
     {
       "key": "563",
@@ -909,6 +909,15 @@
       "parent": 75,
       "blocked_by": [],
       "body_sha256": "615b6f7e956f53dc346f56bc32eafe35bc65224d12f69decee6ea86ad5d2c733"
+    },
+    {
+      "key": "976",
+      "number": 976,
+      "title": "[C4][P1] Qualify safe recovery of Lab publication receipt metadata",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [],
+      "body_sha256": "65ca30be1e3495da3034ad0037423c150c992f9dbf43d54248917f2afd7134e0"
     }
   ]
 }

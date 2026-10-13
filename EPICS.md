@@ -48,6 +48,7 @@ Hierarchy means ownership/roll-up only. Native blocked-by edges separately encod
     - [#964](https://github.com/VerdifyConsultancy/verdify-platform/issues/964) Recover failed production promotion and schedulable Lab/band refresh (C4)
     - [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) Separate API grow-light command intent from observed equipment history (C4)
     - [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) Bound moisture-exchange state and preserve structured consumer detail (C4)
+    - [#976](https://github.com/VerdifyConsultancy/verdify-platform/issues/976) Qualify safe recovery of Lab publication receipt metadata (C4)
   - [#218](https://github.com/VerdifyConsultancy/verdify-platform/issues/218) Durability program: recoverable backups, measured RPO/RTO and safe HA option (C5)
     - [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) Make backup artifacts sufficient to restore roles, ownership and memberships safely (C5)
     - [#672](https://github.com/VerdifyConsultancy/verdify-platform/issues/672) Make compressed-chunk ownership restoration a supported blocking rehearsal test (C5)
