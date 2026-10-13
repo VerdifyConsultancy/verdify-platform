@@ -1,0 +1,57 @@
+{
+  "schema": "verdify-runtime-final-github-readback/v1",
+  "verified_at": "2026-10-13T01:47:59.143593+00:00",
+  "artifact_readback": {
+    "observed_at": "2026-10-13T01:46:38.238674+00:00",
+    "commit": "a5a52e0eef529f84e31167a51827279ce4949a9b",
+    "provider_branch_head_exact": true,
+    "artifacts": [
+      {
+        "path": "planning/execution/2026-10-12/README.md",
+        "blob_sha": "0c27ff49dabafbb1cf44a4d9b2e3377f020416b2",
+        "bytes": 31490,
+        "sha256": "c4fec19673db25a80c9f7ea4f385190d89347d8520197809a8d62b9342d846be",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/runtime-recovery-final.json",
+        "blob_sha": "7679fc3edcd4cc681c5d81cb65b78fc464f1f759",
+        "bytes": 16461,
+        "sha256": "d65af06bc47d928c20b15ddcd9bed6c92a78989fe2d78f61b589be06a9c442ae",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/runtime-recovery-final-field-disposition.json",
+        "blob_sha": "84dde42f846ce233c93a397393b3c07a92d4a803",
+        "bytes": 30482,
+        "sha256": "cc68d7e5996874e06932d4a9e7937e834056a4b9818344959ecca1d39ad2ed57",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/runtime-recovery-natural-plan-transitions.json",
+        "blob_sha": "2a99897c072582a20123b9ea13558ab425bb43c0",
+        "bytes": 48638,
+        "sha256": "ad8f38aa1b5596686e9ae1aae217002c1809c08007c0d52418c0d81d526ce5c8",
+        "exact_provider_bytes": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/runtime-recovery-sample-index.json",
+        "blob_sha": "0b2fdcc06fed8640b52a235733f0f995b9458473",
+        "bytes": 261938,
+        "sha256": "6eeb140671c50796b994e5f9bb7b56d6e6771b59dea92e5d75a07d60e4a00ecd",
+        "exact_provider_bytes": true
+      }
+    ]
+  },
+  "issue": 949,
+  "state": "closed",
+  "state_reason": "completed",
+  "closed_at": "2026-10-13T01:47:39Z",
+  "all_three_original_acceptance_checkboxes_checked": true,
+  "body_sha256": "c4ee2f4eee9fe5adcd8c3698951afe8f8674ebe7351adfb8ad2589376fea8365",
+  "body_provider_bytes_exact": true,
+  "comment_id": 6136290720,
+  "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949#issuecomment-6136290720",
+  "comment_sha256": "ee2f14a3076dcf66728c724465f28ecc68654b12bbfdd61485f40fc364cc0dff",
+  "comment_provider_bytes_exact": true
+}
