@@ -1,0 +1,114 @@
+{
+  "baseMain": "9136f158641f918593df53471e3efe1792b7ad83",
+  "preparedAt": "2026-10-13T00:42:20.693682+00:00",
+  "sourceOnly": true,
+  "consumerSources": [
+    {
+      "consumer": "api",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "api/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "sourceBytesEqualCurrentMain9136": true,
+      "jobFile": "job-api.prepared.json",
+      "credentialRef": "verdify-cnpg-s2-integration-api-client-auth",
+      "credentialCreatedOrRead": false,
+      "currentCacheAndCredentialPosture": "unobserved in this source-only packet; actual owner metadata admission required"
+    },
+    {
+      "consumer": "ingestor",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "sourceBytesEqualCurrentMain9136": true,
+      "jobFile": "job-ingestor.prepared.json",
+      "credentialRef": "verdify-cnpg-s2-integration-ingestor-client-auth",
+      "credentialCreatedOrRead": false,
+      "currentCacheAndCredentialPosture": "unobserved in this source-only packet; actual owner metadata admission required"
+    },
+    {
+      "consumer": "mcp",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "sourceBytesEqualCurrentMain9136": true,
+      "jobFile": "job-mcp.prepared.json",
+      "credentialRef": "verdify-cnpg-s2-integration-mcp-client-auth",
+      "credentialCreatedOrRead": false,
+      "currentCacheAndCredentialPosture": "unobserved in this source-only packet; actual owner metadata admission required"
+    }
+  ],
+  "retainedSixDutySqlProof": [
+    {
+      "duty": "planner",
+      "cases": 20,
+      "allowed": 7,
+      "denied42501": 13,
+      "sha256": "caa1ee687d8843a33977cca8ac9888e58282545bb9c4fe989aa51f0b14f7a959",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-planner-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    },
+    {
+      "duty": "setpoint_server",
+      "cases": 17,
+      "allowed": 5,
+      "denied42501": 12,
+      "sha256": "d2ee7d695dff67a236f771adcb9ce356b29688e4a6887763a59352af8c4dc895",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-setpoint_server-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    },
+    {
+      "duty": "ha_backfill",
+      "cases": 18,
+      "allowed": 7,
+      "denied42501": 11,
+      "sha256": "5b057376ec9edbc8db0f892c3706fa39fa8d047c5670bc48b67e3cab398fb495",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-ha_backfill-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    },
+    {
+      "duty": "vision",
+      "cases": 19,
+      "allowed": 5,
+      "denied42501": 14,
+      "sha256": "919d39d44bb6c6ff7cf107eabc46d547e87c93c0ad8c90239c39bffc2cd973a2",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-vision-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    },
+    {
+      "duty": "lab_publisher",
+      "cases": 15,
+      "allowed": 4,
+      "denied42501": 11,
+      "sha256": "003af47077b8b1c25ad8ee4e8baaa4c71b27a74642ae039bc5873ec98afcd8c1",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-lab_publisher-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    },
+    {
+      "duty": "grafana",
+      "cases": 18,
+      "allowed": 7,
+      "denied42501": 11,
+      "sha256": "9ca66294b090f7d74d58a49e7908b40922423853898ff5b183406dfb451df542",
+      "receiptUrl": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-grafana-restricted-receipt.json",
+      "nativeTestsRepeated": false
+    }
+  ],
+  "retainedEightRoleWindowAndResealCommit": "b4eb826ab3efd4204b5ef8263caceac0f8f67887",
+  "latestTargetResealCommit": "499131dac8647f0d74ee25677641621e117a02a9",
+  "latestSeal": {
+    "tables": 952,
+    "rows": 9699553,
+    "sequenceStates": 77,
+    "studyTables": 42,
+    "nativeStreamSha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+    "catalogSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5"
+  },
+  "targetOid": 16447,
+  "targetSystemIdentifier": "7693399121498484768",
+  "historicalBindingIsNotCurrentAdmission": true,
+  "imageCacheFitOrCredentialAuthorityGrantedByPacket": false,
+  "productionOrTargetMutation": false
+}

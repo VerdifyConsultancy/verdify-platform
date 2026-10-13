@@ -1,5 +1,6 @@
 """Authenticated target-client rendering: fail closed outside the rehearsal."""
 
+import ast
 import copy
 import hashlib
 import importlib.util
@@ -103,9 +104,9 @@ def binding():
     }
 
 
-def test_s2_mode_binds_native_primary_and_exact_new_policy_secret_scope():
+@pytest.mark.parametrize("target", client.S2_TARGETS)
+def test_s2_mode_binds_native_primary_and_exact_new_policy_secret_scope(target):
     facts = binding()
-    target = "verdify-cnpg-s2"
     facts["cluster"]["metadata"]["name"] = target
     facts["cluster"]["status"]["currentPrimary"] = target + "-1"
     facts["pod"]["metadata"]["name"] = target + "-1"
@@ -134,9 +135,38 @@ def test_s2_mode_binds_native_primary_and_exact_new_policy_secret_scope():
     assert env["DB_PASSWORD"]["valueFrom"]["secretKeyRef"]["name"] == target + "-api-client-auth"
     assert json.loads(env["QUALIFICATION_BINDING"]["value"])["target_cluster"] == target
     assert client.policies(target)[0]["spec"]["podSelector"]["matchLabels"] == labels
+    command = job["spec"]["template"]["spec"]["containers"][0]["command"][-1]
+    probe = next(
+        n.args[0].value
+        for n in ast.walk(ast.parse(command))
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "compile"
+    )
+    assert "assert os.environ['DB_HOST'] == '" + target + "-rw." + client.NS + ".svc.cluster.local'" in probe
+    assert "assert identity['cluster_name'] == '" + target + "'" in probe
+    if target == "verdify-cnpg-s2-integration":
+        assert job["spec"]["suspend"] is True
+        assert job["spec"]["template"]["spec"]["containers"][0]["imagePullPolicy"] == "Never"
+        assert job["metadata"]["name"].startswith("cnpg-s2-integration-runtime-")
+        assert all(
+            p["metadata"]["name"].startswith("cnpg-s2-integration-runtime-client-") for p in client.policies(target)
+        )
+    else:
+        assert "suspend" not in job["spec"]
     facts["service"]["metadata"]["ownerReferences"][0]["uid"] = "wrong-owner"
     with pytest.raises(AssertionError):
         client.validate_binding(facts, target)
+
+
+def test_integration_binding_never_weakens_historical_or_arbitrary_target():
+    original = binding()
+    with pytest.raises(AssertionError):
+        client.validate_binding(original, "verdify-cnpg-s2-integration")
+    assert client.wrapped_probe(client.CLUSTER) == client.WRAPPED_PROBE
+    for target in ("verdify-prod", "verdify-cnpg-s2-integration-other", "other.namespace.svc.cluster.local"):
+        with pytest.raises(ValueError):
+            client.wrapped_probe(target)
+        with pytest.raises(ValueError):
+            client.client_labels(target)
 
 
 @pytest.mark.parametrize("role", list(client.ROLES))

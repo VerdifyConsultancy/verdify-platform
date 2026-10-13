@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NS = "verdify-db-rehearsal"
 CLUSTER = "verdify-cnpg-rehearsal"
+S2_TARGETS = ("verdify-cnpg-s2", "verdify-cnpg-s2-integration")
 DATABASE = "verdify_rehearsal"
 HOST = CLUSTER + "-rw." + NS + ".svc.cluster.local"
 ROLES = {name: f"verdify_{name}_runtime_login" for name in ("api", "ingestor", "mcp")}
@@ -158,13 +159,14 @@ def require(ok, message):
 
 
 def validate_binding(binding, target=CLUSTER):
-    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported target")
-    if target == "verdify-cnpg-s2":
+    require(target in {CLUSTER, *S2_TARGETS}, "unsupported target")
+    if target in S2_TARGETS:
         spec = importlib.util.spec_from_file_location(
             "restored_duty_binding", ROOT / "scripts/qualify-restored-runtime-duties.py"
         )
         adapter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adapter)
+        adapter.TARGET_CLUSTER = target
         adapter.target_binding(json.dumps(binding).encode(), binding["cluster"]["metadata"]["uid"])
         return hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     require(set(binding) == {"cluster", "pod", "service"}, "exact native Cluster/Pod/Service binding required")
@@ -208,16 +210,16 @@ def validate_binding(binding, target=CLUSTER):
 
 
 def wrapped_probe(target):
-    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported literal probe target")
+    require(target in {CLUSTER, *S2_TARGETS}, "unsupported literal probe target")
     if target == CLUSTER:
         return WRAPPED_PROBE
     old_host = "assert os.environ['DB_HOST'] == '" + HOST + "'"
     old_cluster = "assert identity['cluster_name'] == '" + CLUSTER + "'"
     require(PROBE.count(old_host) == PROBE.count(old_cluster) == 1, "original probe identity shape changed")
     probe = PROBE.replace(
-        old_host, "assert os.environ['DB_HOST'] == 'verdify-cnpg-s2-rw." + NS + ".svc.cluster.local'", 1
+        old_host, "assert os.environ['DB_HOST'] == '" + target + "-rw." + NS + ".svc.cluster.local'", 1
     )
-    probe = probe.replace(old_cluster, "assert identity['cluster_name'] == 'verdify-cnpg-s2'", 1)
+    probe = probe.replace(old_cluster, "assert identity['cluster_name'] == '" + target + "'", 1)
     require(WRAPPED_PROBE.count(repr(PROBE)) == 1, "original wrapped probe envelope changed")
     return WRAPPED_PROBE.replace(repr(PROBE), repr(probe), 1)
 
@@ -283,11 +285,21 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix, ta
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
-            "name": ("cnpg-s2-runtime-" if target == "verdify-cnpg-s2" else "cnpg-runtime-") + consumer + "-" + suffix,
+            "name": (
+                "cnpg-s2-integration-runtime-"
+                if target == "verdify-cnpg-s2-integration"
+                else "cnpg-s2-runtime-"
+                if target == "verdify-cnpg-s2"
+                else "cnpg-runtime-"
+            )
+            + consumer
+            + "-"
+            + suffix,
             "namespace": NS,
             "labels": labels,
         },
         "spec": {
+            **({"suspend": True} if target == "verdify-cnpg-s2-integration" else {}),
             "backoffLimit": 0,
             "activeDeadlineSeconds": 180,
             "template": {
@@ -307,6 +319,7 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix, ta
                         {
                             "name": "client",
                             "image": image,
+                            **({"imagePullPolicy": "Never"} if target == "verdify-cnpg-s2-integration" else {}),
                             "command": ["python", "-I", "-c", wrapped_probe(target)],
                             "env": env,
                             "securityContext": {
@@ -345,9 +358,9 @@ def hot_query(consumer):
 
 
 def client_labels(target):
-    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported target")
+    require(target in {CLUSTER, *S2_TARGETS}, "unsupported target")
     labels = {"app.kubernetes.io/part-of": "verdify", "app.kubernetes.io/component": "cnpg-runtime-qualification"}
-    if target == "verdify-cnpg-s2":
+    if target in S2_TARGETS:
         labels["app.kubernetes.io/component"] = "cnpg-s2-runtime-qualification"
         labels["verdify.ai/qualification-target"] = target
     return labels
@@ -356,7 +369,13 @@ def client_labels(target):
 def policies(target=CLUSTER):
     client = client_labels(target)
     database = {"cnpg.io/cluster": target}
-    prefix = "cnpg-s2-runtime-client" if target == "verdify-cnpg-s2" else "cnpg-runtime-client"
+    prefix = (
+        "cnpg-s2-integration-runtime-client"
+        if target == "verdify-cnpg-s2-integration"
+        else "cnpg-s2-runtime-client"
+        if target == "verdify-cnpg-s2"
+        else "cnpg-runtime-client"
+    )
     return [
         {
             "apiVersion": "networking.k8s.io/v1",
@@ -397,7 +416,7 @@ def policies(target=CLUSTER):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", choices=(CLUSTER, "verdify-cnpg-s2"), default=CLUSTER)
+    parser.add_argument("--target", choices=(CLUSTER, *S2_TARGETS), default=CLUSTER)
     parser.add_argument("--binding", type=Path, required=True)
     parser.add_argument("--binding-sha256", required=True)
     parser.add_argument("--consumer", choices=ROLES, required=True)

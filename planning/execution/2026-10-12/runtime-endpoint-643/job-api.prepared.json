@@ -1,0 +1,113 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "cnpg-s2-integration-runtime-api-20261013prep",
+    "namespace": "verdify-db-rehearsal",
+    "labels": {
+      "app.kubernetes.io/part-of": "verdify",
+      "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+      "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+    }
+  },
+  "spec": {
+    "suspend": true,
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 180,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/part-of": "verdify",
+          "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+          "verdify.ai/qualification-target": "verdify-cnpg-s2-integration"
+        }
+      },
+      "spec": {
+        "restartPolicy": "Never",
+        "automountServiceAccountToken": false,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 1000,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "imagePullSecrets": [
+          {
+            "name": "zot-origin-cluster-pull"
+          }
+        ],
+        "containers": [
+          {
+            "name": "client",
+            "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+            "imagePullPolicy": "Never",
+            "command": [
+              "python",
+              "-I",
+              "-c",
+              "import hashlib, json, sys\n\ndef hashlib_sha(value):\n    return hashlib.sha256(value).hexdigest()\n\ntry:\n    exec(compile('\\nimport asyncio, datetime, importlib.util, json, logging, os, pathlib, sys, urllib.parse\\nlogging.disable(logging.CRITICAL)\\nbinding = json.loads(os.environ[\\'QUALIFICATION_BINDING\\'])\\nrole = binding[\\'consumer\\']\\nlogin = binding[\\'login\\']\\npassword = os.environ[\\'DB_PASSWORD\\']\\nassert password and os.environ[\\'DB_USER\\'] == login\\nbaked = os.environ.get(\\'VERDIFY_GIT_SHA\\', \\'\\')\\nfallback_path = pathlib.Path(\\'/etc/verdify/source-revision\\')\\nfallback = fallback_path.read_text().strip() if role == \\'api\\' and fallback_path.is_file() else \\'\\'\\nvalid_baked = len(baked) == 40 and all(c in \\'0123456789abcdef\\' for c in baked)\\nvalid_fallback = len(fallback) == 40 and all(c in \\'0123456789abcdef\\' for c in fallback)\\nassert not (valid_baked and valid_fallback and baked != fallback)\\nassert (baked if valid_baked else fallback if valid_fallback else \\'\\') == binding[\\'consumer_source\\']\\nassert os.environ[\\'DB_HOST\\'] == \\'verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local\\'\\nassert os.environ[\\'DB_NAME\\'] == \\'verdify_rehearsal\\'\\nassert os.environ[\\'VERDIFY_DEVICE_WRITE_ENABLED\\'] == \\'0\\'\\nassert not any(os.environ.get(k) for k in (\\'POSTGRES_PASSWORD\\',\\'DB_PASS\\',\\'ESP32_API_KEY\\',\\'DATABASE_URL\\'))\\ndsn = \\'postgresql://\\' + login + \\':\\' + urllib.parse.quote(password, safe=\\'\\') + \\'@\\' + os.environ[\\'DB_HOST\\'] + \\':5432/verdify_rehearsal?default_transaction_read_only=on&search_path=pg_catalog%2C%20public%2C%20pg_temp\\'\\nos.environ[\\'DB_DSN\\'] = dsn\\npath = pathlib.Path(binding[\\'image_module_path\\'])\\nassert hashlib_sha(path.read_bytes()) == binding[\\'consumer_module_sha256\\']\\nsys.path.insert(0, str(path.parent))\\nspec = importlib.util.spec_from_file_location(\\'qualified_consumer\\', path)\\nconsumer = importlib.util.module_from_spec(spec)\\nsys.modules[spec.name] = consumer\\nspec.loader.exec_module(consumer)\\n\\nEXPECTED_TRANSPORT_HOST = os.environ[\\'DB_HOST\\']\\nTRANSPORT_ATTEMPTS = []\\n\\nasync def wait_transport():\\n    # TCP readiness is not login evidence. No credentials or SQL are sent here.\\n    loop = asyncio.get_running_loop()\\n    deadline = loop.time() + 10.0\\n    while loop.time() < deadline:\\n        assert os.environ[\\'DB_HOST\\'] == EXPECTED_TRANSPORT_HOST\\n        assert os.environ[\\'DB_PORT\\'] == \\'5432\\'\\n        attempt = {\\'started_at\\':datetime.datetime.now(datetime.timezone.utc).isoformat(),\\n            \\'host\\':os.environ[\\'DB_HOST\\'], \\'port\\':5432}\\n        TRANSPORT_ATTEMPTS.append(attempt)\\n        try:\\n            _, writer = await asyncio.wait_for(asyncio.open_connection(os.environ[\\'DB_HOST\\'], 5432),\\n                timeout=min(1.0, deadline - loop.time()))\\n        except (ConnectionRefusedError, TimeoutError) as exc:\\n            attempt[\\'outcome\\'] = type(exc).__name__\\n        except BaseException as exc:\\n            attempt[\\'outcome\\'] = type(exc).__name__\\n            raise\\n        else:\\n            attempt[\\'outcome\\'] = \\'connected\\'\\n            writer.close()\\n            await asyncio.wait_for(writer.wait_closed(), timeout=max(0.0, min(1.0, deadline - loop.time())))\\n            if loop.time() >= deadline:\\n                raise TimeoutError(\\'bounded target TCP readiness expired\\')\\n            return\\n        finally:\\n            attempt[\\'finished_at\\'] = datetime.datetime.now(datetime.timezone.utc).isoformat()\\n        await asyncio.sleep(min(0.25, max(0.0, deadline - loop.time())))\\n    raise TimeoutError(\\'bounded target TCP readiness expired\\')\\n\\nasync def run():\\n    import asyncpg\\n    pool = None\\n    try:\\n        await wait_transport()\\n        if role == \\'mcp\\':\\n            pool = await consumer._kpi_fanout_pool_get()\\n        else:\\n            options = {\\'init\\': consumer._init_db_connection, \\'setup\\': consumer._setup_db_connection} if role == \\'api\\' else {}\\n            pool = await asyncpg.create_pool(dsn, min_size=1 if role == \\'api\\' else 2,\\n                max_size=3 if role == \\'api\\' else 10, **options)\\n            if role == \\'ingestor\\':\\n                await consumer.attest_ordinary_ingestor_runtime_role(pool)\\n        for checkout in range(2):\\n            async with pool.acquire() as conn:\\n                identity = dict(await conn.fetchrow(\"\"\"SELECT current_user::text AS current_user,\\n                    session_user::text AS session_user, current_database() AS database,\\n                    current_setting(\\'server_version_num\\') AS server_version,\\n                    current_setting(\\'cluster_name\\') AS cluster_name,\\n                    current_setting(\\'default_transaction_read_only\\') AS default_read_only,\\n                    current_setting(\\'transaction_read_only\\') AS transaction_read_only,\\n                    inet_server_addr()::text AS backend_address_raw,\\n                    pg_catalog.host(inet_server_addr()) AS backend_address, pg_is_in_recovery() AS replica\"\"\"))\\n                assert identity[\\'current_user\\'] == identity[\\'session_user\\'] == login\\n                assert identity[\\'database\\'] == \\'verdify_rehearsal\\' and identity[\\'server_version\\'] == \\'160013\\'\\n                assert identity[\\'cluster_name\\'] == \\'verdify-cnpg-s2-integration\\' and identity[\\'replica\\'] is False\\n                assert identity[\\'backend_address\\'] == binding[\\'primary_address\\']\\n                assert identity[\\'default_read_only\\'] == identity[\\'transaction_read_only\\'] == \\'on\\'\\n                async with conn.transaction(readonly=True):\\n                    rows = await conn.fetch(binding[\\'hot_sql\\'])\\n        result = {\\'status\\':\\'passed\\', \\'consumer\\':role, \\'identity\\':identity,\\n            \\'hot_query_row_count\\':len(rows), \\'target_binding_sha256\\':binding[\\'target_binding_sha256\\'],\\n            \\'consumer_source\\':binding[\\'consumer_source\\'], \\'consumer_image\\':binding[\\'consumer_image\\'],\\n            \\'profile_sha256\\':binding[\\'profile_sha256\\'], \\'password_authentication\\':\\'actual asyncpg TCP pool login\\',\\n            \\'pool_checkout_count\\':2, \\'service_process_started\\':False,\\n            \\'transport_readiness_is_authentication\\':False, \\'transport_attempts\\':TRANSPORT_ATTEMPTS}\\n    finally:\\n        if pool is not None:\\n            await pool.close()\\n    print(json.dumps(result))\\n\\nasyncio.run(run())\\n', '<verdify-cnpg-runtime-probe>', 'exec'))\nexcept BaseException as exc:\n    probe_line = None\n    trace = exc.__traceback__\n    while trace is not None:\n        if trace.tb_frame.f_code.co_filename == '<verdify-cnpg-runtime-probe>':\n            probe_line = trace.tb_lineno\n        trace = trace.tb_next\n    print(json.dumps({'status':'failed','error_category':type(exc).__name__, 'probe_line':probe_line,\n        'transport_attempts':globals().get('TRANSPORT_ATTEMPTS', [])}))\n    sys.exit(1)\n"
+            ],
+            "env": [
+              {
+                "name": "QUALIFICATION_BINDING",
+                "value": "{\"consumer\": \"api\", \"consumer_image\": \"registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624\", \"consumer_module_sha256\": \"df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94\", \"consumer_source\": \"cb21fd3d3295aa8d7183f70b0d5ac82405410b1a\", \"hot_sql\": \"SELECT temp_low, temp_high, vpd_low, vpd_high, temp_target, vpd_target FROM fn_band_setpoints(now())\", \"image_module_path\": \"/app/main.py\", \"login\": \"verdify_api_runtime_login\", \"primary_address\": \"10.42.6.178\", \"profile_sha256\": \"1fb737992a058f16007d9dd5c47d763e3231147eeeab8bd668aedd2b229c86aa\", \"source_module_path\": \"api/main.py\", \"target_binding_sha256\": \"9370d24136a6292b978630c689ca8f60ad346a4efde5468ee7c3e0b47fd58de4\", \"target_cluster\": \"verdify-cnpg-s2-integration\", \"target_host\": \"verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local\"}"
+              },
+              {
+                "name": "DB_HOST",
+                "value": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local"
+              },
+              {
+                "name": "DB_PORT",
+                "value": "5432"
+              },
+              {
+                "name": "DB_NAME",
+                "value": "verdify_rehearsal"
+              },
+              {
+                "name": "DB_USER",
+                "value": "verdify_api_runtime_login"
+              },
+              {
+                "name": "VERDIFY_DEVICE_WRITE_ENABLED",
+                "value": "0"
+              },
+              {
+                "name": "VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED",
+                "value": "1"
+              },
+              {
+                "name": "DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "verdify-cnpg-s2-integration-api-client-auth",
+                    "key": "password"
+                  }
+                }
+              }
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "memory": "1Gi"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

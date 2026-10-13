@@ -1,0 +1,50 @@
+{
+  "schema": "verdify643-source-only-preparation-v1",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "4c64193859eab0edc221ad8305a64d31b242d61093c03400c1942bd9997b9f6a",
+      "bytes": 6690
+    },
+    {
+      "path": "focused-offline-checks.json",
+      "sha256": "48fcf9f0b52ba6444eb125882a971d689223a3814074f25ad055714246321f7f",
+      "bytes": 861
+    },
+    {
+      "path": "historical-target-binding.prepared.json",
+      "sha256": "da0c439125b4942b9d8d0bc1c706fd4d954861f31ab72c3c9a50ca52c2e84ae3",
+      "bytes": 3857
+    },
+    {
+      "path": "independent-review.json",
+      "sha256": "323d5554ee53e0d9a69d5201a5c354ab0484532a50c628d471099df8ce38d060",
+      "bytes": 6029
+    },
+    {
+      "path": "inputs-and-retained-proof.json",
+      "sha256": "640a1ed520b3b6edb9f649ae88df444c5608df270f8de79b74b69bff3561261b",
+      "bytes": 5508
+    },
+    {
+      "path": "job-api.prepared.json",
+      "sha256": "84cb640d11bea797df1f496a726789c35e8d2e22ad00871fa4663596b9ad0a1f",
+      "bytes": 11364
+    },
+    {
+      "path": "job-ingestor.prepared.json",
+      "sha256": "bf7d1dedd0e36375bfd116d4cd2a08bc9ae46a7610b2379818e8843f5b858fc1",
+      "bytes": 11353
+    },
+    {
+      "path": "job-mcp.prepared.json",
+      "sha256": "1bd9241de9e9aac391cde5af109d474a5314b109b6d8d4882d204a04362a227a",
+      "bytes": 12250
+    },
+    {
+      "path": "original-profiles-byte-preservation.json",
+      "sha256": "c1967ecb6f27789bd0d707ea4ed59e52dbde77d3084651d1658237ce15dd6c45",
+      "bytes": 1903
+    }
+  ]
+}

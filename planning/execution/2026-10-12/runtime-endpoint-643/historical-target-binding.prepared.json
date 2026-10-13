@@ -1,0 +1,128 @@
+{
+  "cluster": {
+    "metadata": {
+      "name": "verdify-cnpg-s2-integration",
+      "namespace": "verdify-db-rehearsal",
+      "uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/part-of": "verdify"
+      }
+    },
+    "status": {
+      "currentPrimary": "verdify-cnpg-s2-integration-1"
+    }
+  },
+  "pod": {
+    "metadata": {
+      "name": "verdify-cnpg-s2-integration-1",
+      "namespace": "verdify-db-rehearsal",
+      "uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+      "ownerReferences": [
+        {
+          "apiVersion": "postgresql.cnpg.io/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2-integration",
+          "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+        }
+      ],
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/instance": "verdify-cnpg-s2-integration",
+        "app.kubernetes.io/managed-by": "cloudnative-pg",
+        "app.kubernetes.io/name": "postgresql",
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/version": "16",
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceName": "verdify-cnpg-s2-integration-1",
+        "cnpg.io/instanceRole": "primary",
+        "cnpg.io/podRole": "instance",
+        "role": "primary",
+        "topology.kubernetes.io/zone": "opal"
+      }
+    },
+    "status": {
+      "phase": "Running",
+      "conditions": [
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:04Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodReadyToStartContainers"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:04Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Initialized"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:13Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:35:13Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "ContainersReady"
+        },
+        {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2026-10-12T18:34:56Z",
+          "observedGeneration": 1,
+          "status": "True",
+          "type": "PodScheduled"
+        }
+      ],
+      "podIP": "10.42.6.178"
+    }
+  },
+  "service": {
+    "metadata": {
+      "name": "verdify-cnpg-s2-integration-rw",
+      "namespace": "verdify-db-rehearsal",
+      "uid": "f374b4dd-9ebc-453d-a561-fab081479106",
+      "ownerReferences": [
+        {
+          "apiVersion": "postgresql.cnpg.io/v1",
+          "controller": true,
+          "kind": "Cluster",
+          "name": "verdify-cnpg-s2-integration",
+          "uid": "b087a146-58c5-4d98-8054-09094d22ecfe"
+        }
+      ],
+      "labels": {
+        "app.kubernetes.io/component": "cnpg-rehearsal",
+        "app.kubernetes.io/instance": "verdify-cnpg-s2-integration",
+        "app.kubernetes.io/managed-by": "cloudnative-pg",
+        "app.kubernetes.io/name": "postgresql",
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/version": "16",
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration"
+      }
+    },
+    "spec": {
+      "type": "ClusterIP",
+      "selector": {
+        "cnpg.io/cluster": "verdify-cnpg-s2-integration",
+        "cnpg.io/instanceRole": "primary"
+      },
+      "ports": [
+        {
+          "name": "postgres",
+          "port": 5432,
+          "protocol": "TCP",
+          "targetPort": 5432
+        }
+      ]
+    }
+  }
+}

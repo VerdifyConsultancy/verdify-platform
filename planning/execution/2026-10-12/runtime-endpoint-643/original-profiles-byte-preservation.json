@@ -1,0 +1,55 @@
+{
+  "base": "9136f158641f918593df53471e3efe1792b7ad83",
+  "comparison": "Original default and historical S2 profiles are byte-identical, all3consumers; no imports of consumer apps or database/device call.",
+  "checks": [
+    {
+      "target": "verdify-cnpg-rehearsal",
+      "consumer": "api",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "f8daec951c651950fb4f5c86d46271ad1393a3b2258bbc5d3bc23da916bf3847"
+    },
+    {
+      "target": "verdify-cnpg-rehearsal",
+      "consumer": "ingestor",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "45d1c019d0597bca18d1de204915190720d11b852911b10301c650cc4f83570e"
+    },
+    {
+      "target": "verdify-cnpg-rehearsal",
+      "consumer": "mcp",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "bc1c4c9991cc187a51a293863235cedd66f13daadfb51aefbd7a93b39ba7734c"
+    },
+    {
+      "target": "verdify-cnpg-s2",
+      "consumer": "api",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "8f1fa06ab3e019f0d89b28981831574adebaf36bbf3281ed4857bb69fffd4851"
+    },
+    {
+      "target": "verdify-cnpg-s2",
+      "consumer": "ingestor",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "20ebb19a5a1fc2e9ece164c392f91d65619fbab404929d98874e53feda02a54f"
+    },
+    {
+      "target": "verdify-cnpg-s2",
+      "consumer": "mcp",
+      "canonicalJobBytesExact": true,
+      "probeBytesExact": true,
+      "policyObjectsExact": true,
+      "canonicalSha256": "f6f948ab842cda43ff5a4f1db8bf5a2a3d5e5bfeb2c0d8629416184616d40f0a"
+    }
+  ],
+  "nativeWorkOrTestsRepeated": false
+}

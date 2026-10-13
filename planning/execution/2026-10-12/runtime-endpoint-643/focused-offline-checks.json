@@ -1,0 +1,14 @@
+{
+  "command": "python -m pytest -q tests/test_cnpg_runtime_client_qualification.py",
+  "result": "PASS",
+  "caseCount": 61,
+  "scope": "source-render, mocked driver/consumer, exception retention and transport tests only; no target/network/device",
+  "ruffFormat": "2 files left unchanged after normal formatting",
+  "ruffCheck": "All checks passed!",
+  "firstAttempt": "Two newly added test assertions searched a repr-escaped wrapper string; corrected test parses its embedded compile literal via AST. No source guard was weakened.",
+  "originalSql107OrEightRoleNativeChecksRepeated": false,
+  "sourceHashes": {
+    "scripts/cnpg-runtime-client-qualification.py": "6fc9b9da616da814befed287665f9f0ec1a98a72777325c99d0da9c44fc07207",
+    "tests/test_cnpg_runtime_client_qualification.py": "b5cc88773972650ea3a116e5cb34583af2608bce2cbf8f0e4a9806f9775de5e8"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "actionableMismatches": [],
+  "artifactSha256": {
+    "README.md": "4c64193859eab0edc221ad8305a64d31b242d61093c03400c1942bd9997b9f6a",
+    "focused-offline-checks.json": "48fcf9f0b52ba6444eb125882a971d689223a3814074f25ad055714246321f7f",
+    "historical-target-binding.prepared.json": "da0c439125b4942b9d8d0bc1c706fd4d954861f31ab72c3c9a50ca52c2e84ae3",
+    "inputs-and-retained-proof.json": "640a1ed520b3b6edb9f649ae88df444c5608df270f8de79b74b69bff3561261b",
+    "job-api.prepared.json": "84cb640d11bea797df1f496a726789c35e8d2e22ad00871fa4663596b9ad0a1f",
+    "job-ingestor.prepared.json": "bf7d1dedd0e36375bfd116d4cd2a08bc9ae46a7610b2379818e8843f5b858fc1",
+    "job-mcp.prepared.json": "1bd9241de9e9aac391cde5af109d474a5314b109b6d8d4882d204a04362a227a",
+    "original-profiles-byte-preservation.json": "c1967ecb6f27789bd0d707ea4ed59e52dbde77d3084651d1658237ce15dd6c45"
+  },
+  "baseMain": "9136f158641f918593df53471e3efe1792b7ad83",
+  "claimBoundariesExact": {
+    "apiMcpPasswordPostureUnobserved": true,
+    "cacheFitAndAuthenticationUnobserved": true,
+    "credentialReferencesNotProvisioned": true,
+    "futureThreePoolSeamSeparateFromEndpointReversal": true,
+    "noApplicationProcessHttpDeviceOrProductionAcceptance": true,
+    "noEndpointABARunOrBAllocated": true,
+    "noNativeAcceptanceAdded": true,
+    "sixSqlDutiesDoNotEstablishSixApplicationPools": true
+  },
+  "focusedOfflineTests": {
+    "ownerReportedCaseCount": 61,
+    "ownerReportedResult": "PASS",
+    "reviewerDidNotRerun": true,
+    "sourceHashesExactReported": true
+  },
+  "futureSessionAbsenceClause": "README requires independently bound actual session attribution after awaited close; this preparation is not that future native receipt.",
+  "historicalBinding": {
+    "canonicalSha256": "9370d24136a6292b978630c689ca8f60ad346a4efde5468ee7c3e0b47fd58de4",
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "currentAdmission": false,
+    "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106"
+  },
+  "historicalProfileBytePreservation": {
+    "embeddedProbeBytesAndWrapperEnvelopePreviouslyIndependentlyCheckedExactBase": true,
+    "ownerReceiptSha256": "c1967ecb6f27789bd0d707ea4ed59e52dbde77d3084651d1658237ce15dd6c45",
+    "reviewerDidNotRerunRendererOrTests": true,
+    "sixDefaultAndS2ConsumerCasesReportedExact": true
+  },
+  "packet": "/private/tmp/verdify-runtime-endpoint-643-20261012/planning/execution/2026-10-12/runtime-endpoint-643",
+  "payloadChecksumsAllExact": true,
+  "preparedJobs": [
+    {
+      "cachedImageOnly": true,
+      "consumer": "api",
+      "currentMainModuleBytesExactSource": true,
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "manifestSha256": "84cb640d11bea797df1f496a726789c35e8d2e22ad00871fa4663596b9ad0a1f",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "proposedCredentialReferenceOnly": "verdify-cnpg-s2-integration-api-client-auth",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "suspended": true
+    },
+    {
+      "cachedImageOnly": true,
+      "consumer": "ingestor",
+      "currentMainModuleBytesExactSource": true,
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "manifestSha256": "bf7d1dedd0e36375bfd116d4cd2a08bc9ae46a7610b2379818e8843f5b858fc1",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "proposedCredentialReferenceOnly": "verdify-cnpg-s2-integration-ingestor-client-auth",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "suspended": true
+    },
+    {
+      "cachedImageOnly": true,
+      "consumer": "mcp",
+      "currentMainModuleBytesExactSource": true,
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "manifestSha256": "1bd9241de9e9aac391cde5af109d474a5314b109b6d8d4882d204a04362a227a",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "proposedCredentialReferenceOnly": "verdify-cnpg-s2-integration-mcp-client-auth",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "suspended": true
+    }
+  ],
+  "retainedSixDutySql107": [
+    {
+      "cases": 20,
+      "duty": "planner",
+      "localGitReceiptHashVerified": true,
+      "sha256": "caa1ee687d8843a33977cca8ac9888e58282545bb9c4fe989aa51f0b14f7a959"
+    },
+    {
+      "cases": 17,
+      "duty": "setpoint_server",
+      "localGitReceiptHashVerified": true,
+      "sha256": "d2ee7d695dff67a236f771adcb9ce356b29688e4a6887763a59352af8c4dc895"
+    },
+    {
+      "cases": 18,
+      "duty": "ha_backfill",
+      "localGitReceiptHashVerified": true,
+      "sha256": "5b057376ec9edbc8db0f892c3706fa39fa8d047c5670bc48b67e3cab398fb495"
+    },
+    {
+      "cases": 19,
+      "duty": "vision",
+      "localGitReceiptHashVerified": true,
+      "sha256": "919d39d44bb6c6ff7cf107eabc46d547e87c93c0ad8c90239c39bffc2cd973a2"
+    },
+    {
+      "cases": 15,
+      "duty": "lab_publisher",
+      "localGitReceiptHashVerified": true,
+      "sha256": "003af47077b8b1c25ad8ee4e8baaa4c71b27a74642ae039bc5873ec98afcd8c1"
+    },
+    {
+      "cases": 18,
+      "duty": "grafana",
+      "localGitReceiptHashVerified": true,
+      "sha256": "9ca66294b090f7d74d58a49e7908b40922423853898ff5b183406dfb451df542"
+    }
+  ],
+  "reviewScope": "Local source, prepared JSON and retained local-Git metadata receipts only. No renderer/consumer import, tests, network, native SQL, credential access or target actions.",
+  "reviewedAt": "2026-10-13T00:44:00.904711+00:00",
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "schema": "verdify643-independent-source-packet-review-v1",
+  "sourceDiffPreviouslyReviewedSha256": "6fc9b9da616da814befed287665f9f0ec1a98a72777325c99d0da9c44fc07207"
+}
