@@ -3281,14 +3281,14 @@
         "scripts",
         "tests"
       ],
-      "baseline": "October13 source-only recovery task976/nativeparent75/S2milestone33 created after checking for an existing open Lab issue. Detailed incident payload was not published; live diagnostics and retained originals remain private. Ordinary mirror CI/source delivery accepted independently; closed949/382/965 retained.",
+      "baseline": "October13 source-only recovery task976/nativeparent75/S2milestone33 created after checking for an existing open Lab issue. Detailed incident payload was not published; live diagnostics and retained originals remain private. Ordinary mirror CI/source delivery accepted independently; closed949/382/965 retained. Accepted/closed via source-only terminal assessment6150578311 and verified GitHubCOMPLETED state. Original custody/strictreceiptguard preserved; byte-preserving repair and one normal scheduled publish passed, live single-link invariant retained without recurrence in that run. No source correction/repair loop/device orcredential action needed for this bounded scope. Private detailed operator receipt verified in place and not exported; continuous freshness between scheduled publications is not claimed.",
       "delivery": "Use the existing sole production writer for bounded same-image metadata recovery; any actual source build/promotion waits for shared-CI release and uses normal owner validation and authoritative publication readback. Estimate2–4 engineering hours, not time spent.",
       "rollback": "Retain original receipt bytes/links and failed attempts; preserve publication timestamps and last good content. Do not delete custody or relax guards to clear health.",
       "decision": "Normal scoped Lab recovery; no OTA/device/credential/DB-cutover/custody-deletion authority. No new observation window or compiler blocker."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T16:19:43Z",
+    "reviewed_at": "2026-10-13T16:48:45Z",
     "source_revision": "82195c1b6ada500e254acca27018278597498a69",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3353,8 +3353,7 @@
       787,
       801,
       802,
-      963,
-      976
+      963
     ],
     "sprints": [
       {
@@ -3362,8 +3361,8 @@
         "title": "S2 — Recoverability and reliable delivery (October 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Finish the remaining restore/runtime-role/source-delivery outcomes and the separately tracked Lab receipt recovery.",
-        "exit": "Complete #396/#643/#644 bounded acceptance and #976 guarded Lab receipt recovery. Retain completed #949/#382 and historical #964/#953; Lab recovery and compiler qualification remain independent with serialized shared CI."
+        "goal": "Finish the three remaining S2 outcomes: restored-data/runtime-role acceptance and reliable source delivery.",
+        "exit": "Complete remaining #396/#643/#644 bounded acceptance. Completed #976 guarded Lab receipt recovery, #949 exact-source policy convergence, #382 declared spool boundaries and historical #964/#953 are retained; scientific/physical acceptance remains separate."
       },
       {
         "id": "S3",
@@ -3925,14 +3924,6 @@
         "hours_min": 6,
         "hours_max": 12,
         "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 976,
-        "sprint": "S2",
-        "hours_min": 2,
-        "hours_max": 4,
-        "next_action": "SoleRetrywriter executes custody-preserving same-image receipt recovery and one supported scheduled publisher; verify guard/single-link/publicfreshness/health. Prepare only proven recurrence sourcefix, serializedaftercompilerrelease; private diagnostics stayprivate.",
         "owner_role": "Platform lead"
       }
     ]
