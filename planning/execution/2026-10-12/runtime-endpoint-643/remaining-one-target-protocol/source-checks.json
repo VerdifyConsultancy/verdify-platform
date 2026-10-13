@@ -1,0 +1,12 @@
+{
+  "consumerProductSourceChanged": false,
+  "focusedTestsPassed": 83,
+  "nativeExecutionOrNewCredentialWindow": false,
+  "newReversalCases": 22,
+  "oldProfileOutputsByteIdentical": 9,
+  "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+  "retainedFocusedCases": 61,
+  "ruffCheckPassed": true,
+  "ruffFormatPassed": true,
+  "testFileSha256": "08178fadb9001064c43cb5232d538e3af0dbd99ba7ca1cfe7577f0fe1cb79b95"
+}

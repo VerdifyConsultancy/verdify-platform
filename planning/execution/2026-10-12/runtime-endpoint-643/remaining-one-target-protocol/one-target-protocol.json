@@ -1,0 +1,111 @@
+{
+  "acceptanceLimits": [
+    "same-primary transport/config reversal only",
+    "no separate database/cutover/write-loss/RPO/RTO/failover proof",
+    "no HTTP/MCP serving or ingestor main/device writer",
+    "no production role adoption",
+    "no six other duty clients or experiment mutation pools",
+    "no new whole-data reseal required merely for readonly phases",
+    "fresh processes and fresh pools; not one long-lived pool reconnecting or hot reload"
+  ],
+  "apiAndIngestorCaveat": {
+    "api": "accepted native probe passes a privately constructed readonly DSN to asyncpg and genuine init/setup; it does not call API get_db_dsn or full lifespan. Production uses DB_PASS plus DB_HOST while the accepted probe uses target DB_PASSWORD and forbids DB_PASS/DATABASE_URL fallback. The nine-job seam tests the shared qualification DB_HOST/private-DSN startup configuration and genuine init/setup, not API get_db_dsn/full service rollout; that limitation does not block the finite shared protocol. No owner fallback or implicit privilege expansion.",
+    "ingestor": "accepted probe constructs readonly DSN and passes it to asyncpg, while real ordinary main uses its import-time DB_DSN then attests. The nine-job seam retains its exact accepted qualification DSN/read-only/attester paths and excludes main/device loops; full ordinary-main configuration adoption remains separate."
+  },
+  "bReachabilityIsNotOfflineProof": "Actual direct-route TCP/TLS/authentication remains a future native predicate; do not disable TLS/policy or replace IP after a failure.",
+  "consumers": [
+    "api",
+    "ingestor",
+    "mcp"
+  ],
+  "doesNotProveDistinctDatabaseCutover": true,
+  "futureWindowNotAuthorizedByPacket": {
+    "completed643CredentialWindowReused": false,
+    "lastAcceptedPasswordsRestoredNull": true,
+    "newMutationOrApprovalRequestedNow": false,
+    "noRepeatedCredentialWindowPerConsumer": true,
+    "noSeparateMcpApprovalGate": true,
+    "oldSecretsAndJobsDeleted": true,
+    "plannedFiniteNativeSeam": "one explicitly reviewed future window: three existing NULL LOGIN temporary passwords, three new target-only Secrets, nine serial fresh processes across API/ingestor/MCP A-B-A, exact NULL inverse/catalog/UID cleanup"
+  },
+  "mcpFirstIsAcceptanceGate": false,
+  "plannedFreshProcessJobs": 9,
+  "poolProtocol": [
+    "One fresh isolated process per phase; endpoint config is set before module import. Never mutate consumer.DB_DSN or reset its cached pool in-process to fabricate hot reload.",
+    "Use fixed matching bounded LOGIN and cached source/digest; reuse the genuine API init/setup, ingestor ordinary-role attester or MCP KPI pool factory/attester for the selected consumer; only READ ONLY queries.",
+    "Each phase records exact configured host/mode/phase, Job-Pod UID, actual image/module/source, current/session user, backend identity and native owner OID/systemid binding.",
+    "Await pool.close before passed, then process terminal/exit0; require native owner zero other target client backends and prior process absence before releasing next phase.",
+    "B IP is freshly derived from the same exact UID-bound current primary. A moved UID/currentPrimary/PodIP or policy/readiness failure stops the attempt; it does not authorize a new IP, failover or retry.",
+    "A-restored restores exactly original isolated DB_HOST and internally composed DB_DSN; credential reference, image, login, queries and other controls remain identical.",
+    "Record per-phase timing and backend PID/start pair where accepted role/catalog access supports it. Fresh process+actual authenticated pool and zero-client boundary prove fresh startup even if an OS PID number is recycled."
+  ],
+  "recommendedOrder": [
+    "mcp:a-initial",
+    "mcp:b-direct-primary",
+    "mcp:a-restored",
+    "api:a-initial",
+    "api:b-direct-primary",
+    "api:a-restored",
+    "ingestor:a-initial",
+    "ingestor:b-direct-primary",
+    "ingestor:a-restored"
+  ],
+  "resourceTopologyChanges": {
+    "databasePodOrApplicationConfigEdits": false,
+    "networkPolicyChange": false,
+    "newDatabase": false,
+    "newServiceOrAlias": false,
+    "switchoverOrFailover": false
+  },
+  "routeSequence": [
+    {
+      "endpointMode": "rw-service",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "phase": "A-initial"
+    },
+    {
+      "endpointMode": "bound-primary-pod-ip",
+      "host": "10.42.6.178",
+      "hostMustComeOnlyFromFreshExactBoundPodStatus": true,
+      "phase": "B-direct-current-primary"
+    },
+    {
+      "endpointMode": "rw-service",
+      "host": "verdify-cnpg-s2-integration-rw.verdify-db-rehearsal.svc.cluster.local",
+      "phase": "A-restored"
+    }
+  ],
+  "sameDatabaseAndPrimaryThroughout": true,
+  "singleFutureCredentialEpisode": true,
+  "smallestSourceDelta": {
+    "add": [
+      "optional bounded reversal phase only for integration target",
+      "literal B host assertion generated from validated current bound PodIP while retaining exact cluster/native-backend guards",
+      "receipt phase/endpoint-mode/configured-host and source/operator custody",
+      "closed tests for changed UID/target/invalid or caller-supplied address, B literal/DSN consistency, no alias/policy mutation and preserved default outputs"
+    ],
+    "currentImplementationMissing": false,
+    "doesNotChange": [
+      "product consumer code",
+      "migrations/grants",
+      "production desired state",
+      "image/build/controller",
+      "credential provisioning mechanism"
+    ],
+    "owner": "scripts/cnpg-runtime-client-qualification.py and its existing focused test file",
+    "preserve": "original/default/rehearsal/S2/integration rw-service render/probe bytes remain unchanged",
+    "scope": "integration target only; --reversal-phase enumerates a-initial/b-direct-primary/a-restored and derives RW DNS or exact bound primary Pod IP, never caller-supplied host"
+  },
+  "status": "source/offline renderer complete for all three; future single nine-job window is not admitted or executed",
+  "target": {
+    "cluster": "verdify-cnpg-s2-integration",
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "database": "verdify_rehearsal",
+    "databaseOid": 16447,
+    "historicalBindingOnly": true,
+    "namespace": "verdify-db-rehearsal",
+    "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+    "systemIdentifier": "7693399121498484768"
+  }
+}

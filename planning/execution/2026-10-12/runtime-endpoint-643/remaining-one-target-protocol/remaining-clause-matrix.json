@@ -1,0 +1,71 @@
+{
+  "basis": "42e791f90409fc7e7a08ab6ef3aa7b1f8e669211",
+  "dedicatedExperimentClients": "API lifecycle/ingestor component/equipment source and orchestrator role boundaries are separate function-only/stateful duties. Do not enable them to make ordinary pool reversal look comprehensive. Retained science/107 proofs are reused with their original scopes.",
+  "issue": 643,
+  "nextAction": "review the completed integration literal-bound renderer and one nine-process API/ingestor/MCP A-B-A packet, then obtain one specific future credential/native window decision only when coordinated for execution. No target action is authorized here.",
+  "otherRetainedDutyClients": [
+    {
+      "acceptedSqlCases": 20,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "planner",
+      "nativeSqlReceiptSha256": "caa1ee687d8843a33977cca8ac9888e58282545bb9c4fe989aa51f0b14f7a959",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-planner-restricted-receipt.json"
+    },
+    {
+      "acceptedSqlCases": 17,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "setpoint_server",
+      "nativeSqlReceiptSha256": "d2ee7d695dff67a236f771adcb9ce356b29688e4a6887763a59352af8c4dc895",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-setpoint_server-restricted-receipt.json"
+    },
+    {
+      "acceptedSqlCases": 18,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "ha_backfill",
+      "nativeSqlReceiptSha256": "5b057376ec9edbc8db0f892c3706fa39fa8d047c5670bc48b67e3cab398fb495",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-ha_backfill-restricted-receipt.json"
+    },
+    {
+      "acceptedSqlCases": 19,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "vision",
+      "nativeSqlReceiptSha256": "919d39d44bb6c6ff7cf107eabc46d547e87c93c0ad8c90239c39bffc2cd973a2",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-vision-restricted-receipt.json"
+    },
+    {
+      "acceptedSqlCases": 15,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "lab_publisher",
+      "nativeSqlReceiptSha256": "003af47077b8b1c25ad8ee4e8baaa4c71b27a74642ae039bc5873ec98afcd8c1",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-lab_publisher-restricted-receipt.json"
+    },
+    {
+      "acceptedSqlCases": 18,
+      "applicationPoolOrProcessClaimedByThisPacket": false,
+      "duty": "grafana",
+      "nativeSqlReceiptSha256": "9ca66294b090f7d74d58a49e7908b40922423853898ff5b183406dfb451df542",
+      "sourceReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-role-grafana-restricted-receipt.json"
+    }
+  ],
+  "rows": [
+    {
+      "accepted": "retained107 ordinary-duty native SQL cases; separate API/ingestor/MCP source attesters and two read-only pooled checkouts each at42e791",
+      "clause": "role allows intended functions and rejects unrelated DML/mapping/cross-workload duties",
+      "newExecutionInThisPacket": false,
+      "remaining": "source/desired-role matrix must join actual complete selected running-workload identity/duties; three pool reads do not prove every application call path"
+    },
+    {
+      "accepted": "sanitized native result, three exact NULL inverses, catalog equality and9UID cleanup; qualification Pods only matching target credential refs/noSA/device0",
+      "clause": "no credential or Secret annotation values enter artifacts; ordinary Pods lack owner/migration authority",
+      "newExecutionInThisPacket": false,
+      "remaining": "full ordinary production workload ambient authority and actual bounded runtime role adoption are not supplied by this isolated seam; migration/bootstrap owner identity is intentionally a different duty"
+    },
+    {
+      "accepted": "retained production operational acceptance belongs to sole Retry owner; isolated three consumer pools/closure and restored target catalog remain separate facts",
+      "clause": "public/planner/ingestor health and experiment integrity survive rollout/rollback",
+      "newExecutionInThisPacket": false,
+      "remaining": "actual selected configuration rollout/reversal and corresponding workload health/integrity. Proposed one-target MCP route reversal closes only that bounded client seam, not whole clause or production rollout."
+    }
+  ],
+  "wholeIssueState": "OPEN"
+}

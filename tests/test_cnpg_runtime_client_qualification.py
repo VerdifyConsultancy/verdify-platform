@@ -326,13 +326,20 @@ def test_probe_failure_does_not_print_driver_exception_or_secret(capsys):
         "close",
     ],
 )
-def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monkeypatch, capsys, bad):
+def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(
+    monkeypatch, capsys, bad, reversal_phase=None
+):
     """Exercise the whole fixed probe with a driver double; not live auth credit."""
     import hashlib
     import importlib.abc
     import json
     import types
 
+    program = (
+        client.wrapped_probe("verdify-cnpg-s2-integration", integration_binding(), reversal_phase)
+        if reversal_phase
+        else client.WRAPPED_PROBE
+    )
     secret = "synthetic-fixture-password"
     calls = []
     identity = {
@@ -340,7 +347,7 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "session_user": "verdify_api_runtime_login",
         "database": "verdify_rehearsal",
         "server_version": "160013",
-        "cluster_name": client.CLUSTER,
+        "cluster_name": "verdify-cnpg-s2-integration" if reversal_phase else client.CLUSTER,
         "default_read_only": "on",
         "transaction_read_only": "on",
         "backend_address": "10.42.3.7",
@@ -363,6 +370,13 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         identity[key] = value
 
     expected_address = "2001:db8::7" if bad == "matching_ipv6" else "10.42.3.7"
+    host = (
+        expected_address
+        if reversal_phase == "b-direct-primary"
+        else "verdify-cnpg-s2-integration-rw." + client.NS + ".svc.cluster.local"
+        if reversal_phase
+        else client.HOST
+    )
     valid = bad in (None, "matching_ipv6")
     # PostgreSQL inet::text includes /32 or /128. The selected SQL must obtain
     # native host semantics while retaining the unmodified raw inet evidence.
@@ -382,6 +396,8 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         async def fetchrow(self, sql):
             self.identity_reads += 1
             row = dict(identity)
+            if "pg_backend_pid() AS backend_pid" in sql:
+                row["backend_pid"] = 1234
             if "pg_catalog.host(inet_server_addr()) AS backend_address" not in sql:
                 row["backend_address"] = row["backend_address_raw"]
             if bad == "readonly_reset" and self.identity_reads == 2:
@@ -438,11 +454,12 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
             pass
 
     async def ready_connection(host, port):
-        assert host == client.HOST and port == 5432
+        assert host == expected_host and port == 5432
         calls.append("tcp_readiness_not_authentication")
         return None, ReadyWriter()
 
     monkeypatch.setattr(__import__("asyncio"), "open_connection", ready_connection)
+    expected_host = host
 
     async def create_pool(dsn, **kwargs):
         calls.append("password_tcp_pool_startup")
@@ -468,22 +485,27 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "consumer_image": "qualified-image",
         "profile_sha256": "d" * 64,
     }
+    if reversal_phase:
+        facts.update(
+            reversal_phase=reversal_phase,
+            endpoint_mode="bound-primary-pod-ip" if reversal_phase == "b-direct-primary" else "rw-service",
+        )
     for key, value in {
         "QUALIFICATION_BINDING": json.dumps(facts),
         "DB_PASSWORD": secret,
         "DB_USER": facts["login"],
         "VERDIFY_GIT_SHA": "b" * 40,
-        "DB_HOST": client.HOST,
+        "DB_HOST": host,
         "DB_PORT": "5432",
         "DB_NAME": client.DATABASE,
         "VERDIFY_DEVICE_WRITE_ENABLED": "0",
     }.items():
         monkeypatch.setenv(key, value)
     if valid:
-        exec(client.WRAPPED_PROBE, {})  # noqa: S102 — fixed probe under isolated driver double
+        exec(program, {})  # noqa: S102 — fixed probe under isolated driver double
     else:
         with pytest.raises(SystemExit) as exit_info:
-            exec(client.WRAPPED_PROBE, {})  # noqa: S102 — fixed probe under isolated driver double
+            exec(program, {})  # noqa: S102 — fixed probe under isolated driver double
         assert exit_info.value.code == 1
     output = capsys.readouterr().out
     assert calls.count("password_tcp_pool_startup") == 1
@@ -498,12 +520,112 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         assert result["identity"]["backend_address_raw"] == identity["backend_address_raw"]
         assert result["identity"]["backend_address"] == expected_address
         assert ("transaction", {"readonly": True}) in calls and "hot_query" in calls
+        if reversal_phase:
+            assert result["reversal_phase"] == reversal_phase
+            assert result["configured_host"] == host
+            assert result["identity"]["backend_pid"] == 1234
+            assert result["pool_close_awaited"] is True
     elif bad == "readonly_reset":
         assert calls.count("hot_query") == 1
     elif bad == "close":
         assert calls.count("hot_query") == 2
     else:
         assert "hot_query" not in calls
+
+
+def integration_binding():
+    facts = binding()
+    target = "verdify-cnpg-s2-integration"
+    facts["cluster"]["metadata"]["name"] = target
+    facts["cluster"]["status"]["currentPrimary"] = target + "-1"
+    facts["pod"]["metadata"]["name"] = target + "-1"
+    facts["pod"]["metadata"]["labels"]["cnpg.io/cluster"] = target
+    facts["pod"]["status"].update(phase="Running", conditions=[{"type": "Ready", "status": "True"}])
+    facts["service"]["metadata"]["name"] = target + "-rw"
+    facts["service"]["spec"]["selector"]["cnpg.io/cluster"] = target
+    return facts
+
+
+@pytest.mark.parametrize("consumer", client.ROLES)
+@pytest.mark.parametrize("phase", client.REVERSAL_PHASES)
+def test_reversal_derives_only_bound_primary_route_without_new_topology(consumer, phase):
+    facts = integration_binding()
+    path = {"api": "api/main.py", "ingestor": "ingestor/ingestor.py", "mcp": "mcp/server.py"}[consumer]
+    job = client.render(
+        facts,
+        consumer,
+        "registry.vallery.net/verdifyconsultancy/verdify-" + consumer + "@sha256:" + "a" * 64,
+        "b" * 40,
+        hashlib.sha256((ROOT / path).read_bytes()).hexdigest(),
+        "d" * 64,
+        "20261013phase",
+        "verdify-cnpg-s2-integration",
+        phase,
+    )
+    pod = job["spec"]["template"]["spec"]
+    env = {e["name"]: e for e in pod["containers"][0]["env"]}
+    host = (
+        facts["pod"]["status"]["podIP"]
+        if phase == "b-direct-primary"
+        else "verdify-cnpg-s2-integration-rw." + client.NS + ".svc.cluster.local"
+    )
+    assert env["DB_HOST"]["value"] == host
+    mode = "bound-primary-pod-ip" if phase == "b-direct-primary" else "rw-service"
+    payload = json.loads(env["QUALIFICATION_BINDING"]["value"])
+    assert payload["target_host"] == host and payload["reversal_phase"] == phase
+    assert payload["endpoint_mode"] == mode
+    assert pod["automountServiceAccountToken"] is False and job["spec"]["suspend"] is True
+    assert pod["containers"][0]["imagePullPolicy"] == "Never"
+    program = pod["containers"][0]["command"][-1]
+    probe = next(
+        n.args[0].value
+        for n in ast.walk(ast.parse(program))
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "compile"
+    )
+    compile(probe, "<synthetic-offline-reversal>", "exec")
+    assert "assert os.environ['DB_HOST'] == '" + host + "'" in probe
+    assert "assert binding['reversal_phase'] == " + repr(phase) in probe
+    assert "assert binding['endpoint_mode'] == " + repr(mode) in probe
+    assert "await pool.close()\n    result['pool_close_awaited'] = True\n    print" in probe
+    assert "pg_backend_pid() AS backend_pid" in probe
+    assert "consumer.main(" not in probe and "consumer.lifespan(" not in probe
+
+
+@pytest.mark.parametrize(
+    "phase,bad",
+    [(p, None) for p in client.REVERSAL_PHASES]
+    + [
+        ("b-direct-primary", "close"),
+        ("b-direct-primary", "readonly_reset"),
+        ("b-direct-primary", "backend"),
+        ("b-direct-primary", "password"),
+    ],
+)
+def test_reversal_probe_retains_close_reset_identity_and_privacy_refusals(monkeypatch, capsys, phase, bad):
+    test_probe_pool_startup_and_identity_fail_closed_without_secret_output(
+        monkeypatch, capsys, bad, reversal_phase=phase
+    )
+
+
+@pytest.mark.parametrize("bad", ["phase", "wrong_target", "owner", "uid", "invalid_ip", "external_ip"])
+def test_reversal_refuses_unbound_or_external_route(bad):
+    facts = integration_binding()
+    target = "verdify-cnpg-s2-integration"
+    phase = "b-direct-primary"
+    if bad == "phase":
+        phase = "arbitrary-host"
+    elif bad == "wrong_target":
+        target = "verdify-cnpg-s2"
+    elif bad == "owner":
+        facts["pod"]["metadata"]["ownerReferences"][0]["uid"] = "other-cluster"
+    elif bad == "uid":
+        facts["pod"]["metadata"]["uid"] = "invented"
+    elif bad == "invalid_ip":
+        facts["pod"]["status"]["podIP"] = "10.42.999.7"
+    elif bad == "external_ip":
+        facts["pod"]["status"]["podIP"] = "192.168.30.240"
+    with pytest.raises((ValueError, AssertionError)):
+        client.wrapped_probe(target, facts, phase)
 
 
 def test_hot_queries_are_exact_consumer_source_and_no_arbitrary_sql():

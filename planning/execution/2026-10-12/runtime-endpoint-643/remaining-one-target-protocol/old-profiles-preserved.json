@@ -1,0 +1,55 @@
+{
+  "beforeAfterCanonicalOutputRecordsExact": true,
+  "comparison": "same synthetic native fixtures, consumer file hashes, image/source/profile inputs and suffix before/after; canonical Job plus both NetworkPolicies byte hashes identical",
+  "originalOperatorSourceCommit": "24c94dd491e9fb4777e15dac1bac24bdda6fe32f",
+  "profileCount": 9,
+  "records": [
+    {
+      "canonicalJobAndPolicySha256": "38b92814220ff5c84b1d209c84e992315981de9c19e5d19b23a3789e70d088bc",
+      "consumer": "api",
+      "target": "verdify-cnpg-rehearsal"
+    },
+    {
+      "canonicalJobAndPolicySha256": "98ca8bd4db6acd5ba8d529dbcb0bd278af900d12829c4a03d0f8bda21afae948",
+      "consumer": "ingestor",
+      "target": "verdify-cnpg-rehearsal"
+    },
+    {
+      "canonicalJobAndPolicySha256": "7615a080f81ddd37d7781ac4e5ce4630b2e64ab476db76acbc0524c346e6c864",
+      "consumer": "mcp",
+      "target": "verdify-cnpg-rehearsal"
+    },
+    {
+      "canonicalJobAndPolicySha256": "b696fe2fa11b74aa693d04d50d920a61f12d1efd3f79498be7a420cecaec0d12",
+      "consumer": "api",
+      "target": "verdify-cnpg-s2"
+    },
+    {
+      "canonicalJobAndPolicySha256": "133b02e7aeca3a0246ce9f16902e56b8c86ef4586f43ddb2d667da2feb684463",
+      "consumer": "ingestor",
+      "target": "verdify-cnpg-s2"
+    },
+    {
+      "canonicalJobAndPolicySha256": "1140e8962487c84d3a344df315d467c82137a9b0e1bb83a895a77471c0a9c8a3",
+      "consumer": "mcp",
+      "target": "verdify-cnpg-s2"
+    },
+    {
+      "canonicalJobAndPolicySha256": "804904d92d366d0401cafdb7b3a8a05be659f27f369cf3ddd762d020e525d5d9",
+      "consumer": "api",
+      "target": "verdify-cnpg-s2-integration"
+    },
+    {
+      "canonicalJobAndPolicySha256": "b1a5128788c2224d9cf8eacd91ff49b9abf59bc785e0780bdfaf33725c6296cd",
+      "consumer": "ingestor",
+      "target": "verdify-cnpg-s2-integration"
+    },
+    {
+      "canonicalJobAndPolicySha256": "ddeef2e447fcfb4ca1e13af91cb1427df97dac416426ab31728652e5014956cf",
+      "consumer": "mcp",
+      "target": "verdify-cnpg-s2-integration"
+    }
+  ],
+  "sourceBaseCommit": "42e791f90409fc7e7a08ab6ef3aa7b1f8e669211",
+  "syntheticOfflineOnly": true
+}

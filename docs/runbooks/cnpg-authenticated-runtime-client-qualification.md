@@ -102,3 +102,39 @@ product endpoint, connect a controller, test write delivery, or prove PITR.
 Unit driver doubles qualify refusal/cleanup/privacy behavior only; they are not
 live authentication or restored-target credit. No live target has been qualified
 by preparing this source.
+
+## One-target integration configuration reversal
+
+The integration target alone also accepts `--reversal-phase a-initial`,
+`b-direct-primary` or `a-restored`. A phases use the existing bound RW Service
+FQDN. B derives its host only from the validated current primary Pod IPv4 and
+Cluster owner UID; no arbitrary-host option, alias, second database, switchover
+or policy change is involved. Default renders remain unchanged.
+
+Prepare all three existing API/ingestor/MCP consumers in one reviewed future
+window: nine serial fresh processes, each consumer A→B→A. Set each isolated
+process's configuration before import, preserve its exact matching LOGIN,
+image/source and READ ONLY contract, then reuse the existing genuine pool and
+attester paths. MCP may run first because its pool is cached; this is an order
+choice, not a separate acceptance gate. Do not mutate a module DSN or clear a
+cached pool to fabricate hot reload. Every phase must await pool.close before
+passed, terminate, and be followed by native owner metadata showing zero other
+target client backends before releasing the next process. Reversal receipts add
+the configured host, phase, endpoint mode, backend PID and awaited-close flag.
+Job/Pod UIDs and the native zero-client boundary bind fresh process/pool startup;
+one reported checkout PID does not enumerate all physical pool connections.
+
+The completed three-pool credential window does not authorize this later run.
+Its passwords are NULL and temporary objects are gone. A future concrete
+nine-job packet needs fresh target/cache/fit metadata and one specific temporary
+three-LOGIN credential window with exact NULL inverse and UID cleanup; no
+credentials or target actions are supplied by this renderer. Use only the
+reviewed Job objects, retaining existing policies instead of applying the full
+rendered List as a side effect.
+
+This is a same-database client configuration/route reversal. It does not prove
+distinct-database cutover, write-loss recovery, full API configuration getter or
+service lifespan rollout, ingestor main/device loops, other duty clients or
+production role adoption. See the bounded
+[remaining protocol](../../planning/execution/2026-10-12/runtime-endpoint-643/remaining-one-target-protocol/README.md)
+for the accepted native evidence, source checks and remaining #643 clauses.

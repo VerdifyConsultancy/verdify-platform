@@ -33,3 +33,8 @@ The current issue remains open. Intended allow/deny SQL duties and exact eight-r
 ## Later native checkpoint — October13UTC
 
 The three prepared API/ingestor/MCP pools have now passed their serial single-endpoint native READ ONLY seam, awaited close and zero-other-client checks. The three temporary target passwords were restoredNULL, exact starting role/catalog posture verified and nine new temporary UIDs cleaned up. See [actual three-pool checkpoint](native-three-pool-checkpoint/README.md) for full source/image/identity/cleanup joins and retained limits. Earlier preparation text above remains the historical pre-execution record; #643 remains open for supported endpoint/configuration reversal and full runtime adoption/rollout acceptance.
+
+
+## Remaining configuration definition — October13
+
+[One-target reversal protocol](remaining-one-target-protocol/README.md) defines the smallest supported startup/configuration A→B→A route on the same integration database, the current fixed-DNS renderer gap and a focused shared nine-job source renderer. It performs no native/credential action and preserves42e791 as the completed three-pool checkpoint. Production adoption and other consumer duties remain distinct.

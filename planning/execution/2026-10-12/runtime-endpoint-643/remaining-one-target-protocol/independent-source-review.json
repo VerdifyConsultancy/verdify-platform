@@ -1,0 +1,17 @@
+{
+  "actionableFindings": [],
+  "ciSubmitted": false,
+  "limits": [
+    "fresh-process A-B-A, not one long-lived pool reconnecting",
+    "zero-client proof is the separate future native owner witness",
+    "no native/source-label/adoption credit from review"
+  ],
+  "operatorSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+  "result": "integration-only derived bound primary route/Cluster-owner UID; default branches unchanged; awaited close before success; safe category/line/transport-only failure output",
+  "reviewer": "existing ci_source_matrix worker",
+  "scope": "only scripts/cnpg-runtime-client-qualification.py and tests/test_cnpg_runtime_client_qualification.py delta versus42e791",
+  "sourceEdited": false,
+  "targetCalls": false,
+  "testSha256": "08178fadb9001064c43cb5232d538e3af0dbd99ba7ca1cfe7577f0fe1cb79b95",
+  "testsRerun": false
+}

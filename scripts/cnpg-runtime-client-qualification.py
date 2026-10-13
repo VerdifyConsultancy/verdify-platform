@@ -12,6 +12,7 @@ import argparse
 import ast
 import hashlib
 import importlib.util
+import ipaddress
 import json
 import re
 import sys
@@ -25,6 +26,7 @@ S2_TARGETS = ("verdify-cnpg-s2", "verdify-cnpg-s2-integration")
 DATABASE = "verdify_rehearsal"
 HOST = CLUSTER + "-rw." + NS + ".svc.cluster.local"
 ROLES = {name: f"verdify_{name}_runtime_login" for name in ("api", "ingestor", "mcp")}
+REVERSAL_PHASES = ("a-initial", "b-direct-primary", "a-restored")
 
 # Execute inside the actual reviewed consumer image, not a substitute psql image.
 PROBE = r'''
@@ -209,25 +211,76 @@ def validate_binding(binding, target=CLUSTER):
     return hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def wrapped_probe(target):
+def wrapped_probe(target, binding=None, reversal_phase=None):
     require(target in {CLUSTER, *S2_TARGETS}, "unsupported literal probe target")
+    require(reversal_phase is None or reversal_phase in REVERSAL_PHASES, "unsupported reversal phase")
+    target_host = target + "-rw." + NS + ".svc.cluster.local"
+    if reversal_phase is not None:
+        require(target == "verdify-cnpg-s2-integration", "reversal is integration-only")
+        require(binding is not None, "reversal requires the exact native binding")
+        validate_binding(binding, target)
+        for obj in binding.values():
+            uuid.UUID(obj["metadata"]["uid"])
+        require(
+            any(
+                owner.get("kind") == "Cluster" and owner.get("uid") == binding["cluster"]["metadata"]["uid"]
+                for owner in binding["pod"]["metadata"].get("ownerReferences", [])
+            ),
+            "reversal primary must belong to the bound Cluster UID",
+        )
+        address = ipaddress.IPv4Address(binding["pod"]["status"]["podIP"])
+        require(address in ipaddress.IPv4Network("10.42.0.0/16"), "native primary Pod IPv4 required")
+        if reversal_phase == "b-direct-primary":
+            target_host = str(address)
     if target == CLUSTER:
         return WRAPPED_PROBE
     old_host = "assert os.environ['DB_HOST'] == '" + HOST + "'"
     old_cluster = "assert identity['cluster_name'] == '" + CLUSTER + "'"
     require(PROBE.count(old_host) == PROBE.count(old_cluster) == 1, "original probe identity shape changed")
-    probe = PROBE.replace(
-        old_host, "assert os.environ['DB_HOST'] == '" + target + "-rw." + NS + ".svc.cluster.local'", 1
-    )
+    probe = PROBE.replace(old_host, "assert os.environ['DB_HOST'] == '" + target_host + "'", 1)
     probe = probe.replace(old_cluster, "assert identity['cluster_name'] == '" + target + "'", 1)
+    if reversal_phase is not None:
+        marker = "role = binding['consumer']"
+        require(probe.count(marker) == 1, "consumer binding shape changed")
+        mode = "bound-primary-pod-ip" if reversal_phase == "b-direct-primary" else "rw-service"
+        probe = probe.replace(
+            marker,
+            marker
+            + "\nassert binding['reversal_phase'] == "
+            + repr(reversal_phase)
+            + "\nassert binding['endpoint_mode'] == "
+            + repr(mode),
+            1,
+        )
+        marker = "session_user::text AS session_user, current_database() AS database,"
+        require(probe.count(marker) == 1, "native identity SQL shape changed")
+        probe = probe.replace(marker, marker + " pg_backend_pid() AS backend_pid,", 1)
+        marker = "    finally:\n        if pool is not None:"
+        require(probe.count(marker) == 1, "pool finalization shape changed")
+        probe = probe.replace(
+            marker,
+            "        result.update({'reversal_phase':binding['reversal_phase'], "
+            "'endpoint_mode':binding['endpoint_mode'], 'configured_host':os.environ['DB_HOST']})\n" + marker,
+            1,
+        )
+        marker = "            await pool.close()\n    print(json.dumps(result))"
+        require(probe.count(marker) == 1, "awaited pool close shape changed")
+        probe = probe.replace(
+            marker,
+            "            await pool.close()\n    result['pool_close_awaited'] = True\n    print(json.dumps(result))",
+            1,
+        )
     require(WRAPPED_PROBE.count(repr(PROBE)) == 1, "original wrapped probe envelope changed")
     return WRAPPED_PROBE.replace(repr(PROBE), repr(probe), 1)
 
 
-def render(binding, consumer, image, source, module_sha, profile_sha, suffix, target=CLUSTER):
+def render(binding, consumer, image, source, module_sha, profile_sha, suffix, target=CLUSTER, reversal_phase=None):
     binding_sha = validate_binding(binding, target)
     target_host = target + "-rw." + NS + ".svc.cluster.local"
     require(consumer in ROLES, "ordinary consumer required")
+    probe = wrapped_probe(target, binding, reversal_phase)
+    if reversal_phase == "b-direct-primary":
+        target_host = binding["pod"]["status"]["podIP"]
     require(
         re.fullmatch(r"registry\.vallery\.net/verdifyconsultancy/verdify-" + consumer + r"@sha256:[0-9a-f]{64}", image),
         "origin consumer digest required",
@@ -262,6 +315,11 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix, ta
         "primary_address": binding["pod"]["status"]["podIP"],
         "hot_sql": hot_query(consumer),
     }
+    if reversal_phase is not None:
+        facts.update(
+            reversal_phase=reversal_phase,
+            endpoint_mode="bound-primary-pod-ip" if reversal_phase == "b-direct-primary" else "rw-service",
+        )
     labels = client_labels(target)
     env = [
         {"name": k, "value": v}
@@ -320,7 +378,7 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix, ta
                             "name": "client",
                             "image": image,
                             **({"imagePullPolicy": "Never"} if target == "verdify-cnpg-s2-integration" else {}),
-                            "command": ["python", "-I", "-c", wrapped_probe(target)],
+                            "command": ["python", "-I", "-c", probe],
                             "env": env,
                             "securityContext": {
                                 "allowPrivilegeEscalation": False,
@@ -425,6 +483,7 @@ def main():
     parser.add_argument("--module-sha256", required=True)
     parser.add_argument("--profile-sha256", required=True)
     parser.add_argument("--suffix", required=True)
+    parser.add_argument("--reversal-phase", choices=REVERSAL_PHASES)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     raw = args.binding.read_bytes()
@@ -438,6 +497,7 @@ def main():
         args.profile_sha256,
         args.suffix,
         args.target,
+        args.reversal_phase,
     )
     with args.output.open("x") as out:
         json.dump({"apiVersion": "v1", "kind": "List", "items": [*policies(args.target), job]}, out, indent=2)

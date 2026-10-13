@@ -1,0 +1,121 @@
+{
+  "acceptedNativeCheckpoint": "42e791f90409fc7e7a08ab6ef3aa7b1f8e669211",
+  "checkedCount": 15,
+  "checks": [
+    {
+      "check": "MCP DB_DSN is captured at module import",
+      "passed": true
+    },
+    {
+      "check": "MCP caches pool and creates it from its DB_DSN",
+      "passed": true
+    },
+    {
+      "check": "API supported normal startup calls get_db_dsn and actual init/setup",
+      "passed": true
+    },
+    {
+      "check": "API supported lifespan awaits pool.close",
+      "passed": true
+    },
+    {
+      "check": "ingestor DB_DSN is captured from DB_HOST at import",
+      "passed": true
+    },
+    {
+      "check": "ingestor ordinary startup uses imported DB_DSN and real attester",
+      "passed": true
+    },
+    {
+      "check": "renderer only enumerates reversal phase and has no caller host parameter",
+      "passed": true
+    },
+    {
+      "check": "current probe literal RW host guard and awaited close remain",
+      "passed": true
+    },
+    {
+      "check": "existing egress policy selects same integration database Pods",
+      "passed": true
+    },
+    {
+      "check": "api module bytes still equal accepted source",
+      "passed": true
+    },
+    {
+      "check": "api current integration renderer remains fixed RW DNS",
+      "passed": true
+    },
+    {
+      "check": "ingestor module bytes still equal accepted source",
+      "passed": true
+    },
+    {
+      "check": "ingestor current integration renderer remains fixed RW DNS",
+      "passed": true
+    },
+    {
+      "check": "mcp module bytes still equal accepted source",
+      "passed": true
+    },
+    {
+      "check": "mcp current integration renderer remains fixed RW DNS",
+      "passed": true
+    }
+  ],
+  "consumers": [
+    {
+      "consumer": "api",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "modulePath": "api/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+    },
+    {
+      "consumer": "ingestor",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "modulePath": "ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+    },
+    {
+      "consumer": "mcp",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "modulePath": "mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a"
+    }
+  ],
+  "currentBPhaseRenderable": true,
+  "currentBPhaseScope": "only explicit b-direct-primary on integration target; IPv4 and exact primary owner binding; no arbitrary host",
+  "noProductDefectClaimed": true,
+  "operatorBaseRevision": "24c94dd491e9fb4777e15dac1bac24bdda6fe32f",
+  "operatorFileSha256": "82e27ecca2a1551c5839a46113a5c55ec2dfb7d58674f9074d856b2a7276b55e",
+  "scope": "offline source/AST/render readback only; no target/cache/network/native/credentials or test reruns",
+  "sourceLocations": {
+    "apiDsnConfig": {
+      "line": 926,
+      "path": "api/main.py"
+    },
+    "apiStartup": {
+      "line": 1332,
+      "path": "api/main.py"
+    },
+    "ingestorImportDsn": {
+      "line": 168,
+      "path": "ingestor/ingestor.py"
+    },
+    "ingestorStartup": {
+      "line": 5194,
+      "path": "ingestor/ingestor.py"
+    },
+    "mcpCachedPool": {
+      "line": 960,
+      "path": "mcp/server.py"
+    },
+    "mcpImportDsn": {
+      "line": 115,
+      "path": "mcp/server.py"
+    }
+  }
+}

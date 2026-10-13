@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "correction": "read the already-retained private sanitized historical binding; no native read, target remint or replacement fixture",
+      "outcome": "FileNotFoundError before any output payload",
+      "reason": "assembler initially looked for retained native-binding metadata inside public source-preparation directory",
+      "stage": "local protocol packet assembly"
+    },
+    {
+      "correction": "generate the actual probe before installing the consumer-only import driver double; no source guard weakened",
+      "error": "AttributeError on restored_duty_binding.target_binding",
+      "outcome": "76passed7failed",
+      "reason": "fixture patched every import loader before generating the newly guarded probe, so the real binding adapter was replaced by a fake consumer loader",
+      "stage": "first new mocked probe regressions"
+    },
+    {
+      "checks": "source renderer, all22new reversal cases plus61retained focused cases; Ruffcheck/format and9profile canonical byte comparison pass",
+      "outcome": "83passed0failed",
+      "stage": "final focused offline source tests"
+    }
+  ],
+  "nativeOrCredentialOperations": false
+}
