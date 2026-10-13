@@ -1,0 +1,187 @@
+{
+  "currentIntegration": {
+    "applyCompletion": "2026-10-12T18:33:00Z",
+    "applyStart": "2026-10-12T18:32:58Z",
+    "catalogSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "currentReady": 3,
+    "databaseOid": "16447",
+    "exactEarliestThreeReadyOrCurrentFullRecoveryRtoReceiptPresent": false,
+    "firstIndependentNativePredecessorAt": "2026-10-12T18:35:45.730399+00:00",
+    "firstWhole951CompleteAt": "2026-10-12T18:37:50.782799+00:00",
+    "full952Relations": 952,
+    "imageDigest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+    "lastMetadataAt": "2026-10-13T19:45:53.994098+00:00",
+    "newWholeDataRescanAfterReadonlyNineLegs": false,
+    "nineOrdinaryClientRouteLegsPass": true,
+    "noCurrentIntegrationPrimaryLossDrillClaimed": true,
+    "originalRestoreTargetTimeB": "2026-10-06T05:38:19.219172+00:00",
+    "pg": 160013,
+    "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "reviewed275AndAdmissionFull952Rows": 9699553,
+    "rwServiceUid": "f374b4dd-9ebc-453d-a561-fab081479106",
+    "sequenceStates": 77,
+    "studyTables": 42,
+    "systemIdentifier": "7693399121498484768",
+    "timescale": "2.25.2",
+    "timescaleWorkers": 0,
+    "vector": "0.8.1",
+    "whole951NativeCopySeconds": 52.947441,
+    "whole951RowsExact": 9699549
+  },
+  "failureHistory": {
+    "ambiguousCommitAttemptsNeverReplayed": 12,
+    "currentInspectionFreezeIsNotProductionSchedulerPolicy": true,
+    "initialLogicalNativeCopyMismatches": 3,
+    "nativeCatalogInstallationAdditionsLaterFullyAccounted": 3,
+    "originalS2At275NaturalSwitchWorkers": 16,
+    "originalS2Failed952SealPreserved": true,
+    "originalUnfrozenPitrTargetsRetentionDeletedDiagnosticsRows": 9953
+  },
+  "historical275NativeReceiptHashReadback": [
+    {
+      "artifact": "frozen-a275-primary-rebinding-once/receipt.json",
+      "sha256": "7744a77e9681353cdb7a2be297c0917839a064175b9b289f4843b6c255107a22",
+      "topLevelScalarFacts": {
+        "active_non_database_actors": 0,
+        "actual_authority_sha256": "56bcb4fa9d933d1d112579bcbe68ef3f00004283486c8486160c7b896e33294d",
+        "all77_sequences_unchanged": true,
+        "all_six_worker_settings_sha256": "174f57ebfd50d4f3cda49f579b92e6a4c31cb8dc0aa76d605a2643dbb991e534",
+        "complete": true,
+        "credentials_or_client_jobs_started": false,
+        "current_cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        "current_operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+        "current_primary_ip": "10.42.3.133",
+        "current_primary_name": "verdify-cnpg-s2-pitr-a-frozen-2",
+        "current_primary_uid": "ea68bad4-3f3b-4116-b120-6300d92161f6",
+        "current_rw_service_uid": "93314da9-22ad-465c-b87b-34f7483b356f",
+        "current_timeline": 3,
+        "database_oid": 16447,
+        "full952_acceptance_from_failed_s2_not_waived": true,
+        "full952_receipt_sha256": "4c5668164d32ccdbf418b9e54bbb5e131d6fdee5586444076236a43b85ec86ad",
+        "full952_unchanged": true,
+        "full_installed_witness_sha256": "5676356cd2209d6b8b99a21d83a480d4f8a1c34f7db5ea6afdff62a25c1f7394",
+        "full_installed_witness_unchanged": true,
+        "historical274_receipts_unchanged": true,
+        "historical_installation_sha256": "9d7f12596ec4b015a45d9a3fc3f35df1f09f1be088d97b79ab03f0a00dae4ad9",
+        "historical_ready_sha256": "a7bd0e253d64d7159013358f1e4e9bfc306c89a412f64f2e1d26676fe669317b",
+        "installed275_authority_unchanged": true,
+        "mutations_performed_for_rebinding": false,
+        "native_copy_stdout_sha256": "d4b58dba16f037263c30f81fd27b459d8ae17b2aff985d1654023b469ebc986e",
+        "new_primary_since_utc": "2026-10-06T09:23:46.751499Z",
+        "operator_event_utc": "2026-10-06T09:23:42Z",
+        "operator_reason": "Current primary on unschedulable vm-k3s-node5",
+        "ordinary9_verifiers_still_null": true,
+        "ordinary_backend_count": 0,
+        "original_primary_uid_preserved": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
+        "relation_count": 952,
+        "row_count": 9699553,
+        "schema": "cnpg-current275-transport-rebinding-v1",
+        "source_installation_not_rewritten": true,
+        "study42_unchanged": true,
+        "workers_zero_all_instances": true
+      }
+    },
+    {
+      "artifact": "frozen-a275-final952-copy-once/receipt.json",
+      "sha256": "4c5668164d32ccdbf418b9e54bbb5e131d6fdee5586444076236a43b85ec86ad",
+      "topLevelScalarFacts": {
+        "complete": true,
+        "native_stdout_bytes": 2457973783,
+        "native_stdout_sha256": "d4b58dba16f037263c30f81fd27b459d8ae17b2aff985d1654023b469ebc986e",
+        "row_count": 9699553,
+        "schema": "cnpg-complete-native-copy-receipt-v1",
+        "table_count": 952,
+        "terminal_marker_verified": true
+      }
+    }
+  ],
+  "historicalDataParity": {
+    "admissionAndAllFull95277Sequence42StudyLaterPreservedAt275": true,
+    "allWorkloadRowsAndNativeCatalogExact": true,
+    "doesNotRelabelDeletedHistoricalClustersAsCurrent": true,
+    "fullCountTimeRelations": 427,
+    "fullNativeCatalogEntries": 44220,
+    "historical275BootstrapMarkerLineage": {
+      "aOnly": true,
+      "bHasAAndBNotC": true,
+      "sourceReceiptSha256": "33772f43ce79808828d368eabfa0bd67dcac01bc1549143b6156e3a9f74a5c03"
+    },
+    "relations": 951,
+    "rows": 9699549,
+    "timescaleOwnerRows": 614,
+    "timestampColumns": 567
+  },
+  "historicalPitr": [
+    {
+      "baseRestoreSeconds": 19.849456,
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "clusterUid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+      "createToThreeReadySeconds": 387.0,
+      "createdAt": "2026-10-06T06:00:09Z",
+      "nativeRecoveryStop": "recovery stopping before commit of transaction 13883, time 2026-10-06 05:38:19.212161+00",
+      "threeReadyAt": "2026-10-06T06:06:36+00:00"
+    },
+    {
+      "baseRestoreSeconds": 19.069798,
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "clusterUid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+      "createToThreeReadySeconds": 418.0,
+      "createdAt": "2026-10-06T06:00:09Z",
+      "nativeRecoveryStop": "recovery stopping before commit of transaction 13884, time 2026-10-06 05:38:19.221592+00",
+      "threeReadyAt": "2026-10-06T06:07:07+00:00"
+    }
+  ],
+  "historicalPrimaryLoss": {
+    "acknowledged_attempts": 454,
+    "actual_attempts": 466,
+    "all_clients_stopped": true,
+    "ambiguous_attempts": 12,
+    "boundary": "Normal graceful exact UID+RV primary Pod deletion; no physical host/node loss or ordinary-runtime-role acceptance asserted.",
+    "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+    "duplicate_marker_ids": 0,
+    "lost_acknowledged": 0,
+    "native_committed_markers": 455,
+    "new_primary_uid": "4bdeafd3-5ef4-420a-8536-350069d33d53",
+    "observed_client_ack_gap_seconds": 8.463646806078032,
+    "old_primary_uid": "7c45cff0-5375-40ab-8cdd-ff7b638a53f1",
+    "retained_acknowledged": 454,
+    "unacknowledged_but_committed": 1
+  },
+  "measurementLimits": [
+    "8.463646806s is the same-client ACK gap in a graceful UID/RV primary-Pod-loss drill on historical frozenB, not node/host loss or currentproduction outage",
+    "current275 natural frozenA switch4.751499s was observed operator-stage timing with stopped clients, not an ACK gap",
+    "19.849456/19.069798s base restore and387/418s threeReady describe historical frozenA/B only",
+    "currentintegration firstnative/full951 timestamps are completed stage receipts, not an instrumented production fence-to-firstwrite RTO",
+    "historical distinct A/B PITR marker lineage is retained; current643DNS/IP/DNS is same-database client configuration reversal, not two-database cutover",
+    "no freshproduction final-delta capture, productionwrite-RPO or after-write reverse-restore duration is measured"
+  ],
+  "protectedInput": {
+    "backupId": "20261006T052358",
+    "backupSeconds": 392,
+    "backupStart": "2026-10-06T05:23:58Z",
+    "backupStop": "2026-10-06T05:30:30Z",
+    "backupUid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "baseTarBytes": 619166118,
+    "baseTarSha256": "c3b56cd2ee1fa9612822228af7c0c0f1334a2b7c877836a6989bcecc024cd164",
+    "freshProductionDeltaOrContinuousArchiveProof": false,
+    "historicalSourceClusterUid": "4f697776-df25-4e22-b930-0b76cf35496e",
+    "logicalExportBytes": 349998576,
+    "logicalExportSeconds": 104.01492583300569,
+    "readerRecheckFullBaseAndWalHashesExact": true,
+    "readerRecheckJobCompletion": "2026-10-12T17:59:41Z",
+    "readerRecheckJobStart": "2026-10-12T17:58:04Z",
+    "requiredWalSuffixes": [
+      "72",
+      "73",
+      "74"
+    ],
+    "sourceSnapshotAt": "2026-10-06T03:58:39.426422+00:00",
+    "sourceWitnessSha256": "7cf93863741a7827ef1f75e6f9e926a6966578c81e2884b3a70ed4644e1c5a50",
+    "targetTimeline": 1,
+    "targets": {
+      "A": "2026-10-06T05:38:19.208619+00:00",
+      "B": "2026-10-06T05:38:19.219172+00:00"
+    }
+  }
+}

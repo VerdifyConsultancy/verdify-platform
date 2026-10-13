@@ -1,0 +1,130 @@
+{
+  "baselineDelivery": "b4eb826ab3efd4204b5ef8263caceac0f8f67887",
+  "currentNinePhaseDelivery": "e06dcf51b29cc9062605241512e1df73effcf09f",
+  "private275CutoverDraftSha256": "a87c1795f647fd5b4be829bc28a337d12e2303bdfc448eb767a1e0c82994876a",
+  "privateNativeMarkerLineageReceiptSha256": "33772f43ce79808828d368eabfa0bd67dcac01bc1549143b6156e3a9f74a5c03",
+  "rawRowsCredentialsVerifiersPrivateAuthorityCapacityPacketsExported": false,
+  "scope": "retained sanitized receipts/source only; no native execution/data rescan",
+  "sources": [
+    {
+      "artifact": "cnpg-current274-pair.json",
+      "sha256": "80eed7498ba73bc9b01941f496dc4abc483b34605b99d9b2bee6e7d119dc7235",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-pair.json"
+    },
+    {
+      "artifact": "cnpg-current274-copy-accounting.json",
+      "sha256": "ad91e02b903bc6fd8b6161b711a139ed9a8b8702af317a5fd0d4f56922d0920c",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-copy-accounting.json"
+    },
+    {
+      "artifact": "cnpg-current274-protected-archive.json",
+      "sha256": "11a36d46f008db24d7fd77204e74f416175b5fb063b600655f69cbcad1994ffa",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-protected-archive.json"
+    },
+    {
+      "artifact": "cnpg-current274-recovery-timings.json",
+      "sha256": "1d0fe21ddbe6dda97f4989ecab576c974102c0cdca2bbeba8e05b26d290c05fb",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-recovery-timings.json"
+    },
+    {
+      "artifact": "cnpg-current274-physical-full-parity.json",
+      "sha256": "d683b95c4822da5d8ab92f9dbcc0826e8ae1298353f1a5fb822d51d70afcf40e",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-physical-full-parity.json"
+    },
+    {
+      "artifact": "cnpg-current274-primary-loss.json",
+      "sha256": "24b95445897e996d799ae2eadbd1ad3ce48f092d8862f15234b0568ef0729740",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-primary-loss.json"
+    },
+    {
+      "artifact": "cnpg-current274-post-failover-reseal.json",
+      "sha256": "3cc006950d8f8a3f7b7f8a0bc27de9dcaeb22ab6f798f6633ef4a358e59c1174",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-post-failover-reseal.json"
+    },
+    {
+      "artifact": "actual-restore-apply-receipt.json",
+      "sha256": "a8b342457b11d68929e9d28eea628efade58be2a800d640848e837512e2235c7",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-restore-apply-receipt.json"
+    },
+    {
+      "artifact": "actual-native-predecessor-receipt.json",
+      "sha256": "7af6864de3fa07c4383a1e617dc375935bec3044106a09eece2853dcdbcd560c",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-native-predecessor-receipt.json"
+    },
+    {
+      "artifact": "actual-full951-pre275-execution.json",
+      "sha256": "9b4887eac697a35a84fff36532d8618879a978971d526d7a415ab17623f3a370",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-full951-pre275-execution.json"
+    },
+    {
+      "artifact": "actual-final-full952-execution.json",
+      "sha256": "015c88ce90349cfee855dab02f1e9ea7ec648aa5eead6c3cfef542e848e4febb",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-final-full952-execution.json"
+    },
+    {
+      "artifact": "actual-final-native-catalog-receipt.json",
+      "sha256": "776aa50e486985220e56ee438f6841e96ce9234c3566aa6fa3a8d814c60dd9a3",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-final-native-catalog-receipt.json"
+    },
+    {
+      "artifact": "actual-final-sequence-receipt.json",
+      "sha256": "0a7785236b9bf75a50e7d7b2547211345d8c4fc412355d424cbca996a49be4a8",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-final-sequence-receipt.json"
+    },
+    {
+      "artifact": "actual-final-study42-derivation.json",
+      "sha256": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-final-study42-derivation.json"
+    },
+    {
+      "artifact": "actual-final-target-health.json",
+      "sha256": "a137967aac2d65fb7d7ad4b0022c96523552b8bdd401765beb053268dfbc4b0d",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/actual-final-target-health.json"
+    },
+    {
+      "artifact": "archive-custody-recheck.json",
+      "sha256": "321582b9efddd5689251e128c647d74c6d6fe783d4141cb763ab204bb42de35b",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/archive-custody-recheck.json"
+    },
+    {
+      "artifact": "physical-backing-summary.json",
+      "sha256": "e68e1269aa44e5f01718c95412a0d5e7525322e476f7cdc2e8dd27c761b07558",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/b4eb826ab3efd4204b5ef8263caceac0f8f67887/docs/handoffs/s2-2026-10-12/physical-backing-summary.json"
+    },
+    {
+      "artifact": "643-nine-phase/README.md",
+      "sha256": "2b0d556af7a49e80084d11f158bb360ffaf89c2ee08f67143f9e35e7b9cb59b6",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/README.md"
+    },
+    {
+      "artifact": "643-nine-phase/job-source-bindings.json",
+      "sha256": "fa75526353a02ced6e8eec2df7b1dce470a82c073fafdec8e2f794936744daaf",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/job-source-bindings.json"
+    },
+    {
+      "artifact": "643-nine-phase/phase-timings.json",
+      "sha256": "31cb4c32f2893c7bd8320a077c8e2445e5cb9f79d7d21d72ce542bf17efcbe7f",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/phase-timings.json"
+    },
+    {
+      "artifact": "643-nine-phase/inverse-and-catalog.json",
+      "sha256": "73ed7cd4694eba15ffc25ab33f1741ed6c0fb86ba1036e3b2e9558e874852b67",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/inverse-and-catalog.json"
+    },
+    {
+      "artifact": "643-nine-phase/uid-cleanup.json",
+      "sha256": "92f26106bb3080d5e3352b17e026983c99da55553d3373644528123f5ceec86a",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/uid-cleanup.json"
+    },
+    {
+      "artifact": "643-nine-phase/target-final-metadata.json",
+      "sha256": "04516443a9181dbd6dbb25e1c7ae06bade5b44e5c87eecb197b6a2d6dc0fa21e",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/target-final-metadata.json"
+    },
+    {
+      "artifact": "643-nine-phase/three-consumer-route-joins.json",
+      "sha256": "0689429c0d38df9f679b51e8d3e32814789f3cdb14048386c05e07ac4972e79d",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/e06dcf51b29cc9062605241512e1df73effcf09f/planning/execution/2026-10-12/runtime-endpoint-643/native-nine-phase-checkpoint/three-consumer-route-joins.json"
+    }
+  ]
+}

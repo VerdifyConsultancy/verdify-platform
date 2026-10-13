@@ -1,0 +1,42 @@
+{
+  "currentMainSourceReadback": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+  "declaredPredecessors": [
+    {
+      "closedAt": "2026-09-27T15:26:42Z",
+      "issue": 670,
+      "state": "CLOSED"
+    },
+    {
+      "closedAt": "2026-09-28T02:20:59Z",
+      "issue": 672,
+      "state": "CLOSED"
+    }
+  ],
+  "issue": 396,
+  "recommendation": "Root can accept the original bounded #396 recovery clauses by these evidence joins and the updated #245 handoff; do not require another native fault/physical-host test solely because targetUID is new. Keep #245 and full #643 productionadoption distinct, and do not claim a live cutover occurred. RootownsGitHubclosure/rollup.",
+  "relatedSpoolPredecessor": {
+    "closedAt": "2026-10-13T01:43:16Z",
+    "issue": 382,
+    "state": "CLOSED"
+  },
+  "rows": [
+    {
+      "assessment": "bounded alongside candidate accepted",
+      "evidence": "current b087 integration PG16.13/Timescale2.25.2/vector0.8.1 exact8b461e37digest;3instances/required3physicalhostdomains/20Gi+5Gi each/R2; reader-only recovery/worker0/isolation/device0 target Jobs; latest2026-10-13T19:45:53.994098+00:00zero-clients/3Ready",
+      "limit": "75Gi logical/150GiR2 already allocated; old allocation snapshots are not new reservation; worker0 is an inspection freeze, not production maintenance policy",
+      "originalClause": "candidate digest-compatible/storage/anti-affinity, no productionwriter/device route"
+    },
+    {
+      "assessment": "supported bounded recovery proof is retained; no blanket new fault drill needed for same declared boundary",
+      "evidence": "historical A-only/AB-notC recovery, full951/9699549/catalog/count-time parity,454/454ack retained/8.463646806s gracefulprimary-loss gap/postfailover reseal; later275frozenA preservation; actualnewb087samearchive restoration+full951 exact274+reviewed275/admission/full95277/42+107duty+382inverse andcurrent9ordinarypoolroute legs",
+      "limit": "does not prove physicalhost/node loss, currentprodRPO/RTO or after-write endpoint rollback; do not relabel historicalclusterUIDs/currentintegration tests. EarlierfailedScheduler/partialCOPY seals remainfailed.",
+      "originalClause": "restore/failover/PITR proven with data checks, not onlyReady"
+    },
+    {
+      "assessment": "updated275/currentintegration handoff packet delivered; actual#245execution and missingproductionmeasurements remainseparate",
+      "evidence": "current275-contained-cutover-rollback-packet.md plus original274 packet, exactfresh-target identities/receipt hashes, archivedtimingboundaries, completewriterfence/finalcoherentrestore/prewriteinverse/postwritereverse-restore-or-fixforward/60min+7day retention sequence",
+      "limit": "notexecution-readyproductionwindow: freshsource/candidatecoords/finaldelta/retentionpolicy/allwritersquiescent/fence-to-firstwrite timings/postwrite reverse-restore remainunmeasured/unselected; no oldsnapshotpromotion or DB_HOSTchange",
+      "originalClause": "#245 exact cutover/rollback packet and measured downtime/data risks; liveDBunchanged"
+    }
+  ]
+}

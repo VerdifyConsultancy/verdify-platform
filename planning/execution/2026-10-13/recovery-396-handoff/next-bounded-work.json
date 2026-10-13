@@ -1,0 +1,55 @@
+{
+  "authorityAndRealMeasurements": {
+    "currentNineCredentialWindow": "completedNULLinverse/21UIDcleanup; notborrowed",
+    "genuineMissingMeasurements": [
+      "currentproductionfencedfreshsnapshot/parityclock",
+      "allactualwritersquiescent andfence-to-firstnewcommittedwrite downtime",
+      "completepostwrite reverse-restore correctness/duration or explicitfixforward boundary",
+      "firstactualproductionTimescalejobpolicy execution with datahistory impact",
+      "60minuteinitialobservation and7daydurabilitybake after actualcutover"
+    ],
+    "live245CutoverOrRetirement": "outsidecurrentlyauthorizedscope; exactattendedrequest onlyafterconcretefreshsource/target/fence/finaldelta/rollback packet",
+    "newTargetOrCredentialOrNativeFault": "notauthorizedbythispacket; definefiniteactualneed/owner scopefirst ratherthan inferfrompastwindows",
+    "nextSourceReadOnlyTasksNeedNewJasonDecision": false,
+    "noCurrentHumanDecisionToAskForSourcePreparation": true
+  },
+  "capacityBasis": "proposed10sharedengineeringhours within user40h/week; estimates, notactualtimeworked orruntimeelapsed",
+  "completedByThisPacket": "396 bounded proof/timing/clauses and275cutoverhandoff; no furthernativefault needed foralready-testeddeclaredboundary",
+  "nextUnblocked": [
+    {
+      "action": "bind completecurrentdesired mutator/scheduler/hook surfaces and existingowner runtime metadata to one exact reversiblewriterfence plan",
+      "dependsOn": "accepted396handoff; existingRetrysoleprodwritercoordination",
+      "execution": "source/read-only only; no scales/suspends/clientkills",
+      "hours": 3,
+      "id": "245-FENCE"
+    },
+    {
+      "action": "prepare checksum-bound finalcoherentexport/empty-candidate restore/parity/prewriteinverse and observedtimingworksheet; choose supported source-owned productioncandidate coordinates beforeexecution",
+      "dependsOn": "writerfence surfaceplan; sourceImage/schema/rolecontext",
+      "execution": "source/read-only only; no newtarget/PVC/import/DB_HOSTchange",
+      "hours": 3,
+      "id": "245-DELTA"
+    },
+    {
+      "action": "turn preservedTimescale worker0/retention failure into an exact declaredproduction scheduler job/policy proposal with affectedhistory and firstexecution measurementplan",
+      "dependsOn": "retainedjobs/policies; consult existingproductretentionrequirements before surfacing a materialtradeoff",
+      "execution": "retainedcatalog/source only; no scheduling/retentiondelete",
+      "hours": 2,
+      "id": "245-JOBS"
+    },
+    {
+      "action": "join accepted107+3pool+9route proofs to currentproductiondesired boundedrole contracts and soleowner runtime evidence; state remainingotherclient/health claims exactly",
+      "dependsOn": "e06dcf51terminalinverse; Retryruntimecustody",
+      "execution": "source/read-only andownercoordination; no credentials/endpoints/productionrollout",
+      "hours": 2,
+      "id": "643-ADOPTION-JOIN"
+    }
+  ],
+  "notScheduledAsNewTests": [
+    "repeat952/77/42fullseal",
+    "repeat83offlinetests",
+    "repeatgracefulPodloss solelyforfreshUID",
+    "physicalhostloss",
+    "newA/Bdatabasetargettofakeclientroute reversal"
+  ]
+}
