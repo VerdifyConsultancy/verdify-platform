@@ -1599,7 +1599,7 @@
         "db",
         "docs/runbooks"
       ],
-      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover. October12 contained proof: one admitted native target, committed275/separate admission,107 ordinary allowed/denied cases and two scientific read-only consumers passed; exact952 relations/9,699,553rows,77sequences,42study/catalog/8NULLroles resealed. Immutable b4eb826a plus independent e1a79f19. Failover/PITR/RPO/RTO and exact cutover packet remain separate; no production DB cutover.",
+      "baseline": "October11 review: PARTIAL: production migration275 is applied. Eight rehearsal CNPG clusters currently report healthy3/3. Later October6 full952-rowset/77-sequence/42-study-table frozen-A/B reseals supersede the old270-only assessment, but do not prove final ordinary-client reversal, post-fixture inverse/reseal and cutover packet. Reuse valid reseals and rejected-clone negative evidence; no DB cutover. October12 contained proof: one admitted native target, committed275/separate admission,107 ordinary allowed/denied cases and two scientific read-only consumers passed; exact952 relations/9,699,553rows,77sequences,42study/catalog/8NULLroles resealed. Immutable b4eb826a plus independent e1a79f19. Failover/PITR/RPO/RTO and exact cutover packet remain separate; no production DB cutover. October13 bounded original396clauses accepted/completed20:11:21Z/comment6154244423. Providerb97176ad clause-map/current275handoff joins exactcandidate/full95277/42/native275/107duties/382inverse/e06ninephase with retained PITR19.849456/19.069798sbase387/418s3Ready and gracefulprimary-Pod-loss454/454ACK/8.463646806sgap/12ambiguousunreplayed/1unACKcommitted. Later275operator-onlyswitchnotclientRTO.245receivespacketcomment6154243732; productionfence/finaldelta/postwriteRPO-RTO/jobpolicy/bake remainfutureconditional245work, not requiredphysicalhost/newUIDfaultgate. No productioncutover/freshfault/DBscan.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3288,8 +3288,8 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13",
-    "source_revision": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
+    "reviewed_at": "2026-10-13T20:11:21Z",
+    "source_revision": "0b03466a8f30a0494482c983853128f98cdc9e0a",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
     "open_issues": [
@@ -3319,7 +3319,6 @@
       379,
       386,
       390,
-      396,
       398,
       410,
       412,
@@ -3359,8 +3358,8 @@
         "title": "S2 — Completion sprint (October 13–26, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Finish bounded database recovery/role and reliable-delivery acceptance, and qualify authentic replay freshness in parallel. Four outcomes, 28–56 estimated hours within one shared 80-hour two-week envelope; reserve 24 hours at the upper estimate for actual recovery, review and decisions.",
-        "exit": "396 exact restore/failover/PITR evidence and cutover/rollback packet; 643 approved nine-process reversal/inverse plus exact remaining production-role decision packet; 644 capacity producer recovered and qualified broker cancellation/artifact behavior delivered, with unattended retry/concurrency clauses honestly resolved or explicitly carried; 419 measured replay freshness/branch provenance and known-good comparison. Close issues only on original clauses. No production DB cutover, credential rotation, OTA or physical experiment is implicit. Accepted949/382/303/304/965/976 remain completed."
+        "goal": "Complete remaining runtime-role adoption, reliable delivery and authentic replay freshness in parallel. #396 bounded recovery accepted; three remaining outcomes forecast20–40 engineering hours, within the original shared80-hour two-week envelope. Original four-outcome28–56 estimate remains historical, not hours worked.",
+        "exit": "Completed396 original alongside restore/failover/PITR clauses and exact245handoff retained. Remaining643 full selected production-role/whole-app acceptance,644 recovered producer and deployed cancellation/artifact plus honest retry/concurrency clauses,419 causal fresh/stale replay and known-good evidence. Separately prepare245writer-fence/finaldelta/jobpolicy worksheets from reserve without moving its production-cutover execution into this sprint. No production DB cutover/credentialrotation/OTA/physicalexperiment implicit; accepted949382303304965976 retained."
       },
       {
         "id": "S3",
@@ -3645,14 +3644,6 @@
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 396,
-        "sprint": "S2",
-        "hours_min": 8,
-        "hours_max": 16,
-        "next_action": "Reuse acceptedb4eb/e1a79/full95277/42seal and completed382/643evidence. Same targetworker follows approved643inverse with exact remaining restore/failover/PITR clause map and measured cutover/rollback packet; no production DB cutover or redundant fault scans.",
-        "owner_role": "Data/platform lead"
-      },
-      {
         "issue_number": 398,
         "sprint": "PHYSICAL",
         "hours_min": null,
@@ -3681,7 +3672,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Existing reused science worker owns source/offline replay freshness and real branch coverage, preserving measured as-of age/no future leakage. Request only genuinely missing bounded production export through Retry; source tests cannot fabricate corpus or physical evidence.",
+        "next_action": "Source467harnessfinite-staleguard/28targeted288native/296698causalaudit+invariant/bandselfdiff pass, original3clausesSOURCEmet. Correct runtimeCOPYdoc placement into excludedplanning path beforeordinarysourcePR; existingcapacity4849ownsCI, Retryreadonlyreview only. Historicalproxy716HUMIDIFY/0originaldevice remain390limits not extra419gate.",
         "owner_role": "Platform lead"
       },
       {
@@ -3793,7 +3784,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "NEWdirect Jason approval call_f945134a13af478c88f3cb474124b9d8 received for exact nine-check isolated window28d511. Existing sole target worker executes freshguarded3LOGIN/3Secret/9READONLYDNS→boundprimaryIP→DNS; awaitedclose/zero-backends/exactPASSWORDNULL/catalog/UIDinverse. Full selected production-role adoption remains separate; prepare concrete residual decision packet.",
+        "next_action": "e06dcf51 nine nativeprocesses/18READONLYcheckouts/DNS-IP-DNS all3consumers PASS;3PASSWORDNULL/cataloginverse/21UIDcleanup complete209swarmcachedwindow. Remaining fullselectedproductionduty/authority/wholeappadoption packet; existingcontainedworker joins evidence/prepares source-readonly scopes, no newcredential/cutoverauthority.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3801,7 +3792,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Owner4842/4845 merged6b7520e4/7cbe8c54 with12/12archives each. ONEbrokerbuild49e9 failed firstcapacitypreflight(signal-invalid): producerready=false/writable=false, not evidencephysicalzero. Sameowner now diagnoses/fixes exactcapacityproducerinowninglane; no bypass/resubmit untilgenuinechange. Thenqualifiedbroker/admissionadoption+ownedcancel/authenticatedpresent-absentartifact proof; unattendedretry/concurrencyremainexplicit.",
+        "next_action": "Both4842/4845 sourcefixesmerged; exactsingle7cbrokerbuilddeniedstalecapacityprofile156vs157. Preparedfixedoperatora895/bridge662/LaunchAgent185/61offlinePASS; normalownerPR4849solequalification15checks pending, no liveadoptionyet. Afterproducerrealreadywritable one transparentdocumenteddeliberaterebuildcapacity-profile157-recovery-20261013 allowed, originaldefaultfailurepreserved; thenbrokeradoption/cancel/artifactproof.",
         "owner_role": "Platform lead"
       },
       {
