@@ -63,13 +63,37 @@ checks:
       \ schema; accepted legacy corpus\";\n  exit 0;\nfi; exit \"$rc\" '"
   - name: firmware-secretless-compile
     command: "python3 - <<'PY'\nimport hashlib\nimport json\nimport os\nfrom pathlib\
-      \ import Path\nimport subprocess\nimport tempfile\n\nVERSION = '2026.6.5'\n\
-      IMAGE = 'ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c'\n\
-      TARGETS = ('greenhouse', 'greenhouse-recovery')\nDUMMY = 'wifi_ssid: CI-NONDEPLOYABLE\\\
-      nwifi_password: CI-NONDEPLOYABLE-NOT-A-WLAN-PASSWORD\\nota_password: CI-NONDEPLOYABLE-NOT-AN-OTA-PASSWORD\\\
-      napi_encryption_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\\n'\n\n\n\
-      def digest(path):\n    return hashlib.sha256(path.read_bytes()).hexdigest()\n\
-      \n\ndef source_files(root):\n    # Read only tracked firmware blobs; never follow\
+      \ import Path\nimport platform\nimport subprocess\nimport tempfile\n\nVERSION\
+      \ = '2026.6.5'\nIMAGE = 'ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c'\n\
+      TARGETS = ('greenhouse', 'greenhouse-recovery')\nCOMPILERS = frozenset(prefix\
+      \ + '-' + suffix\n    for prefix in ('xtensa-esp-elf', 'xtensa-esp32-elf', 'xtensa-esp32s2-elf',\
+      \ 'xtensa-esp32s3-elf')\n    for suffix in ('as', 'g++', 'gcc', 'ld'))\nDUMMY\
+      \ = 'wifi_ssid: CI-NONDEPLOYABLE\\nwifi_password: CI-NONDEPLOYABLE-NOT-A-WLAN-PASSWORD\\\
+      nota_password: CI-NONDEPLOYABLE-NOT-AN-OTA-PASSWORD\\napi_encryption_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\\\
+      n'\n\n\ndef digest(path):\n    return hashlib.sha256(path.read_bytes()).hexdigest()\n\
+      \n\ndef compiler_provenance(packages_dir):\n    # Capture actual downloaded\
+      \ bytes before private scratch is removed.\n    # These are the same sixteen\
+      \ compiler filenames qualified in the pinned\n    # ARM64 image; host-specific\
+      \ hashes must be observed afresh on amd64.\n    base = packages_dir.resolve()\n\
+      \    packages = []\n    observed = []\n    for manifest in sorted(packages_dir.glob('*/package.json')):\n\
+      \        if not manifest.resolve().is_relative_to(base):\n            raise\
+      \ RuntimeError('provenance path escapes private packages')\n        metadata\
+      \ = json.loads(manifest.read_text())\n        binaries = []\n        for binary\
+      \ in sorted((manifest.parent / 'bin').glob('*')):\n            if binary.name\
+      \ not in COMPILERS:\n                continue\n            if not binary.resolve().is_relative_to(base):\n\
+      \                raise RuntimeError('provenance path escapes private packages')\n\
+      \            if binary.is_file():\n                binaries.append({'name':\
+      \ binary.name, 'bytes': binary.stat().st_size,\n                           \
+      \      'sha256': digest(binary)})\n                observed.append(binary.name)\n\
+      \        packages.append({'name': metadata['name'], 'version': metadata['version'],\n\
+      \            'package_manifest_sha256': digest(manifest), 'compiler_binaries':\
+      \ binaries})\n    if not packages:\n        raise RuntimeError('compiled toolchain\
+      \ package provenance absent')\n    if len({p['name'] for p in packages}) !=\
+      \ len(packages):\n        raise RuntimeError('duplicate compiled toolchain package\
+      \ identity')\n    if sorted(observed) != sorted(COMPILERS):\n        raise RuntimeError('compiler\
+      \ binary provenance incomplete or duplicated')\n    return {'schema': 'verdify-secretless-container-toolchain/v1',\n\
+      \            'actual_host': platform.platform(), 'packages': packages}\n\n\n\
+      def source_files(root):\n    # Read only tracked firmware blobs; never follow\
       \ checkout symlinks, an ignored\n    # secrets.yaml, .esphome cache, operator\
       \ artifacts or a caller-selected file.\n    names = subprocess.check_output(['git',\
       \ 'ls-tree', '-rz', 'HEAD', 'firmware'], cwd=root).split(b'\\0')\n    result\
@@ -135,10 +159,8 @@ checks:
       \ not in negative.stdout:\n                    raise RuntimeError('broken generated\
       \ C++ did not fail compilation as expected')\n                report['generated_cpp_negative']\
       \ = {'result': 'expected_compile_failure', 'exit_code': negative.returncode}\n\
-      \        report['platformio_packages'] = {json.loads(p.read_text())['name']:\
-      \ json.loads(p.read_text())['version'] for p in sorted((work / 'platformio/packages').glob('*/package.json'))}\n\
-      \        if not report['platformio_packages']:\n            raise RuntimeError('compiled\
-      \ toolchain package provenance absent')\n        print('FIRMWARE_SECRETLESS_RECEIPT='\
-      \ + json.dumps(report, sort_keys=True), flush=True)\n\n\nif __name__ == '__main__':\n\
-      \    main()\nPY\n"
+      \        report['compiler_provenance'] = compiler_provenance(work / 'platformio/packages')\n\
+      \        report['platformio_packages'] = {p['name']: p['version'] for p in report['compiler_provenance']['packages']}\n\
+      \        print('FIRMWARE_SECRETLESS_RECEIPT=' + json.dumps(report, sort_keys=True),\
+      \ flush=True)\n\n\nif __name__ == '__main__':\n    main()\nPY\n"
     image: ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c

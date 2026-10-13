@@ -1671,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof. October12 contained proof b4eb826a/e1a79f19: six real LOGIN duties107 allowed/denied cases plus executor/lifecycle read-only seams; all8NULLcredentials/77sequences/952relations/42study/catalog restored,19 temporary objects removed. Production workload role adoption, endpoint reversal/pool-close/health boundaries remain separate; no production credential rotation.",
+      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof. October12 contained proof b4eb826a/e1a79f19: six real LOGIN duties107 allowed/denied cases plus executor/lifecycle read-only seams; all8NULLcredentials/77sequences/952relations/42study/catalog restored,19 temporary objects removed. Production workload role adoption, endpoint reversal/pool-close/health boundaries remain separate; no production credential rotation. October13native42e791f90409fc7e7a08ab6ef3aa7b1f8e669211: exactcb21API75f/ingestorc6cc/MCPcf26 authenticatedREADONLYpool/hotqueries/awaitedclose/zerootherbackendsPASS; all3temporarypasswords restoredNULL/exactcatalog4355/9UIDcleanup. No fixture/newfullCOPY; accepted382fullbaseline reused. Singleendpointseamaccepted; fullproductionroleadoption andsupportedconfigA→B→A remainunproved. GitHubcomment6148506605.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3254,7 +3254,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T01:47:39Z",
+    "reviewed_at": "2026-10-13T15:00:00Z",
     "source_revision": "9136f158641f918593df53471e3efe1792b7ad83",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3777,7 +3777,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Published24c94dd4 integration-target readonly API/ingestor/MCP pool renderer prep;61offlinechecks/oldprofilesbyteequal. Admit serial native pool seam only after fresh exact cache/credential scope; sixconsumer A→B→A semantics remain unproved. Reuse107-case/eightrole/fullreseal evidence.",
+        "next_action": "42e791f9 three actualAPI/ingestor/MCP READONLY pools/close/zero-backends passed; allNULLpassword/catalog inverse/9UIDcleanup exact. Reuse107-case/full382seal; prepare concrete supportedA→B→A config/pool protocol and remaining production identities/adoption without inventedsecondDB/alias/fault or repeatednativechecks.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3785,7 +3785,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "OwnerPR4807 f5d required native12/12 SUCCESS; hold merge/adoption during production window. Afterwards coordinate4807-first/4808 combined tuple qualification and remaining authenticated artifact/cancel/retry/concurrency clauses using the existing18-clause matrix.",
+        "next_action": "Agents4807 merged191b and4808 mergedc4a0af43(parentcd46/preserved3driftcommits);839PR15/15+15archives qualification retained. Ordinarynative-main advisoryerror56236230519 is notfreshtestfailure/PASS. Existingowner verifies minimaladoption bytes equivalenttoqualifiedsource/mountedruntimehashes/manualpins; productmirrorVerdifymainviaRetryonly. Broaderartifact/cancel/retry/concurrency unproved.",
         "owner_role": "Platform lead"
       },
       {
