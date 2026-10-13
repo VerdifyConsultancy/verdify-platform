@@ -1,0 +1,287 @@
+{
+  "schema": "verdify.issue419.delivery/v1",
+  "issue": 419,
+  "delivery_state": "Exact qualified tree merged; PR and main native validation succeeded; unchanged production readback verified",
+  "pull_request": "https://github.com/VerdifyConsultancy/verdify-platform/pull/978",
+  "pr_head": "39153c4a7fe35e9ebd82ccc5b8f5d6a35d9e7c06",
+  "pr_base_at_open": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+  "pr_tree": "916be227f3f858cec09d47732b910e373f552beb",
+  "qualified_candidate": "8a9c45498ebcc4f36f84180e9171ca275ec115eb",
+  "source_patch_sha256": "6662c150f59c7c3659395a1a6b4c7605efd5b5efa92e16c955853c3e9d2705b2",
+  "source_files_sha256": {
+    "firmware/test/replay_overrides.cpp": "4fed66b6df996704de3b0663102c6bb3cf1be2222e8dd0b89ac82f5049c19e1d",
+    "planning/reviews/2026-10-13/OUTDOOR-REPLAY-PROVENANCE.md": "b1c582188653883e74982e6450720c3a0311e9e44ff044e12932e6b133be5e98",
+    "tests/test_replay_outdoor_coverage.py": "02d6c54ef12abbbc0658b7f783699d78ad4f65ad2d26fdc3d687eb307ad01733"
+  },
+  "source_behavior": "Require nonzero finite observation-backed stale-age coverage alongside existing fresh/regime/action thresholds; missing ages cannot earn stale coverage.",
+  "qualification": {
+    "reused_by_identical_tested_closure": true,
+    "targeted": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 28
+    },
+    "native_greenhouse": {
+      "failed": 0,
+      "passed": 288
+    },
+    "default_invariants": {
+      "full_policy_coverage": false,
+      "policy_fields_fully_imposed": 0,
+      "rows": 296698,
+      "violations": 0
+    },
+    "retained_rom_policy_coverage": {
+      "full_coverage": false,
+      "imposed": 27,
+      "qualified_order_revision": null,
+      "total": 48
+    },
+    "band_derived_replay": {
+      "candidate_source": "467c3733d3b6f291174cd53b772d1cb020fb93e9",
+      "old_source": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
+      "rows": 296698,
+      "divergent_rows": 0,
+      "diagnostic_only_rows": 0,
+      "exit_code": 0,
+      "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_sha256": "d23ad5c6265554af7ceefa89516b563b850e462b46dfd6acfeb602f0b99582eb",
+      "trace_sha256": "18abd8497f0cfc2ef1e9bcf6acca605dac2515ed681b94c4e0feb1a4890af430"
+    },
+    "ordinary_known_good_selfdiff_reused": true,
+    "ordinary_selfdiff_source": "bc35137017b49deac04495c11ef88b48086c5802",
+    "ordinary_selfdiff_receipt_sha256": "99dbc4371d727ba50897e7cfbbe5e015b7a73064fb46ed29655aca681ca63134",
+    "compiled_control_logic_and_emitter_equal": true,
+    "initial_fixture_failure_preserved": {
+      "cause": "synthetic fixture used CRLF; corrected to standard exporter LF and added non-vacuous provenance assertion; failed JUnit retained",
+      "errors": 0,
+      "failures": 2,
+      "skipped": 0,
+      "tests": 28
+    },
+    "pre_fix_rejection_canary": {
+      "base": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
+      "errors": 0,
+      "expected_failure": "otherwise complete all-fresh native coverage gate incorrectly passes before fix",
+      "failures": 1,
+      "skipped": 0,
+      "tests": 2
+    },
+    "commit_hooks_passed": true
+  },
+  "corpus": {
+    "before_and_after_gate": "PASS",
+    "columns": 91,
+    "decompressed_sha256": "ab03e16bd833fa5530832f85fceb67c36a1d3abb624ba5d5a90415d8b7b234ef",
+    "finite_stale_rows_at_or_above_600s": 6,
+    "fresh_rows_under_actual_600s_limit": 199598,
+    "gzip_sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b",
+    "hold_required_rows": 356,
+    "mx_heat_assist_rows": 71725,
+    "mx_vent_dehum_rows": 29857,
+    "mx_vent_humidify_historical_proxy_rows": 716,
+    "observation_backed_rows": 295833,
+    "observations_all_historical_proxy": true,
+    "original_device_age_rows": 0,
+    "rows": 296698,
+    "stdout_identical_except_added_stale_counter": true,
+    "unavailable_age_rows": 97094,
+    "unchanged": true
+  },
+  "causality_audit": {
+    "counts": {
+      "age_elapsed_mismatch": 0,
+      "finite_age": 199604,
+      "finite_fresh_under_600": 199598,
+      "finite_stale_at_least_600": 6,
+      "finite_without_observation": 0,
+      "future_observation": 0,
+      "negative_age": 0,
+      "nonfinite_age": 0,
+      "other_finite_provenance": 0,
+      "rows": 296698,
+      "unavailable_age": 97094
+    },
+    "passed": true,
+    "sha256": "61b4ea5af79ac246bab75a66713ed4990c9e62bacdb2d38d9ac8de94b96e80c5",
+    "age_basis": "elapsed time since persisted conservative outdoor change observation; not raw Tempest packet age",
+    "rounding_tolerance_seconds": 0.500001
+  },
+  "literal_issue419_source_clauses": [
+    {
+      "basis": "Explicit conservative-change-observation timestamps and elapsed ages;199604finite/199598fresh/6stale; actual compiled branch counts; actual all-fresh pre-fix rejection regression fails; missing-age/provenance cannot earn stale counter.",
+      "clause": "Corpus contains measured finite outdoor age with provenance and both fresh/stale branches; a zero-coverage corpus fails loudly.",
+      "not_claimed": "raw Tempest packet age or original-device corpus coverage",
+      "source_evidence": "MET in source evidence",
+      "delivery_evidence": "Qualified source bytes adopted exactly on main; fresh PR and main native gates passed."
+    },
+    {
+      "basis": "All296698rows audited,0future/negative/age-provenance/elapsed mismatches; current actual embedded merge test refuses40s callback leaking into30s row; direct projector rejects future event and preserves missing/malformed/sentinel stale behavior.",
+      "clause": "No future outdoor sample leaks into replay; missing values preserve safe stale behavior.",
+      "source_evidence": "MET in recorded replay scope",
+      "delivery_evidence": "Qualified source bytes adopted exactly on main; fresh PR and main native gates passed."
+    },
+    {
+      "basis": "28focused/288native;296698default-invariant rows0violations; exact8ee-to467band-derived selfdiff296698rows0decision/diagnostic differences atthreshold0; unchanged-source/corpus accepted ordinaryselfdiff retained. Guard/test bytes remain identical at corrected8a and prospective0b composition; no behavior checks repeated for docs-only correction.",
+      "clause": "Native/invariant/band and targeted outdoor tests pass against candidate and known-good self-diff.",
+      "source_evidence": "MET in source qualification",
+      "delivery_evidence": "Qualified source bytes adopted exactly on main; fresh PR and main native gates passed."
+    }
+  ],
+  "broader_390_limitations": {
+    "measured_device_humidify_coverage_proven": false,
+    "not_an_extra_issue419_gate": true,
+    "original_device_age_rows": 0,
+    "physical_benefit_proven": false,
+    "raw_tempest_packet_timestamp_claimed": false
+  },
+  "scope": {
+    "only_offline_harness_tests_excluded_planning": true,
+    "runtime_documentation_controller_exporter_corpus_unchanged": true,
+    "production_render_byte_identical": true,
+    "production_render_sha256": "158eceaf02c0b98ed10c03699ed5dd81b57bdc51292a06cf7c736975fe3fd721",
+    "no_esphome_compile_ota_image_promotion_sync_ingestor_replacement_or_collector": true,
+    "optional_empirical_sql_executed": false,
+    "detailed_runtime_readback_private": true
+  },
+  "corrected_delivery_scope": {
+    "initial_runtime_doc_image_input_error_preserved": true,
+    "runtime_doc_restored": true,
+    "classifier_and_dockerignore_unchanged": true
+  },
+  "preflight_classification": {
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "39153c4a7fe35e9ebd82ccc5b8f5d6a35d9e7c06",
+    "base_revision": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+    "mode": "validate",
+    "profiles": [],
+    "reasons": {},
+    "paths_sha256": "fce9b873fb91d6239b62a7387d3ff727ca88c06c2e56d4c3374da83aa4299185"
+  },
+  "prior_975_image_delivery": {
+    "commit": "36b1b63d622d2eb709a827eceb77b07c6d0ad675",
+    "workflow": "verdify-platform-ci-496hd",
+    "phase": "Failed",
+    "selected_profiles": [
+      "ingestor"
+    ],
+    "stopped_at": "registry-capacity-preflight",
+    "denial_reason": "signal-invalid",
+    "kaniko_or_publication_started": false,
+    "outstanding": true,
+    "not_retried_or_relabelled_by_this_delivery": true
+  },
+  "adoption_commit": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+  "parent": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+  "adoption_tree": "916be227f3f858cec09d47732b910e373f552beb",
+  "files": [
+    {
+      "path": "firmware/test/replay_overrides.cpp",
+      "git_blob": "ac81535a33bda93f2ad9d961221fc463c495d2b7",
+      "sha256": "4fed66b6df996704de3b0663102c6bb3cf1be2222e8dd0b89ac82f5049c19e1d",
+      "bytes": 30433,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-13/OUTDOOR-REPLAY-PROVENANCE.md",
+      "git_blob": "fdd2d9e1e5307a0014ba8763203f6986be746ce5",
+      "sha256": "b1c582188653883e74982e6450720c3a0311e9e44ff044e12932e6b133be5e98",
+      "bytes": 5584,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "tests/test_replay_outdoor_coverage.py",
+      "git_blob": "328b87d8d0b95fde54c7ca7eb9db5c5ea440e686",
+      "sha256": "02d6c54ef12abbbc0658b7f783699d78ad4f65ad2d26fdc3d687eb307ad01733",
+      "bytes": 4111,
+      "provider_bytes_exact": true
+    }
+  ],
+  "exact_pr_tree_adopted": true,
+  "pr_native_ci": {
+    "name": "verdify-platform-pr-ci-gssvw",
+    "uid": "5e31fd08-839e-4e01-ab8f-1aaf31b013a3",
+    "phase": "Succeeded",
+    "started_at": "2026-10-13T22:04:20Z",
+    "finished_at": "2026-10-13T22:15:29Z",
+    "executed_pod_nodes": [
+      {
+        "display": "report(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T22:15:09Z",
+        "finished_at": "2026-10-13T22:15:21Z"
+      },
+      {
+        "display": "report-pending(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T22:04:20Z",
+        "finished_at": "2026-10-13T22:04:32Z"
+      },
+      {
+        "display": "trusted-precheck",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T22:04:20Z",
+        "finished_at": "2026-10-13T22:04:26Z"
+      },
+      {
+        "display": "validate(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T22:04:40Z",
+        "finished_at": "2026-10-13T22:15:04Z"
+      }
+    ],
+    "executed_builder_count": 0,
+    "direct_pod_identity_captured_before_gc_and_bound_to_terminal_node": true,
+    "github_status": {
+      "id": 56274481273,
+      "state": "success",
+      "context": "Verdify Platform / Argo PR CI",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "updated_at": "2026-10-13T22:15:19Z"
+    }
+  },
+  "main_native_ci": {
+    "name": "verdify-platform-ci-fcx49",
+    "uid": "6a576f1a-c24b-4f9f-b146-37b0c52224bd",
+    "phase": "Succeeded",
+    "started_at": "2026-10-13T22:16:00Z",
+    "finished_at": "2026-10-13T22:26:21Z",
+    "executed_pod_nodes": [
+      {
+        "display": "classify-push(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T22:16:00Z",
+        "finished_at": "2026-10-13T22:26:13Z"
+      }
+    ],
+    "executed_builder_count": 0,
+    "direct_pod_identity_captured_before_gc_and_bound_to_terminal_node": true,
+    "classification": {
+      "base_revision": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+      "mode": "validate",
+      "paths_sha256": "fce9b873fb91d6239b62a7387d3ff727ca88c06c2e56d4c3374da83aa4299185",
+      "profiles": [],
+      "reasons": {},
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "916b24a6f339b5b4b63093e9b13148a46e013f8c"
+    }
+  },
+  "runtime_summary": {
+    "observed_at": "2026-10-13T22:26:53.394754+00:00",
+    "sync": "Synced",
+    "health": "Healthy",
+    "revision": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+    "deployment_count": 15,
+    "all_deployments_ready": true,
+    "deployment_specs_and_identities_unchanged": true,
+    "exactly_one_ingestor": true,
+    "ingestor_identity_container_unchanged": true,
+    "ingestor_restarts": 0,
+    "application_spec_unchanged": true,
+    "last_operation_unchanged": true,
+    "detailed_readback_retained_privately": true
+  },
+  "shared_ci_release": "Return main/shared CI custody to the existing coordinator after this terminal receipt; no competing CI or production mutation remains.",
+  "issue_reconciliation": "Coordinator owns #419 closure and canonical backlog reconciliation after reviewing this terminal source/corpus receipt; broader #390 limits remain."
+}
