@@ -8,12 +8,14 @@
 # human (or a restore Job) reads the .dump file straight off the NAS without a
 # pod. iSCSI SSD is the live-DB hot path; backups belong on cheap shared NFS.
 #
-# storageClassName: "" + a matching PV is the contract Root completes. This PVC
-# binds to a STATICALLY PROVISIONED NFS PersistentVolume that Root applies at
-# the platform layer (the NFS server IP + export path are platform facts, not
-# repo facts, so they live in Root's PV, not here). Setting storageClassName to
-# the empty string opts OUT of dynamic provisioning so this never accidentally
-# carves a new dynamic volume — it waits for Root's named PV.
+# storageClassName: "" + a matching static PV is the contract. This PVC binds
+# to the statically provisioned NFS PersistentVolume `verdify-db-dumps-prod`,
+# which jvallery/storage-infra declares as an adopt-live grant in
+# inventory/synology-nas-shares.yml (storage-infra#574). The NFS server IP and
+# export path are platform facts, so they live in that PV, not here; the PV
+# keeps the part-of/component labels this selector matches. Setting
+# storageClassName to the empty string opts OUT of dynamic provisioning so this
+# never accidentally carves a new dynamic volume.
 #
 # READ-ONLY INTENT: the dumps volume is the system-of-record for backups. The
 # nightly CronJob is the ONLY writer (it mounts this RW to drop new .dump files
@@ -35,7 +37,7 @@ metadata:
 spec:
   accessModes: ["ReadWriteMany"]
   # Empty string -> bind to a pre-provisioned (static) NFS PV by selector/size,
-  # never dynamically provision. Root supplies the matching PV.
+  # never dynamically provision. storage-infra supplies the matching PV.
   storageClassName: ""
   selector:
     matchLabels:
@@ -44,6 +46,6 @@ spec:
   resources:
     requests:
       # Sized for many nightly -Fc dumps of the verdify TimescaleDB plus the
-      # retention headroom the CronJob's prune keeps. Root can grow the backing
-      # NFS PV without touching the workloads.
+      # retention headroom the CronJob's prune keeps. storage-infra can grow the
+      # backing NFS PV without touching the workloads.
       storage: 100Gi
