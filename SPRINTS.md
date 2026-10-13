@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T01:47:39Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T15:00:00Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -28,8 +28,8 @@ Exit: Complete remaining #396/#643 restored-data/runtime-role clauses and #644 a
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Published24c94dd4 integration-target readonly API/ingestor/MCP pool renderer prep;61offlinechecks/oldprofilesbyteequal. Admit serial native pool seam only after fresh exact cache/credential scope; sixconsumer A→B→A semantics remain unproved. Reuse107-case/eightrole/fullreseal evidence. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | OwnerPR4807 f5d required native12/12 SUCCESS; hold merge/adoption during production window. Afterwards coordinate4807-first/4808 combined tuple qualification and remaining authenticated artifact/cancel/retry/concurrency clauses using the existing18-clause matrix. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | 42e791f9 three actualAPI/ingestor/MCP READONLY pools/close/zero-backends passed; allNULLpassword/catalog inverse/9UIDcleanup exact. Reuse107-case/full382seal; prepare concrete supportedA→B→A config/pool protocol and remaining production identities/adoption without inventedsecondDB/alias/fault or repeatednativechecks. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Agents4807 merged191b/native-mainSUCCESS.4808head8390198a qualified15/15+15archives56189625808; existingowner resumes normalexpectedheadmerge under actualnon-strictrules afterconcretecurrentmaindrift check, then oneordinarynative-maincombinedqualification beforeminimalpolicy/mirror/runtimeadoption. No advisorysharedcheck rebasegate; broaderartifact/cancel/retry/concurrency remain. |
 
 ## S3 — Source truth, portable validation and prospective design
 
