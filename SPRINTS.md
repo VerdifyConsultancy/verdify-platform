@@ -2,12 +2,12 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T16:48:45Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T17:05:33Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **59 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
 | S2 — Recoverability and reliable delivery (October 2026) | sprint | 22–44 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
-| S3 — Source truth, portable validation and prospective design | sprint | 34–64 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
+| S3 — Source truth, portable validation and prospective design | sprint | 24–44 | 80 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
 | PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
@@ -33,14 +33,12 @@ Exit: Complete remaining #396/#643/#644 bounded acceptance. Completed #976 guard
 
 ## S3 — Source truth, portable validation and prospective design
 
-Kind: sprint. Capacity: 80 engineering hours. Goal: Adopt the existing command/telemetry fixes safely, qualify portable firmware tooling and choose a defensible prospective study before any draw.
+Kind: sprint. Capacity: 80 engineering hours. Goal: Adopt compatible source safely, finish authentic replay coverage and choose a defensible prospective study before any draw.
 
-Exit: #965 no false observed light history; #963 compatible source and explicitly bounded live/OTA acceptance; #304/#303/#419 authentic tooling/replay; #782 reproducible scientific and seasonal decision. Prepare independent work during S2.
+Exit: #965 disabled-route history provenance and #304/#303 bounded portable tooling/registered compilation are completed and retained. Remaining #963 compatible source/live boundaries, #419 authentic replay and #782 reproducible scientific/seasonal decision stay distinct; no OTA or physical qualification inferred.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | Platform lead | 6–12 | Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly. |
-| [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304) | Platform lead | 4–8 | Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments. |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |

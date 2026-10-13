@@ -931,7 +931,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary. October12 execution: qualified973 tree merged ascb21; five affected images built/registry-verified, d439 full-hook production adoption and runtime smoke passed. Remaining18-clause source/native matrix retained at95e2f6ef. Isolated owner source-label fix AgentsPR4807 head6f1ebc369 is in ordinary required native qualification; no live adoption or unattended retry/concurrency acceptance claimed. OwnerPR4807 correctedheadf5d21bdb requirednativeSUCCESS20:46:41UTC12/12archives; original6f1failureandstricttrustedhashcorrectionretained957cb35a. Open/unmerged/undeployedunderobservationhold.",
+      "baseline": "October11 review: PARTIAL: PR960–962 and successful authentic no-recursive-build receipt exist. Fleet owner PR agents#4747 is OPEN; runtime3648 failure is terminal history. Current production is OutOfSync/Degraded/Failed; 25/26 workload image specs match, ingestor differs. Finish exact-source authority/retry/cancel/concurrency/deployed-consumer matrix; #964 must restore the live adoption boundary. October12 execution: qualified973 tree merged ascb21; five affected images built/registry-verified, d439 full-hook production adoption and runtime smoke passed. Remaining18-clause source/native matrix retained at95e2f6ef. Isolated owner source-label fix AgentsPR4807 head6f1ebc369 is in ordinary required native qualification; no live adoption or unattended retry/concurrency acceptance claimed. OwnerPR4807 correctedheadf5d21bdb requirednativeSUCCESS20:46:41UTC12/12archives; original6f1failureandstricttrustedhashcorrectionretained957cb35a. Open/unmerged/undeployedunderobservationhold. October13 owner4807/4808 delivered and mounted command/mirror agreement verified; registered amd64 compiler accepted and303/304 closed. Broader source authority/authenticated-artifact/failure/cancel/unattendedretry/concurrency remains OPEN; existing source worker resumed bounded remaining matrix, no live mutation during canonical adoption window.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -999,7 +999,7 @@
         "Makefile",
         "docs"
       ],
-      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Tools and generated CI contract exist; current portable toolchain, clean real compile and least-authority delivery matrix remain unqualified. No generated fleet contract was hand-edited. October12 ownerPR4808exact4da requirednativeSUCCESS22:58:34/43WFs;141focused/24freshness. Actualpackage/compilerhashcapturedeclaredsourcequalifiedonly; livebrokerstilloldcommand/unmerged/adoptionpending. Finiteactualcaller/token/network/full-log/ownermanualpinpacketprepared; nofirmwarecompile/adoptionclaim.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Tools and generated CI contract exist; current portable toolchain, clean real compile and least-authority delivery matrix remain unqualified. No generated fleet contract was hand-edited. October12 ownerPR4808exact4da requirednativeSUCCESS22:58:34/43WFs;141focused/24freshness. Actualpackage/compilerhashcapturedeclaredsourcequalifiedonly; livebrokerstilloldcommand/unmerged/adoptionpending. Finiteactualcaller/token/network/full-log/ownermanualpinpacketprepared; nofirmwarecompile/adoptionclaim. October13 COMPLETED: owner4807/4808 merged and minimally adopted; exact generated mirror distributed on82195c1b. Registered Linux-amd64 Workflow327edaa05adf95dd7beaaee6/UID0d090d01 succeeded16:55:06Z/all5checks0, both maintained targets compiled and generated-C++ negative expectedexit1. All42firmwareblobs/10actualpackage manifests/16compilerhashes/full3500074Bstdout bound; sanitized owner receipt6150843427 provider-byteverified. Original six checkbox clauses assessed separately; generic caller token/ordinary networking/manual ownerArgo divergence remain explicit, no new grants or zero-ambient/device-denied/physical/cross-host-bit claim. Nonphysical artifact metadata supplied to390 comment6150900801. GitHubCOMPLETED closure verified17:05:28Z304/17:05:33Z303; no OTA/binarypromotion or390runtimeconsumption claimed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1036,7 +1036,7 @@
         "tests",
         ".agent-fleet/ci.yaml"
       ],
-      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Declared fleet compile/negative-fixture steps exist, and firmware input tree is unchanged from the previously reviewed source. A declaration and green native C++ tests are not executed ESPHome evidence: retained CI output lacks the full secretless compile receipt. Keep portable positive/negative acceptance open. October12 missingregisteredLinux-amd64two-target/negativecompile remains pending304ownercommandadoption/distribution; reuseunchangedARM64proof. ActualgenericcallerdoesnotprovenoSA/no-device-network; fullmainlogcapturebefore60sGCneeded. SourceCI4808successnotfirmwareacceptance.",
+      "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Declared fleet compile/negative-fixture steps exist, and firmware input tree is unchanged from the previously reviewed source. A declaration and green native C++ tests are not executed ESPHome evidence: retained CI output lacks the full secretless compile receipt. Keep portable positive/negative acceptance open. October12 missingregisteredLinux-amd64two-target/negativecompile remains pending304ownercommandadoption/distribution; reuseunchangedARM64proof. ActualgenericcallerdoesnotprovenoSA/no-device-network; fullmainlogcapturebefore60sGCneeded. SourceCI4808successnotfirmwareacceptance. October13 COMPLETED: owner4807/4808 merged and minimally adopted; exact generated mirror distributed on82195c1b. Registered Linux-amd64 Workflow327edaa05adf95dd7beaaee6/UID0d090d01 succeeded16:55:06Z/all5checks0, both maintained targets compiled and generated-C++ negative expectedexit1. All42firmwareblobs/10actualpackage manifests/16compilerhashes/full3500074Bstdout bound; sanitized owner receipt6150843427 provider-byteverified. Original six checkbox clauses assessed separately; generic caller token/ordinary networking/manual ownerArgo divergence remain explicit, no new grants or zero-ambient/device-denied/physical/cross-host-bit claim. Nonphysical artifact metadata supplied to390 comment6150900801. GitHubCOMPLETED closure verified17:05:28Z304/17:05:33Z303; no OTA/binarypromotion or390runtimeconsumption claimed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3288,7 +3288,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T16:48:45Z",
+    "reviewed_at": "2026-10-13T17:05:33Z",
     "source_revision": "82195c1b6ada500e254acca27018278597498a69",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3306,8 +3306,6 @@
       297,
       298,
       299,
-      303,
-      304,
       317,
       324,
       350,
@@ -3369,8 +3367,8 @@
         "title": "S3 — Source truth, portable validation and prospective design",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Adopt the existing command/telemetry fixes safely, qualify portable firmware tooling and choose a defensible prospective study before any draw.",
-        "exit": "#965 no false observed light history; #963 compatible source and explicitly bounded live/OTA acceptance; #304/#303/#419 authentic tooling/replay; #782 reproducible scientific and seasonal decision. Prepare independent work during S2."
+        "goal": "Adopt compatible source safely, finish authentic replay coverage and choose a defensible prospective study before any draw.",
+        "exit": "#965 disabled-route history provenance and #304/#303 bounded portable tooling/registered compilation are completed and retained. Remaining #963 compatible source/live boundaries, #419 authentic replay and #782 reproducible scientific/seasonal decision stay distinct; no OTA or physical qualification inferred."
       },
       {
         "id": "S4",
@@ -3541,22 +3539,6 @@
         "hours_max": null,
         "next_action": "Pull a coherent bounded change from the original acceptance after its native predecessors and physical conditions; preserve autonomous safety and locked study identity. No treatment tuning from an inventory or green test alone.",
         "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 303,
-        "sprint": "S3",
-        "hours_min": 6,
-        "hours_max": 12,
-        "next_action": "Reuse successful pinned positive/negative compilation receipts; finish exact portable target/CI adoption rather than recompiling unchanged source repeatedly.",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 304,
-        "sprint": "S3",
-        "hours_min": 4,
-        "hours_max": 8,
-        "next_action": "Reuse existing portable toolchain work and prove the exact least-authority firmware/database diagnostic environments.",
-        "owner_role": "Platform lead"
       },
       {
         "issue_number": 317,
