@@ -1,0 +1,268 @@
+{
+  "accepted_consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "accepted_consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "accepted_native_checkpoint_revision": "499131dac8647f0d74ee25677641621e117a02a9",
+  "accepted_native_source_receipt": {
+    "path": "planning/execution/2026-10-12/spool-final-image-382/native-seven-phase-checkpoint/phases/5/native.sanitized.json",
+    "sha256": "b8f889e81b2e01e3ced774b33426478187e4b24ecac88eb10d62345d1d405b8b"
+  },
+  "actually_guarded_image_modules": {
+    "ingestor.py": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+    "observation_spool.py": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+    "source_spool.py": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983"
+  },
+  "created_at": "2026-10-13T01:38:30.980959+00:00",
+  "files": {
+    "db/migrations/267-idempotent-observational-source-events.sql": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735",
+        "9136f158641f918593df53471e3efe1792b7ad83": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735"
+      },
+      "sha256": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735",
+      "worktree_equal": true
+    },
+    "ingestor/ingestor.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+        "9136f158641f918593df53471e3efe1792b7ad83": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d"
+      },
+      "sha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "worktree_equal": true
+    },
+    "ingestor/observation_spool.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+        "9136f158641f918593df53471e3efe1792b7ad83": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207"
+      },
+      "sha256": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207",
+      "worktree_equal": true
+    },
+    "ingestor/shared.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+        "9136f158641f918593df53471e3efe1792b7ad83": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2"
+      },
+      "sha256": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2",
+      "worktree_equal": true
+    },
+    "ingestor/source_spool.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+        "9136f158641f918593df53471e3efe1792b7ad83": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983"
+      },
+      "sha256": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+      "worktree_equal": true
+    },
+    "tests/fixtures/observational_source_events/qualify.sql": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "453bceabe7600bc787984e601ba44f42090a545e5c3c780156fe022f0a590f70",
+        "9136f158641f918593df53471e3efe1792b7ad83": "453bceabe7600bc787984e601ba44f42090a545e5c3c780156fe022f0a590f70",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "453bceabe7600bc787984e601ba44f42090a545e5c3c780156fe022f0a590f70"
+      },
+      "sha256": "453bceabe7600bc787984e601ba44f42090a545e5c3c780156fe022f0a590f70",
+      "worktree_equal": true
+    },
+    "tests/test_climate_event_spool.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "39fb557a707a5a971b1ccbda29ddbeffd38aeaaf7060275b235b6615fbeb47b0",
+        "9136f158641f918593df53471e3efe1792b7ad83": "39fb557a707a5a971b1ccbda29ddbeffd38aeaaf7060275b235b6615fbeb47b0",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "39fb557a707a5a971b1ccbda29ddbeffd38aeaaf7060275b235b6615fbeb47b0"
+      },
+      "sha256": "39fb557a707a5a971b1ccbda29ddbeffd38aeaaf7060275b235b6615fbeb47b0",
+      "worktree_equal": true
+    },
+    "tests/test_source_spool.py": {
+      "same_at_revisions": {
+        "499131dac8647f0d74ee25677641621e117a02a9": "3f34e41665591ad51f0d88c339f7dc3accc2b7703e94bcb96f839daa87cbe96a",
+        "9136f158641f918593df53471e3efe1792b7ad83": "3f34e41665591ad51f0d88c339f7dc3accc2b7703e94bcb96f839daa87cbe96a",
+        "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a": "3f34e41665591ad51f0d88c339f7dc3accc2b7703e94bcb96f839daa87cbe96a"
+      },
+      "sha256": "3f34e41665591ad51f0d88c339f7dc3accc2b7703e94bcb96f839daa87cbe96a",
+      "worktree_equal": true
+    }
+  },
+  "issue_382_disposition": "OPEN; original-clause acceptance remains coordinator-owned",
+  "limits": [
+    "No additional native setpoint_observed fixture execution",
+    "No additional native multi-event generation-transition FIFO proof",
+    "No physical host-power-loss experiment",
+    "No cross-queue total ordering promise",
+    "No full scheduler/device confirmation execution",
+    "No fresh image or target identity probe"
+  ],
+  "live_operations": {
+    "builds": 0,
+    "credentials": 0,
+    "jobs": 0,
+    "production_calls": 0,
+    "pvc_allocations": 0,
+    "target_calls": 0
+  },
+  "new_regression": {
+    "cases": [
+      "commit_response_lost",
+      "local_ack_lost"
+    ],
+    "current_caches_unchanged": [
+      "state.cfg_readback",
+      "state.setpoints",
+      "state.system",
+      "state.pending_setpoints",
+      "shared.cfg_readback",
+      "shared.cfg_readback_generation",
+      "shared.transport_observed_cfg_readbacks"
+    ],
+    "database": "explicit fake pool, no SQL connection",
+    "expected_database_call_order": [
+      "first original UUID",
+      "same first UUID retry",
+      "second original UUID",
+      "third original UUID"
+    ],
+    "file_sha256": "4753c00fd9da71ccb0767ecc3656dc7374e5b37783b2ea09a39800613e40e89b",
+    "forbidden_paths": [
+      "on_state_change",
+      "_record_cfg_readback",
+      "record_component_cfg_readback",
+      "_fanout_publish",
+      "shared.note_cfg_readback_observed"
+    ],
+    "name": "test_setpoint_replay_preserves_rollover_fifo_without_live_confirmation",
+    "path": "tests/test_observation_spool.py",
+    "queue": "real private temporary SQLite close/reopen",
+    "retry_current_generation": 99,
+    "runtime_generation_acceptance_order": [
+      "old-runtime:7",
+      "old-runtime:8",
+      "new-runtime:1"
+    ],
+    "source_time_order": "descending, deliberately different from acceptance order"
+  },
+  "preservation": {
+    "migration_changed": false,
+    "original_observation_test_functions_unchanged": 20,
+    "original_top_level_functions_unchanged": 21,
+    "prior_native_payloads_exact": 69,
+    "prior_payload_ledger_sha256": "e7604d1bd2fc558e426ed4b74fa5881fdc7ccc4846a6ae362c2f81bf73cb213a",
+    "product_source_changed": false
+  },
+  "reviewed_main_revision": "9136f158641f918593df53471e3efe1792b7ad83",
+  "schema": "verdify382-generation-confirmation-source-join-v1",
+  "scope": "local immutable source and accepted sanitized receipt join; no live calls",
+  "source_and_test_functions": {
+    "ingestor/ingestor.py": {
+      "_accept_observations": {
+        "end_line": 572,
+        "line": 527,
+        "sha256": "259665c5290ff18fc12611368120a549e21c4495e703d6e6bfa57e855944e897"
+      },
+      "_drain_climate_event_spool": {
+        "end_line": 1074,
+        "line": 1051,
+        "sha256": "eac5fa84705256e3cdc202c3bfb060e73713515a1f6b15f0dd211467682870ee"
+      },
+      "_drain_observations": {
+        "end_line": 524,
+        "line": 495,
+        "sha256": "dba8db1c4d0dc4596bbe293145f5d0ed16f803a00fe40b6aa52b74f086a12fc9"
+      },
+      "_generation_log_callback": {
+        "end_line": 3065,
+        "line": 3052,
+        "sha256": "64eb93a8acfc08c359371fa5cb140547e444dabbb403d408bf719ad3e649eaf8"
+      },
+      "_record_cfg_readback": {
+        "end_line": 3400,
+        "line": 3334,
+        "sha256": "574e77696742ecaebb20a0e7faa33099114ed2d8e54967dee6dbc1a890b272fa"
+      },
+      "esp32_loop": {
+        "end_line": 4289,
+        "line": 3955,
+        "sha256": "27e42e22935bfb56f1ab792ec561a246cc7be715d13b138b1777f64b04cafeb5"
+      }
+    },
+    "ingestor/observation_spool.py": {
+      "accept": {
+        "end_line": 43,
+        "line": 19,
+        "sha256": "50962361ca85c59e06193862f6762cc2312ea5f4170887433f8ce0ae5612824e"
+      },
+      "drain": {
+        "end_line": 64,
+        "line": 45,
+        "sha256": "9fe0b358c8fa4a422071731f9392f6466a1339d6190fc62210f036c7a429ee62"
+      }
+    },
+    "ingestor/shared.py": {
+      "note_cfg_readback_observed": {
+        "end_line": 309,
+        "line": 286,
+        "sha256": "ff74ea1e41446f4861ff9088007b9b9203b4de941044a71ba54d86ad0f28df16"
+      },
+      "note_transport_connected": {
+        "end_line": 283,
+        "line": 266,
+        "sha256": "fcc70784f245d1075e2afa675127568ec9c36abac7177fe41ad81edc9f6b7bbb"
+      }
+    },
+    "ingestor/source_spool.py": {
+      "put_many": {
+        "end_line": 79,
+        "line": 47,
+        "sha256": "71f4c2ed364ef1d46668772da6416b22f53249e0b208301b83f5a5b6a978af12"
+      },
+      "rows": {
+        "end_line": 92,
+        "line": 86,
+        "sha256": "08d0eddb8f5b5516468230d1e1ae2b87c2a873e9ca17baa3246591e33483ad5b"
+      }
+    },
+    "tests/test_climate_event_spool.py": {
+      "test_clear_only_after_fsync_acceptance_and_replay_preserves_identity": {
+        "end_line": 84,
+        "line": 67,
+        "sha256": "812d7b0628a467705f71419979d7e19fe2b68c3f55dbf2d420ea81ce53487f5f"
+      },
+      "test_fifo_replay_and_original_callback_provenance": {
+        "end_line": 144,
+        "line": 129,
+        "sha256": "02d7a2ba355b3102237562d7d153f2698c8b74a322d5ffa0fbc03f52744454d0"
+      }
+    },
+    "tests/test_observation_spool.py": {
+      "test_diagnostic_snapshot_excludes_stale_old_generation_and_unfenced_cache": {
+        "end_line": 389,
+        "line": 373,
+        "sha256": "4eff56572fe9ced698209c5319a759b1edb0b96e9f90801694729500ee24b4ed"
+      },
+      "test_old_log_callback_cannot_be_relabelled_after_reconnect": {
+        "end_line": 427,
+        "line": 402,
+        "sha256": "f2fa8164585779cc8783529c6c830a2a12505ee300e9abc40b9ffbf8350ec22a"
+      },
+      "test_setpoint_replay_preserves_rollover_fifo_without_live_confirmation": {
+        "end_line": 206,
+        "line": 133,
+        "sha256": "4d98270e4a2e04ec00a550590fc526baa655ea6483f0447a04f5c85cba9cdf62"
+      },
+      "test_unknown_commit_ack_failure_replays_exact_uuid_without_new_confirmation": {
+        "end_line": 129,
+        "line": 113,
+        "sha256": "8dcad19363d7c1e42ce9530a352f9221e019aa0289ddcc90c20a1b1f214b4185"
+      }
+    },
+    "tests/test_source_spool.py": {
+      "test_abrupt_process_exit_retains_original_order_and_lineage": {
+        "end_line": 35,
+        "line": 16,
+        "sha256": "7bf863cbba1b8071dee0bf36b949b3bbc3964c5b2034b8af06f52ea07057dbbe"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "bytes": 5660,
+      "path": "README.md",
+      "sha256": "1af720bb8ec118aff27ae32302e6ec32b335d6e208cd594e7a56d841cb3ee213"
+    },
+    {
+      "bytes": 849,
+      "path": "offline-checks.json",
+      "sha256": "cc182666c6a31a9acffd2f0cc89be0610c6210c657fc21906fc92f06857727ab"
+    },
+    {
+      "bytes": 11759,
+      "path": "source-contract-join.json",
+      "sha256": "148a09a07f5efdd3453f59bb454b4eb080629c1d05e3e8342b1851491afb3757"
+    }
+  ],
+  "schema": "verdify382-source-join-payloads-v1"
+}

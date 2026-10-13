@@ -129,6 +129,83 @@ def test_unknown_commit_ack_failure_replays_exact_uuid_without_new_confirmation(
     assert ingestor.state.setpoints == {}
 
 
+@pytest.mark.parametrize("interruption", ["commit_response_lost", "local_ack_lost"])
+def test_setpoint_replay_preserves_rollover_fifo_without_live_confirmation(monkeypatch, interruption):
+    """Use the real drain wrapper across rollover; PostgreSQL is an explicit fake."""
+    old_runtime = "38200000-0000-0000-0000-000000000001"
+    new_runtime = "38200000-0000-0000-0000-000000000002"
+    parameter = "vent_prefer_temp_delta_f"
+    # Deliberately reverse the clocks: acceptance FIFO must not sort by source
+    # time, numeric generation, or the currently connected writer's identity.
+    accepted = [
+        (old_runtime, 7, TS + timedelta(seconds=2), 5),
+        (old_runtime, 8, TS + timedelta(seconds=1), 6),
+        (new_runtime, 1, TS, 7),
+    ]
+    for runtime, generation, observed_at, value in accepted:
+        monkeypatch.setattr(ingestor, "COUNTER_SOURCE_RUNTIME_INSTANCE_ID", runtime)
+        monkeypatch.setattr(ingestor.shared, "transport_generation", generation)
+        assert ingestor._accept_observations(
+            [("setpoint_observed", {"parameter": parameter, "value": value})], observed_at
+        )
+    q = ingestor._get_observation_spool()
+    original = q.queue.rows()
+
+    # Existing current-device evidence is distinct from historical replay.
+    ingestor.state.cfg_readback[parameter] = 9
+    ingestor.state.setpoints[parameter] = 9
+    monkeypatch.setattr(ingestor.shared, "cfg_readback", {parameter: 9})
+    monkeypatch.setattr(ingestor.shared, "cfg_readback_generation", {parameter: 99})
+    monkeypatch.setattr(ingestor.shared, "transport_observed_cfg_readbacks", {parameter})
+
+    def forbidden_live_observation(*args, **kwargs):
+        pytest.fail("historical setpoint replay entered a live observation/confirmation path")
+
+    for module, name in (
+        (ingestor, "on_state_change"),
+        (ingestor, "_record_cfg_readback"),
+        (ingestor, "record_component_cfg_readback"),
+        (ingestor, "_fanout_publish"),
+        (ingestor.shared, "note_cfg_readback_observed"),
+    ):
+        monkeypatch.setattr(module, name, forbidden_live_observation)
+
+    class UnknownCommitPool(Pool):
+        async def fetchval(self, query, *args):
+            inserted = await super().fetchval(query, *args)
+            if interruption == "commit_response_lost" and len(self.calls) == 1:
+                raise OSError("connection lost after setpoint commit")
+            return inserted
+
+    if interruption == "local_ack_lost":
+        monkeypatch.setattr(q.queue, "acknowledge", lambda _: (_ for _ in ()).throw(OSError("setpoint ACK lost")))
+    pool = UnknownCommitPool()
+    with pytest.raises(OSError):
+        asyncio.run(ingestor._drain_observations(pool))
+    assert len(pool.committed) == 1 and q.queue.rows() == original
+
+    # Real SQLite close/reopen, then another current transport generation.
+    q.queue.close()
+    monkeypatch.setattr(ingestor, "_observation_spool", None)
+    monkeypatch.setattr(ingestor, "COUNTER_SOURCE_RUNTIME_INSTANCE_ID", "38200000-0000-0000-0000-000000000003")
+    monkeypatch.setattr(ingestor.shared, "transport_generation", 99)
+    assert ingestor._get_observation_spool().queue.rows() == original
+    asyncio.run(ingestor._drain_observations(pool))
+
+    assert pool.calls[0] == pool.calls[1]
+    assert [call[0] for call in pool.calls] == [original[0][1], *(row[1] for row in original)]
+    assert [call[1] for call in pool.calls[1:]] == ["setpoint_observed"] * 3
+    assert [(call[4], call[5], call[2], json.loads(call[6])["value"]) for call in pool.calls[1:]] == accepted
+    assert len(pool.committed) == 3 and ingestor._get_observation_spool().queue.rows() == []
+    assert ingestor.state.cfg_readback == {parameter: 9}
+    assert ingestor.state.setpoints == {parameter: 9}
+    assert ingestor.state.system == {}
+    assert ingestor.state.pending_setpoints == []
+    assert ingestor.shared.cfg_readback == {parameter: 9}
+    assert ingestor.shared.cfg_readback_generation == {parameter: 99}
+    assert ingestor.shared.transport_observed_cfg_readbacks == {parameter}
+
+
 def test_atomic_related_acceptance_capacity_rejects_whole_group(monkeypatch):
     monkeypatch.setenv("OBSERVATION_SPOOL_MAX_ROWS", "1")
     assert not ingestor._accept_observations(EVENTS[:2], TS)

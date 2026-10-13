@@ -1,0 +1,20 @@
+{
+  "command": "python -m pytest -q tests/test_observation_spool.py",
+  "git_diff_check": "PASS",
+  "native_database_test_claimed": false,
+  "new_cases_passed": 2,
+  "product_source_change": false,
+  "ruff_check": "PASS",
+  "ruff_format_check": "PASS",
+  "schema": "verdify382-generation-confirmation-offline-checks-v1",
+  "scope": "known offline module; explicit fake PostgreSQL pool and temporary SQLite only",
+  "setup_failure_preserved": {
+    "cases": 2,
+    "correction": "remove nonexistent patch target; retain real global hooks and cache invariants",
+    "reason": "test tried to patch nonexistent module-level note_native_observation; helper is locally imported",
+    "stage": "before first drain"
+  },
+  "source_file_sha256": "4753c00fd9da71ccb0767ecc3656dc7374e5b37783b2ea09a39800613e40e89b",
+  "tests_failed": 0,
+  "tests_passed": 23
+}
