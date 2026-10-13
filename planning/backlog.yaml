@@ -3288,8 +3288,8 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T17:05:33Z",
-    "source_revision": "82195c1b6ada500e254acca27018278597498a69",
+    "reviewed_at": "2026-10-13",
+    "source_revision": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
     "open_issues": [
@@ -3356,19 +3356,19 @@
     "sprints": [
       {
         "id": "S2",
-        "title": "S2 — Recoverability and reliable delivery (October 2026)",
+        "title": "S2 — Completion sprint (October 13–26, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Finish the three remaining S2 outcomes: restored-data/runtime-role acceptance and reliable source delivery.",
-        "exit": "Complete remaining #396/#643/#644 bounded acceptance. Completed #976 guarded Lab receipt recovery, #949 exact-source policy convergence, #382 declared spool boundaries and historical #964/#953 are retained; scientific/physical acceptance remains separate."
+        "goal": "Finish bounded database recovery/role and reliable-delivery acceptance, and qualify authentic replay freshness in parallel. Four outcomes, 28–56 estimated hours within one shared 80-hour two-week envelope; reserve 24 hours at the upper estimate for actual recovery, review and decisions.",
+        "exit": "396 exact restore/failover/PITR evidence and cutover/rollback packet; 643 approved nine-process reversal/inverse plus exact remaining production-role decision packet; 644 capacity producer recovered and qualified broker cancellation/artifact behavior delivered, with unattended retry/concurrency clauses honestly resolved or explicitly carried; 419 measured replay freshness/branch provenance and known-good comparison. Close issues only on original clauses. No production DB cutover, credential rotation, OTA or physical experiment is implicit. Accepted949/382/303/304/965/976 remain completed."
       },
       {
         "id": "S3",
         "title": "S3 — Source truth, portable validation and prospective design",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Adopt compatible source safely, finish authentic replay coverage and choose a defensible prospective study before any draw.",
-        "exit": "#965 disabled-route history provenance and #304/#303 bounded portable tooling/registered compilation are completed and retained. Remaining #963 compatible source/live boundaries, #419 authentic replay and #782 reproducible scientific/seasonal decision stay distinct; no OTA or physical qualification inferred."
+        "goal": "Adopt compatible source within its separate live boundaries and finish defensible prospective design after genuine inputs.",
+        "exit": "Completed965/303/304 retained. 419 is pulled into the current completion sprint; remaining963 source/live acceptance and782 genuine scientific/seasonal input decisions stay distinct. No OTA or physical qualification inferred."
       },
       {
         "id": "S4",
@@ -3649,7 +3649,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged.",
+        "next_action": "Reuse acceptedb4eb/e1a79/full95277/42seal and completed382/643evidence. Same targetworker follows approved643inverse with exact remaining restore/failover/PITR clause map and measured cutover/rollback packet; no production DB cutover or redundant fault scans.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3678,10 +3678,10 @@
       },
       {
         "issue_number": 419,
-        "sprint": "S3",
+        "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence.",
+        "next_action": "Existing reused science worker owns source/offline replay freshness and real branch coverage, preserving measured as-of age/no future leakage. Request only genuinely missing bounded production export through Retry; source tests cannot fabricate corpus or physical evidence.",
         "owner_role": "Platform lead"
       },
       {
@@ -3793,7 +3793,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "42e791f9 three nativeREADONLYpools/NULLcataloginverse/9UIDcleanup accepted. cdd87583 all3consumerDNS→boundprimaryIP→DNS source/protocol/83checks/9oldprofiles unchanged published; exact9serialwindow28d511prepared/fresh16:04metadata passes, NEWspecificuserdecisionpending. No oldcredentialapprovalreuse; prodroleadoption separate.",
+        "next_action": "NEWdirect Jason approval call_f945134a13af478c88f3cb474124b9d8 received for exact nine-check isolated window28d511. Existing sole target worker executes freshguarded3LOGIN/3Secret/9READONLYDNS→boundprimaryIP→DNS; awaitedclose/zero-backends/exactPASSWORDNULL/catalog/UIDinverse. Full selected production-role adoption remains separate; prepare concrete residual decision packet.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3801,7 +3801,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Owner4807/4808 merged andminimalmounted7a/gen823adoption verified(a246bd73); exactgeneratedmirror+canonical8files deliveredmain82195c1b, ordinaryCI9l5f5Succeeded/validate/noimages. Existingowner nowregisteredamd64/fullarchive at821 afterexplicitCIhandback. Labreceipt failure/Degradedsite separate; advisory562362notfreshFAIL/PASS; artifact/cancel/retry/concurrency remain.",
+        "next_action": "Owner4842/4845 merged6b7520e4/7cbe8c54 with12/12archives each. ONEbrokerbuild49e9 failed firstcapacitypreflight(signal-invalid): producerready=false/writable=false, not evidencephysicalzero. Sameowner now diagnoses/fixes exactcapacityproducerinowninglane; no bypass/resubmit untilgenuinechange. Thenqualifiedbroker/admissionadoption+ownedcancel/authenticatedpresent-absentartifact proof; unattendedretry/concurrencyremainexplicit.",
         "owner_role": "Platform lead"
       },
       {
