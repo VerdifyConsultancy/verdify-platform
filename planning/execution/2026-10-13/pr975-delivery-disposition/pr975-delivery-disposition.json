@@ -1,0 +1,153 @@
+{
+  "schema": "verdify.pr975.delivery-disposition/v1",
+  "recorded_at": "2026-10-13T22:48:04.917452+00:00",
+  "basis_main": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+  "pr": 975,
+  "pr_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/975",
+  "merged_source": "36b1b63d622d2eb709a827eceb77b07c6d0ad675",
+  "source_merged": true,
+  "source_files": [
+    {
+      "path": "deploy/k8s/components/db-backup/dumps-pvc.yaml",
+      "sha256": "047224de1deda239f25a116729ea9209cc608fc73aaf1eb4b36754bf4cbcf109",
+      "unchanged_since_975": true
+    },
+    {
+      "path": "deploy/k8s/components/db-backup/kustomization.yaml",
+      "sha256": "06435289c9672e825d6821aed5e1ab919fa523e383c5fad936b17275e0d1385d",
+      "unchanged_since_975": true
+    },
+    {
+      "path": "docs/runbooks/laptop-operator.md",
+      "sha256": "20ec81e45f67c44c3f3c75aeaa8745f0e7a2cc39cd158962397100277def3f39",
+      "unchanged_since_975": true
+    }
+  ],
+  "publication_delivered": false,
+  "runtime_image_adoption_delivered": false,
+  "historical_failed_attempt": {
+    "workflow": "verdify-platform-ci-496hd",
+    "uid": "4b9438a8-e54f-4b92-bef6-ae4cfd739601",
+    "phase": "Failed",
+    "started_at": "2026-10-13T18:08:04Z",
+    "finished_at": "2026-10-13T18:17:30Z",
+    "classification": {
+      "base_revision": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
+      "mode": "build",
+      "paths_sha256": "167041455f9e171fced63a434471b9ada87660c2088a68275954cee21e822acc",
+      "profiles": [
+        "ingestor"
+      ],
+      "reasons": {
+        "ingestor": [
+          "docs/runbooks/laptop-operator.md"
+        ]
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "36b1b63d622d2eb709a827eceb77b07c6d0ad675"
+    },
+    "source_validation_succeeded": true,
+    "failed_step": "registry-capacity-preflight",
+    "preflight_exit_code": 1,
+    "preflight_reason": "signal-invalid",
+    "fetch_build_context_tests_kaniko_publication_main_started": false,
+    "image_or_digest_emitted": false,
+    "pin_actuator_ran": false,
+    "retained_as_failed": true
+  },
+  "actual_copy_contract": {
+    "ingestor_copy": "COPY docs/ /app/docs/",
+    "dockerignore_reincludes": [
+      "!docs",
+      "!docs/**"
+    ],
+    "changed_runtime_input": "docs/runbooks/laptop-operator.md",
+    "path_impact_helper_sha256": "da7f0c99ed9cffa3783613e7363918494621136943af56767c853af40b20fab1",
+    "current_ci_template_uid": "967ecebc-fa98-4dd1-a529-89267ad7db55",
+    "current_ci_template_spec_sha256": "d822b24c557c1e64ecb0adef2f4be5550e6b84c918e968512d05dd254894e052",
+    "source_contract_sha256": {
+      "ingestor/Dockerfile": "d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+      ".dockerignore": "441049214598c7e162e23d3bd471057a7ee6d86eda2b9cfc404c4b847faa36ed",
+      "scripts/promote-release-pins.py": "246937d0a95cd2d2adac457842298f90062d5f4c11950e0e70296f6f02e85a3b",
+      "deploy/k8s/overlays/prod/release-pins.yaml": "a1b1b8ab9f4740ccbd7faab4c5f3f21942ca55e38cfba3d003fc2f0d548a21a7",
+      "deploy/k8s/overlays/prod/kustomization.yaml": "12cda47e3725c84c400d06f15988750c5d19c83a4b3a58958f0686c3c0a1f567"
+    }
+  },
+  "managed_candidate_release_comparison": [
+    {
+      "image": "verdify-api",
+      "candidate": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "release": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "equal": true
+    },
+    {
+      "image": "verdify-mcp",
+      "candidate": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "release": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "equal": true
+    },
+    {
+      "image": "verdify-ingestor",
+      "candidate": "sha256:6856b46476ca4edbbf2a13bdc4f989d450de58e0e4d20ea2abedc38fc116a885",
+      "release": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "equal": false
+    },
+    {
+      "image": "verdify-migrate",
+      "candidate": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+      "release": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+      "equal": true
+    },
+    {
+      "image": "verdify-experiment-v2-orchestrator",
+      "candidate": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+      "release": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+      "equal": true
+    }
+  ],
+  "unpromoted_ingestor_candidate": {
+    "digest": "sha256:6856b46476ca4edbbf2a13bdc4f989d450de58e0e4d20ea2abedc38fc116a885",
+    "source": "089a1b1e8a9526963409a5b1c484826fee05ed65",
+    "actuator_commit": "cc11025310930bb26c617d692b373f0d9f99c0a6",
+    "source_precedes_975": true,
+    "cannot_claim_975_delivery": true,
+    "do_not_blindly_promote_if_future_cohort_leaves_it_unaffected": true
+  },
+  "supported_disposition": {
+    "state": "Prepared conditional source-only disposition; await genuine qualified #643/276 source and credential packet before new release.",
+    "preferred_path": "Use one ordinary PR validation and automatic exact-main affected-image build for the reviewed #643/276 cohort, if its actual COPY classification selects ingestor. A successful descendant ingestor build carrying the unchanged #975 runbook can satisfy the outstanding publication gap in the same cohort.",
+    "exact_future_source_not_selected_yet": true,
+    "cohort_profiles_not_assumed": true,
+    "natural_ingestor_selection_required_for_this_combination": true,
+    "if_ingestor_unselected": "Keep #975 publication outstanding. Preserve its older candidate and failed workflow as history; do not claim ancestry or validate-only success built it. Obtain the existing CI owner supported disposition for any later explicitly identified attempt; no default-handle retry or fabricated source touch.",
+    "native_build_parameters": {
+      "step": "build-ingestor",
+      "template_ref": "repo-build/build",
+      "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+      "revision": "exact reviewed future main revision from automatic workflow",
+      "dockerfile": "ingestor/Dockerfile",
+      "context": ".",
+      "image": "verdifyconsultancy/verdify-ingestor",
+      "allowed_publish_scopes": "verdifyconsultancy",
+      "build_arg_GIT_SHA": "same exact future main revision"
+    },
+    "pin_actuator": "Uses successful affected-image refs; empty/unaffected refs leave prior candidates byte-identical. Never hand-edit candidate entries.",
+    "promotion": "Bind successful build receipts and the selected cohort to all five candidate/release pairs. If ingestor is rebuilt, its fresh cohort digest must replace 6856b464 before promotion; otherwise exclude that older candidate from any selected promotion and leave #975 outstanding. Use the existing promotion helper with an immutable receipt once the reviewed schema-compatible cohort is known.",
+    "production": "After explicit release of the qualified source/credential packet, use one attended full non-pruning sync for the cohort, with fresh migration hooks and no inherited resource selector. Preserve rollback pins and one Recreate ingestor change; qualify exact source/digest, one device writer and the existing post-rollout schema-error observation. No separate #975 ingestor replacement or convergence window.",
+    "acceptance": "Keep source merge, fresh image publication, candidate pinning, release promotion, full sync and runtime qualification separately evidenced. The historical496hd failure remains failed when a later successful descendant cohort resolves its delivery gap.",
+    "known_scripts_copy_condition": "Ingestor also COPYs scripts/; a newly tracked maintenance bootstrap script under scripts/ is an actual ingestor input. Exact forthcoming packet classification, not this conditional observation, determines the affected cohort."
+  },
+  "current_boundaries": {
+    "source_only_preparation": true,
+    "no_new_ci_attempt_or_default_handle_retry": true,
+    "no_manual_repo_build_submission": true,
+    "no_build_or_publication": true,
+    "no_candidate_or_release_pin_changes": true,
+    "no_sync_ingestor_replacement_or_runtime_probe": true,
+    "no_credential_or_secret_operation": true,
+    "no_schema_ddl_or_live_query": true,
+    "production_writer_custody_retained": true,
+    "shared_ci_idle_and_released_per_coordinator": true,
+    "no_immediate_canonical_main_adoption_requested": true
+  }
+}
