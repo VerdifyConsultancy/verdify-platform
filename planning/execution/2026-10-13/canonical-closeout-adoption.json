@@ -1,0 +1,145 @@
+{
+  "schema": "verdify-canonical-closeout-adoption/v2",
+  "adoption_commit": "8ee4775a6ae89b116c9d0a92e7f17720cc934019",
+  "parent": "82195c1b6ada500e254acca27018278597498a69",
+  "source_snapshot": "1945209f7dff76f3e483e2d45662b52010c787e7",
+  "manifest_v2_sha256": "11e5bfeab9b73e55fcfced5146e1dcb128d1d4d74b74ed9275491c7b6d2c9a39",
+  "files": [
+    {
+      "path": "planning/backlog.yaml",
+      "git_blob": "3c277129759e85e9cfed0385a109ad2d26395703",
+      "sha256": "69b80a82d6eea6f42835501cf3d86a3723cd1f29750a4fdaf14c9916a82dfe38",
+      "bytes": 305595,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "git_blob": "914bd46f345ba94e98b62b01026f023f11799dd0",
+      "sha256": "8785c3820defa03d4ca26b8768af13c318a2c0f5e8bdaf3ccc30483df27f15e7",
+      "bytes": 15202,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "LANES.md",
+      "git_blob": "66759a5b8a4d5e17719df81f16acefa3cbdd1e53",
+      "sha256": "69e8e9c30f941a3a43644d39efb180f36150cb033d910b14d812c2c36482657c",
+      "bytes": 29447,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "MILESTONES.md",
+      "git_blob": "0a8b8db9ff407314ff029af0fe6255f564d57df6",
+      "sha256": "676b4cc88ac21cde14eb43b55e47f1a21e14376a25015ac7ccae1e96a1333d1d",
+      "bytes": 15179,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "git_blob": "bb1940e67bade15033ef1529d94bec5ccf462f50",
+      "sha256": "9a34ddc5c082792ae8734b4be8954a6138718703aa999aae39c61c959116a8a0",
+      "bytes": 32413,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "EPICS.md",
+      "git_blob": "78759c0dda780f30d67ae3963b12a90daf70509f",
+      "sha256": "462f17a31274d970bb0dbcd8a233fcc306b0d49e5c246ceb1de89eb77fc9bc45",
+      "bytes": 14832,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/DEPENDENCIES.md",
+      "git_blob": "d1be3fc08c250fa01a4a3c5c9c5d182e107b9afc",
+      "sha256": "71a502fcc8890f848f7139284eb4a2a26d366df264fd223ae2d7107890cc9684",
+      "bytes": 21216,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "git_blob": "38fe0ef25b937cef75abf094e91c4cb20e65c433",
+      "sha256": "f1bd29a6948abd5212a245188058b450448ac4fb3af824079a21b206675de93d",
+      "bytes": 29000,
+      "provider_bytes_exact": true
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/README.md",
+      "git_blob": "0e9ba4efeb93037744ee7eea552628fdb5f8e852",
+      "sha256": "84b2a2e297c413334fe562a570257bfed328a7b65399ab319084f634c28277e2",
+      "bytes": 94786,
+      "provider_bytes_exact": true
+    }
+  ],
+  "local_validation": {
+    "schema_issues": 89,
+    "stages": 9,
+    "dependency_edges": 76,
+    "generated_views": 7,
+    "planning_tests_passed": 35,
+    "commit_hooks_passed": true
+  },
+  "original_seven_file_attempt": {
+    "state": "local validation failed before commit/push/CI",
+    "reason": "manifest omitted generated LANES.md and MILESTONES.md",
+    "corrected_by": "complete9filemanifest from same frozen source",
+    "failed_attempt_preserved_privately": true
+  },
+  "native_ci": {
+    "name": "verdify-platform-ci-jhswm",
+    "uid": "07d5618a-0de2-4590-982c-8da42a10beeb",
+    "phase": "Succeeded",
+    "started_at": "2026-10-13T17:17:21Z",
+    "finished_at": "2026-10-13T17:26:28Z",
+    "classification": {
+      "base_revision": "82195c1b6ada500e254acca27018278597498a69",
+      "mode": "validate",
+      "paths_sha256": "741596b0cf81edde5ab8bec3471c86ddf1886899e872d5565ef12fc48a77a3bd",
+      "profiles": [],
+      "reasons": {},
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "8ee4775a6ae89b116c9d0a92e7f17720cc934019"
+    },
+    "executed_pod_nodes": [
+      {
+        "display": "classify-push(0)",
+        "name": "verdify-platform-ci-jhswm[0].classify-push(0)",
+        "phase": "Succeeded",
+        "started_at": "2026-10-13T17:17:21Z",
+        "finished_at": "2026-10-13T17:26:25Z"
+      }
+    ],
+    "executed_builder_count": 0,
+    "direct_validation_pod_identity_captured_before_gc": true
+  },
+  "scope": {
+    "planning_only": true,
+    "no_product_firmware_ci_mirror_deploy_pin_changes": true,
+    "production_render_byte_identical": true,
+    "no_explicit_sync_build_promotion_or_collector": true
+  },
+  "runtime_summary": {
+    "sync": "Synced",
+    "health": "Healthy",
+    "all_deployments_ready": true,
+    "deployment_specs_and_identities_unchanged": true,
+    "ingestor_identity_container_unchanged": true,
+    "ingestor_restarts": 0,
+    "application_spec_last_operation_unchanged": true,
+    "detailed_readback_retained_privately": true
+  },
+  "planning_state": {
+    "open_execution_memberships": 59,
+    "remaining_s2": [
+      396,
+      643,
+      644
+    ],
+    "shared_capacity_hours_per_week": 40,
+    "accepted_issue_closeouts": [
+      303,
+      304,
+      976
+    ],
+    "prior949_acceptance_preserved": true
+  },
+  "shared_ci_release": "Return to existing coordinator after this terminal source/CI and unchanged-runtime readback; no competing CI mutation remains."
+}
