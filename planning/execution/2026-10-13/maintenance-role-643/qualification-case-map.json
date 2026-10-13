@@ -10,7 +10,7 @@
   "base_main": "0b03466a8f30a0494482c983853128f98cdc9e0a",
   "fresh_fit": "Native window remains held until coordinator shared-CI release and just-in-time primary RAM/NVMe/free-space/timeout fit; no allocation or native SQL in this packet",
   "later_production_credential_scope": "Two new permanent central-KSOPS identities and initial-only verifiers after source/native qualification and specific production scope; no old credential rotation",
-  "native_attempt": "One root-admitted exact-source transaction stopped at authentic before275 before276 DDL; independent catalog/77/role/ledger state exact, zero setters. See native-stop-276.json.",
+  "native_attempt": "Two stopped native attempts retained: original production275 vs CNPG projection precondition; then projected attempt at Timescale column-grant fault fixture. Both exact catalog/77 restored, zero setters; no completed276 native credit.",
   "new_Secrets_required_for_owner_native_guard": 0,
   "new_temp_passwords_required_for_owner_native_guard": 0,
   "offline_checks": {
@@ -19,6 +19,7 @@
     "focused_cases_passed": 43,
     "historical_first_run": "40/42; new GRANT regex missed indented lines, corrected without changing grant scope; native binding failure retained",
     "native_SQL_or_passwords_or_target_calls": "Native owner rollback attempt executed and stopped before276; zero password/Secret actions, no qualification success claim.",
+    "new_packaging_cases_passed": 3,
     "new_projection_cases_passed": 9,
     "new_projection_first_run": "7/8; test expected9 computed-call edits but exact raw276 contains7; count corrected, no source scope change. Then9/9 including quoted-signature regression pass.",
     "normal_source_lint": "Ruff PASS",
@@ -103,6 +104,7 @@
   },
   "scope": "SOURCE proposal plus preserved credential-free native stop; separate projected-native qualification pending exact new admission; issue643 remains OPEN",
   "source_hashes": {
+    "db/Dockerfile.migrate": "764aab463082d1b302f99bc23c9743a78242afb8a63161a832ba3397016e73cc",
     "db/migrations/276-ordinary-maintenance-runtime-boundaries.sql": "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
     "deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml": "13afef41403a3096d94ac2e053900339bca25305d960d270232dd1117f508f26",
     "deploy/k8s/components/runtime-role-boundary/maintenance-bootstrap-job.yaml": "7bd6e71f38dee5dc1b5986396cc3f0f15d67e12a053b4803a02d6b64f04d35df",
@@ -111,7 +113,7 @@
     "scripts/bootstrap-six-runtime-roles.py": "40b795ddf5432249dd2ad0f9d1f91426bf13f68de967c9c2d0ec00575346c651",
     "scripts/cnpg-maintenance-276-qualification.py": "69d1ccf8857858dac72871684bc30965d7249f7c982ed9f535f70b69a0fdb41f",
     "tests/test_cnpg_maintenance_276_projection.py": "40f982f7af2be2feee0f8efde2d1b261ac7f8902ac8f3871d6397b74a29953b1",
-    "tests/test_maintenance_runtime_boundaries.py": "b840963135504cc9d0eb70449773a6aea694eaeaa457ac495bcc2c68866e2867"
+    "tests/test_maintenance_runtime_boundaries.py": "fd7ab235a619da9585bc2c104d926552cdb45a4dbc590aa62899da896772ca05"
   },
   "whole_issue_643": "OPEN"
 }

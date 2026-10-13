@@ -228,6 +228,42 @@ def test_only_two_callers_and_initial_hook_receive_new_custody():
     assert set(refs) == {"DB_ADMIN_PASSWORD", "WRITER_WATCHDOG_DB_PASSWORD", "MATVIEW_REFRESH_DB_PASSWORD"}
 
 
+def maintenance_image_scripts(dockerfile):
+    copied = {}
+    for line in dockerfile.splitlines():
+        if line.startswith("COPY "):
+            *sources, destination = shlex.split(line)[1:]
+            if destination == "/scripts/":
+                copied.update({"/scripts/" + Path(source).name: source for source in sources})
+    return copied
+
+
+def test_maintenance_hook_and_sibling_import_are_actual_migrate_copy_inputs():
+    hook = yaml.safe_load(
+        (ROOT / "deploy/k8s/components/runtime-role-boundary/maintenance-bootstrap-job.yaml").read_text()
+    )
+    container = hook["spec"]["template"]["spec"]["containers"][0]
+    assert container["image"].endswith("/verdify-migrate")
+    images = yaml.safe_load((ROOT / ".agent-fleet/ci.yaml").read_text())["images"]
+    image = next(i for i in images if i["name"] == "verdify-migrate")
+    assert image["context"] == "."
+    copied = maintenance_image_scripts((ROOT / image["dockerfile"]).read_text())
+    required = {
+        container["command"][1]: "scripts/bootstrap-maintenance-runtime-roles.py",
+        "/scripts/bootstrap-six-runtime-roles.py": "scripts/bootstrap-six-runtime-roles.py",
+    }
+    for destination, source in required.items():
+        assert copied[destination] == source and (ROOT / source).is_file()
+    assert 'with_name("bootstrap-six-runtime-roles.py")' in (ROOT / required[container["command"][1]]).read_text()
+
+
+@pytest.mark.parametrize("missing", ["bootstrap-maintenance-runtime-roles.py", "bootstrap-six-runtime-roles.py"])
+def test_maintenance_packaging_detects_missing_entrypoint_or_sibling(missing):
+    raw = (ROOT / "db/Dockerfile.migrate").read_text()
+    without_required = raw.replace("scripts/" + missing + " ", "")
+    assert "/scripts/" + missing not in maintenance_image_scripts(without_required)
+
+
 @pytest.mark.parametrize("lease", ["ok 1');SELECT pg_sleep(99);--", "ok -1", "ok ", "ok 1\n2"])
 def test_malicious_or_malformed_lease_never_reaches_psql(tmp_path, lease):
     _, container = watchdog()

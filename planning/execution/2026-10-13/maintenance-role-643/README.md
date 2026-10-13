@@ -37,3 +37,22 @@ native evidence will remain distinct from the retained original production275
 qualification. No new credential/TCP/pool or production-ledger acceptance is
 claimed; the old whole-helper native gate and receipts stay unchanged pending
 sufficient actual evidence. No PR/nativeCI was submitted.
+
+## Second retained native stop and image packaging correction
+
+The projected transaction passed the initial/native-source guards,276 contract,
+existing six-role contract and five SAVEPOINT fault cases. Its next fault fixture
+(`GRANT SELECT(ts)` on climate) failed Timescale compressed-column propagation.
+It stopped normally before watchdog/alert allocators or refreshes. Independent
+rollback readback again proves catalog/all77 exact,275/new roles absent/zero
+other clients; no setter ran. The separate sanitized stop receipt retains this
+limit. A plain protected alert_log(id) fault, independently checked for both
+newLOGINs and followed by42501 column-SELECT denials, needs a new exact packet
+review before a third transaction; the production/adapter source stays exact.
+
+Independent source review also found the wave4 hook's new script missing from
+the migrate Dockerfile. The smallest COPY addition now packages that entrypoint
+beside its existing six-role dependency. Three focused checks bind the hook,
+actual registered Dockerfile/COPY inputs and missing-entrypoint/dependency faults.
+No helper body, migration byte, guard, receipt, image or target was altered by
+this packaging correction; no image was built.
