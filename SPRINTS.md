@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-12T23:32:09Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **63 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T00:29:03Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **63 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,10 +27,10 @@ Exit: Current #949 authentic convergence and exact-source #644 delivery; full #3
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Direct Jason approval received for exact temporary isolated credentials. Existing sole contained writer refreshes guards, executes7serialnativephases, restoresNULL/fixture/sequence/chunkstate and verifiesfull95277/42catalogreseal/UIDcleanup; production credentials unchanged. |
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Seven final-image native phases passed; exact two-LOGIN NULL inverse, six-row/three-chunk/three-allocator inverse, full952/9,699,553/77/42/catalog reseal and19 UID cleanups complete. Publish sanitized all-hooks source/result receipt, reconcile original restart/node-loss/capacity clauses and retain failed attempts/PVC/custody evidence; no new multiFIFO/node-loss claim from one-event queues. |
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
 | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Reuse107case/8role/reseal proof; qualify remaining actual runtime endpoint/pool-close/production adoption boundaries without unsolicited credential rotation. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Finish ownerPR4807 native qualification; retain18-clause matrix and prepare remaining authenticated source/artifact/cancel/retry/concurrency execution without mutating production during observation. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | OwnerPR4807 f5d required native12/12 SUCCESS; hold merge/adoption during production window. Afterwards coordinate4807-first/4808 combined tuple qualification and remaining authenticated artifact/cancel/retry/concurrency clauses using the existing18-clause matrix. |
 | [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | Sole Retry owner verifies DISTINCT recovery window23:24:01–earliest01:24:01UTC at9136, actual final smoke/field/nativehistory/stage-cap/natural-publication evidence, then closes only complete acceptance; original68samplefailureretained. |
 
 ## S3 — Source truth, portable validation and prospective design
@@ -55,8 +55,8 @@ Exit: #749/#639/#587/#783 complete current original clauses, reusing closed #747
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 8–12 | Qualify lifecycle/kill-switch/blinded visibility with actual allowed/denied boundaries and preserved experiment ledger. |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Execute remaining current executor/fault/full-state recovery clauses on a safe contained target; no device actuation by a fixture. |
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 8–12 | Source-only20-case ASGI lifecycle packet prepared with SERIALIZABLE always-rollback outer transaction and componentOFF/zero exposure. Execute only in a released, specifically authorized isolated credential window; preserve missing authentic locked/armed/readiness inputs. |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Source-only frozen-consumer callback packet prepared for contained runtime_context parsing with writer lease false; after sealed #382 and an explicitly scoped target credential window, execute genuine remaining safe behavior clauses. Keep27/48 unproven and full recovery/physical acceptance separate. |
 | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | Runtime/release lead | 6–10 | Prepare the exact current attended baseline→aggressive→baseline proof packet; execute only after Jason gives that specific fresh physical decision. |
 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies. |
 | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) | Runtime/release lead | 12–20 | Join the selected scientific contract to a real restore→selector→setter schema→receipt→freeze/export/analyzer path and final ledger/role reseal. |
