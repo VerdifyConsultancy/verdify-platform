@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T15:00:00Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T16:19:43Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -28,8 +28,8 @@ Exit: Complete remaining #396/#643 restored-data/runtime-role clauses and #644 a
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | 42e791f9 three actualAPI/ingestor/MCP READONLY pools/close/zero-backends passed; allNULLpassword/catalog inverse/9UIDcleanup exact. Reuse107-case/full382seal; prepare concrete supportedA→B→A config/pool protocol and remaining production identities/adoption without inventedsecondDB/alias/fault or repeatednativechecks. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Agents4807 merged191b and4808 mergedc4a0af43(parentcd46/preserved3driftcommits);839PR15/15+15archives qualification retained. Ordinarynative-main advisoryerror56236230519 is notfreshtestfailure/PASS. Existingowner verifies minimaladoption bytes equivalenttoqualifiedsource/mountedruntimehashes/manualpins; productmirrorVerdifymainviaRetryonly. Broaderartifact/cancel/retry/concurrency unproved. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | 42e791f9 three nativeREADONLYpools/NULLcataloginverse/9UIDcleanup accepted. cdd87583 all3consumerDNS→boundprimaryIP→DNS source/protocol/83checks/9oldprofiles unchanged published; exact9serialwindow28d511prepared/fresh16:04metadata passes, NEWspecificuserdecisionpending. No oldcredentialapprovalreuse; prodroleadoption separate. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Owner4807/4808 merged andminimalmounted7a/gen823adoption verified(a246bd73); exactgeneratedmirror+canonical8files deliveredmain82195c1b, ordinaryCI9l5f5Succeeded/validate/noimages. Existingowner nowregisteredamd64/fullarchive at821 afterexplicitCIhandback. Labreceipt failure/Degradedsite separate; advisory562362notfreshFAIL/PASS; artifact/cancel/retry/concurrency remain. |
 
 ## S3 — Source truth, portable validation and prospective design
 

@@ -3254,8 +3254,8 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T15:00:00Z",
-    "source_revision": "9136f158641f918593df53471e3efe1792b7ad83",
+    "reviewed_at": "2026-10-13T16:19:43Z",
+    "source_revision": "82195c1b6ada500e254acca27018278597498a69",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
     "open_issues": [
@@ -3777,7 +3777,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "42e791f9 three actualAPI/ingestor/MCP READONLY pools/close/zero-backends passed; allNULLpassword/catalog inverse/9UIDcleanup exact. Reuse107-case/full382seal; prepare concrete supportedA→B→A config/pool protocol and remaining production identities/adoption without inventedsecondDB/alias/fault or repeatednativechecks.",
+        "next_action": "42e791f9 three nativeREADONLYpools/NULLcataloginverse/9UIDcleanup accepted. cdd87583 all3consumerDNS→boundprimaryIP→DNS source/protocol/83checks/9oldprofiles unchanged published; exact9serialwindow28d511prepared/fresh16:04metadata passes, NEWspecificuserdecisionpending. No oldcredentialapprovalreuse; prodroleadoption separate.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3785,7 +3785,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Agents4807 merged191b and4808 mergedc4a0af43(parentcd46/preserved3driftcommits);839PR15/15+15archives qualification retained. Ordinarynative-main advisoryerror56236230519 is notfreshtestfailure/PASS. Existingowner verifies minimaladoption bytes equivalenttoqualifiedsource/mountedruntimehashes/manualpins; productmirrorVerdifymainviaRetryonly. Broaderartifact/cancel/retry/concurrency unproved.",
+        "next_action": "Owner4807/4808 merged andminimalmounted7a/gen823adoption verified(a246bd73); exactgeneratedmirror+canonical8files deliveredmain82195c1b, ordinaryCI9l5f5Succeeded/validate/noimages. Existingowner nowregisteredamd64/fullarchive at821 afterexplicitCIhandback. Labreceipt failure/Degradedsite separate; advisory562362notfreshFAIL/PASS; artifact/cancel/retry/concurrency remain.",
         "owner_role": "Platform lead"
       },
       {
