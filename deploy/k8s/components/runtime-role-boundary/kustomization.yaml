@@ -10,6 +10,7 @@ resources:
   - bootstrap-job.yaml
   - mcp-bootstrap-job.yaml
   - six-workload-bootstrap-job.yaml
+  - maintenance-bootstrap-job.yaml
 
 images:
   # Declare the logical key inside the Component so the consuming overlay's

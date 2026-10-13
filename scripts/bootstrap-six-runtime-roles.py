@@ -287,8 +287,30 @@ def sealed_sql_275():
     return "(" + " AND ".join(expressions) + ")"
 
 
+MAINTENANCE_MIGRATION = (
+    276,
+    "276-ordinary-maintenance-runtime-boundaries.sql",
+    "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
+)
+
+
+def sealed_sql_276():
+    # No prior role, function, receipt or grant changes: only exact new private
+    # maintenance duties. Keep every275 predicate; bind the explicit276 ledger.
+    predecessor = sealed_sql_275()
+    current = seal_profile_sql(275, SUCCESSOR_275)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(276, SUCCESSOR_275), 1)
+        + " AND "
+        + ledger_row_sql(*MAINTENANCE_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
-    return "(" + sealed_sql_270_274() + " OR " + sealed_sql_275() + ")"
+    return "(" + sealed_sql_270_274() + " OR " + sealed_sql_275() + " OR " + sealed_sql_276() + ")"
 
 
 def identity_sql(login, duty):

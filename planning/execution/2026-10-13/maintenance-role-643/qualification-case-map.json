@@ -1,0 +1,112 @@
+{
+  "actual_production_coarse_join": {
+    "all_nine_actual_duties_proved": false,
+    "limits": "Observed session coverage is partial; Ready/zero errors are not attestation. Detailed owner diagnostic/identity/IP/session arrays are kept private.",
+    "nine_role_postures_and_references_bounded": true,
+    "no_new_credentials_for_existing_nine": true,
+    "sole_owner_read_only_receipt_sha256": "4e52e2e2112ffba806c8cbe8b4b156eda8afcebedc4bdbac1d279a4d4816dddd",
+    "two_adjacent_owner_references_confirmed": true
+  },
+  "base_main": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+  "fresh_fit": "Native window remains held until coordinator shared-CI release and just-in-time primary RAM/NVMe/free-space/timeout fit; no allocation or native SQL in this packet",
+  "later_production_credential_scope": "Two new permanent central-KSOPS identities and initial-only verifiers after source/native qualification and specific production scope; no old credential rotation",
+  "new_Secrets_required_for_owner_native_guard": 0,
+  "new_temp_passwords_required_for_owner_native_guard": 0,
+  "offline_checks": {
+    "existing_failure": "test_lighting_successor_bootstrap_matches_actual_rollback_qualification: current helper SHA differs from retained actual275 native receipt; receipt/test untouched",
+    "existing_native_binding_guard_failed": 1,
+    "focused_cases_passed": 43,
+    "historical_first_run": "40/42; new GRANT regex missed indented lines, corrected without changing grant scope; native binding failure retained",
+    "native_SQL_or_passwords_or_target_calls": false,
+    "normal_source_lint": "Ruff PASS",
+    "rendered_Secret_count": 0,
+    "rendered_added_workload": [
+      [
+        "Job",
+        "verdify-maintenance-runtime-role-bootstrap"
+      ]
+    ],
+    "rendered_workload_changes": [
+      [
+        "CronJob",
+        "verdify-band-curve-refresh"
+      ],
+      [
+        "CronJob",
+        "verdify-writer-watchdog"
+      ]
+    ],
+    "unchanged_other_existing_workloads": 30
+  },
+  "pending_native_cases": [
+    {
+      "cases": [
+        "expected isolated UID/OID/system/PG160013 and owner peer",
+        "same3 predecessor digests/nine role metadata",
+        "new276 roles/schemas absent",
+        "source SQL guard true at275; actual file SHA staged exact"
+      ],
+      "credential_free": true,
+      "group": "exact starting275/source/identity/catalogue"
+    },
+    {
+      "cases": [
+        "apply exact276 once under existing peer owner/session authorization verdify",
+        "uncommitted exact276 ledger row, stamp runner",
+        "old three seals/old nine roles unchanged",
+        "unstamped/wrong hash/filename/stamp/later277 refuse",
+        "extra new duty parent/member/raw-column grant/function-body/definer/PUBLIC ACL drift refuses, SAVEPOINT inverse"
+      ],
+      "credential_free": true,
+      "group": "uncommitted276 and guard truth table"
+    },
+    {
+      "cases": [
+        "SET SESSION AUTHORIZATION each new LOGIN; exact current=session and attester true",
+        "intended fixed functions allowed; actual refresh calls separately measured if admitted fit",
+        "raw climate/alert/mapping SELECT LIMIT0 and unrelated DML WHEREfalse/DDL/cross-role calls refused42501",
+        "invalid lease metadata refused22023; read_failed skips writer decision",
+        "watchdog own insert/dedupe/resolve and foreign-source preservation using uncommitted exact fixture only"
+      ],
+      "credential_free": true,
+      "group": "two native authorization/function cases",
+      "not_proved": "password/TCP/pool authentication; SET SESSION AUTHORIZATION is owner-held identity emulation"
+    },
+    {
+      "cases": [
+        "ROLLBACK all DDL/ledger/role/function/fixture/matview mutations to275",
+        "fresh identity and zero other clients",
+        "only actually advanced alert sequence exact guarded inverse; other77 anchors unchanged or STOP",
+        "catalog/role/function/selected ledger restored; retained952/42 reused, no full COPY",
+        "publish exact native source/SQL/proof hashes and retain old275 receipt; update latest whole-helper gate only after actual sufficient native execution"
+      ],
+      "credential_free": true,
+      "group": "inverse and source evidence"
+    }
+  ],
+  "reservation": {
+    "coordinator_concurrent_reservation": "276 sole two-duty643 reservation confirmed",
+    "main_highest": 275,
+    "migration": 276,
+    "open_PR_migration_paths": 0,
+    "open_PRs_checked": [
+      971,
+      970,
+      969,
+      968,
+      855,
+      774
+    ]
+  },
+  "scope": "SOURCE/Offline only; no native SQL or target mutation executed",
+  "source_hashes": {
+    "db/migrations/276-ordinary-maintenance-runtime-boundaries.sql": "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
+    "deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml": "13afef41403a3096d94ac2e053900339bca25305d960d270232dd1117f508f26",
+    "deploy/k8s/components/runtime-role-boundary/maintenance-bootstrap-job.yaml": "7bd6e71f38dee5dc1b5986396cc3f0f15d67e12a053b4803a02d6b64f04d35df",
+    "deploy/k8s/overlays/prod/writer-watchdog.yaml": "f9facc26cd49ac3be2a4e8f0d884f3f4984cb09272de6d32f5f1c50a92b27422",
+    "scripts/bootstrap-maintenance-runtime-roles.py": "440db6f600b5a62d8d2ed446637ee57d0e8239a8c86d31f89451a136b950f4e9",
+    "scripts/bootstrap-six-runtime-roles.py": "40b795ddf5432249dd2ad0f9d1f91426bf13f68de967c9c2d0ec00575346c651",
+    "tests/test_maintenance_runtime_boundaries.py": "b840963135504cc9d0eb70449773a6aea694eaeaa457ac495bcc2c68866e2867"
+  },
+  "whole_issue_643": "OPEN"
+}
