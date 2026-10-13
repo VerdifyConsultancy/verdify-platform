@@ -1,0 +1,144 @@
+{
+  "accepted_evidence": {
+    "retry_actual_release": {
+      "all_fifteen_deployments_ready": true,
+      "delivery_receipt_sha256": "c579af46806a3096c9f89afae61d927e8f89397bf1f21b2c4df140534349aa36",
+      "hook_count": 6,
+      "ingestor_deployment_spec_equal": true,
+      "ingestor_image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "ingestor_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+      "limit": "retained actual owner receipt; not a fresh production session catalogue from this source task",
+      "public_receipt_commit": "a5a52e0eef529f84e31167a51827279ce4949a9b",
+      "resource_results": 128,
+      "revision": "9136f158641f918593df53471e3efe1792b7ad83",
+      "role_bootstrap_hooks": [
+        {
+          "actual_image_ids": [
+            {
+              "exit_code": 0,
+              "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+              "name": "bootstrap-and-attest"
+            }
+          ],
+          "images": [
+            "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+          ],
+          "job_completed_at": "2026-10-12T23:22:01Z",
+          "job_started_at": "2026-10-12T23:21:56Z",
+          "job_uid": "bc4c001e-937d-4fee-b169-02e626d77588",
+          "name": "verdify-mcp-runtime-role-bootstrap",
+          "phase": "PreSync",
+          "pod_uid": "90eb390e-b44d-45f0-af3c-5ed9ba981fbf"
+        },
+        {
+          "actual_image_ids": [
+            {
+              "exit_code": 0,
+              "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+              "name": "bootstrap-and-attest"
+            }
+          ],
+          "images": [
+            "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+          ],
+          "job_completed_at": "2026-10-12T23:21:55Z",
+          "job_started_at": "2026-10-12T23:21:49Z",
+          "job_uid": "eb1c9088-f5d1-4d53-aeef-9d92fb602b77",
+          "name": "verdify-runtime-role-bootstrap",
+          "phase": "PreSync",
+          "pod_uid": "59102930-0fab-45ee-be26-be046f9785f8"
+        },
+        {
+          "actual_image_ids": [
+            {
+              "exit_code": 0,
+              "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+              "name": "bootstrap-and-attest"
+            }
+          ],
+          "images": [
+            "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e"
+          ],
+          "job_completed_at": "2026-10-12T23:22:18Z",
+          "job_started_at": "2026-10-12T23:22:07Z",
+          "job_uid": "00c4d5b4-a586-4abb-b109-6d251baa357a",
+          "name": "verdify-six-runtime-role-bootstrap",
+          "phase": "PreSync",
+          "pod_uid": "ad6e5d64-49c8-4162-9e21-e13ac660e656"
+        }
+      ],
+      "runtime_acceptance_passed": true,
+      "runtime_elapsed_seconds": 7208.568579,
+      "runtime_receipt_sha256": "d65af06bc47d928c20b15ddcd9bed6c92a78989fe2d78f61b589be06a9c442ae",
+      "runtime_samples": 121,
+      "smoke": {
+        "failed": 0,
+        "mcp_replicas": 2,
+        "passed": 9,
+        "tools_each": 23
+      },
+      "sync_finished_at": "2026-10-12T23:22:46Z",
+      "sync_started_at": "2026-10-12T23:21:27Z"
+    },
+    "six_duties_native": {
+      "cases": 107,
+      "commit": "b4eb826ab3efd4204b5ef8263caceac0f8f67887",
+      "duties": [
+        "planner",
+        "setpoint_server",
+        "ha_backfill",
+        "vision",
+        "lab_publisher",
+        "grafana"
+      ],
+      "limit": "restored native SQL duties, not all real production processes"
+    },
+    "three_pools_nine_routes": {
+      "checkouts": 18,
+      "commit": "e06dcf51b29cc9062605241512e1df73effcf09f",
+      "inverse": "3 PASSWORD NULL; exact catalogue; 21 UID cleanup",
+      "jobs": 9,
+      "limit": "same database and fresh processes, no new live credential scope",
+      "window_seconds": 209
+    }
+  },
+  "assessment": "OPEN: production authority/duty join pending; no new credential decision for metadata readback",
+  "base_commit": "b97176adeae315431a19edeac13c11e3881f2ce3",
+  "desired_source_readback": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+  "estimates_are_time_worked": false,
+  "estimates_hours": {
+    "Timescale_job_policy": 2,
+    "final_delta_and_write_boundary_inverse": 3,
+    "production_authority_join": 2,
+    "writer_fence": 3
+  },
+  "future_credential_decision_if_confirmed": "Only after concrete source qualification: two new scoped production credentials for watchdog and matview refresh via central KSOPS; no existing production rotation. Not requested/provisioned by this packet.",
+  "held_actions": [
+    "new credential or authentication window",
+    "production grants/migration/rollout",
+    "CI/build/promotion/controller/main mutation",
+    "new target/PVC/full COPY/native fault",
+    "custody or old database deletion"
+  ],
+  "issue": 643,
+  "next_safe_action": "Retry performs or reuses bounded metadata readback; worker completes source proposal without production or CI writes",
+  "remaining_clauses": [
+    {
+      "clause": "intended duties/unrelated DML/mapping/cross-workload denial",
+      "remaining": "owner metadata joins selected running source/roles and actual duty status; catalogue snapshot is observation, not new live deny testing",
+      "retained": "107 native six-duty matrix plus three genuine pooled-client attesters"
+    },
+    {
+      "clause": "no credential artifacts and ordinary Pods lack owner/migration authority",
+      "remaining": "fresh actual selected workload reference/session join; source owner-password gaps in writer watchdog and matview refresh; admin/server/backup/bootstrap authorities separately classified",
+      "retained": "nine-role desired references and target credential inverses; no exported values or Secret API"
+    },
+    {
+      "clause": "public/planner/ingestor health and study integrity survive rollout/rollback",
+      "remaining": "join production role-specific ordinary duties and health; do not reinterpret same-DB routes as distinct-DB cutover or all application rollout",
+      "retained": "Retry real source/runtime/health/history and native three-consumer route reversal; complete restored952/77/42 integrity"
+    }
+  ],
+  "scope": "source and retained receipts only; no production metadata query by this worker",
+  "specific_human_decision_now": null
+}

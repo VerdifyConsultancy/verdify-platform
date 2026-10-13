@@ -1,0 +1,1237 @@
+{
+  "all_owner_password_references_in_render": [
+    {
+      "container": "postgres",
+      "env_name": "POSTGRES_PASSWORD",
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "refresh",
+      "env_name": "PGPASSWORD",
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "pg-dump",
+      "env_name": "PGPASSWORD",
+      "kind": "CronJob",
+      "name": "verdify-db-backup",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "watchdog",
+      "env_name": "PGPASSWORD",
+      "kind": "CronJob",
+      "name": "verdify-writer-watchdog",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "bootstrap-and-attest",
+      "env_name": "DB_ADMIN_PASSWORD",
+      "kind": "Job",
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "bootstrap-and-attest",
+      "env_name": "DB_ADMIN_PASSWORD",
+      "kind": "Job",
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "migrate",
+      "env_name": "POSTGRES_PASSWORD",
+      "kind": "Job",
+      "name": "verdify-migrate",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "migrate",
+      "env_name": "DB_PASS",
+      "kind": "Job",
+      "name": "verdify-migrate",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "bootstrap-and-attest",
+      "env_name": "DB_ADMIN_PASSWORD",
+      "kind": "Job",
+      "name": "verdify-runtime-role-bootstrap",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    },
+    {
+      "container": "bootstrap-and-attest",
+      "env_name": "DB_ADMIN_PASSWORD",
+      "kind": "Job",
+      "name": "verdify-six-runtime-role-bootstrap",
+      "reference": {
+        "key": "POSTGRES_PASSWORD",
+        "name": "verdify-app-secrets"
+      }
+    }
+  ],
+  "scope": "source render only; no live GET or Secret API",
+  "selected_role_source_unchanged": [
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/kustomization.yaml",
+      "sha256": "b09906a9c05ec1c57acebe0bf6b41a7db098540fede04a8e115952dc52ac56de"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/api-runtime.patch.yaml",
+      "sha256": "a5dbc0f3df7c66ba6a0c2d53fb77e07acd9a75800b1fa265ee28107be3571b92"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/ingestor-runtime.patch.yaml",
+      "sha256": "aec8de901df1edc452a5ae84520ac1e4eebeabdc0ea8d88b3707830afdcae241"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/bootstrap-job.yaml",
+      "sha256": "7d4d9676b6be486e132e2802c025241cdd82ea26e9485f2bab9e071c6424abdd"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/mcp-bootstrap-job.yaml",
+      "sha256": "3384c199379db2512660b1210cb2efb9b7639fd82be18798e9150d47188c1a17"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/runtime-role-boundary/six-workload-bootstrap-job.yaml",
+      "sha256": "f4330fcb048f8f4bcba7dff7574043f7a0125248fa1d55f56e6c3f42f4f30147"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/base/mcp-deployment.yaml",
+      "sha256": "d881371a4a727dda36e8f731b63d3de08a1498f705d3817bf1c2faccfb3387b9"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/planner/planner-deployment.yaml",
+      "sha256": "e24883387cb102352e2fb8524d0b006d60ed25fbf0ed3b5b19b04bff017848d9"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/setpoint-server/setpoint-server.yaml",
+      "sha256": "1f1d9e98957d2864eed393ec1bbb3aadabab40b3d42f63bad06f93cfb92b48d9"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml",
+      "sha256": "09a8902ae9afbc63e960917542e3c2fd42b77941d14936ab93fe666677ea2919"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/lab-site/lab-publisher.yaml",
+      "sha256": "57986e9a20d9089b28df31622da83d6752234dd7eca61307bc443eb1b5bfc0de"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/vision/verdify-vision-cronjob.yaml",
+      "sha256": "24acd3618476840f8220b2b8479c526c4b19cb9250dee6372746f18034bc445a"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/grafana/grafana.yaml",
+      "sha256": "8446d0b39790e1d0929e9503ee4abaf77ae1a802717b654a21f2c720459ea3c1"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/grafana/generated/provisioning-cm.yaml",
+      "sha256": "57c8fd7a67bcfca890085dec1201e30c4a8eb44403530134145f1b835e98f076"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/overlays/prod/writer-watchdog.yaml",
+      "sha256": "a768a07f341433ba3535191d39f4048193cb42f08f43a50c917aaf3fa4fd4e94"
+    },
+    {
+      "equals_main_0b03466a": true,
+      "path": "deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml",
+      "sha256": "248174cd4f8a8ddcbfc8a335ae436b38810a1f806bf324c26b77ded287cff9a0"
+    }
+  ],
+  "selected_service_account_rendered_bindings": [
+    {
+      "kind": "RoleBinding",
+      "name": "verdify-ingestor-writer-lease",
+      "rendered_role_rules": [
+        {
+          "apiGroups": [
+            "coordination.k8s.io"
+          ],
+          "resources": [
+            "leases"
+          ],
+          "verbs": [
+            "create",
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "coordination.k8s.io"
+          ],
+          "resourceNames": [
+            "verdify-ingestor-writer"
+          ],
+          "resources": [
+            "leases"
+          ],
+          "verbs": [
+            "get",
+            "update",
+            "patch",
+            "delete"
+          ]
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "verdify-ingestor-writer-lease"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "verdify-ingestor",
+          "namespace": "verdify-prod"
+        }
+      ]
+    }
+  ],
+  "selected_service_account_scope_limit": "Only product-rendered bindings shown; inherited/live estate grants must be joined by the production owner. Default token mount is retained, not assumed disabled.",
+  "selected_workloads": [
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [],
+          "env_reference_structure": [],
+          "image": "timescale/timescaledb:2.25.2-pg16",
+          "mount_names": [],
+          "name": "wait-for-db",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "DB_USER",
+              "secretKeyRef": {
+                "key": "VERDIFY_API_RUNTIME_DB_USER",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "DB_PASS",
+              "secretKeyRef": {
+                "key": "VERDIFY_API_RUNTIME_DB_PASSWORD",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED",
+              "required": true
+            },
+            {
+              "name": "VERDIFY_PLANNER_MODEL_LABEL"
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_API_TOKEN",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_API_TOKEN",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_OPERATOR_TOKEN",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_OPERATOR_TOKEN",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_WRITE_API_KEY",
+              "secretKeyRef": {
+                "key": "VERDIFY_WRITE_API_KEY",
+                "name": "verdify-app-secrets"
+              }
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+          "mount_names": [
+            "tmp"
+          ],
+          "name": "api",
+          "type": "containers"
+        }
+      ],
+      "duty": "api",
+      "expected_duty_role": "verdify_api_runtime",
+      "expected_login": "verdify_api_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "replicas": 2,
+      "schedule": null,
+      "secret_volumes": [],
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [],
+          "env_reference_structure": [],
+          "image": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+          "mount_names": [
+            "views",
+            "css-inject"
+          ],
+          "name": "inject-canvas-css",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [],
+          "env_reference_structure": [
+            {
+              "name": "GF_SERVER_ROOT_URL"
+            },
+            {
+              "name": "GF_SERVER_SERVE_FROM_SUB_PATH"
+            },
+            {
+              "name": "GF_SERVER_DOMAIN"
+            },
+            {
+              "name": "GF_AUTH_ANONYMOUS_ENABLED"
+            },
+            {
+              "name": "GF_AUTH_ANONYMOUS_ORG_NAME"
+            },
+            {
+              "name": "GF_AUTH_ANONYMOUS_ORG_ROLE"
+            },
+            {
+              "name": "GF_USERS_ALLOW_SIGN_UP"
+            },
+            {
+              "name": "GF_USERS_VIEWERS_CAN_EDIT"
+            },
+            {
+              "name": "GF_AUTH_BASIC_ENABLED"
+            },
+            {
+              "name": "GF_AUTH_DISABLE_LOGIN_FORM"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ENABLED"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_NAME"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_CLIENT_ID"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET",
+              "secretKeyRef": {
+                "key": "GRAFANA_OAUTH_CLIENT_SECRET",
+                "name": "verdify-grafana-oauth"
+              }
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_SCOPES"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_AUTH_URL"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_TOKEN_URL"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_API_URL"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_USE_PKCE"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_GROUPS_ATTRIBUTE_PATH"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ALLOWED_GROUPS"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC"
+            },
+            {
+              "name": "GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN"
+            },
+            {
+              "name": "GF_AUTH_SIGNOUT_REDIRECT_URL"
+            },
+            {
+              "name": "GF_SECURITY_ALLOW_EMBEDDING"
+            },
+            {
+              "name": "GF_SECURITY_COOKIE_SAMESITE"
+            },
+            {
+              "name": "GF_SECURITY_COOKIE_SECURE"
+            },
+            {
+              "name": "GF_SECURITY_ADMIN_USER"
+            },
+            {
+              "name": "GF_SECURITY_ADMIN_PASSWORD",
+              "secretKeyRef": {
+                "key": "GRAFANA_ADMIN_PASSWORD",
+                "name": "verdify-grafana-secrets"
+              }
+            },
+            {
+              "name": "GF_SNAPSHOTS_EXTERNAL_ENABLED"
+            },
+            {
+              "name": "GF_EXPLORE_ENABLED"
+            },
+            {
+              "name": "GF_ALERTING_ENABLED"
+            },
+            {
+              "name": "GF_UNIFIED_ALERTING_ENABLED"
+            },
+            {
+              "name": "GF_HIDE_VERSION"
+            },
+            {
+              "name": "GF_ANALYTICS_REPORTING_ENABLED"
+            },
+            {
+              "name": "GF_ANALYTICS_CHECK_FOR_UPDATES"
+            },
+            {
+              "name": "GF_PLUGINS_PREINSTALL_DISABLED"
+            },
+            {
+              "name": "GF_RENDERING_SERVER_URL"
+            },
+            {
+              "name": "GF_RENDERING_RENDERER_TOKEN",
+              "secretKeyRef": {
+                "key": "GRAFANA_RENDERER_TOKEN",
+                "name": "verdify-grafana-secrets"
+              }
+            },
+            {
+              "name": "GF_RENDERING_CALLBACK_URL"
+            },
+            {
+              "name": "GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-grafana-runtime-db"
+              }
+            }
+          ],
+          "image": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+          "mount_names": [
+            "data",
+            "tmp",
+            "views",
+            "provisioning",
+            "provisioning",
+            "dashboards-0",
+            "dashboards-1",
+            "dashboards-2",
+            "dashboards-3"
+          ],
+          "name": "grafana",
+          "type": "containers"
+        },
+        {
+          "envFrom": [],
+          "env_reference_structure": [
+            {
+              "name": "SERVER_ADDR"
+            },
+            {
+              "name": "AUTH_TOKEN",
+              "secretKeyRef": {
+                "key": "GRAFANA_RENDERER_TOKEN",
+                "name": "verdify-grafana-secrets"
+              }
+            },
+            {
+              "name": "LOG_LEVEL"
+            },
+            {
+              "name": "RATE_LIMIT_MAX_LIMIT"
+            },
+            {
+              "name": "RATE_LIMIT_MIN_LIMIT"
+            },
+            {
+              "name": "BROWSER_READINESS_TIMEOUT"
+            },
+            {
+              "name": "BROWSER_TIMEZONE"
+            },
+            {
+              "name": "HOME"
+            }
+          ],
+          "image": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986",
+          "mount_names": [
+            "renderer-tmp",
+            "renderer-shm"
+          ],
+          "name": "renderer",
+          "type": "containers"
+        }
+      ],
+      "duty": "grafana",
+      "expected_duty_role": "verdify_grafana_runtime",
+      "expected_login": "verdify_grafana_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "replicas": 1,
+      "schedule": null,
+      "secret_volumes": [],
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [],
+          "env_reference_structure": [],
+          "image": "postgres:16",
+          "mount_names": [
+            "pgclient"
+          ],
+          "name": "install-psql",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [],
+          "env_reference_structure": [],
+          "image": "timescale/timescaledb:2.25.2-pg16",
+          "mount_names": [],
+          "name": "wait-for-db",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "ESP32_LOG_LEVEL"
+            },
+            {
+              "name": "VERDIFY_SOURCE_SPOOL_ENABLED"
+            },
+            {
+              "name": "SOURCE_SPOOL_MAX_ROWS"
+            },
+            {
+              "name": "SOURCE_SPOOL_MAX_BYTES"
+            },
+            {
+              "name": "VERDIFY_OBSERVATION_SPOOL_ENABLED"
+            },
+            {
+              "name": "OBSERVATION_SPOOL_MAX_ROWS"
+            },
+            {
+              "name": "OBSERVATION_SPOOL_MAX_BYTES"
+            },
+            {
+              "name": "VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED"
+            },
+            {
+              "name": "CLIMATE_EVENT_SPOOL_MAX_BYTES"
+            },
+            {
+              "name": "CLIMATE_SPOOL_MAX_ROWS"
+            },
+            {
+              "name": "VERDIFY_AUTONOMOUS_POLICY_STAGING"
+            },
+            {
+              "name": "PATH"
+            },
+            {
+              "name": "LD_LIBRARY_PATH"
+            },
+            {
+              "name": "HERMES_IRIS_API_KEY",
+              "secretKeyRef": {
+                "key": "HERMES_IRIS_API_KEY",
+                "name": "verdify-hermes"
+              }
+            },
+            {
+              "name": "PGPASSWORD",
+              "secretKeyRef": {
+                "key": "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "VERDIFY_FIXED_PANEL_NATIVE_LEDGER_ENABLED"
+            },
+            {
+              "name": "DB_USER",
+              "secretKeyRef": {
+                "key": "VERDIFY_INGESTOR_RUNTIME_DB_USER",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "DB_PASSWORD",
+              "secretKeyRef": {
+                "key": "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED",
+              "required": true
+            },
+            {
+              "name": "POD_NAME"
+            },
+            {
+              "name": "POD_NAMESPACE"
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_COMPONENT_DB_USER",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_COMPONENT_DB_USER",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD",
+              "secretKeyRef": {
+                "key": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            },
+            {
+              "name": "ESP32_API_KEY",
+              "secretKeyRef": {
+                "key": "ESP32_API_KEY",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "MQTT_USER",
+              "secretKeyRef": {
+                "key": "MQTT_USER",
+                "name": "verdify-app-secrets"
+              }
+            },
+            {
+              "name": "MQTT_PASS",
+              "secretKeyRef": {
+                "key": "MQTT_PASS",
+                "name": "verdify-app-secrets"
+              }
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+          "mount_names": [
+            "state",
+            "gather-script",
+            "gather-script",
+            "pgclient",
+            "tmp",
+            "ha-token",
+            "slack-token"
+          ],
+          "name": "ingestor",
+          "type": "containers"
+        }
+      ],
+      "duty": "ingestor",
+      "expected_duty_role": "verdify_ingestor_runtime",
+      "expected_login": "verdify_ingestor_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "replicas": 1,
+      "schedule": null,
+      "secret_volumes": [
+        {
+          "name": "ha-token",
+          "secretName": "verdify-ha-token"
+        },
+        {
+          "name": "slack-token",
+          "secretName": "verdify-slack"
+        }
+      ],
+      "service_account": "verdify-ingestor",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "VERDIFY_MCP_TOKEN_OBSERVER",
+              "secretKeyRef": {
+                "key": "token",
+                "name": "verdify-mcp-observer"
+              }
+            },
+            {
+              "name": "DB_USER",
+              "public_role_literal": "verdify_mcp_runtime_login"
+            },
+            {
+              "name": "DB_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-mcp-runtime-db"
+              }
+            },
+            {
+              "name": "PGPASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-mcp-runtime-db"
+              }
+            },
+            {
+              "name": "OPENAI_API_KEY",
+              "secretKeyRef": {
+                "key": "OPENAI_API_KEY",
+                "name": "verdify-hermes"
+              }
+            },
+            {
+              "name": "VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED",
+              "required": true
+            },
+            {
+              "literal_dsn_present": true,
+              "literal_dsn_sha256": "8990182954f1dbf0af0c68738a967dc01d4cf83e86ae1f0ed10aef753d3dc650",
+              "name": "DB_DSN"
+            },
+            {
+              "name": "VERDIFY_MCP_TOKEN_IRIS",
+              "secretKeyRef": {
+                "key": "VERDIFY_MCP_TOKEN",
+                "name": "verdify-hermes"
+              }
+            },
+            {
+              "name": "VERDIFY_SITE_PUBLISH_TRIGGER_PATH"
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+          "mount_names": [
+            "tmp"
+          ],
+          "name": "mcp",
+          "type": "containers"
+        }
+      ],
+      "duty": "mcp",
+      "expected_duty_role": "verdify_mcp_runtime",
+      "expected_login": "verdify_mcp_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "replicas": 2,
+      "schedule": null,
+      "secret_volumes": [],
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [],
+          "image": "timescale/timescaledb:2.25.2-pg16",
+          "mount_names": [],
+          "name": "wait-for-db",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "PORT"
+            },
+            {
+              "name": "POD_NAME"
+            },
+            {
+              "name": "POD_UID"
+            },
+            {
+              "name": "VERDIFY_PLANNER_RUNTIME_DB_ROLE_REQUIRED",
+              "required": true
+            },
+            {
+              "name": "DB_USER",
+              "public_role_literal": "verdify_planner_runtime_login"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-planner-runtime-db"
+              }
+            },
+            {
+              "literal_dsn_present": true,
+              "literal_dsn_sha256": "39fbdec0c1959968e7cf023da0cd40e1323cbbc54011b40f30f08af8b34167c1",
+              "name": "DB_DSN"
+            },
+            {
+              "name": "OPENAI_API_KEY",
+              "secretKeyRef": {
+                "key": "OPENAI_API_KEY",
+                "name": "verdify-app-secrets",
+                "optional": true
+              }
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a",
+          "mount_names": [
+            "tmp"
+          ],
+          "name": "planner",
+          "type": "containers"
+        }
+      ],
+      "duty": "planner",
+      "expected_duty_role": "verdify_planner_runtime",
+      "expected_login": "verdify_planner_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "replicas": 1,
+      "schedule": null,
+      "secret_volumes": [],
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [],
+          "image": "timescale/timescaledb:2.25.2-pg16",
+          "mount_names": [],
+          "name": "wait-for-db",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "DB_USER",
+              "public_role_literal": "verdify_setpoint_server_runtime_login"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-setpoint-server-runtime-db"
+              }
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491",
+          "mount_names": [
+            "tmp",
+            "ha-token"
+          ],
+          "name": "setpoint-server",
+          "type": "containers"
+        }
+      ],
+      "duty": "setpoint_server",
+      "expected_duty_role": "verdify_setpoint_server_runtime",
+      "expected_login": "verdify_setpoint_server_runtime_login",
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-setpoint-server",
+      "replicas": 1,
+      "schedule": null,
+      "secret_volumes": [
+        {
+          "name": "ha-token",
+          "secretName": "verdify-ha-token"
+        }
+      ],
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "DB_USER",
+              "public_role_literal": "verdify_ha_backfill_runtime_login"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-ha-backfill-runtime-db"
+              }
+            },
+            {
+              "name": "HA_TOKEN_FILE"
+            },
+            {
+              "name": "PYTHONPATH"
+            },
+            {
+              "name": "HOME"
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+          "mount_names": [
+            "script",
+            "ha-token",
+            "tmp"
+          ],
+          "name": "backfill",
+          "type": "containers"
+        }
+      ],
+      "duty": "ha_backfill",
+      "expected_duty_role": "verdify_ha_backfill_runtime",
+      "expected_login": "verdify_ha_backfill_runtime_login",
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "replicas": null,
+      "schedule": "23 * * * *",
+      "secret_volumes": [
+        {
+          "name": "ha-token",
+          "secretName": "verdify-ha-token"
+        }
+      ],
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [],
+          "env_reference_structure": [],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+          "mount_names": [
+            "lab-cache"
+          ],
+          "name": "prepare-private-work-root",
+          "type": "initContainers"
+        },
+        {
+          "envFrom": [
+            {
+              "configMapRef": {
+                "name": "verdify-config"
+              }
+            },
+            {
+              "configMapRef": {
+                "name": "verdify-lab-publisher-config"
+              }
+            },
+            {
+              "secretRef": {
+                "name": "verdify-lab-publisher-s3"
+              }
+            }
+          ],
+          "env_reference_structure": [
+            {
+              "name": "LAB_WORK_ROOT"
+            },
+            {
+              "name": "VERDIFY_PUBLISH_STEP_RETRIES"
+            },
+            {
+              "name": "VERDIFY_PUBLISH_STEP_TIMEOUT"
+            },
+            {
+              "name": "VERDIFY_PUBLISH_REBUILD_TIMEOUT"
+            },
+            {
+              "name": "PGOPTIONS"
+            },
+            {
+              "name": "DB_USER",
+              "public_role_literal": "verdify_lab_publisher_runtime_login"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-lab-publisher-runtime-db"
+              }
+            },
+            {
+              "name": "DB_PASS",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-lab-publisher-runtime-db"
+              }
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+          "mount_names": [
+            "lab-cache"
+          ],
+          "name": "publisher",
+          "type": "containers"
+        }
+      ],
+      "duty": "lab_publisher",
+      "expected_duty_role": "verdify_lab_publisher_runtime",
+      "expected_login": "verdify_lab_publisher_runtime_login",
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "replicas": null,
+      "schedule": "5,35 * * * *",
+      "secret_volumes": [],
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "automount_service_account_token": "default",
+      "containers": [
+        {
+          "envFrom": [],
+          "env_reference_structure": [
+            {
+              "name": "PYTHONPATH"
+            },
+            {
+              "name": "AI_CONFIG"
+            },
+            {
+              "name": "TEMPLATES_DIR"
+            },
+            {
+              "name": "GEMINI_API_KEY_FILE"
+            },
+            {
+              "name": "VERDIFY_FRIGATE_URL"
+            },
+            {
+              "name": "VERDIFY_FRIGATE_TLS_SERVER_NAME"
+            },
+            {
+              "name": "VERDIFY_FRIGATE_TOKEN_FILE"
+            },
+            {
+              "name": "VERDIFY_SNAPSHOT_DIR"
+            },
+            {
+              "name": "VERDIFY_ZONES_CONFIG"
+            },
+            {
+              "name": "VERDIFY_ANALYZE_SNAPSHOT_SCRIPT"
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "secretKeyRef": {
+                "key": "password",
+                "name": "verdify-vision-runtime-db"
+              }
+            },
+            {
+              "literal_dsn_present": true,
+              "literal_dsn_sha256": "92c32ba19a2b28a55803133a32d05c6a8120175ffa1cb731ce2017872fa4ef35",
+              "name": "VERDIFY_DB_DSN"
+            }
+          ],
+          "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+          "mount_names": [
+            "vsrc",
+            "vkey",
+            "frigate-auth",
+            "snap"
+          ],
+          "name": "vision",
+          "type": "containers"
+        }
+      ],
+      "duty": "vision",
+      "expected_duty_role": "verdify_vision_runtime",
+      "expected_login": "verdify_vision_runtime_login",
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "replicas": null,
+      "schedule": "0 15,18,21,0 * * *",
+      "secret_volumes": [
+        {
+          "name": "vkey",
+          "secretName": "verdify-vision-key"
+        },
+        {
+          "name": "frigate-auth",
+          "secretName": "verdify-frigate-vision-auth"
+        }
+      ],
+      "service_account": "default",
+      "suspend": false
+    }
+  ],
+  "source_main_readback": "0b03466a8f30a0494482c983853128f98cdc9e0a"
+}

@@ -1,0 +1,205 @@
+{
+  "proposal": {
+    "first_execution": "record job_id/owner/procedure/config hash before/after, job run timing/outcome, exact eligible chunk metadata before, affected chunk identities after, actual public/planner/history checks. Never interpret Ready as data-retention acceptance.",
+    "inspection_target": "keep existing worker0 inspection freeze and all original job definitions; no indiscriminate resume",
+    "inverse": "suspend newly enabled jobs and restore original schedule/config/worker settings. Suspension cannot resurrect deleted history or undo compression layout automatically; use retained complete backup/recovery for actual lost history, never advertise schedule inverse as data inverse.",
+    "non_destructive_jobs": "individually enable existing refresh/compression jobs only after exact function/catalog/schema/unique-index compatibility and resource fit; compression changes storage, so retain owned chunk/schema witnesses",
+    "production_candidate_before_writes": "preserve restored job definitions; explicitly suspend destructive policies before enabling a nonzero worker budget. First reviewed production policy execution belongs to the attended cutover plan, not the clone proof.",
+    "retention_jobs": "keep existing intervals as proposed product contract; do not silently lengthen/shorten or reset them. Before first enable, measure eligible chunks/time bounds using metadata and preserve any required study/history input. If eligibility violates required retained history, surface that exact irreversible tradeoff with concrete archive/restore option.",
+    "workers": "choose explicit nonzero production budget against actual DB CPU/RAM and job concurrency; 16 is historical source, not an admitted new default. No permanent production worker0 proposal."
+  },
+  "retained_jobs": [
+    {
+      "hypertable_name": null,
+      "hypertable_schema": null,
+      "job_id": 1,
+      "owner": "verdify",
+      "policy_config": {},
+      "proc_name": "policy_telemetry",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "24:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": null,
+      "hypertable_schema": null,
+      "job_id": 3,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "1 month"
+      },
+      "proc_name": "policy_job_stat_history_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "06:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "climate",
+      "hypertable_schema": "public",
+      "job_id": 1002,
+      "owner": "verdify",
+      "policy_config": {
+        "compress_after": "7 days",
+        "hypertable_id": 1
+      },
+      "proc_name": "policy_compression",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "12:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "energy",
+      "hypertable_schema": "public",
+      "job_id": 1003,
+      "owner": "verdify",
+      "policy_config": {
+        "compress_after": "7 days",
+        "hypertable_id": 6
+      },
+      "proc_name": "policy_compression",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "12:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "diagnostics",
+      "hypertable_schema": "public",
+      "job_id": 1004,
+      "owner": "verdify",
+      "policy_config": {
+        "compress_after": "7 days",
+        "hypertable_id": 5
+      },
+      "proc_name": "policy_compression",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "12:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "climate",
+      "hypertable_schema": "public",
+      "job_id": 1005,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "365 days",
+        "hypertable_id": 1
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "energy",
+      "hypertable_schema": "public",
+      "job_id": 1006,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "365 days",
+        "hypertable_id": 6
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "diagnostics",
+      "hypertable_schema": "public",
+      "job_id": 1007,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "180 days",
+        "hypertable_id": 5
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "esp32_logs",
+      "hypertable_schema": "public",
+      "job_id": 1008,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "30 days",
+        "hypertable_id": 8
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "setpoint_snapshot",
+      "hypertable_schema": "public",
+      "job_id": 1009,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "90 days",
+        "hypertable_id": 16
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": null,
+      "hypertable_schema": null,
+      "job_id": 1014,
+      "owner": "verdify",
+      "policy_config": {},
+      "proc_name": "refresh_relay_stuck",
+      "proc_schema": "public",
+      "schedule_interval": "00:05:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": null,
+      "hypertable_schema": null,
+      "job_id": 1015,
+      "owner": "verdify",
+      "policy_config": {},
+      "proc_name": "refresh_climate_merged",
+      "proc_schema": "public",
+      "schedule_interval": "00:30:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "setpoint_snapshot",
+      "hypertable_schema": "public",
+      "job_id": 1021,
+      "owner": "verdify",
+      "policy_config": {
+        "compress_after": "7 days",
+        "hypertable_id": 16
+      },
+      "proc_name": "policy_compression",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "12:00:00",
+      "scheduled": true
+    },
+    {
+      "hypertable_name": "fixed_panel_native_events",
+      "hypertable_schema": "public",
+      "job_id": 1024,
+      "owner": "verdify",
+      "policy_config": {
+        "drop_after": "180 days",
+        "hypertable_id": 39
+      },
+      "proc_name": "policy_retention",
+      "proc_schema": "_timescaledb_functions",
+      "schedule_interval": "1 day",
+      "scheduled": true
+    }
+  ],
+  "retained_metadata_sha256": "cc4a4ac69c10ad9d04e31b6db950d5c0d2ddf46a793cf683077d7074a70ceb83",
+  "retained_observed_at": "2026-10-06T09:21:51.435228+00:00",
+  "retained_restoring": "off",
+  "retained_worker_setting": "0",
+  "scope": "retained metadata/source proposal only; no current-production assertion or alter_job",
+  "source_policy": "db/migrations/158-compression-retention-policies.sql; later fixed-panel retention retained as additional job1024"
+}

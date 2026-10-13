@@ -1,0 +1,308 @@
+{
+  "desired_state_authority_is_not_live_fence": true,
+  "exclude_from_blanket_scale": [
+    "verdify-db must remain available for coherent export",
+    "MQTT and external endpoints need explicit consumer-writer analysis, not blind stop",
+    "static Lab/Traefik/render cache do not own ordinary DB writes"
+  ],
+  "owner": "Retry production writer; all restoration and rollback roles separately serialized",
+  "rendered_workloads": [
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "experiment-v2-freezer",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "experiment-v2-lifecycle",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "experiment-v2-selector",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "replicas": 2,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-db-backup-exporter",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-grafana-render-cache",
+      "replicas": 2,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-hermes-iris",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "verdify-ingestor",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-lab",
+      "replicas": 2,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "replicas": 2,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-mqtt",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-setpoint-server",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "Deployment",
+      "name": "verdify-traefik",
+      "replicas": 2,
+      "schedule": null,
+      "service_account": "verdify-traefik",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "replicas": 1,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "replicas": null,
+      "schedule": "2,32 * * * *",
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-db-backup",
+      "replicas": null,
+      "schedule": "17 2 * * *",
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-db-watchdog",
+      "replicas": null,
+      "schedule": "1-59/5 * * * *",
+      "service_account": "verdify-db-watchdog",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-firmware-builder",
+      "replicas": null,
+      "schedule": "0 0 31 2 *",
+      "service_account": "default",
+      "suspend": true
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-fixed-panel-native-freezer",
+      "replicas": null,
+      "schedule": "30 0 * * *",
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "replicas": null,
+      "schedule": "23 * * * *",
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "replicas": null,
+      "schedule": "5,35 * * * *",
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "replicas": null,
+      "schedule": "0 15,18,21,0 * * *",
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-winter-feasibility",
+      "replicas": null,
+      "schedule": "30 0 * * *",
+      "service_account": "default",
+      "suspend": false
+    },
+    {
+      "hook": null,
+      "kind": "CronJob",
+      "name": "verdify-writer-watchdog",
+      "replicas": null,
+      "schedule": "*/5 * * * *",
+      "service_account": "verdify-writer-watchdog",
+      "suspend": null
+    },
+    {
+      "hook": "PreSync",
+      "kind": "Job",
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": "PreSync",
+      "kind": "Job",
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": "PreSync",
+      "kind": "Job",
+      "name": "verdify-migrate",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": "PreSync",
+      "kind": "Job",
+      "name": "verdify-runtime-role-bootstrap",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": "PreSync",
+      "kind": "Job",
+      "name": "verdify-six-runtime-role-bootstrap",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    },
+    {
+      "hook": "Sync",
+      "kind": "Job",
+      "name": "verdify-winter-archive-init",
+      "replicas": null,
+      "schedule": null,
+      "service_account": "default",
+      "suspend": null
+    }
+  ],
+  "required_runtime_additions": [
+    "exact current owning revision/pins and all intended pending drift",
+    "actual current Jobs owned by each CronJob and manually submitted application Jobs",
+    "current sessions and long-lived/dedicated pools",
+    "Timescale jobs and operator/background workers",
+    "actual writer lease/socket authority; old and new endpoint guards",
+    "active migration/bootstrap/PreSync/winter-archive hooks and automation that can recreate writers"
+  ],
+  "scope": "source worksheet; no scale/suspend/terminate/refresh/sync executed"
+}
