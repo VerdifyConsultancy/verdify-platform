@@ -2,11 +2,11 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T16:19:43Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **61 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T16:19:43Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **62 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| S2 — Recoverability and reliable delivery (October 2026) | sprint | 22–44 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
+| S2 — Recoverability and reliable delivery (October 2026) | sprint | 24–48 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#976](https://github.com/VerdifyConsultancy/verdify-platform/issues/976) |
 | S3 — Source truth, portable validation and prospective design | sprint | 34–64 | 80 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
@@ -97,6 +97,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#964](https://github.com/VerdifyConsultancy/verdify-platform/issues/964) | Recover failed production promotion and schedulable Lab/band refresh | None; see concrete issue conditions | L |
 | [#965](https://github.com/VerdifyConsultancy/verdify-platform/issues/965) | Separate API grow-light command intent from observed equipment history | None; see concrete issue conditions | L |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Bound moisture-exchange state and preserve structured consumer detail | None; see concrete issue conditions | S |
+| [#976](https://github.com/VerdifyConsultancy/verdify-platform/issues/976) | Qualify safe recovery of Lab publication receipt metadata | None; see concrete issue conditions | S |
 
 ## C5 — Data/platform lead
 

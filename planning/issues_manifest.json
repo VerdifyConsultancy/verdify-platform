@@ -302,7 +302,7 @@
       "stage": "C4",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "8761c633fc53977aec3e3c8b789e06202171a30f204810adba51fb1e4b13bf77"
+      "body_sha256": "144857710671c1a1fd13b3ac7e2649cfeae2c694ba8512de3b873a14127bbd79"
     },
     {
       "key": "563",
@@ -909,6 +909,15 @@
       "parent": 75,
       "blocked_by": [],
       "body_sha256": "615b6f7e956f53dc346f56bc32eafe35bc65224d12f69decee6ea86ad5d2c733"
+    },
+    {
+      "key": "976",
+      "number": 976,
+      "title": "[C4][P1] Qualify safe recovery of Lab publication receipt metadata",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [],
+      "body_sha256": "16784a6cfaf84da6e36d1c17bbce5f9f8a3c2a8a99ee716dca9dbf015b25ec6e"
     }
   ]
 }
