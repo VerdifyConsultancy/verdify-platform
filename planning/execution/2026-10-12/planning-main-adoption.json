@@ -1,0 +1,215 @@
+{
+  "schema": "verdify-planning-adoption/v1",
+  "observed_at": "2026-10-13T02:07:38.658952+00:00",
+  "main": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a",
+  "parent": "9136f158641f918593df53471e3efe1792b7ad83",
+  "source_snapshot": "69a9f5fa6e67c1ae6cc238716f4fd88240f702ad",
+  "exact22paths": true,
+  "all22_provider_blobs_exact": true,
+  "canonical_decoded_readbacks": [
+    {
+      "path": "planning/backlog.yaml",
+      "git_blob": "9614ef8817ca44fd6269d1c087c116c6c844f8d9",
+      "sha256": "3603037c784b6515f41501eb33210badc106b86941953ecc05f0c853fa083b7b",
+      "bytes": 300504
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "git_blob": "e5cc1ab52b252fd0955af3748ab08926dd177008",
+      "sha256": "a44a89352a6a6de7cd7ac86d353fb75a623c0de8c7a0501c311000fa684296fc",
+      "bytes": 28708
+    },
+    {
+      "path": "SPRINTS.md",
+      "git_blob": "65a9323dd426049f8be170fa66fda7f143070858",
+      "sha256": "7a6e59cf5d6886b686bc27913dda18d3e4546a81c20da94fd3c6467d033fe955",
+      "bytes": 32857
+    }
+  ],
+  "render_byte_identical": true,
+  "render_sha256": "158eceaf02c0b98ed10c03699ed5dd81b57bdc51292a06cf7c736975fe3fd721",
+  "no_product_deploy_pin_changes": true,
+  "runtime": {
+    "sync": "Synced",
+    "health": "Healthy",
+    "observed_revision": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a",
+    "all15_deployments_ready": true,
+    "ingestor_spec_equal": true,
+    "pod_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "container_id": "containerd://17e8ac1b5dfa3f0fc92cbffcbf500909d5e88dc178ca9aec5fec7a655d4a95ac",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+    "restarts": 0,
+    "no_new_sync": true,
+    "last_sync_started_at": "2026-10-12T23:21:27Z",
+    "last_sync_finished_at": "2026-10-12T23:22:46Z"
+  },
+  "issue949": {
+    "state": "closed",
+    "state_reason": "completed",
+    "closed_at": "2026-10-13T01:47:39Z"
+  },
+  "native_ci": [
+    {
+      "name": "verdify-platform-ci-p6hrx",
+      "uid": "ab33bb58-efea-49cb-8ab9-080864129405",
+      "phase": "Succeeded",
+      "started_at": "2026-10-13T01:55:42Z",
+      "finished_at": "2026-10-13T02:07:10Z",
+      "classifiers": [
+        {
+          "phase": "Succeeded",
+          "mode": "validate",
+          "receipt": {
+            "base_revision": "9136f158641f918593df53471e3efe1792b7ad83",
+            "mode": "validate",
+            "paths_sha256": "011bd173431cfd1682a7f6c0a2e0835d76cb2197a838a548f208df95d23623c9",
+            "profiles": [],
+            "reasons": {},
+            "schema": "verdify.path-impact/v1",
+            "source_revision": "2dc2f16e7afb6a7559e72a4cb7d070ccef86f36a"
+          }
+        }
+      ],
+      "build_pods": [],
+      "nonterminal_nodes": [],
+      "actual_pods": [],
+      "executed_pod_nodes": [
+        {
+          "name": "verdify-platform-ci-p6hrx[0].classify-push(0)",
+          "display": "classify-push(0)",
+          "phase": "Succeeded",
+          "started_at": "2026-10-13T01:55:42Z",
+          "finished_at": "2026-10-13T02:06:58Z"
+        }
+      ],
+      "validation_pod_before_gc": {
+        "name": "verdify-platform-ci-p6hrx-validate-1668255494",
+        "uid": "ab9f6f48-4e17-48a5-9feb-9936ea975a3f",
+        "created_at": "2026-10-13T01:55:42Z",
+        "node": "vm-k3s-node6",
+        "phase_at_precompletion_capture": "Running",
+        "images": [
+          "quay.io/argoproj/argoexec:v4.0.5",
+          "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "quay.io/argoproj/argoexec:v4.0.5",
+          "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779"
+        ]
+      },
+      "pod_readback_note": "The validation Pod was directly captured while Running. It was garbage-collected before final post-success Pod inventory; the terminal Workflow retains its single Succeeded Pod node. No builder Pod node executed."
+    }
+  ],
+  "snapshot_manifest_sha256": "5cf93715a6c2f2065365b53f41d271fe90dceda64d9adf6c1f31b4304410a7cf",
+  "snapshot_paths": [
+    {
+      "path": "LANES.md",
+      "git_blob": "7ea6f9d25d008b2a5b286122418d5cfaa5f6c384",
+      "sha256": "379a7f060174b076e468b49657070c61f00679cb67b64c3d1912f6457f44d3a0"
+    },
+    {
+      "path": "MILESTONES.md",
+      "git_blob": "ce214268222bc164af8b3580f1c602e2eeb6fa69",
+      "sha256": "b22242c1eaf991c04ce47056f9e7e6e4dab5360b133368a89fe887d3bf739a2c"
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "git_blob": "aa7f3b167882819e660ae9ca8115cd818cfaac82",
+      "sha256": "d1260a692880c3020d7d7731c0fc0a7dbcbda7b54e637478499bde7e2b753dc7"
+    },
+    {
+      "path": "SPRINTS.md",
+      "git_blob": "65a9323dd426049f8be170fa66fda7f143070858",
+      "sha256": "7a6e59cf5d6886b686bc27913dda18d3e4546a81c20da94fd3c6467d033fe955"
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "git_blob": "9614ef8817ca44fd6269d1c087c116c6c844f8d9",
+      "sha256": "3603037c784b6515f41501eb33210badc106b86941953ecc05f0c853fa083b7b"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/README.md",
+      "git_blob": "ccce4dff0bb621f39678ae10d14cfdf527b07d4b",
+      "sha256": "7ba05412d1a69c9f567c310b1ce9b6514e11b3263c37702543d89a5abccdee22"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/caller-review.json",
+      "git_blob": "1c6906aca14f39e1de7aab7810250ec506cc6c9a",
+      "sha256": "5d8fcbb459a089d78142b694685021a6c965191251d5d11217d7a26020b79033"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/README.md",
+      "git_blob": "308472feff8f7436ddd4ddfdb32f707a283f8ad9",
+      "sha256": "3314dff85e480e667d3f2c41d22804b205d1258d16313fe23250fd6fe8d730f4"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/SHA256SUMS",
+      "git_blob": "3626db2c9cd559fbeb053826850746e652e45aa8",
+      "sha256": "d37a29781055b530024ff9e9e1f49ecb52bdb4312a74185f7c1498d55f6be2e6"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/declared-runtime-metadata.json",
+      "git_blob": "2952ed92bda83054135cecfa42c3af5df9ea412a",
+      "sha256": "047da1b2fcaf6fb78c245a62cef62f7142740d01c000542520437a1b17c5ed01"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/owner-argo-pins.json",
+      "git_blob": "9d0ec7183aa6f7ea3a32229e38ea850e880e24af",
+      "sha256": "528d85590f6c266534bca64fb535f8a816596808bd0590a2fcdc3841967130cb"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/owner-composition-assessment.json",
+      "git_blob": "c514d8e2a783c6b751e7bc8a71d96fd94f9eed00",
+      "sha256": "c67d99ee356744eea70237c9cc6ad188b08cca55dfb82cd4ad447352695cd492"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-adoption-packet/source-pins.json",
+      "git_blob": "3b9bf84b47c32771ab63d9a5fdfc50d743fc5b97",
+      "sha256": "2d7a3e6d1aded38f1f747a64d8c1f011e2b2591428b9fbaaff69200ca284529e"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/compiler-provenance-native-qualification.json",
+      "git_blob": "5199d3ab82d13706a219ad40e542a8a997d1768e",
+      "sha256": "5379ec53be45f550a7bfcd08b10dfd89ffc4d1151e843fd9a6b2871376e90d1d"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/github-readback.json",
+      "git_blob": "1f2e0befa697c19718f0997f56633aa1c63a8ae5",
+      "sha256": "7d466eb00e723bf0229a4a3f880fb0dc36d694e7c5f139d71721c0a95a7a4d9a"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/lights965-issue-closeout.json",
+      "git_blob": "da32da20413a71f46ceb340d91b0c5bc074c896f",
+      "sha256": "65b0726da36a88106e7f435ae04ab297ebb453490cffc727b4e6e79172069f48"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/native-ci-success.json",
+      "git_blob": "7d40054f907cf9f54a7bf7e525b5c6dd6da5ab42",
+      "sha256": "0574f3d974628e96aca32d4fda516a4869f900b5bbfb6250432aafe251f5051a"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/native-predecessor-review.json",
+      "git_blob": "1738a18b4500c29201fa480e09d067800edd7c67",
+      "sha256": "2fc32bc09f4ce178d777badc41400a189eaa8d4d22d519c20f17264ded7239ed"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/relay-dwell-publication.json",
+      "git_blob": "0b05ed948b874a5b7a8586150f1c4245ebbb4a88",
+      "sha256": "130d34aa6c5e8246a687193e79f16c5340a700ee34621c29eed505a508b308bd"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/release-source-merge.json",
+      "git_blob": "1a538470e02f41219bba270fee298f56f6683ef4",
+      "sha256": "b0f0f3f849d91df909939a924b794a8e4daf2e8254f2bb9e171eeb663ca4cd8b"
+    },
+    {
+      "path": "planning/execution/2026-10-12/coordinator/spool382-user-approval.json",
+      "git_blob": "f2e1da0c0496aee49c545adf61b25879388f34aa",
+      "sha256": "b717590bd3c30681d17e6e5985a2ff5d8bf2340b34cf199188ad8fe2ae9d3f6f"
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "git_blob": "e5cc1ab52b252fd0955af3748ab08926dd177008",
+      "sha256": "a44a89352a6a6de7cd7ac86d353fb75a623c0de8c7a0501c311000fa684296fc"
+    }
+  ],
+  "custody_release": "Verdify main and shared CI custody released to existing coordinator at terminal readback. Existing owner delivers4807 first, then the single combined4808 tuple qualification. Evidence-only branch publication follows; no further main or production writes here."
+}
