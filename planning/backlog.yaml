@@ -3254,7 +3254,7 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-13T00:29:03Z",
+    "reviewed_at": "2026-10-13T01:28:39Z",
     "source_revision": "9136f158641f918593df53471e3efe1792b7ad83",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
@@ -3619,7 +3619,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Seven final-image native phases passed; exact two-LOGIN NULL inverse, six-row/three-chunk/three-allocator inverse, full952/9,699,553/77/42/catalog reseal and19 UID cleanups complete. Publish sanitized all-hooks source/result receipt, reconcile original restart/node-loss/capacity clauses and retain failed attempts/PVC/custody evidence; no new multiFIFO/node-loss claim from one-event queues.",
+        "next_action": "Published499131da7/7final-image native phases/full952/9,699,553/77/42/catalogNULLinverse/19UIDcleanup accepted. Reconcile only existing generation-transition and setpoint-confirmation source/offline contract evidence; retain historical3000/cross-worker proof and failures/PVC; no repeated native qualification or new node-loss claim.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3787,7 +3787,7 @@
         "sprint": "S2",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Reuse107case/8role/reseal proof; qualify remaining actual runtime endpoint/pool-close/production adoption boundaries without unsolicited credential rotation.",
+        "next_action": "Published24c94dd4 integration-target readonly API/ingestor/MCP pool renderer prep;61offlinechecks/oldprofilesbyteequal. Admit serial native pool seam only after fresh exact cache/credential scope; sixconsumer A→B→A semantics remain unproved. Reuse107-case/eightrole/fullreseal evidence.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -3899,7 +3899,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 12,
-        "next_action": "Sole Retry owner verifies DISTINCT recovery window23:24:01–earliest01:24:01UTC at9136, actual final smoke/field/nativehistory/stage-cap/natural-publication evidence, then closes only complete acceptance; original68samplefailureretained.",
+        "next_action": "DISTINCT recovery collector completed01:24:10.489324UTC,121samples/7208.568579s at9136/cb21/c6cc/restart0/SyncedHealthy; Retry now finishes final smoke/field/nativehistory/stagecap/naturalLab acceptance and publishes/closeouts. Preserve failed68sample attempt; no closure from collector alone.",
         "owner_role": "Platform lead"
       },
       {

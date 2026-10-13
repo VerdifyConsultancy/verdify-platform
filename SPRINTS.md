@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T00:29:03Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **63 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T01:28:39Z** against source `9136f158641f918593df53471e3efe1792b7ad83`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **63 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,11 +27,11 @@ Exit: Current #949 authentic convergence and exact-source #644 delivery; full #3
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Seven final-image native phases passed; exact two-LOGIN NULL inverse, six-row/three-chunk/three-allocator inverse, full952/9,699,553/77/42/catalog reseal and19 UID cleanups complete. Publish sanitized all-hooks source/result receipt, reconcile original restart/node-loss/capacity clauses and retain failed attempts/PVC/custody evidence; no new multiFIFO/node-loss claim from one-event queues. |
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | Data/platform lead | 6–12 | Published499131da7/7final-image native phases/full952/9,699,553/77/42/catalogNULLinverse/19UIDcleanup accepted. Reconcile only existing generation-transition and setpoint-confirmation source/offline contract evidence; retain historical3000/cross-worker proof and failures/PVC; no repeated native qualification or new node-loss claim. |
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Reuse107case/8role/reseal proof; qualify remaining actual runtime endpoint/pool-close/production adoption boundaries without unsolicited credential rotation. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Published24c94dd4 integration-target readonly API/ingestor/MCP pool renderer prep;61offlinechecks/oldprofilesbyteequal. Admit serial native pool seam only after fresh exact cache/credential scope; sixconsumer A→B→A semantics remain unproved. Reuse107-case/eightrole/fullreseal evidence. |
 | [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | OwnerPR4807 f5d required native12/12 SUCCESS; hold merge/adoption during production window. Afterwards coordinate4807-first/4808 combined tuple qualification and remaining authenticated artifact/cancel/retry/concurrency clauses using the existing18-clause matrix. |
-| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | Sole Retry owner verifies DISTINCT recovery window23:24:01–earliest01:24:01UTC at9136, actual final smoke/field/nativehistory/stage-cap/natural-publication evidence, then closes only complete acceptance; original68samplefailureretained. |
+| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Platform lead | 8–12 | DISTINCT recovery collector completed01:24:10.489324UTC,121samples/7208.568579s at9136/cb21/c6cc/restart0/SyncedHealthy; Retry now finishes final smoke/field/nativehistory/stagecap/naturalLab acceptance and publishes/closeouts. Preserve failed68sample attempt; no closure from collector alone. |
 
 ## S3 — Source truth, portable validation and prospective design
 
