@@ -28,3 +28,8 @@ Only one recovered target is admitted. This packet creates no second database, S
 ## Assessment against #643
 
 The current issue remains open. Intended allow/deny SQL duties and exact eight-role inverse/full reseal have accepted bounded receipts. Credential secrecy is preserved here; this source packet proves no new deployed LOGIN or ordinary-Pod authority. Public/planner/ingestor health through real configuration rollout/rollback and broader per-workload endpoint/pool lifecycle remain separate. This packet is execution preparation for the existing ordinary client pool seam, not complete643orproduction acceptance.
+
+
+## Later native checkpoint — October13UTC
+
+The three prepared API/ingestor/MCP pools have now passed their serial single-endpoint native READ ONLY seam, awaited close and zero-other-client checks. The three temporary target passwords were restoredNULL, exact starting role/catalog posture verified and nine new temporary UIDs cleaned up. See [actual three-pool checkpoint](native-three-pool-checkpoint/README.md) for full source/image/identity/cleanup joins and retained limits. Earlier preparation text above remains the historical pre-execution record; #643 remains open for supported endpoint/configuration reversal and full runtime adoption/rollout acceptance.

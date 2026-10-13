@@ -1,0 +1,18 @@
+{
+  "afterRoleMetadataSha256": "df9801ab25a6874afd4a764d9b7f1e179b85240bd57a171809ce54186601a155",
+  "allStartingRoleLoginFlagsMembershipMetadataExact": true,
+  "beforeRoleMetadataSha256": "df9801ab25a6874afd4a764d9b7f1e179b85240bd57a171809ce54186601a155",
+  "catalogAfterSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "catalogBeforeSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "catalogFinishedAt": "2026-10-13T02:12:39.251909+00:00",
+  "catalogSqlReadOnly": true,
+  "catalogSqlSha256": "0b11d8e7f8f4512a352ad4da16b7341ad2b2d8651ed2beb9de16e46309f7f66b",
+  "credentialValuesOrVerifiersSelectedOrExported": false,
+  "fixturesOrSequenceSetters": false,
+  "membershipOrGrantChanges": false,
+  "newFullCopyScanPerformed": false,
+  "productionCredentialsReadOrChanged": false,
+  "secretGETOrLIST": false,
+  "threeLoginPasswordsRestoredNull": true,
+  "zeroOtherClientBackends": true
+}

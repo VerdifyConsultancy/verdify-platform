@@ -1,0 +1,50 @@
+[
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T02:10:53.762109+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T02:10:41.713217+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "api",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T02:11:16.113207+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T02:11:03.974562+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "ingestor",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  },
+  {
+    "afterTerminalAwaitedClose": {
+      "capturedAt": "2026-10-13T02:11:40.939454+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "before": {
+      "capturedAt": "2026-10-13T02:11:28.356104+00:00",
+      "metadataSqlSha256": "8c5f6cc8d23075328927c624645ef792b8206e29b7a070ad94b82ac599c38d67",
+      "otherClientBackends": 0
+    },
+    "consumer": "mcp",
+    "poolCloseAwaitedBeforePassed": true,
+    "twoCheckouts": true,
+    "twoDistinctPhysicalConnectionsClaimed": false
+  }
+]

@@ -1,0 +1,107 @@
+[
+  {
+    "cachedNever": true,
+    "consumer": "api",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T02:10:51Z",
+      "name": "cnpg-s2-integration-runtime-api-20261013window1",
+      "startTime": "2026-10-13T02:10:42Z",
+      "succeeded": 1,
+      "uid": "d30a557a-1b15-44c7-a136-b0b9a340350b"
+    },
+    "nativeReceiptSha256": "073d958f57b98599271fb60b8c8eb5df8937a16e6b5e1e125941a1c7b66e32b2",
+    "nativeStdoutSha256": "dbf9c506ccdb6b7dd5255ca402d180d6eafde878ca9425d697586f16fe36e7f2",
+    "originalApprovedManifestSha256": "ddad00ecafa802006d4b3085151fcb81b2dfb0ea9100fc08e7d35e33a76c963c",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T02:10:48Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "jobOwnerUid": "d30a557a-1b15-44c7-a136-b0b9a340350b",
+      "name": "cnpg-s2-integration-runtime-api-20261013window1-hbx55",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T02:10:43Z",
+      "uid": "edeabd9d-025f-484c-8bb0-9ea6fa261f3b"
+    },
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/main.py",
+      "moduleSha256": "df8b8a938567edece80366a843f9826081181c1e1461c31f1326f06f43fa8e94",
+      "operatorFileSha256": "6fc9b9da616da814befed287665f9f0ec1a98a72777325c99d0da9c44fc07207",
+      "operatorSource": "24c94dd491e9fb4777e15dac1bac24bdda6fe32f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "consumer": "ingestor",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T02:11:14Z",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013window1",
+      "startTime": "2026-10-13T02:11:04Z",
+      "succeeded": 1,
+      "uid": "cf8036d5-0304-47b2-b858-d185c3b7ecb9"
+    },
+    "nativeReceiptSha256": "b96afa3021c0f9c7b1fd433ba7493a0c8fc280bbd96d09cc1889bdd38a4b726b",
+    "nativeStdoutSha256": "199550058429809e47a36d92e78c7ad47579869decd04a5eef10099002e20f33",
+    "originalApprovedManifestSha256": "c356a76cead505733f57c00d2cb946d00da475180094ee928d682654d4137999",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T02:11:11Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "jobOwnerUid": "cf8036d5-0304-47b2-b858-d185c3b7ecb9",
+      "name": "cnpg-s2-integration-runtime-ingestor-20261013window1-c72tg",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T02:11:05Z",
+      "uid": "85f964bd-a4e2-44fc-b065-a77907edc954"
+    },
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/ingestor/ingestor.py",
+      "moduleSha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "operatorFileSha256": "6fc9b9da616da814befed287665f9f0ec1a98a72777325c99d0da9c44fc07207",
+      "operatorSource": "24c94dd491e9fb4777e15dac1bac24bdda6fe32f"
+    }
+  },
+  {
+    "cachedNever": true,
+    "consumer": "mcp",
+    "deviceWriteEnabled": false,
+    "job": {
+      "completionTime": "2026-10-13T02:11:38Z",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013window1",
+      "startTime": "2026-10-13T02:11:29Z",
+      "succeeded": 1,
+      "uid": "b6523436-a3ce-4f0b-b30c-21a2a55e5797"
+    },
+    "nativeReceiptSha256": "9de463ee729154ce410227d9ae460d7eb165ab2ca8c09c056199843cb12c81d5",
+    "nativeStdoutSha256": "f5ed040b92cd637828c5c1b2f95b920365761b0ab3d838444cf7eb3b24c21e8c",
+    "originalApprovedManifestSha256": "12d54a769502b9015ce0904a1f0ca8a8ab6dc66b86ce24263445251853bae0ae",
+    "pod": {
+      "exitCode": 0,
+      "finishedAt": "2026-10-13T02:11:36Z",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "jobOwnerUid": "b6523436-a3ce-4f0b-b30c-21a2a55e5797",
+      "name": "cnpg-s2-integration-runtime-mcp-20261013window1-dnhpm",
+      "node": "vm-k3s-node5",
+      "restartCount": 0,
+      "startedAt": "2026-10-13T02:11:30Z",
+      "uid": "e1f0280a-9f35-4701-b8cb-442160361b8d"
+    },
+    "serviceAccountTokenMounted": false,
+    "source": {
+      "bakedRevisionAndActualModuleHashGuardPassedBeforeImport": true,
+      "consumerSource": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "modulePath": "/app/mcp/server.py",
+      "moduleSha256": "3b78fbdb710c7f25670d9b19742a760ef6a4a232e8bf8a11955d2a819f6b5b31",
+      "operatorFileSha256": "6fc9b9da616da814befed287665f9f0ec1a98a72777325c99d0da9c44fc07207",
+      "operatorSource": "24c94dd491e9fb4777e15dac1bac24bdda6fe32f"
+    }
+  }
+]

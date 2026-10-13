@@ -1,0 +1,15 @@
+{
+  "allConsumerQueriesReadOnly": true,
+  "catalogSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "dataAndSequenceBaselineReusedNotRescanned": true,
+  "fixtureOrSequenceSettersPerformed": false,
+  "nativeStreamSha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+  "oldStagingCustodyUntouched": true,
+  "retainedSpoolPvcUntouched": true,
+  "rows": 9699553,
+  "sequenceSha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+  "sequences": 77,
+  "sourceCheckpoint": "499131dac8647f0d74ee25677641621e117a02a9",
+  "studyTables": 42,
+  "tables": 952
+}
