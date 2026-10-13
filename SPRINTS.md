@@ -2,11 +2,11 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T20:11:21Z** against source `0b03466a8f30a0494482c983853128f98cdc9e0a`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **58 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13T22:36:22Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| S2 — Completion sprint (October 13–26, 2026) | sprint | 20–40 | 80 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
+| S2 — Completion sprint (October 13–26, 2026) | sprint | 6–12 | 80 | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) |
 | S3 — Source truth, portable validation and prospective design | sprint | 18–32 | 80 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
@@ -21,15 +21,13 @@ Sprint allocations may cover bounded preparation. Full issue acceptance still de
 
 ## S2 — Completion sprint (October 13–26, 2026)
 
-Kind: sprint. Capacity: 80 engineering hours. Goal: Complete remaining runtime-role adoption, reliable delivery and authentic replay freshness in parallel. #396 bounded recovery accepted; three remaining outcomes forecast20–40 engineering hours, within the original shared80-hour two-week envelope. Original four-outcome28–56 estimate remains historical, not hours worked.
+Kind: sprint. Capacity: 80 engineering hours. Goal: Complete remaining production runtime-role adoption. #396/#419/#644 original contracts are completed; #643 forecasts6–12 remaining engineering hours within the unchanged shared80-hour two-week envelope. Original four-outcome28–56 estimate remains historical, not hours worked.
 
-Exit: Completed396 original alongside restore/failover/PITR clauses and exact245handoff retained. Remaining643 full selected production-role/whole-app acceptance,644 recovered producer and deployed cancellation/artifact plus honest retry/concurrency clauses,419 causal fresh/stale replay and known-good evidence. Separately prepare245writer-fence/finaldelta/jobpolicy worksheets from reserve without moving its production-cutover execution into this sprint. No production DB cutover/credentialrotation/OTA/physicalexperiment implicit; accepted949382303304965976 retained.
+Exit: Accepted396 recovery/handoff,419 causal replay source delivery and644 bounded exact-source integration are retained with original failed attempts and proof limits. Remaining643 full selected production-role/whole-app acceptance requires the two ordinary maintenance duties, genuine qualification, owner credential decision and authoritative adoption. Conditional245 source/read-only worksheets remain separate; no production DB cutover, credential rotation, OTA or physical experiment implicit. Separate975 affected-ingestor delivery failure and broaderAgents4014 remain outstanding, not relabeled by validation success.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Source467harnessfinite-staleguard/28targeted288native/296698causalaudit+invariant/bandselfdiff pass, original3clausesSOURCEmet. Correct runtimeCOPYdoc placement into excludedplanning path beforeordinarysourcePR; existingcapacity4849ownsCI, Retryreadonlyreview only. Historicalproxy716HUMIDIFY/0originaldevice remain390limits not extra419gate. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | e06dcf51 nine nativeprocesses/18READONLYcheckouts/DNS-IP-DNS all3consumers PASS;3PASSWORDNULL/cataloginverse/21UIDcleanup complete209swarmcachedwindow. Remaining fullselectedproductionduty/authority/wholeappadoption packet; existingcontainedworker joins evidence/prepares source-readonly scopes, no newcredential/cutoverauthority. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Both4842/4845 sourcefixesmerged; exactsingle7cbrokerbuilddeniedstalecapacityprofile156vs157. Preparedfixedoperatora895/bridge662/LaunchAgent185/61offlinePASS; normalownerPR4849solequalification15checks pending, no liveadoptionyet. Afterproducerrealreadywritable one transparentdocumenteddeliberaterebuildcapacity-profile157-recovery-20261013 allowed, originaldefaultfailurepreserved; thenbrokeradoption/cancel/artifactproof. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Finish admitted0913 fixed-target projected276 rollback qualification with exact original catalog/77 inverse and whole-helper binding; preserve first preDDL stop. Then ordinary source delivery and concrete two-duty initial credential/adoption packet through owner, no completed approval reuse or production cutover. Nine-consumer contracts/reversal retained; prove actual remaining workload duties/health. |
 
 ## S3 — Source truth, portable validation and prospective design
 
