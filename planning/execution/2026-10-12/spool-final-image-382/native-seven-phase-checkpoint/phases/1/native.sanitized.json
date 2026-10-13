@@ -1,0 +1,115 @@
+{
+  "originalNativeRecordsSha256": "2198bf5989ce3a9d419855664bdc62d4c52855e84d020e659a157d3be884732e",
+  "records": [
+    {
+      "phase": "unavailable",
+      "manifest_sha256": "2d51ae37f5a64c346fb7586765cda9bb1dd65add528c1fab7c2b1ce2baa5378a",
+      "consumer_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+      "consumer_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "consumer_module_sha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+      "consumer_modules_sha256": {
+        "ingestor.py": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d",
+        "source_spool.py": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+        "observation_spool.py": "643a8aa376d32d44a56341a5f9f2573370971f1ac9d2adca4e03975efef7b207"
+      },
+      "target_binding": {
+        "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+        "primary_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+        "database_oid": 16447
+      },
+      "normal_main_started": false,
+      "fresh_device_confirmation_claimed": false,
+      "identity": {
+        "current_user": "verdify_ingestor_runtime_login",
+        "session_user": "verdify_ingestor_runtime_login",
+        "database": "verdify_rehearsal",
+        "database_oid": 16447,
+        "cluster_name": "verdify-cnpg-s2-integration",
+        "replica": false,
+        "backend_address": "10.42.6.178"
+      },
+      "collector_identity": {
+        "current_user": "verdify_experiment_v2_equipment_source_collector_login",
+        "session_user": "verdify_experiment_v2_equipment_source_collector_login",
+        "database": "verdify_rehearsal",
+        "backend_address": "10.42.6.178"
+      },
+      "unavailable_transport": {
+        "climate": "ConnectionRefusedError",
+        "diagnostics": "ConnectionRefusedError",
+        "equipment": "ConnectionRefusedError"
+      },
+      "durable_queue_unchanged": true,
+      "status": "passed"
+    },
+    {
+      "phase": "unavailable",
+      "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+      "native_process_exit_code": 0,
+      "expected_process_exit_code": 0,
+      "elapsed_seconds": 4.696050247177482,
+      "child_peak_rss_kib": 91356,
+      "child_exit_expected": true,
+      "local_queues": {
+        "climate": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/climate.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "climate",
+              "identity": "4cc32461-2d38-402e-a97a-75105d9694ce",
+              "payload_sha256": "50f419aa7978198b6f4b91df5edb9ba176c3f96271c28199af6b755756d78abf"
+            }
+          ],
+          "row_count": 1
+        },
+        "diagnostics": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/observations.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "diagnostics",
+              "identity": "24e3fbd7-43b2-4676-9873-5ac888db7484",
+              "payload_sha256": "1cd25b622a912d2ec0721c4a992205533341540ac47db02ebe5cedc552c92279"
+            }
+          ],
+          "row_count": 1
+        },
+        "equipment": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/equipment.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "receipt",
+              "identity": "e386f4fe-4c90-42b1-a954-0996ed009304",
+              "payload_sha256": "cfa9a6abed80283ae48efa637e3a9e4c01f6a7eb5ab2752110dacb50b8d55fa8"
+            }
+          ],
+          "row_count": 1
+        }
+      },
+      "queue_capture_ok": true,
+      "postgres_commit_requires_owner_native_witness": true,
+      "receipt_is_not_phase_acceptance": true
+    }
+  ],
+  "privateApprovalAdmissionAndResourceSnapshotsIncluded": false
+}

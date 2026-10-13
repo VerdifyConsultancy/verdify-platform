@@ -1,0 +1,168 @@
+[
+  {
+    "kind": "roles",
+    "roles": [
+      {
+        "role": "verdify_experiment_v2_equipment_source_collector_login",
+        "login": true,
+        "super": false,
+        "create_db": false,
+        "bypass_rls": false,
+        "create_role": false,
+        "memberships": [
+          "verdify_experiment_equipment_source_collector"
+        ],
+        "replication": false,
+        "password_null": false
+      },
+      {
+        "role": "verdify_ingestor_runtime_login",
+        "login": true,
+        "super": false,
+        "create_db": false,
+        "bypass_rls": false,
+        "create_role": false,
+        "memberships": [
+          "verdify_ingestor_runtime"
+        ],
+        "replication": false,
+        "password_null": false
+      }
+    ]
+  },
+  {
+    "kind": "ledger",
+    "count": 1,
+    "table": "climate_source_events",
+    "whole_row_sha256": [
+      "98e97fe60945800835ab1c8a004b957d188aacdc359145433e54ebe3f25ad15b"
+    ],
+    "runtime_receipt_count": 1
+  },
+  {
+    "kind": "ledger",
+    "count": 1,
+    "table": "observational_source_events",
+    "whole_row_sha256": [
+      "88075da4eab6519e8f16c6c31142eb03aac7fee1e090f48981fc9521fa47a271"
+    ],
+    "runtime_receipt_count": 1
+  },
+  {
+    "kind": "ledger",
+    "count": 0,
+    "table": "equipment_state_source_receipts",
+    "whole_row_sha256": null,
+    "runtime_receipt_count": 0
+  },
+  {
+    "kind": "telemetry",
+    "count": 1,
+    "table": "climate",
+    "whole_row_sha256": [
+      "903185a6495f07fa7771ecfd75bc206c4650da1acff79d34eb049ae205f63fcc"
+    ]
+  },
+  {
+    "kind": "telemetry",
+    "count": 1,
+    "table": "diagnostics",
+    "whole_row_sha256": [
+      "dfcade5a4410ee32d650a0adf1b932a569cadc62f61e5e7e8e3c17b3e2d2fee2"
+    ]
+  },
+  {
+    "kind": "telemetry",
+    "count": 0,
+    "table": "equipment_state",
+    "whole_row_sha256": null
+  },
+  {
+    "kind": "lineage",
+    "rows": [
+      {
+        "runtime": "f4d61647-6648-4d8d-a19a-802e07638a7c",
+        "generation": 7,
+        "source_time": "2000-01-01T00:00:00.168626+00:00",
+        "greenhouse_id": "vallery",
+        "fixture_payload": {
+          "temp_avg": 70.0
+        }
+      }
+    ],
+    "table": "climate_source_events"
+  },
+  {
+    "kind": "lineage",
+    "rows": [
+      {
+        "runtime": "f4d61647-6648-4d8d-a19a-802e07638a7c",
+        "generation": 7,
+        "source_time": "2000-01-01T00:00:00.168626+00:00",
+        "greenhouse_id": "vallery",
+        "fixture_payload": {
+          "firmware_version": "s2-qualification"
+        }
+      }
+    ],
+    "table": "observational_source_events"
+  },
+  {
+    "kind": "equipment_metadata",
+    "rows": null
+  },
+  {
+    "kind": "frozen_bundle_receipt_references",
+    "count": 0
+  },
+  {
+    "kind": "year2000_chunks",
+    "chunks": [
+      {
+        "range_end": "2000-01-06T00:00:00+00:00",
+        "chunk_name": "_hyper_1_1109_chunk",
+        "range_start": "1999-12-30T00:00:00+00:00",
+        "chunk_schema": "_timescaledb_internal",
+        "is_compressed": false,
+        "hypertable_name": "climate",
+        "chunk_tablespace": null,
+        "hypertable_schema": "public",
+        "primary_dimension": "ts",
+        "range_end_integer": null,
+        "chunk_creation_time": "2026-10-13T00:03:56.018224+00:00",
+        "range_start_integer": null,
+        "primary_dimension_type": "timestamp with time zone"
+      },
+      {
+        "range_end": "2000-01-06T00:00:00+00:00",
+        "chunk_name": "_hyper_5_1110_chunk",
+        "range_start": "1999-12-30T00:00:00+00:00",
+        "chunk_schema": "_timescaledb_internal",
+        "is_compressed": false,
+        "hypertable_name": "diagnostics",
+        "chunk_tablespace": null,
+        "hypertable_schema": "public",
+        "primary_dimension": "ts",
+        "range_end_integer": null,
+        "chunk_creation_time": "2026-10-13T00:12:35.854771+00:00",
+        "range_start_integer": null,
+        "primary_dimension_type": "timestamp with time zone"
+      }
+    ]
+  },
+  {
+    "kind": "immutable_trigger",
+    "enabled": "O",
+    "function_sha256": "9097ac8f3913fb8fb7fca031fe8649f607943d35cf1b6b10265b11c2018f2d3e"
+  },
+  {
+    "kind": "other_clients",
+    "count": 0
+  },
+  {
+    "kind": "typed_telemetry",
+    "climate_exact": true,
+    "equipment_exact": true,
+    "diagnostics_exact": true
+  }
+]

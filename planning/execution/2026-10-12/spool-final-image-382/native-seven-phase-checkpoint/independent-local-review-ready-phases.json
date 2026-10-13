@@ -1,0 +1,492 @@
+{
+  "complete_seven_phase_bounded_proof": true,
+  "excluded_claims": [
+    "full382 completion",
+    "multi-event FIFO",
+    "node loss",
+    "fresh device confirmation",
+    "general capacity or lower memory limits"
+  ],
+  "inverse_final952_77_42_catalog_and_cleanup_reviewed": false,
+  "no_runtime_calls_or_tests": true,
+  "reviewed_phase3_receipt_sha256": "9f091a4756c323c966f70638fae4a4cb8cbd50116acbdf6458744a850bf93b47",
+  "reviewed_ready_phases": [
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "reviews": [
+    {
+      "actionable_mismatches": [],
+      "all_previous_native_whole_row_hashes_unchanged": true,
+      "artifact_sha256": {
+        "phase-4-native/execution.json": "253d4a4018202d9f42d945fb4d84675643bf39c1bbf5ff21eaa86cf1f1abd04a",
+        "phase-4-native/records.json": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+        "phase-4-native/source.sql": "cd12c55c058f58d7d7e2b3b161037b2fe7a62413fe72fa159c0018faab1f002a",
+        "phases/4/accepted.json": "fff6d723dc39ace0ad0c5307f8d6156d46fbdb6b3aa176761a29ffa0da3ad2b9",
+        "phases/4/execution.json": "82d37057de5db9b1dc83300ba2765699d86fe4c9bd642d06a41b89dfa34f6490",
+        "phases/4/job.actual.json": "af6d00a39e6d1faf66dffc8c3e621767d5ffe85e78f7612f0896b33751cdf9b0",
+        "phases/4/job.submitted.json": "d22958fd2fac1a2ccd3cffff5494df43144adea0a343b599be30218440256517",
+        "phases/4/native.records.json": "1430186529151bde723374c205bfdff80ec6c1b274e03b94edb0cdad85637b8a",
+        "phases/4/pod.actual.json": "337fa99ed4d45ecc9fa8dc420900443b3a9fcedb56000ccb2ab568d246feca66",
+        "phases/4/pod.events.json": "d7ba0fa68336c5b1610c45c93a59d2ddf7a96e16a6f971d246d155d25c5724a2",
+        "phases/4/release.configmap.json": "33eb639cf4eb0fa5e0c80dca748d734bddcffa8ec867fa82bf58045f0e60c3a0"
+      },
+      "cached_image_already_present_accessible_event_uid": "7dc184fe-a078-474c-8cb0-0d7e62de1c50",
+      "container_restarts": 0,
+      "job_backoff_limit": 0,
+      "job_uid": "13889af3-b5af-4d24-ace7-e99456616d69",
+      "native_child_exit": 74,
+      "native_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "native_login_identity_receipt_emitted": false,
+      "one_child_subprocess_run_by_frozen_wrapper": true,
+      "phase": 4,
+      "phase_name": "crash-equipment",
+      "pod_uid": "876c6f74-6090-4a5f-879b-8c771127e376",
+      "queue_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "queues_exact_uuid_payload_format_integrity": true,
+      "readiness": {
+        "attempts": [
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "TimeoutError",
+          "connected"
+        ],
+        "authentication_attempted": false,
+        "child_started": false,
+        "kind": "transport_readiness",
+        "phase": "crash-equipment",
+        "receipt_is_not_phase_acceptance": true,
+        "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+        "sql_attempted": false,
+        "status": "passed"
+      },
+      "resource": {
+        "cgroup_after_child": {
+          "cpu.stat": {
+            "available": true,
+            "value": "usage_usec 3865822\nuser_usec 3486790\nsystem_usec 379031\ncore_sched.force_idle_usec 0\nnr_periods 60\nnr_throttled 1\nthrottled_usec 593\nnr_bursts 0\nburst_usec 0"
+          },
+          "io.stat": {
+            "available": true,
+            "value": "65:64 rbytes=49152 wbytes=36864 rios=6 wios=6 dbytes=0 dios=0"
+          },
+          "memory.current": {
+            "available": true,
+            "value": "21336064"
+          },
+          "memory.events": {
+            "available": true,
+            "value": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+          },
+          "memory.peak": {
+            "available": true,
+            "value": "88440832"
+          },
+          "pids.peak": {
+            "available": true,
+            "value": "6"
+          }
+        },
+        "cgroup_peak_bytes": 88440832,
+        "child_elapsed_seconds": 4.695181053131819,
+        "child_peak_rss_kib": 92252,
+        "lower_request_or_limit_claimed": false,
+        "memory_limit": "1Gi",
+        "memory_request": "512Mi",
+        "oom_events_zero": true,
+        "spool_filesystem": {
+          "available": true,
+          "available_bytes": 2023518208,
+          "capacity_bytes": 2040373248,
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615"
+        },
+        "sqlite_bytes": {
+          "climate": {
+            "database": 16384,
+            "journal": 0
+          },
+          "diagnostics": {
+            "database": 16384,
+            "journal": 0
+          },
+          "equipment": {
+            "database": 16384,
+            "journal": 0
+          }
+        }
+      },
+      "result": "consistent-with-bounded-acceptance",
+      "wrapper_container_exit": 0
+    },
+    {
+      "actionable_mismatches": [],
+      "all_previous_native_whole_row_hashes_unchanged": true,
+      "artifact_sha256": {
+        "phase-5-native/execution.json": "ec91caf1da41df894e12de04ce3692a71da27c2755e7b2438c8bfd750db745c8",
+        "phase-5-native/records.json": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+        "phase-5-native/source.sql": "cd12c55c058f58d7d7e2b3b161037b2fe7a62413fe72fa159c0018faab1f002a",
+        "phases/5/accepted.json": "1e48e6ea19f7da5adf8e55109b9704b31e0e6fc43a7d1a777afefc814cb8c221",
+        "phases/5/execution.json": "94f8756eb1ebc3d17db7edff31f848f2cc8d5f145ddde63ba57cb03544ef3609",
+        "phases/5/job.actual.json": "cc651cf47c6c43603933e689ab854e450379df9f295613a18fd201a99e4caec1",
+        "phases/5/job.submitted.json": "f78f342724637dd4f40fb2d28f728ab765bdef27065a9a0008a7ddf53b92e031",
+        "phases/5/native.records.json": "f1eb8048a226413a084ae882e9bce53ab65bf74aef6067bd7db50d93708f0bad",
+        "phases/5/pod.actual.json": "ba6131258f46544f8243bc6f37276dd9b6716b773dc78e16e2ccc944c40217df",
+        "phases/5/pod.events.json": "1a4c91414868dabcdc4b88eb58b6983717cfeaf4e1b4f418be0d2cb7a09d9007",
+        "phases/5/release.configmap.json": "fc1b614dbf61db0f4a00e0af717432a6fc89e71fc24c041d8ef1e0507fd304ca"
+      },
+      "cached_image_already_present_accessible_event_uid": "cf115a76-4b25-47d9-8def-15110a0d71e8",
+      "container_restarts": 0,
+      "job_backoff_limit": 0,
+      "job_uid": "038a3bed-ea2e-492c-9bfc-d7605af6fbf6",
+      "native_child_exit": 0,
+      "native_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "native_login_identity_receipt_emitted": true,
+      "one_child_subprocess_run_by_frozen_wrapper": true,
+      "phase": 5,
+      "phase_name": "replay",
+      "pod_uid": "3aa52533-dc7a-4285-b434-ae4dc039d5d3",
+      "queue_counts_C_D_E": [
+        0,
+        0,
+        0
+      ],
+      "queues_exact_uuid_payload_format_integrity": true,
+      "readiness": {
+        "attempts": [
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "TimeoutError",
+          "connected"
+        ],
+        "authentication_attempted": false,
+        "child_started": false,
+        "kind": "transport_readiness",
+        "phase": "replay",
+        "receipt_is_not_phase_acceptance": true,
+        "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+        "sql_attempted": false,
+        "status": "passed"
+      },
+      "resource": {
+        "cgroup_after_child": {
+          "cpu.stat": {
+            "available": true,
+            "value": "usage_usec 3945256\nuser_usec 3651035\nsystem_usec 294220\ncore_sched.force_idle_usec 0\nnr_periods 62\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+          },
+          "io.stat": {
+            "available": true,
+            "value": "65:64 rbytes=49152 wbytes=98304 rios=6 wios=12 dbytes=0 dios=0"
+          },
+          "memory.current": {
+            "available": true,
+            "value": "21405696"
+          },
+          "memory.events": {
+            "available": true,
+            "value": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+          },
+          "memory.peak": {
+            "available": true,
+            "value": "88399872"
+          },
+          "pids.peak": {
+            "available": true,
+            "value": "6"
+          }
+        },
+        "cgroup_peak_bytes": 88399872,
+        "child_elapsed_seconds": 4.561221909942105,
+        "child_peak_rss_kib": 92224,
+        "lower_request_or_limit_claimed": false,
+        "memory_limit": "1Gi",
+        "memory_request": "512Mi",
+        "oom_events_zero": true,
+        "spool_filesystem": {
+          "available": true,
+          "available_bytes": 2023518208,
+          "capacity_bytes": 2040373248,
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615"
+        },
+        "sqlite_bytes": {
+          "climate": {
+            "database": 16384,
+            "journal": 0
+          },
+          "diagnostics": {
+            "database": 16384,
+            "journal": 0
+          },
+          "equipment": {
+            "database": 16384,
+            "journal": 0
+          }
+        }
+      },
+      "result": "consistent-with-bounded-acceptance",
+      "wrapper_container_exit": 0
+    },
+    {
+      "actionable_mismatches": [],
+      "all_previous_native_whole_row_hashes_unchanged": true,
+      "artifact_sha256": {
+        "phase-6-native/execution.json": "88d6bea43dc4c731b98d2257c8aafc0bbc2b22d8d67e6247c6d51dccd4633c84",
+        "phase-6-native/records.json": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+        "phase-6-native/source.sql": "cd12c55c058f58d7d7e2b3b161037b2fe7a62413fe72fa159c0018faab1f002a",
+        "phases/6/accepted.json": "0be27430a5b68e2847b8b7fb11682e5f70c2487b405aeb4c45d0c68f631d1f06",
+        "phases/6/execution.json": "98f35e467195b00ae6de9376b5f374774cd33090d23440918c5cf2c380c51acb",
+        "phases/6/job.actual.json": "f963b605bdd782c30373098a57a176a0a3e70ccb1e88b64fa659873ac24682a1",
+        "phases/6/job.submitted.json": "281cd1a3c7470ebc8c4a6fc77d00d35c28896b01b7bf08dc43a24cd9f5900d62",
+        "phases/6/native.records.json": "de484df79dbdc91a36ff8f968771c7055314ecc183b56a47fda8063b3574dff7",
+        "phases/6/pod.actual.json": "10ae56d6e2c412f784ff09dce519bb20d6f9a6a2c1582f3f825b2d26cc14775c",
+        "phases/6/pod.events.json": "936516cf64c984f109de96607b1fb45f743dc84334a2f20dab163091191190a4",
+        "phases/6/release.configmap.json": "d0bcead7db812f3433577491a4cc3fb743c37aaf74fed0f419c63c4486e06219"
+      },
+      "cached_image_already_present_accessible_event_uid": "d6f539b2-b7e8-4f09-8dd7-b3cdc5ebac90",
+      "container_restarts": 0,
+      "job_backoff_limit": 0,
+      "job_uid": "fec2b029-881d-4e63-8181-c925d3e46707",
+      "native_child_exit": 0,
+      "native_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "native_login_identity_receipt_emitted": true,
+      "one_child_subprocess_run_by_frozen_wrapper": true,
+      "phase": 6,
+      "phase_name": "duplicate",
+      "pod_uid": "448d2708-c3d4-41e4-8643-dd83296d5edd",
+      "queue_counts_C_D_E": [
+        0,
+        0,
+        0
+      ],
+      "queues_exact_uuid_payload_format_integrity": true,
+      "readiness": {
+        "attempts": [
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "TimeoutError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "TimeoutError",
+          "connected"
+        ],
+        "authentication_attempted": false,
+        "child_started": false,
+        "kind": "transport_readiness",
+        "phase": "duplicate",
+        "receipt_is_not_phase_acceptance": true,
+        "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+        "sql_attempted": false,
+        "status": "passed"
+      },
+      "resource": {
+        "cgroup_after_child": {
+          "cpu.stat": {
+            "available": true,
+            "value": "usage_usec 3916310\nuser_usec 3606190\nsystem_usec 310120\ncore_sched.force_idle_usec 0\nnr_periods 68\nnr_throttled 2\nthrottled_usec 1491\nnr_bursts 0\nburst_usec 0"
+          },
+          "io.stat": {
+            "available": true,
+            "value": "65:80 rbytes=49152 wbytes=172032 rios=6 wios=18 dbytes=0 dios=0"
+          },
+          "memory.current": {
+            "available": true,
+            "value": "21368832"
+          },
+          "memory.events": {
+            "available": true,
+            "value": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+          },
+          "memory.peak": {
+            "available": true,
+            "value": "88080384"
+          },
+          "pids.peak": {
+            "available": true,
+            "value": "6"
+          }
+        },
+        "cgroup_peak_bytes": 88080384,
+        "child_elapsed_seconds": 4.667469774140045,
+        "child_peak_rss_kib": 91804,
+        "lower_request_or_limit_claimed": false,
+        "memory_limit": "1Gi",
+        "memory_request": "512Mi",
+        "oom_events_zero": true,
+        "spool_filesystem": {
+          "available": true,
+          "available_bytes": 2023518208,
+          "capacity_bytes": 2040373248,
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615"
+        },
+        "sqlite_bytes": {
+          "climate": {
+            "database": 16384,
+            "journal": 0
+          },
+          "diagnostics": {
+            "database": 16384,
+            "journal": 0
+          },
+          "equipment": {
+            "database": 16384,
+            "journal": 0
+          }
+        }
+      },
+      "result": "consistent-with-bounded-acceptance",
+      "wrapper_container_exit": 0
+    },
+    {
+      "actionable_mismatches": [],
+      "all_previous_native_whole_row_hashes_unchanged": true,
+      "artifact_sha256": {
+        "phase-7-native/execution.json": "3df941f81622a2622fc83ed288589601c7584c5a108fa076ea1127be18896065",
+        "phase-7-native/records.json": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+        "phase-7-native/source.sql": "cd12c55c058f58d7d7e2b3b161037b2fe7a62413fe72fa159c0018faab1f002a",
+        "phases/7/accepted.json": "47da2f9306e44ceb93f40acedb33ce485e7acd8e94868439f74fa602d38e2bf8",
+        "phases/7/execution.json": "5ee073e790b4d70c6380374ce52960cfe4c95eb04e3ec69a20f1d605cb1e2f80",
+        "phases/7/job.actual.json": "945a42848e7acf7bbe1683fd3db25738380a1d05b3a69e3828cc26c9a8ca75d3",
+        "phases/7/job.submitted.json": "fcac310797f3be04ee854479ceacc66a62ae0d2e64b9dfd5246fa724681bd88c",
+        "phases/7/native.records.json": "7084e949d98e1d1e8b562df9182bbbfc85fad738b34baffaa16b3d58bab0a615",
+        "phases/7/pod.actual.json": "489fad928a8fabbb27eb93460c83e38a4194dca2120bfafa41a8208894366707",
+        "phases/7/pod.events.json": "ebd20c0cbf82f9bba934ff0b683a20773e5402bfeeb05b4ffdcf4c6aebd19d11",
+        "phases/7/release.configmap.json": "c734d186f3ba03264bc706e24aae3065b5dba9d16be67d218dcd38e1b04fab6f"
+      },
+      "cached_image_already_present_accessible_event_uid": "1eea8a15-60f4-484c-93cb-3d2f6857b404",
+      "container_restarts": 0,
+      "job_backoff_limit": 0,
+      "job_uid": "19a1260f-ae4e-4f7e-be58-c5042a48df9f",
+      "native_child_exit": 0,
+      "native_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "native_login_identity_receipt_emitted": true,
+      "one_child_subprocess_run_by_frozen_wrapper": true,
+      "phase": 7,
+      "phase_name": "conflict",
+      "pod_uid": "c6d8deb0-d66a-4f0d-915f-f1e5507c3916",
+      "queue_counts_C_D_E": [
+        1,
+        1,
+        1
+      ],
+      "queues_exact_uuid_payload_format_integrity": true,
+      "readiness": {
+        "attempts": [
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "ConnectionRefusedError",
+          "TimeoutError",
+          "connected"
+        ],
+        "authentication_attempted": false,
+        "child_started": false,
+        "kind": "transport_readiness",
+        "phase": "conflict",
+        "receipt_is_not_phase_acceptance": true,
+        "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+        "sql_attempted": false,
+        "status": "passed"
+      },
+      "resource": {
+        "cgroup_after_child": {
+          "cpu.stat": {
+            "available": true,
+            "value": "usage_usec 3760228\nuser_usec 3493358\nsystem_usec 266870\ncore_sched.force_idle_usec 0\nnr_periods 60\nnr_throttled 1\nthrottled_usec 2860\nnr_bursts 0\nburst_usec 0"
+          },
+          "io.stat": {
+            "available": true,
+            "value": "65:64 rbytes=49152 wbytes=110592 rios=6 wios=12 dbytes=0 dios=0"
+          },
+          "memory.current": {
+            "available": true,
+            "value": "21303296"
+          },
+          "memory.events": {
+            "available": true,
+            "value": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+          },
+          "memory.peak": {
+            "available": true,
+            "value": "88342528"
+          },
+          "pids.peak": {
+            "available": true,
+            "value": "6"
+          }
+        },
+        "cgroup_peak_bytes": 88342528,
+        "child_elapsed_seconds": 4.472059446852654,
+        "child_peak_rss_kib": 91808,
+        "lower_request_or_limit_claimed": false,
+        "memory_limit": "1Gi",
+        "memory_request": "512Mi",
+        "oom_events_zero": true,
+        "spool_filesystem": {
+          "available": true,
+          "available_bytes": 2023518208,
+          "capacity_bytes": 2040373248,
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615"
+        },
+        "sqlite_bytes": {
+          "climate": {
+            "database": 16384,
+            "journal": 0
+          },
+          "diagnostics": {
+            "database": 16384,
+            "journal": 0
+          },
+          "equipment": {
+            "database": 16384,
+            "journal": 0
+          }
+        }
+      },
+      "result": "consistent-with-bounded-acceptance",
+      "wrapper_container_exit": 0
+    }
+  ],
+  "schema": "verdify-382-independent-ready-phases-review-v1",
+  "scope": "local retained artifacts only; one event per queue; existing phase1/2 retained, failed old phase3 distinct"
+}

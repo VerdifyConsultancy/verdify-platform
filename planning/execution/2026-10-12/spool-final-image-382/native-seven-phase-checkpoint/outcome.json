@@ -1,0 +1,209 @@
+{
+  "schema": "verdify382-final-image-seven-phase-resealed-v1",
+  "completedAt": "2026-10-13T00:26:20.574167+00:00",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "manifestRunId": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "targetClusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primaryUid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "databaseOid": 16447,
+  "systemIdentifier": "7693399121498484768",
+  "phaseAcceptanceCount": 7,
+  "phaseTotal": 7,
+  "phases": [
+    {
+      "ordinal": 1,
+      "phase": "unavailable",
+      "accepted": true,
+      "nativeProcessExit": 0,
+      "jobUid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+      "podUid": "a042640e-6bec-46ff-bb8b-7d1655c242fd",
+      "childPeakRssKiB": 91356,
+      "elapsedSeconds": 4.696050247177482,
+      "nativeWitnessSha256": "25311a2f5807ae61915113e703560a8d20f39761e38e12f9529f6ed94010adc7",
+      "queueCounts": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      }
+    },
+    {
+      "ordinal": 2,
+      "phase": "crash-climate",
+      "accepted": true,
+      "nativeProcessExit": 74,
+      "jobUid": "9364ad18-4ffc-4216-ba8a-f3cace8878ab",
+      "podUid": "4f7ab510-5482-4dd8-8656-e24d8954cdcd",
+      "childPeakRssKiB": 91744,
+      "elapsedSeconds": 4.608790005091578,
+      "nativeWitnessSha256": "e6fa659d2f7c1cc0a2d83d9d890d1fdb96c2910ca4c34bb558245d4e4024e95e",
+      "queueCounts": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      }
+    },
+    {
+      "ordinal": 3,
+      "phase": "crash-observation",
+      "accepted": true,
+      "nativeProcessExit": 74,
+      "jobUid": "765af9d3-f60d-4d47-b4c0-c2ce1d61c5c8",
+      "podUid": "ed60633e-e1f6-4396-b408-038fc985f6da",
+      "childPeakRssKiB": 89904,
+      "elapsedSeconds": 4.967207830166444,
+      "nativeWitnessSha256": "aa629b08f8570e2f4d90ea551a3a17e71c5b5e97c5567aa8e4494154e7fe3d1d",
+      "queueCounts": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      }
+    },
+    {
+      "ordinal": 4,
+      "phase": "crash-equipment",
+      "accepted": true,
+      "nativeProcessExit": 74,
+      "jobUid": "13889af3-b5af-4d24-ace7-e99456616d69",
+      "podUid": "876c6f74-6090-4a5f-879b-8c771127e376",
+      "childPeakRssKiB": 92252,
+      "elapsedSeconds": 4.695181053131819,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "queueCounts": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      }
+    },
+    {
+      "ordinal": 5,
+      "phase": "replay",
+      "accepted": true,
+      "nativeProcessExit": 0,
+      "jobUid": "038a3bed-ea2e-492c-9bfc-d7605af6fbf6",
+      "podUid": "3aa52533-dc7a-4285-b434-ae4dc039d5d3",
+      "childPeakRssKiB": 92224,
+      "elapsedSeconds": 4.561221909942105,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "queueCounts": {
+        "climate": 0,
+        "diagnostics": 0,
+        "equipment": 0
+      }
+    },
+    {
+      "ordinal": 6,
+      "phase": "duplicate",
+      "accepted": true,
+      "nativeProcessExit": 0,
+      "jobUid": "fec2b029-881d-4e63-8181-c925d3e46707",
+      "podUid": "448d2708-c3d4-41e4-8643-dd83296d5edd",
+      "childPeakRssKiB": 91804,
+      "elapsedSeconds": 4.667469774140045,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "queueCounts": {
+        "climate": 0,
+        "diagnostics": 0,
+        "equipment": 0
+      }
+    },
+    {
+      "ordinal": 7,
+      "phase": "conflict",
+      "accepted": true,
+      "nativeProcessExit": 0,
+      "jobUid": "19a1260f-ae4e-4f7e-be58-c5042a48df9f",
+      "podUid": "c6d8deb0-d66a-4f0d-915f-f1e5507c3916",
+      "childPeakRssKiB": 91808,
+      "elapsedSeconds": 4.472059446852654,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "queueCounts": {
+        "climate": 1,
+        "diagnostics": 1,
+        "equipment": 1
+      }
+    }
+  ],
+  "childPeakRssKiB": 92252,
+  "increments": {
+    "spoolPvcLogicalGiB": 2,
+    "spoolNvmeTwoReplicaGiB": 4,
+    "singleRunnerMemoryRequestMiB": 512,
+    "singleRunnerMemoryLimitMiB": 1024,
+    "singleRunnerEphemeralLimitMiB": 512,
+    "imagePulledOrBuilt": false
+  },
+  "inverse": {
+    "existingPasswordsRestoredNull": 2,
+    "fullLoginMembershipMetadataExactStarting": true,
+    "ownedRowsRemoved": 6,
+    "ownedChunksRemoved": 3,
+    "onlyActualChangedSequenceAllocatorsRestored": 3,
+    "all77SequencesExactStarting": true,
+    "immutableTriggerAndFunctionOriginal": true
+  },
+  "reseal": {
+    "fullTables": 952,
+    "rows": 9699553,
+    "allTableRecordsExactAccepted": true,
+    "nativeStreamSha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+    "studyTables": 42,
+    "allStudyRecordsExactStarting": true,
+    "catalogSha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+    "rawProductRowsExportedOrPersisted": false
+  },
+  "cleanup": {
+    "currentAttemptTemporaryObjectsUidDeleted": 19,
+    "firstFailedAttemptObjectsUidDeleted": 4,
+    "temporarySecretsUidDeleted": 2,
+    "spoolPvcRetained": true,
+    "eighteenStagingCustodyFilesRetained": true
+  },
+  "preservedAttempts": [
+    {
+      "attempt": "first cached Never",
+      "result": "No container/SQL/fixtures; ErrImageNeverPull then DeadlineExceeded; exact NULL inverse and full reseal before distinct continuation."
+    },
+    {
+      "attempt": "cached authorized phase3",
+      "result": "ConnectionRefused before diagnostics SQL; native state byte-identical accepted phase2; distinct supported readiness correction before one child/auth connection."
+    }
+  ],
+  "retainedCustodyLedgers": [
+    {
+      "path": "payload-checksums.json",
+      "sha256": "3ddcb4dbcccb0a41920400d0c216a41ebcc61253e6a224ea2477c8d9b574342d",
+      "payloadCount": 33,
+      "allPayloadsUnchanged": true
+    },
+    {
+      "path": "metadata-preflight-2206Z/payload-checksums.json",
+      "sha256": "2c3a69c6f50891d054818ed60540dcc58c1868546083451f0a699b48ba08daff",
+      "payloadCount": 16,
+      "allPayloadsUnchanged": true
+    },
+    {
+      "path": "actual-preflight-2326Z/payload-checksums.json",
+      "sha256": "c668f42806076cfd3b6de2641c2bc68ae79f4a6209b422e737e75435a9ac68a6",
+      "payloadCount": 21,
+      "allPayloadsUnchanged": true
+    }
+  ],
+  "scope": {
+    "oneEventPerEachOfThreeQueues": true,
+    "serialProcessCrashAfterCommitBeforeLocalAck": true,
+    "replayAndDuplicateRowsHashesUnchanged": true,
+    "conflictingSameUuidPayloadsP0001Retained": true,
+    "multiEventFifoProven": false,
+    "physicalNodeLossProven": false,
+    "freshDeviceConfirmationProven": false,
+    "wholeIssue382Complete": false,
+    "productionOrDeviceOrControllerOrMainChanged": false
+  },
+  "publicExport": {
+    "privateApprovalAdmissionAndResourceSnapshotsIncluded": false,
+    "credentialValuesOrVerifiersIncluded": false,
+    "rejectedPrivatePacketExported": false,
+    "normalHooksRequired": true
+  }
+}

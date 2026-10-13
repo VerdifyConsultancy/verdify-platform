@@ -1,0 +1,109 @@
+[
+  {
+    "kind": "roles",
+    "roles": [
+      {
+        "role": "verdify_experiment_v2_equipment_source_collector_login",
+        "login": true,
+        "super": false,
+        "create_db": false,
+        "bypass_rls": false,
+        "create_role": false,
+        "memberships": [
+          "verdify_experiment_equipment_source_collector"
+        ],
+        "replication": false,
+        "password_null": false
+      },
+      {
+        "role": "verdify_ingestor_runtime_login",
+        "login": true,
+        "super": false,
+        "create_db": false,
+        "bypass_rls": false,
+        "create_role": false,
+        "memberships": [
+          "verdify_ingestor_runtime"
+        ],
+        "replication": false,
+        "password_null": false
+      }
+    ]
+  },
+  {
+    "kind": "ledger",
+    "count": 0,
+    "table": "climate_source_events",
+    "whole_row_sha256": null,
+    "runtime_receipt_count": 0
+  },
+  {
+    "kind": "ledger",
+    "count": 0,
+    "table": "observational_source_events",
+    "whole_row_sha256": null,
+    "runtime_receipt_count": 0
+  },
+  {
+    "kind": "ledger",
+    "count": 0,
+    "table": "equipment_state_source_receipts",
+    "whole_row_sha256": null,
+    "runtime_receipt_count": 0
+  },
+  {
+    "kind": "telemetry",
+    "count": 0,
+    "table": "climate",
+    "whole_row_sha256": null
+  },
+  {
+    "kind": "telemetry",
+    "count": 0,
+    "table": "diagnostics",
+    "whole_row_sha256": null
+  },
+  {
+    "kind": "telemetry",
+    "count": 0,
+    "table": "equipment_state",
+    "whole_row_sha256": null
+  },
+  {
+    "kind": "lineage",
+    "rows": null,
+    "table": "climate_source_events"
+  },
+  {
+    "kind": "lineage",
+    "rows": null,
+    "table": "observational_source_events"
+  },
+  {
+    "kind": "equipment_metadata",
+    "rows": null
+  },
+  {
+    "kind": "frozen_bundle_receipt_references",
+    "count": 0
+  },
+  {
+    "kind": "year2000_chunks",
+    "chunks": []
+  },
+  {
+    "kind": "immutable_trigger",
+    "enabled": "O",
+    "function_sha256": "9097ac8f3913fb8fb7fca031fe8649f607943d35cf1b6b10265b11c2018f2d3e"
+  },
+  {
+    "kind": "other_clients",
+    "count": 0
+  },
+  {
+    "kind": "typed_telemetry",
+    "climate_exact": true,
+    "equipment_exact": true,
+    "diagnostics_exact": true
+  }
+]

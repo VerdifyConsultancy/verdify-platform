@@ -1,0 +1,47 @@
+{
+  "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+  "primary_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+  "database_oid": 16447,
+  "clients_stopped": true,
+  "before_year2000_chunks": [],
+  "before_fixture_rows": 0,
+  "manifest_run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+  "added_chunks": [
+    {
+      "name": "_timescaledb_internal._hyper_1_1109_chunk",
+      "table": "climate",
+      "other_rows": 0,
+      "owned_rows": 1,
+      "total_rows": 1,
+      "range_start": "1999-12-30T00:00:00+00:00",
+      "range_end": "2000-01-06T00:00:00+00:00"
+    },
+    {
+      "name": "_timescaledb_internal._hyper_5_1110_chunk",
+      "table": "diagnostics",
+      "other_rows": 0,
+      "owned_rows": 1,
+      "total_rows": 1,
+      "range_start": "1999-12-30T00:00:00+00:00",
+      "range_end": "2000-01-06T00:00:00+00:00"
+    },
+    {
+      "name": "_timescaledb_internal._hyper_2_1111_chunk",
+      "table": "equipment_state",
+      "other_rows": 0,
+      "owned_rows": 1,
+      "total_rows": 1,
+      "range_start": "1999-12-30T00:00:00+00:00",
+      "range_end": "2000-01-06T00:00:00+00:00"
+    }
+  ],
+  "row_sha256": {
+    "climate_source_events": "98e97fe60945800835ab1c8a004b957d188aacdc359145433e54ebe3f25ad15b",
+    "observational_source_events": "88075da4eab6519e8f16c6c31142eb03aac7fee1e090f48981fc9521fa47a271",
+    "equipment_state_source_receipts": "8ada3869ac9b361e903a19434bbe678350959df1b3b33b5db6a0791268d2fa42"
+  },
+  "immutable_trigger": {
+    "enabled": "O",
+    "function_sha256": "9097ac8f3913fb8fb7fca031fe8649f607943d35cf1b6b10265b11c2018f2d3e"
+  }
+}

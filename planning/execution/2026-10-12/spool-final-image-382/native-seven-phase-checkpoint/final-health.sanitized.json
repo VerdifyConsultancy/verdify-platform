@@ -1,0 +1,50 @@
+{
+  "capturedAt": "2026-10-13T00:26:20.574167+00:00",
+  "cluster": {
+    "name": "verdify-cnpg-s2-integration",
+    "uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "instances": 3,
+    "readyInstances": 3,
+    "currentPrimary": "verdify-cnpg-s2-integration-1"
+  },
+  "threeReadyPodsWithOriginalUidsAndZeroRestarts": true,
+  "podUids": {
+    "verdify-cnpg-s2-integration-1": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "verdify-cnpg-s2-integration-2": "81790e3e-7f0a-4655-9595-83bf2c95f635",
+    "verdify-cnpg-s2-integration-3": "53a071c6-0889-4b04-8c94-714ad98f9d7b"
+  },
+  "healthyTwoReplicaDatabaseVolumes": 6,
+  "retainedSpool": {
+    "pvc": "verdify-s2-spool-382-7fa4f802",
+    "pvcUid": "116e36a0-be6b-42aa-9643-ef4b638492db",
+    "pvcPhase": "Bound",
+    "volume": "pvc-116e36a0-be6b-42aa-9643-ef4b638492db",
+    "volumeUid": "9bbc2e0b-36f2-4aab-a1ec-57096574a21a",
+    "size": "2147483648",
+    "replicas": 2,
+    "state": "detached",
+    "robustness": "unknown",
+    "currentNode": ""
+  },
+  "temporaryActiveRunners": [],
+  "temporaryObjectsDeleted": 19,
+  "temporarySecretDeletedByUidResponse": true,
+  "argo": {
+    "name": "verdify-db-rehearsal-cluster",
+    "uid": "97ff0f52-2691-4f07-9184-591d936e3a05",
+    "revision": "9136f158641f918593df53471e3efe1792b7ad83",
+    "sync": "OutOfSync",
+    "health": "Healthy",
+    "automated": {
+      "enabled": false,
+      "prune": false,
+      "selfHeal": false
+    },
+    "operationPresent": false,
+    "operationPhase": "Succeeded"
+  },
+  "productionChanged": false,
+  "secretGETOrLIST": false,
+  "deviceAction": false,
+  "eighteenStagingCustodyFilesRetained": true
+}

@@ -1,0 +1,21 @@
+{
+  "accepted": true,
+  "phase": "crash-observation",
+  "ordinal": 3,
+  "nativeProcessExit": 74,
+  "ownedRowsAndQueueStatesExact": true,
+  "originalCommittedHashesUnchanged": true,
+  "knownCommittedRows": {
+    "climate_source_events": "98e97fe60945800835ab1c8a004b957d188aacdc359145433e54ebe3f25ad15b",
+    "climate": "903185a6495f07fa7771ecfd75bc206c4650da1acff79d34eb049ae205f63fcc",
+    "observational_source_events": "88075da4eab6519e8f16c6c31142eb03aac7fee1e090f48981fc9521fa47a271",
+    "diagnostics": "dfcade5a4410ee32d650a0adf1b932a569cadc62f61e5e7e8e3c17b3e2d2fee2"
+  },
+  "actualNativeAuthentication": false,
+  "oneEventPerQueueOnly": true,
+  "multiFIFOOrNodeLossOrFreshConfirmationClaimed": false,
+  "wrapperReceiptSha256": "e847d2425888348b0fb1e55ad79ac32c61aa629e41de83316f1f1808006b1734",
+  "nativeWitnessSha256": "aa629b08f8570e2f4d90ea551a3a17e71c5b5e97c5567aa8e4494154e7fe3d1d",
+  "jobUid": "765af9d3-f60d-4d47-b4c0-c2ce1d61c5c8",
+  "podUid": "ed60633e-e1f6-4396-b408-038fc985f6da"
+}

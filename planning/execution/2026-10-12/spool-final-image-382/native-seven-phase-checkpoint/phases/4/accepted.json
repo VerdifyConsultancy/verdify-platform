@@ -1,0 +1,23 @@
+{
+  "accepted": true,
+  "phase": "crash-equipment",
+  "ordinal": 4,
+  "nativeProcessExit": 74,
+  "ownedRowsAndQueueStatesExact": true,
+  "originalCommittedHashesUnchanged": true,
+  "knownCommittedRows": {
+    "climate_source_events": "98e97fe60945800835ab1c8a004b957d188aacdc359145433e54ebe3f25ad15b",
+    "climate": "903185a6495f07fa7771ecfd75bc206c4650da1acff79d34eb049ae205f63fcc",
+    "observational_source_events": "88075da4eab6519e8f16c6c31142eb03aac7fee1e090f48981fc9521fa47a271",
+    "diagnostics": "dfcade5a4410ee32d650a0adf1b932a569cadc62f61e5e7e8e3c17b3e2d2fee2",
+    "equipment_state_source_receipts": "8ada3869ac9b361e903a19434bbe678350959df1b3b33b5db6a0791268d2fa42",
+    "equipment_state": "4885ebf8f6db42f916178c54658b55e5d9545475b92680027bf22dee5d55cba2"
+  },
+  "actualNativeAuthentication": false,
+  "oneEventPerQueueOnly": true,
+  "multiFIFOOrNodeLossOrFreshConfirmationClaimed": false,
+  "wrapperReceiptSha256": "f1f7a58b38d23e7c4bb73155e67a462ee9de165119240fdacb40b2b8cf00f492",
+  "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+  "jobUid": "13889af3-b5af-4d24-ace7-e99456616d69",
+  "podUid": "876c6f74-6090-4a5f-879b-8c771127e376"
+}

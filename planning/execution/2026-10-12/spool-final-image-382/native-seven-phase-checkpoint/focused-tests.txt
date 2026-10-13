@@ -1,0 +1,23 @@
+test_empty_or_over_bound_counter_is_unavailable (__main__.CgroupReceiptTests.test_empty_or_over_bound_counter_is_unavailable) ... ok
+test_fixed_metadata_only_paths_missing_is_explicit (__main__.CgroupReceiptTests.test_fixed_metadata_only_paths_missing_is_explicit) ... ok
+test_corrupt_file_is_retained_and_error_contains_no_payload (__main__.QueueReceiptTests.test_corrupt_file_is_retained_and_error_contains_no_payload) ... ok
+test_empty_acked_queues_are_captured_without_repopulation (__main__.QueueReceiptTests.test_empty_acked_queues_are_captured_without_repopulation) ... ok
+test_expected_crash_exit_emits_queue_receipt_and_preserves_timing (__main__.QueueReceiptTests.test_expected_crash_exit_emits_queue_receipt_and_preserves_timing) ... ok
+test_expected_exit_with_missing_queue_fails_wrapper (__main__.QueueReceiptTests.test_expected_exit_with_missing_queue_fails_wrapper) ... ok
+test_expected_replay_exit_captures_empty_queues (__main__.QueueReceiptTests.test_expected_replay_exit_captures_empty_queues) ... ok
+test_missing_files_are_not_created (__main__.QueueReceiptTests.test_missing_files_are_not_created) ... ok
+test_noncanonical_run_path_refused_without_creating_files (__main__.QueueReceiptTests.test_noncanonical_run_path_refused_without_creating_files) ... ok
+test_owner_release_binds_exact_wrapper_bytes_and_refuses_tamper (__main__.QueueReceiptTests.test_owner_release_binds_exact_wrapper_bytes_and_refuses_tamper) ... ok
+test_readiness_emits_before_one_child_and_child_timing_starts_after_wait (__main__.QueueReceiptTests.test_readiness_emits_before_one_child_and_child_timing_starts_after_wait) ... ok
+test_readiness_failure_prevents_child_and_captures_queues_read_only (__main__.QueueReceiptTests.test_readiness_failure_prevents_child_and_captures_queues_read_only) ... ok
+test_readonly_uri_and_query_only_prevent_writes (__main__.QueueReceiptTests.test_readonly_uri_and_query_only_prevent_writes) ... ok
+test_real_source_schema_exact_payload_hash_source_order_read_only (__main__.QueueReceiptTests.test_real_source_schema_exact_payload_hash_source_order_read_only) ... ok
+test_schema_drift_refused (__main__.QueueReceiptTests.test_schema_drift_refused) ... ok
+test_unexpected_native_exit_still_captures_queues_and_fails (__main__.QueueReceiptTests.test_unexpected_native_exit_still_captures_queues_and_fails) ... ok
+test_unknown_format_refused_without_repair (__main__.QueueReceiptTests.test_unknown_format_refused_without_repair) ... ok
+test_wait_target_transport_ast_matches_frozen_runtime_duties (__main__.QueueReceiptTests.test_wait_target_transport_ast_matches_frozen_runtime_duties) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.096s
+
+OK

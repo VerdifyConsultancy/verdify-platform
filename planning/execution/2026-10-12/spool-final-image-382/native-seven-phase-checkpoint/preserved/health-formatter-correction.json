@@ -1,0 +1,10 @@
+{
+  "correction": "Read-only formatter originally treated automated.enabled=false object as truthy; corrected to explicit enabled=false predicate.",
+  "observedPolicy": {
+    "enabled": false,
+    "prune": false,
+    "selfHeal": false
+  },
+  "originalCaptureStopped": true,
+  "runtimeMutationOrQualificationRerun": false
+}

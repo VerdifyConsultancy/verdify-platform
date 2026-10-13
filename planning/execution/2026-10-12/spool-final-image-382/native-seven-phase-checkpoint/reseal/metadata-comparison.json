@@ -1,0 +1,11 @@
+{
+  "twoRoleMetadataExactStarting": true,
+  "twoPasswordsNull": true,
+  "sequenceCount": 77,
+  "allSequenceStatesExactStarting": true,
+  "allSixOwnedRowsAbsent": true,
+  "allThreeOwnedChunksAbsent": true,
+  "triggerAndFunctionOwnershipGrantsMigrationAndAdmissionExact": true,
+  "noOtherClients": true,
+  "productionChanged": false
+}

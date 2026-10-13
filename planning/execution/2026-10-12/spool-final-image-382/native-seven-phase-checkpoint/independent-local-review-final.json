@@ -1,0 +1,232 @@
+{
+  "actionableMismatches": [],
+  "artifactSha256": {
+    "/private/tmp/verdify-382-execution-20261012T2324Z/before-study42.json": "db861653735990217a8b9ab2b543554fd29b2ba4054df946a2c4e87504462a6e",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/cached-auth-attempt/created-objects.json": "ccd9f8be663df99e7470d489ee8263dec5af0317164ca6b62b458cbb832beb2a",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/native-metadata.json": "aa1b209f188db068f54a8cc7fa8835de1467719f5ab1f1219ce4eb106a60b7c3",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/after-inverses-fixture/records.json": "6b5985ff8e01a1dda7abb5fa3e473e0916121d28f8ac2bb82a36375d12447893",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/after-inverses-metadata/comparison.json": "1a0f935f016ae66c6e6bc5ccc463e31726a80b74fe230a9a1b6d34da864962ee",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/after-inverses-metadata/records.json": "8c92a5817efbad5b961af7671e36222f92be8b3d1b7d7ab5b2cd4c3e80d4ac7d",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/created-objects.json": "635d9f788bcd8962fbb696d944d80069bff6ce62eaab63a5910c69beb3d91fab",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-catalog/execution.json": "7e57bc8dc52433e7dec2b7199f66f87dfbb1d01404b5c216294feaa80fbcd70f",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-cleanup/receipt.json": "ef93ffa8536bcdec31299b6e3339da6d1a1e81b2ca0d19b80b45981c13a32ed0",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-full952/execution.json": "e6ff57178421944b8e1b7405f58151e2c49a33cbd2615c465ec870535ae76849",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-full952/receipt.json": "cd3514ab6c0bffdbdd13e8183301af981dd386a942f7ef6fdcfb4c5e1a4ef2cd",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-health-parser-correction.json": "1ab91e367df6a5fb990dc553fcc7b1f36085040a7d74955c73e07b08e604224e",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-health.json": "4a1ab7d4346a09ec99eb1b728e4cd18ab8482a853fbf272bda901380736a5c25",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/final-study42.json": "947462b46356eaee334b011048d56a32d6bd2128a7b317876782480b51b15574",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/independent-local-review-owned-inverse.json": "9e2446a97c4d8797a1b4206a6a9fd619b44ebb5d61c287d1b747c7b6e2165f41",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/independent-local-review-ready-phases.json": "0db3d2fcf74260498864b5005ba2d27b6d96976bfbc43c08ab268bd34b7acb29",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/independent-local-review-sequence-inverse.json": "a2301cf7816f7de02088050642685498f7eafa051abfa717cbfff33d96c375be",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/chunk-ownership-readonly/records.json": "66b795c53552f4c15fb73063225431cefbaf8bb2c5673f8540a7aea3f71f57b8",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/owned-fixture-witness.json": "50621eeb61258d6611cedc4df04ffb904b02ee39a7a20cff76446714139b371e",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/owned-fixture.sql": "cac0703d6ef0f9bee05ea30a3cda6af83bd84cb0e2ce258a615de30595bfff83",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/owned-fixture/execution.json": "5248ec35244a34eddfeac86fe07c093807dc290ff9065a832b0ee8aa95aaf889",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/sequence-deltas.json": "800ceb81ca13f8321b2bac9ae1c94277c9c033c29fbc5674d5788ec6b13c6bbd",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/sequence.sql": "1fee988ae191d0486d1f3fcb2e5f2b569d26243d0b894a120c91a971f9ed3901",
+    "/private/tmp/verdify-382-execution-20261012T2324Z/transport-ready-attempt/inverses/sequence/execution.json": "2aa96157134c2053fa009fc3a5f62c406817cc670b5b027ac5da9a21c6e2c1c8",
+    "/private/tmp/verdify-spool-final-image-382-20261012/planning/execution/2026-10-12/spool-final-image-382/accepted-inputs/actual-final-full952-copy.json": "e2f989ad83d207196314e9867c6c8d1f1700cca0cf8c8db2424ccda2f522dfb8",
+    "/private/tmp/verdify-spool-final-image-382-20261012/planning/execution/2026-10-12/spool-final-image-382/accepted-inputs/actual-final-native-catalog-receipt.json": "776aa50e486985220e56ee438f6841e96ce9234c3566aa6fa3a8d814c60dd9a3",
+    "/private/tmp/verdify-spool-final-image-382-20261012/planning/execution/2026-10-12/spool-final-image-382/accepted-inputs/actual-final-study42-derivation.json": "e124600908a8b053b3e33d0f883fc2c4253d3fb20eb3e12c2973fd27d2bd14c0"
+  },
+  "capturedAt": "2026-10-13T00:29:49.896869+00:00",
+  "cleanup": {
+    "allUidPreconditionsAndReturnedUidsExact": true,
+    "count": 19,
+    "eighteenCmJobUidsExactCreatedCustody": true,
+    "noActiveQualificationRunners": true,
+    "secretGetOrList": false,
+    "temporarySecretUidExact": "af501692-919b-48e4-8e13-d5e25fcfa449"
+  },
+  "consumerImageDigest": "c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+  "crashAuthenticationReceiptLimit": "Crash phases exit74 before helper final identity receipt; native SQL witness and frozen source prove committed effects, no fabricated direct LOGIN receipt.",
+  "excludedClaims": [
+    "full #382 completion",
+    "new multi-event FIFO proof",
+    "physical or worker node loss",
+    "fresh device confirmation",
+    "general capacity or reduced memory request/limit",
+    "production convergence or deployment"
+  ],
+  "finalCatalog": {
+    "comparisonBasis": "Native metadata hash receipt; full catalog rows were not locally exported or rescanned.",
+    "recordSha256ExactAccepted": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+    "sqlSha256ExactAccepted": "0b11d8e7f8f4512a352ad4da16b7341ad2b2d8651ed2beb9de16e46309f7f66b"
+  },
+  "finalFull952": {
+    "independentCompleteTableDictionaryComparisonExactAccepted": true,
+    "nativeStreamBytes": 2457973781,
+    "nativeStreamSha256": "aee1846393ac5f23866950b23809db9c6f29ef48197462fa88c06edfe6b1642e",
+    "rawRowsExportedOrPersisted": false,
+    "sumRows": 9699553,
+    "terminalMarkerVerified": true,
+    "uniqueTableCount": 952
+  },
+  "finalHealth": {
+    "argo": {
+      "automated": {
+        "enabled": false,
+        "prune": false,
+        "selfHeal": false
+      },
+      "health": "Healthy",
+      "name": "verdify-db-rehearsal-cluster",
+      "operationPhase": "Succeeded",
+      "operationPresent": false,
+      "revision": "9136f158641f918593df53471e3efe1792b7ad83",
+      "sync": "OutOfSync",
+      "uid": "97ff0f52-2691-4f07-9184-591d936e3a05"
+    },
+    "capturedAt": "2026-10-13T00:26:20.574167+00:00",
+    "clusterUid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "formatterCorrectionOnlyNoQualificationRerun": true,
+    "postgresRestarts": 0,
+    "retainedSpoolPvc": {
+      "currentNode": "",
+      "pvc": "verdify-s2-spool-382-7fa4f802",
+      "pvcPhase": "Bound",
+      "pvcUid": "116e36a0-be6b-42aa-9643-ef4b638492db",
+      "replicas": 2,
+      "robustness": "unknown",
+      "size": "2147483648",
+      "state": "detached",
+      "volume": "pvc-116e36a0-be6b-42aa-9643-ef4b638492db",
+      "volumeUid": "9bbc2e0b-36f2-4aab-a1ec-57096574a21a"
+    },
+    "sixDatabaseVolumesBoundAttachedHealthyR2": true,
+    "threeReady": true
+  },
+  "finalMetadata": {
+    "all77SequenceStatesExactStarting": true,
+    "bothPasswordsNull": true,
+    "functionsAclOwnershipBoundaryTriggerMigrationAdmissionExactStarting": true,
+    "otherClientsAbsent": true,
+    "runtimeReceiptRowsAndFrozenReferencesAbsent": true,
+    "secondReviewer": "/root/runtime_inventory/ci_source_matrix/spool_retained_proof",
+    "sixFixtureRowsAbsent": true,
+    "threeOwnedChunksAbsent": true,
+    "twoRolePosturesExactStarting": true
+  },
+  "finalStudy42": {
+    "additionalRowsReadOrExported": false,
+    "all42DerivedFromCurrentFull952": true,
+    "all42TableDictionariesExactAcceptedAndStarting": true
+  },
+  "inverses": {
+    "owned-fixture": {
+      "actualSourceBytesExactReviewed": true,
+      "executionExitCode": 0,
+      "reviewedSqlSha256": "cac0703d6ef0f9bee05ea30a3cda6af83bd84cb0e2ce258a615de30595bfff83"
+    },
+    "sequence": {
+      "actualSourceBytesExactReviewed": true,
+      "executionExitCode": 0,
+      "reviewedSqlSha256": "1fee988ae191d0486d1f3fcb2e5f2b569d26243d0b894a120c91a971f9ed3901"
+    }
+  },
+  "localArtifactsOnly": true,
+  "phaseScope": "one event per climate/diagnostics/equipment queue; retained FIFO proof is separate",
+  "phases": [
+    {
+      "acceptedSha256": "f18fe8f9a01fff33459aba4d500d19fb67fb7de876b2d0b90a831f926a33a05e",
+      "jobUid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+      "nativeChildExit": 0,
+      "nativeLoginIdentityReceiptEmitted": true,
+      "nativeWitnessSha256": "25311a2f5807ae61915113e703560a8d20f39761e38e12f9529f6ed94010adc7",
+      "ordinal": 1,
+      "phase": "unavailable",
+      "podUid": "a042640e-6bec-46ff-bb8b-7d1655c242fd",
+      "retainedActualPhaseNotRerun": true,
+      "wrapperReceiptSha256": "a1f98eaf5e7db13e7a704fe3d18640aa4704928b559739f24e3759effc365dfc"
+    },
+    {
+      "acceptedSha256": "83c07a76f975e94f93ea2dd2220c0a069fcf0cd36e68aeacec92eafe3af4c447",
+      "jobUid": "9364ad18-4ffc-4216-ba8a-f3cace8878ab",
+      "nativeChildExit": 74,
+      "nativeLoginIdentityReceiptEmitted": false,
+      "nativeWitnessSha256": "e6fa659d2f7c1cc0a2d83d9d890d1fdb96c2910ca4c34bb558245d4e4024e95e",
+      "ordinal": 2,
+      "phase": "crash-climate",
+      "podUid": "4f7ab510-5482-4dd8-8656-e24d8954cdcd",
+      "retainedActualPhaseNotRerun": true,
+      "wrapperReceiptSha256": "aa6e1acdafd87c98e23d5e9f0057f3917d38249b1a1f33573b14d415af38b52d"
+    },
+    {
+      "acceptedSha256": "5ba9faaf6824ce1867a445400357fa5caafcec080b24e9cdf0ca7dc286c29ef9",
+      "jobUid": "765af9d3-f60d-4d47-b4c0-c2ce1d61c5c8",
+      "nativeChildExit": 74,
+      "nativeLoginIdentityReceiptEmitted": false,
+      "nativeWitnessSha256": "aa629b08f8570e2f4d90ea551a3a17e71c5b5e97c5567aa8e4494154e7fe3d1d",
+      "ordinal": 3,
+      "phase": "crash-observation",
+      "podUid": "ed60633e-e1f6-4396-b408-038fc985f6da",
+      "retainedActualPhaseNotRerun": false,
+      "wrapperReceiptSha256": "e847d2425888348b0fb1e55ad79ac32c61aa629e41de83316f1f1808006b1734"
+    },
+    {
+      "acceptedSha256": "fff6d723dc39ace0ad0c5307f8d6156d46fbdb6b3aa176761a29ffa0da3ad2b9",
+      "jobUid": "13889af3-b5af-4d24-ace7-e99456616d69",
+      "nativeChildExit": 74,
+      "nativeLoginIdentityReceiptEmitted": false,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "ordinal": 4,
+      "phase": "crash-equipment",
+      "podUid": "876c6f74-6090-4a5f-879b-8c771127e376",
+      "retainedActualPhaseNotRerun": false,
+      "wrapperReceiptSha256": "f1f7a58b38d23e7c4bb73155e67a462ee9de165119240fdacb40b2b8cf00f492"
+    },
+    {
+      "acceptedSha256": "1e48e6ea19f7da5adf8e55109b9704b31e0e6fc43a7d1a777afefc814cb8c221",
+      "jobUid": "038a3bed-ea2e-492c-9bfc-d7605af6fbf6",
+      "nativeChildExit": 0,
+      "nativeLoginIdentityReceiptEmitted": true,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "ordinal": 5,
+      "phase": "replay",
+      "podUid": "3aa52533-dc7a-4285-b434-ae4dc039d5d3",
+      "retainedActualPhaseNotRerun": false,
+      "wrapperReceiptSha256": "3b288f16f6a53be36d669068763d41193905321a63143dd610512e874a5fe359"
+    },
+    {
+      "acceptedSha256": "0be27430a5b68e2847b8b7fb11682e5f70c2487b405aeb4c45d0c68f631d1f06",
+      "jobUid": "fec2b029-881d-4e63-8181-c925d3e46707",
+      "nativeChildExit": 0,
+      "nativeLoginIdentityReceiptEmitted": true,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "ordinal": 6,
+      "phase": "duplicate",
+      "podUid": "448d2708-c3d4-41e4-8643-dd83296d5edd",
+      "retainedActualPhaseNotRerun": false,
+      "wrapperReceiptSha256": "717742e66598a89e17aa310bf9b627f861f794e897c98ad7c98240cdf3a51463"
+    },
+    {
+      "acceptedSha256": "47da2f9306e44ceb93f40acedb33ce485e7acd8e94868439f74fa602d38e2bf8",
+      "jobUid": "19a1260f-ae4e-4f7e-be58-c5042a48df9f",
+      "nativeChildExit": 0,
+      "nativeLoginIdentityReceiptEmitted": true,
+      "nativeWitnessSha256": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763",
+      "ordinal": 7,
+      "phase": "conflict",
+      "podUid": "c6d8deb0-d66a-4f0d-915f-f1e5507c3916",
+      "retainedActualPhaseNotRerun": false,
+      "wrapperReceiptSha256": "0b86f34e1ce616e0fdfd8164a5223e963481084280f84410c793f897ad86f5ef"
+    }
+  ],
+  "readiness": "credential-free SQL-free TCP readiness before one unchanged authenticated child attempt; readiness is not phase acceptance",
+  "resources": {
+    "actualMemoryLimit": "1Gi",
+    "actualMemoryRequest": "512Mi",
+    "lowerLimitOrGeneralCapacityClaim": false,
+    "maxChildPeakRssKiB": 92252,
+    "maxObservedCgroupMemoryPeakBytes": 94560256,
+    "observedSpoolFilesystemAvailableBytes": 2023518208,
+    "observedSpoolFilesystemCapacityBytes": 2040373248,
+    "sqliteDatabaseBytesEach": 16384,
+    "sqliteJournalBytesEach": 0
+  },
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "schema": "verdify382-bounded-independent-local-artifact-review-v1",
+  "sourceRevision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "targetCallsTestsOrSourceEdits": false,
+  "transportReadyWrapperSha256": "83bf9cc2ec903c8ed2be2ca5e54fb7a420410d4f2bc3c0d6cf2c60b593f6c56a"
+}

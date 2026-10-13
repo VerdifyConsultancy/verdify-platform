@@ -1,0 +1,43 @@
+{
+  "actionable_mismatches": [],
+  "exact_setters": [
+    {
+      "current": 1010,
+      "is_called": true,
+      "restore": 1009,
+      "sequence": "_timescaledb_catalog.chunk_constraint_name"
+    },
+    {
+      "current": 1111,
+      "is_called": true,
+      "restore": 1108,
+      "sequence": "_timescaledb_catalog.chunk_id_seq"
+    },
+    {
+      "current": 928,
+      "is_called": true,
+      "restore": 925,
+      "sequence": "_timescaledb_catalog.dimension_slice_id_seq"
+    }
+  ],
+  "execution_reviewed": false,
+  "invariants": {
+    "all_three_current_states_and_no_other_clients_checked_before_first_setter": true,
+    "each_setter_fresh_exact_current_state_and_no_other_client_guard": true,
+    "no_unrelated_mutation": true,
+    "nontransactional_sequence_effects_need_post_readback": true,
+    "only_three_setval_calls": true,
+    "same_native_peer_cluster_database_oid_systemid_pg160013_guard": true
+  },
+  "remaining": [
+    "native setter result and all77 equality",
+    "full952/42/catalog equality",
+    "UID-bound transient cleanup/final health"
+  ],
+  "result": "no-actionable-mismatch",
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "schema": "verdify-382-independent-local-sequence-inverse-review-v1",
+  "sequence_deltas_sha256": "800ceb81ca13f8321b2bac9ae1c94277c9c033c29fbc5674d5788ec6b13c6bbd",
+  "source_sql_sha256": "1fee988ae191d0486d1f3fcb2e5f2b569d26243d0b894a120c91a971f9ed3901",
+  "target_calls_or_tests": false
+}

@@ -1,0 +1,165 @@
+{
+  "startedAt": "2026-10-13T00:24:53.527183+00:00",
+  "objects": [
+    {
+      "kind": "Secret",
+      "name": "verdify-s2-spool-382-auth-7fa4f802-cached",
+      "uid": "af501692-919b-48e4-8e13-d5e25fcfa449",
+      "returnedUid": "af501692-919b-48e4-8e13-d5e25fcfa449",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-packet-5769feb51e-cached-auth",
+      "uid": "0e3de0db-fa7d-4be9-a537-1fde7d9cd927",
+      "returnedUid": "0e3de0db-fa7d-4be9-a537-1fde7d9cd927",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-1-cached-auth",
+      "uid": "aca93aac-151d-47b3-8ac8-1f5e775ce808",
+      "returnedUid": "aca93aac-151d-47b3-8ac8-1f5e775ce808",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth",
+      "uid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+      "returnedUid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-2-cached-auth",
+      "uid": "12b8dd67-2cf4-4687-9fe1-7fbe813ed5ee",
+      "returnedUid": "12b8dd67-2cf4-4687-9fe1-7fbe813ed5ee",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-crash-climate-cached-auth",
+      "uid": "9364ad18-4ffc-4216-ba8a-f3cace8878ab",
+      "returnedUid": "9364ad18-4ffc-4216-ba8a-f3cace8878ab",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-3-cached-auth",
+      "uid": "b2076c92-fbe1-4d88-b1c5-55fd758d9587",
+      "returnedUid": "b2076c92-fbe1-4d88-b1c5-55fd758d9587",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-crash-observation-cached-auth",
+      "uid": "1dd37f52-d42c-441d-9684-e6fa32edc550",
+      "returnedUid": "1dd37f52-d42c-441d-9684-e6fa32edc550",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-packet-83bf9cc2ec-ready",
+      "uid": "f2c99bfa-680b-4bef-a271-0ae16811ee88",
+      "returnedUid": "f2c99bfa-680b-4bef-a271-0ae16811ee88",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-3-ready",
+      "uid": "401af5c9-d39a-4f16-815c-5b55ab18a145",
+      "returnedUid": "401af5c9-d39a-4f16-815c-5b55ab18a145",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-crash-observation-ready",
+      "uid": "765af9d3-f60d-4d47-b4c0-c2ce1d61c5c8",
+      "returnedUid": "765af9d3-f60d-4d47-b4c0-c2ce1d61c5c8",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-4-ready",
+      "uid": "8bf3e306-6839-4e71-b8e2-fa68b4c4fa30",
+      "returnedUid": "8bf3e306-6839-4e71-b8e2-fa68b4c4fa30",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-crash-equipment-ready",
+      "uid": "13889af3-b5af-4d24-ace7-e99456616d69",
+      "returnedUid": "13889af3-b5af-4d24-ace7-e99456616d69",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-5-ready",
+      "uid": "d1789c3b-b719-47c8-99ed-77f54d48c6c3",
+      "returnedUid": "d1789c3b-b719-47c8-99ed-77f54d48c6c3",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-replay-ready",
+      "uid": "038a3bed-ea2e-492c-9bfc-d7605af6fbf6",
+      "returnedUid": "038a3bed-ea2e-492c-9bfc-d7605af6fbf6",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-6-ready",
+      "uid": "ded0a365-8624-41f7-8c23-67a5db3df25b",
+      "returnedUid": "ded0a365-8624-41f7-8c23-67a5db3df25b",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-duplicate-ready",
+      "uid": "fec2b029-881d-4e63-8181-c925d3e46707",
+      "returnedUid": "fec2b029-881d-4e63-8181-c925d3e46707",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-s2-spool-382-release-7fa4f802-7-ready",
+      "uid": "0ddf9e69-fbdb-49f5-963e-45d538b97c03",
+      "returnedUid": "0ddf9e69-fbdb-49f5-963e-45d538b97c03",
+      "uidPrecondition": true,
+      "deleted": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-spool-382-7fa4f802-conflict-ready",
+      "uid": "19a1260f-ae4e-4f7e-be58-c5042a48df9f",
+      "returnedUid": "19a1260f-ae4e-4f7e-be58-c5042a48df9f",
+      "uidPrecondition": true,
+      "deleted": true
+    }
+  ],
+  "retainedPvc": {
+    "name": "verdify-s2-spool-382-7fa4f802",
+    "uid": "116e36a0-be6b-42aa-9643-ef4b638492db"
+  },
+  "secretGETOrLIST": false,
+  "credentialValuesRecorded": false,
+  "productionChanged": false,
+  "finishedAt": "2026-10-13T00:24:54.591451+00:00"
+}

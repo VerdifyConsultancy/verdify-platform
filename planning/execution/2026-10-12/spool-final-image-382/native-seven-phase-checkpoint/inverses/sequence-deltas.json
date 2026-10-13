@@ -1,0 +1,35 @@
+[
+  {
+    "name": "_timescaledb_catalog.chunk_constraint_name",
+    "before": {
+      "last_value": 1009,
+      "is_called": true
+    },
+    "current": {
+      "last_value": 1010,
+      "is_called": true
+    }
+  },
+  {
+    "name": "_timescaledb_catalog.chunk_id_seq",
+    "before": {
+      "last_value": 1108,
+      "is_called": true
+    },
+    "current": {
+      "last_value": 1111,
+      "is_called": true
+    }
+  },
+  {
+    "name": "_timescaledb_catalog.dimension_slice_id_seq",
+    "before": {
+      "last_value": 925,
+      "is_called": true
+    },
+    "current": {
+      "last_value": 928,
+      "is_called": true
+    }
+  }
+]

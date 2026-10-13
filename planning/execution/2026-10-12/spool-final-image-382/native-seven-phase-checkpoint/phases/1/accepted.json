@@ -1,0 +1,16 @@
+{
+  "accepted": true,
+  "phase": "unavailable",
+  "ordinal": 1,
+  "nativeProcessExit": 0,
+  "ownedRowsAndQueueStatesExact": true,
+  "originalCommittedHashesUnchanged": true,
+  "knownCommittedRows": {},
+  "actualNativeAuthentication": true,
+  "oneEventPerQueueOnly": true,
+  "multiFIFOOrNodeLossOrFreshConfirmationClaimed": false,
+  "wrapperReceiptSha256": "a1f98eaf5e7db13e7a704fe3d18640aa4704928b559739f24e3759effc365dfc",
+  "nativeWitnessSha256": "25311a2f5807ae61915113e703560a8d20f39761e38e12f9529f6ed94010adc7",
+  "jobUid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+  "podUid": "a042640e-6bec-46ff-bb8b-7d1655c242fd"
+}

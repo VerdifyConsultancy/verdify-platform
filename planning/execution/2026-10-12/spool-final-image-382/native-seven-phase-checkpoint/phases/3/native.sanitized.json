@@ -1,0 +1,95 @@
+{
+  "originalNativeRecordsSha256": "7e615e38ce57d11147f76750437fc80a3ba3aea5150f3d091a1964ace360214a",
+  "records": [
+    {
+      "kind": "transport_readiness",
+      "phase": "crash-observation",
+      "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+      "authentication_attempted": false,
+      "sql_attempted": false,
+      "child_started": false,
+      "receipt_is_not_phase_acceptance": true,
+      "status": "passed",
+      "attempts": [
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "ConnectionRefusedError",
+        "TimeoutError",
+        "connected"
+      ]
+    },
+    {
+      "phase": "crash-observation",
+      "run_id": "7fa4f802-f14c-4d4f-9f30-97f5d1031615",
+      "native_process_exit_code": 74,
+      "expected_process_exit_code": 74,
+      "elapsed_seconds": 4.967207830166444,
+      "child_peak_rss_kib": 89904,
+      "child_exit_expected": true,
+      "local_queues": {
+        "climate": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/climate.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "climate",
+              "identity": "4cc32461-2d38-402e-a97a-75105d9694ce",
+              "payload_sha256": "50f419aa7978198b6f4b91df5edb9ba176c3f96271c28199af6b755756d78abf"
+            }
+          ],
+          "row_count": 1
+        },
+        "diagnostics": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/observations.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "diagnostics",
+              "identity": "24e3fbd7-43b2-4676-9873-5ac888db7484",
+              "payload_sha256": "1cd25b622a912d2ec0721c4a992205533341540ac47db02ebe5cedc552c92279"
+            }
+          ],
+          "row_count": 1
+        },
+        "equipment": {
+          "path": "/qualification-state/s2-db-replay-7fa4f802-f14c-4d4f-9f30-97f5d1031615/equipment.sqlite",
+          "status": "captured",
+          "database_bytes": 16384,
+          "journal_bytes": 0,
+          "format": 1,
+          "journal_mode": "delete",
+          "integrity_check_ok": true,
+          "rows": [
+            {
+              "seq": 1,
+              "kind": "receipt",
+              "identity": "e386f4fe-4c90-42b1-a954-0996ed009304",
+              "payload_sha256": "cfa9a6abed80283ae48efa637e3a9e4c01f6a7eb5ab2752110dacb50b8d55fa8"
+            }
+          ],
+          "row_count": 1
+        }
+      },
+      "queue_capture_ok": true,
+      "postgres_commit_requires_owner_native_witness": true,
+      "receipt_is_not_phase_acceptance": true
+    }
+  ],
+  "privateApprovalAdmissionAndResourceSnapshotsIncluded": false
+}

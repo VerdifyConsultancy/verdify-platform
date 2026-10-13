@@ -1,0 +1,27 @@
+[
+  {
+    "name": "_timescaledb_internal._hyper_1_1109_chunk",
+    "table": "climate",
+    "other_rows": 0,
+    "owned_rows": 1,
+    "total_rows": 1
+  },
+  {
+    "name": "_timescaledb_internal._hyper_5_1110_chunk",
+    "table": "diagnostics",
+    "other_rows": 0,
+    "owned_rows": 1,
+    "total_rows": 1
+  },
+  {
+    "name": "_timescaledb_internal._hyper_2_1111_chunk",
+    "table": "equipment_state",
+    "other_rows": 0,
+    "owned_rows": 1,
+    "total_rows": 1
+  },
+  {
+    "kind": "other_clients",
+    "count": 0
+  }
+]

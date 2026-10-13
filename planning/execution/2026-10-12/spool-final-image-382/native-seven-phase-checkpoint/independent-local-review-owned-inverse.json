@@ -1,0 +1,41 @@
+{
+  "actionable_mismatches": [],
+  "artifact_sha256": {
+    "inverses/chunk-ownership-readonly/records.json": "66b795c53552f4c15fb73063225431cefbaf8bb2c5673f8540a7aea3f71f57b8",
+    "inverses/owned-fixture-witness.json": "50621eeb61258d6611cedc4df04ffb904b02ee39a7a20cff76446714139b371e",
+    "inverses/owned-fixture.sql": "cac0703d6ef0f9bee05ea30a3cda6af83bd84cb0e2ce258a615de30595bfff83",
+    "phase-7-native/records.json": "cbbad8219f37200a81f72a94cac42ab95e8ef4309a182c233211a5405b3dc763"
+  },
+  "executed_or_target_called_by_reviewer": false,
+  "independent_peer_review": "passed witness/chunk/hash/client custody; no mismatch",
+  "pending": [
+    "three exact sequence setters and their native readbacks",
+    "postinverse full952/77/42/catalog equality",
+    "UID-bound cleanup/final health custody"
+  ],
+  "renderer_sha256": "cc6fb8f3a543c9bf0d6dc9066f1b02937acea2413c69bd599fbaf3e8b613eea4",
+  "result": "no-actionable-mismatch",
+  "reviewed_invariants": {
+    "exact_frozen_receipt_reference_refusal": true,
+    "fresh_chunk_ownership_total_owned_one_other_zero": true,
+    "native_peer_cluster_oid_systemid_pg160013_guard": true,
+    "no_sequence_setters_in_owned_row_transaction": true,
+    "one_guarded_transaction": true,
+    "only_named_immutable_trigger_restored_to_original_mode_and_hash": true,
+    "other_clients_zero": true,
+    "six_exact_owned_row_deletes": true,
+    "three_empty_chunks_exact_drop_return_set": true,
+    "three_ledger_whole_row_hashes_match_phase7": true,
+    "three_telemetry_rows_typed_timestamp_owned_chunk_guarded": true
+  },
+  "reviewer": "/root/runtime_inventory/ci_source_matrix",
+  "schema": "verdify-382-independent-local-owned-inverse-review-v1",
+  "scope": "local source/generated SQL/witness only; not target execution",
+  "source_anchors": {
+    "bounded_witness_validation": "/private/tmp/verdify-spool-final-image-382-20261012/scripts/render-committed-spool-inverse.py:39",
+    "exact_empty_chunk_drop_set": "/private/tmp/verdify-spool-final-image-382-20261012/scripts/render-committed-spool-inverse.py:104",
+    "exact_fixture_lineage_and_ledger_guards": "/private/tmp/verdify-spool-final-image-382-20261012/scripts/render-committed-spool-inverse.py:84",
+    "named_trigger_disable_delete_restore": "/private/tmp/verdify-spool-final-image-382-20261012/scripts/render-committed-spool-inverse.py:92",
+    "native_peer_authority_and_six_table_lock": "/private/tmp/verdify-spool-final-image-382-20261012/scripts/render-committed-spool-inverse.py:88"
+  }
+}

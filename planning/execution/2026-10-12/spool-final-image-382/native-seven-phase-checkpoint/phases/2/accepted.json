@@ -1,0 +1,19 @@
+{
+  "accepted": true,
+  "phase": "crash-climate",
+  "ordinal": 2,
+  "nativeProcessExit": 74,
+  "ownedRowsAndQueueStatesExact": true,
+  "originalCommittedHashesUnchanged": true,
+  "knownCommittedRows": {
+    "climate_source_events": "98e97fe60945800835ab1c8a004b957d188aacdc359145433e54ebe3f25ad15b",
+    "climate": "903185a6495f07fa7771ecfd75bc206c4650da1acff79d34eb049ae205f63fcc"
+  },
+  "actualNativeAuthentication": false,
+  "oneEventPerQueueOnly": true,
+  "multiFIFOOrNodeLossOrFreshConfirmationClaimed": false,
+  "wrapperReceiptSha256": "aa6e1acdafd87c98e23d5e9f0057f3917d38249b1a1f33573b14d415af38b52d",
+  "nativeWitnessSha256": "e6fa659d2f7c1cc0a2d83d9d890d1fdb96c2910ca4c34bb558245d4e4024e95e",
+  "jobUid": "9364ad18-4ffc-4216-ba8a-f3cace8878ab",
+  "podUid": "4f7ab510-5482-4dd8-8656-e24d8954cdcd"
+}

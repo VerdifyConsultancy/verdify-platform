@@ -1,0 +1,7 @@
+{
+  "localOnlyStop": true,
+  "reason": "phase5 parser counted readinesspassed as consumerpassed; corrected discriminator only",
+  "jobOrReleaseCreated": false,
+  "sqlExecuted": false,
+  "at": "2026-10-13T00:14:57.050754+00:00"
+}

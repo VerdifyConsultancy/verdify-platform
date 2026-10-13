@@ -1,0 +1,146 @@
+{
+  "job": {
+    "name": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth",
+    "uid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+    "status": {
+      "completionTime": "2026-10-13T00:03:03Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-13T00:02:44Z",
+          "lastTransitionTime": "2026-10-13T00:02:44Z",
+          "message": "Job resumed",
+          "reason": "JobResumed",
+          "status": "False",
+          "type": "Suspended"
+        },
+        {
+          "lastProbeTime": "2026-10-13T00:03:03Z",
+          "lastTransitionTime": "2026-10-13T00:03:03Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-13T00:03:03Z",
+          "lastTransitionTime": "2026-10-13T00:03:03Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "ready": 0,
+      "startTime": "2026-10-13T00:02:44Z",
+      "succeeded": 1,
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    }
+  },
+  "pod": {
+    "name": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth-9ppsn",
+    "uid": "a042640e-6bec-46ff-bb8b-7d1655c242fd",
+    "ownerReferences": [
+      {
+        "apiVersion": "batch/v1",
+        "blockOwnerDeletion": true,
+        "controller": true,
+        "kind": "Job",
+        "name": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth",
+        "uid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a"
+      }
+    ],
+    "node": "vm-k3s-node7",
+    "imagePullPolicy": "Never",
+    "imagePullSecretReferences": [
+      "zot-origin-cluster-pull"
+    ],
+    "automountServiceAccountToken": false,
+    "containerStatuses": [
+      {
+        "allocatedResources": {
+          "cpu": "250m",
+          "ephemeral-storage": "128Mi",
+          "memory": "512Mi"
+        },
+        "containerID": "containerd://a5336547ac31fba216478738ed1857f45c971863d5730d5e6a9f593f10f5d362",
+        "image": "sha256:ca8b530407520c02984c3a17f940157e9bec98ae3b6d3541f69022461c3c046f",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "lastState": {},
+        "name": "spool-phase",
+        "ready": false,
+        "resources": {
+          "limits": {
+            "cpu": "1",
+            "ephemeral-storage": "512Mi",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "250m",
+            "ephemeral-storage": "128Mi",
+            "memory": "512Mi"
+          }
+        },
+        "restartCount": 0,
+        "started": false,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://a5336547ac31fba216478738ed1857f45c971863d5730d5e6a9f593f10f5d362",
+            "exitCode": 0,
+            "finishedAt": "2026-10-13T00:03:01Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-13T00:02:56Z"
+          }
+        },
+        "user": {
+          "linux": {
+            "gid": 1000,
+            "supplementalGroups": [
+              1000
+            ],
+            "uid": 1000
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/qualification/packet",
+            "name": "packet",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/qualification/release",
+            "name": "release",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/qualification-state",
+            "name": "state"
+          },
+          {
+            "mountPath": "/qualification-tmp",
+            "name": "tmp"
+          }
+        ]
+      }
+    ]
+  },
+  "execution": {
+    "startedAt": "2026-10-13T00:02:44.385798+00:00",
+    "finishedAt": "2026-10-13T00:03:05.803225+00:00",
+    "phase": "unavailable",
+    "job": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth",
+    "jobUid": "cf3fcc35-7150-412b-8d9c-a7a0faf9b63a",
+    "pod": "verdify-s2-spool-382-7fa4f802-unavailable-cached-auth-9ppsn",
+    "podUid": "a042640e-6bec-46ff-bb8b-7d1655c242fd",
+    "releaseConfigMapUid": "aca93aac-151d-47b3-8ac8-1f5e775ce808",
+    "jobSucceeded": true,
+    "stdoutSha256": "3a104a335c1ffb9814c788a0466024b99be482dc45124d59d906d083bc01c55f",
+    "stderrBytes": 0,
+    "nativeOwnerWitnessRequired": true,
+    "accepted": false
+  },
+  "eventsSha256": "5b9c5b8303445513468412c4a7ef1f9d2dd615003f020a5b7e145d5274832e11",
+  "sourceBindingAndActualNativeOwnerWitnessAcceptedSeparately": true
+}
