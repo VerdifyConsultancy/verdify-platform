@@ -2,12 +2,12 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T17:05:33Z** against source `82195c1b6ada500e254acca27018278597498a69`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **59 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-13** against source `8ee4775a6ae89b116c9d0a92e7f17720cc934019`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **59 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| S2 — Recoverability and reliable delivery (October 2026) | sprint | 22–44 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
-| S3 — Source truth, portable validation and prospective design | sprint | 24–44 | 80 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
+| S2 — Completion sprint (October 13–26, 2026) | sprint | 28–56 | 80 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) |
+| S3 — Source truth, portable validation and prospective design | sprint | 18–32 | 80 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
 | S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
 | PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
@@ -19,27 +19,27 @@ Reviewed **2026-10-13T17:05:33Z** against source `82195c1b6ada500e254acca2701827
 
 Sprint allocations may cover bounded preparation. Full issue acceptance still depends on its predecessors, current evidence and declared physical or seasonal conditions. C0–C8 remain stage contracts; closed historical issues remain visible in the stage views below.
 
-## S2 — Recoverability and reliable delivery (October 2026)
+## S2 — Completion sprint (October 13–26, 2026)
 
-Kind: sprint. Capacity: 80 engineering hours. Goal: Finish the three remaining S2 outcomes: restored-data/runtime-role acceptance and reliable source delivery.
+Kind: sprint. Capacity: 80 engineering hours. Goal: Finish bounded database recovery/role and reliable-delivery acceptance, and qualify authentic replay freshness in parallel. Four outcomes, 28–56 estimated hours within one shared 80-hour two-week envelope; reserve 24 hours at the upper estimate for actual recovery, review and decisions.
 
-Exit: Complete remaining #396/#643/#644 bounded acceptance. Completed #976 guarded Lab receipt recovery, #949 exact-source policy convergence, #382 declared spool boundaries and historical #964/#953 are retained; scientific/physical acceptance remains separate.
+Exit: 396 exact restore/failover/PITR evidence and cutover/rollback packet; 643 approved nine-process reversal/inverse plus exact remaining production-role decision packet; 644 capacity producer recovered and qualified broker cancellation/artifact behavior delivered, with unattended retry/concurrency clauses honestly resolved or explicitly carried; 419 measured replay freshness/branch provenance and known-good comparison. Close issues only on original clauses. No production DB cutover, credential rotation, OTA or physical experiment is implicit. Accepted949/382/303/304/965/976 remain completed.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse sealed b4eb target and independent e1a79 review; next qualify remaining endpoint/failover/PITR timing and prepare exact cutover packet with production unchanged. |
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | 42e791f9 three nativeREADONLYpools/NULLcataloginverse/9UIDcleanup accepted. cdd87583 all3consumerDNS→boundprimaryIP→DNS source/protocol/83checks/9oldprofiles unchanged published; exact9serialwindow28d511prepared/fresh16:04metadata passes, NEWspecificuserdecisionpending. No oldcredentialapprovalreuse; prodroleadoption separate. |
-| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Owner4807/4808 merged andminimalmounted7a/gen823adoption verified(a246bd73); exactgeneratedmirror+canonical8files deliveredmain82195c1b, ordinaryCI9l5f5Succeeded/validate/noimages. Existingowner nowregisteredamd64/fullarchive at821 afterexplicitCIhandback. Labreceipt failure/Degradedsite separate; advisory562362notfreshFAIL/PASS; artifact/cancel/retry/concurrency remain. |
+| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | Data/platform lead | 8–16 | Reuse acceptedb4eb/e1a79/full95277/42seal and completed382/643evidence. Same targetworker follows approved643inverse with exact remaining restore/failover/PITR clause map and measured cutover/rollback packet; no production DB cutover or redundant fault scans. |
+| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Existing reused science worker owns source/offline replay freshness and real branch coverage, preserving measured as-of age/no future leakage. Request only genuinely missing bounded production export through Retry; source tests cannot fabricate corpus or physical evidence. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | NEWdirect Jason approval call_f945134a13af478c88f3cb474124b9d8 received for exact nine-check isolated window28d511. Existing sole target worker executes freshguarded3LOGIN/3Secret/9READONLYDNS→boundprimaryIP→DNS; awaitedclose/zero-backends/exactPASSWORDNULL/catalog/UIDinverse. Full selected production-role adoption remains separate; prepare concrete residual decision packet. |
+| [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644) | Platform lead | 8–16 | Owner4842/4845 merged6b7520e4/7cbe8c54 with12/12archives each. ONEbrokerbuild49e9 failed firstcapacitypreflight(signal-invalid): producerready=false/writable=false, not evidencephysicalzero. Sameowner now diagnoses/fixes exactcapacityproducerinowninglane; no bypass/resubmit untilgenuinechange. Thenqualifiedbroker/admissionadoption+ownedcancel/authenticatedpresent-absentartifact proof; unattendedretry/concurrencyremainexplicit. |
 
 ## S3 — Source truth, portable validation and prospective design
 
-Kind: sprint. Capacity: 80 engineering hours. Goal: Adopt compatible source safely, finish authentic replay coverage and choose a defensible prospective study before any draw.
+Kind: sprint. Capacity: 80 engineering hours. Goal: Adopt compatible source within its separate live boundaries and finish defensible prospective design after genuine inputs.
 
-Exit: #965 disabled-route history provenance and #304/#303 bounded portable tooling/registered compilation are completed and retained. Remaining #963 compatible source/live boundaries, #419 authentic replay and #782 reproducible scientific/seasonal decision stay distinct; no OTA or physical qualification inferred.
+Exit: Completed965/303/304 retained. 419 is pulled into the current completion sprint; remaining963 source/live acceptance and782 genuine scientific/seasonal input decisions stay distinct. No OTA or physical qualification inferred.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Platform lead | 6–12 | Finish real outdoor freshness and missing/stale branch coverage using retained replay corpus, then publish exact evidence. |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
 | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
 
