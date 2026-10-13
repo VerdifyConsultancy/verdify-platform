@@ -210,8 +210,10 @@ Edge path: Cloudflare tunnel (`cloudflared` ns `cloudflare`, config SoT
   `deploy/k8s/argocd/apps/`; retired `verdify-dev` / `verdify-local-staging`
   records may still exist in historical agent-fleet-control state.
 - Dumps NFS: NAS `192.168.30.126:/volume2/verdify` subDir `db-dumps/prod`
-  (prod PV `verdify-db-dumps-prod` RWX; dev RO PV
-  `verdify-db-dumps-prod-ro-dev` — both platform-applied, not ArgoCD-managed).
+  (prod PV `verdify-db-dumps-prod` RWX). `jvallery/storage-infra` declares the
+  PV as an adopt-live grant in `inventory/synology-nas-shares.yml`, rendered by
+  its `synology-nfs-grants` Application (storage-infra#574); this repo declares
+  only the PVC `verdify-prod/verdify-db-dumps`. No dev read-only PV exists.
 - CoreDNS override: `kube-system/coredns-custom` NXDOMAINs
   `*.{com,net,org,io,...}.servers.vallery.net` search-append junk (the public
   `*.vallery.net` wildcard otherwise poisons in-cluster resolution of

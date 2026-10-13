@@ -9,7 +9,7 @@ kind: Component
 # opt-in) turns it on.
 #
 # Contains the NAMESPACED resources only (they inherit the overlay namespace):
-#   - dumps-pvc.yaml      verdify-db-dumps PVC (binds Root's static NFS PV)
+#   - dumps-pvc.yaml      verdify-db-dumps PVC (binds storage-infra's static NFS PV)
 #   - backup-cronjob.yaml nightly pg_dump -Fc + retention + db-backup->db allow
 #
 # The cluster-scoped synology-iscsi-ssd StorageClass is DELIBERATELY NOT here —
