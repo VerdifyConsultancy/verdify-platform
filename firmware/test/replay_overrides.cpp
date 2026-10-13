@@ -145,6 +145,7 @@ struct Stats {
     long outdoor_historical_proxy_rows = 0;
     long outdoor_original_stale_rows = 0;
     long outdoor_fresh_rows = 0;
+    long outdoor_finite_stale_rows = 0;
     long outdoor_fresh_cold_wet_rows = 0;
     long outdoor_fresh_wet_demand_rows = 0;
     long outdoor_fresh_dry_demand_rows = 0;
@@ -291,6 +292,10 @@ int main(int argc, char* argv[]) {
             && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
         if (observation_backed) {
             stats.outdoor_observation_backed_rows++;
+            // Missing age already fails safe, but cannot prove the finite-age
+            // stale branch was exercised by an observation-backed corpus row.
+            if (std::isfinite(outdoor_age_s) && outdoor_age_s >= sp.outdoor_staleness_max_s)
+                stats.outdoor_finite_stale_rows++;
             if (get("outdoor_freshness_basis") == "device_reported_original_callback") {
                 stats.outdoor_original_device_rows++;
                 if (!outdoor_fresh) stats.outdoor_original_stale_rows++;
@@ -426,6 +431,7 @@ int main(int argc, char* argv[]) {
     printf("  historical conservative proxies   %ld\n", stats.outdoor_historical_proxy_rows);
     printf("  original device stale rows        %ld\n", stats.outdoor_original_stale_rows);
     printf("  fresh rows (< row staleness max)   %ld\n", stats.outdoor_fresh_rows);
+    printf("  finite observation-backed stale   %ld\n", stats.outdoor_finite_stale_rows);
     printf("  fresh cold/wet regime rows         %ld\n", stats.outdoor_fresh_cold_wet_rows);
     printf("  fresh below-target rows            %ld\n", stats.outdoor_fresh_wet_demand_rows);
     printf("  fresh above-target rows            %ld\n", stats.outdoor_fresh_dry_demand_rows);
@@ -437,6 +443,7 @@ int main(int argc, char* argv[]) {
     const bool corpus_coverage_ok =
         stats.outdoor_observation_backed_rows >= 1000
         && stats.outdoor_fresh_rows >= 1000
+        && stats.outdoor_finite_stale_rows > 0
         && stats.outdoor_fresh_cold_wet_rows >= 100
         && stats.outdoor_fresh_wet_demand_rows >= 100
         && stats.outdoor_fresh_dry_demand_rows >= 100
