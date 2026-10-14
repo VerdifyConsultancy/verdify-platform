@@ -1,0 +1,523 @@
+{
+  "schema": "verdify.643.source-image-delivery/v1",
+  "recorded_at": "2026-10-14T17:59:37.935828+00:00",
+  "state": "Source/PR/main validation/three image publications/candidate actuation accepted; production adoption held",
+  "pull_request": "https://github.com/VerdifyConsultancy/verdify-platform/pull/979",
+  "validated_pr_head": "2ccbba168a66a2300c06785dab5f3f6652b25506",
+  "main_build_source": "3b500cab56d388229a8e01b4c426592884506296",
+  "parent": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+  "source_tree": "55df7fc01b8e5e56c08d7f39322cdf51d06c5212",
+  "qualified_source_snapshot": "a9be9ebf04e9b171b6bab40bd35335dbbc7c6b5a",
+  "qualified_executable_source": "283a3caacfe2c1124ab385a34d2a4d4e4470bbf5",
+  "canonical_snapshot": "772f4ee18d3e0ffd05ec45d5654788cb3ec9bdc2",
+  "provider_payload": {
+    "source_head": "2ccbba168a66a2300c06785dab5f3f6652b25506",
+    "tree": "55df7fc01b8e5e56c08d7f39322cdf51d06c5212",
+    "manifest_files": 32,
+    "actual_changed_files": 30,
+    "all_provider_blobs_and_decoded_bytes_exact": true,
+    "files": [
+      {
+        "path": "db/Dockerfile.migrate",
+        "git_blob": "34f35f27725fba7167e78d3d6af5ea018056a3d5",
+        "sha256": "764aab463082d1b302f99bc23c9743a78242afb8a63161a832ba3397016e73cc",
+        "bytes": 2617,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "db/migrations/276-ordinary-maintenance-runtime-boundaries.sql",
+        "git_blob": "c68f4b84e20e25874a3813b21345e43e9d432e2f",
+        "sha256": "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
+        "bytes": 16456,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "deploy/k8s/SECRETS.md",
+        "git_blob": "a5f48928bb0990fa52f8d4628a100ca32b0d1c74",
+        "sha256": "8f864b05f005c76494a93e29697076a70b4b2341f2e715dd61689edbc2f2a037",
+        "bytes": 19291,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml",
+        "git_blob": "dc8de602e541cb09f0ff796e1fdb11ee5b966d4a",
+        "sha256": "13afef41403a3096d94ac2e053900339bca25305d960d270232dd1117f508f26",
+        "bytes": 5025,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "deploy/k8s/components/runtime-role-boundary/kustomization.yaml",
+        "git_blob": "ded23031937ee0a84ed2e2c7a0d85027341b04e1",
+        "sha256": "035c012708d94b35251f73ad48bb647760336705db9abcdcb0738b0845cedbe1",
+        "bytes": 875,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "deploy/k8s/components/runtime-role-boundary/maintenance-bootstrap-job.yaml",
+        "git_blob": "de33f4a41c1877d1fefc96f6bf1c6d1386107af2",
+        "sha256": "7bd6e71f38dee5dc1b5986396cc3f0f15d67e12a053b4803a02d6b64f04d35df",
+        "bytes": 2824,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "deploy/k8s/overlays/prod/writer-watchdog.yaml",
+        "git_blob": "fd8ef076c0466561fa542409c2728f290306acff",
+        "sha256": "f9facc26cd49ac3be2a4e8f0d884f3f4984cb09272de6d32f5f1c50a92b27422",
+        "bytes": 11774,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "docs/runbooks/ordinary-maintenance-role-643.md",
+        "git_blob": "118eca36a9ae2ab4d35dc13d8902ce2f84027aa9",
+        "sha256": "2672039ebfa8ac85f9068460fb82f624e7ae3dfa250008c7c3506503d39f4e0c",
+        "bytes": 11175,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/maintenance-role-643/README.md",
+        "git_blob": "5968b811375a4ddf81566525727749b66b712c63",
+        "sha256": "8e06be785ca5f56f16f152e23cb7ef05f460f90cd0486fe48d47715aebca2bc2",
+        "bytes": 6272,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/maintenance-role-643/native-stop-276-projected-column-fixture.json",
+        "git_blob": "020716016c662fdaa8e9e0626b17a970ce0266e2",
+        "sha256": "bd579b936996cdfd3677465d6d9dfa9db63ffe738b0db340e0e5402e5c13ae93",
+        "bytes": 1936,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/maintenance-role-643/native-stop-276.json",
+        "git_blob": "1cf961241f5ecd626cbafe2a45b667f3ef3e8585",
+        "sha256": "0b615e81eced25f67d0510667da7aeb33bbbd4baf5c296b76ebc853e72e3470f",
+        "bytes": 2843,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/maintenance-role-643/qualification-case-map.json",
+        "git_blob": "577ba8b05199c2961b7940dbd6555dcfd20fb3ba",
+        "sha256": "29858c0bfe6e7924da33b42e5be0d1fa14ff5f4bd3dfe4c0ae37a09296ecf936",
+        "bytes": 7735,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/maintenance-role-643/release-handoff.md",
+        "git_blob": "a1329a4fe754e554ac2ffd0161e57da5a06c567f",
+        "sha256": "551d63b822c8438629ebd3c99ada5ad1478880211ccfff572f2de68413ddd679",
+        "bytes": 5987,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "scripts/bootstrap-maintenance-runtime-roles.py",
+        "git_blob": "f8349d07e73ba0e23871e49595f8d7961eb251c0",
+        "sha256": "440db6f600b5a62d8d2ed446637ee57d0e8239a8c86d31f89451a136b950f4e9",
+        "bytes": 8970,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "scripts/bootstrap-six-runtime-roles.py",
+        "git_blob": "037387cce5efdece8cbd822316713fc2c95de2c4",
+        "sha256": "40b795ddf5432249dd2ad0f9d1f91426bf13f68de967c9c2d0ec00575346c651",
+        "bytes": 18301,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "scripts/cnpg-maintenance-276-qualification.py",
+        "git_blob": "36fd4fd8cc716d3b1cc1c071af0be0f5aeb6c88c",
+        "sha256": "69d1ccf8857858dac72871684bc30965d7249f7c982ed9f535f70b69a0fdb41f",
+        "bytes": 5445,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "tests/fixtures/six-runtime-bootstrap-276-projected-receipt.json",
+        "git_blob": "84149265fa89685aff20e1848f07e3f715c2851a",
+        "sha256": "1e4c01e50be15dd616929c2338a90f8bc968232cc0b157f18707213702400b2d",
+        "bytes": 8935,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "tests/test_cnpg_maintenance_276_projection.py",
+        "git_blob": "ee7a7cec46d37576ef80d785130f0f149b1b2978",
+        "sha256": "40f982f7af2be2feee0f8efde2d1b261ac7f8902ac8f3871d6397b74a29953b1",
+        "bytes": 3420,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "tests/test_maintenance_runtime_boundaries.py",
+        "git_blob": "4b800b67e21a0409b7c309ae856dba3d0fa82ae9",
+        "sha256": "fd7ab235a619da9585bc2c104d926552cdb45a4dbc590aa62899da896772ca05",
+        "bytes": 13058,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "tests/test_six_runtime_role_bootstrap.py",
+        "git_blob": "8ce3c56c095b982917a6ad2cd69134873a9f9c73",
+        "sha256": "6de89074ad895b9a6a4da7656b9c165d0ac233205f0ee28febc68f54060bebca",
+        "bytes": 21169,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/backlog.yaml",
+        "git_blob": "f0465bbeb43f19d4e779d58da64cae8e59a2c8b3",
+        "sha256": "0a67651039ded1df28376aad3a6a68e49d4d5b9894f613bb89083198b16e0138",
+        "bytes": 307902,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "PROJECT_BOARD.md",
+        "git_blob": "23fced045a3abbbaf0039f11f51de4934f63983f",
+        "sha256": "5439f3ffc96a5622f4c9e3956673c2342343fa9ef44810b54fad1641e8832e3a",
+        "bytes": 14966,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "LANES.md",
+        "git_blob": "7d814fc54d5d52d578050c3fc62c83b605737a62",
+        "sha256": "e85b1ae4bfd8ce058e68a03e5195ba8c079988ef5ff48ff0a64140feab57778e",
+        "bytes": 29211,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "MILESTONES.md",
+        "git_blob": "0872abc5d141095d4b76c1d654b32181c41cd1c8",
+        "sha256": "9bcc4a33dea29c7616adee9fe4d71534b6d75bbd17934307a9597a6ec90ca01d",
+        "bytes": 14943,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "SPRINTS.md",
+        "git_blob": "40df5051ddb0a55b3cd687bd7a3618ca9220c42e",
+        "sha256": "391e1f1e90e0cf7d97de91c75c97f37c3063a1a633ad786880a0be49a8c9ef34",
+        "bytes": 31723,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "EPICS.md",
+        "git_blob": "78759c0dda780f30d67ae3963b12a90daf70509f",
+        "sha256": "462f17a31274d970bb0dbcd8a233fcc306b0d49e5c246ceb1de89eb77fc9bc45",
+        "bytes": 14832,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/DEPENDENCIES.md",
+        "git_blob": "d1be3fc08c250fa01a4a3c5c9c5d182e107b9afc",
+        "sha256": "71a502fcc8890f848f7139284eb4a2a26d366df264fd223ae2d7107890cc9684",
+        "bytes": 21216,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/issues_manifest.json",
+        "git_blob": "3c1d6996fb65c2b6b0a49e4ecb4527853a3e187c",
+        "sha256": "1953f575397d0b5cb3a8a8215e27f7021e8da9aa2ef202fb09b35b77d4c7db8b",
+        "bytes": 29000,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/reviews/2026-10-13/NEXT-SPRINT.md",
+        "git_blob": "0a5e1098e91ef4102b6c9060efc93cbfb54f15ef",
+        "sha256": "1a2da96cc57f2ea53754b61d6aedebf8070bf98e0a64c8bd1f34137f214d70f8",
+        "bytes": 7149,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-12/coordinator/README.md",
+        "git_blob": "85a5db92aa0d67e6d4177012963501d25818c16a",
+        "sha256": "9d12d2ff42d296ef0f14e4e7fd0192e6e5dd19ee97797409690c243f9189d8fa",
+        "bytes": 139086,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "planning/execution/2026-10-13/CI-INTEGRATION-644-CLOSEOUT.md",
+        "git_blob": "ce3b76b7bb99e4534ce2f6918f0992ea98f62a78",
+        "sha256": "1dbbe06db045571ba5cd8b942248e41adc03b34fab14cfcb29c0e725c7f5d37f",
+        "bytes": 2902,
+        "provider_bytes_exact": true
+      },
+      {
+        "path": "tests/test_experiment_schema_migration.py",
+        "git_blob": "a18515663efcecfaacac6b1a33a257d31344d137",
+        "sha256": "c73e1b1968e9e9f881c769bf36a9ed7313bb692c1b4d7cc76cd1cc458e37f935",
+        "bytes": 22429,
+        "provider_bytes_exact": true
+      }
+    ]
+  },
+  "final_source_integrity": {
+    "all32_payload_blobs_unchanged_after_actuator": true,
+    "payload_provider_proof_commit": "2ccbba168a66a2300c06785dab5f3f6652b25506",
+    "current_actuator_commit": "cc9750fc15a22148cb17e3f17707966d45c80072",
+    "baseline_ledger_sql_unchanged": true,
+    "baseline_ledger_sql_sha256": "8a1981dd481fd7e7c33b1d99c1ba4b411044355a605d23b008e9da04a0d0cf43"
+  },
+  "local_validation": {
+    "maintenance_projection_bootstrap_tests": 57,
+    "migration_contract_tests": 17,
+    "planning_tests": 35,
+    "failures_errors_skips": 0,
+    "issues": 89,
+    "stages": 9,
+    "dependency_edges": 76,
+    "generated_views": 7,
+    "ruff_format_and_hooks_passed": true,
+    "migration276_safe_to_wrap": true,
+    "rendered_secrets": 0
+  },
+  "genuine_native_proof_scope": {
+    "fixture_sha256": "1e4c01e50be15dd616929c2338a90f8bc968232cc0b157f18707213702400b2d",
+    "projected_native": true,
+    "fault_families": 9,
+    "permission_denial_count": 22,
+    "malformed_input_denial_count": 5,
+    "three_fixed_refreshes_passed": true,
+    "rollback_and_conditioned_allocator_inverse_retained": true,
+    "physical_catalog_delta_fields": 4,
+    "byte_identical_physical_reseal": false,
+    "original_mv_row_hash_claimed": false,
+    "old275_fixture_and_failed_attempts_preserved": true,
+    "production_raw_migration_login_tcp_pool_or_password_execution_claimed": false
+  },
+  "initial_pr_failure": {
+    "head": "91a2de653bec48b14b0285ee573971f277c9cec7",
+    "workflow": "verdify-platform-pr-ci-mkhll",
+    "uid": "bc3f2001-7e95-4ea2-a681-db37cf9853e5",
+    "phase": "Failed",
+    "started_at": "2026-10-14T17:06:50Z",
+    "finished_at": "2026-10-14T17:18:02Z",
+    "github_failure_status_id": 56349532831,
+    "test": "test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas",
+    "cause": "new276omittedfromexistingforward-onlyexceptionset",
+    "correction": {
+      "previous_head": "91a2de653bec48b14b0285ee573971f277c9cec7",
+      "path": "tests/test_experiment_schema_migration.py",
+      "sha256": "c73e1b1968e9e9f881c769bf36a9ed7313bb692c1b4d7cc76cd1cc458e37f935",
+      "reason": "Exact276forward-onlyexception; baselineSQLandqualifiedruntimebytesunchanged",
+      "focused_tests_passed": 17
+    },
+    "baseline_sql_or_qualified_runtime_bytes_changed": false,
+    "manual_ci_retry_or_gate_bypass": false
+  },
+  "accepted_pr_native_ci": {
+    "workflow": "verdify-platform-pr-ci-j2tnt",
+    "uid": "f730d05a-0e1d-4051-aead-4cfc61432284",
+    "phase": "Succeeded",
+    "started_at": "2026-10-14T17:20:09Z",
+    "finished_at": "2026-10-14T17:30:56Z",
+    "github_status": {
+      "id": 56350718908,
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "success",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "updated_at": "2026-10-14T17:30:45Z"
+    },
+    "direct_validation_pod_identity_captured": true
+  },
+  "main_native_ci": {
+    "builds": {
+      "ingestor": {
+        "accepted": true,
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:fd18c2920fb1d46d9fbb9e4ea12956a1738f1cf35d9e3e255786e40983f8d44d",
+        "phase": "Succeeded",
+        "source_revision": "3b500cab56d388229a8e01b4c426592884506296"
+      },
+      "lab-publisher": {
+        "accepted": true,
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:9ea55b7603e1e078b3afd59fd03264d9599ff51caaa9e1e63ce2a96b65f41797",
+        "phase": "Succeeded",
+        "source_revision": "3b500cab56d388229a8e01b4c426592884506296"
+      },
+      "migrate": {
+        "accepted": true,
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:1c1a138001c3f05ceeefc98c172a9168bae897259a6da7b34ac971395d10b287",
+        "phase": "Succeeded",
+        "source_revision": "3b500cab56d388229a8e01b4c426592884506296"
+      }
+    },
+    "evidence_errors": [],
+    "finished_at": "2026-10-14T17:51:21Z",
+    "outcome": "succeeded",
+    "path_impact": {
+      "base_revision": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+      "mode": "build",
+      "paths_sha256": "e71476d6b5c03d7631f8600b97833e84a357bb8a7efa9f8f19f829ffdf426e6a",
+      "profiles": [
+        "ingestor",
+        "migrate",
+        "lab-publisher"
+      ],
+      "reasons": {
+        "ingestor": [
+          "docs/runbooks/ordinary-maintenance-role-643.md",
+          "scripts/bootstrap-maintenance-runtime-roles.py",
+          "scripts/bootstrap-six-runtime-roles.py",
+          "scripts/cnpg-maintenance-276-qualification.py"
+        ],
+        "lab-publisher": [
+          "scripts/bootstrap-maintenance-runtime-roles.py",
+          "scripts/bootstrap-six-runtime-roles.py",
+          "scripts/cnpg-maintenance-276-qualification.py"
+        ],
+        "migrate": [
+          "db/Dockerfile.migrate",
+          "db/migrations/276-ordinary-maintenance-runtime-boundaries.sql",
+          "scripts/bootstrap-maintenance-runtime-roles.py",
+          "scripts/bootstrap-six-runtime-roles.py"
+        ]
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "3b500cab56d388229a8e01b4c426592884506296"
+    },
+    "phase": "Succeeded",
+    "schema": "verdify.delivery-workflow/v1",
+    "source_revision": "3b500cab56d388229a8e01b4c426592884506296",
+    "started_at": "2026-10-14T17:32:57Z",
+    "verdict": "accepted",
+    "workflow_name": "verdify-platform-ci-fmrsp",
+    "workflow_uid": "f6eed83a-f131-4000-ad20-c89506e8d8df"
+  },
+  "main_native_evidence": {
+    "direct_pod_identities_retained": 5,
+    "all_captured_pods_bound_to_succeeded_terminal_nodes": true,
+    "validation_complete_stdout_bytes": 37591,
+    "validation_complete_stdout_sha256": "defda94d17aa2fecc7f222c565e89b7e88d80ea7121055d840b18ce0e5ddaa5d",
+    "validation_log_reader_exit": 0,
+    "validation_log_reader_stderr_bytes": 0,
+    "detailed_ci_metadata_and_stdout_private": true
+  },
+  "candidate_actuation": {
+    "actuator_commit": "cc9750fc15a22148cb17e3f17707966d45c80072",
+    "build_source": "3b500cab56d388229a8e01b4c426592884506296",
+    "all_five_pairs": [
+      {
+        "image": "verdify-api",
+        "candidate_before": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "candidate_after": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "release": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "candidate_changed": false,
+        "candidate_equals_release": true
+      },
+      {
+        "image": "verdify-mcp",
+        "candidate_before": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "candidate_after": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "release": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "candidate_changed": false,
+        "candidate_equals_release": true
+      },
+      {
+        "image": "verdify-ingestor",
+        "candidate_before": "sha256:6856b46476ca4edbbf2a13bdc4f989d450de58e0e4d20ea2abedc38fc116a885",
+        "candidate_after": "sha256:fd18c2920fb1d46d9fbb9e4ea12956a1738f1cf35d9e3e255786e40983f8d44d",
+        "release": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+        "candidate_changed": true,
+        "candidate_equals_release": false
+      },
+      {
+        "image": "verdify-migrate",
+        "candidate_before": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+        "candidate_after": "sha256:1c1a138001c3f05ceeefc98c172a9168bae897259a6da7b34ac971395d10b287",
+        "release": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+        "candidate_changed": true,
+        "candidate_equals_release": false
+      },
+      {
+        "image": "verdify-experiment-v2-orchestrator",
+        "candidate_before": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "candidate_after": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "release": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "candidate_changed": false,
+        "candidate_equals_release": true
+      }
+    ],
+    "exact_managed_candidate_changes": [
+      "verdify-ingestor",
+      "verdify-migrate"
+    ],
+    "release_pins_unchanged": true,
+    "lab_hand_pin_current": "sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+    "lab_hand_pin_proposed_from_accepted_build": "sha256:9ea55b7603e1e078b3afd59fd03264d9599ff51caaa9e1e63ce2a96b65f41797",
+    "lab_hand_pin_not_changed_yet": true
+  },
+  "actuator_commit": {
+    "actuator_commit": "cc9750fc15a22148cb17e3f17707966d45c80072",
+    "parent": "3b500cab56d388229a8e01b4c426592884506296",
+    "build_source": "3b500cab56d388229a8e01b4c426592884506296",
+    "paths": [
+      "deploy/k8s/overlays/prod/kustomization.yaml"
+    ],
+    "subject": "gitops(pin): verdify images 3b500cab56d3 -> zot digests sha256:c846b56ff7ddfc294f5632219afa6912be40859735411c7a26bb030b9059cfd3"
+  },
+  "actuator_native_ci": {
+    "builds": {},
+    "evidence_errors": [],
+    "finished_at": "2026-10-14T17:52:17Z",
+    "outcome": "succeeded",
+    "path_impact": {
+      "base_revision": "3b500cab56d388229a8e01b4c426592884506296",
+      "mode": "skip",
+      "paths_sha256": "fc77875941072744cea81cf4ddfccd6f8f8c345268337540ae4d0e72ab43fe1f",
+      "profiles": [],
+      "reasons": {
+        "skip": "digest-only pin diff; no source/runtime input change"
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "cc9750fc15a22148cb17e3f17707966d45c80072"
+    },
+    "phase": "Succeeded",
+    "schema": "verdify.delivery-workflow/v1",
+    "source_revision": "cc9750fc15a22148cb17e3f17707966d45c80072",
+    "started_at": "2026-10-14T17:51:16Z",
+    "verdict": "accepted",
+    "workflow_name": "verdify-platform-ci-zd64q",
+    "workflow_uid": "0756765d-e7c7-47fe-8bc8-c77e6614d873"
+  },
+  "candidate_render_review": {
+    "actuator_commit": "cc9750fc15a22148cb17e3f17707966d45c80072",
+    "render_sha256": "c7e39d2bf264271226344d9acb0995a2c4869f4df65bd975d1f2e3a0a27ed411",
+    "render_equal_to_reviewed_source_before_candidate_actuation": true,
+    "no_release_pin_or_lab_pin_changes": true,
+    "offline_pin_only_classification": {
+      "base_revision": "3b500cab56d388229a8e01b4c426592884506296",
+      "mode": "skip",
+      "paths_sha256": "fc77875941072744cea81cf4ddfccd6f8f8c345268337540ae4d0e72ab43fe1f",
+      "profiles": [],
+      "reasons": {
+        "skip": "digest-only pin diff; no source/runtime input change"
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "cc9750fc15a22148cb17e3f17707966d45c80072"
+    }
+  },
+  "pr975_disposition": {
+    "historical_source": "36b1b63d622d2eb709a827eceb77b07c6d0ad675",
+    "historical_workflow": "verdify-platform-ci-496hd",
+    "historical_phase_remains": "Failed",
+    "historical_capacity_denial_before_image_build_retained": true,
+    "new_descendant_publication_source": "3b500cab56d388229a8e01b4c426592884506296",
+    "new_ingestor_image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:fd18c2920fb1d46d9fbb9e4ea12956a1738f1cf35d9e3e255786e40983f8d44d",
+    "older6856_candidate_replaced_by_fresh_same_cohort_output": true,
+    "publication_and_candidate_gap_covered": true,
+    "production_runtime_adoption_pending": true
+  },
+  "production_boundary": {
+    "issue643": "OPEN; declared production adoption/rollback acceptance pending",
+    "new_initial_credential_pairs": 2,
+    "credential_provisioning_performed": false,
+    "release_pin_promotion_performed": false,
+    "lab_hand_pin_changed": false,
+    "argo_prod_sync_performed": false,
+    "production_sql_or_device_operation_performed": false,
+    "production_workload_probe_performed": false,
+    "one_authorized_central_secret_application_metadata_read_private": true,
+    "secret_data_or_secret_api_read_performed": false,
+    "new_runtime_or_physical_acceptance_claimed": false,
+    "old_migrate_release_must_not_sync_new_source": true
+  },
+  "custody": {
+    "owned_pr_main_build_actuator_window_terminal": true,
+    "shared_ci_released_to_coordinator": true,
+    "sole_verdify_main_production_writer_retained": true,
+    "specific_two_initial_credentials_and_attended_adoption_decision_pending": true,
+    "branches_and_failed_evidence_preserved": true
+  }
+}
