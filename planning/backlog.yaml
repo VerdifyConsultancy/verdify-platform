@@ -3247,7 +3247,7 @@
         "firmware/greenhouse/controls.yaml",
         "ingestor/entity_map.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted. October12 execution: merged973/cb21 compatible ingestor source is deployed in d439. Firmware source/portable compile/replay qualification retained; live firmware remains unchanged and separately authorized OTA/HA recovery acceptance is still incomplete.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted. October12 execution: merged973/cb21 compatible ingestor source is deployed in d439. Firmware source/portable compile/replay qualification retained; live firmware remains unchanged and separately authorized OTA/HA recovery acceptance is still incomplete. October14 source-onlyhandoff reusesaccepted949compatiblecb21/c6ccingestor andclosed303304actualregisteredamd64two-target/negativecompilerprovenance. Tenrelevantproducer-consumerfilesbyteequalce244/cb21/821/cc975; firmwaredifferenceonlyaccepted419replaytest. Remainingexactreal-inputdeployablebinary/source/version/acceptedrollbackcustody(or specificallydecidedprovisionalalternative), separatelyauthorizedOTA andactualHA/nativecanonicalrecovery. No newcompile/probe/OTA/physicalclaim;27/48UNPROVEN/#367outsidecohort. Handoffplanning/reviews/2026-10-14/FIRMWARE-HA-963-HANDOFF.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3878,7 +3878,7 @@
         "sprint": "S3",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
+        "next_action": "Reuseaccepted973/971source,949compatibleingestorandclosed303304compilerproof. Prepareexactreal-inputdeployablecandidate+acceptedrollbackcustody/provisionalchoicebeforeseparateOTAdecision; thenactualHAshortstate/error/nativecanonicalconsumerrecovery. Source-onlyhandoffready/no newcompile/OTA/probe/physicalgate.",
         "owner_role": "Platform lead"
       }
     ]

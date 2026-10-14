@@ -38,7 +38,7 @@ Exit: Completed965/303/304 retained. 419 is pulled into the current completion s
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 12–20 | Use5c288576 smallest authentic panel/target/prospective-day measurement packet; await genuine inputs rather than rerun accepted design. |
-| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers. |
+| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | 6–12 | Reuseaccepted973/971source,949compatibleingestorandclosed303304compilerproof. Prepareexactreal-inputdeployablecandidate+acceptedrollbackcustody/provisionalchoicebeforeseparateOTAdecision; thenactualHAshortstate/error/nativecanonicalconsumerrecovery. Source-onlyhandoffready/no newcompile/OTA/probe/physicalgate. |
 
 ## S4 — Current readiness and integrated qualification
 
