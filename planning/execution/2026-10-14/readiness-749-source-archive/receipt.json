@@ -1,0 +1,302 @@
+{
+  "schema": "verdify.749-source-and-archive-closeout/v1",
+  "recorded_at": "2026-10-14T22:56:53.316257+00:00",
+  "status": "source/main/build/canonical delivery and state-only archival passed;749 remains open, no freshphysicalapproval/readiness claim",
+  "source": {
+    "source_revision": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+    "actuator_revision": "262edb110702944a52f2b01d8f256b42682cd627",
+    "actuator_parent": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+    "actuator_only_candidate_path": [
+      "deploy/k8s/overlays/prod/kustomization.yaml"
+    ],
+    "all14_source_payloads_preserved_in_actuator": true
+  },
+  "canonical": {
+    "source": "f69024fef62eb01a0f625ca86730503deef5dada",
+    "manifest_sha256": "6bb487436a982389665ba1c27372dd998bf57d0254c20ed172e456e8beadd243",
+    "all12_length_hash_provider_blob_checked": true,
+    "all14_composed_payloads_verified": true,
+    "actual_source_changed_files": 11,
+    "issues": 89,
+    "stages": 9,
+    "historical_edges": 76,
+    "rendered_views": 7
+  },
+  "tests": {
+    "focused": {
+      "tests": 429,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "planning_passed": 35,
+    "ruff_and_hooks": "passed",
+    "guard_and_original_writer_source_unchanged_during_collector_fix": true
+  },
+  "native": {
+    "native_workflow": "verdify-platform-ci-7v4d7",
+    "native_workflow_uid": "b373e3c7-7eca-4310-8c7b-5931d5d0b801",
+    "native_phase": "Succeeded",
+    "native_finished_at": "2026-10-14T22:49:29Z",
+    "actual_main_pipeline": "classify-push and affected builds; not a full native PR pytest validation",
+    "trusted_impact": {
+      "base_revision": "ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920",
+      "mode": "build",
+      "paths_sha256": "b21950b7550272433a174b3408e5c4848bb12814905995f718efc67d15d5bec7",
+      "profiles": [
+        "ingestor",
+        "orchestrator",
+        "lab-publisher"
+      ],
+      "reasons": {
+        "ingestor": [
+          "scripts/experiment_v2_proof_packet.py"
+        ],
+        "lab-publisher": [
+          "scripts/experiment_v2_proof_packet.py"
+        ],
+        "orchestrator": [
+          "scripts/experiment_v2_proof_packet.py"
+        ]
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "737d562fc35eea1498d0b7c48649c8cb0bf57d89"
+    },
+    "images": [
+      {
+        "step": "build-ingestor",
+        "finished_at": "2026-10-14T22:44:14Z",
+        "digest": "sha256:f054874333809b25057c7d922df6eb962e581d994ee4141dbd75e9f70310b420",
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:f054874333809b25057c7d922df6eb962e581d994ee4141dbd75e9f70310b420",
+        "source": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+        "resolved_tree": "5f29e7cbb5a863ff2a41a5933e70fe5c4d33a489",
+        "dockerfile": "ingestor/Dockerfile",
+        "dockerfile_sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+        "output_contract": "agent-fleet.repo-build.outputs/2",
+        "source_closure": {
+          "image": "verdifyconsultancy/verdify-ingestor",
+          "schema": "agent-fleet.vallery.net/repo-build-source-closure/v3",
+          "status": "not-applicable"
+        }
+      },
+      {
+        "step": "build-orchestrator",
+        "finished_at": "2026-10-14T22:45:34Z",
+        "digest": "sha256:123b46e2ac470b9f54ea954f7af3f98b45b952bd6261017a685bdc49dcda7cb8",
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:123b46e2ac470b9f54ea954f7af3f98b45b952bd6261017a685bdc49dcda7cb8",
+        "source": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+        "resolved_tree": "5f29e7cbb5a863ff2a41a5933e70fe5c4d33a489",
+        "dockerfile": "experiment_orchestrator/Dockerfile",
+        "dockerfile_sha256": "sha256:53a21487b661d55b609788d630666899e7d0ec46a01d01a1c7b2859dcbf03a9b",
+        "output_contract": "agent-fleet.repo-build.outputs/2",
+        "source_closure": {
+          "image": "verdifyconsultancy/verdify-experiment-v2-orchestrator",
+          "schema": "agent-fleet.vallery.net/repo-build-source-closure/v3",
+          "status": "not-applicable"
+        }
+      },
+      {
+        "step": "build-lab-publisher",
+        "finished_at": "2026-10-14T22:48:44Z",
+        "digest": "sha256:8f81bc0bb60557902f47d54f57c95387092458309274f11d0f08d9284799e546",
+        "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:8f81bc0bb60557902f47d54f57c95387092458309274f11d0f08d9284799e546",
+        "source": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+        "resolved_tree": "5f29e7cbb5a863ff2a41a5933e70fe5c4d33a489",
+        "dockerfile": "scripts/Dockerfile.lab-publisher",
+        "dockerfile_sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670",
+        "output_contract": "agent-fleet.repo-build.outputs/2",
+        "source_closure": {
+          "image": "verdifyconsultancy/verdify-lab-publisher-k3s",
+          "schema": "agent-fleet.vallery.net/repo-build-source-closure/v3",
+          "status": "not-applicable"
+        }
+      }
+    ],
+    "classification_log_reader": {
+      "pod_name": "verdify-platform-ci-7v4d7-validate-2462285164",
+      "pod_uid": "8fbe4da8-e385-4370-b966-f894378cf615",
+      "workflow": "verdify-platform-ci-7v4d7",
+      "workflow_uid": "b373e3c7-7eca-4310-8c7b-5931d5d0b801",
+      "source_revision": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+      "returncode": 1,
+      "finished_at": "2026-10-14T22:49:46.845626+00:00",
+      "stdout_bytes": 2149,
+      "stdout_sha256": "9c3a22344a5c973743ce7e65c445fab9f644a2b1240e393ffb8b823af3585bfc"
+    },
+    "trace_limitation": "Classification follow-log reader exited1; initial direct Pod UID,2149B stdout and terminal successful producer node retained. Finished Pod was NotFound on terminal readback; reader stderr reason unavailable. Do not claim complete stdout or full native PR tests. No retry/rebuild."
+  },
+  "actuator_followup": {
+    "name": "verdify-platform-ci-hz6w7",
+    "uid": "b1fb50f2-7d50-434f-ad6d-640a775d50bf",
+    "phase": "Succeeded",
+    "finished_at": "2026-10-14T22:50:13Z",
+    "revision": "262edb110702944a52f2b01d8f256b42682cd627",
+    "trusted_impact": {
+      "base_revision": "737d562fc35eea1498d0b7c48649c8cb0bf57d89",
+      "mode": "skip",
+      "paths_sha256": "fc77875941072744cea81cf4ddfccd6f8f8c345268337540ae4d0e72ab43fe1f",
+      "profiles": [],
+      "reasons": {
+        "skip": "digest-only pin diff; no source/runtime input change"
+      },
+      "schema": "verdify.path-impact/v1",
+      "source_revision": "262edb110702944a52f2b01d8f256b42682cd627"
+    },
+    "build_pods_executed": 0
+  },
+  "release": {
+    "all_five_managed_pairs": [
+      {
+        "image": "verdify-api",
+        "candidate": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "release": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+        "equal": true
+      },
+      {
+        "image": "verdify-mcp",
+        "candidate": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "release": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+        "equal": true
+      },
+      {
+        "image": "verdify-ingestor",
+        "candidate": "sha256:f054874333809b25057c7d922df6eb962e581d994ee4141dbd75e9f70310b420",
+        "release": "sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d",
+        "equal": false
+      },
+      {
+        "image": "verdify-migrate",
+        "candidate": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+        "release": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+        "equal": true
+      },
+      {
+        "image": "verdify-experiment-v2-orchestrator",
+        "candidate": "sha256:123b46e2ac470b9f54ea954f7af3f98b45b952bd6261017a685bdc49dcda7cb8",
+        "release": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+        "equal": false
+      }
+    ],
+    "release_pins_unchanged": true,
+    "lab_hand_pin_unchanged": "sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a",
+    "production_render_identical_to_accepted_ed01": true,
+    "render_sha256": "54fa824a4f9ad565b2307f73210ca14a0a30b503e1847539f9e6d69f97e3d59f",
+    "render_resource_count": 129,
+    "render_secret_count": 0,
+    "promotion_or_sync": false
+  },
+  "clock_history_correction": {
+    "old_matching_events": 17,
+    "old_naive_application_timestamps_silently_skipped": 17,
+    "actual_old_collector_fell_back_to_pod_start_and_zero_errors": true,
+    "prior_event_clock_projection_was_actual_old_collector_output": false,
+    "prior_projected_event_clock_retained_as_corrected_history": true,
+    "patched_retained_offline_result": "writer reconciliation unresolved: blocked_stage; recurring errors=7",
+    "no_readiness_packet_executed_or_pass_inferred": true,
+    "same_existing_log_get_now_requests_authoritative_kubernetes_timestamps": true,
+    "pending_waits_require_quiet30min_and_terminal_holds_remain_denied": true
+  },
+  "historical_native": {
+    "transaction_count": 1,
+    "identity_and_attester_before_after_passed": true,
+    "scoped_ordinary_ingestor_membership_only": true,
+    "repeatable_read_readonly": true,
+    "statement_timeout_seconds": 10,
+    "lock_timeout_seconds": 1,
+    "idle_timeout_seconds": 30,
+    "cutoff": "2026-10-14T22:35:45.454241+00:00",
+    "ordered_native_rows": 12,
+    "unique_parameters": 12,
+    "exact12_set": true,
+    "confirmed_nonnull_count": 12,
+    "expired_rows": 0,
+    "missing_or_extra_parameters": 0,
+    "source_predicates_passed": true,
+    "later_request_exists": false,
+    "rollback_and_connection_close": true,
+    "private_full_result_sha256": "5ca8d5b872e6553bbb2d5380be3078902140a383f87654aa696b27d55a070a53",
+    "no_retry_owner_fallback_or_secret_api": true,
+    "raw_rows_exported": false
+  },
+  "original_custody": {
+    "original_writer_full_capture_sha256": "732f30922a0b37563fa06edb742cd97b46f3d093a16972e5b7fee949b4f86c5f",
+    "original_same_process_preview_sha256": "30ec04e2dd2841dee192050513cfee8e05ca9c12750bb087a6742424924552df",
+    "original_pod_uid": "6509f094-062f-4f93-a9f7-7c56e1ee238a",
+    "original_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "source_custody_guard_passed": true,
+    "state_sha256": "4adbe8bbd6cb6fdf8697b11ef52f599d676f8494b804d65f63fdee4416d5c3bc",
+    "approval_sha256": "ea240452fb27543fb68dd7090d7ac39b796c580f9f898b8fd76facf291ec6e62",
+    "counts_not_substituted_for_native_or_writer_evidence": true
+  },
+  "fresh_archive_input": {
+    "observed_at": "2026-10-14T22:41:21.522553+00:00",
+    "preview_sha256": "0eb3d2651c1915320d76844baaf599421f8f0d14c8dd0a20164660d3baa27703",
+    "captured_at": "2026-10-14T22:40:42.716865+00:00",
+    "capture_age_seconds": 38.805688,
+    "canonical_fields_present_finite": 48,
+    "bound_readbacks_count": 52,
+    "diagnostic_readbacks_count": 241,
+    "candidate_count": 16,
+    "complete_plan_rows_count": 39,
+    "completed12_current_readback_equivalence": true,
+    "untouched_baseline_field_count": 37,
+    "untouched_baseline_exact": true,
+    "atomic48_db_snapshot": "existing producer _fresh_readbacks enforces one exact48 batch <120seconds at preview production; raw batch timestamp is not serialized and is not claimed independently observed now; actual archive rechecks fresh producer state"
+  },
+  "archive_action": {
+    "only_manifest_sha256": "e04bb9c044cd420627d0bc2578a67fd04c6965d4429c12d14699b679fb286b77",
+    "version": 2,
+    "authority": "confirmed_halt_forward",
+    "approved_at": "2026-10-14T22:41:55.179262+00:00",
+    "expires_at": "2026-10-14T22:47:55.179262+00:00",
+    "installed_at": "2026-10-14T22:43:54.058149+00:00",
+    "atomic_no_clobber": true,
+    "old_raw_files_unchanged": true,
+    "archive_exact_expected_object": true,
+    "immutable_archive_sha256": "4439c4bd9718359300cee66af4cfa3cdc6293a2878ec75f73b19b35621bf0728",
+    "immutable_archive_created_at": "2026-10-14T22:45:42.827040+00:00",
+    "actual_hold_reason": "confirmed halt archived; fresh approval required",
+    "actual_disposition": "bounded_hold_no_dispatch",
+    "fresh_approval_created_or_installed": false,
+    "new_bounded_candidate_or_rollback_traces": 0,
+    "preexisting_occupancy_synchronization_traces": 1,
+    "other_transport_parameters_observed": 0,
+    "global_zero_device_commands_claimed": false,
+    "native12_receipt_unchanged_in_actual_guarded_archive": true,
+    "native_evidence_scope": "Actual immutable archive can be emitted only after unchanged runtime source rechecks exact12 native rows/no later request and returns HOLD; archival branch has no DB DML or candidate/device send. Existing ordinary occupancy synchronization is retained separately and is not claimed absent.",
+    "outside_pvc_private_raw_custody_preserved": true,
+    "one_consumption_no_forcewake_restart_refresh_or_retry": true,
+    "inverse": "Before any distinct fresh admission, withdraw only the new recovery manifest under exact Pod/file-hash sole-owner checks; retain old active state/approval and immutable archive; no expired approval replay or old custody deletion.",
+    "log_sha256": "b1bdf35afe1b355d9b059caca0f93c4d153268fe05d398abec542d502d6e8ae5"
+  },
+  "writer": {
+    "source": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+    "pod_uid": "3e709a04-4e3a-4b5a-9cf9-bb4c997c212d",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d",
+    "container_id": "containerd://3cc735e6d8c18e651e09db5ccc66ebcca8f5eb76a4168f378885bb45ed545f5d",
+    "restart_count": 0,
+    "connection_generation": 1,
+    "identity_before_after_unchanged": true,
+    "new_ingestor_replacements_for_this_work": 0
+  },
+  "private_human_intent": {
+    "exact_pairs": 16,
+    "prospective_stage_sizes": [
+      12,
+      4
+    ],
+    "anchor_service_commands": 0,
+    "snapshot_aged_nonexecutable": true,
+    "requires_JIT_identity_cfg_plan_candidate_fingerprint_expiry_recheck_without_scope_substitution": true,
+    "decision_request_deferred": true,
+    "fresh_approval_or_physical_send": false,
+    "exact_values_exported": false
+  },
+  "remaining": {
+    "issue749_open": true,
+    "authentic_run_bound_settlement_observability_needed": true,
+    "collector737_does_not_clear_legacy_terminal_holds_from_unbound_equality_or_hypothetical_physical_send": true,
+    "next_scope": "smallest metadata-only completion linkage and narrow collector source/offline regressions before any next source push or physical decision",
+    "no_experiment_randomized_OTA_dbcutover_credential_or_newendpoint_authority": true
+  }
+}
