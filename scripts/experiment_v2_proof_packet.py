@@ -140,7 +140,7 @@ WRITER_REPLAY = re.compile(
     r"seeded=\d+ unobserved_restore_limit=\d+ comparison=current_generation_readbacks$)"
 )
 WRITER_HOLD = re.compile(
-    r"writer_reconcile reason=\S+ generation=\d+ "
+    r"writer_reconcile reason=\S+ generation=(?P<generation>\d+) "
     r"action=(?P<action>blocked_stage|blocked_broad_restore)\b(?: reason=(?P<reason>.*))?"
 )
 WRITER_PENDING = re.compile(
@@ -153,7 +153,7 @@ WRITER_FAILURE = re.compile(
     r"ESP32 (?:disconnected|connection lost)|connection_generation_change|transport_connection_stopped|"
     r"writer_reconcile reason=\S+ generation=\d+ action=incomplete\b|"
     r"writer_reconcile .* action=stage_awaiting_confirmation .* failure_count=[1-9]\d*\b|"
-    r"writer_drift_probe action=hold\b"
+    r"writer_drift_probe action=hold\b|writer_reconciliation_observation .* status=unavailable"
 )
 WRITER_LOG_PREFIX = re.compile(
     r"^(?P<timestamp>\S+) \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} "
@@ -183,8 +183,113 @@ def parse_time(value: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
+def reconciliation_observation(
+    raw: str, *, phase: str, moment: datetime, source: str | None, pod: str | None, generation: int
+) -> dict | None:
+    """Validate metadata from the existing current-pod log channel only."""
+    try:
+        value = json.loads(raw)
+        if value is None and phase == "hold":
+            return None
+        keys = {
+            "schema",
+            "phase",
+            "observed_at",
+            "source_revision",
+            "pod",
+            "process_sha256",
+            "connection_generation",
+            "run_id",
+            "approved_fingerprint",
+            "state_sha256",
+            "effects_sha256",
+            "status",
+            "completed_count",
+            "staged_pending_count",
+            "handoff_requested_count",
+            "handoff_confirmed_count",
+            "handoff_settled",
+            "rollback_count",
+            "archive_sha256",
+            "supersedes",
+            "receipt_sha256",
+        }
+        if not isinstance(value, dict) or set(value) != keys:
+            raise ValueError("shape")
+        if value["schema"] != "verdify-writer-reconciliation-observation/v1" or value["phase"] != phase:
+            raise ValueError("phase")
+        if source is None or pod is None or value["source_revision"] != source or value["pod"] != pod:
+            raise ValueError("writer")
+        if type(value["connection_generation"]) is not int or value["connection_generation"] != generation:
+            raise ValueError("generation")
+        if abs((parse_time(value["observed_at"]) - moment).total_seconds()) > 5:
+            raise ValueError("time")
+        uuid.UUID(value["run_id"])
+        for key in ("process_sha256", "approved_fingerprint", "state_sha256", "effects_sha256", "receipt_sha256"):
+            if not isinstance(value[key], str) or not SHA256.fullmatch(value[key]):
+                raise ValueError("hash")
+        for key in ("completed_count", "staged_pending_count", "handoff_requested_count", "rollback_count"):
+            if type(value[key]) is not int or value[key] < 0:
+                raise ValueError("count")
+        if value["status"] not in {
+            "ready",
+            "inflight",
+            "awaiting_confirmation",
+            "halted",
+            "complete",
+            "rollback_inflight",
+            "rollback_awaiting",
+            "rollback_complete",
+            "rollback_failed",
+        }:
+            raise ValueError("state")
+        if (
+            phase == "hold"
+            and value["handoff_confirmed_count"] is not None
+            and (type(value["handoff_confirmed_count"]) is not int or value["handoff_confirmed_count"] < 0)
+        ):
+            raise ValueError("handoff count")
+        if type(value["handoff_settled"]) is not bool or value["handoff_settled"] != (phase == "complete"):
+            raise ValueError("handoff")
+        if phase == "complete" and (
+            value["status"] != "complete"
+            or value["staged_pending_count"]
+            or value["rollback_count"]
+            or type(value["handoff_confirmed_count"]) is not int
+            or value["handoff_confirmed_count"] != value["handoff_requested_count"]
+        ):
+            raise ValueError("pending")
+        if value["archive_sha256"] is not None and not SHA256.fullmatch(value["archive_sha256"]):
+            raise ValueError("archive")
+        link = value["supersedes"]
+        if link is not None:
+            if not isinstance(link, dict) or set(link) != {
+                "run_id",
+                "approved_fingerprint",
+                "state_sha256",
+                "archive_sha256",
+            }:
+                raise ValueError("link")
+            uuid.UUID(link["run_id"])
+            if link["run_id"] == value["run_id"] or any(
+                not SHA256.fullmatch(link[key]) for key in ("approved_fingerprint", "state_sha256", "archive_sha256")
+            ):
+                raise ValueError("link identity")
+        if receipt({key: item for key, item in value.items() if key != "receipt_sha256"}) != value["receipt_sha256"]:
+            raise ValueError("receipt")
+        return value
+    except (ValueError, TypeError, KeyError, AttributeError, CollectionError) as error:
+        raise CollectionError("writer reconciliation observation is malformed or mismatched") from error
+
+
 def writer_stability(
-    logs: str, started_at: str, connection_generation: int, *, observed_at: datetime
+    logs: str,
+    started_at: str,
+    connection_generation: int,
+    *,
+    observed_at: datetime,
+    source_revision: str | None = None,
+    pod: str | None = None,
 ) -> tuple[datetime, int]:
     """Separate transport lifecycle edges from a still-unreconciled dispatch.
 
@@ -192,15 +297,21 @@ def writer_stability(
     fresh replay completion or grid reseal starts a new error epoch only when
     no policy hold remains. Existing log events do not bind settlement to a
     held run: equality, reconnects and grid reseals cannot establish recovery
-    of retained state. Such a hold therefore remains a collection denial.
+    of retained state. Only a current-writer settled completion with the exact
+    archived run link can clear a bound hold; legacy unbound holds deny.
     """
     stable_since = parse_time(started_at)
     failures: list[datetime] = []
     hold: str | None = None
+    bound_holds: dict[tuple[str, str, str], dict] = {}
+    process_hash: str | None = None
+    completions: set[str] = set()
     generation = 0
     replays: set[tuple[int, str]] = set()
     attestations: set[tuple[str, str, str]] = set()
-    for line in logs.splitlines():
+    for original in logs.splitlines():
+        line, separator, raw_hold = original.partition(" reconciliation_receipt=")
+        _head, complete_separator, raw_complete = line.partition(" writer_reconciliation_complete receipt=")
         replay = WRITER_REPLAY.search(line)
         held = WRITER_HOLD.search(line)
         pending = WRITER_PENDING.search(line) is not None
@@ -220,14 +331,48 @@ def writer_stability(
         failed = WRITER_FAILURE.search(line)
         attestation = "component_entity_grid_attestation status=pass" in line
         acquired = "writer_lease: ACQUIRED" in line
-        if not any((replay, held, pending, failed, attestation, acquired)):
+        if not any((replay, held, pending, failed, attestation, acquired, complete_separator)):
             continue
         try:
             moment = parse_time(line.split(maxsplit=1)[0])
         except (ValueError, IndexError, CollectionError) as exc:
             raise CollectionError("writer lifecycle event timestamp is malformed") from exc
+        if moment < parse_time(started_at) - timedelta(seconds=5) or moment > observed_at + timedelta(seconds=5):
+            raise CollectionError("writer lifecycle event is outside the current writer lifetime")
         positive = acquired
         recovered = False
+        metadata = None
+        if separator or complete_separator:
+            metadata = reconciliation_observation(
+                raw_hold if separator else raw_complete,
+                phase="hold" if separator else "complete",
+                moment=moment,
+                source=source_revision,
+                pod=pod,
+                generation=generation,
+            )
+            if metadata is not None:
+                if process_hash is not None and process_hash != metadata["process_sha256"]:
+                    raise CollectionError("writer reconciliation process changed")
+                process_hash = metadata["process_sha256"]
+        if complete_separator:
+            if metadata["receipt_sha256"] in completions:
+                continue  # A replay cannot clear a later hold or move its clock.
+            completions.add(metadata["receipt_sha256"])
+            link = metadata["supersedes"]
+            if link is not None:
+                key = (link["run_id"], link["approved_fingerprint"], link["state_sha256"])
+                old = bound_holds.get(key)
+                if (
+                    old is None
+                    or old["archive_sha256"] != link["archive_sha256"]
+                    or old["process_sha256"] != metadata["process_sha256"]
+                    or old["connection_generation"] != metadata["connection_generation"]
+                    or parse_time(metadata["observed_at"]) <= parse_time(old["observed_at"])
+                ):
+                    raise CollectionError("writer completion lacks its exact bound historical hold")
+                del bound_holds[key]
+            positive = recovered = True
         if replay:
             event_generation = int(replay["generation"])
             if event_generation < 1 or event_generation < generation:
@@ -256,7 +401,7 @@ def writer_stability(
             recovered = positive
         if positive:
             stable_since = max(stable_since, moment)
-            if recovered and hold is None:
+            if recovered and hold is None and not bound_holds:
                 failures.clear()
         if pending:
             # An ongoing wait is not a physical failure, but is not a quiet
@@ -267,15 +412,21 @@ def writer_stability(
             stable_since = max(stable_since, moment)
             failures.append(moment)
         if held:
-            hold = held["action"]
+            if metadata is None:
+                hold = held["action"]
+            else:
+                if metadata["connection_generation"] != int(held["generation"]):
+                    raise CollectionError("writer held observation generation differs")
+                key = (metadata["run_id"], metadata["approved_fingerprint"], metadata["state_sha256"])
+                bound_holds[key] = metadata
             failures.append(moment)
     # Count errors in the same 30-minute stability interval, including its
     # latest error. Normal historical waits are not permanent launch gates.
     errors = sum(moment >= observed_at - timedelta(minutes=30) for moment in failures)
     if generation != connection_generation:
         raise CollectionError("writer lifecycle/current attestation generations differ")
-    if hold is not None:
-        raise CollectionError(f"writer reconciliation unresolved: {hold}; recurring errors={errors}")
+    if hold is not None or bound_holds:
+        raise CollectionError(f"writer reconciliation unresolved: {hold or 'bound_hold'}; recurring errors={errors}")
     if (generation, "awaiting_readbacks") not in replays or (generation, "readbacks_complete") not in replays:
         raise CollectionError("writer current-generation connection/readback completion evidence is absent")
     return stable_since, errors
@@ -524,7 +675,12 @@ def collect_kube(
         raise CollectionError("direct-proof ingestor capability is not the exact isolated configuration")
 
     stable_since, recurring = writer_stability(
-        logs, writer_pod["status"]["startTime"], int(attestation["connection"]), observed_at=now
+        logs,
+        writer_pod["status"]["startTime"],
+        int(attestation["connection"]),
+        observed_at=now,
+        source_revision=application_source,
+        pod=writer_name,
     )
 
     app_status = app.get("status", {})

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import shutil
 import sys
 import uuid
@@ -726,6 +727,35 @@ async def test_zero_records_only_truthful_entire_deferral_is_resumable(fixture, 
 
 
 @pytest.mark.asyncio
+async def test_handoff_retains_each_native_request_and_checks_latest_readback(fixture, tmp_path, monkeypatch):
+    _held, done = await completed_linked_run(fixture, tmp_path, monkeypatch)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    parameter = state["completed"][0]
+    assert not dispatcher.readback_values_equivalent(parameter, state["completed_values"][parameter], 3.0)
+    requests = []
+    for value in (2.0, 3.0):
+        handoff = bounded.Decision("complete", ((parameter, value),), run_id=done.run_id)
+        bounded.note_ordinary_handoff(handoff, 3)
+        record = {**records(handoff.changes)[0], "source": "planner"}
+        requests.append(record)
+        bounded.record_ordinary_handoff(handoff, 3, [record], [])
+        fixture.rows[(record["requested_at"], parameter)] = {
+            "value": value,
+            "source": "planner",
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+            "expired_at": None,
+        }
+    fixture.readbacks[parameter] = 3.0
+    first = fixture.rows[(requests[0]["requested_at"], parameter)]
+    first["delivery_status"] = "sent"
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None
+    first["delivery_status"] = "confirmed"
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 3)
+    assert complete["handoff_requested_count"] == complete["handoff_confirmed_count"] == 2
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "defect", [None, "unknown", "baseline", "incomplete", "changed_plan", "rollover", "bad_approval"]
 )
@@ -913,6 +943,257 @@ async def confirmed_halt_fixture(db, tmp_path):
     return state, approval, forward, changes[12:]
 
 
+async def completed_linked_run(db, tmp_path, monkeypatch):
+    """Exercise native archival, distinct admission, and confirmed completion."""
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    monkeypatch.setenv("HOSTNAME", "historical-writer")
+    old, old_approval, _forward, remaining = await confirmed_halt_fixture(db, tmp_path)
+    old_bytes = (tmp_path / bounded.STATE_NAME).read_bytes()
+    result = await bounded.choose_stage(db, remaining, db.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and "fresh approval required" in result.reason
+    archive = tmp_path / f"writer-stage-confirmed-halt-{old['run_id']}.json"
+    archive_bytes = archive.read_bytes()
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == old_bytes
+    assert bounded._read(tmp_path / bounded.APPROVAL_NAME) == old_approval
+
+    # The deployed process observes retained history without inheriting its
+    # expired authority. A distinct current approval is still indispensable.
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "b" * 40)
+    monkeypatch.setenv("HOSTNAME", "writer-pod")
+    monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    monkeypatch.setattr(shared, "transport_generation", 3)
+    monkeypatch.setattr(shared, "reconciled_transport_generation", 3)
+    monkeypatch.setattr(shared, "cfg_drift_versions", {})
+    held = await bounded.choose_stage(db, remaining, db.planned(), 3, tmp_path, 12)
+    assert held.action == "hold"
+    observation = bounded.hold_observation(tmp_path, held, 3)
+    assert observation["run_id"] == old["run_id"]
+    assert observation["archive_sha256"] == bounded.hashlib.sha256(archive_bytes).hexdigest()
+    assert await bounded.completion_observation(db, tmp_path, held, 3) is None
+    preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC))
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    selected = await bounded.choose_stage(db, remaining, db.planned(), 3, tmp_path, 12)
+    assert selected.action == "send" and selected.run_id != old["run_id"]
+    assert await bounded.completion_observation(db, tmp_path, selected, 3) is None
+    stage_records = records(selected.changes)
+    bounded.finish_stage(tmp_path, selected, stage_records, [])
+    for record in stage_records:
+        db.rows[(record["requested_at"], record["parameter"])] = {"delivery_status": "sent", "confirmed_at": None}
+    pending = await bounded.choose_stage(db, remaining, db.planned(), 3, tmp_path, 12)
+    assert pending.action == "hold"
+    assert await bounded.completion_observation(db, tmp_path, pending, 3) is None
+    for record in stage_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    done = await bounded.choose_stage(db, [], db.planned(), 3, tmp_path, 12)
+    assert done.action == "complete" and not done.changes
+    assert archive.read_bytes() == archive_bytes
+    return observation, done
+
+
+@pytest.mark.asyncio
+async def test_actual_producer_completion_settles_only_linked_hold_in_collector(fixture, tmp_path, monkeypatch):
+    held, done = await completed_linked_run(fixture, tmp_path, monkeypatch)
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 3)
+    assert complete["supersedes"] == {
+        "run_id": held["run_id"],
+        "approved_fingerprint": held["approved_fingerprint"],
+        "state_sha256": held["state_sha256"],
+        "archive_sha256": held["archive_sha256"],
+    }
+    assert complete["completed_count"] == 1
+    assert complete["handoff_requested_count"] == complete["handoff_confirmed_count"] == 0
+    assert complete["handoff_settled"] is True
+    assert not any(key in complete for key in ("changes", "readbacks", "session_id", "values"))
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None
+
+    spec = importlib.util.spec_from_file_location(
+        "run_observation_collector", ROOT / "scripts/experiment_v2_proof_packet.py"
+    )
+    collector = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = collector
+    spec.loader.exec_module(collector)
+    now = datetime.now(UTC)
+    start = now - timedelta(seconds=10)
+    prefix = start.isoformat() + " INFO "
+    logs = [
+        prefix
+        + "writer_reconcile reason=transport_reconnect generation=3 action=awaiting_readbacks expected_readback_count=207",
+        prefix
+        + "writer_reconcile reason=transport_reconnect generation=3 seeded=241 unobserved_restore_limit=0 comparison=current_generation_readbacks",
+        held["observed_at"]
+        + " ERROR writer_reconcile reason=retry generation=3 action=blocked_stage reason=confirmed halt archived; fresh approval required reconciliation_receipt="
+        + json.dumps(held),
+        complete["observed_at"] + " INFO writer_reconciliation_complete receipt=" + json.dumps(complete),
+    ]
+    stable, errors = collector.writer_stability(
+        "\n".join(logs), start.isoformat(), 3, observed_at=now, source_revision="b" * 40, pod="writer-pod"
+    )
+    assert stable == datetime.fromisoformat(complete["observed_at"])
+    assert errors == 0
+    assert now - stable < timedelta(minutes=30)  # Completion starts, never bypasses, quiet time.
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "status", ["requested", "sent", "deferred_heap_pressure", "failed", "cancelled", "superseded", "expired", "unknown"]
+)
+async def test_ordinary_handoff_requires_every_actual_row_confirmed(fixture, tmp_path, monkeypatch, status):
+    _held, done = await completed_linked_run(fixture, tmp_path, monkeypatch)
+    parameter = fixture.names[-1]
+    handoff = bounded.Decision("complete", ((parameter, 2.0),), run_id=done.run_id)
+    bounded.note_ordinary_handoff(handoff, 3)
+    assert await bounded.completion_observation(fixture, tmp_path, handoff, 3) is None
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None  # Still unrecorded.
+    record = {**records(handoff.changes)[0], "source": "planner"}
+    bounded.record_ordinary_handoff(handoff, 3, [record], [])
+    native = {"value": 2.0, "source": "planner", "delivery_status": status, "confirmed_at": None, "expired_at": None}
+    fixture.rows[(record["requested_at"], parameter)] = native
+    fixture.readbacks[parameter] = 2.0  # Equality alone never establishes delivery.
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None
+    native.update(delivery_status="confirmed", confirmed_at=datetime.now(UTC))
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 3)
+    assert complete["handoff_requested_count"] == complete["handoff_confirmed_count"] == 1
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert complete["effects_sha256"] == bounded._digest(
+        {
+            "completed": state["completed"],
+            "values": state["completed_values"],
+            "ordinary_handoff": [
+                {
+                    "requested_at": record["requested_at"].isoformat(),
+                    "parameter": parameter,
+                    "value": record["value"],
+                    "source": record["source"],
+                }
+            ],
+        }
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "contradiction",
+    [
+        "missing",
+        "value",
+        "source",
+        "expired",
+        "readback",
+        "failure",
+        "exception",
+        "state_race",
+        "staged_readback_race",
+        "bookkeeping",
+        "missing_source",
+    ],
+)
+async def test_handoff_observation_failures_do_not_mutate_or_wake_control(
+    fixture, tmp_path, monkeypatch, contradiction
+):
+    from unittest.mock import Mock
+
+    _held, done = await completed_linked_run(fixture, tmp_path, monkeypatch)
+    parameter = fixture.names[-1]
+    handoff = bounded.Decision("complete", ((parameter, 2.0),), run_id=done.run_id)
+    bounded.note_ordinary_handoff(handoff, 3)
+    record = {**records(handoff.changes)[0], "source": "planner"}
+    bounded.record_ordinary_handoff(handoff, 3, [record], ["failed"] if contradiction == "failure" else [])
+    native = {
+        "value": 2.0,
+        "source": "planner",
+        "delivery_status": "confirmed",
+        "confirmed_at": datetime.now(UTC),
+        "expired_at": None,
+    }
+    fixture.rows[(record["requested_at"], parameter)] = native
+    fixture.readbacks[parameter] = 2.0
+    if contradiction == "missing":
+        fixture.rows.clear()
+    elif contradiction == "value":
+        native["value"] = 3.0
+    elif contradiction == "source":
+        native["source"] = "other"
+    elif contradiction == "expired":
+        native["expired_at"] = datetime.now(UTC)
+    elif contradiction == "readback":
+        fixture.readbacks[parameter] = 0.0
+    elif contradiction == "exception":
+
+        async def failed(*_args):
+            raise TimeoutError("fixture only")
+
+        fixture.fetchrow = failed
+    elif contradiction == "state_race":
+
+        async def racing(*_args):
+            state = bounded._read(tmp_path / bounded.STATE_NAME)
+            state["status"] = "halted"
+            bounded._write(tmp_path / bounded.STATE_NAME, state)
+            return native
+
+        fixture.fetchrow = racing
+    elif contradiction == "staged_readback_race":
+
+        async def readback_racing(*_args):
+            state = bounded._read(tmp_path / bounded.STATE_NAME)
+            fixture.readbacks[state["completed"][0]] = None
+            return native
+
+        fixture.fetchrow = readback_racing
+    elif contradiction == "bookkeeping":
+        bounded.record_ordinary_handoff(handoff, 3, [{"parameter": parameter}], [])
+    elif contradiction == "missing_source":
+        bounded.record_ordinary_handoff(
+            handoff, 3, [{key: value for key, value in record.items() if key != "source"}], []
+        )
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    wake = Mock(side_effect=AssertionError("metadata cannot wake control"))
+    monkeypatch.setattr(bounded, "_wake_for_confirmation", wake)
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None
+    wake.assert_not_called()
+    if contradiction != "state_race":
+        assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "contradiction",
+    ["source", "pod", "process", "generation", "fingerprint", "lease", "readbacks", "drift", "pending", "rollback"],
+)
+async def test_complete_observation_binds_current_run_and_writer(fixture, tmp_path, monkeypatch, contradiction):
+    _held, done = await completed_linked_run(fixture, tmp_path, monkeypatch)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    if contradiction in {"source", "pod"}:
+        monkeypatch.setenv("VERDIFY_GIT_SHA" if contradiction == "source" else "HOSTNAME", "different")
+    elif contradiction == "process":
+        monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    elif contradiction == "generation":
+        monkeypatch.setattr(shared, "transport_generation", 4)
+    elif contradiction == "fingerprint":
+        state["approved_preview"]["fingerprint"] = "0" * 64
+    elif contradiction == "lease":
+        monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda **_kwargs: False)
+    elif contradiction == "readbacks":
+        monkeypatch.setattr(shared, "transport_readbacks_ready", lambda _generation: False)
+    elif contradiction == "drift":
+        monkeypatch.setattr(shared, "cfg_drift_versions", {"temp_low": 1})
+    elif contradiction == "pending":
+        state["records"] = [{"parameter": "temp_low"}]
+    elif contradiction == "rollback":
+        state["rollback_records"] = [{"parameter": "temp_low"}]
+    bounded._write(tmp_path / bounded.STATE_NAME, state)
+    before = (tmp_path / bounded.STATE_NAME).read_bytes()
+    assert await bounded.completion_observation(fixture, tmp_path, done, 3) is None
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == before
+
+
 @pytest.mark.asyncio
 async def test_confirmed_halt_archives_original_effects_and_requires_distinct_fresh_admission(
     fixture, tmp_path, monkeypatch
@@ -938,6 +1219,12 @@ async def test_confirmed_halt_archives_original_effects_and_requires_distinct_fr
     result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
     assert result.action == "send" and result.changes == tuple(remaining)
     assert result.run_id == new["run_id"]
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["confirmed_halt_link"] == {
+        "run_id": state["run_id"],
+        "approved_fingerprint": state["approved_preview"]["fingerprint"],
+        "state_sha256": bounded._digest(state),
+        "archive_sha256": bounded.hashlib.sha256(archive_bytes).hexdigest(),
+    }
     assert archive_path.read_bytes() == archive_bytes
     assert not (tmp_path / bounded.RECOVERY_NAME).exists()
 

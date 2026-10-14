@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-14T22:14:07Z** against source `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **55 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-14T22:54:27Z** against source `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **55 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Correct concrete collector event/error arithmetic while preserving explicit halted-reconciliation denial and30min/freshness/authority guards; soleRetry owns source/CI, no promotion/sync. Existing contained lane prepares the supported expired previous-writer halt recovery packet from retained evidence. No stage deletion/replay/oldapprovalreuse; only then a genuinely current bounded READ ONLY readiness packet. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Deliver reviewed five-path metadata-only run/archive-bound completion evidence v3 with complete canonical13 snapshot through ordinary source checks/nativeCI/actualaffectedcandidate outputs; no promotion/sync/freshapproval yet. Final306focused tests and independent source review accepted, guard/policy/authority unchanged; post-await staged-cfg race reproduced/fixed. After qualifiedsource/images/rolloutinverse, ask ONE exact distinctordinary16setting decision with JITscope guards; current readiness/physicalclauses remain separate. |
 
 ## S3 — Source truth, portable validation and prospective design
 

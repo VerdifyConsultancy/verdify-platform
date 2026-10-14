@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -48,6 +49,11 @@ DYNAMIC_MOISTURE_GUARDRAIL_PARAMS = frozenset(
         "mister_pulse_gap_s",
     }
 )
+OBSERVATION_SCHEMA = "verdify-writer-reconciliation-observation/v1"
+_handoffs: dict[tuple[str, int, str], dict] = {}
+_observed_completions: set[tuple[str, int, str]] = set()
+_unobservable_handoffs: set[tuple[str, int, str]] = set()
+_observation_log = logging.getLogger(__name__)
 
 
 class SnapshotBehindReadbacks(ValueError):
@@ -85,6 +91,214 @@ def _read(path: Path) -> dict | None:
     if not isinstance(value, dict):
         raise ValueError(f"invalid {path.name}")
     return value
+
+
+def _confirmed_halt_link(state: dict, state_dir: Path) -> dict | None:
+    """Observe validated immutable custody; never change admission on log failure."""
+    try:
+        path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
+        if not path.exists():
+            return None
+        raw = path.read_bytes()
+        archive = json.loads(raw)
+        if archive["state"] != state or archive["approval"]["approved_preview"] != state["approved_preview"]:
+            return None
+        return {
+            "run_id": state["run_id"],
+            "approved_fingerprint": state["approved_preview"]["fingerprint"],
+            "state_sha256": _digest(state),
+            "archive_sha256": hashlib.sha256(raw).hexdigest(),
+        }
+    except Exception:
+        return None
+
+
+def _observation(state: dict, state_dir: Path, generation: int, phase: str, confirmed: int | None) -> dict:
+    approved = state["approved_preview"]
+    uuid.UUID(state["run_id"])
+    source = os.environ.get("VERDIFY_GIT_SHA", "")
+    pod = os.environ.get("HOSTNAME", "")
+    if (
+        not re.fullmatch(r"[0-9a-f]{40}", source)
+        or not pod
+        or not re.fullmatch(r"[0-9a-f]{64}", approved["fingerprint"])
+    ):
+        raise ValueError("observation identity unavailable")
+    identity = {
+        key: approved[key]
+        for key in ("session_id", "pod", "source_revision", "generation", "changes", "plan_rows", "readbacks")
+    }
+    if (
+        _digest(identity) != approved["fingerprint"]
+        or len(state["completed"]) != len(set(state["completed"]))
+        or set(state["completed"]) != set(state["completed_values"])
+    ):
+        raise ValueError("observation run binding unavailable")
+    handoff = _handoffs.get((SESSION_ID, generation, state["run_id"]), {})
+    link = _confirmed_halt_link(state, state_dir)
+    value = {
+        "schema": OBSERVATION_SCHEMA,
+        "phase": phase,
+        "observed_at": datetime.now(UTC).isoformat(),
+        "source_revision": source,
+        "pod": pod,
+        "process_sha256": hashlib.sha256(SESSION_ID.encode()).hexdigest(),
+        "connection_generation": generation,
+        "run_id": state["run_id"],
+        "approved_fingerprint": approved["fingerprint"],
+        "state_sha256": _digest(state),
+        "effects_sha256": _digest(
+            {
+                "completed": state["completed"],
+                "values": state["completed_values"],
+                "ordinary_handoff": [
+                    {"requested_at": stamp.isoformat(), "parameter": param, **record}
+                    for (stamp, param), record in sorted(handoff.get("records", {}).items())
+                ],
+            }
+        ),
+        "status": state["status"],
+        "completed_count": len(state["completed"]),
+        "staged_pending_count": len(state.get("records", [])),
+        "handoff_requested_count": len(handoff.get("records", {})),
+        "handoff_confirmed_count": confirmed,
+        "handoff_settled": phase == "complete",
+        "rollback_count": len(state.get("rollback_records", [])),
+        "archive_sha256": link["archive_sha256"] if link else None,
+        "supersedes": state.get("confirmed_halt_link"),
+    }
+    return {**value, "receipt_sha256": _digest(value)}
+
+
+def hold_observation(state_dir: Path, decision: Decision, generation: int) -> dict | None:
+    """Bind the existing hold log to its actual retained run, without values."""
+    try:
+        state = _read(state_dir / STATE_NAME)
+        if state is None or (decision.run_id is not None and decision.run_id != state["run_id"]):
+            return None
+        return _observation(state, state_dir, generation, "hold", None)
+    except Exception as error:
+        _observation_log.warning(
+            "writer_reconciliation_observation phase=hold status=unavailable class=%s", type(error).__name__
+        )
+        return None
+
+
+def note_ordinary_handoff(decision: Decision, generation: int) -> None:
+    """Remember outstanding existing commands; metadata grants no send authority."""
+    try:
+        key = (SESSION_ID, generation, decision.run_id)
+        if decision.action == "complete" and decision.run_id and decision.changes and key not in _observed_completions:
+            item = _handoffs.setdefault(key, {"unrecorded": set(), "records": {}, "failed": False})
+            item["unrecorded"].update(param for param, _value in decision.changes)
+    except Exception as error:
+        if isinstance(decision.run_id, str):
+            _unobservable_handoffs.add((SESSION_ID, generation, decision.run_id))
+        _observation_log.warning(
+            "writer_reconciliation_observation phase=handoff status=unavailable class=%s", type(error).__name__
+        )
+
+
+def record_ordinary_handoff(decision: Decision, generation: int, records: list[dict], failures: list) -> None:
+    try:
+        item = _handoffs.get((SESSION_ID, generation, decision.run_id))
+        if item is None:
+            return
+        item["failed"] |= bool(failures)
+        for record in records:
+            param = record["parameter"]
+            if param not in dict(decision.changes):
+                continue
+            stamp = record["requested_at"]
+            stamp = _time(stamp) if isinstance(stamp, str) else stamp
+            if not record.get("source"):
+                raise ValueError("handoff request source unavailable")
+            item["records"][(stamp, param)] = {"value": record["value"], "source": record["source"]}
+            item["unrecorded"].discard(param)
+    except Exception as error:
+        if isinstance(decision.run_id, str):
+            _unobservable_handoffs.add((SESSION_ID, generation, decision.run_id))
+        _observation_log.warning(
+            "writer_reconciliation_observation phase=handoff status=unavailable class=%s", type(error).__name__
+        )
+
+
+async def completion_observation(conn, state_dir: Path, decision: Decision, generation: int) -> dict | None:
+    """Observe a confirmed complete run only after the ordinary handoff settles."""
+    if decision.action != "complete" or decision.changes or not decision.run_id:
+        return None
+    try:
+        state = _read(state_dir / STATE_NAME)
+        if (
+            state is None
+            or state["run_id"] != decision.run_id
+            or state["status"] != "complete"
+            or state.get("records")
+            or state.get("rollback_records")
+        ):
+            return None
+        approved = state["approved_preview"]
+        if (
+            approved["session_id"] != SESSION_ID
+            or approved["pod"] != os.environ.get("HOSTNAME", "")
+            or approved["source_revision"] != os.environ.get("VERDIFY_GIT_SHA", "")
+            or approved["generation"] != generation
+        ):
+            return None
+        state_hash = _digest(state)
+        key = (SESSION_ID, generation, decision.run_id)
+        if key in _observed_completions or key in _unobservable_handoffs:
+            return None
+        handoff = _handoffs.get((SESSION_ID, generation, decision.run_id), {})
+        if handoff.get("failed") or handoff.get("unrecorded"):
+            return None
+        latest = {}
+        records = handoff.get("records", {})
+        # Best-effort metadata must not stall or mutate the control path.
+        async with asyncio.timeout(1):
+            for (stamp, param), record in sorted(records.items()):
+                row = await conn.fetchrow(
+                    "SELECT value, source, delivery_status, confirmed_at, expired_at "
+                    "FROM setpoint_changes WHERE ts=$1 AND parameter=$2",
+                    stamp,
+                    param,
+                )
+                if (
+                    row is None
+                    or row["delivery_status"] != "confirmed"
+                    or row["confirmed_at"] is None
+                    or row["expired_at"] is not None
+                    or not _equal(row["value"], record["value"])
+                    or row["source"] != record["source"]
+                ):
+                    return None
+                latest[param] = record["value"]
+        from .dispatcher import readback_values_equivalent
+
+        readbacks = shared.current_cfg_readbacks(generation)
+        expected_readbacks = {**state["completed_values"], **latest}
+        if (
+            shared.transport_generation != generation
+            or shared.reconciled_transport_generation < generation
+            or not shared.transport_readbacks_ready(generation)
+            or shared.cfg_drift_versions
+            or not shared.writer_lease_strictly_held(minimum_remaining_s=3)
+            or any(
+                not readback_values_equivalent(param, readbacks.get(param), value)
+                for param, value in expected_readbacks.items()
+            )
+            or _digest(_read(state_dir / STATE_NAME)) != state_hash
+        ):
+            return None
+        value = _observation(state, state_dir, generation, "complete", len(records))
+        _observed_completions.add(key)
+        _handoffs.pop(key, None)
+        return value
+    except Exception as error:
+        _observation_log.warning(
+            "writer_reconciliation_observation phase=complete status=unavailable class=%s", type(error).__name__
+        )
+        return None
 
 
 def _write(path: Path, value: dict) -> None:
@@ -1021,6 +1235,7 @@ async def choose_stage(
     approval_path = state_dir / APPROVAL_NAME
     state_path = state_dir / STATE_NAME
     recovered_admission = False
+    confirmed_halt_link = None
     original_halt_digest = None
     try:
         approval = _read(approval_path)
@@ -1080,6 +1295,7 @@ async def choose_stage(
                 return Decision(
                     "hold", reason="confirmed halt archived; fresh approval required", run_id=state["run_id"]
                 )
+            confirmed_halt_link = _confirmed_halt_link(state, state_dir)
             state = None
             recovered_admission = True
         if state is not None and state.get("status") == "rollback_complete":
@@ -1154,6 +1370,8 @@ async def choose_stage(
                 "status": "ready",
             }
             _validate_state(preview, state, now, zone_vpd_targets, limit, guardrail_values)
+            if confirmed_halt_link is not None and confirmed_halt_link["run_id"] != state["run_id"]:
+                state["confirmed_halt_link"] = confirmed_halt_link
             _write(state_path, state)
             if recovered_admission:
                 (state_dir / RECOVERY_NAME).unlink()  # Exact old authority retained in recovered archive.

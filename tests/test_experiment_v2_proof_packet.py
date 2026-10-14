@@ -43,6 +43,8 @@ def _stability(logs: str, started_at: str, generation: int, *, observed_at: date
         started_at,
         generation,
         observed_at=observed_at or datetime(2026, 10, 14, 12, 20, tzinfo=UTC),
+        source_revision="b" * 40,
+        pod="writer-pod",
     )
 
 
@@ -70,6 +72,178 @@ def _writer_replay(seconds: int, generation: int = 1, *, seeded: bool = False) -
 
 def _ready_writer() -> list[str]:
     return [_writer_replay(1), _writer_attestation(2), _writer_replay(3, seeded=True)]
+
+
+def _run_observation(seconds: int, phase: str, **changes) -> dict:
+    value = {
+        "schema": "verdify-writer-reconciliation-observation/v1",
+        "phase": phase,
+        "observed_at": _writer_line(seconds, "").split()[0],
+        "source_revision": "b" * 40,
+        "pod": "writer-pod",
+        "process_sha256": "a" * 64,
+        "connection_generation": 1,
+        "run_id": ("1" if phase == "hold" else "2") * 32,
+        "approved_fingerprint": ("e" if phase == "hold" else "f") * 64,
+        "state_sha256": ("d" if phase == "hold" else "b") * 64,
+        "effects_sha256": "f" * 64,
+        "status": "halted" if phase == "hold" else "complete",
+        "completed_count": 12 if phase == "hold" else 4,
+        "staged_pending_count": 0,
+        "handoff_requested_count": 0,
+        "handoff_confirmed_count": None if phase == "hold" else 0,
+        "handoff_settled": phase == "complete",
+        "rollback_count": 0,
+        "archive_sha256": "c" * 64 if phase == "hold" else None,
+        "supersedes": None
+        if phase == "hold"
+        else {
+            "run_id": "1" * 32,
+            "approved_fingerprint": "e" * 64,
+            "state_sha256": "d" * 64,
+            "archive_sha256": "c" * 64,
+        },
+    }
+    value.update(changes)
+    return {**value, "receipt_sha256": collector.receipt(value)}
+
+
+def _observation_line(seconds: int, phase: str, **changes) -> str:
+    body = json.dumps(_run_observation(seconds, phase, **changes), sort_keys=True, separators=(",", ":"))
+    message = (
+        "writer_reconcile reason=retry generation=1 action=blocked_stage reason=confirmed halt archived; fresh approval required reconciliation_receipt="
+        if phase == "hold"
+        else "writer_reconciliation_complete receipt="
+    )
+    return _writer_line(seconds, message + body)
+
+
+def test_linked_settled_completion_starts_new_quiet_window() -> None:
+    logs = [
+        *_ready_writer(),
+        _observation_line(10, "hold", archive_sha256=None),
+        _observation_line(20, "hold"),
+        _observation_line(40, "complete"),
+    ]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 40, tzinfo=UTC)
+    assert errors == 0
+    assert datetime(2026, 10, 14, 12, 20, tzinfo=UTC) - stable < timedelta(minutes=30)
+
+
+@pytest.mark.parametrize(
+    "legacy",
+    [
+        "writer_reconcile reason=retry generation=1 action=blocked_stage reason=unapproved candidate appeared",
+        "writer_reconcile reason=retry generation=1 action=blocked_stage reason=unapproved candidate appeared reconciliation_receipt=null",
+        "writer_reconcile reason=retry generation=1 action=blocked_broad_restore command_count=16 limit=12",
+    ],
+)
+def test_linked_completion_cannot_clear_legacy_unbound_hold(legacy: str) -> None:
+    logs = [*_ready_writer(), _writer_line(8, legacy), _observation_line(10, "hold"), _observation_line(40, "complete")]
+    with pytest.raises(collector.CollectionError, match="unresolved"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+@pytest.mark.parametrize("mismatch", ["run_id", "approved_fingerprint", "state_sha256", "archive_sha256", "absent"])
+def test_completion_requires_exact_archived_hold_link(mismatch: str) -> None:
+    link = _run_observation(40, "complete")["supersedes"]
+    if mismatch == "absent":
+        link = None
+    else:
+        link[mismatch] = "3" * (32 if mismatch == "run_id" else 64)
+    logs = [*_ready_writer(), _observation_line(10, "hold"), _observation_line(40, "complete", supersedes=link)]
+    with pytest.raises(collector.CollectionError, match="bound historical hold|unresolved"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"source_revision": "c" * 40},
+        {"pod": "other-pod"},
+        {"process_sha256": "0" * 64},
+        {"connection_generation": 2},
+        {"staged_pending_count": 1},
+        {"rollback_count": 1},
+        {"handoff_requested_count": 1},
+        {"handoff_settled": False},
+        {"status": "awaiting_confirmation"},
+        {"observed_at": "2026-10-14T12:00:10Z"},
+        {"supersedes": {"run_id": "1" * 32}},
+        {"completed_count": -1},
+        {"run_id": 5},
+        {"effects_sha256": None},
+        {"handoff_confirmed_count": True},
+        {"connection_generation": True},
+    ],
+)
+def test_unsettled_or_mismatched_completion_denies(changes: dict) -> None:
+    logs = [*_ready_writer(), _observation_line(10, "hold"), _observation_line(40, "complete", **changes)]
+    with pytest.raises(collector.CollectionError, match="malformed|process changed"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+@pytest.mark.parametrize("raw", ["null", "{}", "{", "false", '"text"'])
+def test_missing_or_truncated_completion_metadata_cannot_qualify(raw: str) -> None:
+    logs = [
+        *_ready_writer(),
+        _observation_line(10, "hold"),
+        _writer_line(40, "writer_reconciliation_complete receipt=" + raw),
+    ]
+    with pytest.raises(collector.CollectionError, match="malformed"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+def test_completion_digest_is_checked_and_cannot_be_replaced_by_equality() -> None:
+    changed = _run_observation(40, "complete")
+    changed["completed_count"] += 1
+    logs = [
+        *_ready_writer(),
+        _observation_line(10, "hold"),
+        _writer_line(40, "writer_reconciliation_complete receipt=" + json.dumps(changed)),
+    ]
+    with pytest.raises(collector.CollectionError, match="malformed"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    logs[-1] = _writer_line(
+        40,
+        "writer_dispatch reason=retry generation=1 command_count=0 anchor_count=0 unchanged_anchor_count=0 comparison=desired_vs_observed",
+    )
+    with pytest.raises(collector.CollectionError, match="unresolved"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+def test_completion_does_not_clear_unrelated_or_later_bound_hold() -> None:
+    resolved = [*_ready_writer(), _observation_line(10, "hold"), _observation_line(40, "complete")]
+    for logs in (
+        [*resolved, _observation_line(50, "hold")],
+        [*resolved[:4], _observation_line(20, "hold", run_id="3" * 32), *resolved[4:]],
+        [*resolved, _observation_line(50, "hold"), resolved[-1]],
+    ):
+        with pytest.raises(collector.CollectionError, match="unresolved"):
+            _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+def test_later_failure_relatches_and_replayed_completion_cannot_reset_clock() -> None:
+    complete = _observation_line(40, "complete")
+    logs = [
+        *_ready_writer(),
+        _observation_line(10, "hold"),
+        complete,
+        _writer_line(50, "writer_lease: renew error"),
+        complete,
+    ]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 50, tzinfo=UTC) and errors == 1
+    logs = [*_ready_writer(), _observation_line(10, "hold"), complete, complete]
+    assert _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)[0] == datetime(2026, 10, 14, 12, 0, 40, tzinfo=UTC)
+
+
+@pytest.mark.parametrize("second", [0, 1210])
+def test_writer_metadata_outside_current_pod_lifetime_denies(second: int) -> None:
+    logs = [*_ready_writer(), _observation_line(second, "hold")]
+    with pytest.raises(collector.CollectionError, match="outside|malformed"):
+        _stability("\n".join(logs), "2026-10-14T12:00:06Z", 1)
 
 
 def test_writer_logs_use_kubernetes_time_instead_of_naive_application_clock(monkeypatch) -> None:

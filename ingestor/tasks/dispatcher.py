@@ -1288,10 +1288,15 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             )
             shared.defer_failed_dispatch(reconnect_generation, drift_versions)
             log.error(
-                "writer_reconcile reason=%s generation=%d action=blocked_stage reason=%s",
+                "writer_reconcile reason=%s generation=%d action=blocked_stage reason=%s reconciliation_receipt=%s",
                 dispatch_reason,
                 reconnect_generation,
                 stage_decision.reason,
+                json.dumps(
+                    bounded_reconcile.hold_observation(STATE_DIR, stage_decision, reconnect_generation),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
             )
             (STATE_DIR / "setpoint-dispatcher.log").touch()
             return
@@ -1308,6 +1313,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             )
         elif stage_decision.action == "complete":
             changes = list(stage_decision.changes)
+            bounded_reconcile.note_ordinary_handoff(stage_decision, reconnect_generation)
 
         c1_selection = c1_overlay.Selection()
         if stage_decision.action != "send" and probe_decision.action != "send":
@@ -1372,6 +1378,15 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 reconnect_generation,
             )
             complete_dispatch_trigger()
+            if c1_selection.phase == "ordinary" and probe_decision.action == "ordinary":
+                observation = await bounded_reconcile.completion_observation(
+                    conn, STATE_DIR, stage_decision, reconnect_generation
+                )
+                if observation is not None:
+                    log.info(
+                        "writer_reconciliation_complete receipt=%s",
+                        json.dumps(observation, sort_keys=True, separators=(",", ":")),
+                    )
             (STATE_DIR / "setpoint-dispatcher.log").touch()
             return
 
@@ -1790,6 +1805,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         except Exception:
             log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
+    bounded_reconcile.record_ordinary_handoff(
+        stage_decision, reconnect_generation, delivery_records + deferred_records, final_failures
+    )
     if c1_selection.phase in ("send", "yield"):
         c1_overlay.finish(STATE_DIR, c1_selection, delivery_records, final_failures)
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
