@@ -134,10 +134,31 @@ ATTESTATION = re.compile(
     r"source_revision=(?P<source>[0-9a-f]{40}) connection_generation=(?P<connection>\d+)$",
     re.MULTILINE,
 )
-DESTABILIZER = re.compile(
-    r"writer_lease: (?:renew error|SELF-FENCING|ACQUIRED)|"
-    r"Writer lease LOST|reason=transport_reconnect|connection_generation_change|"
-    r"component_entity_grid_attestation status=pass"
+WRITER_REPLAY = re.compile(
+    r"writer_reconcile reason=transport_reconnect generation=(?P<generation>\d+) "
+    r"(?:action=(?P<action>awaiting_readbacks|readbacks_complete)\b|"
+    r"seeded=\d+ unobserved_restore_limit=\d+ comparison=current_generation_readbacks$)"
+)
+WRITER_HOLD = re.compile(
+    r"writer_reconcile reason=\S+ generation=\d+ "
+    r"action=(?P<action>blocked_stage|blocked_broad_restore)\b(?: reason=(?P<reason>.*))?"
+)
+WRITER_PENDING = re.compile(
+    r"writer_reconcile reason=\S+ generation=\d+ action=stage_awaiting_confirmation "
+    r"run_id=\S+ failure_count=0\b"
+)
+WRITER_FAILURE = re.compile(
+    r"writer_lease: (?:renew error|SELF-FENCING)|Writer lease LOST|"
+    r"component_entity_grid_attestation status=fail\b|"
+    r"ESP32 (?:disconnected|connection lost)|connection_generation_change|transport_connection_stopped|"
+    r"writer_reconcile reason=\S+ generation=\d+ action=incomplete\b|"
+    r"writer_reconcile .* action=stage_awaiting_confirmation .* failure_count=[1-9]\d*\b|"
+    r"writer_drift_probe action=hold\b"
+)
+WRITER_LOG_PREFIX = re.compile(
+    r"^(?P<timestamp>\S+) \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} "
+    r"(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL) ",
+    re.MULTILINE,
 )
 BACKUP_WRITTEN = re.compile(
     r"^\[backup\] wrote(?: paired)? /backups/(?P<name>verdify-\d{8}T\d{6}Z\.dump) \(",
@@ -160,6 +181,104 @@ def parse_time(value: str) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise CollectionError("source timestamp is not timezone-aware")
     return parsed.astimezone(UTC)
+
+
+def writer_stability(
+    logs: str, started_at: str, connection_generation: int, *, observed_at: datetime
+) -> tuple[datetime, int]:
+    """Separate transport lifecycle edges from a still-unreconciled dispatch.
+
+    Errors advance the transport clock without erasing their own count. A
+    fresh replay completion or grid reseal starts a new error epoch only when
+    no policy hold remains. Existing log events do not bind settlement to a
+    held run: equality, reconnects and grid reseals cannot establish recovery
+    of retained state. Such a hold therefore remains a collection denial.
+    """
+    stable_since = parse_time(started_at)
+    failures: list[datetime] = []
+    hold: str | None = None
+    generation = 0
+    replays: set[tuple[int, str]] = set()
+    attestations: set[tuple[str, str, str]] = set()
+    for line in logs.splitlines():
+        replay = WRITER_REPLAY.search(line)
+        held = WRITER_HOLD.search(line)
+        pending = WRITER_PENDING.search(line) is not None
+        reason = (held["reason"] or "") if held else ""
+        if (
+            held
+            and held["action"] == "blocked_stage"
+            and (
+                reason in {"awaiting durable confirmation", "awaiting rollback confirmation"}
+                or reason.startswith("awaiting fresh atomic snapshot: ")
+            )
+        ):
+            # choose_stage also uses hold for normal asynchronous waits.
+            # These are not evidence of a terminal halted run or a recovery.
+            pending = True
+            held = None
+        failed = WRITER_FAILURE.search(line)
+        attestation = "component_entity_grid_attestation status=pass" in line
+        acquired = "writer_lease: ACQUIRED" in line
+        if not any((replay, held, pending, failed, attestation, acquired)):
+            continue
+        try:
+            moment = parse_time(line.split(maxsplit=1)[0])
+        except (ValueError, IndexError, CollectionError) as exc:
+            raise CollectionError("writer lifecycle event timestamp is malformed") from exc
+        positive = acquired
+        recovered = False
+        if replay:
+            event_generation = int(replay["generation"])
+            if event_generation < 1 or event_generation < generation:
+                raise CollectionError("writer replay generation regressed or is invalid")
+            generation = event_generation
+            # The first seeded comparison proves the current replay ready;
+            # repeated comparisons are the same completion, not reconnects.
+            action = replay["action"] or "readbacks_complete"
+            event = (generation, action)
+            positive = event not in replays
+            replays.add(event)
+            if action == "awaiting_readbacks" and hold is None:
+                hold = "readbacks_pending"
+            elif action == "readbacks_complete":
+                if hold == "readbacks_pending":
+                    hold = None
+                recovered = positive
+        if attestation:
+            matched = ATTESTATION.fullmatch(line)
+            if matched is None or int(matched["connection"]) < generation:
+                raise CollectionError("writer attestation lifecycle event is malformed or stale")
+            generation = int(matched["connection"])
+            identity = (matched["connection"], matched["firmware"], matched["receipt"])
+            positive = identity not in attestations
+            attestations.add(identity)
+            recovered = positive
+        if positive:
+            stable_since = max(stable_since, moment)
+            if recovered and hold is None:
+                failures.clear()
+        if pending:
+            # An ongoing wait is not a physical failure, but is not a quiet
+            # reconciliation interval either. It cannot be cleared by an
+            # unbound equality trace; the existing 30-minute guard still runs.
+            stable_since = max(stable_since, moment)
+        if failed:
+            stable_since = max(stable_since, moment)
+            failures.append(moment)
+        if held:
+            hold = held["action"]
+            failures.append(moment)
+    # Count errors in the same 30-minute stability interval, including its
+    # latest error. Normal historical waits are not permanent launch gates.
+    errors = sum(moment >= observed_at - timedelta(minutes=30) for moment in failures)
+    if generation != connection_generation:
+        raise CollectionError("writer lifecycle/current attestation generations differ")
+    if hold is not None:
+        raise CollectionError(f"writer reconciliation unresolved: {hold}; recurring errors={errors}")
+    if (generation, "awaiting_readbacks") not in replays or (generation, "readbacks_complete") not in replays:
+        raise CollectionError("writer current-generation connection/readback completion evidence is absent")
+    return stable_since, errors
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -229,14 +348,16 @@ class KubeReader:
 
     def logs(self, pod: str) -> str:
         raw = self._get(
-            f"/api/v1/namespaces/{NAMESPACE}/pods/{urllib.parse.quote(pod)}/log?container=ingestor&timestamps=false",
+            f"/api/v1/namespaces/{NAMESPACE}/pods/{urllib.parse.quote(pod)}/log?container=ingestor&timestamps=true",
             # Kubernetes serves pod logs as a streamed response and returns
             # HTTP 406 for a strict text/plain Accept on this cluster.
             accept="*/*",
         )
         if len(raw) > 16 * 1024 * 1024:
             raise CollectionError("writer log response exceeded bounded size")
-        return raw.decode("utf-8", errors="replace")
+        # The producer's asctime has no zone. Use the Kubernetes RFC3339
+        # prefix, retaining the existing level/message and single logs GET.
+        return WRITER_LOG_PREFIX.sub(r"\g<timestamp> \g<level> ", raw.decode("utf-8", errors="replace"))
 
 
 def _resource_path(kind: str, name: str) -> str:
@@ -402,25 +523,9 @@ def collect_kube(
     if tuple(ingestor_env[name] for name in capability_names) != expected_capability:
         raise CollectionError("direct-proof ingestor capability is not the exact isolated configuration")
 
-    stable_events: list[datetime] = [parse_time(writer_pod["status"]["startTime"])]
-    for line in logs.splitlines():
-        if DESTABILIZER.search(line):
-            token = line.split(maxsplit=1)[0]
-            try:
-                stable_events.append(parse_time(token))
-            except (CollectionError, ValueError):
-                continue
-    stable_since = max(stable_events)
-    recurring = 0
-    for line in logs.splitlines():
-        if not DESTABILIZER.search(line):
-            continue
-        try:
-            moment = parse_time(line.split(maxsplit=1)[0])
-        except (CollectionError, ValueError):
-            continue
-        if moment > stable_since:
-            recurring += 1
+    stable_since, recurring = writer_stability(
+        logs, writer_pod["status"]["startTime"], int(attestation["connection"]), observed_at=now
+    )
 
     app_status = app.get("status", {})
     operation_state = app_status.get("operationState", {})

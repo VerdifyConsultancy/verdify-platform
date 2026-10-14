@@ -33,8 +33,285 @@ def test_writer_log_request_accepts_kubernetes_stream(monkeypatch) -> None:
 
     monkeypatch.setattr(reader, "_get", get)
     assert reader.logs("writer-pod") == "writer attestation\n"
-    assert seen["path"].endswith("/pods/writer-pod/log?container=ingestor&timestamps=false")
+    assert seen["path"].endswith("/pods/writer-pod/log?container=ingestor&timestamps=true")
     assert seen["accept"] == "*/*"
+
+
+def _stability(logs: str, started_at: str, generation: int, *, observed_at: datetime | None = None):
+    return collector.writer_stability(
+        logs,
+        started_at,
+        generation,
+        observed_at=observed_at or datetime(2026, 10, 14, 12, 20, tzinfo=UTC),
+    )
+
+
+def _writer_line(seconds: int, message: str) -> str:
+    return f"2026-10-14T12:{seconds // 60:02d}:{seconds % 60:02d}Z INFO {message}"
+
+
+def _writer_attestation(seconds: int, generation: int = 1, receipt: str = "a") -> str:
+    return _writer_line(
+        seconds,
+        f"component_entity_grid_attestation status=pass grid_revision=grid "
+        f"observation_receipt_sha256={receipt * 64} field_count=48 firmware_revision=firmware "
+        f"source_revision={'b' * 40} connection_generation={generation}",
+    )
+
+
+def _writer_replay(seconds: int, generation: int = 1, *, seeded: bool = False) -> str:
+    message = (
+        "seeded=241 unobserved_restore_limit=0 comparison=current_generation_readbacks"
+        if seeded
+        else ("action=awaiting_readbacks expected_readback_count=207")
+    )
+    return _writer_line(seconds, f"writer_reconcile reason=transport_reconnect generation={generation} {message}")
+
+
+def _ready_writer() -> list[str]:
+    return [_writer_replay(1), _writer_attestation(2), _writer_replay(3, seeded=True)]
+
+
+def test_writer_logs_use_kubernetes_time_instead_of_naive_application_clock(monkeypatch) -> None:
+    reader = collector.KubeReader.__new__(collector.KubeReader)
+    raw = b"2026-10-14T06:00:03.123456789-06:00 2026-10-14T01:00:00 INFO writer event\n"
+    monkeypatch.setattr(reader, "_get", lambda *_args, **_kwargs: raw)
+    logs = reader.logs("writer")
+    assert logs == "2026-10-14T06:00:03.123456789-06:00 INFO writer event\n"
+    assert collector.parse_time(logs.split()[0]) == datetime(2026, 10, 14, 12, 0, 3, 123456, tzinfo=UTC)
+
+
+def test_first_complete_readback_comparison_advances_clock_but_repeats_do_not() -> None:
+    logs = [*_ready_writer(), _writer_replay(300, seeded=True), _writer_replay(600, seeded=True)]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 3, tzinfo=UTC)
+    assert errors == 0
+
+
+def test_new_connection_and_its_complete_readbacks_start_a_new_stability_window() -> None:
+    logs = [*_ready_writer(), _writer_replay(300, 2), _writer_attestation(301, 2), _writer_replay(302, 2, seeded=True)]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 2)
+    assert stable == datetime(2026, 10, 14, 12, 5, 2, tzinfo=UTC)
+    assert errors == 0
+
+
+def test_grid_attestation_does_not_substitute_for_pending_writable_readbacks() -> None:
+    logs = [_writer_replay(1), _writer_attestation(2)]
+    with pytest.raises(collector.CollectionError, match="unresolved: readbacks_pending"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+def test_missing_connection_history_cannot_fall_back_to_pod_start_and_grid_attestation() -> None:
+    with pytest.raises(collector.CollectionError, match="completion evidence is absent"):
+        _stability(_writer_attestation(2), "2026-10-14T12:00:00Z", 1)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "writer_lease: renew error",
+        "writer_lease: SELF-FENCING",
+        "Writer lease LOST — SELF-FENCING: disconnecting ESP32 immediately",
+        "component_entity_grid_attestation status=fail code=missing connection_generation=1",
+        "ESP32 connection lost (unexpected)",
+    ],
+)
+def test_latest_failure_advances_clock_without_erasing_its_own_error_count(failure: str) -> None:
+    # Equal timestamps still represent two errors in the ordered log, and the
+    # latest error must not zero the count by moving max(stable_events).
+    logs = [*_ready_writer(), _writer_line(10, failure), _writer_line(10, failure)]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 10, tzinfo=UTC)
+    assert errors == 2
+
+
+def test_lease_reacquisition_and_replayed_attestation_do_not_erase_a_failure() -> None:
+    logs = [
+        *_ready_writer(),
+        _writer_line(10, "writer_lease: renew error"),
+        _writer_line(11, "writer_lease: ACQUIRED writer as writer-pod"),
+        _writer_attestation(12),
+    ]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 11, tzinfo=UTC)
+    assert errors == 1
+
+
+def test_fresh_grid_reseal_starts_new_error_epoch_and_thirty_minute_clock() -> None:
+    logs = [*_ready_writer(), _writer_line(10, "writer_lease: renew error"), _writer_attestation(12, receipt="c")]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 12, tzinfo=UTC)
+    assert errors == 0
+
+
+def test_persistent_halt_stays_denied_after_comparisons_equality_and_grid_reseal() -> None:
+    logs = _ready_writer()
+    for seconds in (10, 310):
+        logs.extend(
+            [
+                _writer_replay(seconds, seeded=True),
+                _writer_line(
+                    seconds + 1,
+                    "writer_reconcile reason=transport_reconnect generation=1 "
+                    "action=blocked_stage reason=run halted; bounded rollback available",
+                ),
+            ]
+        )
+    logs.extend(
+        [
+            _writer_line(
+                320,
+                "writer_dispatch reason=transport_reconnect generation=1 command_count=0 anchor_count=0 "
+                "unchanged_anchor_count=0 comparison=desired_vs_observed",
+            ),
+            _writer_attestation(321, receipt="c"),
+            _writer_replay(322, 2),
+            _writer_attestation(323, 2),
+            _writer_replay(324, 2, seeded=True),
+            _writer_line(
+                325,
+                "writer_reconcile reason=transport_reconnect generation=2 "
+                "action=blocked_stage reason=awaiting durable confirmation",
+            ),
+        ]
+    )
+    with pytest.raises(collector.CollectionError, match="unresolved: blocked_stage; recurring errors=2"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 2)
+
+
+@pytest.mark.parametrize(
+    "reason",
+    ["awaiting durable confirmation", "awaiting fresh atomic snapshot: pending", "awaiting rollback confirmation"],
+)
+def test_normal_confirmation_wait_then_completion_does_not_create_a_permanent_halt(reason: str) -> None:
+    # The existing bounded-reconcile confirmation test proves this source path
+    # can move from a wait to complete in the same process. Neither status nor
+    # the unbound equality trace is authority to clear a *terminal* held run.
+    logs = [
+        *_ready_writer(),
+        _writer_line(
+            10,
+            "writer_reconcile reason=transport_reconnect generation=1 "
+            "action=stage_awaiting_confirmation run_id=run-a failure_count=0",
+        ),
+        _writer_line(
+            11, f"writer_reconcile reason=transport_reconnect generation=1 action=blocked_stage reason={reason}"
+        ),
+        _writer_line(
+            20,
+            "writer_dispatch reason=transport_reconnect generation=1 command_count=0 anchor_count=0 "
+            "unchanged_anchor_count=0 comparison=desired_vs_observed",
+        ),
+    ]
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 11, tzinfo=UTC)
+    assert errors == 0
+    assert datetime(2026, 10, 14, 12, 20, tzinfo=UTC) - stable < timedelta(minutes=30)
+    # Equality did not clear pending evidence. After actual reporting stops,
+    # the full quiet interval can elapse without inventing a permanent gate.
+    stable, errors = _stability(
+        "\n".join(logs), "2026-10-14T12:00:00Z", 1, observed_at=datetime(2026, 10, 14, 12, 31, tzinfo=UTC)
+    )
+    assert datetime(2026, 10, 14, 12, 31, tzinfo=UTC) - stable >= timedelta(minutes=30)
+    assert errors == 0
+
+
+def test_ongoing_periodic_normal_wait_cannot_borrow_an_old_transport_stability_window() -> None:
+    logs = _ready_writer()
+    for seconds in (10, 310, 610, 910, 1210, 1510, 1810):
+        logs.append(
+            _writer_line(
+                seconds,
+                "writer_reconcile reason=transport_reconnect generation=1 "
+                "action=stage_awaiting_confirmation run_id=run-a failure_count=0",
+            )
+        )
+    observed = datetime(2026, 10, 14, 12, 31, tzinfo=UTC)
+    stable, errors = _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1, observed_at=observed)
+    assert stable == datetime(2026, 10, 14, 12, 30, 10, tzinfo=UTC)
+    assert observed - stable < timedelta(minutes=30)
+    assert errors == 0
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "writer_reconcile reason=transport_reconnect generation=1 action=incomplete failure_count=1",
+        "writer_reconcile reason=transport_reconnect generation=1 action=stage_awaiting_confirmation "
+        "run_id=run-a failure_count=1",
+        "writer_drift_probe action=hold reason=awaiting probe cfg confirmation",
+    ],
+)
+def test_transient_errors_are_counted_in_stability_interval_without_a_permanent_gate(failure: str) -> None:
+    logs = "\n".join([*_ready_writer(), _writer_line(10, failure)])
+    stable, errors = _stability(logs, "2026-10-14T12:00:00Z", 1)
+    assert stable == datetime(2026, 10, 14, 12, 0, 10, tzinfo=UTC)
+    assert errors == 1
+    stable, errors = _stability(logs, "2026-10-14T12:00:00Z", 1, observed_at=datetime(2026, 10, 14, 12, 31, tzinfo=UTC))
+    assert stable == datetime(2026, 10, 14, 12, 0, 10, tzinfo=UTC)
+    assert errors == 0
+
+
+def test_recurring_transient_error_is_still_counted_after_an_old_one_ages_out() -> None:
+    logs = "\n".join(
+        [
+            *_ready_writer(),
+            _writer_line(10, "writer_lease: renew error"),
+            _writer_line(1801, "writer_lease: renew error"),
+        ]
+    )
+    stable, errors = _stability(logs, "2026-10-14T12:00:00Z", 1, observed_at=datetime(2026, 10, 14, 12, 31, tzinfo=UTC))
+    assert stable == datetime(2026, 10, 14, 12, 30, 1, tzinfo=UTC)
+    assert errors == 1
+
+
+def test_terminal_halt_is_not_waived_when_its_old_error_ages_out() -> None:
+    logs = "\n".join(
+        [
+            *_ready_writer(),
+            _writer_line(
+                10,
+                "writer_reconcile reason=transport_reconnect generation=1 "
+                "action=blocked_stage reason=run halted; bounded rollback available",
+            ),
+        ]
+    )
+    with pytest.raises(collector.CollectionError, match="unresolved: blocked_stage; recurring errors=0"):
+        _stability(logs, "2026-10-14T12:00:00Z", 1, observed_at=datetime(2026, 10, 14, 12, 40, tzinfo=UTC))
+
+
+def test_unknown_hold_reason_cannot_borrow_the_normal_wait_prefix() -> None:
+    logs = "\n".join(
+        [
+            *_ready_writer(),
+            _writer_line(
+                10,
+                "writer_reconcile reason=transport_reconnect generation=1 "
+                "action=blocked_stage reason=awaiting durable confirmation failed; run halted",
+            ),
+        ]
+    )
+    with pytest.raises(collector.CollectionError, match="unresolved: blocked_stage"):
+        _stability(logs, "2026-10-14T12:00:00Z", 1)
+
+
+@pytest.mark.parametrize("timestamp", ["bad-time", "2026-10-14T12:00:01", ""])
+def test_recognized_lifecycle_event_without_authoritative_time_fails_closed(timestamp: str) -> None:
+    logs = f"{timestamp} INFO writer_lease: ACQUIRED writer as pod"
+    with pytest.raises(collector.CollectionError, match="timestamp is malformed"):
+        _stability(logs, "2026-10-14T12:00:00Z", 1)
+
+
+def test_new_connection_cannot_reuse_the_old_generation_attestation() -> None:
+    logs = [*_ready_writer(), _writer_replay(10, 2), _writer_replay(11, 2, seeded=True)]
+    with pytest.raises(collector.CollectionError, match="generations differ"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 1)
+
+
+def test_replay_generation_regression_fails_closed() -> None:
+    logs = [_writer_replay(1, 2), _writer_replay(2, 1)]
+    with pytest.raises(collector.CollectionError, match="generation regressed"):
+        _stability("\n".join(logs), "2026-10-14T12:00:00Z", 2)
 
 
 def _climate_row(moment: datetime, offset: float) -> dict:

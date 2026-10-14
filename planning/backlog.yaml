@@ -519,7 +519,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "October11 review: INCOMPLETE: north/east/west raw telemetry is fresh; south is null while diagnostics say active_probe_count4/probe_healthOK. Current writer is halted and Argo degraded. Reopened#949 is a real native predecessor. Preserve honest three-probe degraded-pass semantics and actual safety/contributor/source-bound packet.",
+      "baseline": "October11 review: INCOMPLETE: north/east/west raw telemetry is fresh; south is null while diagnostics say active_probe_count4/probe_healthOK. Current writer is halted and Argo degraded. Reopened#949 is a real native predecessor. Preserve honest three-probe degraded-pass semantics and actual safety/contributor/source-bound packet. October14 next pull after all four original S2 outcomes completed. Closed949 predecessor retained, accepted643 runtime ed01/source5e/newwriter3e709 restart0/one socket. Current readiness NOT yet evaluated: prepared seven-file packetc49f5d57 unchanged; actual collector clock includes recurring blocked_stage reason=transport_reconnect (last22:10:42 at22:12:38 readback), conditional30min cannot use Pod start or old949. One finite source-semantics review precedes current bounded READ ONLY observation; original physical/authority limits unchanged. Actual bounded owner classification confirms persistent halted ordinary-policy run with expired previous-writer approval; same generation1/socket and fresh readbacks do not complete reconciliation. No readinessSQL/recovery/state mutation performed. Collector-only correction and source-only supported recovery packet are assigned separately; physical recovery authority is not inferred. Retained-input offline replay later found17of17 naive app timestamps silently skipped: old collector actually falls back to Pod start/zeroerrors; earlier event-max clocks were normalized projections, not actual packet output. No readiness packet executed. Same existing logGET timestamp authority correction pending focused source review. Authentic original7666Pod UID6509/sameprocess1798 custody retained; exactrawfiles/native12history input completion authorized READONLY, no archive/replay/freshsend.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1671,7 +1671,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof. October12 contained proof b4eb826a/e1a79f19: six real LOGIN duties107 allowed/denied cases plus executor/lifecycle read-only seams; all8NULLcredentials/77sequences/952relations/42study/catalog restored,19 temporary objects removed. Production workload role adoption, endpoint reversal/pool-close/health boundaries remain separate; no production credential rotation. October13native42e791f90409fc7e7a08ab6ef3aa7b1f8e669211: exactcb21API75f/ingestorc6cc/MCPcf26 authenticatedREADONLYpool/hotqueries/awaitedclose/zerootherbackendsPASS; all3temporarypasswords restoredNULL/exactcatalog4355/9UIDcleanup. No fixture/newfullCOPY; accepted382fullbaseline reused. Singleendpointseamaccepted; fullproductionroleadoption andsupportedconfigA→B→A remainunproved. GitHubcomment6148506605. October13 e06dcf51 nine-process authenticated same-primary DNS-IP-DNS/pool-close boundary accepted; passwordsNULL/catalog/21UIDinverse exact. Production metadata confirms nine bounded identities and two ordinary maintenance owner-reference gaps. Reserved276 source949/raw helper guards unchanged; first qualification stopped beforeDDL on known CNPG computed-digest projection, all77/catalog exact/no setter. Reviewed0913 fixed-target adapter and pinned projected rollback packet admitted with no passwords/Secrets/new resources; actual result pending. Raw production276 delivery/TCP/new-duty adoption not claimed. October14 genuineprojectednative source283a passed9faultfamilies/22permission+5malformeddenials/watchdog/3refreshes/finalROLLBACK, oneactualalertdelta3inverse/all77/NULLexact. Catalog4355→92cb retainsEXACT4physicalmaintenancefields/observedautovacuum, allother44MBlogicalACLroleledgeridentitybytesexact; no byteidenticalphysicalreseal/MVrowhash/TCP/rawproduction276claim. Publica9be9ebf genuinewholecurrenthelperfixture1e4c01e5/currentbindingtests2PASS/old275fixtureunchanged. RootreleasedordinaryPR/mainautomatic3-image source delivery toRetry; specific2NEWproductionKSOPSinitialcredentials/adoption decision stillpending, existing9notrotated.",
+      "baseline": "October11 review: PARTIAL: least-privilege roles and runtime-client harness are merged. Later authentic endpoint Jobs and A→B→A reports are progress, but no complete final per-login allow/deny/pool-close/rollback plus full post-fixture reseal receipt is published. Current3/3 rehearsal health is not that proof. October12 contained proof b4eb826a/e1a79f19: six real LOGIN duties107 allowed/denied cases plus executor/lifecycle read-only seams; all8NULLcredentials/77sequences/952relations/42study/catalog restored,19 temporary objects removed. Production workload role adoption, endpoint reversal/pool-close/health boundaries remain separate; no production credential rotation. October13native42e791f90409fc7e7a08ab6ef3aa7b1f8e669211: exactcb21API75f/ingestorc6cc/MCPcf26 authenticatedREADONLYpool/hotqueries/awaitedclose/zerootherbackendsPASS; all3temporarypasswords restoredNULL/exactcatalog4355/9UIDcleanup. No fixture/newfullCOPY; accepted382fullbaseline reused. Singleendpointseamaccepted; fullproductionroleadoption andsupportedconfigA→B→A remainunproved. GitHubcomment6148506605. October13 e06dcf51 nine-process authenticated same-primary DNS-IP-DNS/pool-close boundary accepted; passwordsNULL/catalog/21UIDinverse exact. Production metadata confirms nine bounded identities and two ordinary maintenance owner-reference gaps. Reserved276 source949/raw helper guards unchanged; first qualification stopped beforeDDL on known CNPG computed-digest projection, all77/catalog exact/no setter. Reviewed0913 fixed-target adapter and pinned projected rollback packet admitted with no passwords/Secrets/new resources; actual result pending. Raw production276 delivery/TCP/new-duty adoption not claimed. October14 genuineprojectednative source283a passed9faultfamilies/22permission+5malformeddenials/watchdog/3refreshes/finalROLLBACK, oneactualalertdelta3inverse/all77/NULLexact. Catalog4355→92cb retainsEXACT4physicalmaintenancefields/observedautovacuum, allother44MBlogicalACLroleledgeridentitybytesexact; no byteidenticalphysicalreseal/MVrowhash/TCP/rawproduction276claim. Publica9be9ebf genuinewholecurrenthelperfixture1e4c01e5/currentbindingtests2PASS/old275fixtureunchanged. RootreleasedordinaryPR/mainautomatic3-image source delivery toRetry; specific2NEWproductionKSOPSinitialcredentials/adoption decision stillpending, existing9notrotated. October14 COMPLETED22:14:07UTC/comment6179664613: immutable8a13d19f production acceptance/receiptSHA dfe7fe7b0752f200bbf57a5d671731b36fd9722f2c9b72e62221685bf60303ec. Corrected5e992 source and ed01 full nonpruning selector-free129-resource/seven-hook sync passed; actual276, two new authenticated bounded duties/42501 denials, preserved prior roles/seals/credentials, schedules restored,15Ready/smoke9/9/MCP23each/onewriter-socket/same300s clean watch/fresh guarded415-pageLab passed. First preSQLC0refusal/fourautomaticfailedPods and minimal exactsuccessor fix retained. Native projected/restored-data rollback proof accepted; no committed production rollback/switchover/OTA/physical claim.975 descendant image and actual runtime gap covered; old failed496hd not relabeled.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3247,7 +3247,7 @@
         "firmware/greenhouse/controls.yaml",
         "ingestor/entity_map.py"
       ],
-      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted. October12 execution: merged973/cb21 compatible ingestor source is deployed in d439. Firmware source/portable compile/replay qualification retained; live firmware remains unchanged and separately authorized OTA/HA recovery acceptance is still incomplete.",
+      "baseline": "Source-qualified in canonical PR973 (includes PR971), with actual portable compile and replay receipts. Compatible ingestor adoption precedes separately authorized OTA. Live firmware/HA recovery is not yet accepted. October12 execution: merged973/cb21 compatible ingestor source is deployed in d439. Firmware source/portable compile/replay qualification retained; live firmware remains unchanged and separately authorized OTA/HA recovery acceptance is still incomplete. October14 source-onlyhandoff reusesaccepted949compatiblecb21/c6ccingestor andclosed303304actualregisteredamd64two-target/negativecompilerprovenance. Tenrelevantproducer-consumerfilesbyteequalce244/cb21/821/cc975; firmwaredifferenceonlyaccepted419replaytest. Remainingexactreal-inputdeployablebinary/source/version/acceptedrollbackcustody(or specificallydecidedprovisionalalternative), separatelyauthorizedOTA andactualHA/nativecanonicalrecovery. No newcompile/probe/OTA/physicalclaim;27/48UNPROVEN/#367outsidecohort. Handoffplanning/reviews/2026-10-14/FIRMWARE-HA-963-HANDOFF.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3288,8 +3288,8 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-14T17:00:00Z",
-    "source_revision": "916b24a6f339b5b4b63093e9b13148a46e013f8c",
+    "reviewed_at": "2026-10-14T22:14:07Z",
+    "source_revision": "ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-12",
     "open_issues": [
@@ -3335,7 +3335,6 @@
       640,
       641,
       642,
-      643,
       749,
       750,
       751,
@@ -3356,8 +3355,8 @@
         "title": "S2 — Completion sprint (October 13–26, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Complete remaining production runtime-role adoption. #396/#419/#644 original contracts are completed; #643 forecasts6–12 remaining engineering hours within the unchanged shared80-hour two-week envelope. Original four-outcome28–56 estimate remains historical, not hours worked.",
-        "exit": "Accepted396 recovery/handoff,419 causal replay source delivery and644 bounded exact-source integration are retained with original failed attempts and proof limits. Remaining643 full selected production-role/whole-app acceptance requires the two ordinary maintenance duties, genuine qualification, owner credential decision and authoritative adoption. Conditional245 source/read-only worksheets remain separate; no production DB cutover, credential rotation, OTA or physical experiment implicit. Separate975 affected-ingestor delivery failure and broaderAgents4014 remain outstanding, not relabeled by validation success."
+        "goal": "All four original October13–26 completion outcomes396/643/644/419 are accepted. Jason explicitly pulled749 next:4–8 estimated hours of current read-only readiness work within the unchanged shared80-hour two-week envelope. Original28–56 estimate is historical, not time worked or freed capacity.",
+        "exit": "Original four outcomes retain authoritative source/runtime/recovery receipts and failed attempts. Follow-on749 requires truthful current contributor/source/backup/writer readiness and fail-closed safety boundaries, not physical activation or randomized authority. Repeated halted-stage reporting currently resets the existing writer-stability clock; assess exact source semantics before a bounded live packet. Conditional245 preparation remains separate; no DB cutover/OTA/credential rotation implicit.975 descendant source/image/runtime delivery is now covered by the accepted643 cohort; original496hd failure remains history. BroaderAgents4014 remains open."
       },
       {
         "id": "S3",
@@ -3373,7 +3372,7 @@
         "kind": "sprint",
         "capacity_hours": 80,
         "goal": "Join current executor, lifecycle, backup, readiness and restored-data evidence; prepare the attended physical proof.",
-        "exit": "#749/#639/#587/#783 complete current original clauses, reusing closed #747 evidence only after a fresh backup check. #641 completes only in its separately authorized attended window; otherwise its prepared packet remains a declared conditional carryover."
+        "exit": "#639/#587/#783 complete current original clauses, reusing closed #747 evidence only after a fresh backup check. #641 completes only in its separately authorized attended window; otherwise its prepared packet remains a declared conditional carryover. #749 was explicitly pulled forward after the four original S2 completions; preserve its original clauses and separate physical boundary."
       },
       {
         "id": "S5",
@@ -3770,19 +3769,11 @@
         "owner_role": "Research/release lead"
       },
       {
-        "issue_number": 643,
-        "sprint": "S2",
-        "hours_min": 6,
-        "hours_max": 12,
-        "next_action": "OrdinarysourcePR/currentmainCI+actualingestor/migrate/Labbuilds from qualifieda9be9ebf; preservegenuineprojectedproof/physicaldelta/old275fixture. Afterrequiredchecks/sourceimagesqualify, specifictwoNEWproductioninitialKSOPScredential/attendedfullhookadoptiondecision; actualtwoCronJobidentity/duty/health and originalrollbackclauses. No source-onlysyncoldmigrate, blindolder6856candidatepromotion or nine-role rotation.",
-        "owner_role": "Data/platform lead"
-      },
-      {
         "issue_number": 749,
-        "sprint": "S4",
+        "sprint": "S2",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Rebaseline current three-probe/source/backup/writer readiness after #949, retaining absent south/hydro and safety dependencies.",
+        "next_action": "Correct concrete collector event/error arithmetic while preserving explicit halted-reconciliation denial and30min/freshness/authority guards; soleRetry owns source/CI, no promotion/sync. Existing contained lane prepares the supported expired previous-writer halt recovery packet from retained evidence. No stage deletion/replay/oldapprovalreuse; only then a genuinely current bounded READ ONLY readiness packet.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3878,7 +3869,7 @@
         "sprint": "S3",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Reuse PR973/971 source and compiler receipts; adopt compatible ingestor before any separately decided OTA, then verify HA state/detail and canonical consumers.",
+        "next_action": "Reuseaccepted973/971source,949compatibleingestorandclosed303304compilerproof. Prepareexactreal-inputdeployablecandidate+acceptedrollbackcustody/provisionalchoicebeforeseparateOTAdecision; thenactualHAshortstate/error/nativecanonicalconsumerrecovery. Source-onlyhandoffready/no newcompile/OTA/probe/physicalgate.",
         "owner_role": "Platform lead"
       }
     ]
