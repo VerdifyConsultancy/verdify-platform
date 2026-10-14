@@ -1,4 +1,4 @@
-"""Exact275 delivery before adoption and repeated already-applied verification."""
+"""Exact275/276 delivery and repeated already-applied verification."""
 
 import hashlib
 import importlib.util
@@ -61,7 +61,7 @@ def test_exact275_inventory_refuses_source_gap_and_future():
     assert d.SUCCESSOR_275_MCP_DIGEST == d.SUCCESSOR_274_MCP_DIGEST
 
 
-@pytest.mark.parametrize("last", [274, 275])
+@pytest.mark.parametrize("last", [274, 275, 276])
 @pytest.mark.parametrize("tamper", [None, "api", "ingestor_receipt", "mcp", "mcp_receipt", "table_update"])
 def test_exact_predecessor_and_successor_native_receipts(last, tamper, monkeypatch):
     ordinary, mcp = states(last)
@@ -87,9 +87,13 @@ def test_exact_predecessor_and_successor_native_receipts(last, tamper, monkeypat
         assert len(calls) == 6
 
 
-def test_pending275_commits_once_then_repeated_delivery_verifies_only(monkeypatch):
+@pytest.mark.parametrize("last", [275, 276])
+def test_pending_successor_commits_once_then_repeated_delivery_verifies_only(last, monkeypatch):
     directory = ROOT / "db/migrations"
-    files = d.inventory(directory)
+    # Historical275 starts at274; never invent a pre-applied276 beyond its fixture.
+    files = {name: sha for name, sha in d.inventory(directory).items() if int(name[:3]) <= last}
+    successor = getattr(d, f"SUCCESSOR_{last}")
+    successor_sha = getattr(d, f"SUCCESSOR_{last}_SHA256")
     rows = {
         ("db/migrations", "db/migrations/" + name): {
             "source": "db/migrations",
@@ -99,7 +103,7 @@ def test_pending275_commits_once_then_repeated_delivery_verifies_only(monkeypatc
             "stamp_method": "runner",
         }
         for name, sha in files.items()
-        if name != d.SUCCESSOR_275
+        if name != successor
     }
     applied = False
     runs = []
@@ -107,19 +111,19 @@ def test_pending275_commits_once_then_repeated_delivery_verifies_only(monkeypatc
     def read(sql, env):
         if "jsonb_build_object" not in sql:
             return "a" * 64
-        ordinary, mcp = states(275 if applied else 274)
+        ordinary, mcp = states(last if applied else last - 1)
         return json.dumps(mcp if "'mcp'," in sql else ordinary)
 
     def runner(directory, later, env, *, plan):
         nonlocal applied
-        assert not plan and list(later)[-1] == d.SUCCESSOR_275
-        runs.append(d.SUCCESSOR_275)
+        assert not plan and list(later)[-1] == successor
+        runs.append(successor)
         applied = True
-        rows[("db/migrations", "db/migrations/" + d.SUCCESSOR_275)] = {
+        rows[("db/migrations", "db/migrations/" + successor)] = {
             "source": "db/migrations",
-            "filename": "db/migrations/" + d.SUCCESSOR_275,
-            "seq": 275,
-            "sha256": d.SUCCESSOR_275_SHA256,
+            "filename": "db/migrations/" + successor,
+            "seq": last,
+            "sha256": successor_sha,
             "stamp_method": "runner",
         }
 
@@ -129,4 +133,18 @@ def test_pending275_commits_once_then_repeated_delivery_verifies_only(monkeypatc
     contract = {"version": d.transition.RESOURCE_VERSION, "predecessor_ledger_sha256": "a" * 64}
     d.deliver_resource_successor(directory, files, rows, contract, {}, plan=False)
     d.deliver_resource_successor(directory, files, rows, contract, {}, plan=False)
-    assert runs == [d.SUCCESSOR_275]
+    assert runs == [successor]
+
+
+def test_exact276_inventory_preserves_seals_and_refuses_drift_gap_and_future():
+    names = chain(276)
+    files = {name: hashlib.sha256((ROOT / "db/migrations" / name).read_bytes()).hexdigest() for name in names}
+    assert files[d.SUCCESSOR_276] == d.SUCCESSOR_276_SHA256
+    assert d.SUCCESSOR_276_DIGESTS == d.SUCCESSOR_275_DIGESTS
+    assert d.SUCCESSOR_276_MCP_DIGEST == d.SUCCESSOR_275_MCP_DIGEST
+    d.reviewed_post_254(names, files)
+    with pytest.raises(d.DeliveryError, match="276 successor source drift"):
+        d.reviewed_post_254(names, dict(files, **{d.SUCCESSOR_276: "0" * 64}))
+    for rejected in ([*names, "277-unqualified.sql"], names[:-2] + names[-1:]):
+        with pytest.raises(d.DeliveryError, match="unreviewed post-254"):
+            d.reviewed_post_254(rejected, files)
