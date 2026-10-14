@@ -243,3 +243,23 @@ renderer, OAuth, experiment and owner Secret keys remain unchanged.
 `iris_slack_bot_token.txt`, preserving the existing Iris bot identity. The
 single ingestor mounts it read-only at `/etc/verdify/slack`, matching
 `slack.yaml`; no app/signing token is required by this sender.
+
+### #643 prepared maintenance duties (source proposal, not provisioned)
+
+Two new password-only identities remove the remaining writer-watchdog and
+materialized-view-refresh owner-password references. Values belong exclusively
+to the `jvallery/agents` central KSOPS lane; this repository declares names/keys.
+
+| Secret | Key | Fixed LOGIN | Ordinary consumer |
+|---|---|---|---|
+| `verdify-writer-watchdog-runtime-db` | `password` | `verdify_writer_watchdog_runtime_login` | `verdify-writer-watchdog` |
+| `verdify-matview-refresh-runtime-db` | `password` | `verdify_matview_refresh_runtime_login` | `verdify-band-curve-refresh` |
+
+The prepared wave4 bootstrap receives these two keys and the existing owner key
+only for initial installation. It locks/rechecks NULL state, authenticates any
+existing verifier without replacement, refuses mismatched custody, and never
+changes an existing password. Runtime callers receive only their matching key.
+No Secret object or value is rendered here. The migration/source native
+qualification and explicit credential/delivery scope remain pending; do not
+sync merely because these names now appear in source. Existing backup, database,
+migration and other bootstrap owner credentials are unchanged.

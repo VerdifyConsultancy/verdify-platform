@@ -76,31 +76,15 @@ spec:
                     echo "waiting for db (${tries}/60)"
                     sleep 5
                   done
-                  populated="$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT COALESCE((SELECT ispopulated FROM pg_matviews WHERE schemaname = 'public' AND matviewname = 'mv_band_curve'), false)")"
-                  if [ "$populated" = "t" ]; then
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_band_curve;"
-                  else
-                    echo "mv_band_curve is not populated; running initial non-concurrent refresh"
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW mv_band_curve;"
-                  fi
+                  attested="$(psql -X --no-password -v ON_ERROR_STOP=1 -t -A -q -c 'SELECT verdify_matview_refresh_runtime.fn_attest_login()')"
+                  [ "$attested" = t ] || { echo "refresh database identity refused"; exit 1; }
+                  # Each fixed-target call retains its own transaction and the
+                  # original first-population/concurrent-refresh distinction.
+                  psql -X --no-password -v ON_ERROR_STOP=1 -c 'SELECT verdify_matview_refresh_runtime.fn_refresh_mv_band_curve()'
                   echo "mv_band_curve refreshed $(date -u +%FT%TZ)"
-                  # Equipment-runtime dashboard snapshot (migration 200): the
-                  # live view exceeds Grafana query timeouts — panels read this
-                  # matview (the 2026-07-12 "fans not running" false alarm).
-                  if [ "$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT COALESCE((SELECT ispopulated FROM pg_matviews WHERE schemaname='public' AND matviewname='mv_equipment_runtime_daily'), false)")" = "t" ]; then
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_equipment_runtime_daily;"
-                  else
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW mv_equipment_runtime_daily;"
-                  fi
+                  psql -X --no-password -v ON_ERROR_STOP=1 -c 'SELECT verdify_matview_refresh_runtime.fn_refresh_mv_equipment_runtime_daily()'
                   echo "mv_equipment_runtime_daily refreshed $(date -u +%FT%TZ)"
-                  # Daily-KPI scorecard snapshot (migration 203): 27 live
-                  # v_daily_kpi scans per fn_planner_scorecard call OOM-crashed
-                  # the DB on 2026-07-14/15 — the function reads this matview.
-                  if [ "$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT COALESCE((SELECT ispopulated FROM pg_matviews WHERE schemaname='public' AND matviewname='mv_daily_kpi'), false)")" = "t" ]; then
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_kpi;"
-                  else
-                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW mv_daily_kpi;"
-                  fi
+                  psql -X --no-password -v ON_ERROR_STOP=1 -c 'SELECT verdify_matview_refresh_runtime.fn_refresh_mv_daily_kpi()'
                   echo "mv_daily_kpi refreshed $(date -u +%FT%TZ)"
               env:
                 - name: PGHOST
@@ -113,11 +97,10 @@ spec:
                   valueFrom:
                     configMapKeyRef: { key: DB_NAME, name: verdify-config }
                 - name: PGUSER
-                  valueFrom:
-                    configMapKeyRef: { key: DB_USER, name: verdify-config }
+                  value: verdify_matview_refresh_runtime_login
                 - name: PGPASSWORD
                   valueFrom:
-                    secretKeyRef: { key: POSTGRES_PASSWORD, name: verdify-app-secrets }
+                    secretKeyRef: { key: password, name: verdify-matview-refresh-runtime-db }
               resources:
                 requests: { cpu: 25m, memory: 64Mi }
                 limits: { cpu: 250m, memory: 128Mi }

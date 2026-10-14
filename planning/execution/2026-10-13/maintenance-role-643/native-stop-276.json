@@ -1,0 +1,53 @@
+{
+  "source_commit": "949d1e418ff41b0d20776098580a36a675da46c8",
+  "qualification": "STOPPED before276 DDL; not successful native276 qualification",
+  "phase": "before275 source precondition",
+  "psql_exit_code": 3,
+  "ambiguous_transport": false,
+  "production_guard_changed": false,
+  "existing275_profile_byte_equal": true,
+  "new_roles_or_schemas_created": false,
+  "password_commands": false,
+  "Secrets_or_new_workloads": false,
+  "fixture_or_allocator_actions": false,
+  "sequence_setter_executed": false,
+  "all77_exact_accepted": true,
+  "sequence_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+  "catalog_exact_accepted": true,
+  "catalog_sha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "schema275_restored": true,
+  "new_roles_absent": true,
+  "zero_other_clients": true,
+  "false_predicates": [
+    "three computed production275 digests vs preserved canonical receipt values",
+    "canonical ordinary/MCP receipt vs computed digest equality"
+  ],
+  "true_predicates": [
+    "268/270/271/272/273/274/275 exact ledger rows",
+    "max sequence275",
+    "canonical receipt count/values unchanged",
+    "accepted three CNPG275 computed/admission equality",
+    "native/physical reader scopes",
+    "six existing role contract"
+  ],
+  "source_compatibility": {
+    "base_source": "0b03466a8f30a0494482c983853128f98cdc9e0a",
+    "base_helper_sha256": "b7c311efd8d978a8e58f81d866469f0a9c91ca902c5a3357e53c33c4b37c063c",
+    "current_helper_sha256": "40b795ddf5432249dd2ad0f9d1f91426bf13f68de967c9c2d0ec00575346c651",
+    "sealed_sql_275_byte_equal": true,
+    "sealed_sql_275_sha256": "ccf6a795dc578d0e09dab9888976a8edfbcb029ed6dae1d0af6126b51e9383a5",
+    "legacy270_274_byte_equal": true,
+    "admin_role_contract_byte_equal": true,
+    "native_result": "current original275 source guard rejected accepted CNPG fork, before276 DDL; no changed original275 expression"
+  },
+  "evidence_sha256": {
+    "qualification/execution.json": "1e97d0ea11d8f82eb5e2374c509f8be429e2da8dba934f10fc0db6a27b1eaa6f",
+    "predecessor-diagnostic.execution.json": "50e824cbe3324f943c8862b1432cd47eb73d1ea2a008c624444ea8b9bd89bec7",
+    "predecessor-diagnostic.json": "e677dcd43302e322424788cbb0c9110ceb4bca403ab54978a3d29bca156c70bb",
+    "postflight/execution.json": "2c9eda44b654362aea2eeeddd106e53fa49ace640ec363e4f9b38336dfd59dc1",
+    "after-rollback-sequences/execution.json": "74d8d60d809bf1289e9c1ff493abd88167972f589ffe4c93f2aaa4f7cea05361",
+    "after-catalog/execution.json": "cd32cb41d190e6745e1fda5b18025d31a2c9fafc543183c037e52856c0153108"
+  },
+  "proposed_next": "Separate fixed-target computed-digest projection; no second SQL until new exact packet is reviewed",
+  "claim_limit": "No raw production276 apply, credential/TCP/pool authentication or production workload adoption"
+}

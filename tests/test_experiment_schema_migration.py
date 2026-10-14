@@ -327,6 +327,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "274-qualified-physical-crop-band-publication.sql",
         # JIT configuration and successor receipts must execute through the forward hook.
         "275-lighting-minutes-policy-bounded-jit.sql",
+        # Maintenance roles must execute through the forward hook, never baseline history.
+        "276-ordinary-maintenance-runtime-boundaries.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
