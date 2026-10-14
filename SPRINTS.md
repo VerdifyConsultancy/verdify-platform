@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-14T22:14:07Z** against source `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **55 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-14T22:54:27Z** against source `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **55 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Collector correction737d and canonicalf690 delivered; await actual automatic classifier/build terminal receipts without promotion. Existing guarded archive-only path completed with exact confirmed12 native history/original custody; oldstateapproval unchanged/currenthold freshapprovalrequired. Prepare concrete distinct ordinary16-field decision and authentic run-bound settlement source finding before any admission or current readiness packet. No expiredapprovalreuse/forcedgreen/physicalexperiment. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Collector737d build7v4d7 terminalSucceeded/candidateactuator262ed verified, releasepins/render unchanged. Archive-only recovery completed/currentfreshapprovalrequired. Prepare smallest metadata-only run/archive-bound producer completion+collector interface and focused regressions; no sourcepush/CI/promotion/sync before review. Private16-field ordinary intent remains aged/nonexecutable/JITexactrebind-no-substitution. Ask one specific decision only when qualifiedsource/images/rolloutinverse and readiness trajectory are concrete; no new setter authority. |
 
 ## S3 — Source truth, portable validation and prospective design
 
