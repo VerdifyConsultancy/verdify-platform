@@ -1,0 +1,102 @@
+{
+  "schema": "verdify.writer-hold-owner-classification/v1",
+  "observed_at": "2026-10-14T22:17:04.900406+00:00",
+  "scope": "One bounded read-only classification of existing writer logs and retained state; no SQL/readiness packet, clock/guard edits, new watcher, restart, credentials, state/recovery/device write or physical fault",
+  "binding": {
+    "pod": "verdify-ingestor-c5b9d9547-rtwgw",
+    "pod_uid": "3e709a04-4e3a-4b5a-9cf9-bb4c997c212d",
+    "containerID": "containerd://3cc735e6d8c18e651e09db5ccc66ebcca8f5eb76a4168f378885bb45ed545f5d",
+    "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d",
+    "restarts": 0,
+    "source": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+    "runtime_instance_id": "36d49c90-9f39-4e40-be9c-36fe233dbfe4",
+    "current_preview_session_id": "5214a19c24504d978cb66bcd173b490e",
+    "connection_generation": 1
+  },
+  "actual_hold": {
+    "status": "halted",
+    "halt_reason": "unapproved candidate appeared",
+    "run_id": "4fd1abcd35f844c298d7ee7ae371e081",
+    "stage_started_at": "2026-10-13T10:36:07.273221+00:00",
+    "expires_at": "2026-10-13T11:06:07.267749+00:00",
+    "state_mtime": "2026-10-13T10:37:30.019447+00:00",
+    "approved_preview": {
+      "session_id": "1798f4d876404e94a186019c26b522e7",
+      "generation": 1,
+      "pod": "verdify-ingestor-7666f97959-htjdk",
+      "source_revision": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "captured_at": "2026-10-13T10:36:07.260937+00:00"
+    },
+    "completed_count": 12,
+    "stage_parameter_count": 12,
+    "records_count": 0,
+    "rollback_records_count": 0,
+    "recovery_file_exists": false,
+    "meaning": "real persistent halted ordinary-policy run from prior source/session; no active recovery authority. Current writer cannot complete bounded reconciliation. Same socket generation and fresh telemetry do not establish control-path or proof readiness."
+  },
+  "event_facts": {
+    "lease_acquired_at": "2026-10-14T21:50:00Z",
+    "successful_esp32_connect_at": "2026-10-14T21:50:03Z",
+    "new_generation_awaiting_readbacks_at": "2026-10-14T21:50:03Z",
+    "new_attestation_at": "2026-10-14T21:50:04Z",
+    "initial_readback_completion_exact_timestamp_logged": false,
+    "initial_readbacks_ready_no_later_than_first_seeded_comparison_at": "2026-10-14T21:50:06Z",
+    "completion_bound_basis": "dispatcher.py:779-790 returns unless current generation readbacks are complete before proceeding to seeded comparison; logs have no explicit readbacks_complete event",
+    "connect_count": 1,
+    "connection_generations_observed": [
+      1
+    ],
+    "attestation_count": 1,
+    "lease_acquired_count": 1,
+    "lease_loss_self_fence_renew_error_count": 0,
+    "blocked_stage_count": 7,
+    "latest_blocked_stage_at": "2026-10-14T22:15:41Z",
+    "current_collector_stable_since": "2026-10-14T22:15:41Z",
+    "conditional_existing_contract_30min_at": "2026-10-14T22:45:41Z",
+    "classification": "seven repeated blocked_stage and repeated seeded comparisons belong to sticky unreconciled generation1, not seven new connections; no forced pass or proposed adjusted timestamp accepted"
+  },
+  "retained_source": [
+    {
+      "path": "scripts/experiment_v2_proof_packet.py",
+      "sha256": "8d4f85847eaf9a6816c261747bda0c400dd91685f657bda3018f308e3e0569a3"
+    },
+    {
+      "path": "scripts/experiment_v2_readiness_guard.py",
+      "sha256": "dd4c3b3bbece9638a801fa0a49f0c54e1d1798555e48c40083109dc9333a0d0b"
+    },
+    {
+      "path": "ingestor/shared.py",
+      "sha256": "1438a2f23ee3b50b6a0348bc3811b1af1209903a212045f0b54e8dd245090ed2"
+    },
+    {
+      "path": "ingestor/ingestor.py",
+      "sha256": "b8f3957fa98a3fc963253725fc3cfd328d93234027f40934d700e123ce45182d"
+    },
+    {
+      "path": "ingestor/tasks/dispatcher.py",
+      "sha256": "8c638398664f433534cb48be13642fac50e6a944b259800104bb21e84f16b312"
+    },
+    {
+      "path": "ingestor/tasks/bounded_reconcile.py",
+      "sha256": "a11f6a994d7ba08f15989561187d32947aa747e2741e337ad635a63d51cb2b61"
+    }
+  ],
+  "source_lines": {
+    "collector_destabilizer": "scripts/experiment_v2_proof_packet.py:137-141",
+    "collector_max": "scripts/experiment_v2_proof_packet.py:405-413",
+    "thirty_minute_guard": "scripts/experiment_v2_readiness_guard.py:360-363",
+    "generation_increment": "ingestor/shared.py:266-283 and ingestor/ingestor.py:4101-4123",
+    "readback_completion": "ingestor/shared.py:288-318",
+    "sticky_failure": "ingestor/shared.py:366-375",
+    "dispatch_reason": "ingestor/tasks/dispatcher.py:769-790",
+    "real_hold": "ingestor/tasks/dispatcher.py:1285-1297 and ingestor/tasks/bounded_reconcile.py:455-471"
+  },
+  "evidence_hashes": {
+    "log_sha256": "ec3ee3adc71e0f285f192f41a75563e89e6cdbbdb42e9a5945f2ef7834a1090f",
+    "state_sha256": "4adbe8bbd6cb6fdf8697b11ef52f599d676f8494b804d65f63fdee4416d5c3bc"
+  },
+  "status": "not ready: real halted policy state plus existing collector clock defect; root correction decision pending",
+  "issue": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+  "canonical_sprint_commit": "5bde76e18b570be249b0758324fdd0a81e1709c0",
+  "detailed_logs_and_state_contents_exported": false
+}
