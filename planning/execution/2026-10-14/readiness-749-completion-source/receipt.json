@@ -1,0 +1,95 @@
+{
+  "actual_changed_files": 14,
+  "actuator_ran": false,
+  "all18_source_canonical_payloads_verified": true,
+  "canonical_snapshot": "11f3e0c60aec424b4b8d02bf6c0fcc14c5ae65d0",
+  "current_runtime_or_sql_probe": false,
+  "fresh_physical_approval_or_commands": false,
+  "guard_unchanged_sha256": "dd4c3b3bbece9638a801fa0a49f0c54e1d1798555e48c40083109dc9333a0d0b",
+  "image_admission": {
+    "finished_at": "2026-10-14T23:35:27Z",
+    "first_profile": "ingestor",
+    "image_outputs": null,
+    "observed_metadata": "empty; exact underlying cause not established",
+    "reason": "protected-set-mismatch",
+    "result": "blocked",
+    "stage": "registry-capacity-preflight",
+    "started_at": "2026-10-14T23:35:19Z"
+  },
+  "issue749": "open; no runtime or original three-probe readiness closure claim",
+  "local_focused_tests": {
+    "errors": 0,
+    "failures": 0,
+    "log_sha256": "7fe91ad5fb746be448eeb2b9046edd2af9503c92d8a929f2a082bb52308cd497",
+    "skipped": 0,
+    "tests": 306,
+    "xml_sha256": "c91dac74b776f6a6ac39b4d3931842a0dbd4b5a617774ccfbac338e0dd115c99"
+  },
+  "main_remained_source_at_readback": true,
+  "native_finished_at": "2026-10-14T23:35:39Z",
+  "native_terminal_phase": "Failed",
+  "native_workflow": "verdify-platform-ci-7rrw7",
+  "native_workflow_uid": "c406098a-5892-4e29-816e-a11623d61ae3",
+  "next_owner_action": "Existing shared CI and registry owners resolve protected-set admission mismatch; resume via an explicitly released supported build path without bypass or source repush.",
+  "planning_tests": 35,
+  "prior_candidates_do_not_qualify_new_source": true,
+  "private_custody": "Raw workflow/Pod/log tails, decoded preflight receipt, source-review iterations, actual control/native/state/approval material remain outside this curated artifact.",
+  "production_promotion_or_sync": false,
+  "provider_source_tree": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "qualified_new_images": [],
+  "schema": "verdify-749-completion-source-handoff/v1",
+  "shared_ci_window": "explicitly released after exact workflow terminal failure",
+  "source_and_composed_hooks": "passed",
+  "source_and_main_push_verified": true,
+  "source_branch": "codex/749-run-completion-evidence-20261014",
+  "source_only_production_render": {
+    "byte_identical_to_accepted_ed01": true,
+    "resources": 129,
+    "secrets": 0,
+    "sha256": "54fa824a4f9ad565b2307f73210ca14a0a30b503e1847539f9e6d69f97e3d59f"
+  },
+  "source_parent": "262edb110702944a52f2b01d8f256b42682cd627",
+  "source_review_diff_sha256": "bb1d63a8f85e31ca2d98ae00b953b411a03856e7faa27c10bc39e2537d70da3c",
+  "source_review_five_file_sha256": {
+    "ingestor/tasks/bounded_reconcile.py": "875b07a4e436502226c2d9504a0b564e95f9861d39f97af9b1f01509d5a5432b",
+    "ingestor/tasks/dispatcher.py": "030ed9975123e5e7a52229948bd121a5e82d820fcb51dfc55e333b4813acfc81",
+    "scripts/experiment_v2_proof_packet.py": "02e46a095ebc3d9d2bba97fdfb31d7ee6ca007cb2e2405a90bbc904f663e9092",
+    "tests/test_bounded_reconcile.py": "a71f533798ac493bcc4cccc86029fe835a84be1ef80a4ee9b3fa857593cf2bd3",
+    "tests/test_experiment_v2_proof_packet.py": "afa24cc6dcd573e6b5e607f2a9508e1b4b8761d1fd7e5616311f5a292a2700aa"
+  },
+  "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "source_validation": {
+    "claim": "Native validation node succeeded; not a PR-context check or full-stdout/aggregate pytest-count claim",
+    "exit_code": "0",
+    "finished_at": "2026-10-14T23:35:09Z",
+    "phase": "Succeeded",
+    "started_at": "2026-10-14T23:25:54Z"
+  },
+  "trusted_impact": {
+    "base_revision": "262edb110702944a52f2b01d8f256b42682cd627",
+    "mode": "build",
+    "paths_sha256": "ce68e6ddb11e42e02f9bb5e6be88285381da47b5d176234b572a50bc8140f735",
+    "profiles": [
+      "ingestor",
+      "orchestrator",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "ingestor": [
+        "ingestor/tasks/bounded_reconcile.py",
+        "ingestor/tasks/dispatcher.py",
+        "scripts/experiment_v2_proof_packet.py"
+      ],
+      "lab-publisher": [
+        "ingestor/tasks/bounded_reconcile.py",
+        "ingestor/tasks/dispatcher.py",
+        "scripts/experiment_v2_proof_packet.py"
+      ],
+      "orchestrator": [
+        "scripts/experiment_v2_proof_packet.py"
+      ]
+    },
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4"
+  }
+}
