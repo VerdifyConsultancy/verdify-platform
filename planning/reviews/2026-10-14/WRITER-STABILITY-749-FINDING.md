@@ -1,5 +1,14 @@
 # #749: writer-stability source finding
 
+## Superseding retained-log timestamp finding — October14
+
+Offline replay of the same retained input found17 matching app events and17 silently skipped naive timestamps. The old collector therefore fell back to Pod start with a zero recurring-error counter. Earlier22:10/22:15 event-max clocks describe normalized intended-event projections, **not the actual old collector output**. No readiness packet was executed or acted on. The collector-only correction requests authoritative RFC3339 timestamps on the same existing log GET and fails closed on malformed lifecycle time. The underlying repeated-report classification and recurrence-arithmetic defects below remain concrete. Terminal halted reconciliation stays an explicit denial; no clock correction settles it.
+
+The existing supported archival route is conditional confirmed_halt_forward v2, preserving original active files and requiring distinct fresh authority later. Authentic original fullPod7666/UID6509 and same-process cb21/session1798 preview are retained; earlier different-Pod shorthand was incorrect. Exact target raw files and native request outcomes still require a finite hash-bound read-only completion. No archival, state deletion, stale approval replay, physical recovery or readiness acceptance follows from this source finding.
+
+## Retained initial source assessment
+
+
 **Repeated `blocked_stage` reporting does not itself identify a new transport connection. The collector currently treats it as a new stability-clock event because its pattern matches the sticky dispatch reason.** An unresolved held stage still matters: this finding does not declare it healthy, reset or waive the clock, supply a current readiness result, or authorize replay/device work.
 
 Source assessed: production revision `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`, with byte equality checked against the image build source `5e992d1747eb77d6f596d7e880db1f30862dae06` for the five relevant files. Root's retained owner receipt is `8a13d19f63e31586a460298ff82582746f7fdf83`. It reports a22:10:42UTC `blocked_stage` line, same generation1/socket/restart0, and existing-contract earliest22:40:42 only if no later matching event. That is a valid description of the current collector algorithm, not proof that22:10:42 was the last genuine reconnect. No new log, state, cluster, SQL or provider observation occurred here.
