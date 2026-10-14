@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T22:36:22Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-14T17:00:00Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ Exit: Accepted396 recovery/handoff,419 causal replay source delivery and644 boun
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | Finish admitted0913 fixed-target projected276 rollback qualification with exact original catalog/77 inverse and whole-helper binding; preserve first preDDL stop. Then ordinary source delivery and concrete two-duty initial credential/adoption packet through owner, no completed approval reuse or production cutover. Nine-consumer contracts/reversal retained; prove actual remaining workload duties/health. |
+| [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) | Data/platform lead | 6–12 | OrdinarysourcePR/currentmainCI+actualingestor/migrate/Labbuilds from qualifieda9be9ebf; preservegenuineprojectedproof/physicaldelta/old275fixture. Afterrequiredchecks/sourceimagesqualify, specifictwoNEWproductioninitialKSOPScredential/attendedfullhookadoptiondecision; actualtwoCronJobidentity/duty/health and originalrollbackclauses. No source-onlysyncoldmigrate, blindolder6856candidatepromotion or nine-role rotation. |
 
 ## S3 — Source truth, portable validation and prospective design
 

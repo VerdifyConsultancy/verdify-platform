@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-13T22:36:22Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-14T17:00:00Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
