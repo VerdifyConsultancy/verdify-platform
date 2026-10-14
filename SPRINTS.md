@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Collector737d build7v4d7 terminalSucceeded/candidateactuator262ed verified, releasepins/render unchanged. Archive-only recovery completed/currentfreshapprovalrequired. Prepare smallest metadata-only run/archive-bound producer completion+collector interface and focused regressions; no sourcepush/CI/promotion/sync before review. Private16-field ordinary intent remains aged/nonexecutable/JITexactrebind-no-substitution. Ask one specific decision only when qualifiedsource/images/rolloutinverse and readiness trajectory are concrete; no new setter authority. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Deliver reviewed five-path metadata-only run/archive-bound completion evidence v3 with complete canonical13 snapshot through ordinary source checks/nativeCI/actualaffectedcandidate outputs; no promotion/sync/freshapproval yet. Final306focused tests and independent source review accepted, guard/policy/authority unchanged; post-await staged-cfg race reproduced/fixed. After qualifiedsource/images/rolloutinverse, ask ONE exact distinctordinary16setting decision with JITscope guards; current readiness/physicalclauses remain separate. |
 
 ## S3 — Source truth, portable validation and prospective design
 
