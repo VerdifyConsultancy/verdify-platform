@@ -1,6 +1,6 @@
-# Current promotion inputs: cc9750fc15a22148cb17e3f17707966d45c80072
-# Fresh ingestor/migrate source: 3b500cab56d388229a8e01b4c426592884506296
-# Owning build: verdify-platform-ci-fmrsp UID f6eed83a-f131-4000-ad20-c89506e8d8df
+# Current promotion inputs: 272aa111c292894e2ccad759239b74756b4934a6
+# Fresh ingestor/migrate source: 5e992d1747eb77d6f596d7e880db1f30862dae06
+# Owning build: verdify-platform-ci-njkcq UID 73a5d412-fb4d-4fc8-8702-c2594deec2dc
 # API/MCP retain cb21fd3d; the unchanged orchestrator retains 3fe6abca.
 # Release pins: the digests production runs for the five images that the
 # verdify-platform-ci pin actuator manages (api, mcp, ingestor, migrate and
@@ -41,7 +41,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:fd18c2920fb1d46d9fbb9e4ea12956a1738f1cf35d9e3e255786e40983f8d44d
+  digest: sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -49,7 +49,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:1c1a138001c3f05ceeefc98c172a9168bae897259a6da7b34ac971395d10b287
+  digest: sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
