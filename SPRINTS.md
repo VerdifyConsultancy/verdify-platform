@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | After accepted643 runtime handoff, assess repeated blocked_stage/transport_reconnect stability semantics; execute the existing bounded READ ONLY packet only with actual current writer-generation stability and all original guard predicates. Preserve three-probe truth, absent hydro, spread/semantic denials and close-exposure-first physical proof limits. No guard bypass, borrowed949 clock, new collector, random authority or physical fault. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Correct concrete collector event/error arithmetic while preserving explicit halted-reconciliation denial and30min/freshness/authority guards; soleRetry owns source/CI, no promotion/sync. Existing contained lane prepares the supported expired previous-writer halt recovery packet from retained evidence. No stage deletion/replay/oldapprovalreuse; only then a genuinely current bounded READ ONLY readiness packet. |
 
 ## S3 — Source truth, portable validation and prospective design
 
