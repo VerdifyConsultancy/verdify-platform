@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Correct concrete collector event/error arithmetic while preserving explicit halted-reconciliation denial and30min/freshness/authority guards; soleRetry owns source/CI, no promotion/sync. Existing contained lane prepares the supported expired previous-writer halt recovery packet from retained evidence. No stage deletion/replay/oldapprovalreuse; only then a genuinely current bounded READ ONLY readiness packet. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Collector correction737d and canonicalf690 delivered; await actual automatic classifier/build terminal receipts without promotion. Existing guarded archive-only path completed with exact confirmed12 native history/original custody; oldstateapproval unchanged/currenthold freshapprovalrequired. Prepare concrete distinct ordinary16-field decision and authentic run-bound settlement source finding before any admission or current readiness packet. No expiredapprovalreuse/forcedgreen/physicalexperiment. |
 
 ## S3 — Source truth, portable validation and prospective design
 
