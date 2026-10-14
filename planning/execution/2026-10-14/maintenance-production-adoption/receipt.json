@@ -1,0 +1,332 @@
+{
+  "schema": "verdify.maintenance-production-adoption/v1",
+  "recorded_at": "2026-10-14T22:12:38.204807+00:00",
+  "status": "approved production adoption and finite live verification passed; root acceptance and issue reconciliation pending",
+  "source": {
+    "original_pr": 979,
+    "original_merge": "3b500cab56d388229a8e01b4c426592884506296",
+    "failed_first_promotion": "51c4763586359bcc037b1655edf2eece30e55be3",
+    "corrective_source": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+    "corrective_parent": "51c4763586359bcc037b1655edf2eece30e55be3",
+    "corrective_paths": [
+      "scripts/c0-migration-delivery.py",
+      "tests/test_275_c0_delivery.py",
+      "scripts/ci-local.sh"
+    ],
+    "local_tests": {
+      "passed": 59,
+      "explicit_integration_skips": 18,
+      "failed": 0,
+      "release_pin_tests_passed": 8
+    },
+    "candidate_actuator": "272aa111c292894e2ccad759239b74756b4934a6",
+    "production_revision": "ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920",
+    "raw276_sha256": "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
+    "applied_migrations_edited": false
+  },
+  "native_ci": {
+    "source": {
+      "workflow": "verdify-platform-ci-njkcq",
+      "uid": "73a5d412-fb4d-4fc8-8702-c2594deec2dc",
+      "revision": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-14T21:22:59Z",
+      "profiles": [
+        "ingestor",
+        "migrate",
+        "lab-publisher"
+      ],
+      "validator_pod_uid": "90e44748-9ab2-4b3a-80e9-1d3c37db3186",
+      "validator_stdout_bytes": 37591,
+      "validator_stdout_sha256": "4107d681ea5dffc6a36d5fe2e69dddbb00e65ded68e60de0d6b3de83ada4a2ff"
+    },
+    "promotion": {
+      "workflow": "verdify-platform-ci-mrr2n",
+      "uid": "f6c7ec2c-81fe-4ce5-88a2-32512c604106",
+      "revision": "ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-14T21:37:55Z",
+      "profiles": [],
+      "builders_executed": 0,
+      "initial_validator_pod_uid": "fb483143-0d16-4fc9-ad18-e99e4f6f09a2",
+      "validator_stdout_bytes": 37591,
+      "validator_stdout_sha256": "ca85b67982a0ef098350a843f01cecc405c8176c294d93cde9fe706b162d3f49",
+      "terminal_pod_live_metadata_available": false,
+      "trace_limitation": "initial direct Pod UID, complete bound validator log and terminal Workflow/producer node retained; Pod had been removed before terminal metadata readback"
+    }
+  },
+  "images": {
+    "ingestor_digest": "sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d",
+    "migrate_digest": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+    "lab_digest": "sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a",
+    "api_sha": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "api_digest": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+  },
+  "credential_owner": {
+    "repository": "jvallery/agents",
+    "pr": 4927,
+    "merge": "d2cf54a0784607a7897de18f1e54d73c3d3a94a5",
+    "required_native_status_succeeded": true,
+    "new_persistent_credentials": 2,
+    "existing_credentials_rotated": 0,
+    "new_secret_uids_unchanged": true,
+    "custody": "central KSOPS encrypted Git plus existing operator Mac decryption key; no new age key or plaintext artifacts",
+    "secret_values_verifiers_and_annotations_exported": false
+  },
+  "first_attempt": {
+    "revision": "51c4763586359bcc037b1655edf2eece30e55be3",
+    "outcome": "Failed before SQL and workload template adoption",
+    "cause": "C0 delivery whitelist rejected unreviewed post-254 receipt successor276",
+    "native_migration_attempt_pods": 4,
+    "manual_retry_jobs": 0,
+    "ledger_after_failure": 275,
+    "new_roles_or_password_setters_executed": false,
+    "ingestor_replacements": 0,
+    "two_old_schedules_restored_while_source_fixed": true
+  },
+  "successful_full_sync": {
+    "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+    "revision": "ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920",
+    "sync": "Synced",
+    "health": "Healthy",
+    "operation_phase": "Succeeded",
+    "operation_started_at": "2026-10-14T21:42:29Z",
+    "operation_finished_at": "2026-10-14T21:49:34Z",
+    "selector": null,
+    "prune": false,
+    "result_count": 129,
+    "rendered_secrets": 0,
+    "fresh_actual_hooks": [
+      {
+        "name": "verdify-migrate",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-runtime-role-bootstrap",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-experiment-v2-credential-bootstrap",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-maintenance-runtime-role-bootstrap",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-mcp-runtime-role-bootstrap",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-six-runtime-role-bootstrap",
+        "phase": "PreSync",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-winter-archive-init",
+        "phase": "Sync",
+        "succeeded": 1
+      }
+    ],
+    "post_sync_readiness_hook_count": 0,
+    "post_sync_limitation": "actual reviewed render contains no PostSync readiness Job; no such Job was executed or claimed"
+  },
+  "database": {
+    "ledger_max_seq": 276,
+    "maintenance_function_and_acl_contract": true,
+    "existing_six_role_contract": true,
+    "new_logins_non_null_count": 2,
+    "existing_six_login_non_null_count": 6,
+    "old_three_catalog_seals_preserved": true,
+    "pod_and_container_unchanged": true,
+    "remote_host_auth": "SCRAM-SHA-256; trust restricted to IPv4 and IPv6 loopback",
+    "database_cutover": false
+  },
+  "actual_maintenance_duties": {
+    "writer_watchdog": {
+      "job_name": "verdify-643-writer-watchdog-20261014",
+      "job_uid": "705ac7f8-e24e-46eb-bd72-6944ebffc0a4",
+      "pod_uid": "6d87e8c4-e989-41f4-8c08-69cb1243c4f6",
+      "started": "2026-10-14T21:53:57Z",
+      "finished": "2026-10-14T21:54:14Z",
+      "identity": {
+        "current_user": "verdify_writer_watchdog_runtime_login",
+        "session_user": "verdify_writer_watchdog_runtime_login",
+        "attested": true,
+        "direct_alert_privilege": false,
+        "mapping_privilege": false,
+        "cross_duty_execute": false
+      },
+      "denial_sqlstate": "42501",
+      "normal_sweep_completed": true,
+      "synthetic_lease_alert_or_device_fixture": false
+    },
+    "matview_refresh": {
+      "job_name": "verdify-643-matview-refresh-20261014",
+      "job_uid": "bee3ceea-33a4-4c40-8ca6-598b7554a308",
+      "pod_uid": "c4f3fbe3-cada-45e3-83a8-39c30291abf4",
+      "started": "2026-10-14T21:59:05Z",
+      "finished": "2026-10-14T21:59:44Z",
+      "identity": {
+        "current_user": "verdify_matview_refresh_runtime_login",
+        "session_user": "verdify_matview_refresh_runtime_login",
+        "attested": true,
+        "direct_alert_privilege": false,
+        "mapping_privilege": false,
+        "cross_duty_execute": false
+      },
+      "denial_sqlstate": "42501",
+      "normal_refreshes_completed": [
+        "mv_band_curve",
+        "mv_equipment_runtime_daily",
+        "mv_daily_kpi"
+      ],
+      "synthetic_fixture": false
+    },
+    "denial_method": "mapping SELECT LIMIT0 and nonexecuting EXPLAIN DELETE WHERE FALSE in READ ONLY sessions; both denied42501; direct/mapping/cross-duty privilege checks false",
+    "no_synthetic_lease_alert_device_fixture": true
+  },
+  "schedules_restored": [
+    {
+      "name": "verdify-writer-watchdog",
+      "uid": "2978785a-3f89-4a44-86d2-d253d208e3f7",
+      "suspend": false,
+      "schedule": "*/5 * * * *",
+      "concurrencyPolicy": "Forbid"
+    },
+    {
+      "name": "verdify-band-curve-refresh",
+      "uid": "c1850fb9-b575-483d-9262-c583d816b8cb",
+      "suspend": false,
+      "schedule": "2,32 * * * *",
+      "concurrencyPolicy": "Forbid"
+    }
+  ],
+  "runtime": {
+    "all_deployments_ready": 15,
+    "writer": {
+      "name": "verdify-ingestor-c5b9d9547-rtwgw",
+      "uid": "3e709a04-4e3a-4b5a-9cf9-bb4c997c212d",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d",
+      "containerID": "containerd://3cc735e6d8c18e651e09db5ccc66ebcca8f5eb76a4168f378885bb45ed545f5d",
+      "startedAt": "2026-10-14T21:49:53Z",
+      "restartCount": 0,
+      "lease_holder": "verdify-ingestor-c5b9d9547-rtwgw",
+      "lease_transitions": 1270
+    },
+    "actual_ingestor_replacements_total": 1,
+    "five_minute_observation": {
+      "started_at": "2026-10-14T21:51:09.398985Z",
+      "finished_at": "2026-10-14T21:56:09.537381Z",
+      "elapsed_seconds": 300.016354,
+      "schema_validation_errors": 0,
+      "restarts": 0,
+      "same_pod_uid": true,
+      "observation_restarted": false,
+      "log_sha256": "3a2ee97cef228d71dd7048095ecbbf6c2efd2a7f8c8167f2a25c22eaef2d7457"
+    },
+    "dispatch_cap": 12,
+    "unobserved_restore_budget": 0,
+    "dispatch_limit_event_observed": false,
+    "observer_correction": "suffix limit= matcher mistook unobserved_restore_limit=0 for dispatch cap; original receipt/log retained, exact-field supplement accepted; no rerun",
+    "smoke": {
+      "passed": 9,
+      "failed": 0,
+      "api_expected_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+      "api_expected_digest": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "mcp_ready_replicas": 2,
+      "authenticated_tools_per_replica": 23,
+      "setpoint_fields": 48,
+      "setpoint_age_seconds": 32
+    },
+    "socket_monitor": {
+      "passed": 1,
+      "failed": 0,
+      "established_device_sockets": 1,
+      "completed_at": "2026-10-14T22:07:16.589472Z"
+    },
+    "smoke_transport_correction": "initiallocalhost18080 already belonged to Fleet dashboard and returned HTML; original failed log retained; rerun on free localhost port passed with no production change",
+    "planner": {
+      "checkpoint": "postgres",
+      "openai": "configured",
+      "worker": "ready",
+      "db": "ok",
+      "consecutive_store_failures": 0,
+      "retry_delay_seconds": 0.0,
+      "last_error_class": null,
+      "http": 200
+    },
+    "pvc_bound_count_at_final_observation": 9
+  },
+  "lab": {
+    "job_uid": "e9ee1dec-85d8-4ba9-915e-fdbdbf8792e0",
+    "pod_uid": "ea47a9dd-966a-4f92-889d-df191b5dc1d4",
+    "digest": "sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a",
+    "build_source": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+    "completed_at": "2026-10-14T22:09:18Z",
+    "pages_emitted": 415,
+    "guard_clean": true,
+    "ordinary_template_execution": true,
+    "manual_publication_jobs": 1,
+    "public_http": 200,
+    "publication_status": {
+      "last_attempt": {
+        "at_utc": "2026-10-14T22:09:10Z",
+        "failure_class": null,
+        "outcome": "succeeded"
+      },
+      "last_contention_at_utc": "2026-10-12T23:09:17Z",
+      "last_success": {
+        "at_utc": "2026-10-14T22:09:10Z",
+        "content_sha256": "sha256:cf98d8311cf6e933d7a421fd0cf3fe44f12aba564b4400e2a97513aa5c68b92b",
+        "fresh_until_utc": "2026-10-14T22:29:10Z",
+        "public_sha256": "sha256:43e1231aaa3ac76460f4b62260fe2d1bfe26ffac117a578c56646a221a80713d",
+        "source": "s3_content_prefix",
+        "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+      },
+      "schema_version": 1,
+      "served_public_sha256": "sha256:43e1231aaa3ac76460f4b62260fe2d1bfe26ffac117a578c56646a221a80713d"
+    },
+    "readback_at": "2026-10-14T22:09:43.275837+00:00",
+    "detailed_diagnostics_exported": false
+  },
+  "rollback_and_limits": {
+    "native_projected_rehearsal": "retained nine fault families, fixed-function allows, malformed/permission denials and conditioned allocator inverse; this was projected native rehearsal, not a committed production rollback",
+    "prior_successful_production_revision": "9136f158641f918593df53471e3efe1792b7ad83",
+    "prior_actual_ingestor_digest": "sha256:c6cc8d250ef8dabe3bc3bfa4c5bc759c845508a029eae52ea4b3fadde5cd773f",
+    "prior_actual_migrate_digest": "sha256:531bc20dc193eb2da60ced8f1bc1eb609155f2fa733e77a8b3d39074ea6b0a7e",
+    "prior_actual_lab_digest": "sha256:7ee33ce0fb1142c760dbef86d7ddaa560bd79c1dd640db15825abaf414e78b66",
+    "failed_promotion_pins_are_runtime_rollback_floor": false,
+    "old_whole_source_is_automatic_safe_inverse_after276": false,
+    "recovery_boundary": "keep ledger276-aware migrate and bounded callers; use reviewed forward-safe changes. No owner fallback, password NULL/revocation or custody deletion performed",
+    "physical_or_ota_or_experiment_activation": false,
+    "db_rpo_rto_or_switchover_claim": false
+  },
+  "next_readiness": {
+    "issue": 749,
+    "executed": false,
+    "contract": "scripts/experiment_v2_proof_packet.py:405-413 and scripts/experiment_v2_readiness_guard.py:360-363",
+    "observed_at": "2026-10-14T22:12:38.170885+00:00",
+    "latest_actual_contract_event": {
+      "at": "2026-10-14T22:10:42+00:00",
+      "class": "blocked_stage"
+    },
+    "stable_since": "2026-10-14T22:10:42+00:00",
+    "earliest_30min_if_no_later_event": "2026-10-14T22:40:42+00:00",
+    "limitation": "reason=transport_reconnect, including blocked_stage repeats, resets this existing contract clock even if socket generation remains1; no Pod-start based acceptance or promise of later stability",
+    "prior949_clock_reused": false,
+    "pod_start_used_as_clock": false
+  },
+  "custody": {
+    "writer_handoff": "root after terminal receipt acceptance",
+    "issue643_closure_owner": "root coordinator",
+    "sprint_reconciliation_owner": "root coordinator",
+    "evidence_branch": "codex/runtime-delivery-evidence-20261012",
+    "unrelated_work_preserved": true
+  }
+}
