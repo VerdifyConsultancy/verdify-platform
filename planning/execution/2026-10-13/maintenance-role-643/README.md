@@ -56,3 +56,30 @@ beside its existing six-role dependency. Three focused checks bind the hook,
 actual registered Dockerfile/COPY inputs and missing-entrypoint/dependency faults.
 No helper body, migration byte, guard, receipt, image or target was altered by
 this packaging correction; no image was built.
+
+## Completed corrected projected-native qualification
+
+The corrected third attempt on source283a passed all9 SAVEPOINT fault families
+(including independent protected-column capability faults under both new LOGINs),
+22 expected42501 denials and five22023 invalid-lease refusals, both attesters,
+watchdog owned lifecycle/foreign preservation and all3 fixed materialized-view
+refreshes. It exited0/stderr0 and completed ROLLBACK. Only alert-ID nextval
+advanced3; the exact observed-state inverse ran once, then all77 and starting/
+ending NULL-membership metadata matched. Both prior SQL failures and staging
+failure remain retained. No fourth qualification/credential/TCP/pool test ran.
+
+The [genuine receipt](../../../../tests/fixtures/six-runtime-bootstrap-276-projected-receipt.json)
+binds the entire current helper/maintenance helper/adapter and raw+executed SQL.
+It explicitly records projected-native scope, the unchanged original275 receipt
+and original whole-profile reconstruction. The two updated binding tests pass;
+no historical hash/receipt was rewritten to fit.
+
+Final metadata is not physically byte-identical: original4355a2c8… and actual
+92cb24ed… differ only in4 reviewed MV/index page/visibility/freeze fields. An
+actual autovacuum on mv_band_curve occurred18s after rollback. Reversing only
+those four fields in a comparison-only memory copy exactly reconstructs all
+original catalog bytes. Actual records/seals stay unchanged; all logical/ACL/
+role/ledger/receipt/identity facts match. No MV pre/post row hash is claimed.
+The [release handoff](release-handoff.md) retains this boundary, actual3-image
+COPY closure/#975 disposition and the two-initial-credential rollout/inverse.
+Production credentials/adoption and#643 closeout remain pending.
