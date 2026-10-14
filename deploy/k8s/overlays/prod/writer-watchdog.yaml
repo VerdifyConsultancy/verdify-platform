@@ -197,67 +197,28 @@ spec:
                 - /bin/sh
                 - -ceu
                 - |
-                  LEASE_THRESHOLD_S=180
-                  STALL_THRESHOLD_S=600
-
-                  # Lease state comes from the python initContainer (the kube
-                  # API needs TLS that busybox wget cannot speak — proven on
-                  # the first live run). Format: "ok <age_s>" | absent | read_failed
                   LEASE_STATE="$(cat /shared/lease_state 2>/dev/null || echo read_failed)"
-                  echo "lease_state: ${LEASE_STATE}"
-                  LEASE_RC=0
-                  LEASE_FOUND=false
+                  LEASE_KIND=read_failed
                   LEASE_AGE_S=""
                   case "$LEASE_STATE" in
-                    ok\ *)  LEASE_FOUND=true; LEASE_AGE_S="${LEASE_STATE#ok }" ;;
-                    absent) LEASE_FOUND=false ;;
-                    *)      LEASE_RC=1 ;;  # read_failed: skip the writer decision
+                    ok\ *)
+                      LEASE_KIND=found
+                      LEASE_AGE_S="${LEASE_STATE#ok }"
+                      case "$LEASE_AGE_S" in ''|*[!0-9]*) echo "invalid lease age"; exit 1 ;; esac
+                      ;;
+                    absent) LEASE_KIND=absent ;;
                   esac
-
-                  # ── 2. DB reachability gate for the paging surface ──
-                  # (the initContainer already emitted the writer-absent k8s
-                  # Event if the lease was stale; a DB outage here fails the
-                  # job loudly — failed jobs are the visibility surface until
-                  # the monitoring-stack PrometheusRule lands.)
                   if ! pg_isready -h "${PGHOST}" -p "${PGPORT:-5432}" -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; then
-                    echo "DB unreachable: cannot write alert_log (lease_state=${LEASE_STATE}); failing the job for visibility"
-                    exit 1
+                    echo "DB unreachable: cannot run bounded watchdog duty"; exit 1
                   fi
-
-                  PSQL="psql -v ON_ERROR_STOP=1 -t -A -q"
-
-                  # ── 3. writer_absent lifecycle (skipped when the lease read failed) ──
-                  if [ "$LEASE_RC" -eq 0 ] && { [ "$LEASE_FOUND" != "true" ] || [ "${LEASE_AGE_S:-99999}" -gt "$LEASE_THRESHOLD_S" ]; }; then
-                    AGE_JSON="${LEASE_AGE_S:-null}"
-                    $PSQL -c "INSERT INTO alert_log (alert_type, severity, category, message, details, source)
-                      SELECT 'writer_absent', 'critical', 'system',
-                             'WRITER ABSENT: verdify-ingestor-writer lease stale/missing (age_s=${LEASE_AGE_S:-absent}). Telemetry, setpoint dispatch, and the in-ingestor alert engine are all down; the ESP32 holds its on-chip band.',
-                             json_build_object('lease_found', ${LEASE_FOUND}, 'lease_age_s', ${AGE_JSON}, 'threshold_s', ${LEASE_THRESHOLD_S})::jsonb,
-                             'writer_watchdog'
-                      WHERE NOT EXISTS (SELECT 1 FROM alert_log WHERE alert_type = 'writer_absent' AND resolved_at IS NULL)"
-                    echo "writer_absent: CRITICAL (lease age ${LEASE_AGE_S:-absent}s)"
-                  elif [ "$LEASE_RC" -eq 0 ]; then
-                    $PSQL -c "UPDATE alert_log SET resolved_at = now(), disposition = 'resolved', resolved_by = 'writer_watchdog',
-                              resolution = 'writer lease fresh again'
-                       WHERE alert_type = 'writer_absent' AND resolved_at IS NULL" >/dev/null
-                  fi
-
-                  # ── 4. telemetry_stall lifecycle ──
-                  CLIMATE_AGE="$($PSQL -c "SELECT COALESCE(round(extract(epoch FROM now() - max(ts)))::text, 'none') FROM climate")"
-                  echo "climate age_s=${CLIMATE_AGE}"
-                  if [ "$CLIMATE_AGE" != "none" ] && [ "$CLIMATE_AGE" -gt "$STALL_THRESHOLD_S" ]; then
-                    $PSQL -c "INSERT INTO alert_log (alert_type, severity, category, message, details, source)
-                      SELECT 'telemetry_stall', 'critical', 'system',
-                             'TELEMETRY STALL: newest climate row is ${CLIMATE_AGE}s old (threshold ${STALL_THRESHOLD_S}s). Writer may be connected but not persisting.',
-                             json_build_object('climate_age_s', ${CLIMATE_AGE}, 'threshold_s', ${STALL_THRESHOLD_S})::jsonb,
-                             'writer_watchdog'
-                      WHERE NOT EXISTS (SELECT 1 FROM alert_log WHERE alert_type = 'telemetry_stall' AND resolved_at IS NULL)"
-                    echo "telemetry_stall: CRITICAL"
-                  else
-                    $PSQL -c "UPDATE alert_log SET resolved_at = now(), disposition = 'resolved', resolved_by = 'writer_watchdog',
-                              resolution = 'climate rows landing again'
-                       WHERE alert_type = 'telemetry_stall' AND resolved_at IS NULL" >/dev/null
-                  fi
+                  attested="$(psql -X --no-password -v ON_ERROR_STOP=1 -t -A -q -c 'SELECT verdify_writer_watchdog_runtime.fn_attest_login()')"
+                  [ "$attested" = t ] || { echo "watchdog database identity refused"; exit 1; }
+                  # psql quotes variables from stdin; never interpolate lease text
+                  # into SQL or use -c for variable substitution.
+                  psql -X --no-password -v ON_ERROR_STOP=1 -t -A -q \
+                    --set=lease_state="$LEASE_KIND" --set=lease_age="$LEASE_AGE_S" <<'SQL'
+                  SELECT * FROM verdify_writer_watchdog_runtime.fn_sweep(:'lease_state',nullif(:'lease_age','')::bigint);
+                  SQL
                   echo "watchdog sweep complete $(date -u +%FT%TZ)"
               env:
                 - name: POD_NAMESPACE
@@ -274,11 +235,10 @@ spec:
                   valueFrom:
                     configMapKeyRef: { key: DB_NAME, name: verdify-config }
                 - name: PGUSER
-                  valueFrom:
-                    configMapKeyRef: { key: DB_USER, name: verdify-config }
+                  value: verdify_writer_watchdog_runtime_login
                 - name: PGPASSWORD
                   valueFrom:
-                    secretKeyRef: { key: POSTGRES_PASSWORD, name: verdify-app-secrets }
+                    secretKeyRef: { key: password, name: verdify-writer-watchdog-runtime-db }
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp

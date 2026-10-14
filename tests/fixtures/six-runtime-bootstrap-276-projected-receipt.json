@@ -1,0 +1,271 @@
+{
+  "kind": "actual-fixed-target-projected-cnpg276-rollback-qualification",
+  "qualification_source_commit": "283a3caacfe2c1124ab385a34d2a4d4e4470bbf5",
+  "helper_sha256": "40b795ddf5432249dd2ad0f9d1f91426bf13f68de967c9c2d0ec00575346c651",
+  "maintenance_helper_sha256": "440db6f600b5a62d8d2ed446637ee57d0e8239a8c86d31f89451a136b950f4e9",
+  "adapter_sha256": "69d1ccf8857858dac72871684bc30965d7249f7c982ed9f535f70b69a0fdb41f",
+  "retained_275_helper_sha256": "b7c311efd8d978a8e58f81d866469f0a9c91ca902c5a3357e53c33c4b37c063c",
+  "retained_275_fixture_sha256": "3b7fb529bab8aa0e10a2a9ea063fa0e1d2dd174035e7c4f69386288845125467",
+  "retained_275_whole_sealed_sql_sha256": "d53692d7fee80d83f6a4332e7bf4ea1202b401a6e70863b806b8de6ee50366d7",
+  "retained_275_profile_sha256": "ccf6a795dc578d0e09dab9888976a8edfbcb029ed6dae1d0af6126b51e9383a5",
+  "sealed_sql_sha256": "fef26dbda73d30e45d4130068a3b18185b71e131b954a73fa55d72e0ba0d171b",
+  "sealed_sql_276_sha256": "02954dcc43d8dda1841563b14bb4139832035561c6102d96e2f2d71e1236964a",
+  "role_contract_sql_sha256": "e95dd4234f674b315bf22e6411249d13480b72f94bad2068e107a7107b07c804",
+  "maintenance_contract_sql_sha256": "25e6ac5a8d6dbf0b9a453c8d7c9faa39c3f1ccd8dc2ea9643f1ace2f5986abc6",
+  "projected_whole_sealed_sql_sha256": "0840d0f72b55a478b67483492ff333de409f8b12ecc01e650e7874fcf88533c5",
+  "projected_maintenance_contract_sql_sha256": "e82bbdecabd1677bf4f35208fe1709c3a494fc6ac4ad8d00a16a623daaa332e5",
+  "raw_migration_sha256": "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9ae4331764",
+  "executed_qualification_sql_sha256": "bb2bfc8103a7c13afe65447ae20e5fd8e5d193570278a20b5c8ba688435e51cb",
+  "executed_projected_migration_sha256": "34bbabbe36431607145f32b3c296623619afd94d38f764aff5a2a4e3c078d4bb",
+  "native_exit_code": 0,
+  "native_stderr_bytes": 0,
+  "ordered_assertions_and_final_rollback": true,
+  "whole_helper_scope": "projected source guards plus retained unchanged original-production275 profile proof; password entrypoint not executed",
+  "projected_native": true,
+  "raw_production276_executed": false,
+  "authenticated_login": false,
+  "actual_tcp_qualification": false,
+  "pool_qualification": false,
+  "password_commands_executed": false,
+  "new_secrets_jobs_pods_PVCs": 0,
+  "qualification_transaction_committed": false,
+  "negative_families": [
+    "wrong276hash",
+    "wrong276filename",
+    "wrong276stamp",
+    "later277",
+    "new-cross-membership",
+    "new-raw-column",
+    "new-definer-drift",
+    "new-PUBLIC-execute",
+    "new-body-drift"
+  ],
+  "negative_families_passed": true,
+  "raw_column_both_logins_independently_refused": true,
+  "raw_column_inverse_contract_true": true,
+  "savepoint_count": 9,
+  "protected_column_select_42501_count": 2,
+  "permission_denials": [
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "protected-column-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-update-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "public-create-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "cross-role-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "invalid-lease",
+      "expected_sqlstate": "22023",
+      "passed": true
+    },
+    {
+      "case": "invalid-lease",
+      "expected_sqlstate": "22023",
+      "passed": true
+    },
+    {
+      "case": "invalid-lease",
+      "expected_sqlstate": "22023",
+      "passed": true
+    },
+    {
+      "case": "invalid-lease",
+      "expected_sqlstate": "22023",
+      "passed": true
+    },
+    {
+      "case": "invalid-lease",
+      "expected_sqlstate": "22023",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "protected-column-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-select-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "raw-update-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "public-create-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "cross-role-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "other-function-denied",
+      "expected_sqlstate": "42501",
+      "passed": true
+    },
+    {
+      "case": "old-api-has-no-new-duty",
+      "expected_sqlstate": "42501",
+      "passed": true
+    }
+  ],
+  "fixed_matview_refreshes": {
+    "mv_band_curve": true,
+    "mv_equipment_runtime_daily": true,
+    "mv_daily_kpi": true
+  },
+  "watchdog_owned_lifecycle_and_foreign_preservation": true,
+  "alert_allocator": {
+    "actual_delta": 3,
+    "only_changed_sequence": "public.alert_log_id_seq",
+    "all_other76_exact": true,
+    "conditioned_inverse_calls": 1,
+    "setter_result_rows": 1,
+    "after_all77_exact_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1"
+  },
+  "NULL_and_memberships_exact": true,
+  "independent_schema275_new_roles_absent_zero_clients": true,
+  "catalog": {
+    "original_sha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+    "post_sha256": "92cb24edbb7f5379339545a2455913f828c3e80812ab4e46540e6a9a41c7a524",
+    "byte_identical_physical_reseal": false,
+    "exact_reviewed_physical_delta": [
+      {
+        "identity": "public.mv_band_curve_ts_uidx",
+        "field": "relpages",
+        "before": 5,
+        "after": 9
+      },
+      {
+        "identity": "public.mv_band_curve",
+        "field": "relallvisible",
+        "before": 0,
+        "after": 13
+      },
+      {
+        "identity": "public.mv_band_curve",
+        "field": "relpages",
+        "before": 16,
+        "after": 13
+      },
+      {
+        "identity": "public.mv_band_curve",
+        "field": "relfrozenxid",
+        "before": "13096",
+        "after": "13958"
+      }
+    ],
+    "all_other_canonical_bytes_exact": true,
+    "source_acl_role_ledger_seals_identity_exact": true,
+    "observed_autovacuum_after_rollback": true,
+    "old_catalog_or_seal_rewritten": false,
+    "materialized_view_rows_hashed_before_after": false,
+    "full952_prior_seal_reused_MVs_excluded": true
+  },
+  "historical_failed_attempts": [
+    {
+      "stage": "initial-source-staging",
+      "reason": "read-only /tmp",
+      "SQL_executed": false,
+      "qualified": false
+    },
+    {
+      "stage": "unprojected-production275-guard",
+      "native_exit_code": 3,
+      "qualified": false,
+      "catalog_and77_exact": true,
+      "sequence_setter": false
+    },
+    {
+      "stage": "projected-climate-column-fault",
+      "native_exit_code": 3,
+      "qualified": false,
+      "catalog_and77_exact": true,
+      "sequence_setter": false
+    }
+  ],
+  "private_proof_sha256": "b538e003d3a6dbbb1948025d795b743ced333778d7b83bb0a6fdcf5b6f29c11d",
+  "evidence_sha256": {
+    "qualification/execution.json": "0fe9d05ed342459359a9d705d9e1b429154b5c510de712a5d9689a6676a970af",
+    "qualification/native.stdout": "0f71b2052df280bd16fcabe8469195ea81f50e2d9e590df65c0ae82c8dca99c2",
+    "inverse-preconditions.private.json": "61dd76d557ff080f18473d79eee86cd26ab4ea422c341ddfe94735721dd2638e",
+    "alert-sequence-inverse/execution.json": "d74ecb47b7ccdfd39413c0177c2c736c3037d8cdd32ef04427db82466aa4b335",
+    "after-inverse-sequences/execution.json": "400f20a9d153047b3fc4cd78b754e87915c2afeab3bc567cea88ad1123b9b1d6",
+    "catalog-field-diff/diff.private.json": "0f3fe4bc4e4c89397de56d98648d5fabbc025851f9069693af82ad26ec012e00",
+    "catalog-field-diff/physical-stats.private.json": "81db2c0295c0c85826b90a4e08e7601e574a6305556ad85ff92f5d63dcd2d08b",
+    "catalog-field-diff/physical-delta-assessment.private.json": "a653310d6f20d189746edc006485b31fb3d2659dd9953ad2e7c6079d8e071320"
+  }
+}

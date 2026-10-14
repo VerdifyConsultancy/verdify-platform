@@ -295,14 +295,19 @@ def test_lighting_successor_bootstrap_matches_actual_rollback_qualification():
 
     root = Path(__file__).resolve().parents[1]
     receipt = json.loads((root / "tests/fixtures/six-runtime-bootstrap-275-receipt.json").read_text())
+    current = json.loads((root / "tests/fixtures/six-runtime-bootstrap-276-projected-receipt.json").read_text())
 
     def digest(value):
         return hashlib.sha256(value).hexdigest()
 
     predecessor = json.loads((root / "tests/fixtures/six-runtime-bootstrap-274-receipt.json").read_text())
     assert receipt["predecessor_helper_sha256"] == predecessor["helper_sha256"]
-    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
-    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    # This retained receipt qualifies the original whole275 helper. The genuine
+    # successor test below binds every byte of the current whole helper instead.
+    assert receipt["helper_sha256"] == current["retained_275_helper_sha256"]
+    retained_whole = "(" + module.sealed_sql_270_274() + " OR " + module.sealed_sql_275() + ")"
+    assert receipt["sealed_sql_sha256"] == current["retained_275_whole_sealed_sql_sha256"]
+    assert receipt["sealed_sql_sha256"] == digest(retained_whole.encode())
     assert receipt["legacy_sealed_sql_sha256"] == predecessor["sealed_sql_sha256"]
     assert receipt["legacy_sealed_sql_sha256"] == digest(module.sealed_sql_270_274().encode())
     assert receipt["role_contract_sql_sha256"] == predecessor["role_contract_sql_sha256"]
@@ -348,3 +353,88 @@ def test_lighting_successor_bootstrap_matches_actual_rollback_qualification():
         assert stages[name]["combined_qualified"] is False
     assert stages["unsafe_planner_membership"]["role_contract"] is False
     assert len(stages) == len(negatives) + 5
+
+
+def test_maintenance_successor_whole_helper_matches_genuine_projected_native_receipt():
+    """Current authority binds actual projected proof; old275 remains history."""
+    import hashlib
+    from collections import Counter
+
+    root = Path(__file__).resolve().parents[1]
+    receipt = json.loads((root / "tests/fixtures/six-runtime-bootstrap-276-projected-receipt.json").read_text())
+
+    def digest(raw):
+        return hashlib.sha256(raw).hexdigest()
+
+    def load(name, filename):
+        spec = importlib.util.spec_from_file_location(name, root / "scripts" / filename)
+        result = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(result)
+        return result
+
+    maintenance = load("native_receipt_maintenance", "bootstrap-maintenance-runtime-roles.py")
+    projection = load("native_receipt_projection", "cnpg-maintenance-276-qualification.py")
+    projection.require_source()
+    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert receipt["maintenance_helper_sha256"] == digest(
+        (root / "scripts/bootstrap-maintenance-runtime-roles.py").read_bytes()
+    )
+    assert receipt["adapter_sha256"] == digest((root / "scripts/cnpg-maintenance-276-qualification.py").read_bytes())
+    assert receipt["retained_275_fixture_sha256"] == digest(
+        (root / "tests/fixtures/six-runtime-bootstrap-275-receipt.json").read_bytes()
+    )
+    assert receipt["retained_275_profile_sha256"] == digest(module.sealed_sql_275().encode())
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    assert receipt["sealed_sql_276_sha256"] == digest(module.sealed_sql_276().encode())
+    assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
+    assert receipt["maintenance_contract_sql_sha256"] == digest(maintenance.contract_sql().encode())
+    assert receipt["projected_whole_sealed_sql_sha256"] == digest(
+        projection.remap_computed(module.sealed_sql())[0].encode()
+    )
+    assert receipt["projected_maintenance_contract_sql_sha256"] == digest(
+        projection.remap_computed(maintenance.contract_sql())[0].encode()
+    )
+    assert receipt["raw_migration_sha256"] == module.MAINTENANCE_MIGRATION[2]
+    assert receipt["raw_migration_sha256"] == digest(
+        (root / "db/migrations" / module.MAINTENANCE_MIGRATION[1]).read_bytes()
+    )
+    assert receipt["native_exit_code"] == receipt["native_stderr_bytes"] == 0
+    assert receipt["ordered_assertions_and_final_rollback"] and receipt["projected_native"]
+    for excluded in (
+        "raw_production276_executed",
+        "authenticated_login",
+        "actual_tcp_qualification",
+        "pool_qualification",
+        "password_commands_executed",
+        "qualification_transaction_committed",
+    ):
+        assert receipt[excluded] is False
+    assert receipt["new_secrets_jobs_pods_PVCs"] == 0
+    assert len(set(receipt["negative_families"])) == receipt["savepoint_count"] == 9
+    assert receipt["negative_families_passed"] and receipt["raw_column_both_logins_independently_refused"]
+    assert receipt["raw_column_inverse_contract_true"] and receipt["protected_column_select_42501_count"] == 2
+    assert all(c["passed"] for c in receipt["permission_denials"])
+    assert Counter(c["expected_sqlstate"] for c in receipt["permission_denials"]) == {"42501": 22, "22023": 5}
+    assert (
+        all(receipt["fixed_matview_refreshes"].values())
+        and receipt["watchdog_owned_lifecycle_and_foreign_preservation"]
+    )
+    assert receipt["alert_allocator"]["actual_delta"] == 3
+    assert (
+        receipt["alert_allocator"]["conditioned_inverse_calls"] == receipt["alert_allocator"]["setter_result_rows"] == 1
+    )
+    assert receipt["alert_allocator"]["all_other76_exact"] and receipt["NULL_and_memberships_exact"]
+    assert receipt["independent_schema275_new_roles_absent_zero_clients"]
+    catalog = receipt["catalog"]
+    assert catalog["byte_identical_physical_reseal"] is False
+    assert catalog["all_other_canonical_bytes_exact"] and catalog["source_acl_role_ledger_seals_identity_exact"]
+    assert catalog["observed_autovacuum_after_rollback"] and catalog["old_catalog_or_seal_rewritten"] is False
+    assert catalog["materialized_view_rows_hashed_before_after"] is False
+    assert {(c["identity"], c["field"]) for c in catalog["exact_reviewed_physical_delta"]} == {
+        ("public.mv_band_curve", "relpages"),
+        ("public.mv_band_curve", "relallvisible"),
+        ("public.mv_band_curve", "relfrozenxid"),
+        ("public.mv_band_curve_ts_uidx", "relpages"),
+    }
+    assert all(c["qualified"] is False for c in receipt["historical_failed_attempts"])
+    assert len(receipt["private_proof_sha256"]) == 64

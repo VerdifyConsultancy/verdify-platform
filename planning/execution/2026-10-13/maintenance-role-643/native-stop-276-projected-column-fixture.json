@@ -1,0 +1,30 @@
+{
+  "source_commit": "0913a9e6d510f44b6ffe9aa1ee0b12ddc560e142",
+  "qualification": "projected-native STOPPED normally exit3 at fault fixture, not completed276 acceptance",
+  "passed_before_stop": [
+    "fixed native275 projection/admission",
+    "projected276 creation/source contract",
+    "existing six-role contract",
+    "unstamped276 refused",
+    "wrong276 hash/filename/stamp/later277/new-cross-membership faults refused and restored"
+  ],
+  "stop": "GRANT SELECT(ts) on climate propagated into Timescale compressed relation without ts",
+  "raw_production_guard_adapter_or_functions_changed": false,
+  "before_watchdog_fixture_sequence_or_refresh": true,
+  "all77_exact_accepted": true,
+  "sequence_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1",
+  "catalog_exact_accepted": true,
+  "catalog_sha256": "4355a2c83fbb260c3a6a5c483c46369dd115a24258bbdeb260d59f49557112b5",
+  "schema275_new_roles_absent_zero_other_clients": true,
+  "sequence_setter_executed": false,
+  "passwords_Secrets_new_workloads": 0,
+  "evidence_sha256": {
+    "qualification/execution.json": "dfc7e76bffa20cadf5b7d4dc7c39097e025a7f944c7ddf11b11f0ef300d948fa",
+    "postflight/execution.json": "e9cd380c750c2ab5faab435542b5f0ec06f44eb31ef2aa8334c20bd8ba48c0af",
+    "after-rollback-sequences/execution.json": "b29946983ccf31a689e09c005c7b089c99959f0d665d9eb010d79a30f3b9a9b2",
+    "after-catalog/execution.json": "88fb2635889146c2a1a1d2df46744953dabe6f2c86064e63df5387199888adf0"
+  },
+  "correction_pending_review": "plain protected alert_log(id) any-column fault independently for both newLOGINs, original9SAVEPOINT families; actual column-select42501 after inverse",
+  "separate_source_packaging_fix": "wave4 maintenance bootstrap command must be in migrate-image COPY; smallest COPY addition with3focused packaging regressions",
+  "claim_limit": "No raw production276 apply/authenticatedLOGIN/TCP/pool/production acceptance"
+}
