@@ -2,13 +2,13 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-14T17:00:00Z** against source `916b24a6f339b5b4b63093e9b13148a46e013f8c`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **56 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-14T22:14:07Z** against source `ed01cb8f64c9b3165924e4006a9bb3fe2a7e1920`. [planning/reviews/2026-10-12](planning/reviews/2026-10-12) records current source, GitHub, runtime and evidence limits. All **55 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| S2 — Completion sprint (October 13–26, 2026) | sprint | 6–12 | 80 | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) |
+| S2 — Completion sprint (October 13–26, 2026) | sprint | 4–8 | 80 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) |
 | S3 — Source truth, portable validation and prospective design | sprint | 18–32 | 80 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) |
-| S4 — Current readiness and integrated qualification | sprint | 38–66 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
+| S4 — Current readiness and integrated qualification | sprint | 34–58 | 80 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | S5 — Immutable lock, launch and first real outcome | conditional | 12–24 | 80 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
 | PILOT — Pilot operations and reproducible readout | ongoing | 36–68 | Not timeboxed | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
 | RELEASE — Release safety and estate adoption follow-through | conditional | Unestimated | Not timeboxed | [#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#801](https://github.com/VerdifyConsultancy/verdify-platform/issues/801), [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) |
