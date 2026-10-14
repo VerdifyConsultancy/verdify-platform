@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Deliver reviewed five-path metadata-only run/archive-bound completion evidence v3 with complete canonical13 snapshot through ordinary source checks/nativeCI/actualaffectedcandidate outputs; no promotion/sync/freshapproval yet. Final306focused tests and independent source review accepted, guard/policy/authority unchanged; post-await staged-cfg race reproduced/fixed. After qualifiedsource/images/rolloutinverse, ask ONE exact distinctordinary16setting decision with JITscope guards; current readiness/physicalclauses remain separate. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Source2208401d/canonical13 delivered/provider18exact; local306+35/nativevalidationexit0 accepted. Automatic7rrw7 firstimagebuild FAILED protected-set-mismatch beforepublication/no images-actuator. Existingci_source_matrix soleREADONLYowner diagnosis of exactservedprotected/capacity contract versusexpected164/302; minimalownerfix onlyafterrootcause-overlapreview. No retry/guardbypass/promotion/sync/freshordinary16decision untilgenuineexternalrecovery+qualifiedcohort/rolloutinverse. |
 
 ## S3 — Source truth, portable validation and prospective design
 
