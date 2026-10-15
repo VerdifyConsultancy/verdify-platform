@@ -49,3 +49,7 @@ Fresh October15 16:05 JIT comparison stopped BEFORE submission: profile/capacity
 ## October15 integrity publisher failure
 
 October15 named normal integrity audit8638 FAILED16:30:46/main exit1; current integrity ready=false/no tuple, capacity/profile168 coherent and above floor. Normal-lag hypothesis superseded; exact cause pending finite owned failure-log custody before TTL. No build submission/key consumed/fit or recovery handback. Existing owner diagnoses cause/minimal remedy read-only; no producer/guard changes, promotion/sync/current readiness or ordinary16 decision. #643 acceptance and productioned01 remain unchanged.
+
+## Confirmed registry graph bound incompatibility
+
+Registry integrity failure cause established: current protected graph exceeds historical96GiB aggregate audit limit; verified prefix plus next object already103112110542B, final total unknown. Dedup/counter defect not found; no physical disk/auth/corruption claim. Existing owner prepares bounded read-only complete-closure byte accounting and45min fit plan BEFORE any calls/calibration. Preserve all roots/rollback custody/hash-origin checks/per-object limits/frozenv2/floors. No build/key use/promotion/sync/current readiness/ordinary16 decision. Repeating the unchanged audit cannot resolve this bound. #643 and productioned01 remain accepted.

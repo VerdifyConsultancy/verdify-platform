@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | October15 named normal integrity audit8638 FAILED16:30:46/main exit1; current integrity ready=false/no tuple, capacity/profile168 coherent and above floor. Normal-lag hypothesis superseded; exact cause pending finite owned failure-log custody before TTL. No build submission/key consumed/fit or recovery handback. Existing owner diagnoses cause/minimal remedy read-only; no producer/guard changes, promotion/sync/current readiness or ordinary16 decision. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Registry integrity failure cause established: current protected graph exceeds historical96GiB aggregate audit limit; verified prefix plus next object already103112110542B, final total unknown. Dedup/counter defect not found; no physical disk/auth/corruption claim. Existing owner prepares bounded read-only complete-closure byte accounting and45min fit plan BEFORE any calls/calibration. Preserve all roots/rollback custody/hash-origin checks/per-object limits/frozenv2/floors. No build/key use/promotion/sync/current readiness/ordinary16 decision. |
 
 ## S3 — Source truth, portable validation and prospective design
 
