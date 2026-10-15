@@ -41,3 +41,7 @@ Reviewed completion source2208401d and canonical13 files are delivered; local306
 ## October15 registry publication recovery
 
 The existing owner's changed-facts read found genuine normal-publication coherence across profile/capacity/integrity, ready/writable above the preserved floor and a bounded standard single-builder fit. No producer repair, manual duplicate audit or guard change was needed. The individual overnight audit is no longer retained; its terminal result remains unknown. Root released one documented deliberate supported build resumption for unchanged qualified source220/trusted three profiles, with fresh just-in-time guards. Prior7rrw7 failure remains immutable; new images/actuator and runtime acceptance are pending. The distinct ordinary16-setting decision stays deferred until the qualified cohort and rollout/inverse are concrete.
+
+## October15 just-in-time recurrence
+
+Fresh October15 16:05 JIT comparison stopped BEFORE submission: profile/capacity168 differs from integrity167 despite ready/writable capacity above the unchanged floor. ZERO submissions/tokens/recovery keys consumed; no new failed Workflow. Existing owner read-only diagnosis resumed for recurring publication coordination; await genuine current coherence and fresh fit before the same one supported deliberate cohort. No promotion/sync/ordinary16 decision/current readiness probe. Historical15:04 coherence remains a valid earlier observation, not current admission. #643 acceptance and productioned01 remain unchanged.

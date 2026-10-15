@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Normal registry publication recovered coherent profile/capacity/integrity167/readywritable/unchangedfloors, no producerrepair. Root released SAMEsoleRetry ONEdocumentedDELIBERATEsupported source220/trusted3profile cohort afterfreshJITcoherence+fit; original7rrw7failureimmutable/no defaultrearm/rawWorkflow/keyloop. Awaitactualnewsource-digest/cohort/actuator/all5pairs/explicitrelease; no promotion/sync/ordinary16decision untilqualifiedrolloutinversepacket. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Fresh October15 16:05 JIT comparison stopped BEFORE submission: profile/capacity168 differs from integrity167 despite ready/writable capacity above the unchanged floor. ZERO submissions/tokens/recovery keys consumed; no new failed Workflow. Existing owner read-only diagnosis resumed for recurring publication coordination; await genuine current coherence and fresh fit before the same one supported deliberate cohort. No promotion/sync/ordinary16 decision/current readiness probe. |
 
 ## S3 — Source truth, portable validation and prospective design
 
