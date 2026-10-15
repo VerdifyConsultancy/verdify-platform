@@ -57,3 +57,7 @@ Registry integrity failure cause established: current protected graph exceeds hi
 ## Complete registry graph accounting
 
 Complete guarded read-only closure accounting succeeded:104314428281B across4647 unique blobs+312 repository-scoped manifests, all5340 exact metadata requests/zero blob-body reads,110.226s/source168 endfences exact. Prepare smallest Agents aggregate audit bound96→98GiB (next wholeGiB above measured total;912270471B rounding headroom), preserve every integrity/root/deadline/floor check. Normal owner source qualification/adoption and actual natural full audit still required; no payload/deadline-fit/current recovery/build/promotion/readiness claim. Productioned01/#643 acceptance remain unchanged.
+
+## Owner calibration qualified and adopted
+
+Agents4973 normal required native qualification passed/merged0c2303ea; measured96→98Gi audit calibration adopted as ONLYcapacity.py key, tick/manualAppspec/unrelatedbytes preserved. Pre-adoption old96 audit failure retained. Next NATURAL full audit45f7add9 began21:46:10/source00159/full168 exact; terminal/deadline22:31:10 pending with full logs captured. No recovery/coherentpublication/freshfit/buildhandback/image/promotion/readiness claim; await exact natural terminal, no polling/manualaudit. Product productioned01 and #643 acceptance remain unchanged.
