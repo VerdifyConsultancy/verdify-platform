@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Source2208401d/canonical13 delivered/provider18exact; local306+35/nativevalidationexit0 accepted. Automatic7rrw7 firstimagebuild FAILED protected-set-mismatch beforepublication/no images-actuator. Existingci_source_matrix soleREADONLYowner diagnosis of exactservedprotected/capacity contract versusexpected164/302; minimalownerfix onlyafterrootcause-overlapreview. No retry/guardbypass/promotion/sync/freshordinary16decision untilgenuineexternalrecovery+qualifiedcohort/rolloutinverse. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Normal registry publication recovered coherent profile/capacity/integrity167/readywritable/unchangedfloors, no producerrepair. Root released SAMEsoleRetry ONEdocumentedDELIBERATEsupported source220/trusted3profile cohort afterfreshJITcoherence+fit; original7rrw7failureimmutable/no defaultrearm/rawWorkflow/keyloop. Awaitactualnewsource-digest/cohort/actuator/all5pairs/explicitrelease; no promotion/sync/ordinary16decision untilqualifiedrolloutinversepacket. |
 
 ## S3 — Source truth, portable validation and prospective design
 
