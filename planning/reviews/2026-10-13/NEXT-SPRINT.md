@@ -45,3 +45,7 @@ The existing owner's changed-facts read found genuine normal-publication coheren
 ## October15 just-in-time recurrence
 
 Fresh October15 16:05 JIT comparison stopped BEFORE submission: profile/capacity168 differs from integrity167 despite ready/writable capacity above the unchanged floor. ZERO submissions/tokens/recovery keys consumed; no new failed Workflow. Existing owner read-only diagnosis resumed for recurring publication coordination; await genuine current coherence and fresh fit before the same one supported deliberate cohort. No promotion/sync/ordinary16 decision/current readiness probe. Historical15:04 coherence remains a valid earlier observation, not current admission. #643 acceptance and productioned01 remain unchanged.
+
+## October15 integrity publisher failure
+
+October15 named normal integrity audit8638 FAILED16:30:46/main exit1; current integrity ready=false/no tuple, capacity/profile168 coherent and above floor. Normal-lag hypothesis superseded; exact cause pending finite owned failure-log custody before TTL. No build submission/key consumed/fit or recovery handback. Existing owner diagnoses cause/minimal remedy read-only; no producer/guard changes, promotion/sync/current readiness or ordinary16 decision. #643 acceptance and productioned01 remain unchanged.
