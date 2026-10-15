@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Registry integrity failure cause established: current protected graph exceeds historical96GiB aggregate audit limit; verified prefix plus next object already103112110542B, final total unknown. Dedup/counter defect not found; no physical disk/auth/corruption claim. Existing owner prepares bounded read-only complete-closure byte accounting and45min fit plan BEFORE any calls/calibration. Preserve all roots/rollback custody/hash-origin checks/per-object limits/frozenv2/floors. No build/key use/promotion/sync/current readiness/ordinary16 decision. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Complete guarded read-only closure accounting succeeded:104314428281B across4647 unique blobs+312 repository-scoped manifests, all5340 exact metadata requests/zero blob-body reads,110.226s/source168 endfences exact. Prepare smallest Agents aggregate audit bound96→98GiB (next wholeGiB above measured total;912270471B rounding headroom), preserve every integrity/root/deadline/floor check. Normal owner source qualification/adoption and actual natural full audit still required; no payload/deadline-fit/current recovery/build/promotion/readiness claim. |
 
 ## S3 — Source truth, portable validation and prospective design
 
