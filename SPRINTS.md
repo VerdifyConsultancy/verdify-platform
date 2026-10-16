@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Owner natural full integrity audit45f7 succeededOct15 22:16:42/1834s within2700/source00159/full168; observer+frozenv2 coherentpublicationPASS22:17. Full successful-stream custody GAP retained (followersfailedInitializing/PodGC); ONEbounded historicalcentral-log recovery authorizedreadonly. Owner releasedCI; rootreturnedSOLE Retry SAMEunusedsource220 deliberate3imagecohort aftermandatoryCURRENTJITcoherence+freshfit. Historicalrecovery notcurrentreservation; anydenialSTOP/no keyloop. No build/image/promotion/runtime/readiness acceptance claimed yet. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Deliberate source220 ingestor and orchestrator images succeeded with exact native+typed receipts; Lab serial operation remains Retry-owned/pending finalcohort. Concrete downstream blocker: typedbroker offersbuild/validate but NOcandidate-pin/externalreceipt fan-in action; oldfailedparentcannotresume/standalonehandlesnotparentstepoutputs. Existing owner prepares smallest closed publisher action inexistingcontract reusingqualifiedownedhandles/normalpublisher/current-main CAS; SOURCE/OFFLINEscope only/no editsCIwrites/credentials/rawWorkflow/handcandidatechange. No candidate/runtime/readiness or749closure acceptance follows fromsource/builds. |
 
 ## S3 — Source truth, portable validation and prospective design
 
