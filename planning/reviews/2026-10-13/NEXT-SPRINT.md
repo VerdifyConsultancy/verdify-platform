@@ -91,3 +91,8 @@ Agents [PR4977](https://github.com/jvallery/agents/pull/4977) carries the review
 ## Publisher qualification composition correction
 
 PR4977 now head90c6e38a after two exact contract guards reproduced a stale generated broker source-bundle hash. The owning generator changed one hash;73 focused checks pass, runtime/pins/null identities unchanged. Required native qualification remains pending. Existing automatic two-image path is accepted under fixed profiles, shared semaphore/quota/scheduler and current integrity gates; fresh actual combined fit still precedes merge. No duplicate typed build or Sensor change. Live adoption/invoke remains held for qualified images/source exports and minimal CAS/inverse review; product main220/productioned01 unchanged.
+
+
+## Publisher conflict resolution
+
+Same PR4977 now6edbc32 resolves four actual generated conflicts against current Agents main42c19f31. Production modules and27 catalogue rows remain exact;24 regeneration steps/freshness and8 focused checks pass. Normal registered qualificationdf54cf55 tests e8479133 with20 checks; terminal pending. Same existing observer continues, then the authorized automatic two-image path after requiredPASS/current fit. Live adoption/invoke remains held; production unchanged.
