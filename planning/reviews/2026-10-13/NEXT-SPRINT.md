@@ -86,3 +86,8 @@ The complete existing caller-binding function already normalizes a freshly verif
 ## Publisher owner PR qualification
 
 Agents [PR4977](https://github.com/jvallery/agents/pull/4977) carries the reviewed closed publisher. Initial native integration failures prompted bounded schema, test-wiring, generated identity and catalogue merge-attribute corrections in the same PR; corrected focused checks pass at head207adb39. Required native qualification remains pending. Existing automatic push delivery builds both affected images on merge; avoid duplicate submissions and confirm its normal admission/fit behavior before merge. Live adoption and publisher invocation await qualified images/source exports and exact minimal CAS/inverse review. Product main220, productioned01 and #643 acceptance remain unchanged; ordinary16 decision stays deferred.
+
+
+## Publisher qualification composition correction
+
+PR4977 now head90c6e38a after two exact contract guards reproduced a stale generated broker source-bundle hash. The owning generator changed one hash;73 focused checks pass, runtime/pins/null identities unchanged. Required native qualification remains pending. Existing automatic two-image path is accepted under fixed profiles, shared semaphore/quota/scheduler and current integrity gates; fresh actual combined fit still precedes merge. No duplicate typed build or Sensor change. Live adoption/invoke remains held for qualified images/source exports and minimal CAS/inverse review; product main220/productioned01 unchanged.
