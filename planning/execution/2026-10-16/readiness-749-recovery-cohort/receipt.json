@@ -1,0 +1,193 @@
+{
+  "all_five_managed_candidate_release_dispositions": [
+    {
+      "candidate": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "candidate_equals_release": true,
+      "current_candidate_is_latest_qualified": null,
+      "disposition": "retain unchanged candidate/release; outside affected profiles",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api",
+      "proposed_candidate_after_supported_actuator": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+      "qualified_source220_digest": null,
+      "release": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+    },
+    {
+      "candidate": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "candidate_equals_release": true,
+      "current_candidate_is_latest_qualified": null,
+      "disposition": "retain unchanged candidate/release; outside affected profiles",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp",
+      "proposed_candidate_after_supported_actuator": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+      "qualified_source220_digest": null,
+      "release": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c"
+    },
+    {
+      "candidate": "sha256:f054874333809b25057c7d922df6eb962e581d994ee4141dbd75e9f70310b420",
+      "candidate_equals_release": false,
+      "current_candidate_is_latest_qualified": false,
+      "disposition": "new qualified source220 digest awaits supported candidate publication",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor",
+      "proposed_candidate_after_supported_actuator": "sha256:ebd30812244916563b649d141f9f69dcd6466021069038b73e40eea2c34c9c96",
+      "qualified_source220_digest": "sha256:ebd30812244916563b649d141f9f69dcd6466021069038b73e40eea2c34c9c96",
+      "release": "sha256:7aa993ebb35d345255d226f0a9758454031ae90c29599785923cac41b4a6fa2d"
+    },
+    {
+      "candidate": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+      "candidate_equals_release": true,
+      "current_candidate_is_latest_qualified": null,
+      "disposition": "retain unchanged candidate/release; outside affected profiles",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-migrate",
+      "proposed_candidate_after_supported_actuator": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+      "qualified_source220_digest": null,
+      "release": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962"
+    },
+    {
+      "candidate": "sha256:123b46e2ac470b9f54ea954f7af3f98b45b952bd6261017a685bdc49dcda7cb8",
+      "candidate_equals_release": false,
+      "current_candidate_is_latest_qualified": false,
+      "disposition": "new qualified source220 digest awaits supported candidate publication",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator",
+      "proposed_candidate_after_supported_actuator": "sha256:6a64b2091de2059a16c746f915863aeab3fb4b26f8312df2c42443845635e83d",
+      "qualified_source220_digest": "sha256:6a64b2091de2059a16c746f915863aeab3fb4b26f8312df2c42443845635e83d",
+      "release": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+    }
+  ],
+  "all_three_Succeeded": true,
+  "automatic_retry_or_default_rearm_proof": false,
+  "caller_binding_continuity": "Existing verified Deployment-caller normalization matches the retained operations. A physical Pod freeze or injected client is unnecessary; normal authentication and portfolio ownership guards remain unchanged. Operator identity metadata is excluded.",
+  "candidate_publisher": {
+    "commit": null,
+    "executed": false,
+    "raw_workflow_manual_retry_credential_or_candidate_edit_workaround": false,
+    "state": "Existing typed standalone builds have no supported external-receipt fan-in/candidate-publish action. Existing owner is implementing the reviewed closed action; source implementation and normal qualification/adoption remain separate."
+  },
+  "current_SQL_or_runtime_probe": false,
+  "current_desired_production_render": {
+    "byte_identical_to_accepted_ed01": true,
+    "fresh_runtime_health_claim": false,
+    "resources": 129,
+    "secrets": 0,
+    "sha256": "54fa824a4f9ad565b2307f73210ca14a0a30b503e1847539f9e6d69f97e3d59f"
+  },
+  "deliberate_after_genuine_owner_recovery": true,
+  "historical_JIT_refusals_created_no_builds": true,
+  "images": [
+    {
+      "all_direct_readers_exit0": true,
+      "created_at": "2026-10-16T15:08:05Z",
+      "declared_container_count": 10,
+      "digest": "sha256:ebd30812244916563b649d141f9f69dcd6466021069038b73e40eea2c34c9c96",
+      "direct_log_container_count": 10,
+      "dockerfile": "ingestor/Dockerfile",
+      "dockerfile_sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+      "finished_at": "2026-10-16T15:10:27Z",
+      "full_direct_declared_log_custody": true,
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ebd30812244916563b649d141f9f69dcd6466021069038b73e40eea2c34c9c96",
+      "output_contract": "agent-fleet.repo-build.outputs/2",
+      "phase": "Succeeded",
+      "profile": "verdify-ingestor",
+      "resolved_tree": "75e6daffcca502148fa144422b4790fdf3d61c14",
+      "source_closure": {
+        "image": "verdifyconsultancy/verdify-ingestor",
+        "schema": "agent-fleet.vallery.net/repo-build-source-closure/v4",
+        "status": "not-applicable"
+      },
+      "source_requested": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+      "source_resolved": "2208401de0c5d1653661c676cd255eaab2e7afb4"
+    },
+    {
+      "all_direct_readers_exit0": true,
+      "created_at": "2026-10-16T15:14:23Z",
+      "declared_container_count": 10,
+      "digest": "sha256:6a64b2091de2059a16c746f915863aeab3fb4b26f8312df2c42443845635e83d",
+      "direct_log_container_count": 8,
+      "dockerfile": "experiment_orchestrator/Dockerfile",
+      "dockerfile_sha256": "sha256:53a21487b661d55b609788d630666899e7d0ec46a01d01a1c7b2859dcbf03a9b",
+      "finished_at": "2026-10-16T15:15:34Z",
+      "full_direct_declared_log_custody": false,
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:6a64b2091de2059a16c746f915863aeab3fb4b26f8312df2c42443845635e83d",
+      "output_contract": "agent-fleet.repo-build.outputs/2",
+      "phase": "Succeeded",
+      "profile": "verdify-experiment-v2-orchestrator",
+      "resolved_tree": "75e6daffcca502148fa144422b4790fdf3d61c14",
+      "source_closure": {
+        "image": "verdifyconsultancy/verdify-experiment-v2-orchestrator",
+        "schema": "agent-fleet.vallery.net/repo-build-source-closure/v4",
+        "status": "not-applicable"
+      },
+      "source_requested": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+      "source_resolved": "2208401de0c5d1653661c676cd255eaab2e7afb4"
+    },
+    {
+      "all_direct_readers_exit0": true,
+      "created_at": "2026-10-16T15:23:32Z",
+      "declared_container_count": 10,
+      "digest": "sha256:23140a44c28259a6cd5e6a97b5d371c1847498199284a6b111181de3527f9fbf",
+      "direct_log_container_count": 10,
+      "dockerfile": "scripts/Dockerfile.lab-publisher",
+      "dockerfile_sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670",
+      "finished_at": "2026-10-16T15:26:43Z",
+      "full_direct_declared_log_custody": true,
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:23140a44c28259a6cd5e6a97b5d371c1847498199284a6b111181de3527f9fbf",
+      "output_contract": "agent-fleet.repo-build.outputs/2",
+      "phase": "Succeeded",
+      "profile": "verdify-lab-publisher-k3s",
+      "resolved_tree": "75e6daffcca502148fa144422b4790fdf3d61c14",
+      "source_closure": {
+        "image": "verdifyconsultancy/verdify-lab-publisher-k3s",
+        "schema": "agent-fleet.vallery.net/repo-build-source-closure/v4",
+        "status": "not-applicable"
+      },
+      "source_requested": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+      "source_resolved": "2208401de0c5d1653661c676cd255eaab2e7afb4"
+    }
+  ],
+  "issue749": "open; image publication is not candidate adoption, production rollout or original readiness acceptance",
+  "lab_new_digest_qualified_but_not_adopted": "sha256:23140a44c28259a6cd5e6a97b5d371c1847498199284a6b111181de3527f9fbf",
+  "new_registry_images_published": 3,
+  "orchestrator_log_scope": {
+    "declared": 10,
+    "direct": 8,
+    "missing_direct": [
+      "main",
+      "wait"
+    ],
+    "one_central_query_bytes": 5183,
+    "one_central_query_entries": 43,
+    "one_current_pod_get": "NotFound",
+    "returned_streams": [
+      "wait"
+    ],
+    "scope": "exact namespace/uniquePodname/time plus savedUID; not original byte-complete stdout",
+    "uid_label_absent": true
+  },
+  "original_failed_attempt_preserved_as_failed": true,
+  "private_details_excluded": [
+    "caller Pod/UID/container/SA metadata",
+    "operation IDs and handles",
+    "registry signal and capacity contract data",
+    "raw workflows/Pods/logs",
+    "actual control/state/approval/native rows",
+    "physical proposal values and credentials"
+  ],
+  "private_draft_only": {
+    "combined_rollout_and_distinct_ordinary_intent": "nonexecutable; exact-image preview and inverse are prepared privately",
+    "fresh_approval_created": false,
+    "human_question_asked": false,
+    "old_source_identity_borrowed": false,
+    "silent_value_or_plan_substitution": false
+  },
+  "schema": "verdify749-coarse-recovery-cohort/v1",
+  "serial_nonoverlapping_builds": true,
+  "shared_CI_window": "explicitly released; all3 terminal and no owned pending build/controller write",
+  "source_candidate_release_runtime_or_credential_changes": false,
+  "source_main_readback_at_cohort_close": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "source_validation_repeated": false,
+  "source_worktree_clean_at_readback": true,
+  "submission_count": 3,
+  "unmanaged_hand_pins": {
+    "lab-publisher-k3s": "sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a",
+    "planner": "sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a",
+    "setpoint-server": "sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491"
+  }
+}
