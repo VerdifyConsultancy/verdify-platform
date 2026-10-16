@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Agents4973 normal required native qualification passed/merged0c2303ea; measured96→98Gi audit calibration adopted as ONLYcapacity.py key, tick/manualAppspec/unrelatedbytes preserved. Pre-adoption old96 audit failure retained. Next NATURAL full audit45f7add9 began21:46:10/source00159/full168 exact; terminal/deadline22:31:10 pending with full logs captured. No recovery/coherentpublication/freshfit/buildhandback/image/promotion/readiness claim; await exact natural terminal, no polling/manualaudit. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Owner natural full integrity audit45f7 succeededOct15 22:16:42/1834s within2700/source00159/full168; observer+frozenv2 coherentpublicationPASS22:17. Full successful-stream custody GAP retained (followersfailedInitializing/PodGC); ONEbounded historicalcentral-log recovery authorizedreadonly. Owner releasedCI; rootreturnedSOLE Retry SAMEunusedsource220 deliberate3imagecohort aftermandatoryCURRENTJITcoherence+freshfit. Historicalrecovery notcurrentreservation; anydenialSTOP/no keyloop. No build/image/promotion/runtime/readiness acceptance claimed yet. |
 
 ## S3 — Source truth, portable validation and prospective design
 
