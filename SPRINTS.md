@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | ALL3deliberate source220 registered builds Succeeded serially; joinedcohort e60ac24d/all5pairs/unchangedrender129-zeroSecrets accepted, sharedCIreleased. Candidate publication still blocked by missingtypedaction. Root reviewedscope6735c5c5 and authorized SAMEAgentsowner minimalclosedpublisher-action source implementation/focusedproof (existingcontract/twoownedhandles/normalpinner-CAS/oldreceiptcompatibility), notpush/liveeffectyet. Preserve originalKeplercallerPod throughreceiptconsumption; onecurrentmetadataavailabilitycheck assignedRetryreadonly. NewMCProllheld/productioned01unchanged/ordinary16draftNONEXECUTABLE. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | ALL3deliberate source220 registered builds Succeeded serially; joinedcohort e60ac24d/all5pairs/unchangedrender129-zeroSecrets accepted, sharedCIreleased. Candidate publication still blocked by missingtypedaction. Root reviewedscope6735c5c5 and authorized SAMEAgentsowner minimalclosedpublisher-action source implementation/focusedproof (existingcontract/twoownedhandles/normalpinner-CAS/oldreceiptcompatibility), notpush/liveeffectyet. ExistingverifiedDeployment normalization provenforbothhandles; physicalPodfreeze/injectedclientrequirementREMOVED withoutownershipchange. Normalbroker+typedconsumerdelivery remainsfuturequalifiedscope; productioned01unchanged/ordinary16draftNONEXECUTABLE. |
 
 ## S3 — Source truth, portable validation and prospective design
 
