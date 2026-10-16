@@ -27,7 +27,7 @@ Exit: Original four outcomes retain authoritative source/runtime/recovery receip
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | Deliberate source220 ingestor and orchestrator images succeeded with exact native+typed receipts; Lab serial operation remains Retry-owned/pending finalcohort. Concrete downstream blocker: typedbroker offersbuild/validate but NOcandidate-pin/externalreceipt fan-in action; oldfailedparentcannotresume/standalonehandlesnotparentstepoutputs. Existing owner prepares smallest closed publisher action inexistingcontract reusingqualifiedownedhandles/normalpublisher/current-main CAS; SOURCE/OFFLINEscope only/no editsCIwrites/credentials/rawWorkflow/handcandidatechange. No candidate/runtime/readiness or749closure acceptance follows fromsource/builds. |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 4–8 | ALL3deliberate source220 registered builds Succeeded serially; joinedcohort e60ac24d/all5pairs/unchangedrender129-zeroSecrets accepted, sharedCIreleased. Candidate publication still blocked by missingtypedaction. Root reviewedscope6735c5c5 and authorized SAMEAgentsowner minimalclosedpublisher-action source implementation/focusedproof (existingcontract/twoownedhandles/normalpinner-CAS/oldreceiptcompatibility), notpush/liveeffectyet. Preserve originalKeplercallerPod throughreceiptconsumption; onecurrentmetadataavailabilitycheck assignedRetryreadonly. NewMCProllheld/productioned01unchanged/ordinary16draftNONEXECUTABLE. |
 
 ## S3 — Source truth, portable validation and prospective design
 
