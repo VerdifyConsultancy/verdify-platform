@@ -81,3 +81,8 @@ The complete existing caller-binding function already normalizes a freshly verif
 ## Durable three-image source evidence
 
 [Immutable source-only cohort handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/89ad8e8e3c3505444af08d929f805624a696ecb7/planning/execution/2026-10-16/readiness-749-recovery-cohort/README.md) records all three qualified images and all five current/proposed pin dispositions, with unchanged accepted render and explicit log/version/closure limits. It establishes no candidate publication, promotion, fresh ordinary-policy authority or runtime acceptance. Root verified both provider file lengths and SHA256 bytes.
+
+
+## Publisher owner PR qualification
+
+Agents [PR4977](https://github.com/jvallery/agents/pull/4977) carries the reviewed closed publisher. Initial native integration failures prompted bounded schema, test-wiring, generated identity and catalogue merge-attribute corrections in the same PR; corrected focused checks pass at head207adb39. Required native qualification remains pending. Existing automatic push delivery builds both affected images on merge; avoid duplicate submissions and confirm its normal admission/fit behavior before merge. Live adoption and publisher invocation await qualified images/source exports and exact minimal CAS/inverse review. Product main220, productioned01 and #643 acceptance remain unchanged; ordinary16 decision stays deferred.
