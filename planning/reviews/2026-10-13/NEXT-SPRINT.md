@@ -77,3 +77,7 @@ ALL3deliberate source220 registered builds Succeeded serially; joinedcohort e60a
 ## Corrected caller continuity interpretation
 
 The complete existing caller-binding function already normalizes a freshly verified Kepler Deployment Pod to its stable logical principal. Root recomputed that exact principal from both actual retained build Workflow annotations. The earlier physical-Pod freeze and injected-client requirement were based on an incomplete function read and are removed. Existing audience, ServiceAccount, live Pod UID, Deployment naming and portfolio verification stay unchanged. Ordinary qualified broker then typed consumer delivery is the simpler supported path; no ownership relaxation or live effect follows from this correction.
+
+## Durable three-image source evidence
+
+[Immutable source-only cohort handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/89ad8e8e3c3505444af08d929f805624a696ecb7/planning/execution/2026-10-16/readiness-749-recovery-cohort/README.md) records all three qualified images and all five current/proposed pin dispositions, with unchanged accepted render and explicit log/version/closure limits. It establishes no candidate publication, promotion, fresh ordinary-policy authority or runtime acceptance. Root verified both provider file lengths and SHA256 bytes.
