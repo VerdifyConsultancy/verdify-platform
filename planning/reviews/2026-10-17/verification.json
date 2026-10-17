@@ -1267,5 +1267,15 @@
     "complete25_copy_ack_sha256": "cd138669c2cf9ffa2355ad6d203e3c0f0e943d9ceca75ff9140e6ef55d2e8428",
     "root_unfrozen": true,
     "new_explicit_physical_run": false
+  },
+  "snapshot_wait_runtime_delivery": {
+    "release": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "observed_at": "2026-10-17T23:15:09.331370Z",
+    "runtime_receipt_sha256": "6be145e3b43691bd4961489a65a08adfa64affbb69d723e11b0151ce6fa2296e",
+    "root_runtime_review_sha256": "1458ee197eb1003e609d34a861a8a08af6eea1b1cf7bf8915be09d66d126ace7",
+    "runtime_pass": true,
+    "current_final_packet_pending": true,
+    "shared_CI_returned_before_observation": true
   }
 }

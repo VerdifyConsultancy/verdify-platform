@@ -6,9 +6,7 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 
 ```mermaid
 flowchart TD
-  delivery["749 source/images and minimal rollout completed"] --> hold["Current retained-state/snapshot hold"]
-  hold --> remedy["Published67f snapshot fix and normal native qualification"]
-  remedy --> i749["749 actual quiet interval and bounded read-only acceptance"]
+  delivery["749 snapshot fix67f deployed in releasef916; runtime checks pass"] --> i749["749 actual quiet interval and bounded read-only acceptance"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783
   i981["981 energy source truth"] --> i782["782 final scientific eligibility"]
@@ -25,7 +23,7 @@ flowchart TD
   i784 --> i785["785 reveal/readout"]
 ```
 
-The delivery steps above are internal to #749, not new native issue dependencies. Source10dd/image6e and release11cd are deployed with runtime basic checks passing. A real current retained-state/snapshot hold blocks final readiness; the exact two-file producer fix is published as67f, with normal native/image qualification pending before its minimal rollout and a new current quiet interval. The consumed policy run is not replayed and missing historical reports are not retroactively repaired. The existing Agents owner returned the finite shared window; SAME Retry owns this product delivery and returns it at promotion terminal. The final read-only packet observes actual authority/exposure without inventing an experiment. Agents4977 remains outside this route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
+The delivery steps above are internal to #749, not new native issue dependencies. Source67f/image249c and releasef916 are deployed with source, smoke, singleton, hook and five-minute schema checks passing. The actual same snapshot mismatch now waits temporarily and resumes naturally; the old11cd terminal hold remains dated failure evidence. The source-defined quiet interval and one current read-only packet remain before acceptance. The consumed policy run is not replayed and missing historical reports are not retroactively repaired. SAME Retry owns the product observation; shared CI/controller custody is already returned to the existing Agents owner at actual promotion terminal and complete log closure. The final read-only packet observes actual authority/exposure without inventing an experiment. Agents4977 remains outside this route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
 
 
 ## Exact native relationships
