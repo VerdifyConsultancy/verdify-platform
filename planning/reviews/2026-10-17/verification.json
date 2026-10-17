@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "142f75a1ec8f297d5153bd83b153ec6d475147ee5ecf526da85b8117050cb068",
+    "prompt_sha256": "e71f4cacb3afd79eed71cebac3352f529e734f956cad72994ead4e362d5066e1",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -456,6 +456,38 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T17:41:51Z",
       "scope": "actual source/image/candidate completion and corrected ingestor-only rollout scope; native graph and milestones unchanged"
+    },
+    "current_policy_decision": {
+      "status": "explicitly_approved_by_Jason; rollout_and_readiness_not_performed",
+      "decision_scope": "ingestor-only rollout and one fresh guarded ordinary-policy run; physical recovery separately scoped",
+      "capture_finished_at": "2026-10-17T17:47:23.131523+00:00",
+      "capture_receipt_sha256": "71f2c96c92ca60153c5e07aed52c5c96f30b540f23f52c1c505651286d197cea",
+      "private_packet_sha256": "b46576e51b7f57a04883a1408acfda41982f7e8a7089291dc042b52199217488",
+      "root_review_sha256": "8208fa996c3df5d3ee1e51766315c0d638ea3e97365879d09cfb5d895bfb448e",
+      "sealed_members_verified": 16,
+      "pending_adjustments": 19,
+      "nominal_stages": [
+        12,
+        7
+      ],
+      "full_plan_rows": 39,
+      "bound_readbacks": 52,
+      "canonical_finite_fields": 48,
+      "independent_render_sha256": "cfe9dbb1c7942f12c3469bad1176abbde6e07f217d314e4051a9458d000d0240",
+      "prospective_resources_changed": 3,
+      "shared_window_release_pending": false,
+      "physical_recovery_authorized": false,
+      "shared_window_released_scope": "digest-only product validation and attended sync; existing external image coordinator retains isolated owner custody; no globalzero requirement"
+    },
+    "issue749_approved_rollout": {
+      "verified_at": "2026-10-17T17:57:59.802573+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "3e9e4afc3268d26d9d2d3ce638621bbc9045b526de28270c5994a0962a78e39b",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T17:57:58Z",
+      "scope": "specific rollout and ordinary-policy decision approved; current19 captured proposal; runtime/readiness still pending; graph and milestones unchanged"
     }
   }
 }
