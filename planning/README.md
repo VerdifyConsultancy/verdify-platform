@@ -2,15 +2,9 @@
 
 Start with [CAMPAIGN.md](CAMPAIGN.md) for implementation strategy and [the roadmap](../PROJECT_BOARD.md) for the complete issue index. [EVIDENCE.md](EVIDENCE.md) explains the review findings and their limits.
 
-The [October 11 acceptance review and S2 completion sprint](reviews/2026-10-11/NEXT-SPRINT.md) is the latest full review. It supersedes the October 6 runtime snapshot: production promotion ultimately failed, #949 has regressed, #49 is accepted, and seven open sprint issues have 46–88 remaining engineering hours. [Status against every original stage](reviews/2026-10-11/STATUS.md), [complete clause matrix](reviews/2026-10-11/ISSUE-TRIAGE.md), and [fresh-session goal](reviews/2026-10-11/GOAL.md) retain the full C0–C8 scope. S1's historical acceptances remain dated evidence; the reopened convergence issue must be qualified again.
+The [October17 live review and current/next sprint](reviews/2026-10-17/NEXT-SPRINT.md) is authoritative for current execution:58 open issues, ten recent accepted closures, current source220 versus running source5e, and the remaining749 publisher/runtime path. [Live status](reviews/2026-10-17/STATUS.md), [all-issue triage](reviews/2026-10-17/ISSUE-TRIAGE.md), [active native graph](reviews/2026-10-17/DEPENDENCIES.md) and [handoff](reviews/2026-10-17/GOAL.md) distinguish completed work, staged source and unproven runtime/physical acceptance.
 
-The [October 6 review](reviews/2026-10-06/NEXT-SPRINT.md) remains historical evidence of the earlier healthy snapshot, not current deployment acceptance.
-
-The [October11 Iris execution receipt](execution/2026-10-11/IRIS-953.md) seals #953's first post-rollout and current natural-cycle acceptance. It updates that bounded issue after the full review; the remaining S2 and C0–C8 requirements stay open.
-
-The historical [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) records the previous S1 pull set and its dated full-issue acceptance, health and native graph receipts.
-
-The [September 26 production, issue, branch and worktree review](reviews/2026-09-26/NEXT-SPRINT.md) provides the next-sprint pull set and a full 80-issue inventory. The two later estate-rationalization issues, #801 and #802, are outside this 78-issue campaign source and are included in that review with their native cross-repository dependencies.
+The October5–16 reviews and coordinator ledger remain historical evidence. In particular,949 and643 are closed; old failed-rollout/reopened-current assertions are superseded. The three legacy issues317/801/802 remain included in execution coverage and the native cross-repository graph even though the original campaign stage model predates them. The canonical stage model now also includes977/980/981.
 
 `backlog.yaml` is the v2 source of truth (JSON-compatible YAML): nine stages and every campaign issue's owner role, priority, effort, what, why, how, acceptance, actual source paths, blocking dependencies, parent, delivery, rollback and decision boundary. The old lane/story schema and issue bodies are preserved in [the archive](archive/2026-09-05/README.md); they are not a second active backlog.
 

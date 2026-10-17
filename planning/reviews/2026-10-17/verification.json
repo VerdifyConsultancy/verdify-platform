@@ -1,0 +1,75 @@
+{
+  "schema": "verdify-live-replan-20261017",
+  "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "prior_planning_revision": "cc7e77d562661872a428ce6cd8a2429034d245fd",
+  "intake_open_issues": 56,
+  "new_issues": [
+    980,
+    981
+  ],
+  "planned_open_issues": 58,
+  "recent_closed_issues": [
+    303,
+    304,
+    382,
+    396,
+    419,
+    643,
+    644,
+    949,
+    965,
+    976
+  ],
+  "canonical_issue_count": 92,
+  "expected_active_native_edges": 41,
+  "expected_satisfied_native_edges": 27,
+  "sprint3_base_hours": [
+    33,
+    62
+  ],
+  "sprint3_reserve_hours": 18,
+  "shared_fortnight_ceiling": 80,
+  "provider_publication_verified": false,
+  "evidence_hashes": [
+    {
+      "kind": "issue-recommendations.json",
+      "sha256": "2c4c9387227ac48a58fe03a6303b678ff8a5063a3b994ced597d7ad2941bdf30"
+    },
+    {
+      "kind": "prs-and-work-in-flight.json",
+      "sha256": "508bab42259063d8d196e8e28a26b8a38e22da044330d9be6c062fa78773d94c"
+    },
+    {
+      "kind": "runtime-summary.private.json",
+      "sha256": "78b3e0e4c0af8142f4f2809b4c69fe6e5318467382dc33eb2a79057d083b1da1"
+    },
+    {
+      "kind": "issue-runtime-findings.json",
+      "sha256": "2b9fa9e84fdeeaa453ac77de64c0ebd6c4c2bf2290e8ab0ecef3aa7b9a4ddd16"
+    },
+    {
+      "kind": "native-graph.json",
+      "sha256": "8d0d097411a65b4156cf070014bf44178cc90a4312ea247eb6f40573b573d905"
+    },
+    {
+      "kind": "open-issues.json",
+      "sha256": "cafe33e34cb7e7e7ed2971276e8d5b575715e8cde8029012a5e2b0f613f6b44b"
+    },
+    {
+      "kind": "recent-comments.json",
+      "sha256": "08cd9a59c3d1b3c36a35ef7f48e8740aeec9d2f35cd100d0036e497d3ed211e3"
+    }
+  ],
+  "limits": [
+    "Raw evidence remains private.",
+    "No production, device, credentials, controller or CI mutation by the review.",
+    "Provider synchronization is recorded in the final receipt after readback."
+  ],
+  "local_validation": {
+    "schema": "PASS:92 issues/9 stages/78 historical edges; coverage and DAG valid",
+    "generated_views": "all7 fresh",
+    "focused_tests": "35 passed",
+    "published_paths": "all source paths exist",
+    "diff_check": "PASS"
+  }
+}

@@ -191,7 +191,7 @@ def test_execution_plan_covers_open_work_and_renders_current_sprints(execution_d
     assert "Data/platform lead | 12–20 | Refresh storage admission" in sprints
     assert "Platform lead | Unestimated | Retain the upstream correction" in sprints
     assert "## C0 —" in sprints
-    assert "planning/reviews/2026-10-12/DEPENDENCIES.md" in rendered["planning/DEPENDENCIES.md"]
+    assert "[current reviewed native graph](reviews/2026-10-12/DEPENDENCIES.md)" in rendered["planning/DEPENDENCIES.md"]
 
 
 def test_execution_plan_preserves_issue_bodies_and_manifest(execution_data):

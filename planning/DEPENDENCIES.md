@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-12/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 89-issue/76-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-17/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 92-issue/78-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -62,6 +62,8 @@ flowchart TD
     i965["#965 Separate API grow-light command intent from observed equip"]
     i963["#963 Bound moisture-exchange state and preserve structured cons"]
     i976["#976 Qualify safe recovery of Lab publication receipt metadata"]
+    i980["#980 Resolve backup-exporter readiness timeouts without obscuri"]
+    i981["#981 Restore truthful energy source freshness and trace stale m"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 Durability program: recoverable backups, measured RPO/RTO "]
@@ -72,6 +74,7 @@ flowchart TD
     i245["#245 Execute a separately bounded database cutover only after p"]
     i643["#643 Extend least-privilege database roles beyond the already-r"]
     i49["#49 Audit and close historical suppressed sensor alerts withou"]
+    i977["#977 Decide the database replica policy before November 12; kee"]
   end
   subgraph C6["C6: Evidence-led control and irrigation"]
     i359["#359 Control program: truthful crop corridors before evidence-l"]
@@ -125,6 +128,7 @@ flowchart TD
   i779 --> i782
   i780 --> i782
   i781 --> i782
+  i981 --> i782
   i639 --> i783
   i587 --> i783
   i782 --> i783
@@ -189,6 +193,7 @@ flowchart TD
   i785 --> i787
   i781 --> i787
   i410 --> i787
+  i981 --> i787
 ```
 
 ## Exact edge list
@@ -207,6 +212,7 @@ flowchart TD
 | [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
 | [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
+| [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
@@ -271,5 +277,6 @@ flowchart TD
 | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
 | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
+| [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.

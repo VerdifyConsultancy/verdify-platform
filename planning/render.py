@@ -249,7 +249,7 @@ def outputs(plan: Backlog) -> dict[str, str]:
         graph_title, graph_body = rendered["planning/DEPENDENCIES.md"].split("\n\n", 1)
         rendered["planning/DEPENDENCIES.md"] = (
             graph_title
-            + f"\n\nThe [current reviewed native graph]({REPO}/blob/main/{review_graph}) includes independent local "
+            + f"\n\nThe [current reviewed native graph]({review_graph.removeprefix('planning/')}) includes independent local "
             "issues and transitive cross-repository predecessors. The canonical "
             f"{len(plan.issues)}-issue/{sum(len(item.depends_on) for item in plan.issues)}-edge campaign graph "
             "is retained below.\n\n" + graph_body

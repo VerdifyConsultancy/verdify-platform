@@ -33,3 +33,71 @@ Retained-input replay found17of17 naive app timestamps silently skipped by the o
 ## Guarded archive-only completion
 
 The existing supported archive-only branch consumed once on its normal cadence at22:45:42UTC, after authentic original custody/exact12 confirmed native rows/current readback-plan guards. Immutable archival preserves the old active state and expired approval; the current writer still requires distinct fresh approval. No new bounded policy or rollback candidate was sent; routine occupancy synchronization remains separate. Collector source737d and canonical snapshotf690 are delivered, with local429 focused+35 planning checks. Actual main build profiles are ingestor/orchestrator/Lab, not migration; classification stdout is not full native PR pytest evidence. Source/image qualification remains distinct from runtime acceptance. A reviewable ordinary16-field decision and run-bound settlement evidence assessment are being prepared; no current readiness packet or physical qualification is claimed.
+
+## Actual image-admission blocker
+
+Reviewed completion source2208401d and canonical13 files are delivered; local306 focused+35 planning checks and native source validation exit0 are accepted. Automatic7rrw7 then failed its first image build before publication on registry protected-set mismatch. Expected generation164/count302 is known; observed set is empty, so physical disk exhaustion and cause are unproved. Existing owner lane diagnoses exact producer/contract/custody and overlap before any reversible owner fix; no retry, guard bypass, image, actuator, promotion or sync followed. Ordinary16-setting decision stays deferred until qualified images and rollout/inverse exist. Production remains accepteded01; #643 stays completed.
+
+## October15 registry publication recovery
+
+The existing owner's changed-facts read found genuine normal-publication coherence across profile/capacity/integrity, ready/writable above the preserved floor and a bounded standard single-builder fit. No producer repair, manual duplicate audit or guard change was needed. The individual overnight audit is no longer retained; its terminal result remains unknown. Root released one documented deliberate supported build resumption for unchanged qualified source220/trusted three profiles, with fresh just-in-time guards. Prior7rrw7 failure remains immutable; new images/actuator and runtime acceptance are pending. The distinct ordinary16-setting decision stays deferred until the qualified cohort and rollout/inverse are concrete.
+
+## October15 just-in-time recurrence
+
+Fresh October15 16:05 JIT comparison stopped BEFORE submission: profile/capacity168 differs from integrity167 despite ready/writable capacity above the unchanged floor. ZERO submissions/tokens/recovery keys consumed; no new failed Workflow. Existing owner read-only diagnosis resumed for recurring publication coordination; await genuine current coherence and fresh fit before the same one supported deliberate cohort. No promotion/sync/ordinary16 decision/current readiness probe. Historical15:04 coherence remains a valid earlier observation, not current admission. #643 acceptance and productioned01 remain unchanged.
+
+## October15 integrity publisher failure
+
+October15 named normal integrity audit8638 FAILED16:30:46/main exit1; current integrity ready=false/no tuple, capacity/profile168 coherent and above floor. Normal-lag hypothesis superseded; exact cause pending finite owned failure-log custody before TTL. No build submission/key consumed/fit or recovery handback. Existing owner diagnoses cause/minimal remedy read-only; no producer/guard changes, promotion/sync/current readiness or ordinary16 decision. #643 acceptance and productioned01 remain unchanged.
+
+## Confirmed registry graph bound incompatibility
+
+Registry integrity failure cause established: current protected graph exceeds historical96GiB aggregate audit limit; verified prefix plus next object already103112110542B, final total unknown. Dedup/counter defect not found; no physical disk/auth/corruption claim. Existing owner prepares bounded read-only complete-closure byte accounting and45min fit plan BEFORE any calls/calibration. Preserve all roots/rollback custody/hash-origin checks/per-object limits/frozenv2/floors. No build/key use/promotion/sync/current readiness/ordinary16 decision. Repeating the unchanged audit cannot resolve this bound. #643 and productioned01 remain accepted.
+
+## Complete registry graph accounting
+
+Complete guarded read-only closure accounting succeeded:104314428281B across4647 unique blobs+312 repository-scoped manifests, all5340 exact metadata requests/zero blob-body reads,110.226s/source168 endfences exact. Prepare smallest Agents aggregate audit bound96→98GiB (next wholeGiB above measured total;912270471B rounding headroom), preserve every integrity/root/deadline/floor check. Normal owner source qualification/adoption and actual natural full audit still required; no payload/deadline-fit/current recovery/build/promotion/readiness claim. Productioned01/#643 acceptance remain unchanged.
+
+## Owner calibration qualified and adopted
+
+Agents4973 normal required native qualification passed/merged0c2303ea; measured96→98Gi audit calibration adopted as ONLYcapacity.py key, tick/manualAppspec/unrelatedbytes preserved. Pre-adoption old96 audit failure retained. Next NATURAL full audit45f7add9 began21:46:10/source00159/full168 exact; terminal/deadline22:31:10 pending with full logs captured. No recovery/coherentpublication/freshfit/buildhandback/image/promotion/readiness claim; await exact natural terminal, no polling/manualaudit. Product productioned01 and #643 acceptance remain unchanged.
+
+## Natural registry audit accepted; current build admission remains guarded
+
+Owner natural full integrity audit45f7 succeededOct15 22:16:42/1834s within2700/source00159/full168; observer+frozenv2 coherentpublicationPASS22:17. Full successful-stream custody GAP retained (followersfailedInitializing/PodGC); ONEbounded historicalcentral-log recovery authorizedreadonly. Owner releasedCI; rootreturnedSOLE Retry SAMEunusedsource220 deliberate3imagecohort aftermandatoryCURRENTJITcoherence+freshfit. Historicalrecovery notcurrentreservation; anydenialSTOP/no keyloop. No build/image/promotion/runtime/readiness acceptance claimed yet. Productioned01 and #643 acceptance remain unchanged; fresh ordinary-policy authority stays deferred.
+
+## Supported candidate publication route missing
+
+Deliberate source220 ingestor and orchestrator images succeeded with exact native+typed receipts; Lab serial operation remains Retry-owned/pending finalcohort. Concrete downstream blocker: typedbroker offersbuild/validate but NOcandidate-pin/externalreceipt fan-in action; oldfailedparentcannotresume/standalonehandlesnotparentstepoutputs. Existing owner prepares smallest closed publisher action inexistingcontract reusingqualifiedownedhandles/normalpublisher/current-main CAS; SOURCE/OFFLINEscope only/no editsCIwrites/credentials/rawWorkflow/handcandidatechange. No candidate/runtime/readiness or749closure acceptance follows fromsource/builds. Registry recovery is accepted; productioned01/#643 acceptance and fresh ordinary authority limits remain unchanged.
+
+## Three-image cohort complete; closed publisher remedy in source
+
+ALL3deliberate source220 registered builds Succeeded serially; joinedcohort e60ac24d/all5pairs/unchangedrender129-zeroSecrets accepted, sharedCIreleased. Candidate publication still blocked by missingtypedaction. Root reviewedscope6735c5c5 and authorized SAMEAgentsowner minimalclosedpublisher-action source implementation/focusedproof (existingcontract/twoownedhandles/normalpinner-CAS/oldreceiptcompatibility), notpush/liveeffectyet. Preserve originalKeplercallerPod throughreceiptconsumption; onecurrentmetadataavailabilitycheck assignedRetryreadonly. NewMCProllheld/productioned01unchanged/ordinary16draftNONEXECUTABLE. Source-closure/v4 is not-applicable, not full OCI closure. Ingestor/Lab have10/10 direct log custody; orchestrator8/10 plus wait-only recovery remains explicit. No candidate, release or runtime mutation occurred.
+
+## Corrected caller continuity interpretation
+
+The complete existing caller-binding function already normalizes a freshly verified Kepler Deployment Pod to its stable logical principal. Root recomputed that exact principal from both actual retained build Workflow annotations. The earlier physical-Pod freeze and injected-client requirement were based on an incomplete function read and are removed. Existing audience, ServiceAccount, live Pod UID, Deployment naming and portfolio verification stay unchanged. Ordinary qualified broker then typed consumer delivery is the simpler supported path; no ownership relaxation or live effect follows from this correction.
+
+## Durable three-image source evidence
+
+[Immutable source-only cohort handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/89ad8e8e3c3505444af08d929f805624a696ecb7/planning/execution/2026-10-16/readiness-749-recovery-cohort/README.md) records all three qualified images and all five current/proposed pin dispositions, with unchanged accepted render and explicit log/version/closure limits. It establishes no candidate publication, promotion, fresh ordinary-policy authority or runtime acceptance. Root verified both provider file lengths and SHA256 bytes.
+
+
+## Publisher owner PR qualification
+
+Agents [PR4977](https://github.com/jvallery/agents/pull/4977) carries the reviewed closed publisher. Initial native integration failures prompted bounded schema, test-wiring, generated identity and catalogue merge-attribute corrections in the same PR; corrected focused checks pass at head207adb39. Required native qualification remains pending. Existing automatic push delivery builds both affected images on merge; avoid duplicate submissions and confirm its normal admission/fit behavior before merge. Live adoption and publisher invocation await qualified images/source exports and exact minimal CAS/inverse review. Product main220, productioned01 and #643 acceptance remain unchanged; ordinary16 decision stays deferred.
+
+
+## Publisher qualification composition correction
+
+PR4977 now head90c6e38a after two exact contract guards reproduced a stale generated broker source-bundle hash. The owning generator changed one hash;73 focused checks pass, runtime/pins/null identities unchanged. Required native qualification remains pending. Existing automatic two-image path is accepted under fixed profiles, shared semaphore/quota/scheduler and current integrity gates; fresh actual combined fit still precedes merge. No duplicate typed build or Sensor change. Live adoption/invoke remains held for qualified images/source exports and minimal CAS/inverse review; product main220/productioned01 unchanged.
+
+
+## Publisher conflict resolution
+
+Same PR4977 now6edbc32 resolves four actual generated conflicts against current Agents main42c19f31. Production modules and27 catalogue rows remain exact;24 regeneration steps/freshness and8 focused checks pass. Normal registered qualificationdf54cf55 tests e8479133 with20 checks; terminal pending. Same existing observer continues, then the authorized automatic two-image path after requiredPASS/current fit. Live adoption/invoke remains held; production unchanged.
+
+
+## Superseding full review — October 17, 2026
+
+The [October17 current/next sprint](../2026-10-17/NEXT-SPRINT.md) supersedes current-state and allocation assertions above. Original S2 outcomes are complete;749 remains current, with verified publisher/source/runtime distinctions. All58 open issues and nextS3 six-issue33–62h base plus18h reserve are reconciled. This dated document remains history, not an independent current queue.
