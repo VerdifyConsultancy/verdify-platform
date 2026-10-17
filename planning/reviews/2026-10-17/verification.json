@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "9785de66bf01006f0d78b95723313ce0ba0944ab1180ff95480e912ffd72fe49",
+    "prompt_sha256": "142f75a1ec8f297d5153bd83b153ec6d475147ee5ecf526da85b8117050cb068",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -388,9 +388,10 @@
       "fresh_jit_sha256": "6f51132c3d2dc7c4f235bd1948f7b484c707f5d5be172311385aa39dec71a371",
       "native_parent": "verdify-platform-ci-m8m6z",
       "native_parent_uid": "e154f2a2-26e6-49d4-8f27-f42d0489ab08",
-      "last_known_phase": "Running",
+      "last_known_phase": "Succeeded",
       "image_pin_runtime_acceptance": false,
-      "sole_ci_owner": "existing Retry session"
+      "sole_ci_owner": "existing Retry session",
+      "qualification_limit": "source/image/candidate accepted; runtime not adopted"
     },
     "issue749_source_delivery": {
       "verified_at": "2026-10-17T17:20:40.068128+00:00",
@@ -401,6 +402,60 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T17:20:39Z",
       "scope": "actual source publication/native parent in flight; native graph and milestones unchanged"
+    },
+    "native_source_validation": {
+      "receipt_sha256": "688fdbbaf27f91674b00959c463f92ee664e0bd2727753612d0112eeb4128c09",
+      "first_attempt_succeeded": true,
+      "all4_containers_exit0": true,
+      "retained8_stream_hashes_exact": true,
+      "final_reader_returns_pending": false,
+      "profiles": [
+        "ingestor",
+        "lab-publisher"
+      ],
+      "other6_profiles_unaffected": true,
+      "native_skips_retained": true,
+      "image_or_pin_acceptance": true
+    },
+    "rollout_scope_correction": {
+      "initial_receipt_sha256": "76d96d15d65eb4bc01cea2c690dc7974a823f93456cb249e5a13ca190e50dd76",
+      "correction_receipt_sha256": "cb75fffd4952c851c539c861e39dff217baa28a1744e168f8d51e0143d1d1109",
+      "all10_source_hashes_and_prepared_route_root_verified": true,
+      "orchestrator_directory_equal_accepted3fe": true,
+      "required_image_promotion": "ingestor only; actual qualified output pending",
+      "readiness_route": "existing owner read-only observations plus exact-source local guard; dormantJobs unselected"
+    },
+    "native_completion": {
+      "source": "6feda001210164004b1db6b81e61ae5b19d22fa3",
+      "candidate_main": "fed9ff59f8a3ff32c55c7a2a445017624387a3e7",
+      "parent_finished_at": "2026-10-17T17:32:00Z",
+      "followup_finished_at": "2026-10-17T17:32:43Z",
+      "ingestor_digest": "sha256:671af79add7a5f4d7933132fe1d5841f3e0c0fa51ce634fdab852eab669f2a10",
+      "lab_digest": "sha256:f5a33e13324b559c0733c35672b4b2ed7b1f7263d5f7ab1cd4ac8be9f2d2c951",
+      "six_source_profiles_unaffected": true,
+      "followup_empty_profiles_skip": true,
+      "source_tree_recipe_contract2_exact": true,
+      "provider_only_ingestor_candidate_changed": true,
+      "all26_source_payloads_preserved": true,
+      "all_release_pins_unchanged": true,
+      "all32_readers_returned_zero": true,
+      "all64_streams_hashes_exact": true,
+      "retained_log_bytes": 266423,
+      "log_custody_sha256": "1c394fbb38307d5a7bcc2c4d633a1cf57cbbb46a22dd01b87ac285b89b976a02",
+      "root_terminal_verification_sha256": "50a5a1f6368f55e3ce67b2932f0cda8d483c12191944aa1085ad56eacb615fd6",
+      "release_receipt_sha256": "f4b6f50fe0bcdfa0a5e9b8f54e1b5480d68571bd23a49be32cfded00b213e0e9",
+      "shared_window_returned": true,
+      "runtime_acceptance": false
+    },
+    "issue749_native_completion": {
+      "verified_at": "2026-10-17T17:41:52.448567+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "84349cbff3cf8772a00bf2e342922df730b5bf0a4cda38622131528a32ccb77c",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T17:41:51Z",
+      "scope": "actual source/image/candidate completion and corrected ingestor-only rollout scope; native graph and milestones unchanged"
     }
   }
 }
