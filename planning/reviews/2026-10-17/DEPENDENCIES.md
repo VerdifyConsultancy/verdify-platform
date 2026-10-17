@@ -6,9 +6,9 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 
 ```mermaid
 flowchart TD
-  repair["749 explicit archive-linked current-plan remedy"] --> delivery["Existing normal source CI and pin actuator"]
-  registry["Registry recovered; fresh coherence/fit and CI handback"] --> delivery
-  delivery --> i749["749 exact rollout, hold settlement and readiness"]
+  delivery["749 source/images and minimal rollout completed"] --> hold["Current retained-state/snapshot hold"]
+  hold --> remedy["Reviewed completed-state snapshot wait fix"]
+  remedy --> i749["749 actual quiet interval and bounded read-only acceptance"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783
   i981["981 energy source truth"] --> i782["782 final scientific eligibility"]
@@ -25,7 +25,7 @@ flowchart TD
   i784 --> i785["785 reveal/readout"]
 ```
 
-The two delivery conditions above are operational steps inside #749, not new native issue dependencies. The registry owner's actual coherent publication and CI availability are sufficient for handback; unrelated RAG acceptance or whole #4995 closure is not required. Agents4977 is held outside the selected route because a genuine necessary source fix can use the existing parent build/pin actuator. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 is not a blanket prerequisite for honest three-probe749 readiness. No source fixture, current green container or ordinary reconciliation grants experiment authority.
+The delivery steps above are internal to #749, not new native issue dependencies. Source10dd/image6e and release11cd are deployed with runtime basic checks passing. A real current retained-state/snapshot hold blocks final readiness; the exact two-file producer fix is accepted and awaits normal delivery before a new current quiet interval. The consumed policy run is not replayed and missing historical reports are not retroactively repaired. Shared CI belongs to the existing Agents owner; coordinate only if a reviewed source delivery requires it. The final read-only packet observes actual authority/exposure without inventing an experiment. Agents4977 remains outside this route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
 
 
 ## Exact native relationships

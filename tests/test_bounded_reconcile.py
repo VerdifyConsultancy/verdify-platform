@@ -97,6 +97,179 @@ def records(selection):
     ]
 
 
+async def completed_old_session_with_snapshot_lag(db, state_dir, monkeypatch, repeated_guard=False):
+    """Completed custody survives a cold writer while its atomic DB batch lags."""
+    monkeypatch.setenv("HOSTNAME", "previous-writer")
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    guards = ["fog_escalation_kpa", "mister_all_kpa", "mister_pulse_gap_s"]
+    names = guards + [name for name in db.names if name not in guards][:17]
+    db.parameters = names
+    preview = await bounded._preview(db, [(name, 1.0) for name in names], db.planned(), 3)
+    expiry = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+    approval = {
+        "version": 1,
+        "run_id": uuid.uuid4().hex,
+        "authority": "source_bound_ordinary_policy_v1",
+        "session_id": preview["session_id"],
+        "generation": 3,
+        "fingerprint": preview["fingerprint"],
+        "approved_preview": preview,
+        "expires_at": expiry,
+    }
+    state = {
+        "version": 1,
+        "run_id": approval["run_id"],
+        "approved_preview": preview,
+        "expires_at": expiry,
+        "status": "complete",
+        "completed": names + (guards if repeated_guard else []),
+        "completed_values": dict.fromkeys(names, 1.0),
+        "records": [],
+        "stage_parameters": [names[-1]],
+        "stage_started_at": (datetime.now(UTC) - timedelta(hours=2)).isoformat(),
+    }
+    bounded._write(state_dir / bounded.PREVIEW_NAME, preview)
+    bounded._write(state_dir / bounded.APPROVAL_NAME, approval)
+    bounded._write(state_dir / bounded.STATE_NAME, state)
+    (state_dir / "retained-history.json").write_text('{"immutable":true}\n')
+    db.readbacks.update(state["completed_values"])
+    db.snapshot_readbacks = dict(db.readbacks)
+    db.readbacks["mister_all_kpa"] = 1.5
+    monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    monkeypatch.setenv("HOSTNAME", "current-writer")
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "b" * 40)
+    return state
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("repeated_guard", [False, True])
+async def test_completed_old_session_snapshot_lag_waits_without_replaying_history(
+    fixture, tmp_path, monkeypatch, repeated_guard
+):
+    state = await completed_old_session_with_snapshot_lag(fixture, tmp_path, monkeypatch, repeated_guard)
+    assert len(state["completed"]) == (23 if repeated_guard else 20)
+    before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    wakes = []
+    monkeypatch.setattr(bounded, "_wake_for_confirmation", lambda: wakes.append(True))
+
+    pending = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert pending.action == "hold" and pending.reason.startswith("awaiting fresh atomic snapshot:")
+    assert pending.run_id == state["run_id"] and pending.changes == ()
+    assert wakes == [True]
+    assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
+
+    # Real snapshot convergence follows the unchanged ordinary path. The old
+    # expired approval is history, not new authority or a new completion.
+    fixture.snapshot_readbacks = dict(fixture.readbacks)
+    fresh = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert fresh.action == "ordinary" and fresh.changes == () and fresh.run_id is None
+    assert wakes == [True]
+    assert set(path.name for path in tmp_path.iterdir()) == set(before)
+    for name, raw in before.items():
+        if name != bounded.PREVIEW_NAME:
+            assert (tmp_path / name).read_bytes() == raw
+    assert bounded._read(tmp_path / bounded.PREVIEW_NAME)["session_id"] == bounded.SESSION_ID
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "missing_records",
+        "null_records",
+        "nonempty_records",
+        "rollback_records",
+        "missing_approval",
+        "changed_run",
+        "changed_preview",
+        "changed_expiry",
+        "bad_fingerprint",
+        "forged_shared_fingerprint",
+        "missing_preview",
+        "invalid_run",
+        "ready",
+        "inflight",
+        "halted",
+        "rollback_inflight",
+        "rollback_awaiting",
+        "rollback_complete",
+        "rollback_failed",
+        "awaiting_confirmation",
+    ],
+)
+async def test_completed_snapshot_wait_does_not_downgrade_unsafe_or_changed_custody(
+    fixture, tmp_path, monkeypatch, damage
+):
+    await completed_old_session_with_snapshot_lag(fixture, tmp_path, monkeypatch)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    approval = bounded._read(tmp_path / bounded.APPROVAL_NAME)
+    if damage == "missing_records":
+        del state["records"]
+    elif damage == "null_records":
+        state["records"] = None
+    elif damage == "nonempty_records":
+        state["records"] = [{"parameter": "mister_all_kpa", "value": 1.0}]
+    elif damage == "rollback_records":
+        state["rollback_records"] = [{"parameter": "mister_all_kpa", "value": 1.0}]
+    elif damage == "missing_approval":
+        (tmp_path / bounded.APPROVAL_NAME).unlink()
+    elif damage == "changed_run":
+        approval["run_id"] = uuid.uuid4().hex
+    elif damage == "changed_preview":
+        approval["approved_preview"] = {**approval["approved_preview"], "pod": "replaced-writer"}
+    elif damage == "changed_expiry":
+        approval["expires_at"] = datetime.now(UTC).isoformat()
+    elif damage == "bad_fingerprint":
+        approval["fingerprint"] = "0" * 64
+    elif damage == "forged_shared_fingerprint":
+        state["approved_preview"]["fingerprint"] = "0" * 64
+        approval["approved_preview"]["fingerprint"] = "0" * 64
+        approval["fingerprint"] = "0" * 64
+    elif damage == "missing_preview":
+        del state["approved_preview"]
+    elif damage == "invalid_run":
+        state["run_id"] = approval["run_id"] = "not-a-run-uuid"
+    else:
+        state["status"] = damage
+    bounded._write(tmp_path / bounded.STATE_NAME, state)
+    if damage != "missing_approval":
+        bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    wakes = []
+    monkeypatch.setattr(bounded, "_wake_for_confirmation", lambda: wakes.append(True))
+    result = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and not result.reason.startswith("awaiting fresh atomic snapshot:")
+    assert not result.changes and not wakes
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mutation", ["state", "approval", "revoked"])
+async def test_completed_snapshot_wait_rechecks_custody_after_snapshot_await(fixture, tmp_path, monkeypatch, mutation):
+    await completed_old_session_with_snapshot_lag(fixture, tmp_path, monkeypatch)
+    fetch = fixture.fetch
+    changed = {}
+
+    async def mutate_during_snapshot(sql, *args):
+        rows = await fetch(sql, *args)
+        if "FROM setpoint_snapshot" in sql:
+            if mutation == "revoked":
+                (tmp_path / bounded.APPROVAL_NAME).unlink()
+            else:
+                path = tmp_path / (bounded.STATE_NAME if mutation == "state" else bounded.APPROVAL_NAME)
+                value = bounded._read(path)
+                value["expires_at"] = datetime.now(UTC).isoformat()
+                bounded._write(path, value)
+            changed.update({path.name: path.read_bytes() for path in tmp_path.iterdir()})
+        return rows
+
+    monkeypatch.setattr(fixture, "fetch", mutate_during_snapshot)
+    wakes = []
+    monkeypatch.setattr(bounded, "_wake_for_confirmation", lambda: wakes.append(True))
+    result = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and not result.reason.startswith("awaiting fresh atomic snapshot:")
+    assert not result.changes and not wakes
+    assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == changed
+
+
 @pytest.mark.asyncio
 async def test_broad_desired_change_stages_without_reconnect_and_archives_completed_run(fixture, tmp_path):
     db = fixture

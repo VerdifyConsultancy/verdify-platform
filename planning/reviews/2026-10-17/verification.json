@@ -1085,7 +1085,168 @@
       "owner_reported_preserved_or_released_claims": 35,
       "owner_reported_protected_generation": 171,
       "no_more_controller_mutation_queued": true,
-      "limitations": "Nine other real cycle errors remain owner investigation; original5001 terminal FAILURE preserved. This is handback, not new product admission or success. Exact private receipt readback pending; Retry must use fresh normal checks."
+      "limitations": "Nine other real cycle errors remain owner investigation; original5001 terminal FAILURE preserved. This is handback, not new product admission or success. Exact private receipt readback pending; Retry must use fresh normal checks.",
+      "root_read_actual_owner_receipts": {
+        "adoption": "b23fbe8fc9b6cb738c18a2aa0cc20258a82c765444e8deaa342b39ed0484eb14",
+        "sync": "3a4c57e993c16f2b87786dabee6da8148537eac7944220dd3b8584456c86e99e",
+        "mounted": "d456ba8449ec3dcaf6a2ac5e175b0d0ad734c04dbce933f1eb45147e0fbe40e2",
+        "completed_cycle": "3fa7ff62434bd409503cb1c083a7a65106d32cf857c596b4aa57ce9c74ac4053",
+        "protected_before_after_equal": true
+      }
+    },
+    "canonical25_delivery_copy": {
+      "source": "70dfe41413105199e2b01089f5b04756ab4648aa",
+      "manifest_sha256": "d014e8ba3afe3c178b954eb6b92124c356632f744d895a7dec52d8ed42d9090d",
+      "copy_ack_sha256": "315b24a52d52f4850cc071ce31451d2a386cc9b5b46e812a917c6266f8376394",
+      "root_verified_actual_destination_files": 25,
+      "root_frozen": false,
+      "new_ledger_requires_separate_product_adoption": false
+    },
+    "source10dd_status_github_publication": {
+      "verified_at": "2026-10-17T20:48:50.948137+00:00",
+      "coarse_immutable_receipt_revision": "4942549cc1eeae6b0839a631c37e66a5606bec80",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/4942549cc1eeae6b0839a631c37e66a5606bec80/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "bd8c9dbc621344e370b110c2c785f08c1e369e3a183f58836bb16e1f1e0d8aca",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
+    },
+    "fix_rollout_status_github_publication": {
+      "verified_at": "2026-10-17T21:30:06.789462+00:00",
+      "coarse_immutable_receipt_revision": "d93a2fee56759bc74fdb019a9bc438e4991c4540",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/d93a2fee56759bc74fdb019a9bc438e4991c4540/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "5c0d34417a002724e5a33c2eda1f19f39664d68993ab426b35886ee7a7be5cdf",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
     }
+  },
+  "post_rollout_followup_delivery": {
+    "local_source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "sole_parent": "3c9a4edf8b6940840b9d61574175a51001f62766",
+    "tree": "1d226607f0b8d283296f9a0705e7efc288c3a6ca",
+    "root_verified_local_tree_payloads": 33,
+    "actual_changed_paths": 22,
+    "canonical_snapshot": "70dfe41413105199e2b01089f5b04756ab4648aa",
+    "local_tree_proof_sha256": "e2f0b504e2f67c3d80097035d8fc6401ab2c6930f6b982fee81d75e0a1ef5b45",
+    "owner_commit_receipt_sha256": "6e3de9aad68ad9947cfec54c18a2c00db21ae35f576d9f5129088998e85df4c1",
+    "source_push_verified": true,
+    "runtime_adoption_released": true,
+    "observer_correction": "Unsupported local client flag stopped the observer before source push or normal signal/capacity reads. Same-context read-only transport correction is authorized; this is not a CI, registry, RBAC or capacity denial.",
+    "verified_at": "2026-10-17T20:41:36.642695+00:00",
+    "source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "parent": "3c9a4edf8b6940840b9d61574175a51001f62766",
+    "current_main_observed": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "all33_provider_payloads_exact": true,
+    "runtime_claim": "New image deployed/SyncedHealthy; current readiness still unqualified",
+    "normal_fast_forward": true,
+    "automatic_native_qualification": "Succeeded; all three selected images qualified",
+    "production_render_unchanged": true,
+    "promotion_or_sync": true,
+    "new_explicit_policy_run": false,
+    "native_terminal_receipt_sha256": "8c78eeab3955dbda7c1aa3965de8e518727f5e316d7b48147c33b47c4de56696",
+    "native_manifest_sha256": "c31c5e940ab2bdc4c9f6b7f4c0863c4c27b2de04fdc231255b4ada982715f79c",
+    "root_verified_native_members": 141,
+    "root_verified_native_bytes": 12636028,
+    "native_selected_profiles": [
+      "ingestor",
+      "orchestrator",
+      "lab-publisher"
+    ],
+    "all_selected_images_succeeded": true,
+    "candidate_child": "ad2981fc27c7df6590368608b87f46c916af750a",
+    "root_candidate_provider_proof_sha256": "44530cb5d0da286caa4f51f051cb06e9525bfa26c38a24acabc35a5b935f714c",
+    "root_independent_live_diff_proof_sha256": "aeaf00b7cecf9b180c0081b16e49f8da99265c6b3b060b4776667e4bd1aff634",
+    "runtime_adoption_completed": true,
+    "runtime_release_scope": "Ingestor only6e087f9; normal digest-only promotion and one attended full nonpruning no-selector sync; no additional explicit policy run. Then actual stable30minute/current bounded read-only original-clause qualification including supported scoped authority/exposure read.",
+    "github_main_status_limit": "No contexts/statuses for main pushes; native success is observed, no provider-combined-green claim."
+  },
+  "current_fix_rollout": {
+    "release": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "ingestor_digest": "6e087f9a170f5feae962129bbc1f51d6fb3852e4e91b03ea294941c0910058c5",
+    "all_three_selected_images_qualified": true,
+    "promotion_validation_succeeded_at": "2026-10-17T21:18:44Z",
+    "promotion_mode": "validate",
+    "promotion_profiles": [],
+    "all8_build_slots_and_pin": "Skipped",
+    "promotion_4_container_logs_root_verified_bytes": 66751,
+    "shared_CI_returned_to_existing_owner": true,
+    "full_nonpruning_sync_finished_at": "2026-10-17T21:22:42Z",
+    "resource_results": 129,
+    "hook_resources": 9,
+    "hook_jobs": 7,
+    "hook_configmaps": 2,
+    "actual_immediate_selector_absent": true,
+    "argo_synced_healthy_observed_at": "2026-10-17T21:23:52Z",
+    "new_single_writer_ready": true,
+    "new_writer_restart_count": 0,
+    "current_readiness_qualified": false,
+    "final_read_only_packet_executed": false,
+    "no_extra_explicit_run": true,
+    "startup_observer_correction": "Known pre-lease process-start continuity marker was caught by an overly broad local all-ERROR rule. Original failure retained; existing genuine anchor semantics preserved; no continuity recovery or quiet PASS inferred.",
+    "root_promotion_provider_proof_sha256": "499db4e1d695235c1f98e6fed054859f7c0221b56e32933ed51105572f6de86e",
+    "root_startup_disposition_sha256": "02a84b0d8c9e2bb75b19f7f97725d38326af797e18f738821c1703277255648e"
+  },
+  "restart_resume_current_blocker": {
+    "captured_at": "2026-10-17T21:41:25.511296Z",
+    "basic_runtime_accepted": true,
+    "runtime_verdict_sha256": "eb1f841ae2d1029f6406fca1ca066bebcd37f205db3aed35c21ec59b43df05e6",
+    "runtime_source_binding_sha256": "09e17b2dae9da4ec4956a8f5c381602957401b994dffb676d4c210f4fd2e99ca",
+    "restart_capture_sha256": "a08f7b96ef6523712d8cb8cd6377472674e0e1598426a8550c88e519ec433143",
+    "same_writer_survived_restart": true,
+    "retrospective_gap_read_not_continuous_observation": true,
+    "final_readiness": "BLOCKED: current typed bound hold; snapshot differs from current misting readback while retaining completed previous-writer run",
+    "native_hold_receipt_sha256": "532eb92a39a5bd901c6cea09f5143794846ae73ce7ca208b7ed17da98dae4e84",
+    "final_read_only_packet_executed": false,
+    "current_exposure": "UNKNOWN; final query unexecuted",
+    "canonical_path": "/Users/jason/.codex/worktrees/verdify-live-replan-20261017/verdify-platform",
+    "restored_clean_commit": "13beaf63fd77945e96f379f641f64d50f3fee174",
+    "existing_sessions_resumed": true,
+    "no_repeated_mutation_or_policy_approval": true,
+    "source_remedy": "Finite source/retained-state review; exact scope pending",
+    "shared_CI_owner": "Existing Agents Assessment; no handback"
+  },
+  "snapshot_wait_fix_source_review": {
+    "accepted_at": "2026-10-17T21:57:38.554213+00:00",
+    "base": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "paths": [
+      "ingestor/tasks/bounded_reconcile.py",
+      "tests/test_bounded_reconcile.py"
+    ],
+    "production_sha256": "e9c26c61b0bef09fb8a1bced5cf1ec75c51d37041e5d60d72640826c80760330",
+    "test_sha256": "db4e91532f6313c7fcad14d31800bc01305d1a7b03e0facf7ba7b46ca6230b7f",
+    "patch_sha256": "e4645a3862a50d34a4e97283d8c38b7c942414e70c39863834ac3c152b3ee73b",
+    "proof_sha256": "c85fa9b91632d806e7d571fb4a7c825116d2b62cb95d3adab08144374bf00a79",
+    "manifest_sha256": "2ec1d532dd56c5cd734c7ec266353709a4dc011e7528b78e7642874a4355af8b",
+    "root_review_sha256": "3f98afa0c8e6dfc354c008be422262c8ffdc8a72f20874e58dcbe49c7e8453db",
+    "root_verified_members": 11,
+    "root_verified_bytes": 226675,
+    "focused_passes": 27,
+    "focused_failures_errors_skips": 0,
+    "old_source_regression_failures": 1,
+    "all_other_production_AST_unchanged": true,
+    "strict_collector_unchanged": true,
+    "history_and_authority_unchanged": true,
+    "published": false,
+    "built": false,
+    "deployed": false,
+    "new_explicit_physical_run": false,
+    "shared_CI_handback_pending": true,
+    "runtime_inverse": "Forward ingestor release pin only back to current6e; keep all other pins, migrate211/applied276 and state/history."
   }
 }

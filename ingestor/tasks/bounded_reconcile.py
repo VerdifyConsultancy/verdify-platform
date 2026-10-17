@@ -1390,6 +1390,41 @@ async def choose_stage(
             if state is None and approval is None:
                 _wake_for_confirmation()
                 return Decision("hold", reason=f"awaiting fresh atomic snapshot: {error}")
+            if (
+                state is not None
+                and state.get("status") == "complete"
+                and state.get("records") == []
+                and state.get("rollback_records", []) == []
+            ):
+                # Completed custody is history, not a stage to confirm again.
+                # Keep it intact while the atomic DB batch catches up.
+                uuid.UUID(state["run_id"])
+                approved = state["approved_preview"]
+                identity = {
+                    key: approved[key]
+                    for key in (
+                        "session_id",
+                        "pod",
+                        "source_revision",
+                        "generation",
+                        "changes",
+                        "plan_rows",
+                        "readbacks",
+                    )
+                }
+                if (
+                    approval is None
+                    or state["run_id"] != approval.get("run_id")
+                    or approved != approval.get("approved_preview")
+                    or approved["fingerprint"] != approval.get("fingerprint")
+                    or state["expires_at"] != approval.get("expires_at")
+                    or _digest(identity) != approved["fingerprint"]
+                    or _read(state_path) != state
+                    or _read(approval_path) != approval
+                ):
+                    raise ValueError("completed stage custody changed") from error
+                _wake_for_confirmation()
+                return Decision("hold", reason=f"awaiting fresh atomic snapshot: {error}", run_id=state["run_id"])
             if state is None or state.get("status") != "awaiting_confirmation":
                 raise
             approved = state["approved_preview"]

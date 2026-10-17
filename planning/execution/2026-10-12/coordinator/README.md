@@ -1227,3 +1227,64 @@ Root read full270 ops function: only RETURNQUERY/table reads/builtins;217 grants
 Existing controller owner explicitly returned the sharedCI/controllerwindow after exactsix-resource5011adoption20:22:00 atacceptedmain7e340fcd, Ready/restart0 andonecompletednaturalcycle102.35s. Owner reports all35 oldclaims preservedorauthoritativelyreleased, samePVC/ONtuning/protected171; no morecontrollermutationqueued. Nineothercycleerrorsremainownerinvestigation,notwaived; original5001 is truthfullyterminalFAILURE38/40 withfailedimagecustody. Root accepted this finite handback; actual product submission stillrequiresfreshnormalcoherence/fit/caller and ownednativeproof. RAG/dashboard/Networkacceptance is not a productgate; laterprotected172change mustcoordinate. Exactprivateownerreceiptreadbackpending, no newaudit requested.
 
 ChangedGitHub749and45bodies were provider-exact afterf5439006 publication, retaining originalacceptance/tails/metadata:749body966dcad8,45body151cf280; bothOPEN. All14changedplanningpayloads atf543 wereproviderexact, schema92/9/78/all7views/35planningtests/hooksPASS. Root nowpreparesfreshcomplete25canonicalmanifest and freezes onlyuntilcopyACK; no separateplanning-onlymainadoption.
+
+
+## October17 complete canonical25 copy acknowledged
+
+SAME Retry copied exact70dfe414 snapshot/all25paths underd014e8ba manifest; root read315b24a5 ACK and independently checked every actualdestinationlength/SHA. All8 reviewedsource/test/docbytes unchanged, no wholebranchmerge. ROOTUNFROZEN; laterledgerfacts do not request anotherproductcopy/status-onlypush. Releasedpathcontinuesfreshnormalguards/actualCOPYclassification/one genuine source/native delivery; no nativePASSorpushclaimedfromACK.
+
+Root read actualownerb23fbe8f/3a4c57e9/d456ba84/3fa7ff62 receipts: sixresourcessucceeded, mountedsource/config/execution exact, firstmatchingcyclecomplete, Readyrestart0/samePVC andprotectedbefore-afterequal. Old5001FAIL/two image-custodyerrors/nineothercycleerrors remain explicit; no forcedgreen or owner-widecompletion. SharedwindowreturnedtoRetry forfiniteproductdelivery; futureprotected172mutationheldbyowner until coordination.
+
+
+## October17 composed source commit verified locally
+
+SAME Retry created10dd58a7 with soleparent3c9/tree1d226607; normalcommit hooksPASS andcleanworktree reported. Root independently read6e3de9aa receipt and verifiedall33 committedpayloads against25canonical70d and8acceptedsource/doc hashes:22actualchangedpaths,11canonicalpaths alreadyidentical. Privateproofe2f0b504 records localtree verification only; providerpush/nativequalification/runtimeadoption are not yetclaimed.
+
+The prepublication observer stopped on a locallyunsupportedclientflag beforepush, nativeoperation or normalregistry/fitreads. Failedcustody is retained. SAME Retry corrects onlythe lightweightread-onlywatch transport usingexistingcontext/credentials, thencontinuesalreadyreleasedfreshnormalchecks/oneFFsourcepush. No alternatekey, buildretry, controllerchange or physicalauthority follows. Runtimehold andusedexplicitapproval remain.
+
+
+## October17 composed source published and independently verified
+
+One normalFFmainpublication completed20:38:15:3c9→10dd58a7/tree1d226607. Root independently verifiedall33providerpayloads/soleparent/tree/currentmain; privatecfcb016e proof. Fresh20:37normalcoherent171/readywritable/caller/fit precededpush; historicalfitisnotreservation. Automaticparentjrvmb/UID9ece5ee5 started20:38:19 andremainsownedbySAME Retry withsupportedGETwatch/fullstartedcontainerstreams. Nativefull offlineCI isrunning in k3s, no terminalPASS/images claimed. Sourceprod129/zeroSecrets/render760174a4 andotherreleasepins unchanged; no runtimeaction.
+
+Rootc8bbb4ab/all2changedproviderpayloads verified51dd0ebe. Automation source10dd/copyACK/UNFROZEN/currentwindow prompt39de6ae1 readbackexact withscheduleandtargetpreserved. No furthercanonicalcopy/planning-onlymainaction requested.
+
+
+## October17 native delivery complete; minimal fix rollout released
+
+Root read8c78eeab and independentlyverifiedc31c5e94/all141members12,636,028bytes. Nativeparentjrvmb succeeded20:56:59; actualthreeprofiles ingestor6e087f9/orchestratorcd1475d2/Labfebf0941 source10dd/tree1d226607/normalv2/closureN/A. All42startedcontainerlogs retainedwithreaders0; pin-loopz5mc9 succeeded20:57:44/SKIP/0builders. Normalcandidatead298 soleparent10dd/onlytwo candidatepins, all5pairs andall33sourcepayloads preserved; rootproviderproof44530cb5. Main-pushstatusendpoints have no statuses, so no GitHubcombined-success claim.
+
+Root independently parsed591,570-byte currentlive-diff:125resources,116tracking/generationonly,3exactimagechanges,6newdryrunPreSyncdocuments containallactualdesiredfieldsrecursively unchanged. No unexplaineddrift; sameoldsingleton/Pod/container/restart0 before-after. Rootproofaeaf00b7; proposedrenderc63f/release8820/inverse671 reviewed. This is dryrun, notdeployment.
+
+Root released SAME Retry for normalINGESTOR-only6e087f9promotion, onefull exact-revision nonpruning/no-selector attendedsync, unchangedallotherpins/migrate211/applied276, actualhooks/smoke/singleton/5minschema and30minquiet currentwriter qualification. Then ONEcombinedboundedread-only originalpacket including e6540add scopedopsstatus; no guessedexperiment/physicalproof/oldreportrepair. Usedapproval/oldstate/archive retained; no extraexplicitrun/approvalrefresh/forcedwake/manualcorpusrefresh. Anydenial/drift/failure stopsaffectedaction. Runtimeacceptance is notclaimedfromrelease. Agentsownerexplicitlyholdsprotected172/controller/catalog mutation for the shortdigest-onlypromotion/SKIPfollowup window andreceivescustodyagainatitsactualterminal, notafter30minproductobservation.
+
+
+## October17 final promotion and one full fix sync complete
+
+Root verified promotion11cd/soleparentad298/tree f1c169/onlyingestor release change with499db4e1. Actualgxzt9 Succeeded21:18:44, classifier mode=validate/profiles[], all8 image slots andpinSkipped. All4startedcontainer logs66,751bytes independently hashed/readers0. Existing observer ended after120s grace; no literal modeSKIP or missing-child failure claim. SharedCI/controller custody returned to existing Agents owner at21:21 before product observation; its separate controllerCrashLoop/sourcefix does not invalidate the independently completed native run.
+
+One atomicRV-tested exact11cd full nonpruning/no-selector sync succeeded21:21:07–21:22:42 with129resource results; rootread e9f6433b submission/f48d9aee terminal. Actual9hookresources=7Jobs+2PreSyncConfigMaps, not9Jobs; allSucceeded. Source-linked freshUID/data/hookcontainer custody belongs to SAME Retry. Terminal capture initiallyOutOfSync/Healthy; distinct21:23:52 metadata establishesSyncedHealthy/newReady image6e/singleton/restart0. Currentreadiness stillunqualified.
+
+Successor metadata observer failedlocally with KeyError(uid); exactfailed event shape was notretained, so bookmarkcause is plausible, notestablished. Failedscript/trace preserved; no repeatedsync/rollout. A subsequent blanketallERROR follower stopped on expected21:23:20.098 durable_source_process_start beforeactuallease21:23:20.415. Rootread b98e76bf and existing independentreview confirmed unchangedingestor source/collector/current originalanchor rules. Originalincorrectfailureclassification2809a8e5 retained; explicitroot02a84b0d supersedes attribution only. Resume SAMEprocess/originalhistory; no restart/clockreset/gap-recovery orquietPASSclaim. Actualschema/smoke/current30min andonefinalSQL remain. Final10statementSQL6a7e505f/binding1e8e1c0c independentlyreviewedSELECT-only/exactscope/noextraauthority.
+
+Automation rewritten as a cohesive current handoff; existing schedule/target/status preserved, prompt b7d584c7 exactreadback. Laterrootledger/status needs no newproductcopy.
+
+
+## October17 actual runtime hold and laptop restart recovery
+
+The current runtime basics passed at21:33:23: exact11cd/source10dd/image6e, samePod88ae/containerdde633/sessionc2e/G1/restart0, singletonRecreate/onesocket/smoke9of9/schema5min0errors/freshlease/48grid,16controllers21requestedreplicasReady/allPVCBound. Rootread eb1f841a/09e17b2d/1eeae9bb and verifiedall5runtime-sourcefilehashes plus8hooklogs2811bytes. Actual9hookresources comprise7Jobs+2CMs; bothCMUID/datafreshwithinoperation. These accepted deployment facts are not finalreadiness.
+
+Actual21:24:04.740829 typedhold532eb92a rejects snapshot/currentconnection mister_all_kpa with retainedcomplete6ddd/20effects/state10f05393/oldexpired6fapproval/newcurrentprocess. Existingcollector reports unresolvedbound_hold/recurringerrors1. This realhold supersedes normal-observation queue; finalquiet/SQL remainHELD. The pre-lease startupcontinuity marker and localobservererrors are separate. Rootdirectsource read finds expected atomic-snapshot waiting only for noactive orawaiting-confirmation state; retainedcomplete raises before oldsessionordinary path. Actual lag/physicalcause is not established merely by exceptiontext. SAME Retry finite source/state diagnosis and minimumscope/inverse requested before edits/delivery; no newexplicitrun/approvalrefresh/historyclear/restart.
+
+Jason explicitly requested resumeallinflight after Maccrash. No localobservers survived. Retryretainedoldstream59698bytesending21:33:04 withoutterminalcustody; ONErestartcapture21:41:25/a08f7b96 verifiedsamewriter/source5files/ArgoSyncedHealthy11cd andimmutarchive4439.33062-byte gaplog through21:41:05 is retrospective, notcontinuousobservation. NoSQL/deployment/policy mutation repeated. ExistingRetry andAgentsAssessment resumed; no newworkers. Agentsretains sharedCI/controllerwindow, exactsixresourcebootstrap21:34:13/currentReadyrestart0/PVCsame at21:39; PR5021/Storage5017hold separate.
+
+Roottempcheckout and helperfiles were cleared. Exactclean13beaf63provider branch retained; SAME registeredworktree restored then moved persistently to /Users/jason/.codex/worktrees/verdify-live-replan-20261017/verdify-platform. Originaldirtycheckoutpreserved; nowholebranchmerge/newproductcopy. Automationupdated with persistentpath/currenthold andusedauthority; schedule/targetunchanged. GitHub749onlychangedstatus publication follows; full58issue/nativegraph review alreadycomplete andunchanged.
+
+
+## October17 completed-state snapshot fix accepted for genuine delivery
+
+Root read fullfa027d9a diagnosis, verifiedb6d9ff2c/all19members841,788bytes and actualoldcomplete custody/fingerprint. Source _fresh_readbacks numericmismatch is not an identitytest; failure-time values remainuncaptured. Latercurrent21:40preview proves true48field comparison converged andexistingordinarydispatch resumednaturally. Initialtypedhold remainsstrictlydenied; no retroactiveoldcompletion orphysicalfaultclaim.
+
+SAME Retry exact2path fixe4645a38 accepted: productione9c26c61/testdb4e9153, c85fa9b9 proof,2ec1d532/all11members226,675bytes rootverified. Oldsource1FAIL reproduces exactmisterreason; new27PASS/0errors-skips-failures in1.33s purefakeDB. Rootreadentire35lineproductionbranch/173linetests and independentlyprovedwholemoduleAST identical afterremoving solecompleted-snapshot-waitbranch (3f98afa0). Completedexplicitrecords[]/nopendingrollback/UUID/matchingapproval-run-preview-fingerprint-expiry/postawaitcustodyrequired. Existingpending+wakeonly, no sender/newapproval/state/history/completionrewrite; valid23application/20setting guardrepeats supported. Allunsafe/unknown/confirmation/source/expiry/plan checks andstrictcollector unchanged. No repeatedfocusedtests/reviewer required.
+
+Jason's latest directinstruction explicitlyreleases finishing this softwarefix throughdeployment/liveverification usingexistingowners; no furtheruserconfirmation needed forreviewedsoftwarepath. It doesnotgrant secondexplicitpolicy/approvalrefresh/physicalrecovery. ExistingAgentsownerretains CI whilePR5021normalqualification/adoption completes; no handbackyet. Root nowpublishescompletecurrent25canonical snapshot andfreezesonlyuntil exactcopyACK for SAMEgenuinesourcecomposition. No wholebranchmerge/planning-onlymainadoption, forcedprofiles ormanualdispatch. Futureingestor-onlyinverse6e preservesallotherpins/migrate211/applied276/immutablehistory. Actualqualifiedimage/currentminimaldiff/fullsync/quiet/finalSQL remain, no runtimePASSclaimedfromsourceacceptance.
