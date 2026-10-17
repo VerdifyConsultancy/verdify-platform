@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "5a156e604a531fa60a3520b2d9b1d73fd02751054e2f0d01cea64b5fd8650637",
+    "prompt_sha256": "d030e3d3e49ffcadc26c554acd35de0811bd0c36ebe892bc4a1076e31589a518",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -340,6 +340,21 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T16:50:43Z",
       "scope": "current source acceptance/recovery/next action only; native graph and milestones unchanged"
+    },
+    "composed_local_source": {
+      "commit": "6feda001210164004b1db6b81e61ae5b19d22fa3",
+      "tree": "d51e74a095638c5e99a95a1f5554801eb7670899",
+      "parent": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+      "canonical_snapshot": "a203ae2f0790e03b92f429d5b328c9c83f06a856",
+      "complete_canonical_paths": 23,
+      "all26_committed_payloads_verified": true,
+      "tests": 341,
+      "failures_errors_skips": 0,
+      "copy_ack_sha256": "89a1e2bbcb048ab4524a297367290e15f37298b074a598512c840f608bc7692c",
+      "commit_proof_sha256": "a822c51b98b9e0db03013c455c17ee0500fd99e99bf68b497dfdaf6021a8c4ba",
+      "root_unfrozen": true,
+      "pushed": false,
+      "release": "conditional on actual external overlapping CI release and fresh normal current coherence/fit/expectedmain; no new source review needed"
     }
   }
 }
