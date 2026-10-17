@@ -25,7 +25,10 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: db-backup-exporter
 spec:
-  replicas: 1
+  # Paused 2026-10-17 to cut NFS load on the Obsidian NAS during the
+  # jvallery/storage-infra#708 Garage cutover and heavy-NAS queue
+  # (jvallery/storage-infra#799). Restore replicas: 1 when #799's queue completes.
+  replicas: 0
   selector:
     matchLabels:
       app.kubernetes.io/component: db-backup-exporter
