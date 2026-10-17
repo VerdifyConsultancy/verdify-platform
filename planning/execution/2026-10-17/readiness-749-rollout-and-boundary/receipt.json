@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish SAME Retry's finite source/retained-state diagnosis of the current snapshot/retained-complete-state hold and return the smallest concrete remedy with inverse. Review that scope before source edits or delivery. Preserve all unknown-outcome, confirmation, authority and strict collector semantics. The shared CI/controller window remains with its existing Agents owner. After a legitimate remedy and actual current quiet interval, perform the one prepared bounded read-only original-clause packet. Do not replay the consumed policy approval, force a wake, clear history, invent an experiment UUID or infer physical recovery authority. Keep749 open until actual original acceptance.",
+  "next_step": "Adopt the complete current25-path canonical snapshot with SAME Retry's accepted two-file snapshot-wait correction, verify the exact copy ACK, then use the existing shared-CI owner's actual handback and fresh normal admission for one normal source/native build/pin path. Review actual qualified image, minimal ingestor-only runtime diff and inverse, then promote and perform one full nonpruning sync. Verify the new writer, actual quiet interval and one bounded read-only original-clause packet. Preserve the old typed hold and missing report as dated history; no collector weakening, approval replay, extra explicit policy run or physical recovery. Close749 only on actual original acceptance.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -290,5 +290,33 @@
     "no_repeated_mutation_or_policy_approval": true,
     "source_remedy": "Finite source/retained-state review; exact scope pending",
     "shared_CI_owner": "Existing Agents Assessment; no handback"
+  },
+  "snapshot_wait_fix_source_review": {
+    "accepted_at": "2026-10-17T21:57:38.554213+00:00",
+    "base": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "paths": [
+      "ingestor/tasks/bounded_reconcile.py",
+      "tests/test_bounded_reconcile.py"
+    ],
+    "production_sha256": "e9c26c61b0bef09fb8a1bced5cf1ec75c51d37041e5d60d72640826c80760330",
+    "test_sha256": "db4e91532f6313c7fcad14d31800bc01305d1a7b03e0facf7ba7b46ca6230b7f",
+    "patch_sha256": "e4645a3862a50d34a4e97283d8c38b7c942414e70c39863834ac3c152b3ee73b",
+    "proof_sha256": "c85fa9b91632d806e7d571fb4a7c825116d2b62cb95d3adab08144374bf00a79",
+    "manifest_sha256": "2ec1d532dd56c5cd734c7ec266353709a4dc011e7528b78e7642874a4355af8b",
+    "root_review_sha256": "3f98afa0c8e6dfc354c008be422262c8ffdc8a72f20874e58dcbe49c7e8453db",
+    "root_verified_members": 11,
+    "root_verified_bytes": 226675,
+    "focused_passes": 27,
+    "focused_failures_errors_skips": 0,
+    "old_source_regression_failures": 1,
+    "all_other_production_AST_unchanged": true,
+    "strict_collector_unchanged": true,
+    "history_and_authority_unchanged": true,
+    "published": false,
+    "built": false,
+    "deployed": false,
+    "new_explicit_physical_run": false,
+    "shared_CI_handback_pending": true,
+    "runtime_inverse": "Forward ingestor release pin only back to current6e; keep all other pins, migrate211/applied276 and state/history."
   }
 }
