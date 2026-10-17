@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "d030e3d3e49ffcadc26c554acd35de0811bd0c36ebe892bc4a1076e31589a518",
+    "prompt_sha256": "e9513ee5437238de20f76a98b55fe1ec50448674529f3259e1da59e2a8958f67",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -355,6 +355,26 @@
       "root_unfrozen": true,
       "pushed": false,
       "release": "conditional on actual external overlapping CI release and fresh normal current coherence/fit/expectedmain; no new source review needed"
+    },
+    "shared_ci_handback": {
+      "workflow_uid": "9013a62f-9ed6-4290-b10d-341e81379093",
+      "terminal_at": "2026-10-17T16:54:27Z",
+      "explicit_release": true,
+      "window_at": "2026-10-17T16:57:58.996471+00:00",
+      "window_sha256": "9e42cbb940203bc8f749eb529156c9cfaa886ef6a09c7ed34a9e3ce4ca3c1024",
+      "active_builds": 0,
+      "controller_or_profile_adoption_in_progress": false,
+      "new_owner": "existing Retry product session",
+      "submission_not_inferred": true
+    },
+    "actual_ci_route": "Installed COPY/input path-impact-v2 classifier, eight serial slots with possible unaffected skips; existing pinner retains skipped refs. Prior older-source all-eight-build assumption superseded. Do not force profiles.",
+    "issue749_actual_route": {
+      "verified_at": "2026-10-17T17:07:36.950368+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "54c36dda1b13de6c2e879d5def4f338e85a2161cc4ceb7d724083ae964b24874",
+      "provider_exact": true,
+      "scope": "actual eight-slot classifier route correction; original acceptance and native graph retained"
     }
   }
 }
