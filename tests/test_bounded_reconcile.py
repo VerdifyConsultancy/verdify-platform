@@ -1741,3 +1741,612 @@ async def test_two_stage_archive_rejects_incomplete_or_unbounded_history(fixture
     assert result.action == "hold"
     assert not list(tmp_path.glob("writer-stage-confirmed-halt-*.json"))
     assert bounded._read(tmp_path / bounded.STATE_NAME)["status"] == "halted"
+
+
+async def changed_archived_plan(db, tmp_path, monkeypatch):
+    """Retain twelve old effects; approve twenty NEW values in a new writer/generation."""
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    monkeypatch.setenv("HOSTNAME", "historical-writer")
+    old, original, _forward, remaining = await confirmed_halt_fixture(db, tmp_path)
+    held = await bounded.choose_stage(db, remaining, db.planned(), 3, tmp_path, 12)
+    assert held.action == "hold" and "fresh approval required" in held.reason
+    path = tmp_path / f"writer-stage-confirmed-halt-{old['run_id']}.json"
+    raw = path.read_bytes()
+    db.parameters = [
+        p for p in db.names if p not in bounded.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS | bounded.ZONE_VPD_TARGETS
+    ][:20]
+    db.plan_values = dict.fromkeys(db.parameters, 2.0)
+    changes = [(p, 2.0) for p in db.parameters]
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "b" * 40)
+    monkeypatch.setenv("HOSTNAME", "current-writer")
+    monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    monkeypatch.setattr(shared, "transport_readbacks_ready", lambda generation: generation == 10)
+    monkeypatch.setattr(shared, "transport_generation", 10)
+    monkeypatch.setattr(shared, "reconciled_transport_generation", 10)
+    monkeypatch.setattr(shared, "cfg_drift_versions", {})
+    preview = await bounded._preview(db, changes, db.planned(), 10)
+    assert preview["plan_rows"] != old["approved_preview"]["plan_rows"]
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC), confirmed_halt_archive=raw)
+    assert approval["run_id"] != original["run_id"]
+    return old, changes, approval, path, raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("completion_damage", [None, "approval", "archive", "missing_approval", "state_link"])
+async def test_explicit_archive_link_admits_twenty_current_values_with_confirmation_between_stages(
+    fixture, tmp_path, monkeypatch, completion_damage
+):
+    old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    # The old hold is observed by this new writer before explicit admission.
+    held = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert held.action == "hold"
+    held_observation = bounded.hold_observation(tmp_path, held, 10)
+    native_before = json.dumps(fixture.stage_rows, default=str)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    sizes = []
+    while changes:
+        selection = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+        assert selection.action == "send"
+        assert selection.run_id == approval["run_id"] != old["run_id"]
+        assert 0 < len(selection.changes) <= 12
+        assert not set(selection.changes).intersection(old["completed_values"].items())
+        sizes.append(len(selection.changes))
+        stage_records = records(selection.changes)
+        bounded.finish_stage(tmp_path, selection, stage_records, [])
+        for record in stage_records:
+            fixture.rows[(record["requested_at"], record["parameter"])] = {
+                "delivery_status": "sent",
+                "confirmed_at": None,
+            }
+        pending = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+        assert pending.action == "hold" and pending.reason == "awaiting durable confirmation"
+        for record in stage_records:
+            fixture.readbacks[record["parameter"]] = record["value"]
+            fixture.rows[(record["requested_at"], record["parameter"])] = {
+                "delivery_status": "confirmed",
+                "confirmed_at": datetime.now(UTC),
+            }
+        changes = [(p, value) for p, value in changes if fixture.readbacks[p] != value]
+    done = await bounded.choose_stage(fixture, [], fixture.planned(), 10, tmp_path, 12)
+    assert done.action == "complete" and not done.changes
+    assert sizes == [12, 8]
+    assert path.read_bytes() == raw
+    assert json.dumps(fixture.stage_rows, default=str) == native_before
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["confirmed_halt_link_required"] is True
+    assert state["confirmed_halt_link"] == approval["confirmed_halt_link"]
+    assert len(state["completed"]) == 20
+    if completion_damage == "approval":
+        del approval["confirmed_halt_link"]
+        bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    elif completion_damage == "archive":
+        path.write_bytes(raw + b"\n")
+    elif completion_damage == "missing_approval":
+        (tmp_path / bounded.APPROVAL_NAME).unlink()
+    elif completion_damage == "state_link":
+        del state["confirmed_halt_link"]
+        bounded._write(tmp_path / bounded.STATE_NAME, state)
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 10)
+    if completion_damage is not None:
+        assert complete is None  # Actual completion cannot attest damaged linked authority.
+        return
+    assert complete["supersedes"] == approval["confirmed_halt_link"]
+    assert complete["supersedes"]["run_id"] == held_observation["run_id"]
+    assert complete["handoff_settled"] is True and complete["completed_count"] == 20
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "run_id",
+        "approved_fingerprint",
+        "state_sha256",
+        "archive_sha256",
+        "null",
+        "list",
+        "extra",
+        "missing",
+        "old_run",
+        "old_run_alias",
+        "authority",
+        "preview",
+        "missing_archive",
+        "archive_bytes",
+    ],
+)
+async def test_explicit_archive_link_denies_before_replacing_old_state(fixture, tmp_path, monkeypatch, damage):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    protected = {name: (tmp_path / name).read_bytes() for name in (bounded.STATE_NAME, bounded.RECOVERY_NAME)}
+    if damage in {"run_id", "approved_fingerprint", "state_sha256", "archive_sha256"}:
+        approval["confirmed_halt_link"][damage] = uuid.uuid4().hex if damage == "run_id" else "0" * 64
+    elif damage == "null":
+        approval["confirmed_halt_link"] = None
+    elif damage == "list":
+        approval["confirmed_halt_link"] = []
+    elif damage == "extra":
+        approval["confirmed_halt_link"]["unexpected"] = True
+    elif damage == "missing":
+        del approval["confirmed_halt_link"]["archive_sha256"]
+    elif damage == "old_run":
+        approval["run_id"] = approval["confirmed_halt_link"]["run_id"]
+    elif damage == "old_run_alias":
+        approval["run_id"] = str(uuid.UUID(approval["confirmed_halt_link"]["run_id"]))
+    elif damage == "authority":
+        approval["authority"] = "source_bound_ordinary_policy_v1"
+    elif damage == "preview":
+        del approval["approved_preview"]
+    elif damage == "missing_archive":
+        path.unlink()
+    else:
+        path.write_bytes(raw + b"\n")
+    # Best-effort observation deliberately fails; it cannot authorize admission.
+    monkeypatch.setattr(bounded, "_confirmed_halt_link", lambda *_args: None)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    assert {name: (tmp_path / name).read_bytes() for name in protected} == protected
+    if damage == "missing_archive":
+        assert not path.exists()
+    else:
+        assert path.read_bytes() == (raw + b"\n" if damage == "archive_bytes" else raw)
+
+
+@pytest.mark.asyncio
+async def test_linked_approval_cannot_start_without_retained_halt(fixture, tmp_path, monkeypatch):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    (tmp_path / bounded.STATE_NAME).unlink()
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert result.action == "hold" and "no retained transition" in result.reason
+    assert not (tmp_path / bounded.STATE_NAME).exists()
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "source",
+        "session",
+        "generation",
+        "plan",
+        "candidate",
+        "stale",
+        "future",
+        "expired",
+        "duration",
+        "readback",
+        "untouched",
+        "native",
+        "later",
+    ],
+)
+async def test_linked_admission_preserves_current_and_historical_fences(fixture, tmp_path, monkeypatch, damage):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    protected = (tmp_path / bounded.STATE_NAME).read_bytes()
+    generation = 10
+    if damage == "source":
+        monkeypatch.setenv("VERDIFY_GIT_SHA", "c" * 40)
+    elif damage == "session":
+        monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    elif damage == "generation":
+        generation = 11
+        monkeypatch.setattr(shared, "transport_readbacks_ready", lambda _generation: True)
+    elif damage == "plan":
+        fixture.plan_values[fixture.parameters[0]] = 3.0
+    elif damage == "candidate":
+        changes[0] = (changes[0][0], 3.0)
+    elif damage in {"stale", "future"}:
+        approval["approved_preview"]["captured_at"] = (
+            datetime.now(UTC) + (timedelta(minutes=-7) if damage == "stale" else timedelta(seconds=30))
+        ).isoformat()
+    elif damage in {"expired", "duration"}:
+        approval["expires_at"] = (
+            datetime.now(UTC) + (timedelta(seconds=-1) if damage == "expired" else timedelta(minutes=31))
+        ).isoformat()
+    elif damage == "readback":
+        fixture.readbacks[fixture.parameters[0]] = 9.0
+    elif damage == "untouched":
+        fixture.readbacks[fixture.names[-1]] = 9.0
+    elif damage == "native":
+        fixture.stage_rows[0]["delivery_status"] = "sent"
+    else:
+        fetch = fixture.fetch
+
+        async def later(sql, *args):
+            return [{"ts": datetime.now(UTC)}] if "AND ts > $2" in sql else await fetch(sql, *args)
+
+        fixture.fetch = later
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), generation, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == protected
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("missing", ["client", "lease"])
+async def test_linked_admission_without_client_or_lease_never_sends(fixture, tmp_path, monkeypatch, missing):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    if missing == "client":
+        monkeypatch.setattr(shared, "esp32", {"client": None})
+    else:
+        monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda **_kwargs: False)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["run_id"] == approval["run_id"] and state["status"] == "halted"
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("damage", ["removed", "link", "preview", "expiry", "archive"])
+async def test_linked_authority_is_checked_before_confirmation_or_next_stage(fixture, tmp_path, monkeypatch, damage):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    selected = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert selected.action == "send"
+    bounded.finish_stage(tmp_path, selected, records(selected.changes), [])
+    pending_records = bounded._read(tmp_path / bounded.STATE_NAME)["records"]
+    if damage == "removed":
+        del approval["confirmed_halt_link"]
+    elif damage == "link":
+        approval["confirmed_halt_link"]["state_sha256"] = "0" * 64
+    elif damage == "preview":
+        approval["approved_preview"]["changes"][0][1] = 3.0
+    elif damage == "expiry":
+        approval["expires_at"] = (datetime.now(UTC) + timedelta(minutes=20)).isoformat()
+    else:
+        path.write_bytes(raw + b"\n")
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["status"] == "halted" and state["records"] == pending_records
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["before_ready", "after_ready", "after_inflight", "recovery_unlink"])
+async def test_linked_transition_interruption_retains_custody_and_unknown_outcome(
+    fixture, tmp_path, monkeypatch, failure
+):
+    old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    write = bounded._write
+
+    def interrupted(target, value):
+        target_state = target.name == bounded.STATE_NAME and value.get("run_id") == approval["run_id"]
+        if target_state and value.get("status") == "ready" and failure == "before_ready":
+            raise OSError("new state write failed before persistence")
+        write(target, value)
+        if target_state and (
+            value.get("status") == "ready"
+            and failure == "after_ready"
+            or value.get("status") == "inflight"
+            and failure == "after_inflight"
+        ):
+            raise OSError("new state persistence acknowledgement unknown")
+
+    monkeypatch.setattr(bounded, "_write", interrupted)
+    if failure == "recovery_unlink":
+        unlink = Path.unlink
+
+        def interrupted_unlink(target, *args, **kwargs):
+            if target.name == bounded.RECOVERY_NAME:
+                raise OSError("recovery unlink acknowledgement unknown")
+            return unlink(target, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "unlink", interrupted_unlink)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["status"] == "halted"
+    assert state["run_id"] == (old["run_id"] if failure == "before_ready" else approval["run_id"])
+    assert path.read_bytes() == raw
+    if failure != "before_ready":
+        # Unknown durable new state must not turn back into a first send.
+        again = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+        assert again.action == "hold" and not again.changes
+
+
+@pytest.mark.asyncio
+async def test_explicit_archive_preparer_cli_is_opt_in_and_exclusive(fixture, tmp_path, monkeypatch):
+    _old, _changes, _approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    preview = await bounded._preview(fixture, _changes, fixture.planned(), 10)
+    preview_path = tmp_path / "captured-preview.json"
+    bounded._write(preview_path, preview)
+    output = tmp_path / "new-approval.json"
+    monkeypatch.setattr(sys, "argv", ["prepare", str(preview_path), str(output), "--confirmed-halt-archive", str(path)])
+    prepare_writer_stage.main()
+    prepared = bounded._read(output)
+    assert prepared["confirmed_halt_link"] == bounded.confirmed_halt_archive_link(raw)
+    before = output.read_bytes()
+    with pytest.raises(FileExistsError):
+        prepare_writer_stage.main()
+    assert output.read_bytes() == before
+    assert path.read_bytes() == raw
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prepare",
+            str(preview_path),
+            str(output),
+            "--confirmed-halt-archive",
+            str(path),
+            "--rollback-state",
+            str(tmp_path / bounded.STATE_NAME),
+        ],
+    )
+    with pytest.raises(SystemExit) as error:
+        prepare_writer_stage.main()
+    assert error.value.code == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("damage", ["json", "schema", "custody", "completed", "pod", "native", "cutoff", "version"])
+async def test_archive_preparer_rejects_damaged_historical_custody(fixture, tmp_path, monkeypatch, damage):
+    _old, changes, _approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    archive = json.loads(raw)
+    if damage == "schema":
+        archive["schema"] = "unrecognized"
+    elif damage == "custody":
+        archive["forward"]["custody"][bounded.STATE_NAME] += " "
+    elif damage == "completed":
+        name = archive["state"]["completed"][0]
+        archive["state"]["completed_values"][name] = 9.0
+    elif damage == "pod":
+        archive["forward"]["original_writer_custody"]["pod"]["metadata"]["uid"] = "not-a-uuid"
+    elif damage == "native":
+        archive["native_requests"][0]["delivery_status"] = "sent"
+    elif damage == "cutoff":
+        archive["native_requests"][0]["confirmed_at"] = (datetime.now(UTC) + timedelta(minutes=1)).isoformat()
+    elif damage == "version":
+        archive["forward"]["version"] = 1
+    damaged = b"{" if damage == "json" else json.dumps(archive).encode()
+    preview = await bounded._preview(fixture, changes, fixture.planned(), 10)
+    with pytest.raises((ValueError, KeyError, TypeError)):
+        prepare_writer_stage.prepare(preview, datetime.now(UTC), confirmed_halt_archive=damaged)
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+async def test_explicit_link_also_retains_existing_two_stage_archive(fixture, tmp_path, monkeypatch):
+    state, _original, _forward = await confirmed_two_stage_fixture(fixture, tmp_path)
+    held = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert held.action == "hold" and "fresh approval required" in held.reason
+    path = tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json"
+    raw = path.read_bytes()
+    parameter = fixture.parameters[-1]
+    fixture.plan_values[parameter] = 2.0
+    changes = [(parameter, 2.0)]
+    monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    preview = await bounded._preview(fixture, changes, fixture.planned(), 3)
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC), confirmed_halt_archive=raw)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "send" and result.run_id != state["run_id"]
+    assert result.changes == tuple(changes)
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["confirmed_halt_link_required"] is True
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+async def test_linked_run_preserves_existing_settled_rollback_fresh_admission(fixture, tmp_path, monkeypatch):
+    _old, changes, approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    first = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert first.action == "send"
+    bounded.finish_stage(tmp_path, first, [], [])  # No successful effects claimed for this new stage.
+    await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    recovery = prepare_writer_stage.prepare_rollback(preview, state, datetime.now(UTC))
+    bounded._write(tmp_path / bounded.RECOVERY_NAME, recovery)
+    settled = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert settled.action == "hold" and settled.reason == "last stage already matches baseline"
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["status"] == "rollback_complete"
+    fixture.stage_rows = [
+        {
+            "ts": datetime.fromisoformat(state["stage_started_at"]),
+            "parameter": parameter,
+            "value": value,
+            "delivery_status": "deferred_heap_pressure",
+            "confirmed_at": None,
+        }
+        for parameter, value in first.changes
+    ]
+    archived = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert archived.action == "hold" and "fresh approval required" in archived.reason
+    recovered_path = tmp_path / f"writer-stage-recovered-{state['run_id']}.json"
+    recovered_raw = recovered_path.read_bytes()
+    fresh = prepare_writer_stage.prepare(bounded._read(tmp_path / bounded.PREVIEW_NAME), datetime.now(UTC))
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, fresh)
+    resumed = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    assert resumed.action == "send" and resumed.run_id == fresh["run_id"] != approval["run_id"]
+    assert recovered_path.read_bytes() == recovered_raw and path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+async def test_strict_archive_validation_rejects_coherent_custody_with_false_original_fingerprint(
+    fixture, tmp_path, monkeypatch
+):
+    _old, changes, _approval, path, raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    archive = json.loads(raw)
+    state, forward = archive["state"], archive["forward"]
+    state["approved_preview"]["fingerprint"] = "0" * 64
+    original = archive["approval"]
+    original["approved_preview"] = state["approved_preview"]
+    original["fingerprint"] = "0" * 64
+    forward["original_approval"] = original
+    forward["custody"][bounded.STATE_NAME] = json.dumps(state)
+    forward["custody"][bounded.APPROVAL_NAME] = json.dumps(original)
+    forward["state_digest"] = bounded._digest(state)
+    forward["approval_digest"] = bounded._digest(original)
+    forward["custody_sha256"] = bounded._digest(forward["custody"])
+    # Even self-consistent containers cannot replace the approved full-vector hash.
+    preview = await bounded._preview(fixture, changes, fixture.planned(), 10)
+    with pytest.raises(ValueError, match="original preview fingerprint"):
+        prepare_writer_stage.prepare(preview, datetime.now(UTC), confirmed_halt_archive=json.dumps(archive).encode())
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("phase", ["history", "later"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        None,
+        "archive_changed",
+        "archive_removed",
+        "approval_removed",
+        "approval_replaced",
+        "state_changed",
+        "recovery_removed",
+        "recovery_changed",
+    ],
+)
+async def test_admission_rechecks_custody_after_each_native_await(fixture, tmp_path, monkeypatch, phase, mutation):
+    _old, changes, approval, path, _raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    names = (bounded.STATE_NAME, bounded.APPROVAL_NAME, bounded.RECOVERY_NAME, path.name)
+
+    def custody():
+        return {name: (tmp_path / name).read_bytes() if (tmp_path / name).exists() else None for name in names}
+
+    expected = custody()
+    calls = []
+    fetch = fixture.fetch
+
+    async def mutate_during_fetch(sql, *args):
+        rows = await fetch(sql, *args)
+        if "FROM setpoint_changes" not in sql:
+            return rows
+        current_phase = "later" if "AND ts > $2" in sql else "history"
+        calls.append(current_phase)
+        if current_phase == phase and mutation is not None:
+            if mutation == "archive_changed":
+                path.write_bytes(path.read_bytes() + b"\n")
+            elif mutation == "archive_removed":
+                path.unlink()
+            elif mutation == "approval_removed":
+                (tmp_path / bounded.APPROVAL_NAME).unlink()
+            elif mutation == "approval_replaced":
+                replacement = {**approval, "run_id": uuid.uuid4().hex}
+                bounded._write(tmp_path / bounded.APPROVAL_NAME, replacement)
+            elif mutation == "state_changed":
+                changed = bounded._read(tmp_path / bounded.STATE_NAME)
+                changed["halt_reason"] = "external operator changed custody"
+                bounded._write(tmp_path / bounded.STATE_NAME, changed)
+            elif mutation == "recovery_removed":
+                (tmp_path / bounded.RECOVERY_NAME).unlink()
+            else:
+                target = tmp_path / bounded.RECOVERY_NAME
+                target.write_bytes(target.read_bytes() + b"\n")
+            expected.update(custody())
+        return rows
+
+    fixture.fetch = mutate_during_fetch
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+    if mutation is None:
+        assert result.action == "send" and len(result.changes) == 12
+        assert calls == ["history", "later"]
+    else:
+        assert result.action == "hold" and not result.changes
+        assert "changed during native validation" in result.reason
+        assert calls == (["history"] if phase == "history" else ["history", "later"])
+        # Denying stale authority must not rewrite the retained or concurrently
+        # changed files, even when the old state's digest no longer matches.
+        assert custody() == expected
+
+
+@pytest.mark.asyncio
+async def test_generic_approval_cannot_reuse_old_uuid_through_hyphenated_alias(fixture, tmp_path):
+    old, _original, _forward, changes = await confirmed_halt_fixture(fixture, tmp_path)
+    held = await bounded.choose_stage(fixture, changes, fixture.planned(), 3, tmp_path, 12)
+    assert held.action == "hold"
+    state_raw = (tmp_path / bounded.STATE_NAME).read_bytes()
+    path = tmp_path / f"writer-stage-confirmed-halt-{old['run_id']}.json"
+    archive_raw = path.read_bytes()
+    preview = await bounded._preview(fixture, changes, fixture.planned(), 3)
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC))
+    approval["run_id"] = str(uuid.UUID(old["run_id"]))
+    assert approval["run_id"] != old["run_id"]
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    result = await bounded.choose_stage(fixture, changes, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and not result.changes
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == state_raw
+    assert path.read_bytes() == archive_raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mutation", [None, "approval_removed", "approval_replaced", "archive_changed", "archive_removed", "state_changed"]
+)
+async def test_completion_rechecks_linked_authority_after_nonempty_handoff_await(
+    fixture, tmp_path, monkeypatch, mutation
+):
+    _old, changes, approval, path, _raw = await changed_archived_plan(fixture, tmp_path, monkeypatch)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    while changes:
+        selected = await bounded.choose_stage(fixture, changes, fixture.planned(), 10, tmp_path, 12)
+        assert selected.action == "send"
+        stage = records(selected.changes)
+        bounded.finish_stage(tmp_path, selected, stage, [])
+        for record in stage:
+            fixture.readbacks[record["parameter"]] = record["value"]
+            fixture.rows[(record["requested_at"], record["parameter"])] = {
+                "delivery_status": "confirmed",
+                "confirmed_at": datetime.now(UTC),
+            }
+        changes = [(p, value) for p, value in changes if fixture.readbacks[p] != value]
+    done = await bounded.choose_stage(fixture, [], fixture.planned(), 10, tmp_path, 12)
+    assert done.action == "complete"
+    parameter = bounded._read(tmp_path / bounded.STATE_NAME)["completed"][0]
+    handoff = bounded.Decision("complete", ((parameter, 3.0),), run_id=done.run_id)
+    bounded.note_ordinary_handoff(handoff, 10)
+    record = {**records(handoff.changes)[0], "source": "planner"}
+    bounded.record_ordinary_handoff(handoff, 10, [record], [])
+    fixture.readbacks[parameter] = 3.0
+    fixture.rows[(record["requested_at"], parameter)] = {
+        "value": 3.0,
+        "source": "planner",
+        "delivery_status": "confirmed",
+        "confirmed_at": datetime.now(UTC),
+        "expired_at": None,
+    }
+    calls = []
+    fetchrow = fixture.fetchrow
+
+    async def mutate_during_fetchrow(sql, *args):
+        row = await fetchrow(sql, *args)
+        calls.append(args)
+        if mutation == "approval_removed":
+            (tmp_path / bounded.APPROVAL_NAME).unlink()
+        elif mutation == "approval_replaced":
+            bounded._write(tmp_path / bounded.APPROVAL_NAME, {**approval, "run_id": uuid.uuid4().hex})
+        elif mutation == "archive_changed":
+            path.write_bytes(path.read_bytes() + b"\n")
+        elif mutation == "archive_removed":
+            path.unlink()
+        elif mutation == "state_changed":
+            state = bounded._read(tmp_path / bounded.STATE_NAME)
+            state["external_change"] = True
+            bounded._write(tmp_path / bounded.STATE_NAME, state)
+        return row
+
+    fixture.fetchrow = mutate_during_fetchrow
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 10)
+    assert len(calls) == 1  # Every mutation happens inside a real awaited handoff read.
+    key = (bounded.SESSION_ID, 10, done.run_id)
+    if mutation is None:
+        assert complete["handoff_settled"] is True
+        assert complete["handoff_confirmed_count"] == complete["handoff_requested_count"] == 1
+        assert complete["supersedes"] == approval["confirmed_halt_link"]
+    else:
+        assert complete is None
+        assert key not in bounded._observed_completions
+        assert key in bounded._handoffs  # Failed attestation retains pending custody.

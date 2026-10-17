@@ -1,0 +1,345 @@
+{
+  "schema": "verdify-live-replan-20261017",
+  "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+  "prior_planning_revision": "cc7e77d562661872a428ce6cd8a2429034d245fd",
+  "intake_open_issues": 56,
+  "new_issues": [
+    980,
+    981
+  ],
+  "planned_open_issues": 58,
+  "recent_closed_issues": [
+    303,
+    304,
+    382,
+    396,
+    419,
+    643,
+    644,
+    949,
+    965,
+    976
+  ],
+  "canonical_issue_count": 92,
+  "expected_active_native_edges": 41,
+  "expected_satisfied_native_edges": 27,
+  "sprint3_base_hours": [
+    33,
+    62
+  ],
+  "sprint3_reserve_hours": 18,
+  "shared_fortnight_ceiling": 80,
+  "provider_publication_verified": true,
+  "evidence_hashes": [
+    {
+      "kind": "issue-recommendations.json",
+      "sha256": "2c4c9387227ac48a58fe03a6303b678ff8a5063a3b994ced597d7ad2941bdf30"
+    },
+    {
+      "kind": "prs-and-work-in-flight.json",
+      "sha256": "508bab42259063d8d196e8e28a26b8a38e22da044330d9be6c062fa78773d94c"
+    },
+    {
+      "kind": "runtime-summary.private.json",
+      "sha256": "78b3e0e4c0af8142f4f2809b4c69fe6e5318467382dc33eb2a79057d083b1da1"
+    },
+    {
+      "kind": "issue-runtime-findings.json",
+      "sha256": "2b9fa9e84fdeeaa453ac77de64c0ebd6c4c2bf2290e8ab0ecef3aa7b9a4ddd16"
+    },
+    {
+      "kind": "native-graph.json",
+      "sha256": "8d0d097411a65b4156cf070014bf44178cc90a4312ea247eb6f40573b573d905"
+    },
+    {
+      "kind": "open-issues.json",
+      "sha256": "cafe33e34cb7e7e7ed2971276e8d5b575715e8cde8029012a5e2b0f613f6b44b"
+    },
+    {
+      "kind": "recent-comments.json",
+      "sha256": "08cd9a59c3d1b3c36a35ef7f48e8740aeec9d2f35cd100d0036e497d3ed211e3"
+    }
+  ],
+  "limits": [
+    "Raw evidence remains private.",
+    "No production, device, credentials, controller or CI mutation by the review.",
+    "GitHub issue bodies, native relationships, milestone dates/memberships and PR dispositions were independently read back. Product main remains220 during offline preparation; complete canonical paths may accompany the genuine reviewed source fix through normal delivery. No whole planning-branch merge or planning-only CI."
+  ],
+  "local_validation": {
+    "schema": "PASS:92 issues/9 stages/78 historical edges; coverage and DAG valid",
+    "generated_views": "all 7 fresh",
+    "focused_tests": "35 passed",
+    "published_paths": "all source paths exist",
+    "diff_check": "PASS"
+  },
+  "provider_verification": {
+    "verified_at": "2026-10-17T16:07:38.830373+00:00",
+    "open_issues": 58,
+    "all_issue_bodies_exact": true,
+    "native_graph_exact": true,
+    "parent_links_exact": true,
+    "active_edges": 41,
+    "satisfied_edges": 27,
+    "acyclic": true,
+    "s2_open_members": [
+      749
+    ],
+    "s3_open_members": [
+      639,
+      782,
+      963,
+      977,
+      980,
+      981
+    ],
+    "remaining_open_prs": [
+      855
+    ],
+    "superseded_prs_closed_without_merge": [
+      774,
+      968,
+      969,
+      970,
+      971
+    ],
+    "product_main_unchanged": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+    "body_hashes": {
+      "14": "5dcfcaa564f57be5fc5d6bd56b92fd911341dca99ab50b29bb74591f900794f8",
+      "16": "e35c3201a0c99601f3ecb4482b136a0d1e1cf53dc75ccfc0b7ba3bd85cc7f1c7",
+      "31": "02d5ede5d3724f9b1cf946f67981fdf788eac5a93a6fa7b0c931e741766d42e7",
+      "45": "ae6524bc0fe13f740bae8475eb300710a200671280a22e95bab9601ba85fef6f",
+      "51": "582bce66538de0bbcf23dafc4dd914535751de43fc2a1ac4b7fe002cf8b32f8f",
+      "52": "b7c088645a5739e56f3e5f539059ed88f7eef24a2498bb12dfec4691b9e0c318",
+      "75": "bb7f13043df41d64e0ccb475c1f83d0ae53ab4b6ae89458c021b1ee7af507e3d",
+      "218": "a9052d3c92ab5e66721048bf325947463adbdba1dfa2633e718028783151fe67",
+      "245": "004633b71337c09e081f7598d73a4894636f549c6a658645742e94e300319b48",
+      "296": "32fecbe7b08eed3cf97b80d56c8fe0d8c9d2a645e6f51e44a4cdf173b392b593",
+      "297": "ec7767fcb28e9deb9fbccafab0e6af196d494af4bc63e05951974c26ba1bbe96",
+      "298": "e7b4891958b6c28aa258fb4d370fc06d8bf61068daf4eec9821a9b14c70feb1b",
+      "299": "a41c9ae3f4da84769d044277aed6ce66bef21466515f0449be3cde39888be79c",
+      "317": "2b2a748009dc4dbf5e530b49fa5950c231a9f2bd83655e23d6df5f1fff9d6917",
+      "324": "950b44480ab77613f1892881cb7f359f0fd4999f2dff602507a16c61f9a7e961",
+      "350": "536d7f42dafe2a183f523c2af386457cfbdbb292001c895430938fda229e1b08",
+      "359": "f1d9251c70e2b3cdedd6efadc7a97908c2536113e60117a4e03a2e6a3c620375",
+      "361": "424683bb1c778d439e7a6a1d2176768a32f4a45673a7c812b445145156cde882",
+      "367": "ca5642dd8a7b95c71cccad7c94e576769b4e372457fb0b00399184380a53b987",
+      "368": "2603feefac7e302c7812f412d3e45b8566d2e732266e487105dbed4725074ead",
+      "369": "e9d2f85422c0671c589a759e03e416a282b4a9d43b0b7197f29e49e4cf995b1a",
+      "370": "14f6661a039e5536173c7a1f1763671331d9affedfa8661262a24ba6c27ca610",
+      "378": "0b67e8c8efa41340e512af6ac2a141c426612421fc843df1a468fadd08630bb0",
+      "379": "4a9e300960b85c0406d28611b80c82f124beb89e4e7422a92a68e9b0f4b13a37",
+      "386": "5393225a397116f8accbbd2d9326a2d6e5d98da2722a0b64f93144d9b976c161",
+      "390": "1b292516511e19144840ab943f9e861d56c55cb282ba7341d68b3bd9c6246d70",
+      "398": "55ce814c0b027b70bb3206bc1c4be4177c7d6dd4cab54d865669c88d5c6edd09",
+      "410": "3d445b5e38ea1c04a5a8485fb1edac9ed0d12c79cf7218dfcba2b89d43559042",
+      "412": "9fbe22a3f3c1512baf30ce7dcd308cb0301bdddf6f6c182011748cd3c2a4b65b",
+      "428": "596c26c3e9aa5a1e7dc368c3b84390951fdb7ba47e00952e7db20bab9eb0864b",
+      "430": "903bcbbdfe45568bf3b46eeeb706a7a1336c8c8aafc0856b5e580929ba017536",
+      "434": "6b06d07ab9746b91b1bb13fabde2107fb46490bef7b48a4a7aa974ca89e21faf",
+      "581": "137a00e844bb32fc97d6b7b05a9eb2962861240f3b2e313b878ff4eaab954037",
+      "586": "b3fb7a02e9caa98ec2872312ef07b65303381da567520cd8b94afbe2cd10a855",
+      "587": "7b1c679f4b66613bf40a8807ee0de3927e72713bd281db6e00d03746ce9e813f",
+      "588": "a6a974ade3f7244768a160d3439d124c8a9d5f50c1a98edad4942aa12b6f45d7",
+      "606": "95bdf7c2d9e20cf32c058ee609c9e0765a8f4744b417c26656b528679aa27897",
+      "638": "d3618ab241ab08f9e862367bd1816265dc05ad8c683ec5d2a61b1a8a64fe1738",
+      "639": "b775381a4c230b52213e162de9dce62845d21ad462a6d6d9ed3a54f19d17cdb0",
+      "640": "2eaeff7cf589fcc99682e15d1a61c6b937e4ea3410aa1cbe51135c7c9fd07099",
+      "641": "27244302cc5d403647f265f7d3bddff25fd7c95e16187795ebc6a15508cf2229",
+      "642": "d2cbfbcbe4935ad80f9b11057dd0b2c2cfacf36f11b3db61196552aebecd8416",
+      "749": "debebec5f961103b78f5d4e49c2890cb9280bc67c855cd4fe53a2dcc90a790f0",
+      "750": "eb00db7fabf12137baac4e2f1ca8a6b9e29bdc070077c02095385404a8a3f625",
+      "751": "485d243705e65be49db14a1ac5301b1af84002946cff7b95fc0c765b6cf4423e",
+      "775": "f22ee6252686abbe3b1a0590b4a7239bb539c6188c47fb105701051c188457e4",
+      "782": "d94e484d247833527e06067e2d76647977d0a8a2e0e3679a3cb78aacc6d51e2c",
+      "783": "1285584028b62a8161dec36bbcfe31fadeff36c4fa96b697156259d8d7b9cd31",
+      "784": "f2ffdbf1904aba734211aa622326ca50c42e3ba7da4439eb21cc31766d9d555b",
+      "785": "d053aeea4722312817f4397aa1e3cce023100903965a2aa6b13617b8512943c8",
+      "786": "13113d8fe67084db859465a0810c1acd907bfdb0975d0cefe5c70cbfb340f77c",
+      "787": "cb23d5b9ebc9dcfc9dc1270d960e35b67b507b0cf31928392e2130315af59cff",
+      "801": "b1862dacbb60d324a736d70b9406f1eff6d2a940157e2227fa76beedfce169e7",
+      "802": "a6a46ee5f5e46028b16bef2addd18a3d8128dc0d09e8704c4c898d2608e2e620",
+      "963": "d222646cadc4430fe4a9ec3d620d72a78f781a692e6040681a5f31c3a4fd08c2",
+      "977": "7aa5519dc3720efdfc293e04fb788c9f897185e2170b90c365f2c57d754dd732",
+      "980": "4d30b089012425ea497acf3a53d4cf5f36c8c890d135b48c7c4d41f8b5086f58",
+      "981": "9b93afd3385a41923a6f022265461cfaadbedf7cdb5f02cf0b577308defbdcb9"
+    }
+  },
+  "milestones_verified": [
+    {
+      "number": 33,
+      "title": "S2 \u2014 Completion and current readiness (October 13\u201326, 2026)",
+      "due_on": "2026-10-26T00:00:00Z",
+      "verified": true
+    },
+    {
+      "number": 34,
+      "title": "S3 \u2014 Runtime truth and bounded qualification (October 27\u2013November 9, 2026)",
+      "due_on": "2026-11-09T00:00:00Z",
+      "verified": true
+    },
+    {
+      "number": 35,
+      "title": "S4 \u2014 Integrated qualification after current readiness",
+      "due_on": null,
+      "verified": true
+    },
+    {
+      "number": 37,
+      "title": "Release safety and estate adoption follow-through",
+      "due_on": null,
+      "verified": true
+    }
+  ],
+  "native_changes_verified": [
+    {
+      "kind": "parent",
+      "child": 977,
+      "parent": 218,
+      "verified": true
+    },
+    {
+      "kind": "parent",
+      "child": 980,
+      "parent": 75,
+      "verified": true
+    },
+    {
+      "kind": "parent",
+      "child": 981,
+      "parent": 75,
+      "verified": true
+    },
+    {
+      "kind": "parent",
+      "child": 317,
+      "parent": 75,
+      "verified": true
+    },
+    {
+      "kind": "blocked_by",
+      "dependent": 782,
+      "blocker": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+      "verified": true
+    },
+    {
+      "kind": "blocked_by",
+      "dependent": 787,
+      "blocker": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+      "verified": true
+    },
+    {
+      "kind": "blocked_by",
+      "dependent": 802,
+      "blocker": "https://github.com/jvallery/agents/issues/4451",
+      "verified": true
+    }
+  ],
+  "pull_requests_verified": [
+    {
+      "number": 971,
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "head": "ce24459c8ad2edc6bd69fc12da162f0958f7582d",
+      "body_sha256": "1bf08fca3d44b23e87c2acbed9a8a6700a4af0e4dab9bc811d97c9e50286b7a4"
+    },
+    {
+      "number": 970,
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "head": "9ec13506c68d28029fe1109cc86cbe777239e0e6",
+      "body_sha256": "50d17404878a3709ebe5da66f3e645597e721821bdbba68320a4a745eff61ccd"
+    },
+    {
+      "number": 969,
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "head": "38efbd834a08577b124e3aff7f122697b9f04f71",
+      "body_sha256": "913e090042cb1063559f6cef9417c54a91c046146f7b21cf65e65d812c51da77"
+    },
+    {
+      "number": 968,
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "head": "4ceb6dcc47997be3cfa0c14db7d169e61f793d3d",
+      "body_sha256": "da9ec65c28b0d47a50ca2a5a04fb632bcf65a511d7f99edc12c8f743df5a177c"
+    },
+    {
+      "number": 855,
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "head": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+      "body_sha256": "09ec1d7dd546aa1333ca835b46902e016f0f154dcb9363757b3baeeaea245cf1"
+    },
+    {
+      "number": 774,
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "head": "1a6d64e853a861d4c4bd24f4cfc5f51a15f137b4",
+      "body_sha256": "666bfe39a943d54e79aaf609cc4b35439d4665400d20c1f7521c5d7b868cf59a"
+    }
+  ],
+  "publication": {
+    "branch": "codex/verdify-live-replan-20261017",
+    "initial_plan_commit": "0d5305a8",
+    "review_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/codex/verdify-live-replan-20261017/planning/reviews/2026-10-17/NEXT-SPRINT.md",
+    "scope": "Canonical planning and curated status only; no product or production action."
+  },
+  "coordinator_automation": {
+    "id": "verdify-sprint-coordinator",
+    "prompt_sha256": "5a156e604a531fa60a3520b2d9b1d73fd02751054e2f0d01cea64b5fd8650637",
+    "prompt_updated_and_read_back": true,
+    "schedule_status_target_and_notification_preference_preserved": true
+  },
+  "execution_resume": {
+    "issue749": {
+      "verified_at": "2026-10-17T16:32:41.397731+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "bfc6a7a7bf9e4a3b69f40172c4dec3ff5570c416999d9a3addd82ecfd4222666",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T16:32:40Z",
+      "scope": "current evidence and execution route only; native issue graph and milestone unchanged"
+    },
+    "product_source_unchanged": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+    "source_transition": "Accepted final3path patchabce1968 after306 focused tests and independent review; no source delivery yet.",
+    "route": "existing genuine source parent CI and pin actuator;4977 no longer prerequisite",
+    "diagnostic_receipt_sha256": "c78cce878f175d1af6f2f1015a2b607562181b558cd153861c584e7f8b58fea3",
+    "diagnostic_comparison_sha256": "9c5a82eda86808d2c8983b66dc4e74977af5ce23f1cd83467db29725bc2cd3d2",
+    "external_registry_owner": "Normal full audit succeeded16:35:27UTC; matching169 integrity/capacity publication independently verified. Current CI availability and fresh coherence/fit still required.",
+    "native_issue_graph_unchanged": true,
+    "planning_tests_passed": 35,
+    "all_seven_generated_views_fresh": true,
+    "automation_readback_exact": true,
+    "registry_recovery_receipt_sha256": "75b634ec57bd8a202c7ec531c54dd2a8934398f8e49d513e348f9c0f94433daf",
+    "initial_review_receipt_sha256": "ec2b175cb8cff6f54850ae014849802bdd2a9e9851267041762423ec379f7b79",
+    "source_acceptance": {
+      "patch_sha256": "abce19689c321542886e0bc56920db5cf5f6ceafd1858edfa4a8c27c5303a948",
+      "receipt_sha256": "7a26178800eeaf80214d2bb9ddc267642a00e7bd0a50f671d52699e53940088a",
+      "correction_delta_sha256": "ac42293d8b58a6d05b6791c09d2f41262745db1c71cb49019a82d985b85f614a",
+      "junit_sha256": "6076f58667183fc468620fcd97fe47cb6c2b4625deed39684f27254b4b61d514",
+      "tests": 306,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "independent_readonly_review": "accepted; three concrete defects corrected; no remaining defect in review scope",
+      "runtime_acceptance": false
+    },
+    "issue749_source_acceptance": {
+      "verified_at": "2026-10-17T16:50:44.163173+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "86edc85f65534f90ac609d10283676302c81992d30e91184fe9061956529b02a",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T16:50:43Z",
+      "scope": "current source acceptance/recovery/next action only; native graph and milestones unchanged"
+    }
+  }
+}

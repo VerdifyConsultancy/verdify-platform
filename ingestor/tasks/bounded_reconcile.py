@@ -60,6 +60,10 @@ class SnapshotBehindReadbacks(ValueError):
     """The atomic DB snapshot has not caught up to this connection's cfg values."""
 
 
+class ConfirmedHaltAuthorityChanged(ValueError):
+    """A concurrent authority/custody change must be denied without overwriting it."""
+
+
 @dataclass(frozen=True)
 class Decision:
     action: str  # ordinary | hold | send | complete
@@ -237,6 +241,7 @@ async def completion_observation(conn, state_dir: Path, decision: Decision, gene
             or state.get("rollback_records")
         ):
             return None
+        _validate_linked_halt_run(state, _read(state_dir / APPROVAL_NAME), state_dir)
         approved = state["approved_preview"]
         if (
             approved["session_id"] != SESSION_ID
@@ -273,6 +278,7 @@ async def completion_observation(conn, state_dir: Path, decision: Decision, gene
                 ):
                     return None
                 latest[param] = record["value"]
+        _validate_linked_halt_run(state, _read(state_dir / APPROVAL_NAME), state_dir)
         from .dispatcher import readback_values_equivalent
 
         readbacks = shared.current_cfg_readbacks(generation)
@@ -1132,20 +1138,20 @@ def _forward_request_receipt(rows, state: dict, cutoff: datetime, *, two_stage: 
     return sorted(result, key=lambda row: (row["ts"], row["parameter"]))
 
 
-async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: dict | None, state_dir: Path) -> bool:
-    """Archive verified successful effects, then require independent fresh authority.
-
-    The original state remains active until normal admission validates a new
-    approval; no halted request is reset, retried, expired, or rolled back.
-    """
-    from .dispatcher import readback_values_equivalent
-
-    forward = _read(state_dir / RECOVERY_NAME)
+def _confirmed_halt_original(state: dict, forward: dict) -> tuple[dict, list[str], bool]:
+    """Validate retained authority independently of any new current plan."""
     if forward is None or forward.get("authority") != FORWARD_AUTHORITY:
         raise ValueError("explicit confirmed-halt handoff missing")
     original = forward["original_approval"]
     two_stage = forward.get("version") == 3
     parameters = _confirmed_halt_shape(state, original, two_stage=two_stage)
+    approved = state["approved_preview"]
+    identity = {
+        key: approved[key]
+        for key in ("session_id", "pod", "source_revision", "generation", "changes", "plan_rows", "readbacks")
+    }
+    if _digest(identity) != approved["fingerprint"] or original.get("fingerprint") != approved["fingerprint"]:
+        raise ValueError("confirmed-halt original preview fingerprint changed")
     if (
         forward.get("version") not in {2, 3}
         or forward.get("source_run_id") != state["run_id"]
@@ -1159,11 +1165,120 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
     if forward.get("writer_custody_digest") != _digest(forward["original_writer_custody"]):
         raise ValueError("confirmed-halt original Pod custody changed")
     _confirmed_halt_writer_custody(state, forward["original_writer_custody"])
+    return original, parameters, two_stage
+
+
+def confirmed_halt_archive_link(raw: bytes) -> dict:
+    """Strict admission/preparation validation; observation failures cannot authorize."""
+    archive = json.loads(raw)
+    state, forward = archive["state"], archive["forward"]
+    original, _parameters, two_stage = _confirmed_halt_original(state, forward)
+    receipt = _forward_request_receipt(
+        archive["native_requests"], state, _time(forward["approved_at"]), two_stage=two_stage
+    )
+    if (
+        archive
+        != {
+            "schema": "verdify-writer-stage-confirmed-halt-v3"
+            if two_stage
+            else "verdify-writer-stage-confirmed-halt-v2",
+            "state": state,
+            "approval": original,
+            "forward": forward,
+            "native_requests": receipt,
+        }
+        or receipt != forward["native_requests"]
+    ):
+        raise ValueError("immutable confirmed-halt archive changed")
+    return {
+        "run_id": state["run_id"],
+        "approved_fingerprint": state["approved_preview"]["fingerprint"],
+        "state_sha256": _digest(state),
+        "archive_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
+def _require_confirmed_halt_approval(approval: dict, link: dict) -> None:
+    approved = approval.get("approved_preview")
+    if (
+        approval.get("version") != 1
+        or approval.get("authority") != "desired_all_five_layers"
+        or not isinstance(approved, dict)
+        or approval.get("confirmed_halt_link") != link
+        or not isinstance(approval.get("confirmed_halt_link"), dict)
+        or approval.get("fingerprint") != approved.get("fingerprint")
+        or any(approval.get(key) != approved.get(key) for key in ("session_id", "generation"))
+    ):
+        raise ValueError("explicit confirmed-halt approval link missing or changed")
+    if uuid.UUID(approval["run_id"]) == uuid.UUID(link["run_id"]):
+        raise ValueError("confirmed-halt approval requires a distinct run UUID")
+
+
+def _validate_linked_halt_run(state: dict, approval: dict | None, state_dir: Path) -> None:
+    if not state.get("confirmed_halt_link_required"):
+        return
+    link = state["confirmed_halt_link"]
+    path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(link['run_id']).hex}.json"
+    if confirmed_halt_archive_link(path.read_bytes()) != link:
+        raise ValueError("linked confirmed-halt archive changed")
+    if state.get("status") == "rollback_complete" and (approval is None or approval.get("run_id") != state["run_id"]):
+        # The existing settled-recovery path retains the linked OLD approval
+        # before accepting a separate fresh run. Its native/history checks
+        # still run in _settled_recovery_archive before any new admission.
+        recovered = _read(state_dir / f"writer-stage-recovered-{uuid.UUID(state['run_id']).hex}.json")
+        if recovered is None or recovered.get("state") != state:
+            raise ValueError("linked settled-recovery custody missing or changed")
+        approval = recovered["approval"]
+    if approval is None:
+        raise ValueError("linked confirmed-halt approval removed")
+    _require_confirmed_halt_approval(approval, link)
+    if (
+        approval["run_id"] != state["run_id"]
+        or approval["approved_preview"] != state["approved_preview"]
+        or approval["expires_at"] != state["expires_at"]
+    ):
+        raise ValueError("linked confirmed-halt authority changed during run")
+
+
+async def _confirmed_halt_archive(
+    conn, preview: dict, state: dict, approval: dict | None, state_dir: Path
+) -> dict | None:
+    """Retain successful effects; a changed plan needs explicit fresh archive acknowledgment."""
+    from .dispatcher import readback_values_equivalent
+
+    archive_path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
+
+    def current_custody() -> dict[str, bytes | None]:
+        custody = {}
+        for name in (STATE_NAME, APPROVAL_NAME, RECOVERY_NAME, archive_path.name):
+            try:
+                custody[name] = (state_dir / name).read_bytes()
+            except FileNotFoundError:
+                custody[name] = None
+        return custody
+
+    custody = current_custody()
+    current_approval = json.loads(custody[APPROVAL_NAME]) if custody[APPROVAL_NAME] is not None else None
+    if json.loads(custody[STATE_NAME]) != state or current_approval != approval:
+        raise ConfirmedHaltAuthorityChanged("confirmed-halt active state or approval changed before validation")
+    forward = json.loads(custody[RECOVERY_NAME]) if custody[RECOVERY_NAME] is not None else None
+    original, parameters, two_stage = _confirmed_halt_original(state, forward)
+    if custody[STATE_NAME] != forward["custody"][STATE_NAME].encode():
+        raise ConfirmedHaltAuthorityChanged("confirmed-halt retained state bytes changed")
     approved = state["approved_preview"]
-    # The original plan remains immutable in state/custody. Archival is not
-    # permission to replay it: separately bind the complete fresh current plan
-    # for archive creation and the later distinct ordinary admission.
-    if not isinstance(forward.get("current_plan_rows"), list) or preview["plan_rows"] != forward["current_plan_rows"]:
+    raw = custody[archive_path.name]
+    archive = json.loads(raw) if raw is not None else None
+    explicit = approval is not None and "confirmed_halt_link" in approval
+    if explicit:
+        if raw is None:
+            raise ValueError("explicit confirmed-halt approval requires existing archive")
+        _require_confirmed_halt_approval(approval, confirmed_halt_archive_link(raw))
+    # Only explicit acknowledgment of an existing archive separates historical
+    # plan custody from new desired authority. Creation and generic approvals
+    # keep the original complete-plan predicate.
+    if not isinstance(forward.get("current_plan_rows"), list) or (
+        not explicit and preview["plan_rows"] != forward["current_plan_rows"]
+    ):
         raise ValueError("confirmed-halt bound current effective plan changed or missing")
     for param, baseline in approved["readbacks"].items():
         current = preview["readbacks"].get(param)
@@ -1181,6 +1296,8 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
         _time(approved["captured_at"] if two_stage else state["stage_started_at"]),
         cutoff,
     )
+    if current_custody() != custody:
+        raise ConfirmedHaltAuthorityChanged("confirmed-halt authority or custody changed during native validation")
     receipt = _forward_request_receipt(rows, state, cutoff, two_stage=two_stage)
     if receipt != forward["native_requests"]:
         raise ValueError("confirmed-halt native history changed")
@@ -1190,10 +1307,17 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
         parameters,
         cutoff,
     )
+    # Both native reads yield. Revocation/replacement during either read is
+    # not permission to use the earlier in-memory authority or rewrite custody.
+    current = current_custody()
+    if current != custody:
+        raise ConfirmedHaltAuthorityChanged("confirmed-halt authority or custody changed during native validation")
+    if current[archive_path.name] is not None:
+        current_link = confirmed_halt_archive_link(current[archive_path.name])
+        if explicit:
+            _require_confirmed_halt_approval(json.loads(current[APPROVAL_NAME]), current_link)
     if later:
         raise ValueError("confirmed-halt later request exists")
-    archive_path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
-    archive = _read(archive_path)
     expected = {
         "schema": "verdify-writer-stage-confirmed-halt-v3" if two_stage else "verdify-writer-stage-confirmed-halt-v2",
         "state": state,
@@ -1218,7 +1342,9 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
         _write(archive_path, expected)
     elif archive != expected:
         raise ValueError("immutable confirmed-halt archive changed")
-    return approval is not None and approval.get("run_id") != state["run_id"]
+    if approval is None or uuid.UUID(approval["run_id"]) == uuid.UUID(state["run_id"]):
+        return None
+    return confirmed_halt_archive_link(raw if raw is not None else archive_path.read_bytes())
 
 
 async def choose_stage(
@@ -1243,6 +1369,8 @@ async def choose_stage(
         # A stopped receipt is historical evidence. A new preview/manifest
         # failure cannot rewrite its original reason or completed effects.
         original_halt_digest = _digest(state) if state is not None and state.get("status") == "halted" else None
+        if state is not None:
+            _validate_linked_halt_run(state, approval, state_dir)
         prior = state.get("approved_preview") if state else approval.get("approved_preview") if approval else None
         baseline_names = set(prior["readbacks"]) if prior else set()
         try:
@@ -1291,11 +1419,11 @@ async def choose_stage(
             and forward
             and forward.get("authority") == FORWARD_AUTHORITY
         ):
-            if not await _confirmed_halt_archive(conn, preview, state, approval, state_dir):
+            confirmed_halt_link = await _confirmed_halt_archive(conn, preview, state, approval, state_dir)
+            if confirmed_halt_link is None:
                 return Decision(
                     "hold", reason="confirmed halt archived; fresh approval required", run_id=state["run_id"]
                 )
-            confirmed_halt_link = _confirmed_halt_link(state, state_dir)
             state = None
             recovered_admission = True
         if state is not None and state.get("status") == "rollback_complete":
@@ -1335,6 +1463,12 @@ async def choose_stage(
             _write(approval_path, approval)
         if approval is None:
             raise ValueError("approval removed during run")
+        if (
+            "confirmed_halt_link" in approval
+            and confirmed_halt_link is None
+            and (state is None or not state.get("confirmed_halt_link_required"))
+        ):
+            raise ValueError("linked confirmed-halt approval has no retained transition")
         now = datetime.now(UTC)
         if state is None:
             approved_preview = approval.get("approved_preview", preview)
@@ -1354,8 +1488,10 @@ async def choose_stage(
                 raise ValueError("approval bound to another writer generation")
             if not approval.get("run_id") or not isinstance(approval["run_id"], str):
                 raise ValueError("approval run ID missing")
-            if now - _time(approved_preview["captured_at"]) > MAX_STAGE_AGE:
-                raise ValueError("preview stale")
+            if now - _time(approved_preview["captured_at"]) > MAX_STAGE_AGE or _time(
+                approved_preview["captured_at"]
+            ) > now + timedelta(seconds=15):
+                raise ValueError("preview stale or future-dated")
             if now >= _time(approval["expires_at"]):
                 raise ValueError("approval expired")
             if _time(approval["expires_at"]) > now + timedelta(minutes=30):
@@ -1370,8 +1506,12 @@ async def choose_stage(
                 "status": "ready",
             }
             _validate_state(preview, state, now, zone_vpd_targets, limit, guardrail_values)
-            if confirmed_halt_link is not None and confirmed_halt_link["run_id"] != state["run_id"]:
+            if confirmed_halt_link is not None and uuid.UUID(confirmed_halt_link["run_id"]) != uuid.UUID(
+                state["run_id"]
+            ):
                 state["confirmed_halt_link"] = confirmed_halt_link
+                if "confirmed_halt_link" in approval:
+                    state["confirmed_halt_link_required"] = True
             _write(state_path, state)
             if recovered_admission:
                 (state_dir / RECOVERY_NAME).unlink()  # Exact old authority retained in recovered archive.
@@ -1445,7 +1585,7 @@ async def choose_stage(
         # through to the ordinary dispatcher, which could send the full vector.
         # This also covers a failed read-only DB probe. Cancellation is a
         # BaseException and still propagates to the task owner.
-        if state_path.exists():
+        if state_path.exists() and not isinstance(error, ConfirmedHaltAuthorityChanged):
             try:
                 state = _read(state_path)
                 if (

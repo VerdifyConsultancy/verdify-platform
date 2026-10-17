@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
-def prepare(preview: dict, now: datetime) -> dict:
+def prepare(preview: dict, now: datetime, *, confirmed_halt_archive: bytes | None = None) -> dict:
     captured = datetime.fromisoformat(preview["captured_at"])
     expiry = datetime.fromisoformat(preview["earliest_plan_expiry"])
     if captured.tzinfo is None or expiry.tzinfo is None:
@@ -30,7 +30,7 @@ def prepare(preview: dict, now: datetime) -> dict:
     deadline = min(now + timedelta(minutes=30), expiry - timedelta(minutes=5))
     if deadline <= now + timedelta(minutes=1):
         raise ValueError("effective plan expires before bounded delivery can begin")
-    return {
+    approval = {
         "version": 1,
         "run_id": uuid.uuid4().hex,
         "session_id": preview["session_id"],
@@ -43,6 +43,15 @@ def prepare(preview: dict, now: datetime) -> dict:
         "expires_at": deadline.isoformat(),
         "authority": "desired_all_five_layers",
     }
+    if confirmed_halt_archive is not None:
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestor"))
+        from tasks import bounded_reconcile as bounded
+
+        approval["confirmed_halt_link"] = bounded.confirmed_halt_archive_link(confirmed_halt_archive)
+        bounded._require_confirmed_halt_approval(approval, approval["confirmed_halt_link"])
+    return approval
 
 
 def prepare_rollback(preview: dict, state: dict, now: datetime) -> dict:
@@ -126,6 +135,11 @@ def main() -> None:
     mode.add_argument(
         "--confirmed-halt-custody", type=Path, help="raw original active-file custody for confirmed forward archive"
     )
+    mode.add_argument(
+        "--confirmed-halt-archive",
+        type=Path,
+        help="explicitly acknowledge immutable halt archive for a NEW ordinary run",
+    )
     parser.add_argument(
         "--native-requests", type=Path, help="read-only export of the exact original confirmed requests"
     )
@@ -158,7 +172,13 @@ def main() -> None:
         approval = (
             prepare_rollback(preview, json.loads(args.rollback_state.read_text()), datetime.now(UTC))
             if args.rollback_state
-            else prepare(preview, datetime.now(UTC))
+            else prepare(
+                preview,
+                datetime.now(UTC),
+                confirmed_halt_archive=args.confirmed_halt_archive.read_bytes()
+                if args.confirmed_halt_archive
+                else None,
+            )
         )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
