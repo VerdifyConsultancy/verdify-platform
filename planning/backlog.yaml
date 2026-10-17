@@ -1,7 +1,7 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "963ea818aad09b02259509cffa6bfdafb48d1702",
+  "source_revision": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
   "snapshot_date": "2026-09-05",
   "original_open_issues": [
     14,
@@ -155,7 +155,8 @@
       "how": [
         "Maintain planning/backlog.yaml as the machine-readable source, rendered issue bodies and native blocked-by edges; keep parentage separate from blocking dependencies.",
         "Execute C0 and C1 in parallel where safe, then C2 lock/start and C3 run/readout. Pull C4/C5 reliability work in bounded bundles; defer C6\u2013C8 behavioral changes until the frozen study permits them.",
-        "Review evidence weekly, serialize shared migrations/writer changes, record scope changes and publish each stage exit. Keep old closed issues and the September 5 issue snapshot as history."
+        "Review evidence weekly, serialize shared migrations/writer changes, record scope changes and publish each stage exit. Keep old closed issues and the September 5 issue snapshot as history.",
+        "Deferred architecture register:586/638 are retired as not planned, not fixed. Current639/587/783 sequential component transport remains selected. Reopen only for a demonstrated gap and a separately selected protocol/release scope; never count retirement as vector/atomic/heap/OTA proof."
       ],
       "acceptance": [
         "Every issue open at the snapshot has exactly one owner role, stage, what/why/how, testable acceptance and disposition.",
@@ -170,7 +171,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: S2 accepted children include #303/#304/#382/#396/#419/#643/#644/#949/#965/#976 within their stated boundaries. Source/build/runtime/physical/study evidence are distinct. Remaining: Every still-open child requires its own acceptance receipt or explicit scope decision; native graph acyclic and matched to canonical; eventual reproducible pilot decision. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "Second full October17 pass reviewed58open issues and624comments. Seven consolidated/unselected records296/317/324/361/586/606/638 are CLOSED/NOT_PLANNED;51remain OPEN. Native graph31active+25accepted historical edges is acyclic after removing two whole-program gates. Original396/419/643/644 are completed. 749softwarefix is deployed but strict current readiness remains blocked. S3 has eight bounded28\u201356h packets plus24h reserve inclusive749, maximum80sharedh; program effort is not added again. Future atomic/vector architecture is unselected, not qualified.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -519,7 +520,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "The completed-state snapshot-wait correction is deployed at releasef91602f6/source67f08ccf/image249c7647. Normal source and promotion qualification passed; all32 source-build and four promotion container logs are retained with verified hashes. One full exact-revision nonpruning sync completed23:09:13UTC with129 resource results and all nine fresh hook resources (seven Jobs and two ConfigMaps), with eight successful container logs. At23:15, Argo is Synced/Healthy, all16 controllers/21 requested replicas are Ready, all PVCs are Bound, the singleton writer has zero restarts, all five running source files match, smoke passes9/9 with one device connection, and the first five minutes contain zero schema-validation errors. The actual same snapshot mismatch now produces a temporary pending wait and ordinary dispatch resumes naturally; the old terminal hold remains historical evidence. State, used approval and original halt archive are preserved. Other release/hand pins, Lab and migrate211/applied276 remain unchanged. Shared CI/controller custody was returned at promotion terminal and log closure, before the product observation. The30-minute source-defined quiet interval and one current bounded read-only original-clause packet remain; no final readiness acceptance is claimed. Historical19:36 denial, missing typed report, unresolved soil warnings and corrected UNKNOWN exposure remain preserved. No extra explicit policy run or approval refresh is authorized. Original acceptance remains binding; see planning/reviews/2026-10-17/ISSUE-TRIAGE.md.",
+      "baseline": "Snapshot-hold fix67f/image249c/releasef916 is deployed and live temporary-wait/resumption behavior is verified. Normal source/promotion CI, one full129-resource nonpruning selector-free sync/all9fresh hook resources,5actual source files, singleton/socket/smoke9/9 and five-minute schema watch pass. Four normal snapshot waits prevented the strict30-minute quiet interval; the finite observer stopped23:31, same writer Ready/restart0 and ArgoSyncedHealthy. Final readiness/SQL were NEVER attempted. All212 sealed evidence members/6,563,822bytes are root-hash verified. Actual callback-versus-durable-batch cadence and immutable-copy ordering motivate one bounded producer-coherence correction; failure-time numeric direction and hardware cause remain unknown. Strict collector/48-field/generation/freshness/equality/authority/history remain unchanged. No timer reset, approval replay, extra physical policy run or repeated observation loop. Current backup and scoped exposure remainUNKNOWN until a legitimate final packet.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1163,7 +1164,7 @@
       "owner_role": "Platform lead",
       "parent": "775",
       "depends_on": [],
-      "what": "Own the current health and alert contracts through #89/#563/#394/#671, retiring stale VM-era umbrella assumptions.",
+      "what": "Own actual source-to-device health and observability; preserve accepted historical children and execute the remaining980/981/963 scopes without VM-era or static-green assumptions.",
       "why": "Health must reflect delivered data/actions and actual loaded alert rules, not static HTTP readiness or unused Kubernetes resource kinds.",
       "how": [
         "Maintain a compact service/source/data/route/writer/backup/planner/experiment health matrix with explicit unavailable versus failed states.",
@@ -1181,7 +1182,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "The broader15:44 audit recorded exporter timeouts and a stale underlying energy source, owned by#980/#981. At19:36 the#749 boundary was denied by16 unclassified identities. A distinct19:49 targeted read found seven absent soil channels reported by two producers in registered occupied zones, one fresh-corpus alert lifecycle defect, and one heap warning meeting the existing informational predicate. No warning was manually resolved and no blanket count-parity target was imposed. The minimal corpus producer lifecycle correction is locally reviewed (15 focused tests; old-source regression fails), composed with the accepted completion-report fix. Seven later passive Home Assistant reads independently returned unknown; no live alert was changed. Original acceptance and dated failures remain binding; see planning/reviews/2026-10-17/ISSUE-TRIAGE.md.",
+      "baseline": "Current749reporting/corpus-lifecycle/soil classification corrections are deployed. The older19:49read established seven absent soil channels,14overlapping warnings and an informational heap snapshot; no sensor repair or manual alert cleanup follows. Current749finalpacket remainsunexecuted. 980retains exporter timeout uncertainty and proposed intentional NAS-window pause983/resume handoff;981retains authentic source freshness recovery. Do not infer backup success from silence or absence of a paused exporter.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1460,7 +1461,7 @@
         "docs/runbooks",
         "scripts"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Recent local dump+roles+checksums completed and bounded recovery #396/#382 accepted. Local generation does not prove current offsite restore or production HA cutover. Remaining: Every durability child meets actual measured RPO/RTO/custody and selected production HA/cutover/bake scope without zero-loss assumptions. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Recent local dump+roles+checksums completed and bounded recovery #396/#382 accepted. Local generation does not prove current offsite restore or production HA cutover. Remaining: Every durability child meets actual measured RPO/RTO/custody and selected production HA/cutover/bake scope without zero-loss assumptions. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding. October17second pass: Storage702 reports a guarded trim/purge with DBrestart0; this doesnotdecide977replica policy or245productioncutover. PR982canonicalrehearsalendpoint is source-only/owner-held. ExistingStatefulSet remains production; no cutover is selected forS3.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1727,7 +1728,8 @@
       "how": [
         "Close #371/#424 measurement contracts first; keep #368/#367/#370 safety semantics and #430 simplification behavior-preserving.",
         "Use #410/#378/#361 realized seasonal evidence for any corridor/anchor proposal; #379 is gated model development, not an immediate MPC rewrite.",
-        "Freeze crop targets, firmware and control surface during a study. Any safety repair is logged and handled under the protocol, not silently mixed into an arm."
+        "Freeze crop targets, firmware and control surface during a study. Any safety repair is logged and handled under the protocol, not silently mixed into an arm.",
+        "Consolidated324: keep current legacy/zonal lineage wire-compatible; propose an extension only for a named future consuming control design, with round-trip/readback/drift guards and unavailable-center negatives. No new zonal authority is selected."
       ],
       "acceptance": [
         "Measurement and localized safety are trustworthy independently of AI credit.",
@@ -1994,7 +1996,7 @@
         "api",
         "firmware"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Closed #424/#371 are accepted predecessors. Current legacy and zonal lineage models exist and must stay wire-compatible. Remaining: Round-trip old/new zonal lineage and readback contracts, negative absent-center/invalid-contributor cases without synthetic physical values. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. The issue proposes a future zonal wire extension without a selected consuming control design. Existing legacy and zonal lineage stay intact; retain compatibility and missing-center safeguards in the owning control record instead of an independent speculative implementation queue. Retained owner: #359 (evidence-led control). A future named per-zone consumer needs explicit schema/readback/round-trip and absent-center negative evidence before this proposal is reopened. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2057,7 +2059,8 @@
       "how": [
         "Freeze candidate crop-tolerance sources and compare fixed-panel miss severity, worst-zone exposure, resource eligibility and uncertainty under unchanged factual measurements.",
         "Separate crop-safety constraints from controller centering and diagnose seasonal tradeoffs before selecting a width.",
-        "Publish keep/change/no-evidence decision with any change prospectively versioned, band replayed and outside the locked study."
+        "Publish keep/change/no-evidence decision with any change prospectively versioned, band replayed and outside the locked study.",
+        "Consolidated361: current anchors remain unchanged. If an anchor proposal is selected, consume410 solar-night evidence and explicit temperature/VPD safety, preserve locked-study identity and exact source/readback/rollback values. The condition is not a blanket new gate on independent width analysis."
       ],
       "acceptance": [
         "The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.",
@@ -2107,7 +2110,7 @@
         "research/planner-efficacy",
         "docs"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Existing diurnal anchors and solar source lineage are not evidence for a current retune. Remaining: Measured corridor and realized solar-night results, then explicit anchor/curve decision with actual safety/readback/rollback. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. A separate anchor-retuning ticket duplicates the later control decision and has no current retune evidence. Consolidate the conditional anchor decision with corridor review; leave current anchors unchanged and preserve solar-night evidence as an input. Retained owner: #378 (evidence-based corridor/anchor decision), with #410 inputs. Any later anchor proposal still needs #410 evidence, temperature/VPD safety, no locked-study changes, exact source/readback and rollback values. No tuning is performed by this closure. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2327,7 +2330,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: No evidence yet compels a firmware irrigation feedback loop; dispatcher path and commissioned topology take precedence. Remaining: Explicit qualified slow-hysteresis firmware design or justified no-build decision based on measured dispatcher results and safety/rollback. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. No firmware-local feedback engine is selected. Required sensor/topology commissioning and the simpler dispatcher loop remain unqualified; a second firmware feedback authority and OTA have no demonstrated unmet need. This is the explicit no-build disposition, not physical feedback acceptance. Retained owner: #297 (dispatcher feedback) and #350 (irrigation policy). Reopen only if commissioned dispatcher evidence demonstrates a specific offline/safety gap. Existing hard safety and disabled/uncommissioned paths remain. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2656,12 +2659,14 @@
       "how": [
         "Rebaseline current harness/schema/driver against merged work; #31 owns consumer coverage and #606 the owning build profile.",
         "Define which policies/actuators are compared, default-only, unsupported or identity-only; keep the twin device-denied and off the current component-study launch path.",
-        "Run identical-source self-diff, known injected divergence and live shadow evidence only for the declared scope before proposing any release gate."
+        "Run identical-source self-diff, known injected divergence and live shadow evidence only for the declared scope before proposing any release gate.",
+        "Consolidated606: when this twin is selected, register its profile in the owning Agents registry, regenerate the mirror, qualify one immutable build and device-denied read-only runtime; no startup compiler/pip downloads or undeclared network/build inputs. This is not a current pilot gate."
       ],
       "acceptance": [
         "Coverage and limitations are explicit; unsupported/default-only fields cannot produce a full-parity PASS.",
         "Source/build/runtime and actual read-only output receipts exist, with no startup compiler/pip downloads.",
-        "The current pilot remains independent; a future twin gate is adopted only after useful positive and negative evidence."
+        "The current pilot remains independent; a future twin gate is adopted only after useful positive and negative evidence.",
+        "Consolidated606: owning registry/mirror and qualified immutable twin digest agree; no registration/build/runtime acceptance is inferred from retiring the separate tracker."
       ],
       "paths": [
         "docs/design/firmware-digital-twin.md",
@@ -2737,7 +2742,7 @@
         "deploy/k8s/components/firmware-twin",
         "docs"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Current generated registry mirror declares8product images and excludes verdify-twin. #303/#304 actual compiler qualification does not register a twin image. Remaining: Owning fleet registry profile, generated mirror, supported native build/admission/provenance and exact runtime/oracle boundary. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. The unregistered twin profile is a real remaining subtask of the twin, not a separate current execution commitment. Consolidate owning-registry registration, build provenance and read-only runtime acceptance into #14. Retained owner: #14 (read-only twin qualification). The profile is still absent and no twin image/runtime/oracle acceptance is claimed. Registration must use the owning Agents registry, generated mirror and supported admission when the twin is actually selected. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2772,7 +2777,7 @@
         "ingestor",
         "tests"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Existing legacy manifest/vector contracts remain source; vector future qualification must not change the current pilot or production authority. Remaining: Cross-language schema/content identity and negative conformance vectors plus typed future transport, retaining legacy compatibility and authoritative origin. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. Generalized vector transport is off and unselected; its cross-language schema project belongs to the same retired future architecture option. It is not a current missing prerequisite for the existing sequential component transport. Retained owner: #775 deferred architecture register alongside #586. Current legacy contracts remain unchanged. Future vector adoption must reopen exact cross-language identity/service/outbox/commit/stage/activate/expiry/abort conformance; none is claimed complete. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2811,7 +2816,7 @@
         "tests",
         "docs"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Existing executor/lifecycle and legacy policy are not qualification of a future atomic firmware engine. Remaining: Crash-safe atomic per-tick policy, cross-language identity, watchdog/heap recovery, independently qualified rollback and later protocol/OTA adoption. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "RETIRED October17,2026 \u2014 GitHub CLOSED/NOT_PLANNED. An alternative atomic firmware policy platform is unselected and not needed to qualify the existing confirmed sequential-setter transport. Retire the speculative implementation commitment so it cannot expand or block the current pilot. Retained owner: #775 deferred architecture register; current implementation remains #639/#587/#783. No atomic-engine, crash-safe firmware, watchdog/heap, vector-transport or OTA acceptance is claimed. Reopen only after a demonstrated gap and a separately selected future protocol/release scope. This is not completed engineering or physical acceptance; original source, scope and failure history remain.",
       "delivery": "First deliver host/native, invariant, replay and real ESPHome compile evidence. Group compatible changes into one independently reviewed release. Physical OTA needs a bounded operator window, current topology/last-good binary, canaries and rollback receipt; no experimental transport or live tuning is enabled by this issue body.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3249,7 +3254,7 @@
         "firmware/greenhouse/controls.yaml",
         "ingestor/entity_map.py"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Compact HA state / structured detail producer and compatible consumer source are in main through #973. Compatible cb21 ingestor was actually adopted under closed #949; closed #303/#304 provide reusable registered Linux amd64 two-target/negative compiler evidence. Current firmware still reports 620a218a. Remaining: All published states <= HA255 with tested structured schema; actual HA recovery on the intended firmware; exact deployed binary/source/rollback custody. Source compile and consumer adoption do not establish OTA or HA recovery. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "Compatible moisture-exchange source/consumer corrections and accepted compile/replay evidence are delivered. Exact firmware binary, independently qualified last-good/rollback choice and actual HomeAssistant short-state/detail acceptance remain. No OTA, repeated compiler workload or physical claim follows from triage; select as a scoped substitute only when its concrete operator/release inputs exist.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "Review/tracker authority only; no production changes executed. Physical, OTA and DB-cutover scope remains separate."
@@ -3315,7 +3320,7 @@
         "deploy/k8s/base/db-statefulset.yaml",
         "docs/runbooks"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Fresh October 17 metadata verifies the production volume attached and healthy with two running replicas and a completed recorded backup. Storage #703 delivered the bounded two-replica change; the November 12 policy decision remains open. Remaining: Owner choice: retain two replicas or restore three before typed exception expires 2026-11-12. Optional remount/trim remains a separately selected disruption. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "Storage703iscompleted with the typed Verdify two-Longhorn-replica exception throughNovember12. Storage702reports guardedOctober17trim/purge without restart, separately from any optional remount/reclaim. The production database remains one PostgreSQL StatefulSet instance; storage replicas are not DB HA instances. Record the actual policy/placement/backup decision beforeNovember12. No restart, furthertrim or reclaimed-capacity claim is performed by triage.",
       "delivery": "Deliver the smallest owner change through existing required checks and verify the actual deployed behavior. Source, image, runtime and recovery evidence remain distinct.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "Jason must choose whether to retain two replicas or restore three. An optional database remount requires its own concrete attended decision; no restart or trim is authorized by this replan."
@@ -3347,7 +3352,7 @@
         "deploy/k8s/components/db-backup",
         "scripts"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Backup-exporter accumulated 257 readiness timeouts and repeated BrokenPipe responses while currently Ready. Local dump/roles/manifest generation completed independently. Remaining: Observed timeout/BrokenPipe cause is evidenced and deployed behavior fits the configured response budget.; Stale/failed backup still reports stale/failed; exporter readiness is not substituted for backup success.; Verify actual local generation and exporter health separately; no restore or offsite claim. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "Earlier bounded audit observed exporter timeout/BrokenPipe; underlying cause remainsunproved. NewopenPR983 proposes replicas1\u21920 to reduce NFS load in the Storage708/799/761heavy-NASwindow and restoration after the named owner queue handoff. At23:31 the last actual metadata fence still showed exporter1/1; PRsource isnotadoption. Preserve any authorized pause, never unpause/scan to pass readiness, and keep silence/exporterhealth/actualbackupfreshness distinct. Review source/offline whileheld and verify deployed recovery only in the actual owner window.",
       "delivery": "Deliver the smallest owner change through existing required checks and verify the actual deployed behavior. Source, image, runtime and recovery evidence remain distinct.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "Normal scoped diagnosis/delivery; no database cutover, device action or credential change."
@@ -3380,15 +3385,15 @@
         "api",
         "grafana"
       ],
-      "baseline": "October 17, 2026 review against main 2208401de0c5d1653661c676cd255eaab2e7afb4: Recent energy rows contain an underlying channel 0 source over 18 hours old; only 8 of 288 recent quality rows are ok/ok. Source age, not insertion time, controls freshness. Remaining: Source timestamp, ingest timestamp, channel identity and quality remain separately correct.; Actual intended-source recovery is verified; otherwise the upstream constraint remains open and fail closed.; Stale/missing inputs cannot become fresh/OK or silently enter scientific eligibility; this does not independently qualify782 or787. See planning/reviews/2026-10-17/ISSUE-TRIAGE.md; original acceptance and dated failures remain binding.",
+      "baseline": "The last authoritative broader audit found recent energy rows with underlying source morethan18hoursold. This is dated evidence, not a new assertion of current age or recovery. No later actual source-advancement receipt exists. Trace channel/source/ingesttime and truthful quality before changing consumers; missing/stale values remain ineligible for782/787.",
       "delivery": "Deliver the smallest owner change through existing required checks and verify the actual deployed behavior. Source, image, runtime and recovery evidence remain distinct.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-17T15:50:57Z",
-    "source_revision": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+    "reviewed_at": "2026-10-17T23:38:45.548698+00:00",
+    "source_revision": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-17",
     "open_issues": [
@@ -3401,15 +3406,11 @@
       75,
       218,
       245,
-      296,
       297,
       298,
       299,
-      317,
-      324,
       350,
       359,
-      361,
       367,
       368,
       369,
@@ -3425,11 +3426,8 @@
       430,
       434,
       581,
-      586,
       587,
       588,
-      606,
-      638,
       639,
       640,
       641,
@@ -3457,23 +3455,23 @@
         "title": "S2 \u2014 Completion and current readiness (October 13\u201326, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "The original four outcomes396/419/643/644 are completed. Finish the selected749 source-to-runtime readiness path, now estimated8\u201316 remaining shared engineering hours after its newly verified delivery and runtime constraints.",
-        "exit": "749 meets its original contributor, source, backup, writer/run and fail-closed boundaries after supported publication and specifically authorized rollout/ordinary policy. Historical4\u20138 follow-on and28\u201356 original estimates are superseded/historical estimates, not measured time worked or freed capacity. Preserve all accepted receipts; no repeated product rebuild or state/clock bypass. Carry unfinished749 inside the next sprint reserve, not as an unbudgeted extra."
+        "goal": "Original396/419/643/644 are complete. 749is the sole completion focus, retaining8\u201316h planning allocation; software snapshot-hold fix is deployed, actual strict readiness is blocked by recurring snapshot publication/coherence waits.",
+        "exit": "Finish one bounded producer-coherence correction and genuine current original-clause readiness acceptance without pass-hunting, collector weakening, used-approval replay or a new physical policy run. Source/runtime success isdistinctfromreadiness. Any carryover usesS3reserve, notextra capacity; prior estimates and CI/runtime/wakes are not hoursworked."
       },
       {
         "id": "S3",
         "title": "S3 \u2014 Runtime truth and bounded qualification (October 27\u2013November 9, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "At40 shared engineering hours/week, deliver six bounded pulls:981 energy source truth,980 exporter reliability,977 replica-policy decision,639 contained behavior,963 exact firmware/HA recovery preparation and782 authentic scientific inputs. Base33\u201362h; reserve18h of the80h ceiling includes any749 carryover and unexpected work.",
-        "exit": "Each selected issue retains its original full acceptance. Preparation can finish without physical authority; incomplete physical/runtime clauses remain open. 977 decision is recorded beforeNovember12. If genuine782/963 inputs or decisions are unavailable, substitute802 at4\u20138h within the same80h envelope; do not add it on top. Keep20-hour historical782 analysis distinct from prospective elapsed sampling and the real60-day pilot."
+        "goal": "Eight bounded packets981/980/639/587/801/802/977/782 at28\u201356shared engineering hours. Reserve24h includes749carryover and unexpected work; upper envelope56+24=80 at40h/week. Finish one product delivery at a time; combine639/587in one contained execution and count shared work once.",
+        "exit": "Deliver each explicitly bounded packet and preserve full original acceptance; incomplete physical/scientific clauses stayopen. 782spend4\u20138h is input/decision preparation, not full12\u201320h design completion. 977policy precedesNovember12. Respect actual NAS pause/handoff; if980held, advance other ready packets. 963is a replacement only after exact qualified release/operator inputs, never additive."
       },
       {
         "id": "S4",
         "title": "S4 \u2014 Integrated qualification after current readiness",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Finish587 and783 and the genuinely remaining physical639/641 clauses after their actual inputs; reuse bounded completed predecessors.",
+        "goal": "After S3contained639/587evidence and genuine scientific inputs, finish remaining783vertical-path and separately authorized641physical proof; preserve any unfinished639/587physical clauses.",
         "exit": "639 source/contained preparation was pulled intoS3; its full physical acceptance remains distinct. 587/783 need actual stateful vertical-path evidence. 641 requires a specific attended proof decision. No blanket experiment/OTA or new isolated target is authorized by planning."
       },
       {
@@ -3498,7 +3496,7 @@
         "kind": "conditional",
         "capacity_hours": null,
         "goal": "Finish the remaining bounded release and ownership interfaces without delaying independent scientific work.",
-        "exit": "Actual #386/#390 release evidence, #317 regression qualification and owner-coordinated #801/#802 adoption; no broad shared-app sync or OTA implied."
+        "exit": "Actual386/390firmware/lighting release evidence and separately selected963operator/binary/HA acceptance. 317is retired to owner/workaround record;801/802bounded adoption packets are inS3. No whole-estate adoption gate, broadsharedsync or OTA implied."
       },
       {
         "id": "CONTROL",
@@ -3506,7 +3504,7 @@
         "kind": "conditional",
         "capacity_hours": null,
         "goal": "Retain C6 ownership and pull bounded sensing/safety maintenance independently; treatment changes respect study locks.",
-        "exit": "Original control/topology/irrigation acceptance with calibrated inputs and actual physical evidence. #378/#361 remain downstream of readout; no opportunistic tuning during assigned days."
+        "exit": "Retained topology/sensor/irrigation/dwell/arbitration contracts. 378owns any later conditional anchor decision from361; current anchors and zonal authority remainunchanged. No tuning during locked study;296firmwarefeedback is explicitlynotselected."
       },
       {
         "id": "PHYSICAL",
@@ -3521,7 +3519,7 @@
         "title": "Future comparator, resource economics and cutover options",
         "kind": "future",
         "capacity_hours": null,
-        "goal": "Keep independently justified future capabilities and optional DB cutover owned without adding them as pilot launch gates.",
+        "goal": "Keep useful comparator/economics/read-onlytwin and conditional245cutover work without making them current pilot gates. Separate unselected atomic/vector architecture586/638isretired, notanimplementationcommitment.",
         "exit": "Issue-specific qualified proof and separate implementation decision after dependencies; no claim of whole-resource savings or AI superiority from the narrow pilot."
       },
       {
@@ -3607,14 +3605,6 @@
         "owner_role": "Data/platform lead"
       },
       {
-        "issue_number": 296,
-        "sprint": "CONTROL",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Retain deferred no-build option; evaluate only after actual dispatcher/soil evidence, no duplicate active writer or speculative firmware abstraction.",
-        "owner_role": "Control lead"
-      },
-      {
         "issue_number": 297,
         "sprint": "CONTROL",
         "hours_min": null,
@@ -3639,22 +3629,6 @@
         "owner_role": "Control lead"
       },
       {
-        "issue_number": 317,
-        "sprint": "RELEASE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Resolve agents#4666/upstream owner status and narrow an actual reproducible controller regression test or explicit workaround scope disposition. Do not submit a production sync to test this audit.",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 324,
-        "sprint": "CONTROL",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Prepare one bounded offline compatibility delta only when selected; future control behavior/physical adoption remains separate from source schema proof.",
-        "owner_role": "Control lead"
-      },
-      {
         "issue_number": 350,
         "sprint": "ROLLUP",
         "hours_min": null,
@@ -3668,14 +3642,6 @@
         "hours_min": null,
         "hours_max": null,
         "next_action": "Keep the child graph and bounded source pulls; do not close program on compiler or replay counts.",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 361,
-        "sprint": "CONTROL",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Keep anchors unchanged until both evidence decisions are accepted; later prepare one reversible curve delta against frozen eligible inputs.",
         "owner_role": "Control lead"
       },
       {
@@ -3799,19 +3765,11 @@
         "owner_role": "Research/release lead"
       },
       {
-        "issue_number": 586,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Keep deferred until readout and future wire/release contract are accepted; no new engine during the pilot.",
-        "owner_role": "Research/platform lead"
-      },
-      {
         "issue_number": 587,
-        "sprint": "S4",
-        "hours_min": 8,
-        "hours_max": 12,
-        "next_action": "Reuse the prepared finite current-source HTTP/native state packet with #639 after sole target writer release. Preserve device-denied boundary and rollback/seals; enumerate physical-only clauses separately rather than inventing a second SQL target.",
+        "sprint": "S3",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "S3 bounded packet: Incremental lifecycle/kill-switch/visibility cases in SAME639 run; count shared execution only once; physical portions stay separately scoped. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. Use the same639 execution; estimate only distinct incremental cases, never duplicate shared runtime. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3823,27 +3781,11 @@
         "owner_role": "Research/release lead"
       },
       {
-        "issue_number": 606,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "If a qualified twin use case is selected, change the owning agents registry and regenerate the mirror; no hand edit or unregistered build during current delivery.",
-        "owner_role": "Research/platform lead"
-      },
-      {
-        "issue_number": 638,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Prepare only when future engine work is pulled; keep vector path disabled and no framework adoption as a current pilot gate.",
-        "owner_role": "Research/platform lead"
-      },
-      {
         "issue_number": 639,
         "sprint": "S3",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Run the one prepared current-source device-denied behavior packet on the same admitted target only after writer release/reseal coordination; use explicit transaction/inverses/seals, no connected-clock loop or new target. Escalate only the genuine separately physical remainder.",
+        "next_action": "S3 bounded packet: One contained device-denied executor/recovery qualification; preserve unproved physical portions. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3875,7 +3817,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Finish the current source-defined quiet interval on the SAME qualifiedf916/67f writer; the initial earliest boundary is23:40:44UTC, subject to actual new errors or holds. Then execute the accepted read-only original-clause packet ONCE using its fresh authoritative timestamped whole-Pod log, current same-writer preview/lease and typed alert projection. Verify newest two climate cycles, exact source/backup/authentication boundaries and scoped protocol-v2 randomized exposure; unknown or nonzero exposure blocks acceptance. Keep749 open until actual original clauses pass. Shared CI is already returned; no duplicate observer, clock reset, new physical run, approval replay, manual refresh, state/history rewrite or further product source/pin copy.",
+        "next_action": "SAME Retry implements the root-reviewed finite SOURCE/OFFLINE producer-coherence scope: same existing flush task, immutable full cfg batch and FW4 confirmation transaction, fanout/ack only after commit, content/generation coalescing and periodic timer alignment, one bounded demand before eligible live admission; common readback helper stays read-only and takes current values after SQL await. Preserve original deadlines, full48/singleTS/120s/equality/generation/authority/history and strict30-minute collector. Focused meaningful regressions/diff/resource/inverse review precede any source push. No new worker/pool/RBAC/SQL probe/physical run. A next genuine delivery needs the fresh complete canonical manifest and actual shared-owner CI handback; no ledger-only main update.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3905,9 +3847,9 @@
       {
         "issue_number": 782,
         "sprint": "S3",
-        "hours_min": 12,
-        "hours_max": 20,
-        "next_action": "Finish the smallest pre-draw decision: retain the attainable exploratory claim; obtain named physical panel/target plus authentic prospective eligible measurement and input custody. Reuse fixed30 analysis; rerun only when new eligible input changes the result.",
+        "hours_min": 4,
+        "hours_max": 8,
+        "next_action": "S3 bounded packet: Authentic seasonal/panel/target input and a concrete scientific decision packet; full design/power/approval acceptance remains when inputs allow. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. This4\u20138h packet is not the former12\u201320h full scientific-contract estimate. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Evidence/data lead"
       },
       {
@@ -3952,26 +3894,26 @@
       },
       {
         "issue_number": 801,
-        "sprint": "RELEASE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Prepare small route-only PR now; actual one-object sync waits for agents#4461 adoption and an idle operation. Preserve original selective-sync scope verification and exact inverse, not a full unrelated runtime sync.",
+        "sprint": "S3",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "S3 bounded packet: Small owner-exclusion route fix and exact owner-delivery proof; no blanket parent-adoption prerequisite. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Platform lead"
       },
       {
         "issue_number": 802,
-        "sprint": "RELEASE",
+        "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Prepare only the remaining Verdify source delta and exact seven-object adoption packet with agents#4451 owner. Reuse completed #4459; treat old #4457/#4487 as consolidated NOT FIXED, with successor scope linked only where actually required. No second enforce fix or broad #4830 completion gate.",
+        "next_action": "S3 bounded packet: Spec-preserving manual Argo descheduler adoption with exact owner/project/catalog record; preserve enforce mode. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Platform lead"
       },
       {
         "issue_number": 963,
-        "sprint": "S3",
+        "sprint": "RELEASE",
         "hours_min": 6,
         "hours_max": 12,
-        "next_action": "Select the exact candidate binary and accepted/provisional rollback floor from existing compiler/OTA packet; only in a separately authorized attended window run supported OTA and bounded native+HA readback/rollback checks. Correct stale not-adopted consumer text; do not recompile or add an original-device corpus gate.",
+        "next_action": "Substitute only after a concrete qualified binary/last-good/HA/operator decision packet is ready, replacing held S3 scope within80h. Compatible source is delivered; no recompile/OTA or physical recovery merely for triage.",
         "owner_role": "Platform lead"
       },
       {
@@ -3979,7 +3921,7 @@
         "sprint": "S3",
         "hours_min": 2,
         "hours_max": 4,
-        "next_action": "Record replica-count decision with storage-infra#703/#699 owner; if optional reclaim is selected, schedule one quiet DB restart outside 05:30\u201307:00 UTC with storage trim and exact recovery readback. No restart from this triage.",
+        "next_action": "S3 bounded packet: Record replica-policy decision beforeNovember12; optional remount/reclaim stays separate and unapproved. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Platform lead + storage owner"
       },
       {
@@ -3987,7 +3929,7 @@
         "sprint": "S3",
         "hours_min": 2,
         "hours_max": 4,
-        "next_action": "Capture a bounded reproducer and distinguish exporter work, dependency latency and caller timeout. Make the smallest evidenced owner change and preserve independent backup-age/failure signals. Verify deployed identity and normal scrape/readiness behavior without masking negative cases.",
+        "next_action": "S3 bounded packet: Review intentional NAS-window exporter pause and resume handoff; qualify exporter/backup separately after owner release, no NFS load during the hold. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Platform/observability lead"
       },
       {
@@ -3995,7 +3937,7 @@
         "sprint": "S3",
         "hours_min": 3,
         "hours_max": 6,
-        "next_action": "Trace channel identity/source time/ingest time through the existing owner and quality path. Repair the evidenced owner defect; an unresolved upstream constraint keeps this issue open with a named handoff. Verify independent source advancement and stale/missing negative cases through consumers; never synthesize a replacement input.",
+        "next_action": "S3 bounded packet: Recover authentic energy source advancement; retain source and ingest clocks separately. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
         "owner_role": "Data/platform lead"
       }
     ]

@@ -7,7 +7,7 @@
     980,
     981
   ],
-  "planned_open_issues": 58,
+  "planned_open_issues": 51,
   "recent_closed_issues": [
     303,
     304,
@@ -21,13 +21,13 @@
     976
   ],
   "canonical_issue_count": 92,
-  "expected_active_native_edges": 41,
-  "expected_satisfied_native_edges": 27,
+  "expected_active_native_edges": 31,
+  "expected_satisfied_native_edges": 25,
   "sprint3_base_hours": [
-    33,
-    62
+    28,
+    56
   ],
-  "sprint3_reserve_hours": 18,
+  "sprint3_reserve_hours": 24,
   "shared_fortnight_ceiling": 80,
   "provider_publication_verified": true,
   "evidence_hashes": [
@@ -1277,5 +1277,51 @@
     "runtime_pass": true,
     "current_final_packet_pending": true,
     "shared_CI_returned_before_observation": true
+  },
+  "full_triage_second_pass": {
+    "provider_verified_at": "2026-10-17T23:38:45.548698+00:00",
+    "intake_open": 58,
+    "comments_reviewed": 624,
+    "closed_not_planned": [
+      296,
+      317,
+      324,
+      361,
+      586,
+      606,
+      638
+    ],
+    "open_after": 51,
+    "all58body_readbacks_exact": true,
+    "original_tails_labels_assignees_preserved": true,
+    "native_active_edges": 31,
+    "native_accepted_historical_edges": 25,
+    "acyclic": true,
+    "removed_whole_program_gates": [
+      "801->jvallery/agents4461",
+      "802->jvallery/agents4451"
+    ],
+    "actual_milestone_memberships": {
+      "33": [
+        749
+      ],
+      "34": [
+        587,
+        639,
+        782,
+        801,
+        802,
+        977,
+        980,
+        981
+      ]
+    },
+    "provider_proof_sha256": "16de08184808b06266e4927275ca2a80e2e4fe635c758602097dc160ec1a1f5e",
+    "retired_is_not_engineering_completion": true,
+    "canonical_nodes_stages_historical_edges": [
+      92,
+      9,
+      78
+    ]
   }
 }

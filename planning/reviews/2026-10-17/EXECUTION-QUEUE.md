@@ -1,0 +1,16 @@
+# Prepared execution queue — October 17, 2026
+
+This is a finite work queue under the shared 80h envelope, not a new implementation authorization for physical operations. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Agents owner holds shared CI/controller custody. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
+
+| Packet / owner | First concrete action | Exit / stop / inverse |
+|---|---|---|
+| 749 / Retry | Complete the bounded source-only publisher-coherence diff and meaningful fake regressions, preserving the strict common reader/collector | Review exact source/resource/inverse249before any genuine delivery. One future finite qualification; no pass-hunting or used approval. |
+| 981 / data-platform | Trace the actual channel/source timestamp versus ingestion through the existing authorized reader after the credential window is free | Actual intended-source advancement and stale/missing negatives; otherwise name upstream constraint. Never synthesize fresh values. |
+| 980 / observability + storage owner | Inspect actual#983 pause / owner queue state without NFS access; review existing timeout source/evidence while held | Resume only in named owner window; exporter response and real backup freshness separate. Preserve deliberatepause; inverse scoped replica/config restoration, no broad NAS scan. |
+| 639+587 / runtime lead | Bind current source and the existing supported contained device-denied target/identities; run one shared executor/lifecycle failure matrix | Full48/generation/exclusivity/close-first and kill-switch/blinded visibility proof; retain reseal/custody. No new credentials/physical source substitution. Shared execution countedonce. |
+| 801 / platform lead | Add two outside-owner host exclusions and focused contract/render proof | Exact current diff/owner-delivery and affected public-route checks; inverse only those rule clauses. No parent-adoption project gate or writer pin change. |
+| 802 / platform + Agents owner | Export exact enforce-mode resources and current ownership; prepare minimal manual project/catalog declaration | No spec drift/namespace rewrite/security expansion; actual natural enforcement and tracking proof. Inverse must preserve enforce, never restore stale dry-run. |
+| 977 / storage + product owner | Assemble two-versus-three replica policy, actual placement/backup/exception evidence beforeNovember12 | Record concrete owner decision; optional remount/trim separate. No DB restart or survivability claim from planning. |
+| 782 / science + operator | List authentic missing crop/panel/target/season inputs and produce one concrete decision packet | No guessed observations/calendar/power; final energy eligibility waits981. No draw, random activation or new physical authority. |
+
+PRs #982 and #983 are retained under their existing owners; they were not merged or closed by triage. PR982rehearsalendpointwaitsStorage708W7anditsownexactObjectStore/authreadback; neverwhole-rehearsalsync. PR983is atemporaryexporterpausescope withnamedresumeowner; do not borrow that approval for other productionchanges. #855 stays parked.

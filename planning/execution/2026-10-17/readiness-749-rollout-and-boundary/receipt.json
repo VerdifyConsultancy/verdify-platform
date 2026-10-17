@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish the current source-defined quiet interval on the SAME qualifiedf916/67f writer; the initial earliest boundary is23:40:44UTC, subject to actual new errors or holds. Then execute the accepted read-only original-clause packet ONCE using its fresh authoritative timestamped whole-Pod log, current same-writer preview/lease and typed alert projection. Verify newest two climate cycles, exact source/backup/authentication boundaries and scoped protocol-v2 randomized exposure; unknown or nonzero exposure blocks acceptance. Keep749 open until actual original clauses pass. Shared CI is already returned; no duplicate observer, clock reset, new physical run, approval replay, manual refresh, state/history rewrite or further product source/pin copy.",
+  "next_step": "SAME Retry implements the root-reviewed finite SOURCE/OFFLINE producer-coherence scope: same existing flush task, immutable full cfg batch and FW4 confirmation transaction, fanout/ack only after commit, content/generation coalescing and periodic timer alignment, one bounded demand before eligible live admission; common readback helper stays read-only and takes current values after SQL await. Preserve original deadlines, full48/singleTS/120s/equality/generation/authority/history and strict30-minute collector. Focused meaningful regressions/diff/resource/inverse review precede any source push. No new worker/pool/RBAC/SQL probe/physical run. A next genuine delivery needs the fresh complete canonical manifest and actual shared-owner CI handback; no ledger-only main update.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -391,5 +391,26 @@
     "initial_earliest_quiet_boundary": "2026-10-17T23:40:44.157137Z",
     "final_readiness_accepted": false,
     "new_explicit_physical_run": false
+  },
+  "finite_residual_readiness": {
+    "recorded_at": "2026-10-17T23:32:35.194087Z",
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "image_source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "software_fix": "delivered_and_live_branch_verified",
+    "readiness": "OPEN_BLOCKED_not_accepted",
+    "observed_normal_waits": 4,
+    "strict_quiet_achieved": false,
+    "final_readonly_packet_attempted": false,
+    "current_exposure_or_backup_artifact": "UNKNOWN_unqueried",
+    "observer_stopped_intentionally": true,
+    "actual_observer_exit_code": 1,
+    "metadata_at_stop": "samewriterReadyrestart0_ArgoSyncedHealthy_nooperation",
+    "sealed_members": 212,
+    "sealed_bytes": 6563822,
+    "manifest_sha256": "ddcefc5934ce4a6e96d874f4304c6c1756fa295bebf81c611acf89779a078441",
+    "residual_receipt_sha256": "5db11b93776262f6689a8cf89c029e0acd71e91c62ab3651519c312b3e315c39",
+    "cause_limit": "cadence/order consistent; failure-time numeric direction and hardware cause unknown",
+    "no_further_observation_loop_or_physical_run": true,
+    "release": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf"
   }
 }

@@ -1,8 +1,8 @@
 # Full issue triage and execution replan — October17,2026
 
-This second full pass reviews all58 currently open issues, their624 comments, the native parent/blocking graph, current product delivery and three open PRs. Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. This preparation records the decisions; provider changes and their readbacks are recorded in the verification file after application.
+This second full pass reviews all58 currently open issues, their624 comments, the native parent/blocking graph, current product delivery and three open PRs. Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. Provider application is complete: all58issue bodies are readbackexact; sevenCLOSED/NOT_PLANNED and51OPEN, with31active+25acceptedhistoricalnativeedges and an acyclic graph. ExistingS2milestone33hasactualmember749; S3milestone34hasactualmembers587/639/782/801/802/977/980/981. Milestone aggregate counts were not used as authoritative membership.
 
-## Retire seven records as not planned
+## Seven records retired as not planned
 
 These are explicit consolidation/no-build decisions, not claims of implementation or physical qualification. No issue is closed merely because it is old.
 
@@ -18,7 +18,7 @@ These are explicit consolidation/no-build decisions, not claims of implementatio
 
 ## Remaining work and the current blocker
 
-Deployed67f/249/f916, live snapshot-wait correction verified. Third normal wait23:30:16 defeats finite quiet candidate; finalSQL unexecuted; current readiness remainsOPEN/BLOCKED. Existing Retry seals evidence and prepares one bounded source-only producer-coherence proposal; no clock relaxation or new loop.
+Deployed67f/249/f916, live snapshot-wait correction verified. Four normal waits through23:30:46 defeat finite quiet candidate; finalSQL unexecuted; current readiness remainsOPEN/BLOCKED. Existing Retry seals evidence and prepares one bounded source-only producer-coherence proposal; no clock relaxation or new loop.
 
 The existing writer is Synced/Healthy atf916 with verified source67f/image249c, singleton/socket/smoke/source/hooks/schema checks passing. Software deployment success does not establish the final readiness boundary. Keep original643/396/419/644 and all accepted predecessor closures; do not repeat them. No old approval, altered clock or cleanup turns the failed window into a pass.
 

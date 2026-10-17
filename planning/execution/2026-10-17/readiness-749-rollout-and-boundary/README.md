@@ -1,3 +1,16 @@
+# #749 — deployed snapshot fix and residual readiness blocker
+
+**The snapshot-hold fix is deployed and its live temporary-wait/resumption behavior is verified. #749 remainsOPEN: a finite observation did not achieve the strict30minutequiet boundary.**
+
+Snapshot-hold fix67f/image249c/releasef916 is deployed and live temporary-wait/resumption behavior is verified. Normal source/promotion CI, one full129-resource nonpruning selector-free sync/all9fresh hook resources,5actual source files, singleton/socket/smoke9/9 and five-minute schema watch pass. Four normal snapshot waits prevented the strict30-minute quiet interval; the finite observer stopped23:31, same writer Ready/restart0 and ArgoSyncedHealthy. Final readiness/SQL were NEVER attempted. All212 sealed evidence members/6,563,822bytes are root-hash verified. Actual callback-versus-durable-batch cadence and immutable-copy ordering motivate one bounded producer-coherence correction; failure-time numeric direction and hardware cause remain unknown. Strict collector/48-field/generation/freshness/equality/authority/history remain unchanged. No timer reset, approval replay, extra physical policy run or repeated observation loop. Current backup and scoped exposure remainUNKNOWN until a legitimate final packet.
+
+SAME Retry implements the root-reviewed finite SOURCE/OFFLINE producer-coherence scope: same existing flush task, immutable full cfg batch and FW4 confirmation transaction, fanout/ack only after commit, content/generation coalescing and periodic timer alignment, one bounded demand before eligible live admission; common readback helper stays read-only and takes current values after SQL await. Preserve original deadlines, full48/singleTS/120s/equality/generation/authority/history and strict30-minute collector. Focused meaningful regressions/diff/resource/inverse review precede any source push. No new worker/pool/RBAC/SQL probe/physical run. A next genuine delivery needs the fresh complete canonical manifest and actual shared-owner CI handback; no ledger-only main update.
+
+Original396/419/643/644acceptancesremainclosed. No extraexplicitpolicyrun/approvalrefresh/physicalrecovery/experiment/OTA/credentialchange occurred. Read-onlypacketgrantsno physical/randomauthority; missingsoil/south/hydrovaluesremainvisible. [Current full triage](../../../reviews/2026-10-17/FULL-TRIAGE.md).
+
+<details>
+<summary>Earlier dated rollout, hold and boundary history (not current acceptance)</summary>
+
 # #749 — current rollout and readiness boundary
 
 **The snapshot-wait fix is deployed and its live temporary-wait behavior is verified. Runtime checks pass; the quiet interval and final current readiness packet remain. #749 is open.**
@@ -35,3 +48,5 @@ The19:36UTC packet was BLOCKED by16 unclassified alerts. It independently passed
 The current software inverse restores only the previous ingestor release pin; it does not undo device settings or erase alert history. No extra explicit run, refreshed approval, physical recovery, experiment, OTA or credential change follows from this rollout.
 
 [Machine-readable coarse receipt](receipt.json). Detailed operator identities, native streams, physical values, state and approval material remain private. This is a dated boundary, not permanent readiness.
+
+</details>
