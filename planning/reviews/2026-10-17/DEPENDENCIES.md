@@ -6,9 +6,9 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 
 ```mermaid
 flowchart TD
-  repair["749 explicit archive-linked current-plan remedy"] --> delivery["Existing normal source CI and pin actuator"]
-  registry["Registry recovered; fresh coherence/fit and CI handback"] --> delivery
-  delivery --> i749["749 exact rollout, hold settlement and readiness"]
+  repair["749 reporting, alert lifecycle and exact classification fixes published"] --> delivery["Existing native image builds and pin actuator"]
+  registry["Shared CI handback and publication admission passed"] --> delivery
+  delivery --> i749["749 minimal fix rollout and current read-only readiness"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783
   i981["981 energy source truth"] --> i782["782 final scientific eligibility"]
@@ -25,7 +25,7 @@ flowchart TD
   i784 --> i785["785 reveal/readout"]
 ```
 
-The two delivery conditions above are operational steps inside #749, not new native issue dependencies. The registry owner's actual coherent publication and CI availability are sufficient for handback; unrelated RAG acceptance or whole #4995 closure is not required. Agents4977 is held outside the selected route because a genuine necessary source fix can use the existing parent build/pin actuator. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 is not a blanket prerequisite for honest three-probe749 readiness. No source fixture, current green container or ordinary reconciliation grants experiment authority.
+The delivery steps above are internal to #749, not new native issue dependencies. The shared-CI handback and fresh publication checks have passed; source10dd58a7 follows the existing automatic parent and pin actuator. Actual image qualification and the minimal rollout review remain. The used explicit policy run is not replayed, and the missing historical report is not retroactively repaired. The final current packet observes actual authority/exposure without inventing an experiment. Unrelated RAG acceptance or whole #4995 closure is not required. Agents4977 remains outside the selected route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
 
 
 ## Exact native relationships
