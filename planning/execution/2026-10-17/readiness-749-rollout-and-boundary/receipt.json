@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish SAME Retry's normalf916 promotion validation, then ONE full exact-revision nonpruning sync and source-bound singleton runtime verification. Return shared CI/controller custody at promotion native terminal and complete log custody, before the30-minute product observation. After actual quiet qualification, execute the accepted bounded read-only original-clause packet once, using its current typed alert projection, authoritative timestamped whole-Pod log and same-writer identity fences. Exposure must be definitively zero within the queried protocol-v2 randomized scope; denial, ambiguity or nonzero blocks acceptance. Preserve the real prior hold/history, all other pins and applied276. No repeated build, approval replay, extra explicit policy run, physical recovery or later ledger-only product copy.",
+  "next_step": "Finish the current source-defined quiet interval on the SAME qualifiedf916/67f writer; the initial earliest boundary is23:40:44UTC, subject to actual new errors or holds. Then execute the accepted read-only original-clause packet ONCE using its fresh authoritative timestamped whole-Pod log, current same-writer preview/lease and typed alert projection. Verify newest two climate cycles, exact source/backup/authentication boundaries and scoped protocol-v2 randomized exposure; unknown or nonzero exposure blocks acceptance. Keep749 open until actual original clauses pass. Shared CI is already returned; no duplicate observer, clock reset, new physical run, approval replay, manual refresh, state/history rewrite or further product source/pin copy.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -314,7 +314,7 @@
     "history_and_authority_unchanged": true,
     "published": true,
     "built": true,
-    "deployed": false,
+    "deployed": true,
     "new_explicit_physical_run": false,
     "shared_CI_handback_pending": false,
     "runtime_inverse": "Forward ingestor release pin only back to current6e; keep all other pins, migrate211/applied276 and state/history."
@@ -358,6 +358,38 @@
     "only_render_changes": "Ingestor Deployment and two related CronJob image references",
     "other_pins_and_history_preserved": true,
     "new_runtime_accepted": false,
+    "new_explicit_physical_run": false
+  },
+  "snapshot_wait_runtime_delivery": {
+    "release": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "ingestor_digest": "sha256:249c7647f3e09a80866d95975372535f68465a0e2f6a12faca3b8c0b17fe2ba2",
+    "promotion_validation_finished_at": "2026-10-17T23:06:48Z",
+    "promotion_mode": "validate",
+    "promotion_started_container_logs": 4,
+    "full_sync_started_at": "2026-10-17T23:07:30Z",
+    "full_sync_finished_at": "2026-10-17T23:09:13Z",
+    "full_sync_resources": 129,
+    "prune": false,
+    "resource_selectors": null,
+    "fresh_hook_jobs": 7,
+    "fresh_hook_configmaps": 2,
+    "hook_container_logs_exit0_hash_verified": 8,
+    "runtime_observed_at": "2026-10-17T23:15:09.331370Z",
+    "argo": "SyncedHealthy",
+    "source_files_exact": 5,
+    "ready_controllers": 16,
+    "ready_requested_replicas": 21,
+    "singleton_writer_restart_count": 0,
+    "smoke_passed": 9,
+    "device_connections": 1,
+    "five_minute_schema_errors": 0,
+    "actual_fixed_branch": "temporary snapshot wait followed by naturally resumed ordinary dispatch",
+    "history_state_approval_and_original_archive_preserved": true,
+    "runtime_receipt_sha256": "6be145e3b43691bd4961489a65a08adfa64affbb69d723e11b0151ce6fa2296e",
+    "shared_CI_returned_before_product_observation": true,
+    "initial_earliest_quiet_boundary": "2026-10-17T23:40:44.157137Z",
+    "final_readiness_accepted": false,
     "new_explicit_physical_run": false
   }
 }
