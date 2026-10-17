@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish SAME Retry's already-authorized current writer qualification and actual30-minute quiet interval, then execute ONE prepared bounded read-only packet: newest two cycles, original source/backup/authority boundaries, all open alert identities, exact corpus lifecycle audit and existing protocol-v2 randomized ops-status scope. Preserve UNKNOWN on denial/cap/drift and do not invent an experiment UUID or physical GateR acceptance. No additional explicit policy run, approval refresh, forced wake, manual alert update or physical recovery. Shared CI/controller custody has returned to its existing Agents owner; the product observation does not reserve it. The complete planning snapshot is already in source10dd; later ledgers need no product delivery. Close749 only on actual original-clause acceptance.",
+  "next_step": "Finish SAME Retry's finite source/retained-state diagnosis of the current snapshot/retained-complete-state hold and return the smallest concrete remedy with inverse. Review that scope before source edits or delivery. Preserve all unknown-outcome, confirmation, authority and strict collector semantics. The shared CI/controller window remains with its existing Agents owner. After a legitimate remedy and actual current quiet interval, perform the one prepared bounded read-only original-clause packet. Do not replay the consumed policy approval, force a wake, clear history, invent an experiment UUID or infer physical recovery authority. Keep749 open until actual original acceptance.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -271,5 +271,24 @@
     "startup_observer_correction": "Known pre-lease process-start continuity marker was caught by an overly broad local all-ERROR rule. Original failure retained; existing genuine anchor semantics preserved; no continuity recovery or quiet PASS inferred.",
     "root_promotion_provider_proof_sha256": "499db4e1d695235c1f98e6fed054859f7c0221b56e32933ed51105572f6de86e",
     "root_startup_disposition_sha256": "02a84b0d8c9e2bb75b19f7f97725d38326af797e18f738821c1703277255648e"
+  },
+  "restart_resume_current_blocker": {
+    "captured_at": "2026-10-17T21:41:25.511296Z",
+    "basic_runtime_accepted": true,
+    "runtime_verdict_sha256": "eb1f841ae2d1029f6406fca1ca066bebcd37f205db3aed35c21ec59b43df05e6",
+    "runtime_source_binding_sha256": "09e17b2dae9da4ec4956a8f5c381602957401b994dffb676d4c210f4fd2e99ca",
+    "restart_capture_sha256": "a08f7b96ef6523712d8cb8cd6377472674e0e1598426a8550c88e519ec433143",
+    "same_writer_survived_restart": true,
+    "retrospective_gap_read_not_continuous_observation": true,
+    "final_readiness": "BLOCKED: current typed bound hold; snapshot differs from current misting readback while retaining completed previous-writer run",
+    "native_hold_receipt_sha256": "532eb92a39a5bd901c6cea09f5143794846ae73ce7ca208b7ed17da98dae4e84",
+    "final_read_only_packet_executed": false,
+    "current_exposure": "UNKNOWN; final query unexecuted",
+    "canonical_path": "/Users/jason/.codex/worktrees/verdify-live-replan-20261017/verdify-platform",
+    "restored_clean_commit": "13beaf63fd77945e96f379f641f64d50f3fee174",
+    "existing_sessions_resumed": true,
+    "no_repeated_mutation_or_policy_approval": true,
+    "source_remedy": "Finite source/retained-state review; exact scope pending",
+    "shared_CI_owner": "Existing Agents Assessment; no handback"
   }
 }

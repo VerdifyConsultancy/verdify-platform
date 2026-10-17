@@ -6,9 +6,9 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 
 ```mermaid
 flowchart TD
-  repair["749 reporting, alert lifecycle and exact classification fixes published"] --> delivery["Existing native image builds and pin actuator"]
-  registry["Shared CI handback and publication admission passed"] --> delivery
-  delivery --> i749["749 minimal fix rollout and current read-only readiness"]
+  delivery["749 source/images and minimal rollout completed"] --> hold["Current retained-state/snapshot hold"]
+  hold --> remedy["Exact source/state diagnosis and smallest safe remedy"]
+  remedy --> i749["749 actual quiet interval and bounded read-only acceptance"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783
   i981["981 energy source truth"] --> i782["782 final scientific eligibility"]
@@ -25,7 +25,7 @@ flowchart TD
   i784 --> i785["785 reveal/readout"]
 ```
 
-The delivery steps above are internal to #749, not new native issue dependencies. The shared-CI handback and fresh publication checks have passed; source10dd58a7 follows the existing automatic parent and pin actuator. Actual image qualification and the minimal rollout review remain. The used explicit policy run is not replayed, and the missing historical report is not retroactively repaired. The final current packet observes actual authority/exposure without inventing an experiment. Unrelated RAG acceptance or whole #4995 closure is not required. Agents4977 remains outside the selected route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
+The delivery steps above are internal to #749, not new native issue dependencies. Source10dd/image6e and release11cd are deployed with runtime basic checks passing. A real current retained-state/snapshot hold blocks final readiness; source/state diagnosis precedes the smallest legitimate remedy and current quiet interval. The consumed policy run is not replayed and missing historical reports are not retroactively repaired. Shared CI belongs to the existing Agents owner; coordinate only if a reviewed source delivery requires it. The final read-only packet observes actual authority/exposure without inventing an experiment. Agents4977 remains outside this route. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 and broad soil commissioning45 are not blanket prerequisites for truthful bounded readiness; warnings and absent values remain visible. No source fixture, green container or ordinary reconciliation grants experiment authority.
 
 
 ## Exact native relationships

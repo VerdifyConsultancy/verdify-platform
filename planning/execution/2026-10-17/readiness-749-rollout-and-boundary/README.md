@@ -1,12 +1,18 @@
 # #749 — current rollout and readiness boundary
 
-**The minimal follow-up fix is deployed. #749 remains open while current runtime readiness is verified.**
+**The fix rollout and runtime checks pass. #749 remains open because a current retained-state/snapshot hold blocks readiness.**
 
 Source10dd58a7 contains the ordered-history reporting correction, producer-owned corpus-alert lifecycle fix and exact recovery-only soil classification. All33 intended provider payloads match; native full offline qualification and all three selected images succeeded. The normal actuator published the candidate pins. Only the ingestor image was promoted in release11cd6a92; other release pins, Lab, migrate211 and applied276 remain unchanged.
 
-The promotion passed its normal validation with all eight image slots and the pin updater skipped. One full nonpruning sync completed21:22:42UTC with129 resource results. Nine hook resources comprise seven fresh Jobs and two ConfigMaps; all succeeded. At21:23:52, Argo was Synced/Healthy and one new writer was Ready without restart. Source/process binding, smoke, schema watch and the actual30-minute quiet interval are still being completed.
+The promotion passed its normal validation with all eight image slots and the pin updater skipped. One full nonpruning sync completed21:22:42UTC with129 resource results. Nine hook resources comprise seven fresh Jobs and two ConfigMaps; all succeeded. At21:23:52, Argo was Synced/Healthy and one new writer was Ready without restart. Source/process binding, all nine smoke checks, one device connection, the48-field attestation and a five-minute schema watch have passed. The actual quiet interval and final read-only readiness packet are blocked by the current hold.
 
 A local follower stopped on an expected pre-lease startup continuity marker. Independent source review confirmed that the blanket all-ERROR rule was broader than the existing readiness rule. The failed observation is retained; continuation uses the same process and original timestamps. This does not establish continuity recovery or readiness, and no restart, clock reset or extra policy run occurred.
+
+## Current hold and restart recovery
+
+At21:24UTC, the new writer rejected an atomic snapshot that differed from its current misting readback, while a completed run from the previous writer remained retained. The source-bound collector reports an unresolved hold. Its cause and legitimate settlement path are under finite source/state review; elapsed time, equality logs or another rollout cannot erase that evidence.
+
+The laptop restart interrupted local observation. One bounded21:41UTC read verified the same production writer, zero restarts, exact source and Synced/Healthy release. Recovered logs cover the gap retrospectively; continuous observation across the restart is not claimed. Existing owner sessions resumed, and the planning checkout was restored from its published branch into persistent storage. No deployment, approval, policy run or SQL was repeated.
 
 ## Remaining acceptance
 
