@@ -1117,6 +1117,22 @@
       ],
       "native_graph_changed": false,
       "new_physical_authority": false
+    },
+    "fix_rollout_status_github_publication": {
+      "verified_at": "2026-10-17T21:30:06.789462+00:00",
+      "coarse_immutable_receipt_revision": "d93a2fee56759bc74fdb019a9bc438e4991c4540",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/d93a2fee56759bc74fdb019a9bc438e4991c4540/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "5c0d34417a002724e5a33c2eda1f19f39664d68993ab426b35886ee7a7be5cdf",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
     }
   },
   "post_rollout_followup_delivery": {
