@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "e9513ee5437238de20f76a98b55fe1ec50448674529f3259e1da59e2a8958f67",
+    "prompt_sha256": "9785de66bf01006f0d78b95723313ce0ba0944ab1180ff95480e912ffd72fe49",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -307,8 +307,7 @@
       "updated_at": "2026-10-17T16:32:40Z",
       "scope": "current evidence and execution route only; native issue graph and milestone unchanged"
     },
-    "product_source_unchanged": "2208401de0c5d1653661c676cd255eaab2e7afb4",
-    "source_transition": "Accepted final3path patchabce1968 after306 focused tests and independent review; no source delivery yet.",
+    "source_transition": "Accepted three-file remedy published as6f;306 focused and341 composed tests pass; native parent in flight, no runtime acceptance.",
     "route": "existing genuine source parent CI and pin actuator;4977 no longer prerequisite",
     "diagnostic_receipt_sha256": "c78cce878f175d1af6f2f1015a2b607562181b558cd153861c584e7f8b58fea3",
     "diagnostic_comparison_sha256": "9c5a82eda86808d2c8983b66dc4e74977af5ce23f1cd83467db29725bc2cd3d2",
@@ -353,8 +352,8 @@
       "copy_ack_sha256": "89a1e2bbcb048ab4524a297367290e15f37298b074a598512c840f608bc7692c",
       "commit_proof_sha256": "a822c51b98b9e0db03013c455c17ee0500fd99e99bf68b497dfdaf6021a8c4ba",
       "root_unfrozen": true,
-      "pushed": false,
-      "release": "conditional on actual external overlapping CI release and fresh normal current coherence/fit/expectedmain; no new source review needed"
+      "pushed": true,
+      "release": "One normal main publication completed17:13:08UTC after explicit handback and fresh JIT. Retry owns automatic parent through terminal/release."
     },
     "shared_ci_handback": {
       "workflow_uid": "9013a62f-9ed6-4290-b10d-341e81379093",
@@ -375,6 +374,33 @@
       "body_sha256": "54c36dda1b13de6c2e879d5def4f338e85a2161cc4ceb7d724083ae964b24874",
       "provider_exact": true,
       "scope": "actual eight-slot classifier route correction; original acceptance and native graph retained"
+    },
+    "product_source_at_initial_resume": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+    "source_publication": {
+      "source": "6feda001210164004b1db6b81e61ae5b19d22fa3",
+      "tree": "d51e74a095638c5e99a95a1f5554801eb7670899",
+      "parent": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+      "published_at": "2026-10-17T17:13:08.161584+00:00",
+      "one_attempt": true,
+      "all26_provider_payloads_exact": true,
+      "root_provider_proof_sha256": "14262f5012abc57dcd05f47120c97d3879ed63473423024f200cca3520b0fc30",
+      "source_push_receipt_sha256": "16bec79470000f060019a11eaf23445df6aeb73bc4d6fa8baf4a5a728cdcb3b4",
+      "fresh_jit_sha256": "6f51132c3d2dc7c4f235bd1948f7b484c707f5d5be172311385aa39dec71a371",
+      "native_parent": "verdify-platform-ci-m8m6z",
+      "native_parent_uid": "e154f2a2-26e6-49d4-8f27-f42d0489ab08",
+      "last_known_phase": "Running",
+      "image_pin_runtime_acceptance": false,
+      "sole_ci_owner": "existing Retry session"
+    },
+    "issue749_source_delivery": {
+      "verified_at": "2026-10-17T17:20:40.068128+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "4f1f96ec9d46a1e0e559e0d3b2d4101a40d47a0e087452e8f68c5104690e68cc",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T17:20:39Z",
+      "scope": "actual source publication/native parent in flight; native graph and milestones unchanged"
     }
   }
 }
