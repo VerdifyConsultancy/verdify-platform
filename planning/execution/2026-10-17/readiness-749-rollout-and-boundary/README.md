@@ -25,3 +25,10 @@ A distinct targeted read at19:49UTC established zero readings for all seven soil
 The specific rollout/run approval is consumed. No additional explicit policy run, physical recovery, experiment, OTA or credential change is authorized. Source delivery of the local reporting correction requires the existing shared-CI owner's finite handback; a future image cannot borrow the old writer's identity.
 
 [Machine-readable coarse receipt](receipt.json). Raw native streams, operator identities, physical values, state and approval material remain private. This receipt records its capture boundary and is not permanent readiness.
+
+
+## Reviewed follow-up and passive soil check
+
+The four-file reporting and corpus-alert correction is locally reviewed:316 existing formatter tests and15 corpus tests pass, with the relevant old-source regressions failing. Ordered history, existing authority, confirmation and freshness checks remain intact. The corpus producer resolves only its own matching warning after freshness succeeds. Source delivery awaits the existing shared-CI handback; no runtime change or manual alert resolution has occurred.
+
+At19:57UTC, seven exact existing Home Assistant soil entities all returned unknown. This later independent observation agrees with the earlier SQL gap and establishes no hardware cause. The seven channels remain unresolved; the subsequent bounded provenance reader stopped before retrieving metadata or logs. The cause remains unestablished. No extra device connection, refresh, physical run or broad commissioning gate is added.

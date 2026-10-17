@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "7dfc7363b1e8dcc598cc456bc48d5b4741598c897b7face390b88e4b8416edbb",
+    "prompt_sha256": "de5f42b89e3f78331ab00fe808f88f5dffa63d4548a856c5099d2a1b5517bf99",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -873,6 +873,98 @@
       "assessment_manifest_sha256": "98600538c86c47b6665141bfc5427dd438e3c28cf98bcfb0f7b48b72548e66e9",
       "root_verified_assessment_members": 23,
       "root_verified_assessment_bytes": 406440
+    },
+    "targeted_alert_github_publication": {
+      "verified_at": "2026-10-17T19:56:04.272884+00:00",
+      "coarse_immutable_receipt_revision": "ae1286c8bd475ea0e0b3ee556cc8c1d5dce309f7",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/ae1286c8bd475ea0e0b3ee556cc8c1d5dce309f7/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "20f218b4c6f19c1aac9c114c09652180205e99b77c0df7172abbb350da6e4a63",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 428,
+          "state": "open",
+          "body_sha256": "c947853cac7b52d550a2acbbbbeb3ad500c3f71e70a054bd47e9d57f90282226",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 45,
+          "state": "open",
+          "body_sha256": "f57b8f6461e1d20dfac9580f5351e3239baf772f44b2a545fcd25d597784db88",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 75,
+          "state": "open",
+          "body_sha256": "981e5cf26dd8ebf4ae4cf5fbbfa7a0c028cae7eee70ed9813f26240da06cdc39",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
+    },
+    "seven_passive_ha_states": {
+      "observed_at": "2026-10-17T19:57:23.428925Z",
+      "exact_entity_reads": 7,
+      "http200": 7,
+      "unknown": 7,
+      "finite": 0,
+      "mutations": 0,
+      "new_device_connections": 0,
+      "assessment_sha256": "a4d389d162f80b9eb2110b8bfa8d0d74e30c24d2242e4ff0c5ae994ea7813605",
+      "manifest_sha256": "8177d88580be90378bb174a5ae11551ece1f1b5e086cb3dd90bfdf174ce2beef",
+      "root_verified_members": 6,
+      "root_verified_bytes": 17363,
+      "relation": "Later independent observation; not simultaneous with SQL and not a retrospective readiness verdict",
+      "hardware_cause_established": false,
+      "next": "Passive provenance reader stopped; no metadata/logs acquired. Original causal scope source review pending, with soil warnings visible."
+    },
+    "combined_reporting_site_source_review": {
+      "reviewed": true,
+      "base": "3c9a4edf8b6940840b9d61574175a51001f62766",
+      "files": 4,
+      "patch_sha256": "f20e054d353e643464b431740b58bdc688fbc16ff8acdb3bc689ada0fc4ecb74",
+      "new_site_patch_sha256": "421ceb7a1890b6bad6b8cd2f33b908a13a2adcf3e95b42d2b4aac1666c2c0b8b",
+      "proof_sha256": "e304f823e3dd25e09bf65eb0f7df7bf85d1ab42e5abdd40333229230ee48a586",
+      "manifest_sha256": "6892292a3d4121de84f339062cda66dca26d01e9eb7bfbc68f3ebc43f0bb213c",
+      "root_verified_members": 18,
+      "root_verified_bytes": 33510,
+      "current_four_blobs_and_diff_exact": true,
+      "formatter_tests_passed": 316,
+      "formatter_proof_not_repeated": true,
+      "site_tests_passed": 15,
+      "site_baseline_failure": 1,
+      "new_failures_errors_skips": 0,
+      "native_sql_privileges": "existing217 duty grant; no role/schema change",
+      "pushed_built_deployed": false,
+      "delivery": "Pending existing shared-CI owner handback, current canonical copy and fresh normal admission/fit; no new physical run"
+    },
+    "passive_ha_provenance_stop": {
+      "captured_at": "2026-10-17T20:02:31.934107Z",
+      "manifest_sha256": "8189301d8531478f88bc790214351cecb3efaed87d6f71e08c1ea0a97de72e99",
+      "assessment_sha256": "45aac365f1b314e4166ad3a5ca090634a43c930da55dd27f8160bd18502ad9ae",
+      "root_verified_members": 6,
+      "root_verified_bytes": 13060,
+      "result": "Reader ValueError before registry filtering or log read; exact failed predicate unretained",
+      "core_log_bytes": 0,
+      "current_provenance_obtained": false,
+      "retry_or_mutation": false
+    },
+    "followup_rollout_plan": {
+      "sha256": "5b8678050dac603aa9d05bd601478a8f9af7aa7caae5217d5875e92c380abd8d",
+      "root_reviewed": true,
+      "source_images_runtime_coordinates": "unbound_future",
+      "expected_scope": "ingestor release only/oneDeployment+twoCron future templates; otherpins/migrate211/applied276 retained",
+      "inverse": "forward ingestor-only pin inverse to671; no physical undo or stale-alert history reversal",
+      "runtime_action_released": false
     }
   }
 }

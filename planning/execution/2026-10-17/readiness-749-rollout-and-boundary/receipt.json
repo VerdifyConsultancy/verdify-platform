@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "SAME Retry seals the completed targeted diagnosis and prepares the smallest LOCAL producer-owned site_content_stale resolution fix plus meaningful existing-suite regressions, alongside the accepted unchanged formatter fix. Existing runtime_inventory traces only seven soil mappings and retained logs offline to distinguish source failure from missing physical evidence; no blanket exemption, unpotted inference or full#45 commissioning prerequisite. Review only the new lifecycle delta, then coordinate one genuine source delivery with the existing shared-CI owner. No live alert resolution, new read loop, source push/build/rollout, physical run, recovery or fresh approval is released by this preparation. Current exposure remains explicitly unknown; do not guess an experiment ID.",
+  "next_step": "Deliver the reviewed four-file completion-report/corpus-alert correction through SAME Retry, with the complete current canonical snapshot, after the existing shared-CI owner returns custody and fresh normal admission/fit passes. Preserve the single-writer and applied276/migrate211 floor; qualify actual images and review the minimal rollout/inverse before runtime change. The finite passive HA provenance reader stopped before metadata/log access; cause remains unestablished. Keep soil warnings visible while the original causal scope is checked from source; no new device connection, refresh, blanket exemption or full#45 prerequisite. No additional explicit policy run, physical recovery or approval replay is authorized. Exposure remains unknown without an accepted experiment binding.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -146,5 +146,52 @@
     "no_retrospective_boundary_override": true,
     "next_action": "Local producer-owned corpus alert lifecycle correction + existing formatter fix; finite offline7-channel source trace; no new live operation",
     "existing_heap_diagnostic_predicates": "pass_at_targeted_capture_only"
+  },
+  "seven_passive_ha_states": {
+    "observed_at": "2026-10-17T19:57:23.428925Z",
+    "exact_entity_reads": 7,
+    "http200": 7,
+    "unknown": 7,
+    "finite": 0,
+    "mutations": 0,
+    "new_device_connections": 0,
+    "assessment_sha256": "a4d389d162f80b9eb2110b8bfa8d0d74e30c24d2242e4ff0c5ae994ea7813605",
+    "manifest_sha256": "8177d88580be90378bb174a5ae11551ece1f1b5e086cb3dd90bfdf174ce2beef",
+    "root_verified_members": 6,
+    "root_verified_bytes": 17363,
+    "relation": "Later independent observation; not simultaneous with SQL and not a retrospective readiness verdict",
+    "hardware_cause_established": false,
+    "next": "Passive provenance reader stopped; no metadata/logs acquired. Original causal scope source review pending, with soil warnings visible."
+  },
+  "combined_reporting_site_source_review": {
+    "reviewed": true,
+    "base": "3c9a4edf8b6940840b9d61574175a51001f62766",
+    "files": 4,
+    "patch_sha256": "f20e054d353e643464b431740b58bdc688fbc16ff8acdb3bc689ada0fc4ecb74",
+    "new_site_patch_sha256": "421ceb7a1890b6bad6b8cd2f33b908a13a2adcf3e95b42d2b4aac1666c2c0b8b",
+    "proof_sha256": "e304f823e3dd25e09bf65eb0f7df7bf85d1ab42e5abdd40333229230ee48a586",
+    "manifest_sha256": "6892292a3d4121de84f339062cda66dca26d01e9eb7bfbc68f3ebc43f0bb213c",
+    "root_verified_members": 18,
+    "root_verified_bytes": 33510,
+    "current_four_blobs_and_diff_exact": true,
+    "formatter_tests_passed": 316,
+    "formatter_proof_not_repeated": true,
+    "site_tests_passed": 15,
+    "site_baseline_failure": 1,
+    "new_failures_errors_skips": 0,
+    "native_sql_privileges": "existing217 duty grant; no role/schema change",
+    "pushed_built_deployed": false,
+    "delivery": "Pending existing shared-CI owner handback, current canonical copy and fresh normal admission/fit; no new physical run"
+  },
+  "passive_ha_provenance_stop": {
+    "captured_at": "2026-10-17T20:02:31.934107Z",
+    "manifest_sha256": "8189301d8531478f88bc790214351cecb3efaed87d6f71e08c1ea0a97de72e99",
+    "assessment_sha256": "45aac365f1b314e4166ad3a5ca090634a43c930da55dd27f8160bd18502ad9ae",
+    "root_verified_members": 6,
+    "root_verified_bytes": 13060,
+    "result": "Reader ValueError before registry filtering or log read; exact failed predicate unretained",
+    "core_log_bytes": 0,
+    "current_provenance_obtained": false,
+    "retry_or_mutation": false
   }
 }
