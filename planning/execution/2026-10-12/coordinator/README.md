@@ -1241,3 +1241,10 @@ Root read actualownerb23fbe8f/3a4c57e9/d456ba84/3fa7ff62 receipts: sixresourcess
 SAME Retry created10dd58a7 with soleparent3c9/tree1d226607; normalcommit hooksPASS andcleanworktree reported. Root independently read6e3de9aa receipt and verifiedall33 committedpayloads against25canonical70d and8acceptedsource/doc hashes:22actualchangedpaths,11canonicalpaths alreadyidentical. Privateproofe2f0b504 records localtree verification only; providerpush/nativequalification/runtimeadoption are not yetclaimed.
 
 The prepublication observer stopped on a locallyunsupportedclientflag beforepush, nativeoperation or normalregistry/fitreads. Failedcustody is retained. SAME Retry corrects onlythe lightweightread-onlywatch transport usingexistingcontext/credentials, thencontinuesalreadyreleasedfreshnormalchecks/oneFFsourcepush. No alternatekey, buildretry, controllerchange or physicalauthority follows. Runtimehold andusedexplicitapproval remain.
+
+
+## October17 composed source published and independently verified
+
+One normalFFmainpublication completed20:38:15:3c9→10dd58a7/tree1d226607. Root independently verifiedall33providerpayloads/soleparent/tree/currentmain; privatecfcb016e proof. Fresh20:37normalcoherent171/readywritable/caller/fit precededpush; historicalfitisnotreservation. Automaticparentjrvmb/UID9ece5ee5 started20:38:19 andremainsownedbySAME Retry withsupportedGETwatch/fullstartedcontainerstreams. Nativefull offlineCI isrunning in k3s, no terminalPASS/images claimed. Sourceprod129/zeroSecrets/render760174a4 andotherreleasepins unchanged; no runtimeaction.
+
+Rootc8bbb4ab/all2changedproviderpayloads verified51dd0ebe. Automation source10dd/copyACK/UNFROZEN/currentwindow prompt39de6ae1 readbackexact withscheduleandtargetpreserved. No furthercanonicalcopy/planning-onlymainaction requested.

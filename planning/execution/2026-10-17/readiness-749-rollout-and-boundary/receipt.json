@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Deliver the seven reviewed source/test files plus the exact AGENTS policy insertion through SAME Retry, composed with the complete current canonical25 planning snapshot. Wait for the existing controller owner's explicit safe CI handback, then use fresh normal admission and actual affected-image classification; scripts may affect additional image COPY inputs, so do not force the earlier two-profile expectation. Qualify outputs and review the ingestor-only runtime diff/inverse before adoption. One subsequent current read-only packet must include the existing no-UUID ops-status discovery for actual authority/exposure, bounded to its protocol-v2 scope. No guessed experiment, full physical GateR claim, extra policy run or physical recovery. Keep all soil warnings visible; broader#45 commissioning is separate. The old missing report and19:36 denial remain historical.",
+  "next_step": "Finish SAME Retry's existing automatic source10dd58a7 native CI and actual affected-image builds, retain terminal logs and normal candidate-actuator evidence, then review the qualified ingestor-only runtime diff and inverse before adoption. The complete25 planning snapshot is already copied and verified; no further ledger-only product delivery is needed. One subsequent current read-only packet must observe actual authority/exposure through the existing bounded no-UUID ops-status function, preserving its protocol-v2 scope. No guessed experiment, full physical GateR claim, extra explicit policy run or physical recovery. Soil warnings stay visible; broader#45 commissioning remains separate. The old missing report and19:36 denial remain historical.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -228,5 +228,21 @@
     "field": "clause_3.close_first_scope",
     "current_exposure": "UNKNOWN; original zero wording unsupported by that packet",
     "sealed_original_preserved": true
+  },
+  "composed_source_publication": {
+    "verified_at": "2026-10-17T20:41:36.642695+00:00",
+    "source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "parent": "3c9a4edf8b6940840b9d61574175a51001f62766",
+    "tree": "1d226607f0b8d283296f9a0705e7efc288c3a6ca",
+    "current_main_observed": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "all33_provider_payloads_exact": true,
+    "runtime_claim": false,
+    "actual_changed_paths": 22,
+    "canonical_snapshot": "70dfe41413105199e2b01089f5b04756ab4648aa",
+    "normal_fast_forward": true,
+    "automatic_native_qualification": "In progress; no terminal qualification or new image claimed",
+    "production_render_unchanged": true,
+    "promotion_or_sync": false,
+    "new_explicit_policy_run": false
   }
 }
