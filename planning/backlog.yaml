@@ -1,7 +1,7 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+  "source_revision": "183b6f2bdd58cb6cc3df1110d6f722a7b9d3c6f6",
   "snapshot_date": "2026-09-05",
   "original_open_issues": [
     14,
@@ -520,7 +520,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "Snapshot-hold fix67f/image249c/releasef916 is deployed and live temporary-wait/resumption behavior is verified. Normal source/promotion CI, one full129-resource nonpruning selector-free sync/all9fresh hook resources,5actual source files, singleton/socket/smoke9/9 and five-minute schema watch pass. Four normal snapshot waits prevented the strict30-minute quiet interval; the finite observer stopped23:31, same writer Ready/restart0 and ArgoSyncedHealthy. Final readiness/SQL were NEVER attempted. All212 sealed evidence members/6,563,822bytes are root-hash verified. Actual callback-versus-durable-batch cadence and immutable-copy ordering motivate one bounded producer-coherence correction; failure-time numeric direction and hardware cause remain unknown. Strict collector/48-field/generation/freshness/equality/authority/history remain unchanged. No timer reset, approval replay, extra physical policy run or repeated observation loop. Current backup and scoped exposure remainUNKNOWN until a legitimate final packet.",
+      "baseline": "Snapshot-hold fix67f/image249c/releasef916 is deployed and live temporary-wait/resumption behavior is verified. Normal source/promotion CI, one full129-resource nonpruning selector-free sync/all9fresh hook resources,5actual source files, singleton/socket/smoke9/9 and five-minute schema watch pass. Four normal snapshot waits prevented the strict30-minute quiet interval; the finite observer stopped23:31, same writer Ready/restart0 and ArgoSyncedHealthy. Final readiness/SQL were NEVER attempted. All212 sealed evidence members/6,563,822bytes are root-hash verified. Actual callback-versus-durable-batch cadence and immutable-copy ordering motivate one bounded producer-coherence correction; failure-time numeric direction and hardware cause remain unknown. Strict collector/48-field/generation/freshness/equality/authority/history remain unchanged. No timer reset, approval replay, extra physical policy run or repeated observation loop. Current backup and scoped exposure remainUNKNOWN until a legitimate final packet. At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -1182,7 +1182,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "Current749reporting/corpus-lifecycle/soil classification corrections are deployed. The older19:49read established seven absent soil channels,14overlapping warnings and an informational heap snapshot; no sensor repair or manual alert cleanup follows. Current749finalpacket remainsunexecuted. 980retains exporter timeout uncertainty and proposed intentional NAS-window pause983/resume handoff;981retains authentic source freshness recovery. Do not infer backup success from silence or absence of a paused exporter.",
+      "baseline": "Current749reporting/corpus-lifecycle/soil classification corrections are deployed. The older19:49read established seven absent soil channels,14overlapping warnings and an informational heap snapshot; no sensor repair or manual alert cleanup follows. Current749finalpacket remainsunexecuted. 980retains exporter timeout uncertainty and proposed intentional NAS-window pause983/resume handoff;981retains authentic source freshness recovery. Do not infer backup success from silence or absence of a paused exporter. At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -3352,7 +3352,7 @@
         "deploy/k8s/components/db-backup",
         "scripts"
       ],
-      "baseline": "Earlier bounded audit observed exporter timeout/BrokenPipe; underlying cause remainsunproved. NewopenPR983 proposes replicas1\u21920 to reduce NFS load in the Storage708/799/761heavy-NASwindow and restoration after the named owner queue handoff. At23:31 the last actual metadata fence still showed exporter1/1; PRsource isnotadoption. Preserve any authorized pause, never unpause/scan to pass readiness, and keep silence/exporterhealth/actualbackupfreshness distinct. Review source/offline whileheld and verify deployed recovery only in the actual owner window.",
+      "baseline": "Earlier bounded audit observed exporter timeout/BrokenPipe; underlying cause remainsunproved. NewopenPR983 proposes replicas1\u21920 to reduce NFS load in the Storage708/799/761heavy-NASwindow and restoration after the named owner queue handoff. At23:31 the last actual metadata fence still showed exporter1/1; PRsource isnotadoption. Preserve any authorized pause, never unpause/scan to pass readiness, and keep silence/exporterhealth/actualbackupfreshness distinct. Review source/offline whileheld and verify deployed recovery only in the actual owner window. At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.",
       "delivery": "Deliver the smallest owner change through existing required checks and verify the actual deployed behavior. Source, image, runtime and recovery evidence remain distinct.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "Normal scoped diagnosis/delivery; no database cutover, device action or credential change."
@@ -3393,7 +3393,7 @@
   ],
   "execution_plan": {
     "reviewed_at": "2026-10-17T23:38:45.548698+00:00",
-    "source_revision": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+    "source_revision": "183b6f2bdd58cb6cc3df1110d6f722a7b9d3c6f6",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-17",
     "open_issues": [

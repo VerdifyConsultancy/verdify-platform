@@ -14,7 +14,7 @@ The snapshot-hold fix is deployed at source `67f08ccf`, ingestor image `249c7647
 
 The existing writer session has a bounded offline producer-coherence implementation scope. No further source push, CI window, rollout or observation loop is released from that diagnosis alone. The failure-time value direction and hardware cause remain unknown; current backup and exposure evidence were not queried. The collector, physical authority and history remain unchanged.
 
-PR #982 is a held canonical-S3 rehearsal endpoint change. PR #983 proposes an intentional backup-exporter pause during the NAS load window; source is not adoption. Honor its actual owner handoff before unpausing or adding NFS load. PR #855 remains a parked draft. Shared CI/controller custody has already returned to the existing Agents owner.
+PR #982 is a held canonical-S3 rehearsal endpoint change. PR #983 merged as `183b6f2b` during this review. The 23:44 metadata read shows exporter 1/1 and Argo Healthy/OutOfSync against that new desired revision; the intended pause is not yet adopted. Honor its actual owner handoff before unpausing or adding NFS load. PR #855 remains a parked draft. Shared CI/controller custody has already returned to the existing Agents owner.
 
 ## Remaining and next sprint
 

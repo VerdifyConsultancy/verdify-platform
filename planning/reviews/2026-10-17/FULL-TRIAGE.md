@@ -1,6 +1,6 @@
 # Full issue triage and execution replan — October17,2026
 
-This second full pass reviews all58 currently open issues, their624 comments, the native parent/blocking graph, current product delivery and three open PRs. Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. Provider application is complete: all58issue bodies are readbackexact; sevenCLOSED/NOT_PLANNED and51OPEN, with31active+25acceptedhistoricalnativeedges and an acyclic graph. ExistingS2milestone33hasactualmember749; S3milestone34hasactualmembers587/639/782/801/802/977/980/981. Milestone aggregate counts were not used as authoritative membership.
+This second full pass reviews all58 currently open issues, their624 comments, the native parent/blocking graph, current product delivery and three PR dispositions (including #983 merged during this review). Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. Provider application is complete: all58issue bodies are readbackexact; sevenCLOSED/NOT_PLANNED and51OPEN, with31active+25acceptedhistoricalnativeedges and an acyclic graph. ExistingS2milestone33hasactualmember749; S3milestone34hasactualmembers587/639/782/801/802/977/980/981. Milestone aggregate counts were not used as authoritative membership.
 
 ## Seven records retired as not planned
 
@@ -54,3 +54,6 @@ Use one product writer and one independent owner lane. Start the cheapest authen
 The782 sprint spend is a bounded input/decision packet, not a promise to finish its full scientific/power contract in4–8h. #639/#587 physical clauses stay open when outside the contained scope. No pilot launch date or engineering estimate is a promise of a60-day study's completion. Native milestones and the final51-issue disposition table follow the verified provider result.
 
 [Current status](STATUS.md) · [Issue dispositions](ISSUE-TRIAGE.md) · [Active dependency graph](DEPENDENCIES.md) · [Execution queue](EXECUTION-QUEUE.md) · [Current/next sprint](NEXT-SPRINT.md). Detailed operator/state/approval/native/credential material stays private.
+
+
+Current desired-state update: At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.

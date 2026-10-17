@@ -13,3 +13,6 @@ Existing Agents owner `01a135dc-ccc3-7473-be5e-5b643a40a3fd` holds shared CI/con
 Capacity is 40 shared hours/week, 80/fortnight. S3 base is 28–56 hours plus 24 hours reserve, including #749. Estimates and runtime do not measure hours worked. Keep GitHub and the plan current, and interrupt only for a concrete decision, real blocker or meaningful completion.
 
 [Status](STATUS.md) · [Triage](FULL-TRIAGE.md) · [Dispositions](ISSUE-TRIAGE.md) · [Graph](DEPENDENCIES.md) · [Execution queue](EXECUTION-QUEUE.md) · [Sprint](NEXT-SPRINT.md)
+
+
+Current desired-state update: At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.

@@ -1322,6 +1322,12 @@
       92,
       9,
       78
+    ],
+    "later_owner_source_revision": "183b6f2bdd58cb6cc3df1110d6f722a7b9d3c6f6",
+    "PR983_merged_adoption_pending_verified_at": "2026-10-17T23:44:32.606407Z",
+    "final_open_PRs": [
+      982,
+      855
     ]
   }
 }

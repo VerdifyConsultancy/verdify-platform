@@ -8,6 +8,10 @@ SAME Retry implements the root-reviewed finite SOURCE/OFFLINE producer-coherence
 
 Original396/419/643/644acceptancesremainclosed. No extraexplicitpolicyrun/approvalrefresh/physicalrecovery/experiment/OTA/credentialchange occurred. Read-onlypacketgrantsno physical/randomauthority; missingsoil/south/hydrovaluesremainvisible. [Current full triage](../../../reviews/2026-10-17/FULL-TRIAGE.md).
 
+## Later owner desired-state change
+
+At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.
+
 <details>
 <summary>Earlier dated rollout, hold and boundary history (not current acceptance)</summary>
 
