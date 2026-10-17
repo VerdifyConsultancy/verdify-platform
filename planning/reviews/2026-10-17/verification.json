@@ -1242,11 +1242,30 @@
     "all_other_production_AST_unchanged": true,
     "strict_collector_unchanged": true,
     "history_and_authority_unchanged": true,
-    "published": false,
+    "published": true,
     "built": false,
     "deployed": false,
     "new_explicit_physical_run": false,
-    "shared_CI_handback_pending": true,
+    "shared_CI_handback_pending": false,
     "runtime_inverse": "Forward ingestor release pin only back to current6e; keep all other pins, migrate211/applied276 and state/history."
+  },
+  "snapshot_wait_source_publication": {
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "sole_parent": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "tree": "533d1cf229c86a7e3618ad324ad076a06a97f1dd",
+    "pushed_at": "2026-10-17T22:30:57Z",
+    "root_all27_provider_payloads_exact": true,
+    "actual_changed_paths": 15,
+    "deployment_files_changed": 0,
+    "root_provider_proof_sha256": "571fe1fcaf3659b34d205b77272670ad7f4fa2df41ccc75a753235e1e69c7e4e",
+    "fresh_normal_admission_sha256": "530a7aca12d213137c7a62e261f816c276736a4cd032bac7cb8726094fdcf746",
+    "normal_native_workflow": "verdify-platform-ci-hrfrg",
+    "normal_native_uid": "9d3f4952-091c-4c20-ad6e-867f6bcccfa5",
+    "normal_native_started_at": "2026-10-17T22:31:02Z",
+    "native_terminal": "Pending; no image or runtime acceptance claimed",
+    "canonical_snapshot": "6e3450780b88e003611863084a32775b48838623",
+    "complete25_copy_ack_sha256": "cd138669c2cf9ffa2355ad6d203e3c0f0e943d9ceca75ff9140e6ef55d2e8428",
+    "root_unfrozen": true,
+    "new_explicit_physical_run": false
   }
 }
