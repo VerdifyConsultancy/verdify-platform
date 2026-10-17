@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish SAME Retry's existing automatic source10dd58a7 native CI and actual affected-image builds, retain terminal logs and normal candidate-actuator evidence, then review the qualified ingestor-only runtime diff and inverse before adoption. The complete25 planning snapshot is already copied and verified; no further ledger-only product delivery is needed. One subsequent current read-only packet must observe actual authority/exposure through the existing bounded no-UUID ops-status function, preserving its protocol-v2 scope. No guessed experiment, full physical GateR claim, extra explicit policy run or physical recovery. Soil warnings stay visible; broader#45 commissioning remains separate. The old missing report and19:36 denial remain historical.",
+  "next_step": "Finish SAME Retry's already-authorized current writer qualification and actual30-minute quiet interval, then execute ONE prepared bounded read-only packet: newest two cycles, original source/backup/authority boundaries, all open alert identities, exact corpus lifecycle audit and existing protocol-v2 randomized ops-status scope. Preserve UNKNOWN on denial/cap/drift and do not invent an experiment UUID or physical GateR acceptance. No additional explicit policy run, approval refresh, forced wake, manual alert update or physical recovery. Shared CI/controller custody has returned to its existing Agents owner; the product observation does not reserve it. The complete planning snapshot is already in source10dd; later ledgers need no product delivery. Close749 only on actual original-clause acceptance.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -244,5 +244,32 @@
     "production_render_unchanged": true,
     "promotion_or_sync": false,
     "new_explicit_policy_run": false
+  },
+  "current_fix_rollout": {
+    "release": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "ingestor_digest": "6e087f9a170f5feae962129bbc1f51d6fb3852e4e91b03ea294941c0910058c5",
+    "all_three_selected_images_qualified": true,
+    "promotion_validation_succeeded_at": "2026-10-17T21:18:44Z",
+    "promotion_mode": "validate",
+    "promotion_profiles": [],
+    "all8_build_slots_and_pin": "Skipped",
+    "promotion_4_container_logs_root_verified_bytes": 66751,
+    "shared_CI_returned_to_existing_owner": true,
+    "full_nonpruning_sync_finished_at": "2026-10-17T21:22:42Z",
+    "resource_results": 129,
+    "hook_resources": 9,
+    "hook_jobs": 7,
+    "hook_configmaps": 2,
+    "actual_immediate_selector_absent": true,
+    "argo_synced_healthy_observed_at": "2026-10-17T21:23:52Z",
+    "new_single_writer_ready": true,
+    "new_writer_restart_count": 0,
+    "current_readiness_qualified": false,
+    "final_read_only_packet_executed": false,
+    "no_extra_explicit_run": true,
+    "startup_observer_correction": "Known pre-lease process-start continuity marker was caught by an overly broad local all-ERROR rule. Original failure retained; existing genuine anchor semantics preserved; no continuity recovery or quiet PASS inferred.",
+    "root_promotion_provider_proof_sha256": "499db4e1d695235c1f98e6fed054859f7c0221b56e32933ed51105572f6de86e",
+    "root_startup_disposition_sha256": "02a84b0d8c9e2bb75b19f7f97725d38326af797e18f738821c1703277255648e"
   }
 }
