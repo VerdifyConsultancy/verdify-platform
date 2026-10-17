@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "751a7fd3d2c94ba08f5db696cce62f70d2466835834a25c73c7163311d76479a",
+    "prompt_sha256": "813fb20e2b28b9cfe64825446888639b3bbd13981cf5f04f4667f9226b5f1a65",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -477,7 +477,7 @@
       "prospective_resources_changed": 3,
       "shared_window_release_pending": false,
       "physical_recovery_authorized": false,
-      "shared_window_released_scope": "Returned to existing Agents owner during independent Lab health diagnosis; product execution not started"
+      "shared_window_released_scope": "Existing Agents owner explicitly returned finite publication/controller window; same approved product writer resumed with fresh guards; isolated PR checks remain externally owned"
     },
     "issue749_approved_rollout": {
       "verified_at": "2026-10-17T17:57:59.802573+00:00",
@@ -511,6 +511,35 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T18:05:05Z",
       "scope": "independent Lab publishing health failure holds rollout; accepted human decision retained; no product mutation; finite owner diagnosis"
+    },
+    "lab_natural_recovery": {
+      "terminal_receipt_sha256": "79fd4062c4c42cac103dfbf44fc45ebf2eccbef8f8af33ac4c7814857718b723",
+      "complete_log_sha256": "c06c5920941a3eaf9a2ed1633a1d73b456a209e2d82eb3a121b21fd77e4cf38e",
+      "complete_log_bytes": 305963,
+      "all7_evidence_members_root_verified": true,
+      "completed_at": "2026-10-17T18:12:53Z",
+      "pages_emitted": 418,
+      "all3_upload_phases_succeeded": true,
+      "final_argo_observed_at": "2026-10-17T18:13:05.554536+00:00",
+      "argo_health": "Healthy",
+      "argo_sync": "Synced",
+      "argo_revision": "fed9ff59f8a3ff32c55c7a2a445017624387a3e7",
+      "health_transition_predates_job_completion": true,
+      "underlying_previous_failure_cause": "unestablished",
+      "broader_storage_acceptance": "not claimed",
+      "observer_released": true,
+      "corrective_mutations": 0,
+      "approved_execution_resumed": true
+    },
+    "issue749_lab_recovered": {
+      "verified_at": "2026-10-17T18:16:49.485133+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "5d4cd859c73a12772f75516e225cc9854200756ca700634a78433c8bb1ef87a3",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T18:16:48Z",
+      "scope": "Natural Lab publication and health recovered; existing approved product execution resumed after explicit shared window handback; no runtime acceptance inferred"
     }
   }
 }
