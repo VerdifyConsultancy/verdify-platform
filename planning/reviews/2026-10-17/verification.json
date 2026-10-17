@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "de5f42b89e3f78331ab00fe808f88f5dffa63d4548a856c5099d2a1b5517bf99",
+    "prompt_sha256": "57078026a2a0f4447906dab06d3d4863081b2174abfadbde60efbea2dc640c81",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -965,6 +965,92 @@
       "expected_scope": "ingestor release only/oneDeployment+twoCron future templates; otherpins/migrate211/applied276 retained",
       "inverse": "forward ingestor-only pin inverse to671; no physical undo or stale-alert history reversal",
       "runtime_action_released": false
+    },
+    "followup_source_status_github_publication": {
+      "verified_at": "2026-10-17T20:07:40.000799+00:00",
+      "coarse_immutable_receipt_revision": "c9144fcd70f24dd4f26245c7486dc05738619bed",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/c9144fcd70f24dd4f26245c7486dc05738619bed/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "69de26dcf41e7a69e033ac5690f4c61231220e8db9766a296a1c8bd246e2f952",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 45,
+          "state": "open",
+          "body_sha256": "d2e074eb6663e65ee6f327be21f662b51fd731aaafe32f9112d842e13a4c5615",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 75,
+          "state": "open",
+          "body_sha256": "2e33ba47fd5e51f40cf8afcc1778f05df28174ad98a777f609e3eb6494af7873",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
+    },
+    "soil_original_contract_source_review": {
+      "reviewed": true,
+      "existing_collector_accepts_now": false,
+      "source_read": "collector1379-1518/guard408,745-830,1318",
+      "disposition": "Small explicit exact-identity recovery-only classification is legitimate scope; no full45 commissioning prerequisite",
+      "preserve": "All14 warning rows, missing values, unknown/proof/newcausal failures and fullguard experiment/zeroexposure checks",
+      "current_exposure": "unknown",
+      "partial_original_clause_wrapper": "alert/dependency slice only; emptyexperimentID cannot authorizeGateR/proof/random/physical policy",
+      "owner_local_delta_authorized": true,
+      "delivery_runtime_or_live_classification": false
+    },
+    "original_clause_exposure_correction": {
+      "original_verdict_sha256": "15dd1d75f854318b89e479845480dfa6c97d62d30ef09844da1e5e37483463b9",
+      "incorrect_field": "clause_3.close_first_scope",
+      "correction_receipt_sha256": "930feb3913cecbe6fb13152275d0f4a811ede7922a8e259e08ec2307f7dd2889",
+      "current_exposure": "UNKNOWN; no accepted experiment binding or exposure query in original packet",
+      "original_sealed_bytes_preserved": true,
+      "full_collector_or_guard_acceptance": false
+    },
+    "final_authority_observer_preparation": {
+      "source_plan_sha256": "e6540add2c0d5b77e26a8e9b9e62424b942a49e6a8030075d8ce6b664ad4053a",
+      "executed": false,
+      "existing_function": "fn_experiment_v2_ops_status()",
+      "supported_existing_principal": true,
+      "scope": "all protocol-v2 randomized rows, limit21 and fail-incomplete; no UUID fabrication or new permission",
+      "current_exposure": "UNKNOWN pending actual observation"
+    },
+    "additional_soil_source_review": {
+      "base": "3c9a4edf8b6940840b9d61574175a51001f62766",
+      "source_and_test_files": 7,
+      "documentation_files": 1,
+      "additional_patch_sha256": "fde1cceb6ea49e732bc3e914ad8738394c2647e4e31e8bc33b183f3db893ad06",
+      "composed_patch_sha256": "d1121a867e31def15937592e439f9e2804605d46e0796f8629d80bd684f1b219",
+      "proof_sha256": "fd4fdb586de803157b43daa30975c476ac85be581b34b69d31515fe6548c1e24",
+      "manifest_sha256": "e537e6c8b77e93caccc83175e45b5eccbc7dea1d92d0e04d3d48e1e9d855c2a3",
+      "root_verified_members": 23,
+      "root_verified_bytes": 155593,
+      "all_eight_actual_worktree_blobs_exact": true,
+      "independent_readonly_review": "No actionable defect; no repeated tests or live calls",
+      "bounded_tests_passed": 38,
+      "new_failures_errors_skips": 0,
+      "old_source_regression_failed": true,
+      "offline_replay": {
+        "targeted_rows_retained": 16,
+        "exact_soil_matches": 14,
+        "changed_bindings_denied": 112,
+        "required_south_hydro_framing": "Explicit synthetic framing only, not live evidence",
+        "current_readiness_or_authority": false
+      },
+      "accepted_four_blobs_unchanged": true,
+      "AGENTS_policy_insertion_sha256": "04bdd87bc862a5b02e8cf4b6f20cfe194e4e54c8a18fb9043112181d25eb87e1",
+      "source_pushed": false,
+      "built": false,
+      "deployed": false,
+      "physical_authority": false
     }
   }
 }

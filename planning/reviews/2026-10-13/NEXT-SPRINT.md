@@ -1,5 +1,7 @@
 # Completion sprint: October 13–26, 2026
 
+**Historical checkpoint, superseded by the [October17 current plan](../2026-10-17/NEXT-SPRINT.md).** The original four outcomes remain complete. #749's approved rollout and policy run have completed, and its remaining 8–16h planning range now covers follow-up source delivery and current readiness acceptance. The earlier estimates and execution holds below are retained as dated history, not the current instruction.
+
 All four original outcomes are complete: #396 recovery, #419 replay freshness, #644 bounded CI integration and #643 least-privilege production adoption. Jason explicitly selected **#749 current readiness** next, with its existing **4–8h estimate** pulled forward into this sprint. Capacity remains **40 shared engineering hours/week, 80h for two weeks**. The original four-outcome28–56h estimate is historical; neither completion, wakeups nor runtime measures hours spent or freed capacity. The follow-on estimate fits the originally reserved24h alongside conditional #245's8h source/read-only preparation; #643's2h role join was already within its original allocation.
 
 | Outcome | Current state | Acceptance boundary |
