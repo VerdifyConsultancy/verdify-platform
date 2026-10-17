@@ -1,6 +1,6 @@
 # Full issue triage and execution replan — October17,2026
 
-This second full pass reviews all58 currently open issues, their624 comments, the native parent/blocking graph, current product delivery and three PR dispositions (including #983 merged during this review). Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. Provider application is complete: all58issue bodies are readbackexact; sevenCLOSED/NOT_PLANNED and51OPEN, with31active+25acceptedhistoricalnativeedges and an acyclic graph. ExistingS2milestone33hasactualmember749; S3milestone34hasactualmembers587/639/782/801/802/977/980/981. Milestone aggregate counts were not used as authoritative membership.
+This second full pass reviewed all 58 issues open at intake and their 624 comments, the native parent/blocking graph, current product delivery and three PR dispositions (including #983 merged during this review). Earlier October17 and pre-restart checkpoints are superseded where the facts below differ. Original contracts and failed evidence remain retained. Provider application is complete: all58issue bodies are readbackexact; sevenCLOSED/NOT_PLANNED and51OPEN, with31active+25acceptedhistoricalnativeedges and an acyclic graph. ExistingS2milestone33hasactualmember749; S3milestone34hasactualmembers587/639/782/801/802/977/980/981. Milestone aggregate counts were not used as authoritative membership.
 
 ## Seven records retired as not planned
 
@@ -22,7 +22,7 @@ Deployed67f/249/f916, live snapshot-wait correction verified. Four normal waits 
 
 The existing writer is Synced/Healthy atf916 with verified source67f/image249c, singleton/socket/smoke/source/hooks/schema checks passing. Software deployment success does not establish the final readiness boundary. Keep original643/396/419/644 and all accepted predecessor closures; do not repeat them. No old approval, altered clock or cleanup turns the failed window into a pass.
 
-Two new PRs change the operational plan: #982 carries a held canonical-S3 rehearsal endpoint change; #983 proposes an intentionally paused backup exporter during the NAS heavy-load window. Preserve both owners and exact scopes. No source-only proposal proves adoption. Do not reverse an approved NAS pause or create load merely to finish readiness; a missing authorized reader is an explicit evidence limitation. #855 remains a parked draft.
+Two PRs change the operational plan: #982 remains a held canonical-S3 rehearsal endpoint change; #983 merged as `183b6f2b`, with the intended exporter pause still awaiting adoption at the 23:44 metadata check. Preserve both owners and exact scopes. No source-only proposal proves adoption. Do not reverse an approved NAS pause or create load merely to finish readiness; a missing authorized reader is an explicit evidence limitation. #855 remains a parked draft.
 
 ## Graph changes and execution rules
 
