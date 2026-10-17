@@ -109,7 +109,7 @@
     "Scheduled dump freshness does not prove restore or offsite recovery.",
     "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
   ],
-  "next_step": "Finish SAME Retry's existing automatic67f source workflow and actual classified image builds, candidate actuator and complete owned log custody. Then review the qualified ingestor-only runtime diff/inverse, perform the authorized promotion and one full nonpruning sync, and verify the actual new writer, quiet interval and one bounded read-only original-clause packet. The complete25-path snapshot6e345 is already adopted; later root ledgers need no additional product copy. Shared CI was explicitly returned after the existing controller owner's finite qualified recovery; keep this window through necessary promotion validation, then return it before the30-minute product observation. No duplicate build, collector weakening, approval replay, extra explicit policy run or physical recovery.",
+  "next_step": "Finish SAME Retry's normalf916 promotion validation, then ONE full exact-revision nonpruning sync and source-bound singleton runtime verification. Return shared CI/controller custody at promotion native terminal and complete log custody, before the30-minute product observation. After actual quiet qualification, execute the accepted bounded read-only original-clause packet once, using its current typed alert projection, authoritative timestamped whole-Pod log and same-writer identity fences. Exposure must be definitively zero within the queried protocol-v2 randomized scope; denial, ambiguity or nonzero blocks acceptance. Preserve the real prior hold/history, all other pins and applied276. No repeated build, approval replay, extra explicit policy run, physical recovery or later ledger-only product copy.",
   "targeted_alert_diagnostic": {
     "state": "complete_source_bound_read_only",
     "source_review_complete": true,
@@ -313,7 +313,7 @@
     "strict_collector_unchanged": true,
     "history_and_authority_unchanged": true,
     "published": true,
-    "built": false,
+    "built": true,
     "deployed": false,
     "new_explicit_physical_run": false,
     "shared_CI_handback_pending": false,
@@ -332,10 +332,32 @@
     "normal_native_workflow": "verdify-platform-ci-hrfrg",
     "normal_native_uid": "9d3f4952-091c-4c20-ad6e-867f6bcccfa5",
     "normal_native_started_at": "2026-10-17T22:31:02Z",
-    "native_terminal": "Pending; no image or runtime acceptance claimed",
+    "native_terminal": "Succeeded2026-10-17T22:50:49Z; source/image acceptance, not runtime",
     "canonical_snapshot": "6e3450780b88e003611863084a32775b48838623",
     "complete25_copy_ack_sha256": "cd138669c2cf9ffa2355ad6d203e3c0f0e943d9ceca75ff9140e6ef55d2e8428",
     "root_unfrozen": true,
+    "new_explicit_physical_run": false
+  },
+  "snapshot_wait_qualified_delivery": {
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "candidate": "43d7cdf7ba338c153c76acfa57cecadd2fa9adf9",
+    "promotion": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+    "promotion_pushed_at": "2026-10-17T22:56:58Z",
+    "native_source_finished_at": "2026-10-17T22:50:49Z",
+    "native_candidate_followup_finished_at": "2026-10-17T22:51:32Z",
+    "classified_profiles": [
+      "ingestor",
+      "lab-publisher"
+    ],
+    "ingestor_digest": "sha256:249c7647f3e09a80866d95975372535f68465a0e2f6a12faca3b8c0b17fe2ba2",
+    "lab_digest_retained_not_promoted": "sha256:4a8236c251a16f1d8c27184a859ef1486a3c4d7ee6a8c82a31afd6d2fec8b75e",
+    "normal_output_contract": 2,
+    "source_closure": "v4 not-applicable; no full-OCI claim",
+    "started_container_logs_hash_verified": 32,
+    "root_live_diff_review_sha256": "6c5be6deb74046ddfdbaacdf8b36fa49598589e72092dfc26049a0732d4b91e6",
+    "only_render_changes": "Ingestor Deployment and two related CronJob image references",
+    "other_pins_and_history_preserved": true,
+    "new_runtime_accepted": false,
     "new_explicit_physical_run": false
   }
 }
