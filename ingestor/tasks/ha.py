@@ -282,6 +282,22 @@ async def site_content_refresh(pool: asyncpg.Pool) -> None:
         max_updated_at = await conn.fetchval("SELECT max(updated_at) FROM site_content")
 
         if site_content_is_fresh(max_updated_at):
+            await conn.execute(
+                """
+                UPDATE alert_log
+                   SET disposition = 'resolved',
+                       resolved_at = now(),
+                       resolved_by = 'system',
+                       resolution = 'auto-resolved: site_content refreshed'
+                 WHERE greenhouse_id = $1
+                   AND source = 'ingestor'
+                   AND alert_type = 'site_content_stale'
+                   AND sensor_id = 'site_content'
+                   AND disposition IN ('open', 'acknowledged')
+                   AND resolved_at IS NULL
+                """,
+                GREENHOUSE_ID,
+            )
             log.info(
                 "site_content_refresh: %d rows refreshed; max(updated_at)=%s within %dh window",
                 written,

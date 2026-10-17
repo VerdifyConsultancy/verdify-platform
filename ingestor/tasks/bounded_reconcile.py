@@ -132,9 +132,16 @@ def _observation(state: dict, state_dir: Path, generation: int, phase: str, conf
         key: approved[key]
         for key in ("session_id", "pod", "source_revision", "generation", "changes", "plan_rows", "readbacks")
     }
+    repeatable = (
+        DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
+        & {row["parameter"] for row in approved["plan_rows"]}
+        & approved["readbacks"].keys()
+    )
+    # Live caps can reconfirm a bound guard; retain those ordered applications.
+    fixed_completed = [param for param in state["completed"] if param not in repeatable]
     if (
         _digest(identity) != approved["fingerprint"]
-        or len(state["completed"]) != len(set(state["completed"]))
+        or len(fixed_completed) != len(set(fixed_completed))
         or set(state["completed"]) != set(state["completed_values"])
     ):
         raise ValueError("observation run binding unavailable")

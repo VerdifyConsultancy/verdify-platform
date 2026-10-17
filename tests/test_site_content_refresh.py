@@ -18,7 +18,10 @@ timestamps.
 
 from __future__ import annotations
 
+import sqlite3
 import sys
+from contextlib import closing
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -97,10 +100,43 @@ class _FakeConn:
                     "metric_value": metric_value,
                     "threshold_value": threshold_value,
                     "greenhouse_id": greenhouse_id,
+                    "source": "ingestor",
                     "disposition": "open",
                 }
             )
             return "INSERT 0 1"
+        if q.startswith("UPDATE alert_log"):
+            # Execute the real ownership predicate rather than duplicating it
+            # in a fake filter. SQLite supports the query's $1 bind and IN/NULL.
+            columns = (
+                "id",
+                "alert_type",
+                "source",
+                "sensor_id",
+                "greenhouse_id",
+                "disposition",
+                "resolved_at",
+                "resolved_by",
+                "resolution",
+            )
+            with closing(sqlite3.connect(":memory:")) as db:
+                db.row_factory = sqlite3.Row
+                db.create_function("now", 0, lambda: self._stamp.isoformat())
+                db.execute(
+                    "CREATE TABLE alert_log (id INTEGER, alert_type TEXT, source TEXT, sensor_id TEXT, "
+                    "greenhouse_id TEXT, disposition TEXT, resolved_at TEXT, resolved_by TEXT, resolution TEXT)"
+                )
+                db.executemany(
+                    "INSERT INTO alert_log VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [tuple(i + 1 if k == "id" else row.get(k) for k in columns) for i, row in enumerate(self.alerts)],
+                )
+                changed = db.execute(query, {str(i): value for i, value in enumerate(args, 1)}).rowcount
+                updated = db.execute("SELECT * FROM alert_log ORDER BY id").fetchall()
+            for row, result in zip(self.alerts, updated, strict=True):
+                for key in columns[1:]:
+                    if key in row or result[key] is not None:
+                        row[key] = result[key]
+            return f"UPDATE {changed}"
         raise AssertionError(f"unexpected execute: {q!r}")
 
 
@@ -298,6 +334,70 @@ async def test_fresh_refresh_inserts_no_alert(fixture_corpus, monkeypatch):
 
     assert store  # corpus indexed
     assert pool.conn.alerts == []
+
+
+def _stale_site_alert(**changes):
+    row = {
+        "alert_type": "site_content_stale",
+        "source": "ingestor",
+        "sensor_id": "site_content",
+        "greenhouse_id": tasks.ha.GREENHOUSE_ID,
+        "disposition": "open",
+        "resolved_at": None,
+        "resolved_by": None,
+        "resolution": None,
+    }
+    return {**row, **changes}
+
+
+@pytest.mark.asyncio
+async def test_fresh_refresh_resolves_only_its_stale_alerts(fixture_corpus, monkeypatch):
+    stamp = datetime.now(UTC)
+    pool = _FakePool({}, stamp)
+    pool.conn.alerts = [
+        _stale_site_alert(),
+        _stale_site_alert(disposition="acknowledged"),
+        _stale_site_alert(greenhouse_id="another-greenhouse"),
+        _stale_site_alert(source="system"),
+        _stale_site_alert(sensor_id="another-corpus"),
+        _stale_site_alert(alert_type="soil_sensor_offline"),
+        _stale_site_alert(disposition="resolved", resolved_at="historical", resolution="keep history"),
+        _stale_site_alert(disposition="suppressed"),
+        _stale_site_alert(resolved_at="historical"),
+    ]
+    untouched = deepcopy(pool.conn.alerts[2:])
+    populator = tasks._load_site_content_populator()
+    _point_populator_at(populator, fixture_corpus)
+    monkeypatch.setattr(tasks.ha, "_load_site_content_populator", lambda: populator)
+
+    await tasks.site_content_refresh(pool)
+
+    assert tasks.site_content_is_fresh(max(t for _, t in pool.conn._store.values()))
+    for row in pool.conn.alerts[:2]:
+        assert row["disposition"] == "resolved"
+        assert row["resolved_at"] == stamp.isoformat()
+        assert row["resolved_by"] == "system"
+        assert row["resolution"] == "auto-resolved: site_content refreshed"
+    assert pool.conn.alerts[2:] == untouched
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("watermark", ["stale", "empty", "future"])
+async def test_unfresh_refresh_preserves_existing_stale_alert(tmp_path, monkeypatch, watermark):
+    stamp = datetime.now(UTC)
+    when = stamp + timedelta(hours=1) if watermark == "future" else stamp - timedelta(days=8)
+    store = {} if watermark == "empty" else {"docs/overview.md": ("existing", when)}
+    pool = _FakePool(store, stamp)
+    pool.conn.alerts = [_stale_site_alert()]
+    before = deepcopy(pool.conn.alerts)
+    populator = tasks._load_site_content_populator()
+    _point_populator_at_missing_root(populator, tmp_path)
+    monkeypatch.setattr(tasks.ha, "_load_site_content_populator", lambda: populator)
+
+    await tasks.site_content_refresh(pool)
+
+    assert not tasks.site_content_is_fresh(when if store else None)
+    assert pool.conn.alerts == before
 
 
 # ── #400: the corpus source of truth must be live post-VM-decommission ──────

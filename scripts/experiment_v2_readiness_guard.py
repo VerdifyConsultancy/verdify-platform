@@ -47,6 +47,32 @@ SURFACES = {
     "executor_control": "ingestor/tasks/component_experiment.py",
     "locked_outcome": "research/planner-efficacy/switchback/v2_outcomes.py",
 }
+
+# These hashes bind the reviewed absence of soil from the four causal surfaces.
+# They constrain only the exact soil incidents below, not legacy classifications.
+REVIEWED_SOIL_SURFACE_HASHES = {
+    "component_proof": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
+    "selector": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431",
+    "executor_control": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+    "locked_outcome": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
+}
+REVIEWED_SOIL_INPUTS = frozenset(
+    [
+        "aggregate_rh",
+        "aggregate_temperature",
+        "aggregate_vpd",
+        "component_grid",
+        "device_cfg_readback",
+        "equipment_counter",
+        "equipment_state",
+        "experiment_authority",
+        "forecast",
+        "registry_revision",
+        "writer_connection_generation",
+        "writer_lease",
+    ]
+)
+
 KNOWN_DEPENDENCIES = {
     "aggregate_rh",
     "aggregate_temperature",
@@ -105,6 +131,93 @@ RECOVERY_ONLY_ALERTS = {
         "esp32_push_failed",
         "open",
         433,
+    ),
+}
+# Projected identities are independently checked against this soil catalog.
+RECOVERY_ONLY_SOIL_ALERTS = {
+    "recovery_only:sensor_offline:climate.soil_moisture_west": (
+        "70b2ccf2981f8c1c7f4dcb8588c9f1e2475e83fb608a3499735f39eb6619e953",
+        "sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_temp_west": (
+        "8f315a75230216edb57926fcd65638c17ff6427dd759b182b92cda95449253d9",
+        "sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_temp_south_2": (
+        "637d8afec1d31d073aaf03287dc764825f5f626b8b7ed5ee7186572006dbc69e",
+        "sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_moisture_south_2": (
+        "5be41dbf015b07c98745d56f84e1c528365a7b6482e662048f6d049296a95dfb",
+        "sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.south_2.soil_moisture_south_2": (
+        "46640fc80390c79239dad26a5f5ef3c19f19378410d5a6614f792e75815b87e5",
+        "soil_sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.south_2.soil_temp_south_2": (
+        "ec81ad8bba8b175ee0dfec45ba4cf597dd5044e27ec44d8dad137d11f0fc6123",
+        "soil_sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.west.soil_moisture_west": (
+        "66ba10dcd37da7f59f066506f4fef9a5a5023ef26b630c64c3e23f15eb4c97e9",
+        "soil_sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.west.soil_temp_west": (
+        "17d6e26d379854c26e0475735992aa6dd38dd8c6dbe0c2014c920e0a0219dc49",
+        "soil_sensor_offline",
+        "acknowledged",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_temp_south_1": (
+        "a53f3974cfe010d48e7449701e453198f1cbc47a4170c7dde48814d2f1b0c07e",
+        "sensor_offline",
+        "open",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_moisture_south_1": (
+        "c514d648b63919245b73d03b40b6944f5cebee0985fa626ee95c42dddf67efbf",
+        "sensor_offline",
+        "open",
+        45,
+    ),
+    "recovery_only:sensor_offline:climate.soil_ec_south_1": (
+        "ce22191277eef4735bf5dce2d0bcc6b7c526cb36f3795c20f2aa8c29cb16d236",
+        "sensor_offline",
+        "open",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.south_1.soil_moisture_south_1": (
+        "6af93c03a005294bea52780b29dcba35498a9b2f7459854f30efcf20ddba467a",
+        "soil_sensor_offline",
+        "open",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.south_1.soil_temp_south_1": (
+        "cdf0e49e1b570f1314da71c695f7c595dece0e228755ff5cebd5418bdcd6e17e",
+        "soil_sensor_offline",
+        "open",
+        45,
+    ),
+    "recovery_only:soil_sensor_offline:soil.south_1.soil_ec_south_1": (
+        "3050fd91b6c1b3b972e0d53658d3cf7d9b344dbfd97d968eece3b0e796897d68",
+        "soil_sensor_offline",
+        "open",
+        45,
     ),
 }
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -739,6 +852,39 @@ def _validate_climate(
     return len(contributors), contributors, excluded, diagnostic_contradiction
 
 
+def _soil_sources_bound(dependencies: object, expected_source: str | None = None) -> bool:
+    """A dependency assertion is valid only for the exact reviewed soil scope."""
+    try:
+        source = dependencies["application_source_revision"]
+        if not re.fullmatch(r"[0-9a-f]{40}", source) or (expected_source is not None and source != expected_source):
+            return False
+        rows = dependencies["surfaces"]
+        surfaces = {row["name"]: row for row in rows}
+        if len(rows) != 4 or set(surfaces) != set(REVIEWED_SOIL_SURFACE_HASHES):
+            return False
+        used = set()
+        for name, expected_hash in REVIEWED_SOIL_SURFACE_HASHES.items():
+            row = surfaces[name]
+            if (
+                row["path"] != SURFACES[name]
+                or row["source_sha256"] != expected_hash
+                or row["application_source_revision"] != source
+                or row["hydro_references"] != []
+                or not isinstance(row["causal_dependencies"], list)
+            ):
+                return False
+            used.update(row["causal_dependencies"])
+        classifications = dependencies["classifications"]
+        return (
+            len(classifications) == len(REVIEWED_SOIL_INPUTS)
+            and {row["dependency"] for row in classifications} == REVIEWED_SOIL_INPUTS
+            and used == REVIEWED_SOIL_INPUTS
+            and all(row["classification"] == "required_causal" and row["causal"] is True for row in classifications)
+        )
+    except (KeyError, TypeError, AttributeError):
+        return False
+
+
 def _validate_alerts(
     raw: object,
     *,
@@ -748,6 +894,7 @@ def _validate_alerts(
     expected: ExpectedPins,
     blockers: list[str],
     warnings: list[str],
+    dependencies: object = None,
 ) -> None:
     rows = _array(raw, "alerts")
     required_scopes = {"south_wall_probe", "hydroponic_monitor"}
@@ -768,7 +915,7 @@ def _validate_alerts(
             },
             f"alerts[{index}]",
         )
-        _text(row["alert_id"], f"alerts[{index}].alert_id")
+        alert_id = _text(row["alert_id"], f"alerts[{index}].alert_id")
         _text(row["alert_type"], f"alerts[{index}].alert_type")
         scope = _text(row["scope"], f"alerts[{index}].scope")
         observed_scopes.add(scope)
@@ -781,7 +928,26 @@ def _validate_alerts(
             blockers.append(f"unclassified_alert:{scope}")
         if causal:
             blockers.append(f"causal_alert:{scope}")
-        if scope in required_scopes:
+        id_hash = hashlib.sha256(alert_id.encode()).hexdigest()
+        soil_scope = next((key for key, value in RECOVERY_ONLY_SOIL_ALERTS.items() if value[0] == id_hash), None)
+        soil = RECOVERY_ONLY_SOIL_ALERTS.get(scope)
+        if soil is not None or soil_scope is not None:
+            if (
+                mode != "recovery"
+                or soil is None
+                or scope != soil_scope
+                or classification != "accepted_recovery_only_degradation"
+                or (id_hash, row["alert_type"], row["disposition"]) != soil[:3]
+                or causal
+                or row["decision_issue_url"] != GATE_R_ISSUE_URL
+                or row["maintenance_issue_url"]
+                != f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{soil[3]}"
+                or not _soil_sources_bound(dependencies, expected.application_source)
+            ):
+                blockers.append(f"unsupported_alert_classification:{scope}")
+            else:
+                warnings.append(f"accepted_recovery_only_degradation:{scope}")
+        elif scope in required_scopes:
             if (
                 classification != "accepted_nonblocking_degradation"
                 or row["decision_issue_url"] != "https://github.com/VerdifyConsultancy/verdify-platform/issues/748"
@@ -1350,6 +1516,7 @@ def evaluate_packet(
         expected=expected,
         blockers=blockers,
         warnings=warnings,
+        dependencies=top["dependencies"],
     )
     _validate_dependencies(top["dependencies"], expected=expected, repo_root=repo_root, blockers=blockers)
     proof_preflight_receipts = _validate_evidence(

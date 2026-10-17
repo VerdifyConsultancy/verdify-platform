@@ -2350,3 +2350,167 @@ async def test_completion_rechecks_linked_authority_after_nonempty_handoff_await
         assert complete is None
         assert key not in bounded._observed_completions
         assert key in bounded._handoffs  # Failed attestation retains pending custody.
+
+
+async def completed_reapplied_guard_history(db, tmp_path, monkeypatch):
+    """Sanitized runtime shape: 19 candidates become 12+11 confirmed applications."""
+    initial_guard = {
+        "fog_escalation_kpa": 0.3,
+        "min_fog_off_s": 90.0,
+        "mister_all_delay_s": 90.0,
+        "mister_all_kpa": 1.3,
+        "mister_engage_delay_s": 45.0,
+        "mister_engage_kpa": 0.9,
+        "mister_pulse_gap_s": 30.0,
+    }
+    db.readbacks.update({param: value * 2 for param, value in initial_guard.items()})
+    db.readbacks["mister_pulse_gap_s"] = 30.0
+    old, _changes, _approval, archive, raw = await changed_archived_plan(db, tmp_path, monkeypatch)
+    fixed = {
+        "cool_exit_hysteresis_f": 2.0,
+        "cool_stage2_over_high_f": 2.5,
+        "direct_wet_stress_vpd_margin_kpa": 0.2,
+        "dwell_gate_ms": 120000.0,
+        "min_fog_on_s": 30.0,
+        "mister_vpd_weight": 1.5,
+        "temp_hysteresis": 2.0,
+        "vpd_hysteresis": 0.2,
+        "vpd_watch_dwell_s": 90.0,
+    }
+    zones = dict(zip(sorted(bounded.ZONE_VPD_TARGETS), (0.7, 0.8, 0.9, 1.0), strict=True))
+    db.readbacks.update(dict.fromkeys(zones, 0.0))
+    rebased_guard = {
+        **initial_guard,
+        "fog_escalation_kpa": 0.35,
+        "min_fog_off_s": 120.0,
+        "mister_all_delay_s": 120.0,
+        "mister_pulse_gap_s": 45.0,
+    }
+    db.parameters = [*fixed, *initial_guard, *zones]
+    db.plan_values = {**fixed, **rebased_guard, **zones}
+    initial = [*zones.items(), *fixed.items(), *list(initial_guard.items())[:-1]]
+    assert len(initial) == 19
+    preview = await bounded._preview(db, initial, db.planned(), 10)
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC), confirmed_halt_archive=raw)
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    native_history = []
+    candidate, guard = initial, initial_guard
+    for expected_count in (12, 11):
+        selected = await bounded.choose_stage(db, candidate, db.planned(), 10, tmp_path, 12, zones, guard)
+        assert selected.action == "send" and len(selected.changes) == expected_count
+        assert selected.run_id == approval["run_id"] != old["run_id"]
+        stage = records(selected.changes)
+        native_history.extend(stage)
+        bounded.finish_stage(tmp_path, selected, stage, [])
+        for record in stage:
+            db.readbacks[record["parameter"]] = record["value"]
+            db.rows[(record["requested_at"], record["parameter"])] = {
+                "delivery_status": "sent",
+                "confirmed_at": None,
+            }
+        # Matching cfg values cannot advance a stage without native confirmation.
+        pending = await bounded.choose_stage(db, candidate, db.planned(), 10, tmp_path, 12, zones, guard)
+        assert pending.action == "hold" and pending.reason == "awaiting durable confirmation"
+        for record in stage:
+            db.rows[(record["requested_at"], record["parameter"])].update(
+                delivery_status="confirmed", confirmed_at=datetime.now(UTC)
+            )
+        candidate, guard = [*zones.items(), *rebased_guard.items()], rebased_guard
+    done = await bounded.choose_stage(db, [], db.planned(), 10, tmp_path, 12, zones, guard)
+    assert done.action == "complete" and not done.changes
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["completed"] == [record["parameter"] for record in native_history]
+    assert len(state["completed"]) == 23 and len(state["completed_values"]) == 20
+    assert archive.read_bytes() == raw
+    return done, approval, native_history
+
+
+@pytest.mark.asyncio
+async def test_guardrail_reapplication_completion_preserves_confirmed_application_history(
+    fixture, tmp_path, monkeypatch
+):
+    from unittest.mock import Mock
+
+    done, approval, history = await completed_reapplied_guard_history(fixture, tmp_path, monkeypatch)
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    wake = Mock(side_effect=AssertionError("metadata cannot wake control"))
+    monkeypatch.setattr(bounded, "_wake_for_confirmation", wake)
+    monkeypatch.setattr(shared, "esp32", {"client": Mock(spec=[])})
+    complete = await bounded.completion_observation(fixture, tmp_path, done, 10)
+    assert complete is not None
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert complete["completed_count"] == len(history) == 23
+    assert complete["supersedes"] == approval["confirmed_halt_link"]
+    assert complete["handoff_settled"] is True
+    assert complete["state_sha256"] == bounded._digest(state)
+    assert complete["effects_sha256"] == bounded._digest(
+        {"completed": state["completed"], "values": state["completed_values"], "ordinary_handoff": []}
+    )
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+    wake.assert_not_called()
+    assert shared.esp32["client"].mock_calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("damage", ["fixed", "not_planned", "not_read_back", "latest_value_keys"])
+async def test_guardrail_reapplication_observation_rejects_unbound_repetitions(fixture, tmp_path, monkeypatch, damage):
+    await completed_reapplied_guard_history(fixture, tmp_path, monkeypatch)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    if damage == "fixed":
+        state["completed"].append("cool_exit_hysteresis_f")
+    elif damage == "not_planned":
+        state["approved_preview"]["plan_rows"] = [
+            row for row in state["approved_preview"]["plan_rows"] if row["parameter"] != "fog_escalation_kpa"
+        ]
+    elif damage == "not_read_back":
+        del state["approved_preview"]["readbacks"]["fog_escalation_kpa"]
+    else:
+        del state["completed_values"]["fog_escalation_kpa"]
+    # Exercise formatter eligibility itself, rather than only a changed hash.
+    approved = state["approved_preview"]
+    approved["fingerprint"] = bounded._digest(
+        {
+            k: approved[k]
+            for k in ("session_id", "pod", "source_revision", "generation", "changes", "plan_rows", "readbacks")
+        }
+    )
+    with pytest.raises(ValueError, match="observation run binding unavailable"):
+        bounded._observation(state, tmp_path, 10, "complete", 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("damage", ["binding", "process", "final_value", "unrecorded", "unconfirmed"])
+async def test_guardrail_reapplication_completion_retains_settlement_boundaries(fixture, tmp_path, monkeypatch, damage):
+    done, _approval, _history = await completed_reapplied_guard_history(fixture, tmp_path, monkeypatch)
+    parameter = "vpd_target_south"
+    native = None
+    if damage == "binding":
+        state = bounded._read(tmp_path / bounded.STATE_NAME)
+        state["approved_preview"]["plan_rows"][0]["plan_id"] = "changed-plan"
+        bounded._write(tmp_path / bounded.STATE_NAME, state)
+    elif damage == "process":
+        monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    elif damage == "final_value":
+        fixture.readbacks["fog_escalation_kpa"] = 0.0
+    else:
+        handoff = bounded.Decision("complete", ((parameter, 1.2),), run_id=done.run_id)
+        bounded.note_ordinary_handoff(handoff, 10)
+        if damage == "unconfirmed":
+            record = {**records(handoff.changes)[0], "source": "planner"}
+            bounded.record_ordinary_handoff(handoff, 10, [record], [])
+            native = {
+                "value": 1.2,
+                "source": "planner",
+                "delivery_status": "sent",
+                "confirmed_at": None,
+                "expired_at": None,
+            }
+            fixture.rows[(record["requested_at"], parameter)] = native
+            fixture.readbacks[parameter] = 1.2
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    assert await bounded.completion_observation(fixture, tmp_path, done, 10) is None
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+    if native is not None:
+        native.update(delivery_status="confirmed", confirmed_at=datetime.now(UTC))
+        complete = await bounded.completion_observation(fixture, tmp_path, done, 10)
+        assert complete["handoff_requested_count"] == complete["handoff_confirmed_count"] == 1

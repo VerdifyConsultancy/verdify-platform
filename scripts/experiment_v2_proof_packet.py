@@ -71,6 +71,32 @@ SURFACES = {
     "executor_control": "ingestor/tasks/component_experiment.py",
     "locked_outcome": "research/planner-efficacy/switchback/v2_outcomes.py",
 }
+
+# These hashes bind the reviewed absence of soil from the four causal surfaces.
+# They constrain only the exact soil incidents below, not legacy classifications.
+REVIEWED_SOIL_SURFACE_HASHES = {
+    "component_proof": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
+    "selector": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431",
+    "executor_control": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+    "locked_outcome": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
+}
+REVIEWED_SOIL_INPUTS = frozenset(
+    [
+        "aggregate_rh",
+        "aggregate_temperature",
+        "aggregate_vpd",
+        "component_grid",
+        "device_cfg_readback",
+        "equipment_counter",
+        "equipment_state",
+        "experiment_authority",
+        "forecast",
+        "registry_revision",
+        "writer_connection_generation",
+        "writer_lease",
+    ]
+)
+
 BOUNDARY_SEQUENCE = {
     "recovery": ("gate-r",),
     "proof": ("gate-p", "baseline-before", "aggressive", "baseline-after"),
@@ -125,6 +151,107 @@ RECOVERY_ONLY_ALERTS = {
         "setpoint_listener",
         "2026-09-06T00:41:51Z",
         433,
+    ),
+}
+# Exact reviewed raw-identity hashes, not encrypted identities or new authority.
+RECOVERY_ONLY_SOIL_ALERTS = {
+    "860caaa1d1c3707f46b3dda96ebd587cbebe9d9e7ee51d3c319fb967efe68299": (
+        "70b2ccf2981f8c1c7f4dcb8588c9f1e2475e83fb608a3499735f39eb6619e953",
+        "sensor_offline",
+        "climate.soil_moisture_west",
+        "acknowledged",
+        45,
+    ),
+    "7e754dc42aa9443d60611ec604d0a860d9fba55287f4f141251fa3490d5e2036": (
+        "8f315a75230216edb57926fcd65638c17ff6427dd759b182b92cda95449253d9",
+        "sensor_offline",
+        "climate.soil_temp_west",
+        "acknowledged",
+        45,
+    ),
+    "f2eee9e2fead7b8b260a84e5ca35478a74ad5a19a5b1fd71c6549bd4f0972a1e": (
+        "637d8afec1d31d073aaf03287dc764825f5f626b8b7ed5ee7186572006dbc69e",
+        "sensor_offline",
+        "climate.soil_temp_south_2",
+        "acknowledged",
+        45,
+    ),
+    "a52d4b62d55b3a7b1c32284b3cb0085038ca09e4331f8b6cb9779129c3d8739f": (
+        "5be41dbf015b07c98745d56f84e1c528365a7b6482e662048f6d049296a95dfb",
+        "sensor_offline",
+        "climate.soil_moisture_south_2",
+        "acknowledged",
+        45,
+    ),
+    "79df0cdd98fcfb58a3c2a7bd81fed6cee560a4d2940dd09cc4f3c554de4330e8": (
+        "46640fc80390c79239dad26a5f5ef3c19f19378410d5a6614f792e75815b87e5",
+        "soil_sensor_offline",
+        "soil.south_2.soil_moisture_south_2",
+        "acknowledged",
+        45,
+    ),
+    "0d893598dfb5bc2f0ad7b230a36adfb30b72e3c9dd5001da29e1ce6fb7bb08aa": (
+        "ec81ad8bba8b175ee0dfec45ba4cf597dd5044e27ec44d8dad137d11f0fc6123",
+        "soil_sensor_offline",
+        "soil.south_2.soil_temp_south_2",
+        "acknowledged",
+        45,
+    ),
+    "66eff5af9b879139ae8eb6dc244d028eef4696c36ac0a21b7d7617dab57e5514": (
+        "66ba10dcd37da7f59f066506f4fef9a5a5023ef26b630c64c3e23f15eb4c97e9",
+        "soil_sensor_offline",
+        "soil.west.soil_moisture_west",
+        "acknowledged",
+        45,
+    ),
+    "3fe68ad7a8d737f5a1bf2eadef116668c52d8f7c166a5a313f5fbd169ff11fb7": (
+        "17d6e26d379854c26e0475735992aa6dd38dd8c6dbe0c2014c920e0a0219dc49",
+        "soil_sensor_offline",
+        "soil.west.soil_temp_west",
+        "acknowledged",
+        45,
+    ),
+    "95a2a47bb7050e298a44ae8401015055d53ff7d8bf0147f762ce72c2c743a23b": (
+        "a53f3974cfe010d48e7449701e453198f1cbc47a4170c7dde48814d2f1b0c07e",
+        "sensor_offline",
+        "climate.soil_temp_south_1",
+        "open",
+        45,
+    ),
+    "5fbb09563b402f112efe9a59e1cf11e2da947a77fca44f4bcb760513845c35b5": (
+        "c514d648b63919245b73d03b40b6944f5cebee0985fa626ee95c42dddf67efbf",
+        "sensor_offline",
+        "climate.soil_moisture_south_1",
+        "open",
+        45,
+    ),
+    "f457843647f8e3e63b6dea7aaec96c4ed5984a8e91f210babbf61fc3ca20a130": (
+        "ce22191277eef4735bf5dce2d0bcc6b7c526cb36f3795c20f2aa8c29cb16d236",
+        "sensor_offline",
+        "climate.soil_ec_south_1",
+        "open",
+        45,
+    ),
+    "c09b2f12f9bea44ea78decb3779f4e6f7dc42b6932bdf46949a1153dc4cd1f2b": (
+        "6af93c03a005294bea52780b29dcba35498a9b2f7459854f30efcf20ddba467a",
+        "soil_sensor_offline",
+        "soil.south_1.soil_moisture_south_1",
+        "open",
+        45,
+    ),
+    "fe5a68e2d3d79b484787bf36294f588355f2ad59f48f25d2b7c8f81e949d79e9": (
+        "cdf0e49e1b570f1314da71c695f7c595dece0e228755ff5cebd5418bdcd6e17e",
+        "soil_sensor_offline",
+        "soil.south_1.soil_temp_south_1",
+        "open",
+        45,
+    ),
+    "ef8825dac388cbf9969cf01b3f45733bc925dd685eb67ff3b6d2fb51ba968159": (
+        "3050fd91b6c1b3b972e0d53658d3cf7d9b344dbfd97d968eece3b0e796897d68",
+        "soil_sensor_offline",
+        "soil.south_1.soil_ec_south_1",
+        "open",
+        45,
     ),
 }
 ATTESTATION = re.compile(
@@ -1376,8 +1503,76 @@ def _safe_historical_heap_warning(row: Mapping[str, Any], *, observed_at: str) -
     )
 
 
-def _recovery_only_alert(row: Mapping[str, Any]) -> tuple[str, str] | None:
+def _soil_sources_bound(dependencies: object, expected_source: str | None = None) -> bool:
+    """A dependency assertion is valid only for the exact reviewed soil scope."""
+    try:
+        source = dependencies["application_source_revision"]
+        if not re.fullmatch(r"[0-9a-f]{40}", source) or (expected_source is not None and source != expected_source):
+            return False
+        rows = dependencies["surfaces"]
+        surfaces = {row["name"]: row for row in rows}
+        if len(rows) != 4 or set(surfaces) != set(REVIEWED_SOIL_SURFACE_HASHES):
+            return False
+        used = set()
+        for name, expected_hash in REVIEWED_SOIL_SURFACE_HASHES.items():
+            row = surfaces[name]
+            if (
+                row["path"] != SURFACES[name]
+                or row["source_sha256"] != expected_hash
+                or row["application_source_revision"] != source
+                or row["hydro_references"] != []
+                or not isinstance(row["causal_dependencies"], list)
+            ):
+                return False
+            used.update(row["causal_dependencies"])
+        classifications = dependencies["classifications"]
+        return (
+            len(classifications) == len(REVIEWED_SOIL_INPUTS)
+            and {row["dependency"] for row in classifications} == REVIEWED_SOIL_INPUTS
+            and used == REVIEWED_SOIL_INPUTS
+            and all(row["classification"] == "required_causal" and row["causal"] is True for row in classifications)
+        )
+    except (KeyError, TypeError, AttributeError):
+        return False
+
+
+def _soil_recovery_only_alert(row: Mapping[str, Any], dependencies: object) -> tuple[str, str] | None:
+    if not _soil_sources_bound(dependencies):
+        return None
+    try:
+        if type(row["id"]) is not int:
+            return None
+        opened = row["ts"] if isinstance(row["ts"], datetime) else parse_time(str(row["ts"]))
+        if opened.tzinfo is None:
+            return None
+        details = _alert_details(row)
+        keys = ("column", "sensor", "occupancy", "type")
+        identity = {key: row[key] for key in ("alert_type", "sensor_id", "disposition", "source", "severity")}
+        identity.update(id=str(row["id"]), opened_at=zulu(opened), details={key: details.get(key) for key in keys})
+        expected = RECOVERY_ONLY_SOIL_ALERTS.get(receipt(identity))
+        if expected is None:
+            return None
+        id_hash, family, sensor, disposition, issue = expected
+        if id_hash != hashlib.sha256(str(row["id"]).encode()).hexdigest() or (family, sensor, disposition) != (
+            row["alert_type"],
+            row["sensor_id"],
+            row["disposition"],
+        ):
+            return None
+        return (
+            f"recovery_only:{family}:{sensor}",
+            f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}",
+        )
+    except (KeyError, TypeError, ValueError, CollectionError):
+        return None
+
+
+def _recovery_only_alert(row: Mapping[str, Any], dependencies: object = None) -> tuple[str, str] | None:
     """Classify only the observed alert identities, never a future recurrence."""
+    if row.get("alert_type") == "soil_sensor_offline" or (
+        row.get("alert_type") == "sensor_offline" and str(row.get("sensor_id") or "").startswith("climate.soil_")
+    ):
+        return _soil_recovery_only_alert(row, dependencies)
     try:
         alert_id = int(row["id"])
         expected = RECOVERY_ONLY_ALERTS[alert_id]
@@ -1408,7 +1603,9 @@ def _recovery_only_alert(row: Mapping[str, Any]) -> tuple[str, str] | None:
     )
 
 
-def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: str) -> list[dict[str, Any]]:
+def alert_projection(
+    db: Mapping[str, Any], *, observed_at: str, experiment_id: str, dependencies: object = None
+) -> list[dict[str, Any]]:
     open_rows = db["open_alerts"]
     south = [
         row
@@ -1475,7 +1672,7 @@ def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: 
         )
         historical_issue = _historical_alert_issue(row)
         heap_warning = _safe_historical_heap_warning(row, observed_at=observed_at)
-        recovery_only = _recovery_only_alert(row)
+        recovery_only = _recovery_only_alert(row, dependencies)
         if gate_p_recovery_target:
             classification = "authorized_recovery_target"
             causal = False
@@ -1613,6 +1810,7 @@ def assemble(
         "writer_generation": writer_generation,
         "connection_generation": connection_generation,
     }
+    dependencies = source_dependencies(template, repo_root, application_source=application_source)
     packet.update(
         {
             "schema": INPUT_SCHEMA,
@@ -1663,8 +1861,8 @@ def assemble(
                 "qualification_capture": {**QUALIFICATION, "application_source_revision": application_source},
                 "samples": climate_samples(db["climate"]),
             },
-            "alerts": alert_projection(db, observed_at=now, experiment_id=experiment_id),
-            "dependencies": source_dependencies(template, repo_root, application_source=application_source),
+            "alerts": alert_projection(db, observed_at=now, experiment_id=experiment_id, dependencies=dependencies),
+            "dependencies": dependencies,
             "evidence": {
                 "component_grid": component,
                 "authentication_686": preflights["authentication_686"],
