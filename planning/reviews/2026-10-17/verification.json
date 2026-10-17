@@ -1329,5 +1329,31 @@
       982,
       855
     ]
+  },
+  "sprint_execution_release": {
+    "authorized": "Jason direct instruction October17: carve off next sprint and begin implementation and delivery",
+    "verified_at": "2026-10-17T23:55:13.586401+00:00",
+    "sprint": "S3",
+    "early_pulls_begin_now": true,
+    "calendar_dates_unchanged": true,
+    "base_hours": [
+      28,
+      56
+    ],
+    "reserve_hours_max": 24,
+    "total_envelope_hours": 80,
+    "product_first": 749,
+    "product_next": 801,
+    "owner_queue_acknowledged": 802,
+    "root_source_diagnosis_started": 981,
+    "github3bodies_and_milestone_readback_exact": true,
+    "planning_tests_passed": 35,
+    "schema_nodes_stages_edges": [
+      92,
+      9,
+      78
+    ],
+    "generated_views_fresh": 7,
+    "product_delivery_claimed_from_start": false
   }
 }

@@ -8,7 +8,7 @@ The canonical checkout is `/Users/jason/.codex/worktrees/verdify-live-replan-202
 
 The full review covered 58 issues and 624 comments: seven are retired as not planned (#296/#317/#324/#361/#586/#606/#638), 51 remain open, all bodies are readback exact, and the native graph has 31 active plus 25 accepted historical edges without cycles. S2's actual open member is #749; S3 has eight bounded members.
 
-Existing Agents owner `01a135dc-ccc3-7473-be5e-5b643a40a3fd` holds shared CI/controller custody. Obtain an actual handoff before new product CI; observation does not retain that window. Preserve PR #982 and the intentional NAS-window pause proposed in #983. Do not create a reader, change credentials, unpause or scan NFS to obtain a readiness pass.
+Existing Agents owner `01a135dc-ccc3-7473-be5e-5b643a40a3fd` holds shared CI/controller custody. Obtain an actual handoff before new product CI; observation does not retain that window. Preserve PR #982 and the intentional NAS-window exporter pause merged in #983 as183b. Do not create a reader, change credentials, unpause or scan NFS to obtain a readiness pass.
 
 Capacity is 40 shared hours/week, 80/fortnight. S3 base is 28–56 hours plus 24 hours reserve, including #749. Estimates and runtime do not measure hours worked. Keep GitHub and the plan current, and interrupt only for a concrete decision, real blocker or meaningful completion.
 
@@ -16,3 +16,6 @@ Capacity is 40 shared hours/week, 80/fortnight. S3 base is 28–56 hours plus 24
 
 
 Current desired-state update: At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.
+
+
+October17 execution release: Jason instructed starting implementation and delivery. Pull #749 first, #801 next in the same product lane; the existing Agents owner has acknowledged #802 preparation after its current qualification. Root has begun #981 source diagnosis. Use the active execution queue for actual status; no new sessions, duplicated CI or re-triage. The eight S3 packets and28–56h plus24h reserve remain within80h.

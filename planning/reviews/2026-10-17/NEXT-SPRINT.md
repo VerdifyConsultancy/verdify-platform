@@ -8,7 +8,9 @@ The original outcomes **#396, #419, #643 and #644 are complete**. **#749 remains
 
 Four ordinary snapshot waits prevented the required 30 quiet minutes. The finite observation stopped at 23:31 UTC, and the final SQL/readiness packet was never attempted. The existing writer session is implementing one bounded producer-coherence correction offline. It must preserve the strict collector, full 48-field checks, authority, deadlines and history. There is no new physical policy run, approval replay or timer-reset loop.
 
-## Next S3 — October 27–November 9
+## S3 — October 27–November 9; execution released October 17
+
+Jason authorized implementation and delivery on October17. Ready packets start now as early pulls from this sprint; the milestone dates, scope and 80-hour envelope remain unchanged. #749 retains first delivery priority. Work is limited to the existing product writer, existing infrastructure owner, and root planning/source diagnosis.
 
 | Pull | Bounded outcome | Shared hours |
 |---|---|---:|

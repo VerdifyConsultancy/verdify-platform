@@ -3385,14 +3385,14 @@
         "api",
         "grafana"
       ],
-      "baseline": "The last authoritative broader audit found recent energy rows with underlying source morethan18hoursold. This is dated evidence, not a new assertion of current age or recovery. No later actual source-advancement receipt exists. Trace channel/source/ingesttime and truthful quality before changing consumers; missing/stale values remain ineligible for782/787.",
+      "baseline": "The last authoritative broader audit found recent energy rows with underlying source morethan18hoursold. This is dated evidence, not a new assertion of current age or recovery. No later actual source-advancement receipt exists. Trace channel/source/ingesttime and truthful quality before changing consumers; missing/stale values remain ineligible for782/787. October17 execution start: six exact current183b source files reviewed; source-time/observation-time separation and fail-closed missing/stale handling remain intact. Actual upstream freshness/cause is not established by this source review.",
       "delivery": "Deliver the smallest owner change through existing required checks and verify the actual deployed behavior. Source, image, runtime and recovery evidence remain distinct.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-17T23:38:45.548698+00:00",
+    "reviewed_at": "2026-10-17T23:53:02Z",
     "source_revision": "183b6f2bdd58cb6cc3df1110d6f722a7b9d3c6f6",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-17",
@@ -3463,7 +3463,7 @@
         "title": "S3 \u2014 Runtime truth and bounded qualification (October 27\u2013November 9, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Eight bounded packets981/980/639/587/801/802/977/782 at28\u201356shared engineering hours. Reserve24h includes749carryover and unexpected work; upper envelope56+24=80 at40h/week. Finish one product delivery at a time; combine639/587in one contained execution and count shared work once.",
+        "goal": "Execution released October17 by Jason; begin ready work now as early pulls from this existing sprint, keeping October27\u2013November9 membership and the same shared80h envelope. Eight bounded packets981/980/639/587/801/802/977/782 at28\u201356shared engineering hours. Reserve24h includes749carryover and unexpected work; upper envelope56+24=80 at40h/week. Finish one product delivery at a time; combine639/587in one contained execution and count shared work once.",
         "exit": "Deliver each explicitly bounded packet and preserve full original acceptance; incomplete physical/scientific clauses stayopen. 782spend4\u20138h is input/decision preparation, not full12\u201320h design completion. 977policy precedesNovember12. Respect actual NAS pause/handoff; if980held, advance other ready packets. 963is a replacement only after exact qualified release/operator inputs, never additive."
       },
       {
@@ -3897,7 +3897,7 @@
         "sprint": "S3",
         "hours_min": 1,
         "hours_max": 2,
-        "next_action": "S3 bounded packet: Small owner-exclusion route fix and exact owner-delivery proof; no blanket parent-adoption prerequisite. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
+        "next_action": "EXECUTION RELEASED October17. Assigned to existing Retry as next small product source task after the #749 coherence packet; preserve #749 priority. Prepare only two host exclusions plus focused contract/render proof; no new image profile. Normal delivery follows actual owner handback and scoped pending #983 drift disposition.",
         "owner_role": "Platform lead"
       },
       {
@@ -3905,7 +3905,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "S3 bounded packet: Spec-preserving manual Argo descheduler adoption with exact owner/project/catalog record; preserve enforce mode. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
+        "next_action": "EXECUTION RELEASED October17. Existing Agents owner acknowledged the independent source/metadata packet and will pull it after its current Network/reindex/archive repair work. Prepare exact current enforce resources, minimum manual project/catalog declarations and inverse; adoption not started. No new workers or whole-program prerequisite.",
         "owner_role": "Platform lead"
       },
       {
@@ -3937,7 +3937,7 @@
         "sprint": "S3",
         "hours_min": 3,
         "hours_max": 6,
-        "next_action": "S3 bounded packet: Recover authentic energy source advancement; retain source and ingest clocks separately. Preserve the original full issue acceptance; partial preparation or contained proof does not close physical/scientific clauses. See planning/reviews/2026-10-17/EXECUTION-QUEUE.md for first action, stop condition and owner.",
+        "next_action": "SOURCE DIAGNOSIS STARTED October17 by root. Six current183b provider files retained; shelly_sync AST is exact despite unrelated HA-file differences. Two fixed HA power entities preserve gateway last_updated independently from row time; >=300s stale and any non-ok channel blocks total. No live source recovery or physical cause proven. Next bounded intended-source/ingest comparison belongs to the existing product lane after #749 and #801; never substitute clocks/channels or force OK.",
         "owner_role": "Data/platform lead"
       }
     ]
