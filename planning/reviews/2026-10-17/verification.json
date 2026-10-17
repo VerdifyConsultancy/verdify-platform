@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "813fb20e2b28b9cfe64825446888639b3bbd13981cf5f04f4667f9226b5f1a65",
+    "prompt_sha256": "3cd2947b4f0adf2d975837d9c13eac2e3551341dbb402adccc2ece24d506adcc",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -477,7 +477,7 @@
       "prospective_resources_changed": 3,
       "shared_window_release_pending": false,
       "physical_recovery_authorized": false,
-      "shared_window_released_scope": "Existing Agents owner explicitly returned finite publication/controller window; same approved product writer resumed with fresh guards; isolated PR checks remain externally owned"
+      "shared_window_released_scope": "Returned to existing Agents owner18:38:36 after actual full sync and runtime qualification; same Retry retains sole product/device operation and one log stream"
     },
     "issue749_approved_rollout": {
       "verified_at": "2026-10-17T17:57:59.802573+00:00",
@@ -540,6 +540,58 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T18:16:48Z",
       "scope": "Natural Lab publication and health recovered; existing approved product execution resumed after explicit shared window handback; no runtime acceptance inferred"
+    },
+    "approved_rollout": {
+      "promotion": "3c9a4edf8b6940840b9d61574175a51001f62766",
+      "promotion_provider_proof_sha256": "5005b2c1b8253ab624de0265ef3f6506511496023cd6d073843e36018da82691",
+      "native_qualification_sha256": "67bd283d0c89b0af204c19b2d1b27ad6510bd0217262a56ec66803b523c0d97c",
+      "all8_native_streams_root_verified": true,
+      "native_log_bytes": 66053,
+      "full_sync_submission_sha256": "27590979b3d90db2b360a8d9727a93909ad7de4a20f2ceda4b2d6681cf03473a",
+      "full_sync_finished_at": "2026-10-17T18:30:08Z",
+      "resource_results": 129,
+      "new_presync_jobs": 6,
+      "new_sync_jobs": 1,
+      "started_hook_containers_exit0": 8,
+      "complete_corrected_hook_logs_root_verified": true,
+      "initial_reader_failures_preserved": true,
+      "runtime_qualification_sha256": "e797cf4a33032c555db8b4f1f9850fc03cb9c65d0c4144410ff8dc0c85a1e702",
+      "image_source": "6feda001210164004b1db6b81e61ae5b19d22fa3",
+      "ingestor_digest": "sha256:671af79add7a5f4d7933132fe1d5841f3e0c0fa51ce634fdab852eab669f2a10",
+      "argo_sync": "Synced",
+      "argo_health": "Healthy",
+      "ready_single_writer": true,
+      "restart_count": 0,
+      "smoke_passed": 9,
+      "esp32_connections": 1,
+      "five_minute_schema_errors": 0,
+      "baseline_existing_source_contract_equivalent": true,
+      "baseline_equivalence_sha256": "ac9699977b1584431b1e9609cfebf0cc5a0e1a41fddb01fe986423844cd1f43d",
+      "shared_window_release_sha256": "6a6f2e1175fb96b8f235c43a7dbe8d9f317bf59c3bcb4b92e2dfdadd908c6c4f",
+      "ordinary_settled_completion": "pending",
+      "quiet30_and_original_readiness": "pending",
+      "ordinary_approval_install": {
+        "installed_at": "2026-10-17T18:39:04.313928+00:00",
+        "receipt_sha256": "270eb817d289e7cbcad82873ea3c9298b21fe0f23f3fa0fff71cf88c4ad2a4d6",
+        "approval_manifest_sha256": "c4242c88c74b918b6fbdd12c73eb5ca49a8cb114874e4b135185865bbaf609f2",
+        "manifest_bytes": 22589,
+        "exact_archive_link_root_read": true,
+        "attempts": 1,
+        "expires_at": "2026-10-17T19:09:02.299569+00:00",
+        "normal_cadence_only": true,
+        "commands_or_completion_inferred": false,
+        "physical_recovery_authorized": false
+      }
+    },
+    "issue749_rollout_qualified": {
+      "verified_at": "2026-10-17T18:42:12.898413+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "3d525887f5e2ba221a60277d0fe6ca5578ce2239d0b1c579fc543403c6cb08de",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T18:42:12Z",
+      "scope": "Approved rollout actually verified; one ordinary approval installed; original policy settlement and readiness still pending; shared window returned"
     }
   }
 }
