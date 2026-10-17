@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "3cd2947b4f0adf2d975837d9c13eac2e3551341dbb402adccc2ece24d506adcc",
+    "prompt_sha256": "7dfc7363b1e8dcc598cc456bc48d5b4741598c897b7face390b88e4b8416edbb",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -458,7 +458,7 @@
       "scope": "actual source/image/candidate completion and corrected ingestor-only rollout scope; native graph and milestones unchanged"
     },
     "current_policy_decision": {
-      "status": "explicitly_approved_by_Jason; rollout_and_readiness_not_performed",
+      "status": "approved_rollout_completed; one_ordinary_policy_run_used; completion_observation_failed; acceptance_stopped",
       "decision_scope": "ingestor-only rollout and one fresh guarded ordinary-policy run; physical recovery separately scoped",
       "capture_finished_at": "2026-10-17T17:47:23.131523+00:00",
       "capture_receipt_sha256": "71f2c96c92ca60153c5e07aed52c5c96f30b540f23f52c1c505651286d197cea",
@@ -477,7 +477,7 @@
       "prospective_resources_changed": 3,
       "shared_window_release_pending": false,
       "physical_recovery_authorized": false,
-      "shared_window_released_scope": "Returned to existing Agents owner18:38:36 after actual full sync and runtime qualification; same Retry retains sole product/device operation and one log stream"
+      "shared_window_released_scope": "Returned18:38:36 to existing Agents owner; Retry retains product evidence/source custody only, with no new shared mutation or physical-run authority"
     },
     "issue749_approved_rollout": {
       "verified_at": "2026-10-17T17:57:59.802573+00:00",
@@ -568,8 +568,8 @@
       "baseline_existing_source_contract_equivalent": true,
       "baseline_equivalence_sha256": "ac9699977b1584431b1e9609cfebf0cc5a0e1a41fddb01fe986423844cd1f43d",
       "shared_window_release_sha256": "6a6f2e1175fb96b8f235c43a7dbe8d9f317bf59c3bcb4b92e2dfdadd908c6c4f",
-      "ordinary_settled_completion": "pending",
-      "quiet30_and_original_readiness": "pending",
+      "ordinary_settled_completion": "accepted source-grounded inference18:41:28; typed_report_absent",
+      "quiet30_and_original_readiness": "not_started_or_executed; acceptance_stopped",
       "ordinary_approval_install": {
         "installed_at": "2026-10-17T18:39:04.313928+00:00",
         "receipt_sha256": "270eb817d289e7cbcad82873ea3c9298b21fe0f23f3fa0fff71cf88c4ad2a4d6",
@@ -592,6 +592,72 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T18:42:12Z",
       "scope": "Approved rollout actually verified; one ordinary approval installed; original policy settlement and readiness still pending; shared window returned"
+    },
+    "completion_observation_defect": {
+      "observed_at": "2026-10-17T18:41:28Z",
+      "denial_receipt_sha256": "87a65a268f998dad8f8cb69e4cbe753f8a3d90e1abf561d0f42937b132f7bcbb",
+      "custody_manifest_sha256": "09f5bdc5dd8fd5745bb1994c1c2324fde2d1e4a236b752be843caf6cae9eb900",
+      "root_verified_custody_files": 4,
+      "actual_stage_application_counts": [
+        12,
+        11
+      ],
+      "completed_application_history_count": 23,
+      "unique_latest_value_count": 20,
+      "source_uniqueness_predicate_false_rejection": true,
+      "allowed_named_guard_reapplications_preserved": true,
+      "state_complete_empty_stage_records": true,
+      "typed_settled_completion_emitted": false,
+      "quiet30_started": false,
+      "original_current_readiness_executed": false,
+      "writer_physically_stopped": false,
+      "approval_used_no_replay_refresh": true,
+      "local_source_tests_only_released": true,
+      "future_rollout_cannot_retroactively_attest_old_run": true,
+      "original_acceptance_evidence_route_review": "complete; existing READ ONLY route permitted; typed report not original clause",
+      "terminal_custody_root_verification": {
+        "verified_at": "2026-10-17T18:53:48.578456+00:00",
+        "terminal_receipt_sha256": "cc9811bd777284fb5572fab99e39e9d670c77b44a92774a4f82c0711879c5c59",
+        "manifest_sha256": "93a4d4144a3fd5ddf6b619fd2fcd0e95f6ec74121fc2f3456386f8d8c085716f",
+        "all_members_exact": true,
+        "members": 147,
+        "bytes": 8438989,
+        "observer_stopped_at": "2026-10-17T18:50:01.796436+00:00",
+        "intentional_observer_return1_distinct_from_writer": true,
+        "no_runtime_typed_completion": true,
+        "original_proposal_unique_history_correction_superseded_by_preserve_history_local_scope": true
+      },
+      "settlement_inference": {
+        "timestamp": "2026-10-17T18:41:28Z",
+        "basis": "exact-source native confirmation and post-await binding path plus sealed current log/state/archive linkage",
+        "not_emitted_typed_report": true,
+        "not_independent_native_rows_export": true,
+        "retained_log_end": "2026-10-17T18:49:57Z",
+        "existing_verified_interval_seconds": 509,
+        "earliest_30minute_boundary": "2026-10-17T19:11:28Z",
+        "one_bounded_original_read_only_capture_authorized": true,
+        "current_result": "pending"
+      }
+    },
+    "issue749_observation_defect": {
+      "verified_at": "2026-10-17T18:54:06.736350+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "385905908e39f173cd734066f99e2f95e454fb8aa6e8b46385c7f1f0e11b389b",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T18:54:05Z",
+      "scope": "Actual approved rollout/run and reporting defect; used approval; no quiet/readiness claim; local correction/evidence review only"
+    },
+    "issue749_original_readiness_route": {
+      "verified_at": "2026-10-17T18:57:41.874834+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "f25b7d3e1795b4ce26645adb9b1538a149c79f2e458be6ffdfad377f539604c3",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T18:57:41Z",
+      "scope": "Original acceptance route accepted with source-grounded settlement inference; one current read-only observation pending; typed-report defect remains explicit"
     }
   }
 }
