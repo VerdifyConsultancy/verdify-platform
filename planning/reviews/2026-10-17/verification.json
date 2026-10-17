@@ -1354,6 +1354,15 @@
       78
     ],
     "generated_views_fresh": 7,
-    "product_delivery_claimed_from_start": false
+    "product_delivery_claimed_from_start": false,
+    "749_initial_source_review": {
+      "decision": "Revise before delivery",
+      "packet_sha256": "a008901e757203eb47955fc14ee4b44cf9bdb3763edbcf97e95b5a1247d4ccfe",
+      "sealed_members_root_verified": 39,
+      "sealed_bytes_root_verified": 1091700,
+      "defect": "New helper selected a different setpoint-change SQL statement instead of retaining the existing confirmation statement; same owner instructed to restore exact semantics and bind regression to the actual functions.",
+      "native_or_runtime_failure": false,
+      "source_publication_authorized": false
+    }
   }
 }
