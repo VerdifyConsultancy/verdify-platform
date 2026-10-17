@@ -40,3 +40,8 @@ The #749 decision above is accepted; the other listed decisions remain scoped to
 ## Evidence and delivery
 
 [Live status](STATUS.md), [all 58 dispositions](ISSUE-TRIAGE.md), [native active/historical graph](DEPENDENCIES.md), [PR/work disposition](PRS-AND-WORK.md), [fresh-session instructions](GOAL.md). Canonical allocations are in `planning/backlog.yaml`; all seven generated views derive from it. Native GitHub milestones/sub-issues/dependencies and body readbacks are verified separately from the local generator. Parent/program estimates are not double-counted.
+
+
+### Changed execution blocker before rollout
+
+Fresh pre-rollout health supersedes the earlier healthy checkpoint: Argo explicitly attributes Degraded to two failed natural Lab publisher executions on its unchanged accepted image. Complete retained logs report bounded object-store upload/list/mirror failures; underlying provider/network cause is not established. The validated-tree retention is a producer-log claim, not a new page-availability proof. The16 controllers are Ready and exact desired-spec drift remains only the approved three image references. Promotion/sync/policy have not started. The existing runtime lane owns one finite read-only dependency diagnosis; no Job deletion, forced run, Lab promotion or credential change is authorized. The approved #749 decision remains valid within its exact fresh guards. The shared publication window was returned during diagnosis.

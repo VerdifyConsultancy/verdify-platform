@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "e71f4cacb3afd79eed71cebac3352f529e734f956cad72994ead4e362d5066e1",
+    "prompt_sha256": "751a7fd3d2c94ba08f5db696cce62f70d2466835834a25c73c7163311d76479a",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -477,7 +477,7 @@
       "prospective_resources_changed": 3,
       "shared_window_release_pending": false,
       "physical_recovery_authorized": false,
-      "shared_window_released_scope": "digest-only product validation and attended sync; existing external image coordinator retains isolated owner custody; no globalzero requirement"
+      "shared_window_released_scope": "Returned to existing Agents owner during independent Lab health diagnosis; product execution not started"
     },
     "issue749_approved_rollout": {
       "verified_at": "2026-10-17T17:57:59.802573+00:00",
@@ -488,6 +488,29 @@
       "original_acceptance_retained": true,
       "updated_at": "2026-10-17T17:57:58Z",
       "scope": "specific rollout and ordinary-policy decision approved; current19 captured proposal; runtime/readiness still pending; graph and milestones unchanged"
+    },
+    "lab_health_preflight": {
+      "cause_receipt_sha256": "5ea6a8266d0df405342e9227cfcfcee2acfe257f4065d8a8cccc952e631732a6",
+      "resource_tree_sha256": "0c0b6f313d2db09b6a0aa260ed3f9d9df5b52dfee0230b2022e3fb138ca389c6",
+      "actual_argo_health": "Degraded",
+      "attribution": "unchanged Lab publisher CronJob latest natural execution failed",
+      "underlying_provider_cause": "unestablished",
+      "all16_controllers_ready": true,
+      "proposed_spec_diff_only_three_approved_images": true,
+      "product_mutations_started": false,
+      "specific_decision_still_approved": true,
+      "finite_readonly_diagnosis_lane": "existing runtime_inventory",
+      "shared_window_returned": true
+    },
+    "issue749_lab_health_hold": {
+      "verified_at": "2026-10-17T18:05:05.999716+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "c7f00dfa7dd241c020c47e03d009b4e2c22504781ed1d1de3e8344411f47ec39",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T18:05:05Z",
+      "scope": "independent Lab publishing health failure holds rollout; accepted human decision retained; no product mutation; finite owner diagnosis"
     }
   }
 }
