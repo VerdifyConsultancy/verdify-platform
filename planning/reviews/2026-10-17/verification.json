@@ -1051,6 +1051,41 @@
       "built": false,
       "deployed": false,
       "physical_authority": false
+    },
+    "classification_source_status_github_publication": {
+      "verified_at": "2026-10-17T20:26:35.737441+00:00",
+      "coarse_immutable_receipt_revision": "f543900696e2623f9609b9dd806aafa231fee94d",
+      "coarse_immutable_receipt_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/f543900696e2623f9609b9dd806aafa231fee94d/planning/execution/2026-10-17/readiness-749-rollout-and-boundary/README.md",
+      "issues": [
+        {
+          "issue": 749,
+          "state": "open",
+          "body_sha256": "966dcad8a70446359a01ace6b9df22a6176bf08bba1eeffcf7e84dc40f102ca1",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        },
+        {
+          "issue": 45,
+          "state": "open",
+          "body_sha256": "151cf280aa55e5cc5691487db8107118f3379eff219732d5dabefda937a841f7",
+          "provider_exact": true,
+          "original_acceptance_retained": true
+        }
+      ],
+      "native_graph_changed": false,
+      "new_physical_authority": false
+    },
+    "shared_ci_handback_20261017_2022": {
+      "owner_thread": "01a135dc-ccc3-7473-be5e-5b643a40a3fd",
+      "owner_explicit_release_received": true,
+      "owner_reported_controller_adoption_at": "2026-10-17T20:22:00Z",
+      "accepted_owner_main": "7e340fcd",
+      "owner_reported_first_cycle_seconds": 102.35,
+      "owner_reported_reopen_history_errors": 0,
+      "owner_reported_preserved_or_released_claims": 35,
+      "owner_reported_protected_generation": 171,
+      "no_more_controller_mutation_queued": true,
+      "limitations": "Nine other real cycle errors remain owner investigation; original5001 terminal FAILURE preserved. This is handback, not new product admission or success. Exact private receipt readback pending; Retry must use fresh normal checks."
     }
   }
 }
