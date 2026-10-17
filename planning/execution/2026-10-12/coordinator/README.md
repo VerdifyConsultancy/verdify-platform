@@ -1227,3 +1227,17 @@ Root read full270 ops function: only RETURNQUERY/table reads/builtins;217 grants
 Existing controller owner explicitly returned the sharedCI/controllerwindow after exactsix-resource5011adoption20:22:00 atacceptedmain7e340fcd, Ready/restart0 andonecompletednaturalcycle102.35s. Owner reports all35 oldclaims preservedorauthoritativelyreleased, samePVC/ONtuning/protected171; no morecontrollermutationqueued. Nineothercycleerrorsremainownerinvestigation,notwaived; original5001 is truthfullyterminalFAILURE38/40 withfailedimagecustody. Root accepted this finite handback; actual product submission stillrequiresfreshnormalcoherence/fit/caller and ownednativeproof. RAG/dashboard/Networkacceptance is not a productgate; laterprotected172change mustcoordinate. Exactprivateownerreceiptreadbackpending, no newaudit requested.
 
 ChangedGitHub749and45bodies were provider-exact afterf5439006 publication, retaining originalacceptance/tails/metadata:749body966dcad8,45body151cf280; bothOPEN. All14changedplanningpayloads atf543 wereproviderexact, schema92/9/78/all7views/35planningtests/hooksPASS. Root nowpreparesfreshcomplete25canonicalmanifest and freezes onlyuntilcopyACK; no separateplanning-onlymainadoption.
+
+
+## October17 complete canonical25 copy acknowledged
+
+SAME Retry copied exact70dfe414 snapshot/all25paths underd014e8ba manifest; root read315b24a5 ACK and independently checked every actualdestinationlength/SHA. All8 reviewedsource/test/docbytes unchanged, no wholebranchmerge. ROOTUNFROZEN; laterledgerfacts do not request anotherproductcopy/status-onlypush. Releasedpathcontinuesfreshnormalguards/actualCOPYclassification/one genuine source/native delivery; no nativePASSorpushclaimedfromACK.
+
+Root read actualownerb23fbe8f/3a4c57e9/d456ba84/3fa7ff62 receipts: sixresourcessucceeded, mountedsource/config/execution exact, firstmatchingcyclecomplete, Readyrestart0/samePVC andprotectedbefore-afterequal. Old5001FAIL/two image-custodyerrors/nineothercycleerrors remain explicit; no forcedgreen or owner-widecompletion. SharedwindowreturnedtoRetry forfiniteproductdelivery; futureprotected172mutationheldbyowner until coordination.
+
+
+## October17 composed source commit verified locally
+
+SAME Retry created10dd58a7 with soleparent3c9/tree1d226607; normalcommit hooksPASS andcleanworktree reported. Root independently read6e3de9aa receipt and verifiedall33 committedpayloads against25canonical70d and8acceptedsource/doc hashes:22actualchangedpaths,11canonicalpaths alreadyidentical. Privateproofe2f0b504 records localtree verification only; providerpush/nativequalification/runtimeadoption are not yetclaimed.
+
+The prepublication observer stopped on a locallyunsupportedclientflag beforepush, nativeoperation or normalregistry/fitreads. Failedcustody is retained. SAME Retry corrects onlythe lightweightread-onlywatch transport usingexistingcontext/credentials, thencontinuesalreadyreleasedfreshnormalchecks/oneFFsourcepush. No alternatekey, buildretry, controllerchange or physicalauthority follows. Runtimehold andusedexplicitapproval remain.

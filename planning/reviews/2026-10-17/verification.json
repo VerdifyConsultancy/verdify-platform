@@ -1085,7 +1085,35 @@
       "owner_reported_preserved_or_released_claims": 35,
       "owner_reported_protected_generation": 171,
       "no_more_controller_mutation_queued": true,
-      "limitations": "Nine other real cycle errors remain owner investigation; original5001 terminal FAILURE preserved. This is handback, not new product admission or success. Exact private receipt readback pending; Retry must use fresh normal checks."
+      "limitations": "Nine other real cycle errors remain owner investigation; original5001 terminal FAILURE preserved. This is handback, not new product admission or success. Exact private receipt readback pending; Retry must use fresh normal checks.",
+      "root_read_actual_owner_receipts": {
+        "adoption": "b23fbe8fc9b6cb738c18a2aa0cc20258a82c765444e8deaa342b39ed0484eb14",
+        "sync": "3a4c57e993c16f2b87786dabee6da8148537eac7944220dd3b8584456c86e99e",
+        "mounted": "d456ba8449ec3dcaf6a2ac5e175b0d0ad734c04dbce933f1eb45147e0fbe40e2",
+        "completed_cycle": "3fa7ff62434bd409503cb1c083a7a65106d32cf857c596b4aa57ce9c74ac4053",
+        "protected_before_after_equal": true
+      }
+    },
+    "canonical25_delivery_copy": {
+      "source": "70dfe41413105199e2b01089f5b04756ab4648aa",
+      "manifest_sha256": "d014e8ba3afe3c178b954eb6b92124c356632f744d895a7dec52d8ed42d9090d",
+      "copy_ack_sha256": "315b24a52d52f4850cc071ce31451d2a386cc9b5b46e812a917c6266f8376394",
+      "root_verified_actual_destination_files": 25,
+      "root_frozen": false,
+      "new_ledger_requires_separate_product_adoption": false
     }
+  },
+  "post_rollout_followup_delivery": {
+    "local_source": "10dd58a7083a9d6de6f19fb8159d9f75bf66ee5d",
+    "sole_parent": "3c9a4edf8b6940840b9d61574175a51001f62766",
+    "tree": "1d226607f0b8d283296f9a0705e7efc288c3a6ca",
+    "root_verified_local_tree_payloads": 33,
+    "actual_changed_paths": 22,
+    "canonical_snapshot": "70dfe41413105199e2b01089f5b04756ab4648aa",
+    "local_tree_proof_sha256": "e2f0b504e2f67c3d80097035d8fc6401ab2c6930f6b982fee81d75e0a1ef5b45",
+    "owner_commit_receipt_sha256": "6e3de9aad68ad9947cfec54c18a2c00db21ae35f576d9f5129088998e85df4c1",
+    "source_push_verified": false,
+    "runtime_adoption_released": false,
+    "observer_correction": "Unsupported local client flag stopped the observer before source push or normal signal/capacity reads. Same-context read-only transport correction is authorized; this is not a CI, registry, RBAC or capacity denial."
   }
 }
