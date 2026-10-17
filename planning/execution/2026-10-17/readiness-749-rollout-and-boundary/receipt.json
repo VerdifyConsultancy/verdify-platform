@@ -1,0 +1,150 @@
+{
+  "schema": "verdify-749-coarse-rollout-and-boundary-v1",
+  "observed_at": "2026-10-17T19:36:23.350777Z",
+  "issue_state": "OPEN",
+  "release_revision": "3c9a4edf8b6940840b9d61574175a51001f62766",
+  "image_source_revision": "6feda001210164004b1db6b81e61ae5b19d22fa3",
+  "ingestor_digest": "sha256:671af79add7a5f4d7933132fe1d5841f3e0c0fa51ce634fdab852eab669f2a10",
+  "rollout": {
+    "full_sync_finished_at": "2026-10-17T18:30:08Z",
+    "resource_results": 129,
+    "new_presync_jobs": 6,
+    "new_sync_jobs": 1,
+    "started_hook_containers_exit0": 8,
+    "argo_sync": "Synced",
+    "argo_health": "Healthy",
+    "ready_single_writer": true,
+    "restart_count": 0,
+    "smoke_passed": 9,
+    "esp32_connections": 1,
+    "five_minute_schema_errors": 0
+  },
+  "approved_ordinary_policy": {
+    "authority": "One specific approved rollout/run; consumed",
+    "stage_application_counts": [
+      12,
+      11
+    ],
+    "ordered_applications": 23,
+    "distinct_settings": 20,
+    "eligible_guard_reapplications": 3,
+    "settlement_evidence": "Source-grounded inference at18:41:28, not a typed runtime report or independently exported native history",
+    "typed_completion_report": "Missing due to reproduced metadata uniqueness defect",
+    "physical_recovery_authorized": false
+  },
+  "later_normal_policy": {
+    "preexisting_autonomous_policy": true,
+    "authentic_settled_completion_at": "2026-10-17T18:59:57.394503Z",
+    "stage_application_counts": [
+      12,
+      7,
+      1
+    ],
+    "same_writer_source_process_generation": true,
+    "pending_handoff": 0,
+    "supersedes": null,
+    "repairs_prior_missing_link": false
+  },
+  "local_formatter_correction": {
+    "source_accepted": true,
+    "paths": 2,
+    "focused_tests_passed": 316,
+    "failures_errors_skips": 0,
+    "baseline_regression_failed": true,
+    "preserves_ordered_history_and_authority": true,
+    "committed_pushed_built_deployed": false
+  },
+  "read_only_boundary": {
+    "capture_started_at": "2026-10-17T19:36:18.336829Z",
+    "capture_finished_at": "2026-10-17T19:36:23.350777Z",
+    "current_three_probe_climate": "degraded_pass_with_false_green_diagnostic_warning",
+    "cycles": [
+      "2026-10-17T19:35:06.981848Z",
+      "2026-10-17T19:36:09.122955Z"
+    ],
+    "temperature_spreads_f": [
+      3.9599990844726562,
+      3.779998779296875
+    ],
+    "temperature_spread_limit_f": 4.0,
+    "hydro_absence_four_surfaces_twelve_inputs": "pass_source_bound",
+    "source_defined_quiet_seconds": 2183.091861,
+    "same_writer_before_after": true,
+    "argo": "SyncedHealthy3c9",
+    "ready_controllers": 16,
+    "ready_requested_replicas": 21,
+    "scheduled_backup_bytes": 470996511,
+    "backup_regular_PGDMP_no_partial": true,
+    "backup_age_seconds": 40652.25813,
+    "backup_age_limit_seconds": 93600,
+    "all_open_alert_identities": 40,
+    "projected_alert_rows": 32,
+    "accepted_nonblocking_degradation_groups": 2,
+    "informational_noncausal": 14,
+    "unclassified": 16,
+    "blocked_types": {
+      "site_content_stale": 1,
+      "sensor_offline": 7,
+      "soil_sensor_offline": 7,
+      "heap_pressure_warning": 1
+    },
+    "overall_current_readiness": "BLOCKED_BY_UNCLASSIFIED_CURRENT_ALERTS"
+  },
+  "evidence": {
+    "runtime_qualification_sha256": "e797cf4a33032c555db8b4f1f9850fc03cb9c65d0c4144410ff8dc0c85a1e702",
+    "local_source_proof_sha256": "7b85c63bba8d504b2dc5d59649e748947e20c341ee72ce2d5d71eb3d3834be27",
+    "boundary_receipt_sha256": "1db39f118d7e22b481e311188cea8e5d4cde262d61844605dabfa44c0e7534ae",
+    "boundary_manifest_sha256": "ec5be2c51f4a6eb72691fb97a1bb1dcfdd86399fc56e2646902a22df48f62cd9",
+    "boundary_root_verified_members": 40,
+    "clause_verdict_sha256": "15dd1d75f854318b89e479845480dfa6c97d62d30ef09844da1e5e37483463b9",
+    "verdict_manifest_sha256": "02d8c938e82b44a95435c050ab88783be983ded31568bca70fbb572c3f4e17a7"
+  },
+  "limits": [
+    "16 unclassified identities are fail-closed blockers, not proof of16 causal faults.",
+    "Seven soil channels are reported by two producers; planner corpus and heap warnings require targeted context.",
+    "Full collector remains unaccepted because the older archive-linked typed report is missing.",
+    "This boundary did not query current exposure; prior zero cannot establish current zero.",
+    "48-field grid is a same-process startup attestation joined to current preview/lease, not a physical48-component test.",
+    "SQL authentication was current; MCP smoke was earlier; no new GateP/provider preflight.",
+    "Scheduled dump freshness does not prove restore or offsite recovery.",
+    "No experiment, randomized activation, OTA, new physical run or recovery is authorized by this receipt."
+  ],
+  "next_step": "SAME Retry seals the completed targeted diagnosis and prepares the smallest LOCAL producer-owned site_content_stale resolution fix plus meaningful existing-suite regressions, alongside the accepted unchanged formatter fix. Existing runtime_inventory traces only seven soil mappings and retained logs offline to distinguish source failure from missing physical evidence; no blanket exemption, unpotted inference or full#45 commissioning prerequisite. Review only the new lifecycle delta, then coordinate one genuine source delivery with the existing shared-CI owner. No live alert resolution, new read loop, source push/build/rollout, physical run, recovery or fresh approval is released by this preparation. Current exposure remains explicitly unknown; do not guess an experiment ID.",
+  "targeted_alert_diagnostic": {
+    "state": "complete_source_bound_read_only",
+    "source_review_complete": true,
+    "site_freshness_window_seconds": 108000,
+    "soil_channels": 7,
+    "soil_producers": 2,
+    "soil_interval_minutes": 30,
+    "existing_heap_classifier_used_without_change": true,
+    "direct_sensor_registry_grant": false,
+    "supported_exposure_function_select_only_and_granted": true,
+    "accepted_experiment_binding_available": false,
+    "current_exposure": "unknown_no_accepted_experiment_id",
+    "mutation_authorized": false,
+    "captured_at": "2026-10-17T19:49:40.534653Z",
+    "receipt_sha256": "7551e465dd7bfc4fca15af9d5222281a39371c9c42a2a74250a3816643f66e7c",
+    "manifest_sha256": "c795956afbfe6fc0dc91c97dd9af49b447b9ac76520f5d181698429031f36575",
+    "query_sha256": "91451c5ce872c4e4e2bd9580de7490f19ce783ec8c5b1efb79b5fbe6e90570f7",
+    "output_sha256": "abe624bbc1cc52b86b73749a55cdfa85575bb4aa3bdd2accdf7a3ea949a2b01c",
+    "root_verified_members": 16,
+    "root_verified_bytes": 92574,
+    "same_writer_before_after": true,
+    "all_five_read_calls_exit_zero": true,
+    "read_only_rollback_and_awaited_close": true,
+    "site_corpus_rows": 335,
+    "site_latest_updated_at": "2026-10-17T18:31:07.383379Z",
+    "site_within_existing30h_window": true,
+    "old_site_alert_still_open": true,
+    "soil_window_rows": 29,
+    "all_seven_soil_nonnull_finite_nonfinite_counts": 0,
+    "active_crop_count_south": 1,
+    "active_crop_count_west": 1,
+    "all_seven_registered_staleness_rows_true": true,
+    "heap_existing_informational_predicate_passes_at_new_boundary": true,
+    "no_retrospective_boundary_override": true,
+    "next_action": "Local producer-owned corpus alert lifecycle correction + existing formatter fix; finite offline7-channel source trace; no new live operation",
+    "existing_heap_diagnostic_predicates": "pass_at_targeted_capture_only"
+  }
+}
