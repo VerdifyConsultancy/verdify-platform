@@ -8,7 +8,7 @@
 # The dev MinIO WAL store, the scheduled base backup and the PITR drill were
 # removed on 2026-09-24: MinIO is deprecated estate-wide. A revived WAL/PITR
 # drill uses a bucket requested from jvallery/storage-infra on Garage
-# (s3-hdd.vallery.net) through the CNPG barman-cloud plugin.
+# (s3.vallery.net) through the CNPG barman-cloud plugin.
 #
 # NOT wired into any ArgoCD Application yet: this is a dev-first validation
 # fixture applied manually (kubectl apply -k) for the failover drill.

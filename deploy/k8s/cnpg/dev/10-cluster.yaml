@@ -124,7 +124,7 @@ spec:
   # None. The throwaway in-namespace MinIO WAL store, its ScheduledBackup and
   # the PITR drill were removed on 2026-09-24 (MinIO is deprecated estate-wide).
   # To run a WAL/PITR drill again, request a bucket and key from
-  # jvallery/storage-infra on its Garage platform (s3-hdd.vallery.net) and
+  # jvallery/storage-infra on its Garage platform (s3.vallery.net) and
   # configure the CNPG barman-cloud plugin against it.
 
   # DEV resources sized to fit node6/node7 (node4/5 are memory-saturated). PROD
