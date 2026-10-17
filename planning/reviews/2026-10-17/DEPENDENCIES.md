@@ -7,7 +7,7 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 ```mermaid
 flowchart TD
   repair["749 explicit archive-linked current-plan remedy"] --> delivery["Existing normal source CI and pin actuator"]
-  registry["Agents4995: actual registry coherence and CI handback"] --> delivery
+  registry["Registry recovered; fresh coherence/fit and CI handback"] --> delivery
   delivery --> i749["749 exact rollout, hold settlement and readiness"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783

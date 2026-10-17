@@ -63,7 +63,7 @@
   "limits": [
     "Raw evidence remains private.",
     "No production, device, credentials, controller or CI mutation by the review.",
-    "GitHub issue bodies, native relationships, milestone dates and memberships, and PR dispositions were independently read back. Product main remains at the qualified source revision; the planning branch must not be merged while candidate publication requires main to equal that source."
+    "GitHub issue bodies, native relationships, milestone dates/memberships and PR dispositions were independently read back. Product main remains220 during offline preparation; complete canonical paths may accompany the genuine reviewed source fix through normal delivery. No whole planning-branch merge or planning-only CI."
   ],
   "local_validation": {
     "schema": "PASS:92 issues/9 stages/78 historical edges; coverage and DAG valid",
@@ -292,7 +292,7 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "cb856bca46e65c5275b67d0815c4d8e0b184202ffa0277133af59c6e15d1088b",
+    "prompt_sha256": "5a156e604a531fa60a3520b2d9b1d73fd02751054e2f0d01cea64b5fd8650637",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
   },
@@ -308,14 +308,38 @@
       "scope": "current evidence and execution route only; native issue graph and milestone unchanged"
     },
     "product_source_unchanged": "2208401de0c5d1653661c676cd255eaab2e7afb4",
-    "source_transition": "three-path explicit archive-link remedy in offline implementation; no delivery yet",
+    "source_transition": "Accepted final3path patchabce1968 after306 focused tests and independent review; no source delivery yet.",
     "route": "existing genuine source parent CI and pin actuator;4977 no longer prerequisite",
     "diagnostic_receipt_sha256": "c78cce878f175d1af6f2f1015a2b607562181b558cd153861c584e7f8b58fea3",
     "diagnostic_comparison_sha256": "9c5a82eda86808d2c8983b66dc4e74977af5ce23f1cd83467db29725bc2cd3d2",
-    "external_registry_owner": "jvallery/agents#4995; current audit pending; our CI custody explicitly released",
+    "external_registry_owner": "Normal full audit succeeded16:35:27UTC; matching169 integrity/capacity publication independently verified. Current CI availability and fresh coherence/fit still required.",
     "native_issue_graph_unchanged": true,
     "planning_tests_passed": 35,
     "all_seven_generated_views_fresh": true,
-    "automation_readback_exact": true
+    "automation_readback_exact": true,
+    "registry_recovery_receipt_sha256": "75b634ec57bd8a202c7ec531c54dd2a8934398f8e49d513e348f9c0f94433daf",
+    "initial_review_receipt_sha256": "ec2b175cb8cff6f54850ae014849802bdd2a9e9851267041762423ec379f7b79",
+    "source_acceptance": {
+      "patch_sha256": "abce19689c321542886e0bc56920db5cf5f6ceafd1858edfa4a8c27c5303a948",
+      "receipt_sha256": "7a26178800eeaf80214d2bb9ddc267642a00e7bd0a50f671d52699e53940088a",
+      "correction_delta_sha256": "ac42293d8b58a6d05b6791c09d2f41262745db1c71cb49019a82d985b85f614a",
+      "junit_sha256": "6076f58667183fc468620fcd97fe47cb6c2b4625deed39684f27254b4b61d514",
+      "tests": 306,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "independent_readonly_review": "accepted; three concrete defects corrected; no remaining defect in review scope",
+      "runtime_acceptance": false
+    },
+    "issue749_source_acceptance": {
+      "verified_at": "2026-10-17T16:50:44.163173+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "86edc85f65534f90ac609d10283676302c81992d30e91184fe9061956529b02a",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T16:50:43Z",
+      "scope": "current source acceptance/recovery/next action only; native graph and milestones unchanged"
+    }
   }
 }
