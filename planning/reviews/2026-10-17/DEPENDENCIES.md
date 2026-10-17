@@ -6,7 +6,9 @@ All58 open issues are represented below. 41 open native blocking edges remain af
 
 ```mermaid
 flowchart TD
-  publisher["Agents4977: owner publisher delivery"] --> i749["749 current source/runtime readiness"]
+  repair["749 explicit archive-linked current-plan remedy"] --> delivery["Existing normal source CI and pin actuator"]
+  registry["Agents4995: actual registry coherence and CI handback"] --> delivery
+  delivery --> i749["749 exact rollout, hold settlement and readiness"]
   i639["639 contained behavior + physical remainder"] --> i783["783 integrated vertical qualification"]
   i587["587 lifecycle / kill-switch"] --> i783
   i981["981 energy source truth"] --> i782["782 final scientific eligibility"]
@@ -23,7 +25,7 @@ flowchart TD
   i784 --> i785["785 reveal/readout"]
 ```
 
-The publisher is an external implementation step, not a newly invented issue or broad estate-completion gate. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 is not a blanket prerequisite for honest three-probe749 readiness. No source fixture, current green container or ordinary reconciliation grants experiment authority.
+The two delivery conditions above are operational steps inside #749, not new native issue dependencies. The registry owner's actual coherent publication and CI availability are sufficient for handback; unrelated RAG acceptance or whole #4995 closure is not required. Agents4977 is held outside the selected route because a genuine necessary source fix can use the existing parent build/pin actuator. The981→782 edge applies to final eligibility for electricity already included in the chosen contract; independent climate/design preparation proceeds before it. Hardware repair751 is not a blanket prerequisite for honest three-probe749 readiness. No source fixture, current green container or ordinary reconciliation grants experiment authority.
 
 
 ## Exact native relationships

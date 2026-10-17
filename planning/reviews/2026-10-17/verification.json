@@ -292,8 +292,30 @@
   },
   "coordinator_automation": {
     "id": "verdify-sprint-coordinator",
-    "prompt_sha256": "9b942e1fc5101276851796d1f6251194f16bae476f56599a8d0ba3f556f7c8e1",
+    "prompt_sha256": "cb856bca46e65c5275b67d0815c4d8e0b184202ffa0277133af59c6e15d1088b",
     "prompt_updated_and_read_back": true,
     "schedule_status_target_and_notification_preference_preserved": true
+  },
+  "execution_resume": {
+    "issue749": {
+      "verified_at": "2026-10-17T16:32:41.397731+00:00",
+      "issue": 749,
+      "state": "open",
+      "body_sha256": "bfc6a7a7bf9e4a3b69f40172c4dec3ff5570c416999d9a3addd82ecfd4222666",
+      "provider_exact": true,
+      "original_acceptance_retained": true,
+      "updated_at": "2026-10-17T16:32:40Z",
+      "scope": "current evidence and execution route only; native issue graph and milestone unchanged"
+    },
+    "product_source_unchanged": "2208401de0c5d1653661c676cd255eaab2e7afb4",
+    "source_transition": "three-path explicit archive-link remedy in offline implementation; no delivery yet",
+    "route": "existing genuine source parent CI and pin actuator;4977 no longer prerequisite",
+    "diagnostic_receipt_sha256": "c78cce878f175d1af6f2f1015a2b607562181b558cd153861c584e7f8b58fea3",
+    "diagnostic_comparison_sha256": "9c5a82eda86808d2c8983b66dc4e74977af5ce23f1cd83467db29725bc2cd3d2",
+    "external_registry_owner": "jvallery/agents#4995; current audit pending; our CI custody explicitly released",
+    "native_issue_graph_unchanged": true,
+    "planning_tests_passed": 35,
+    "all_seven_generated_views_fresh": true,
+    "automation_readback_exact": true
   }
 }
