@@ -45,7 +45,7 @@
       "accepted_bounded_scope": "Source tests cover lease/reconnect/fault cases. Actual baseline_recovery/emergency_hold transitions rolled back with no open exposure.",
       "remaining": "Actual current contained runtime has not proved exposure-first closure and restoration across lease loss/reconnect/failure/recovery. Physical epochs/rescue/handoff remain #641.",
       "source": [
-        "ingestor/tasks/component_experiment.py:ComponentExperimentExecutor",
+        "ingestor/tasks/component_experiment.py:ConfirmedComponentExecutor",
         "tests/test_component_experiment_executor.py:test_reboot_reconnect_reset_and_foreign_writer_close_and_forbid_reentry",
         "db/migrations/214-confirmed-component-experiment-v2.sql",
         "db/migrations/227-experiment-v2-emergency-recovery-retry.sql"
