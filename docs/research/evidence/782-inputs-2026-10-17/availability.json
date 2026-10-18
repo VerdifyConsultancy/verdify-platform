@@ -1,0 +1,315 @@
+{
+  "schema": "verdify-782-input-availability-decision-v1",
+  "source_revision": "39dbedd609f38a5e6f3db2a6c823373da293f423",
+  "review_date_denver": "2026-10-17",
+  "scope": "Bounded S3 input/decision preparation; issue782 remains open; no design/draw/physical/efficacy acceptance",
+  "production_metadata": {
+    "as_of": "2026-10-18T02:06:09.552779+00:00",
+    "claim": "metadata availability only; no physical continuity, complete endpoint, selector mix or power proof",
+    "targets": [
+      {
+        "bins": 28,
+        "recorded_at": "2026-10-05T22:50:26.866276+00:00",
+        "revision_id": 3,
+        "effective_to": "2026-10-06T06:00:00+00:00",
+        "effective_from": "2026-10-05T23:00:00+00:00",
+        "target_version": "native-route-2026-10-05-2300Z"
+      },
+      {
+        "bins": 72,
+        "recorded_at": "2026-09-28T17:02:35.760821+00:00",
+        "revision_id": 2,
+        "effective_to": "2026-09-30T06:00:00+00:00",
+        "effective_from": "2026-09-29T12:00:00+00:00",
+        "target_version": "native-route-2026-09-29"
+      },
+      {
+        "bins": 4320,
+        "recorded_at": "2026-09-28T05:35:43.442865+00:00",
+        "revision_id": 1,
+        "effective_to": "2027-01-01T07:00:00+00:00",
+        "effective_from": "2026-11-02T13:00:00+00:00",
+        "target_version": "winter-2026-27-panel-mean-v1"
+      }
+    ],
+    "contributors": [
+      {
+        "zone": "west",
+        "valid_to": "2026-10-06T06:00:00+00:00",
+        "valid_from": "2026-10-05T23:00:00+00:00",
+        "recorded_at": "2026-10-05T22:50:26.914486+00:00",
+        "revision_id": 9,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "east",
+        "valid_to": "2026-10-06T06:00:00+00:00",
+        "valid_from": "2026-10-05T23:00:00+00:00",
+        "recorded_at": "2026-10-05T22:50:26.91441+00:00",
+        "revision_id": 8,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "north",
+        "valid_to": "2026-10-06T06:00:00+00:00",
+        "valid_from": "2026-10-05T23:00:00+00:00",
+        "recorded_at": "2026-10-05T22:50:26.913924+00:00",
+        "revision_id": 7,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "west",
+        "valid_to": "2026-09-30T06:00:00+00:00",
+        "valid_from": "2026-09-29T12:00:00+00:00",
+        "recorded_at": "2026-09-28T17:52:16.880158+00:00",
+        "revision_id": 6,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "east",
+        "valid_to": "2026-09-30T06:00:00+00:00",
+        "valid_from": "2026-09-29T12:00:00+00:00",
+        "recorded_at": "2026-09-28T17:52:16.880087+00:00",
+        "revision_id": 5,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "north",
+        "valid_to": "2026-09-30T06:00:00+00:00",
+        "valid_from": "2026-09-29T12:00:00+00:00",
+        "recorded_at": "2026-09-28T17:52:16.879416+00:00",
+        "revision_id": 4,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "west",
+        "valid_to": "2027-01-01T07:00:00+00:00",
+        "valid_from": "2026-11-02T13:00:00+00:00",
+        "recorded_at": "2026-09-28T05:35:10.251107+00:00",
+        "revision_id": 3,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "east",
+        "valid_to": "2027-01-01T07:00:00+00:00",
+        "valid_from": "2026-11-02T13:00:00+00:00",
+        "recorded_at": "2026-09-28T05:35:10.251009+00:00",
+        "revision_id": 2,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      },
+      {
+        "zone": "north",
+        "valid_to": "2027-01-01T07:00:00+00:00",
+        "valid_from": "2026-11-02T13:00:00+00:00",
+        "recorded_at": "2026-09-28T05:35:10.250261+00:00",
+        "revision_id": 1,
+        "capture_scope": "route_only",
+        "has_physical_serial": false,
+        "has_physical_evidence": false
+      }
+    ],
+    "selector_choices": 0,
+    "selector_contexts": 0,
+    "frozen_native_days": [
+      {
+        "day": "2026-09-29",
+        "receipt_id": 1
+      }
+    ],
+    "transaction_isolation": "repeatable read",
+    "transaction_read_only": "on",
+    "latest_native_callback": {
+      "event_kind": "callback",
+      "received_at": "2026-10-18T02:06:07.220255+00:00",
+      "recorded_at": "2026-10-18T02:06:07.887464+00:00",
+      "collector_revision": "c386f834de7a1acbd1ad74300218ab7922cf6d4b"
+    },
+    "latest_equipment_receipt": {
+      "gap_before": false,
+      "gap_reason": null,
+      "event_count": 0,
+      "recorded_at": "2026-10-18T02:05:46.141311+00:00",
+      "source_observed_through": "2026-10-18T02:05:45.442058+00:00"
+    }
+  },
+  "cronjobs": [
+    {
+      "name": "verdify-winter-feasibility",
+      "uid": "357d96ac-f387-493c-8f8d-7dce8655ef4d",
+      "generation": 27,
+      "schedule": "30 0 * * *",
+      "timezone": "America/Denver",
+      "suspend": false,
+      "last_schedule": "2026-10-17T06:30:00Z",
+      "last_success": "2026-10-17T06:30:27Z",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+      ]
+    },
+    {
+      "name": "verdify-fixed-panel-native-freezer",
+      "uid": "96da9ff0-7a82-48b2-821f-8a58323bd534",
+      "generation": 2,
+      "schedule": "30 0 * * *",
+      "timezone": "America/Denver",
+      "suspend": false,
+      "last_schedule": "2026-10-17T06:30:00Z",
+      "last_success": "2026-10-17T06:30:06Z",
+      "images": [
+        "timescale/timescaledb:2.25.2-pg16"
+      ]
+    }
+  ],
+  "natural_job_outcomes": {
+    "winter": {
+      "job": "verdify-winter-feasibility-29870310",
+      "uid": "0fcc61a6-ffbc-4fd7-9205-b5c72f48e3a2",
+      "result": "[winter] no missing completed day in registered interval",
+      "interpretation": "Before registered start; no captured day or DB observer operation established by no-due result"
+    },
+    "native": {
+      "job": "verdify-fixed-panel-native-freezer-29870310",
+      "uid": "f98735ea-7f5c-4201-87d7-f7a48026d129",
+      "result": "NOTICE:  {\"day\": \"2026-10-16\", \"status\": \"not_declared\", \"receipt_id\": null, \"route_18h_available\": false}",
+      "interpretation": "Undeclared day truthfully unavailable; not a freezer failure"
+    }
+  },
+  "retained_oct02_validation": {
+    "snapshot_sha256": "4aa68ce9727c18f315605f0ddf3737f4942366352a0654cd2a53b09db95078f0",
+    "validator_sha256": "ab09e50e1971d14f7b02b1605e0c3fb9a974186a53f34d0b48b514f185a75c08",
+    "validator_result": "PASS",
+    "summary": {
+      "as_of": "2026-10-02T04:37:29.558946+00:00",
+      "transaction_isolation": "repeatable read",
+      "transaction_read_only": "on",
+      "cutoff_kind": "actual_current_clock_not_preregistered_pre06",
+      "window_start": "2026-09-30T06:00:00-06:00",
+      "window_end": "2026-10-01T00:00:00-06:00",
+      "context_status": "frozen",
+      "failure_reason": null,
+      "context_sha256": "ade5974bfafac4619642b72d9d90a0b194230f4773b4242819b9a96710a9d64a",
+      "source_bundle_sha256": "597847aea7d79ca2cb124d574da212f467e8c886289c4f22d33487769214292f",
+      "counts": {
+        "climate_source_rows": 1043,
+        "fixed_targets": 0,
+        "contributors": 0,
+        "profile_revisions": 288,
+        "equipment_receipts": 737,
+        "direct_snapshots": 11,
+        "counter_samples": 7176,
+        "native_source_groups": 616,
+        "native_frozen_day_receipts": 0
+      },
+      "fixed_panel_climate": {
+        "distinct_complete_minutes": 1029,
+        "eligible_bins_min12minutes": 69,
+        "expected_bins": 72,
+        "longest_missing_complete_minute_run": 7
+      },
+      "equipment": {
+        "event_byte_hashes_verified": 737,
+        "gap_before_rows": 71,
+        "gap_reasons": {
+          "initial_receipt": 15,
+          "collector_reported_gap": 42,
+          "source_time_gap": 14
+        }
+      },
+      "scientific_inputs": {
+        "qualified_target_contributor_coverage": null,
+        "physical_source_continuity": null,
+        "selector_admission_and_mix": null,
+        "paired_18h_effects_covariance_carryover": null,
+        "joint_power": null
+      },
+      "claim_scope": "Observational input availability only; not assigned outcomes, physical identity or chain continuity, selector admission/mix or power"
+    }
+  },
+  "retained_winter_package": {
+    "instance_sha256": "dcd8f2cd8e7d1876587a71e1f3452c65ba1e7339a0ca4fdca36821e207464dcd",
+    "source_revision": "f77ef0005b8cf211130eebbd4b54d881d14c335a",
+    "start_local_date": "2026-11-02",
+    "day_count": 60,
+    "files": {
+      "extractor_sha256": {
+        "bytes": 30498,
+        "sha256": "40baece6b987b7afc07266914efcd877b3d31caa973230edcc0087f4a3849dac",
+        "matches_instance": true
+      },
+      "protocol_sha256": {
+        "bytes": 7877,
+        "sha256": "6c363f062eda23c817c5b0711df719161ff8cab32be7504fabc23db6cdf3d049",
+        "matches_instance": true
+      },
+      "panel_source_sha256": {
+        "bytes": 1253,
+        "sha256": "a570eac0f076267af8d6a8b56db246972aeb71319e1041e3d8301715382ecc6f",
+        "matches_instance": true
+      },
+      "crop_target_source_sha256": {
+        "bytes": 629375,
+        "sha256": "e11e73d0aae60d5682d69f0884f8e614c7f81e6ea033f9d601b53d226fbd6705",
+        "matches_instance": true
+      },
+      "cfg_schema_sha256": {
+        "bytes": 2024,
+        "sha256": "2db136e627882752df3caebf65e81da7156dc2b5c28ef15b72ec0fee37db36fd",
+        "matches_instance": true
+      }
+    },
+    "scope": "Local retained original package; no claim of fresh PVC byte readback"
+  },
+  "data_decision": {
+    "include": [
+      "Existing v2 warm calendar and climate-only sensitivity, with scope limits",
+      "Original Oct2 actual-clock context and its original source identities for availability/schema evidence only",
+      "Existing winter passive route-only registration for its separate observational objective"
+    ],
+    "exclude_from_empirical_pilot": [
+      "Historical climate-only bins lacking contemporaneous targets/contributors/equipment/selector choices",
+      "Oct2 capture as preregistered pre06 or original provider replay",
+      "Synthetic #783 connected fixture as empirical data",
+      "Unapplied Oct2/June1 target drafts as actual future crop/physical identity"
+    ],
+    "defer_until_authentic_inputs": [
+      "Qualified physical contributor/crop-target contract",
+      "Actual frozen-selector profile mix/fallback",
+      "Continuous complete 18h nine-state endpoint and paired covariance/carryover/power"
+    ],
+    "runtime_change": "none; existing passive paths active; no new logger/schema/collector or repeated target declaration justified"
+  },
+  "mutations": [],
+  "retained_climate_input_validation": {
+    "climate_bins.csv": {
+      "sha256": "05c96485a34cf3cdce3a2955e62e7ed98580a1e21546162724a285443abce486",
+      "bytes": 867452,
+      "matches_existing_sensitivity_receipt": true
+    },
+    "climate_summary.json": {
+      "sha256": "462d19ca78906f53cd72122e50537e3337e1b5a9edfa631d9e51125fcf927c49",
+      "bytes": 21346,
+      "matches_existing_sensitivity_receipt": true
+    },
+    "input_presence.txt": {
+      "sha256": "2f9b27713efe3366cdda40b2648b0d404413c3a83e2233eff2f764d176ed3c83",
+      "bytes": 471,
+      "matches_existing_sensitivity_receipt": true
+    }
+  }
+}

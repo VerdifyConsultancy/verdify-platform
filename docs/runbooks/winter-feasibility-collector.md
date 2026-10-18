@@ -2,10 +2,13 @@
 
 This is the separate **observational** November 2–December 31, 2026 packet.
 It does not draw assignments, write the database, contact the controller, or
-claim hot/dry efficacy. The source-owned CronJob is suspended until a real
-prospective target declaration, route-only panel, and registered instance are
-staged. No physical inspection is a registration gate; NULL physical identities
-remain explicit in the packet.
+claim hot/dry efficacy. The source-owned CronJob is active after staging the
+prospective target declaration, route-only panel, and registered instance.
+October 17, 2026 readback confirmed it unsuspended and its latest natural Job
+successful with no observation day yet due. See the
+[current input and collection decision](../research/782-input-decision-2026-10-17.md).
+No physical inspection is a registration gate; NULL physical identities remain
+explicit in the packet.
 
 ## Runtime contract
 
@@ -37,7 +40,13 @@ remain explicit in the packet.
   credential. Confirm actual backup objects
   and restore/readback separately before claiming off-cluster recovery.
 
-## One-time staging before the first window
+## One-time staging procedure (already completed for the existing instance)
+
+Preserve the existing registration and archive. The following is the original
+staging procedure, not a request to restage, re-register or overwrite the live
+instance. A no-due Job validates the source-revision marker but does not run the
+extractor's full source-byte checks or connect to the database. Verify actual
+first-day collection, archive byte custody and recovery separately.
 
 After migration 255 is live, generate the *new live* 4,320-bin crop-target
 source and verify its production revision/readback. Use the current firmware
