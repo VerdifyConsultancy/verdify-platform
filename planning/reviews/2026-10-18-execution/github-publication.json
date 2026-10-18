@@ -1,0 +1,125 @@
+{
+  "schema": "verdify-next-ready-github-publication-v1",
+  "at": "2026-10-18T08:53:25.050623+00:00",
+  "source_revision": "4b2c3bc4cf7a3cee62285a23644df586889e87f8",
+  "issues_total": 369,
+  "open": 47,
+  "closed": 322,
+  "closed_completed": 241,
+  "closed_not_planned": 81,
+  "closed_before_images_exact_prior_titles_bodies_reasons_closed_at": true,
+  "all47_open_bodies_titles_exact_source": true,
+  "all47_metadata_states_preserved": true,
+  "open_acceptance_clauses_unchanged": 143,
+  "native_active_edges_unchanged": 27,
+  "mutated": [
+    {
+      "number": 75,
+      "body_sha256": "c38a1e04f28267a7a0e7012306777da9d899b7fa5d720a7b62fc6a306a80c1d8",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 359,
+      "body_sha256": "e72da470e5cce6471a9cc31799a95acbba24c540696409dadd54ee669e206bf5",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 367,
+      "body_sha256": "b23d2a9c14fff7b56ffb8ae8772a5971a280384cf83ff08583818d0ef520a13e",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 368,
+      "body_sha256": "0fd15c244c755a8283e18e795a089d6e6da7a99edfb879dac462c3563666934f",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 390,
+      "body_sha256": "19b59be44069a4c2b38851b93e5edfe5fc0e33d78348cd95f32f256a9649075f",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 430,
+      "body_sha256": "8736867d506245ed6ec98802f42fc16c3179735992b44e43a76726fcd4fe11e4",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 587,
+      "body_sha256": "7bbabe0dd486c314a697e4f716957e320f29f884c24c7fb55b1ba94095206dae",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 639,
+      "body_sha256": "1c23c21ba001be63fa6fd5e6a443c5ca4bc99bc53ba4969233f0873f0f7bef19",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 641,
+      "body_sha256": "0f5834533d06aeea492c06234ded8324e17e4621c32616d6d351ae3da2291348",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 749,
+      "body_sha256": "ba545c6ced077e118bc54d2f7bad3801f3c93627a7c2ad4063e47a96ca2d6085",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 750,
+      "body_sha256": "d65bac8e8d89a13be99e386f27884afb1b46e084ee496437d4272d750c881387",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 775,
+      "body_sha256": "6e3319633e6319e2a798d5c15ac75835eb7f7a20559bb595b3f8d5263c96e740",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 782,
+      "body_sha256": "db6f398bb4de700dcef0c3280ee0eb9f15b1b4bf15753a8130758ea2066a398b",
+      "metadata_state_and_acceptance_preserved": true
+    },
+    {
+      "number": 783,
+      "body_sha256": "750360091b211b3af03460c888d105565596b031fc5d031ac500675c103a4017",
+      "metadata_state_and_acceptance_preserved": true
+    }
+  ],
+  "unchanged_open": [
+    14,
+    16,
+    31,
+    45,
+    51,
+    52,
+    218,
+    245,
+    297,
+    298,
+    299,
+    350,
+    369,
+    370,
+    378,
+    379,
+    386,
+    398,
+    410,
+    412,
+    428,
+    434,
+    581,
+    588,
+    640,
+    642,
+    751,
+    784,
+    785,
+    786,
+    787,
+    963,
+    981
+  ],
+  "closed_or_reopened": [],
+  "all_inventory_pages": 10,
+  "inventory_before_sha256": "be6f44299054383f91195ab7f59353a5498333cd69aade2e351ad9f78b314fb2"
+}

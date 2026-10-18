@@ -1,0 +1,37 @@
+{
+  "schema": "verdify-ready-evidence-only-ci-v1",
+  "at": "2026-10-18T09:04:16.555044+00:00",
+  "source_revision": "4b2c3bc4cf7a3cee62285a23644df586889e87f8",
+  "workflow": "verdify-platform-ci-6xqnk",
+  "workflow_uid": "3655bbd3-009e-4fac-b5d4-64838c98072b",
+  "phase": "Succeeded",
+  "finished_at": "2026-10-18T09:04:11Z",
+  "classify_result": {
+    "base_revision": "93b101b20ed70bcc9a84d14ff7c2364628e291b2",
+    "mode": "validate",
+    "paths_sha256": "1e794fd11794e2d5f131ee46a0b11587d1a46f1a2c854b47b1a2761ce206e725",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "4b2c3bc4cf7a3cee62285a23644df586889e87f8"
+  },
+  "pod_count": 1,
+  "only_classification_pod": true,
+  "mode": "validate",
+  "path_impact_receipt": {
+    "base_revision": "93b101b20ed70bcc9a84d14ff7c2364628e291b2",
+    "mode": "validate",
+    "paths_sha256": "1e794fd11794e2d5f131ee46a0b11587d1a46f1a2c854b47b1a2761ce206e725",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "4b2c3bc4cf7a3cee62285a23644df586889e87f8"
+  },
+  "actual_container_exits_zero": true,
+  "complete_main_log_bytes": 38071,
+  "complete_main_log_sha256": "b8821b97bffb265ae7d8cedb09df299cbb7086830b1ec5511a47e69ad908fb75",
+  "complete_main_log_gzip_sha256": "a115a21ab538dd3e1d7a03c98d0ac16d12d4364cb69757fb88299167a9c25257",
+  "complete_main_log_path": "native-custody/publication-validation-4b2c.log.gz",
+  "all_build_steps_unselected": true,
+  "production_sync": false
+}
