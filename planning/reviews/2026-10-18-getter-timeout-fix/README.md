@@ -55,3 +55,21 @@ Both owning Jobs were created suspended, read back and released once with exact 
 Reviewed [source CI](receipts/source-ci.json), [promotion](receipts/promotion.json), [owning plan](receipts/plan.json), [owning apply](receipts/apply.json), [final state comparison](receipts/state.json), [installed result summary](receipts/installed-results.json), and full ordinary [October16](receipts/oct16-custom.json), [October4 custom](receipts/oct04-custom.json) / [generic](receipts/oct04-generic.json) results accompany this report. Credentials, Secret values and password verifiers are absent.
 
 The full byte-preserving evidence packet, original failed attempts, terminal publication-CI receipts and final47-issue native graph verification are retained on the custody branch `codex/getter-timeout-evidence-20261018`. The final receipt on [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6253284314) supplies the immutable commit/archive link. This keeps terminal evidence separate from the main publication that triggers its validation. No issue is closed by this bounded repair.
+
+
+## Final CI and live custody
+
+Both automatic publication validations completed: release-pin `verdify-platform-ci-27skd` at19:12:59UTC and planning/report `verdify-platform-ci-qcb4r` at19:23:59UTC. Direct terminal evidence shows one validation Pod each, all declared init/main/wait exits0, zero restarts and complete `ALL GATES GREEN` main logs. Both selected validate-only mode, all eight build flags false and zero build Pods. [Release CI](custody/release-main-ci.json), [planning CI](custody/planning-main-ci.json).
+
+The final native GitHub pass at19:13:40UTC matches main`ff8d72e18cd08625c2a888106be1572c9c04b079`:47open contracts,143acceptance clauses,27active edges,24closed predecessor records, exact parent/open-subissue relationships and no captured cycle. [Graph receipt](custody/github-graph.json). The19:22:11UTC [live readback](custody/final-live.json) is Synced/Healthy at that same main revision;15Deployment specs/UIDs and six serving Pod/container states remain unchanged. Both one-shot migration Jobs have naturally expired under their600-second TTL; retained logs and terminal proofs remain in custody.
+
+
+## Sealed raw custody packet
+
+The [raw evidence archive](custody/evidence.tar.gz) contains 1,108 selected task files plus packaging controls, with byte-preserving originals and failed attempts retained. Compressed size is 14,693,970 bytes; SHA256 is `baf2ddff2221994607e9d92858d559b6970d13ebbb8c16b3e046da65274efda8`. The [manifest](custody/manifest.json) records every selected member hash and exact archive readback. Broad unrelated CI discovery and duplicate inventories were excluded explicitly by the [selection policy](custody/selection.json).
+
+An [independent scan](custody/credential-scan-review.json) inspected 1,240 files and nested archive members. Its 81 matches were exclusively five exact public source DSN expressions and three public filename/endpoint references; no unknown credential patterns were admitted. Values were never resolved or exported. These finite pattern and structural checks do not claim a general security audit.
+
+The first actual packaging attempt refused a native Pod's Workflow owner reference because the guard treated it as a full Workflow object. No archive or publication resulted. The reviewed v3 correction admits only the exact approved six-field owner-reference shape; full Workflow and Pod identity checks remain unchanged. All 24 small guard tests passed. Original v2, failed packet 01 and the correction review remain in custody. This was a technical packaging refusal, not an automatic publication-approval rejection.
+
+The archive freezes the coordinator immediately before publication. The final immutable Git commit, remote archive hash/readback and completion state are recorded in the linked #410 comment, avoiding a self-referential archive. No further production operation, build or CI run is queued by this evidence branch.

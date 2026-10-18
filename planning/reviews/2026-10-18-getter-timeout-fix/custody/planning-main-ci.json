@@ -1,0 +1,33 @@
+{
+  "status": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+  "workflow": "verdify-platform-ci-qcb4r",
+  "workflow_uid": "c856d50d-ac55-4a66-902d-26e2868cee19",
+  "source_revision": "ff8d72e18cd08625c2a888106be1572c9c04b079",
+  "finished_at": "2026-10-18T19:23:59Z",
+  "actual_pods": 1,
+  "actual_build_pods": 0,
+  "all_eight_build_flags_false": true,
+  "path_impact": {
+    "base_revision": "8c2243020e82f52fbdf3169278715302f7688edf",
+    "mode": "validate",
+    "paths_sha256": "1b05b9e6d34f52bb582bb593f447dae7b76bf52c805d65d485547eb2442188ed",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "ff8d72e18cd08625c2a888106be1572c9c04b079"
+  },
+  "pod": "verdify-platform-ci-qcb4r-validate-894038890",
+  "pod_uid": "ac68cd9e-72af-4ebf-b8e4-2aa459b0862a",
+  "node": "vm-k3s-node6",
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "workflow_file": "/private/tmp/verdify-getter-fix-20261018/planning-main-ci/workflow-final-d157631d3fd43431485d1bce249cb75f43462d122a8e00c1848e7af5a51c7b92.json",
+  "workflow_sha256": "d157631d3fd43431485d1bce249cb75f43462d122a8e00c1848e7af5a51c7b92",
+  "terminal_pod_file": "/private/tmp/verdify-getter-fix-20261018/planning-main-ci/verdify-platform-ci-qcb4r-validate-894038890-MODIFIED-9563ce3ee62fd30dc30cc53c81c6745d9db44363c15e3a70febb9a450a16ecb1.json",
+  "terminal_pod_sha256": "9563ce3ee62fd30dc30cc53c81c6745d9db44363c15e3a70febb9a450a16ecb1",
+  "terminal_summary_file": "/private/tmp/verdify-getter-fix-20261018/planning-main-ci/verdify-platform-ci-qcb4r-validate-894038890-summary-ef490377a1109ea44775fecbbd6a5fd5cd27a9a6cc48ad51e0a7ab947bf6d5a1.json",
+  "terminal_summary_sha256": "ef490377a1109ea44775fecbbd6a5fd5cd27a9a6cc48ad51e0a7ab947bf6d5a1",
+  "full_main_log_file": "/private/tmp/verdify-getter-fix-20261018/planning-main-ci/verdify-platform-ci-qcb4r-validate-894038890-main-1423de4a923d52d01a8831d5da31fb42ff8365dc9820a7a10915fdba917d3775.log",
+  "full_main_log_sha256": "1423de4a923d52d01a8831d5da31fb42ff8365dc9820a7a10915fdba917d3775",
+  "full_main_log_bytes": 38570,
+  "verified_at": "2026-10-18T19:25:00.200010+00:00"
+}

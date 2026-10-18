@@ -1,0 +1,1390 @@
+{
+  "schema": "verdify-getter-final-native-graph/v1",
+  "started_at": "2026-10-18T19:13:39.052515+00:00",
+  "checked_at": "2026-10-18T19:13:40.919307+00:00",
+  "status": "MATCH",
+  "errors": [],
+  "source_revision": "ff8d72e18cd08625c2a888106be1572c9c04b079",
+  "remote_main": "ff8d72e18cd08625c2a888106be1572c9c04b079",
+  "backlog_sha256": "eafcf1c5be8f36a43c7f9314fa20dba563fdef43432f2eb13a9de3a390b95c8c",
+  "native_raw_sha256": "720833cc3a71f35f9aa0d6b5f85053334b473a96e4a39faaf95fa381c66386d2",
+  "inflight_comment_raw_sha256": "e4a9f9013f9c0924bda8ab60214917fe6c09a0c9a6162a9f37bf150341d9130e",
+  "open_issues": 47,
+  "canonical_records": 93,
+  "open_acceptance_clauses": 143,
+  "local_active_edges": 26,
+  "external_active_edges": [
+    {
+      "predecessor_repo": "jvallery/homeassistant",
+      "predecessor": 878,
+      "dependent": 981,
+      "state": "OPEN"
+    }
+  ],
+  "total_active_edges": 27,
+  "closed_predecessor_records": 24,
+  "contracts": [
+    {
+      "number": 14,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:17Z",
+      "body_sha256": "96011cadd914d9570f0986b5e7113a88f563e6e5a3b55b7048d3861232f873de",
+      "title_sha256": "bb7a48b11bf48f2cacd7b70c806e1e5e2ba2ee6e5e4ece975bf3f34b22f0be38",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 16,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:20Z",
+      "body_sha256": "323aeb5c4deab0e3b95684b0f3e6ff86521970905efc05dab2e5a2f888fbddc3",
+      "title_sha256": "7e854eff0b742528571921472adf5de2b03580e02b65ef313a139539ea699893",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 31,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:22Z",
+      "body_sha256": "72979a7498b84f02cae26bd687bcd979392088b40c991a5d4e31776547025e45",
+      "title_sha256": "55af9597a578765880b44e678534d1cf3b3a5085f04f1c8afbdeafe1e82aaff2",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 45,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:25Z",
+      "body_sha256": "cb38a883a47d032aaa9b16dff4f1924d81c98fa0ee0e256603458d83d82d9537",
+      "title_sha256": "306fbae1116fd7fdef4543d2f739ed6d33c37e468dfc7bab7ca5998d177d0724",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 51,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:27Z",
+      "body_sha256": "60bb5e1e1622133bafe802816853895f36579332c2cb204158997dae28b34392",
+      "title_sha256": "482427ee951c36d50b8336db45b00380d0863915bc3462f6a1bc2a3097267617",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 52,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:30Z",
+      "body_sha256": "e1594ef1e0d119b293aeb6231f99cd2d9888063e073fdd7aea1b3aa12c06c4a7",
+      "title_sha256": "631e0afd2ad4d175a196aee8cfe8edb4db2b8e5839fec3494d7f24c76a0dd821",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 75,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:52:50Z",
+      "body_sha256": "c38a1e04f28267a7a0e7012306777da9d899b7fa5d720a7b62fc6a306a80c1d8",
+      "title_sha256": "8117f613ec278ded0ba9829a1288a507963b4817c32b1956115e6eeaa7f0abf8",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 218,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:35Z",
+      "body_sha256": "ee0ea773e22b2ee3f041da6424b0dc03eb8f24018b5328cdb74db6f1e266ebd8",
+      "title_sha256": "2c6aa893da37f413288737a1e1ec98280a3180ab60aac311a73820e351e7810f",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 245,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:38Z",
+      "body_sha256": "85af6886697e4ff7c7cb3e00dfeecf28dfa03373c8fd4c2bac15cfec10197f6d",
+      "title_sha256": "f3a1644afff3dd7372f20159ffadfa0eacbd6de737c272e326cffb583e9def44",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 297,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:40Z",
+      "body_sha256": "1aefbda322a889b7c1d18e28c4380fd27c497348b5116bc62388e8d91cb6bad4",
+      "title_sha256": "ebf895b1dcd11b8f12b8405424fb7af3b7d4b09366b70ef33e5c1751594967f7",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 298,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:43Z",
+      "body_sha256": "b907afe8094983044ff1ed49243c9f552f14b3fd41c7407e2d8d20eeb8042a2b",
+      "title_sha256": "c820fba98f23024ff0561a07d9b39fb5fb6d826c175586cd58a0d69229385446",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 299,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:46Z",
+      "body_sha256": "230cedbd5ed5fbbe1f0a6b78a877e8451ff0d838c4d7f46720f454008a4f0eba",
+      "title_sha256": "7cef0e676160423f078ba00974291bf23bedf5b334f12a2fa26c474f5be5a6c2",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 350,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:20:49Z",
+      "body_sha256": "0cf201dcd574795777d0dcc3a445393798ed58958cb02158e33e23ab414a724a",
+      "title_sha256": "d51a58aed5418b8f1e27a7cd087b58dfd5b559ec110c6e53d0f6ae5e7c92237f",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 359,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:52:53Z",
+      "body_sha256": "e72da470e5cce6471a9cc31799a95acbba24c540696409dadd54ee669e206bf5",
+      "title_sha256": "28614bc1a68c170c237edb9372d0dbac9473d6e2c6707d74522d844dbb0408cd",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 367,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:52:55Z",
+      "body_sha256": "b23d2a9c14fff7b56ffb8ae8772a5971a280384cf83ff08583818d0ef520a13e",
+      "title_sha256": "df65b05a4bb9ccb86e57738476317f57e1dcb0c00d39b8551ac5b7ca3ffa711a",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 368,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:52:58Z",
+      "body_sha256": "0fd15c244c755a8283e18e795a089d6e6da7a99edfb879dac462c3563666934f",
+      "title_sha256": "a80a3674b357aa7305920abdd1838dc60424b1b8eb7bb33750e9d45368e1938a",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 369,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:00Z",
+      "body_sha256": "69a131db81fc0294006b8270688a700a4261bf339b70854067003200226bd08e",
+      "title_sha256": "0b311d2e4518c6494cdddcb72445babafadd5a6a1677684b190d57091a2a6262",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 370,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:03Z",
+      "body_sha256": "25a5f2543f429cb2ac9d7a8e454ac1f2afdb45d4661464f67a7f34f1f794a4e9",
+      "title_sha256": "2bf1f2b41f1abfd701f41469e6a4d19fa5edeb5c7f6f735c0a08b8085251b38d",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 378,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:05Z",
+      "body_sha256": "2576a8830a626841505c1716114b5135bd9be894695f160a441cf18be20fd4d7",
+      "title_sha256": "49c27f0fcfc72686e67f6cdaee92774c01c8f5b76b20bf623a1e24f5a99cfb30",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 379,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:08Z",
+      "body_sha256": "86da6141ffeca5d54cd8aeaaeed4ed6865fb93bebb01a7e0d6240c3495a658ff",
+      "title_sha256": "450f87171512602102de32cf1f72e574a7ed8f1637cc6df5eebc135cb31fb6a9",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 386,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:11Z",
+      "body_sha256": "1faead1d510a5509924cedfded0711a595ded356b3eab869b8d29c7c6c57407d",
+      "title_sha256": "d881674df632b957d9872552b98431f44a7ca0b80330ede3beaa1a9c666ab830",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 390,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T15:47:53Z",
+      "body_sha256": "b4705a0e21e70a5bde0533558055b0e2ad2a79825c677eedc7c73c0eaa7b6575",
+      "title_sha256": "10b67e4c1ef6657b7ecc7e77d98c2ff8569a13507686b10c5b087ed06433debc",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 398,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:16Z",
+      "body_sha256": "8d030e79347eab17981d059cd54823e698fd973e1eccced10066f1a284e8fd4f",
+      "title_sha256": "9cce820290496384636ddffad6872bba5b4fb0d9ef467efff832d06b662e8f28",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 410,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T19:11:51Z",
+      "body_sha256": "2dd4e6db05eefc5d315d2d10de2c1dd55f3b8fa7219e2484ad0b4843e2e1de42",
+      "title_sha256": "201e3ec9d93196a0c80a1d02f32b7f25326689e7643d7ae98fb2638da97fbe88",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 412,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:21Z",
+      "body_sha256": "5f918bacffb19ad2b9ebfa16dc61b2b9d3774804dd406f21ab12ee8310056257",
+      "title_sha256": "44d8cc43c9e7edfe4617f7100e887404c99fb5b43872c141026740c962f09a59",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 428,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T16:47:02Z",
+      "body_sha256": "863713a5f88800f74b08c62ad7799aae35d9c9ce382215114ac53407b1e0fc5e",
+      "title_sha256": "80a4544ba85ff0541f7e5c8a836ad2982bac142738cfbc899dac46a8cbd0633f",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 430,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:02Z",
+      "body_sha256": "8736867d506245ed6ec98802f42fc16c3179735992b44e43a76726fcd4fe11e4",
+      "title_sha256": "1b98f315add4c6a8ef7801f831bf1f6b5104cef68d062f2e6024752494ef7351",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 434,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:29Z",
+      "body_sha256": "cc64845a17acb795f3f06454aada8ac49d06d2256ec120221a2f029a5999db35",
+      "title_sha256": "587dcb4e31ee1ace7032e2334184f0585b4599e8ce7b2b33fde1205a9672179a",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 581,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:32Z",
+      "body_sha256": "8a17083b568eec174c2353ac4e3f04af30599c8629f50f5227b8189d495fe10d",
+      "title_sha256": "662f198aeead07e3b1610677a3354993c4589c51d99f907dfa9a9419ec566324",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 587,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:05Z",
+      "body_sha256": "7bbabe0dd486c314a697e4f716957e320f29f884c24c7fb55b1ba94095206dae",
+      "title_sha256": "6b74a54b7c6ebaa61132cc6a65be5886449ef8adb64cd2f61051965764e5cd8e",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 588,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:37Z",
+      "body_sha256": "fcccbac1f0b48fd4476eab6da658b687d8f5d90650b7bb38b757750e3fe9cb3b",
+      "title_sha256": "232717ed8023f33c301d8f58ef434d13882b65ae4bffd676a4bddf2028eb137d",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 4
+    },
+    {
+      "number": 639,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T16:46:59Z",
+      "body_sha256": "e4ee4c59f2436254ababe20d75f9898430ef898386cd6619155f861e88a08770",
+      "title_sha256": "e3b5458f601c735cd446e357a8ca250767cfe13b03b0f4ff723fa46bc543b8ab",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 640,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:42Z",
+      "body_sha256": "965dce8d9c7f206da3f1b028c54556dd3a0485924cab419cce85e375a9fa8733",
+      "title_sha256": "86073d4f551df8a0b9343beb35980bfa2edc02cd380332db005ca90ebf810c03",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 641,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:09Z",
+      "body_sha256": "0f5834533d06aeea492c06234ded8324e17e4621c32616d6d351ae3da2291348",
+      "title_sha256": "1625bfec5f32271c677113cceb2757d1e2a0079aaa765f49c1bf4bb028f6fe64",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 642,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:47Z",
+      "body_sha256": "0e4f14fb8ac280bb3f7c5300aba637a69d49cf68eba1f995ce9d2e6062cf02e2",
+      "title_sha256": "9ad475e353f0abb13fe3b738758dd898d9869ec3c6b621dfcf4e3e317054161a",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 749,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:12Z",
+      "body_sha256": "ba545c6ced077e118bc54d2f7bad3801f3c93627a7c2ad4063e47a96ca2d6085",
+      "title_sha256": "59f0460da128eedb8e0ed65f2e8700aa2a2ea81aee981b011e91c9bf3b4b1381",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 750,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:14Z",
+      "body_sha256": "d65bac8e8d89a13be99e386f27884afb1b46e084ee496437d4272d750c881387",
+      "title_sha256": "0233382e943b3d13348194aad8fdaacca6701853729156fe4032c014132abbc4",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 751,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:21:55Z",
+      "body_sha256": "d42a0e6a47ff1a28ecc1e2f6f9cd2e9a9d158afc448ffed14fea1a66905d7ee8",
+      "title_sha256": "0d0f6cb91c23a3ce282312ed3d1017ad9fb0f7ae231ff1af3ee01fd0cbfb7707",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 775,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T19:11:53Z",
+      "body_sha256": "3562824eac55d250d258cbfd81abbdef8802bad8114d1eafe46da0e922bdf025",
+      "title_sha256": "6a316f528e0e51c134602455057c2f75f1a8c849b748940637a887e6b1f3b946",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 782,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:20Z",
+      "body_sha256": "db6f398bb4de700dcef0c3280ee0eb9f15b1b4bf15753a8130758ea2066a398b",
+      "title_sha256": "756b5ae98f4ae32b5410f532a18f8367a522a9f4715a8416d7ef6914dab4d568",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 4
+    },
+    {
+      "number": 783,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T08:53:22Z",
+      "body_sha256": "750360091b211b3af03460c888d105565596b031fc5d031ac500675c103a4017",
+      "title_sha256": "40f86bd80568d2fb2da448ce3bc57737810e024ca247d24d684acca38757c3d5",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 784,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:22:06Z",
+      "body_sha256": "8c03d8d0def3885f1086808de7691109e69fad065ec5d0bf5e338784f7ab6225",
+      "title_sha256": "caae016d6a5710dc96409b4c461a55e0f6d60975d3c8276a07cd1bea011c3ff0",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 785,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:22:08Z",
+      "body_sha256": "b264aa3fc7837930fbd83f6c1b5487a9351c09dae2b164e65557f658262ff5e9",
+      "title_sha256": "1e22c91c8cdd5115d86e1b387f132c12a05eb7d196ef95510aab399b3fcc7401",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 786,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:22:11Z",
+      "body_sha256": "0e74f75d808fd9fffe67a8234b148740f4ade48a9470a4971c62389409aa3092",
+      "title_sha256": "ad1211a7b46acf0863f1fe84ffd2d0c8e778fcc91b0821a8270bee6024fa31e4",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 787,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:22:13Z",
+      "body_sha256": "a1f9e98147b74291b9567c99d7aac7f5bf8f19c123bef5e1eb13a62cddc692b2",
+      "title_sha256": "9704bd5420a7ec1fdd1d134e82adbd7d6872979c8209e5487aa8edd2cc017919",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 963,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T15:47:57Z",
+      "body_sha256": "fd2757a16993cb6be9d357a466b4a8a6ce29b2021bddea63692ca3784d253cea",
+      "title_sha256": "1fb5f25e379542acffb4657d9592a6f3e2d0b96600757e95d14ef547ea46a2da",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    },
+    {
+      "number": 981,
+      "state": "OPEN",
+      "updated_at": "2026-10-18T07:22:19Z",
+      "body_sha256": "b11230eeb9b3a8dca90e075cc10e917abbe1df3f6b094883fe846f6f5a418925",
+      "title_sha256": "683011bda36e9155b4bf6b9b4edd5f7f9c6a546ee42d827034db9bee4d04abb2",
+      "body_matches": true,
+      "title_matches": true,
+      "acceptance_clauses": 3
+    }
+  ],
+  "edges": [
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 398,
+      "dependent": 45,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 396,
+      "dependent": 245,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 382,
+      "dependent": 245,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 45,
+      "dependent": 297,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 390,
+      "dependent": 299,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 390,
+      "dependent": 367,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 424,
+      "dependent": 368,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 433,
+      "dependent": 369,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 390,
+      "dependent": 369,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 367,
+      "dependent": 370,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 785,
+      "dependent": 378,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 371,
+      "dependent": 378,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 786,
+      "dependent": 379,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 419,
+      "dependent": 379,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 371,
+      "dependent": 379,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 303,
+      "dependent": 386,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 419,
+      "dependent": 390,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 303,
+      "dependent": 390,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 298,
+      "dependent": 398,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 424,
+      "dependent": 410,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 419,
+      "dependent": 410,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 371,
+      "dependent": 410,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 433,
+      "dependent": 428,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 299,
+      "dependent": 434,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 783,
+      "dependent": 588,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 782,
+      "dependent": 588,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 641,
+      "dependent": 588,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 642,
+      "dependent": 640,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 749,
+      "dependent": 641,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 747,
+      "dependent": 641,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 639,
+      "dependent": 641,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 587,
+      "dependent": 641,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 588,
+      "dependent": 642,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 949,
+      "dependent": 749,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 778,
+      "dependent": 749,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 424,
+      "dependent": 749,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 781,
+      "dependent": 782,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 780,
+      "dependent": 782,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 779,
+      "dependent": 782,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 371,
+      "dependent": 782,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 639,
+      "dependent": 783,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 587,
+      "dependent": 783,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 640,
+      "dependent": 784,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 784,
+      "dependent": 785,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 785,
+      "dependent": 786,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 780,
+      "dependent": 786,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 981,
+      "dependent": 787,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 785,
+      "dependent": 787,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 781,
+      "dependent": 787,
+      "state": "CLOSED"
+    },
+    {
+      "predecessor_repo": "VerdifyConsultancy/verdify-platform",
+      "predecessor": 410,
+      "dependent": 787,
+      "state": "OPEN"
+    },
+    {
+      "predecessor_repo": "jvallery/homeassistant",
+      "predecessor": 878,
+      "dependent": 981,
+      "state": "OPEN"
+    }
+  ],
+  "parent_edges": [
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#14"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#16"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#14",
+      "VerdifyConsultancy/verdify-platform#31"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#45"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#51"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#52"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#75"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#218"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#245"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#297"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#298"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#299"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#350"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#359"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#367"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#368"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#369"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#370"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#378"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#379"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#386"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#644",
+      "VerdifyConsultancy/verdify-platform#390"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#398"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#410"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#412"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#428"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#430"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#434"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#581"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#587"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#588"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#639"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#640"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#750",
+      "VerdifyConsultancy/verdify-platform#641"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#642"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#750",
+      "VerdifyConsultancy/verdify-platform#749"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#750"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#751"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#782"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#783"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#784"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#785"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#786"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#787"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#963"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#981"
+    ]
+  ],
+  "subissue_edges": [
+    [
+      "VerdifyConsultancy/verdify-platform#14",
+      "VerdifyConsultancy/verdify-platform#31"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#14",
+      "VerdifyConsultancy/verdify-platform#606"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#751"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#298"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#398"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#45"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#51"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#52"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#16",
+      "VerdifyConsultancy/verdify-platform#412"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#563"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#394"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#89"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#671"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#49"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#950"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#951"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#952"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#953"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#835"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#862"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#963"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#964"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#965"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#976"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#980"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#981"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#75",
+      "VerdifyConsultancy/verdify-platform#317"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#670"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#672"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#382"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#396"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#245"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#643"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#218",
+      "VerdifyConsultancy/verdify-platform#977"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#434"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#299"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#297"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#350",
+      "VerdifyConsultancy/verdify-platform#296"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#371"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#424"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#386"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#430"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#368"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#324"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#410"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#378"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#361"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#359",
+      "VerdifyConsultancy/verdify-platform#379"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#390",
+      "VerdifyConsultancy/verdify-platform#419"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#433"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#428"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#367"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#370"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#369"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#430",
+      "VerdifyConsultancy/verdify-platform#949"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#642"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#750"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#639"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#587"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#782"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#783"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#588"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#640"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#784"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#581",
+      "VerdifyConsultancy/verdify-platform#785"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#642",
+      "VerdifyConsultancy/verdify-platform#676"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#750",
+      "VerdifyConsultancy/verdify-platform#747"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#750",
+      "VerdifyConsultancy/verdify-platform#749"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#750",
+      "VerdifyConsultancy/verdify-platform#641"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#778"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#779"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#780"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#781"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#581"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#644"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#427"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#75"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#218"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#359"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#214"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#350"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#16"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#174"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#14"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#638"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#586"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#786"
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform#775",
+      "VerdifyConsultancy/verdify-platform#787"
+    ]
+  ],
+  "blocking_cycles": [],
+  "parent_cycles": [],
+  "cycle_scope": "Captured all 47 local open issues and their immediate parent/subissue/blocker references plus external HA#878 relationships; no claim about unrelated transitive external graphs.",
+  "accepted_history": [
+    {
+      "number": 802,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T04:17:55Z"
+    },
+    {
+      "number": 977,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T02:32:26Z"
+    },
+    {
+      "number": 980,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T03:21:38Z"
+    }
+  ],
+  "inflight_comment": {
+    "id": 6253284314,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6253284314",
+    "created_at": "2026-10-18T18:04:10Z",
+    "updated_at": "2026-10-18T18:58:44Z",
+    "body_sha256": "4519e742e39157342414cdf4259dbe7bbbd3264af9b20a5ba502c857ba3835c2"
+  },
+  "verified_final_scope": {
+    "issues": [
+      410,
+      775
+    ],
+    "fields": [
+      "baseline",
+      "how",
+      "decision"
+    ],
+    "acceptance_or_dependency_changes_justified_by_this_snapshot": false
+  },
+  "github_mutations": 0,
+  "source_mutations": 0
+}

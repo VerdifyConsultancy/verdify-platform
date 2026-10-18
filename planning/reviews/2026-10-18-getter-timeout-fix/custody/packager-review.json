@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "known_native_pod_list_and_watch_shapes": true,
+    "mutated_name_uid_apiVersion_booleans_extra_or_missing_fields_refused": true,
+    "native_calls": 0,
+    "pure_tests_passed": 24,
+    "unknown_full_workflow_namespace_name_uid_refused": true,
+    "v3_packaging_calls": 0
+  },
+  "exact_delta": "Recognize only metadata-less Workflow references having exactly apiVersion,kind,name,uid,controller,blockOwnerDeletion; require argoproj.io/v1alpha1, both native booleans true, and exact approved name/UID. Full Workflow objects still require the exact existing metadata namespace/name/UID. Containing CI Pod guard remains unchanged.",
+  "files": {
+    "/private/tmp/test_verdify_getter277_evidence_guards_v3.py": "07ed3bb3fae4b5b8d1766d2695eae88846b0cf13db8dac76b11069bb8f47a90f",
+    "/private/tmp/verdify-package-getter277-evidence-v3.py": "a2ca2cc6004dea0a2d9f0afb845a7f375d28028fbb2c118ab226d1a007ec7eb4"
+  },
+  "original_failed_attempt": {
+    "path": "/private/tmp/verdify-getter277-publication-packet-01/attempt-result.json",
+    "relabelled": false,
+    "sha256": "820947f5b93330fb62697d806e2515fc2ff4c64be340d2a5dc6b8b89b78fae03",
+    "status": "FAILED_NOT_PUBLISHED"
+  },
+  "predecessor_helper_v2_preserved_sha256": "48b96f80c9868029b218479a707af97bf515a67f8b7d6ca88ec8708e8a37295e",
+  "preflight_refusals": {
+    "path": "/private/tmp/verdify-getter277-package-preflight-refusals.json",
+    "sha256": "b5c6efb264e64c6cc16b136dd34a2a49fbe1bc9625355c29af650dab4664ed5d"
+  },
+  "publication_authorization_claimed": false,
+  "remaining_controls": "All v2 DSN, credential, exclusion, archive/source/hash/readback controls remain unchanged.",
+  "schema": "verdify-getter277-packaging-v3-source-review-plan-v1",
+  "status": "SOURCE_PREPARED_NO_ACTUAL_PACKAGING"
+}

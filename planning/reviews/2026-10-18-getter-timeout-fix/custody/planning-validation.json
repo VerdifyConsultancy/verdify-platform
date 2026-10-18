@@ -1,0 +1,16 @@
+{
+  "status": "PLANNING_SCHEMA_RENDER_AND_43_TESTS_PASSED",
+  "command": "make VENV=/Users/jason/repos/verdify-platform/.venv planning-validate",
+  "canonical_records": 93,
+  "stages": 9,
+  "all_status_source_dependency_edges": 73,
+  "open_native_active_edges_with_external": 27,
+  "generated_views_checked": 7,
+  "tests_passed": 43,
+  "evidence": "Observed exec chunk23b2cf; this is a structured outcome receipt, not a byte-preserved subprocess stdout",
+  "local_harness_limits": [
+    "Initial default.venv invocation unavailable in isolatedworktree; corrected existingVENV override",
+    "Nonfatal pytest cache-write warning;43tests passed"
+  ],
+  "source_backlog_sha256": "eafcf1c5be8f36a43c7f9314fa20dba563fdef43432f2eb13a9de3a390b95c8c"
+}

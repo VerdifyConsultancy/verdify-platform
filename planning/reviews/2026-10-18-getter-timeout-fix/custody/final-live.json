@@ -1,0 +1,29 @@
+{
+  "status": "FINAL_LIVE_SAME_WORKLOADS_SYNCED_HEALTHY",
+  "observed_at": "2026-10-18T19:22:11.375031+00:00",
+  "argo_revision": "ff8d72e18cd08625c2a888106be1572c9c04b079",
+  "argo_sync": "Synced",
+  "argo_health": "Healthy",
+  "deployment_specs_and_uids_preserved": 15,
+  "critical_pod_and_container_states_preserved": 6,
+  "migration_jobs_naturally_TTL_cleaned": [
+    {
+      "job": "verdify-getter277-plan-20261018-01",
+      "absent_after_declared600s_TTL": true,
+      "manual_delete_used": false
+    },
+    {
+      "job": "verdify-getter277-apply-20261018-01",
+      "absent_after_declared600s_TTL": true,
+      "manual_delete_used": false
+    }
+  ],
+  "scope": "fresh metadata readback; prior exact277SQL and actual3getterresults/HTTPsmoke/socket evidence retained, not rerun",
+  "retained_clone_fixture_source_output_dirs": [
+    "/controller/v410src01",
+    "/controller/v410b01",
+    "/controller/v410src02",
+    "/controller/v410b02"
+  ],
+  "retained_dirs_scope": "small synthetic source/output custody; private PostgreSQL instances already stopped/removed by fixture drivers"
+}

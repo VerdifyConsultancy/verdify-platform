@@ -1,0 +1,8 @@
+{
+  "helper_sha256": "a2ca2cc6004dea0a2d9f0afb845a7f375d28028fbb2c118ab226d1a007ec7eb4",
+  "publication_authorized_by_this_helper": false,
+  "schema": "verdify-getter277-packaging-attempt-v1",
+  "selection_sha256": "0f58002ddcd0923243b552bf6700823b3c1469460d6577e27aa358225961791b",
+  "status": "started",
+  "taskbase": "/private/tmp/verdify-getter-fix-20261018"
+}
