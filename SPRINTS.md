@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T19:10:46.011606+00:00** against source `8c2243020e82f52fbdf3169278715302f7688edf`. [planning/reviews/2026-10-18-getter-timeout-fix/README.md](planning/reviews/2026-10-18-getter-timeout-fix/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T21:10:01.450606+00:00** against source `1f132f20eea07ab57c5d705a9bd626ac6fe72faf`. [planning/reviews/2026-10-18-daytime-consumer/README.md](planning/reviews/2026-10-18-daytime-consumer/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -29,7 +29,7 @@ Exit: Retain original bounded packet source/input/output custody and truthful ou
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | Use the installed validity-bearing results to complete a bounded daytime-coverage assessment and verify the intended admin/planner consumption paths through existing approved identities. Distinguish observed zero holds from complete measured absence, preserve ineffective/incomplete outcomes, and keep crop-sensing and physical-efficacy requirements explicit. Reuse the accepted getter delivery; no repair retry, new credential or broader audience is required by this checkpoint. |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | Define a supported observation/freshness contract and collect a prospective complete recorded daytime window; preserve the incomplete October 16/17 history. Observe intended outcome consumption in a naturally scheduled ordinary planner cycle, separately from the accepted bounded read/model qualification. Measure that new cycle before comparing cost. Reuse the installed getter and accepted delivery; keep physical efficacy, crop sensing and crop safety on their own evidence. |
 | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | 4–6 | P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion. |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 14–22 | P1 native packet and P2 source/input admission are complete within scope. Reuse3 compiles/56 positives/8 completed causal negatives and strict refusal report; obtain a legitimate causal pre-tick state producer/reconstruction and prove row-wise propagation/recovery before prefix credit. Historical prefix stays27/48 UNPROVEN; do not repeat the accepted synthetic matrix. |
 
@@ -175,7 +175,7 @@ Exit: Every required child has accepted evidence or an explicit recorded scope d
 | [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | Unestimated | Keep #428/#367/#369/#370 child scope and zero duplicated effort. P4 only bounds current heap/reset/rollback uncertainty; it does not justify broad simplification. |
 | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581) | Research/release lead | Unestimated | Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction. |
 | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Runtime/release lead | Unestimated | Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop. |
-| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Advance the remaining measured daytime evidence, intended outcome-consumer route, authentic scientific inputs and physical/recovery work. Reuse the installed getter and accepted MCP/S3B receipts; retain negative and inconclusive outcomes, unchanged acceptance edges and the original effort estimates without inferring remaining hours. |
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Pull the prospective observation/freshness packet, natural ordinary-consumer observation and authentic scientific/physical inputs as they become concrete. Reuse accepted getter, S3B and bounded consumer receipts; preserve negative/incomplete outcomes, the 40-hour budget and original 22–34h estimates. Do not repeat accepted delivery, infer remaining hours or close unfinished acceptance. |
 
 ## Campaign stage contracts
 

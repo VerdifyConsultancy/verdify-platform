@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-18-getter-timeout-fix/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 93-issue/73-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-18-daytime-consumer/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 93-issue/73-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
