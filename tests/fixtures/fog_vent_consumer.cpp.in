@@ -1,0 +1,247 @@
+// Synthetic storage/time adapter. Marked fragments are copied verbatim from source.
+#include <array>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include "greenhouse_logic.h"
+#include "policy_rom_baseline_generated.h"
+
+namespace esphome { namespace switch_ {
+struct Switch {
+  bool state = false;
+  unsigned transitions = 0;
+  void turn_on() { if (!state) { state = true; ++transitions; } }
+  void turn_off() { if (state) { state = false; ++transitions; } }
+};
+}}
+#define id(x) x
+std::array<esphome::switch_::Switch, 6> switches;
+auto *heat1_rly = &switches[0], *heat2_rly = &switches[1];
+auto *fan1_rly = &switches[2], *fan2_rly = &switches[3];
+auto *fog_rly = &switches[4], *vent_rly = &switches[5];
+struct PolicySnapshot {
+  bool experiment_active;
+  std::array<float, verdify_policy::kPolicyFieldCount> values{};
+} psnap{};
+bool fog_closes_vent = false;
+float min_heat_on_s=120, min_heat_off_s=120;
+float min_fan_on_s=120, min_fan_off_s=120;
+float min_vent_on_s=120, min_vent_off_s=120;
+float min_fog_on_s=120, min_fog_off_s=120;
+struct DurationStorage { uint8_t field; float* legacy; };
+const DurationStorage durations[] = {
+  {verdify_policy::kPF_min_heat_on_s, &min_heat_on_s},
+  {verdify_policy::kPF_min_heat_off_s, &min_heat_off_s},
+  {verdify_policy::kPF_min_fan_on_s, &min_fan_on_s},
+  {verdify_policy::kPF_min_fan_off_s, &min_fan_off_s},
+  {verdify_policy::kPF_min_vent_on_s, &min_vent_on_s},
+  {verdify_policy::kPF_min_vent_off_s, &min_vent_off_s},
+  {verdify_policy::kPF_min_fog_on_s, &min_fog_on_s},
+  {verdify_policy::kPF_min_fog_off_s, &min_fog_off_s}
+};
+void set_policy(bool selected) {
+  fog_closes_vent = psnap.experiment_active ? !selected : selected;
+  psnap.values[verdify_policy::kPF_sw_fog_closes_vent] =
+      psnap.experiment_active ? float(selected) : float(!selected);
+}
+void set_durations() {
+  for (const auto &storage : durations) {
+    const auto &def = verdify_policy::kPolicyFields[storage.field];
+    for (float seconds : {60.0f, 120.0f}) {
+      const double raw = double(seconds) * def.scale;
+      if (raw < def.min_raw || raw > def.max_raw || raw != int64_t(raw)) {
+        std::fprintf(stderr, "INVALID_FIXTURE_DURATION %s\n", def.name);
+        std::exit(64);
+      }
+    }
+    *storage.legacy = psnap.experiment_active ? 120.0f : 60.0f;
+    psnap.values[storage.field] = psnap.experiment_active ? 60.0f : 120.0f;
+  }
+}
+struct Input {
+  uint32_t now_ms;
+  Mode mode;
+  bool controller_fog, fog_before, vent_requested;
+  bool manual_fog_force, fan_requires_vent;
+  bool controller_time_valid, leak_block, occupancy_moisture_block;
+  bool irrigation_water_conflict, climate_water_budget_block;
+  bool mister_volume_hard_block, fert_master_on;
+};
+struct Observation {
+  bool request, fog, vent, actual_vent_before, assist;
+  uint32_t last_on, last_off, on_stamp, runtime, min_on, min_off;
+  unsigned transitions;
+  std::array<uint32_t, 12> all_limits;
+};
+Observation tick(const Input &in) {
+  const uint32_t now_ms = in.now_ms;
+  const Mode mode = in.mode;
+  RelayOutputs relay_out{};
+  relay_out.fog = in.controller_fog;
+  bool willFog = in.fog_before, willVent = in.vent_requested;
+  const bool manual_fog_force = in.manual_fog_force;
+  const bool fan_requires_vent = in.fan_requires_vent;
+  const bool controller_time_valid = in.controller_time_valid;
+  const bool leak_block = in.leak_block;
+  const bool occupancy_moisture_block = in.occupancy_moisture_block;
+  const bool irrigation_water_conflict = in.irrigation_water_conflict;
+  const bool climate_water_budget_block = in.climate_water_budget_block;
+  const bool mister_volume_hard_block = in.mister_volume_hard_block;
+  const bool fert_master_on = in.fert_master_on;
+@@policy_selection@@
+@@dwell_constants@@
+@@relay_helpers@@
+@@sensor_fault_lock@@
+@@vent_readback@@
+@@fog_assist@@
+@@safety_suppression@@
+@@fog_consumer@@
+@@vent_apply@@
+@@fog_apply@@
+  const auto &r = R[4];
+  return {willFog, r.sw->state, R[5].sw->state, vent_is_open,
+          open_vent_fog_assist, r.last_on_ms, r.last_off_ms,
+          r.on_stamp_ms, r.runtime_ms, r.min_on_ms, r.min_off_ms,
+          r.sw->transitions,
+          {R[0].min_on_ms,R[0].min_off_ms,R[1].min_on_ms,R[1].min_off_ms,
+           R[2].min_on_ms,R[2].min_off_ms,R[3].min_on_ms,R[3].min_off_ms,
+           R[4].min_on_ms,R[4].min_off_ms,R[5].min_on_ms,R[5].min_off_ms}};
+}
+
+// Named, explicit expected observations; no alternate policy/relay algorithm.
+#define EXPECT(tag, condition) do { if (!(condition)) { \
+  std::fprintf(stderr, "BEHAVIOR_ASSERT %s line=%d\n", tag, __LINE__); return 1; \
+} } while (false)
+int scenario(const std::string &name) {
+  const uint32_t start = 1000000U;
+  // Every synthetic safety/authority input is explicit. No historical input
+  // admission or telemetry reconstruction is performed by this scenario.
+  Input in{start, IDLE, true, true, false, false, false,
+           true, false, false, false, false, false, false};
+  set_policy(true);
+  set_durations();
+  struct GateCase { const char *name; bool policy, actual, desired, expected; };
+  const GateCase gate_cases[] = {
+    {"gate_true_open_close", true, true, false, false},
+    {"gate_true_open_open", true, true, true, false},
+    {"gate_false_open_close", false, true, false, true},
+    {"gate_false_open_open", false, true, true, true},
+    {"gate_true_closed_close", true, false, false, true},
+    {"gate_true_closed_open", true, false, true, true},
+    {"gate_false_closed_close", false, false, false, true},
+    {"gate_false_closed_open", false, false, true, true}
+  };
+  for (const auto &g : gate_cases) if (name == g.name) {
+    set_policy(g.policy);
+    vent_rly->state = g.actual;
+    in.vent_requested = g.desired;
+    const auto r = tick(in);
+    EXPECT("selected_consumer_request", r.request == g.expected);
+    EXPECT("selected_consumer_relay", r.fog == g.expected);
+    EXPECT("actual_preapply_readback", r.actual_vent_before == g.actual);
+    EXPECT("vent_applied_after_readback", r.vent == g.desired);
+    EXPECT("no_idle_exemption", !r.assist);
+    for (const auto limit : r.all_limits) EXPECT("selected_all_dwell", limit == 60000U);
+    return 0;
+  }
+  if (name == "ventilate_requested" || name == "safety_cool_requested" ||
+      name == "ventilate_manual_only" || name == "unrelated_mode") {
+    vent_rly->state = true;
+    in.vent_requested = true;
+    if (name == "safety_cool_requested") in.mode = SAFETY_COOL;
+    else if (name == "unrelated_mode") in.mode = THERMAL_RELIEF;
+    else in.mode = VENTILATE;
+    if (name == "ventilate_manual_only") {
+      in.controller_fog = false;
+      in.manual_fog_force = true;
+    }
+    const bool expected = name == "ventilate_requested" || name == "safety_cool_requested";
+    const auto r = tick(in);
+    EXPECT("explicit_controller_exemption", r.assist == expected);
+    EXPECT("exemption_request", r.request == expected);
+    EXPECT("exemption_relay", r.fog == expected);
+    return 0;
+  }
+  if (name == "preblocked_true_open" || name == "preblocked_false_open" ||
+      name == "preblocked_true_closed" || name == "preblocked_false_closed") {
+    set_policy(name == "preblocked_true_open" || name == "preblocked_true_closed");
+    vent_rly->state = name == "preblocked_true_open" || name == "preblocked_false_open";
+    in.mode = VENTILATE;
+    in.fog_before = false;
+    const auto r = tick(in);
+    EXPECT("preblocked_not_reenabled", !r.request && !r.fog && r.transitions == 0);
+    EXPECT("preblocked_even_with_exemption", r.assist);
+    return 0;
+  }
+  if (name == "minimum_on" || name == "minimum_on_wrap") {
+    const uint32_t began = name == "minimum_on_wrap" ? 0xffff8000U : start;
+    in.now_ms = began;
+    auto r = tick(in);
+    EXPECT("minimum_on_started", r.fog && r.last_on == began && r.on_stamp == began);
+    vent_rly->state = true;
+    in.vent_requested = true;
+    in.now_ms = began + 59999U;
+    r = tick(in);
+    EXPECT("minimum_on_suppressed_request", !r.request);
+    EXPECT("minimum_on_not_forced", r.fog && r.last_on == began && r.on_stamp == began && r.transitions == 1U);
+    in.now_ms = began + 60000U;
+    r = tick(in);
+    EXPECT("minimum_on_boundary", !r.request && !r.fog && r.last_off == in.now_ms);
+    EXPECT("minimum_on_history", r.on_stamp == 0U && r.runtime == 60000U && r.transitions == 2U);
+    return 0;
+  }
+  if (name == "minimum_off" || name == "manual_force_on") {
+    set_policy(false);
+    in.now_ms = 59999U;
+    in.manual_fog_force = name == "manual_force_on";
+    auto r = tick(in);
+    if (name == "manual_force_on") {
+      EXPECT("manual_force_dwell_bypass", r.request && r.fog && r.last_on == 59999U);
+    } else {
+      EXPECT("minimum_off_not_elapsed", r.request && !r.fog && r.transitions == 0U);
+      in.now_ms = 60000U;
+      r = tick(in);
+      EXPECT("minimum_off_boundary", r.request && r.fog && r.last_on == 60000U && r.transitions == 1U);
+    }
+    return 0;
+  }
+  if (name == "blocked_clock" || name == "blocked_leak" ||
+      name == "blocked_occupancy" || name == "blocked_irrigation" ||
+      name == "blocked_budget" || name == "blocked_hard_limit" ||
+      name == "blocked_fertilizer" || name == "sensor_fault_preblocked") {
+    auto r = tick(in);
+    EXPECT("interlock_initially_on", r.fog);
+    in.now_ms += 1U;
+    if (name == "blocked_clock") in.controller_time_valid = false;
+    if (name == "blocked_leak") in.leak_block = true;
+    if (name == "blocked_occupancy") in.occupancy_moisture_block = true;
+    if (name == "blocked_irrigation") in.irrigation_water_conflict = true;
+    if (name == "blocked_budget") in.climate_water_budget_block = true;
+    if (name == "blocked_hard_limit") in.mister_volume_hard_block = true;
+    if (name == "blocked_fertilizer") in.fert_master_on = true;
+    if (name == "sensor_fault_preblocked") {
+      // The upstream SENSOR_FAULT resolver is outside this extracted slice.
+      // Supply its already-blocked request; test only the actual forced cutoff.
+      in.mode = SENSOR_FAULT;
+      in.controller_fog = false;
+      in.fog_before = false;
+    }
+    r = tick(in);
+    EXPECT("interlock_suppressed", !r.request);
+    EXPECT("interlock_forced_before_minimum_on", !r.fog && r.last_off == start + 1U);
+    EXPECT("interlock_history", r.runtime == 1U && r.on_stamp == 0U && r.transitions == 2U);
+    return 0;
+  }
+  std::fprintf(stderr, "UNKNOWN_SCENARIO\n");
+  return 64;
+}
+int main(int argc, char **argv) {
+  if (argc != 3) return 64;
+  const std::string selection = argv[2];
+  if (selection != "snapshot" && selection != "legacy") return 64;
+  psnap.experiment_active = selection == "snapshot";
+  const int result = scenario(argv[1]);
+  std::printf("SCENARIO_COMPLETE name=%s selection=%s exit=%d\n", argv[1], argv[2], result);
+  return result;
+}
