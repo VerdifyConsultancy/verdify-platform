@@ -1363,6 +1363,21 @@
       "defect": "New helper selected a different setpoint-change SQL statement instead of retaining the existing confirmation statement; same owner instructed to restore exact semantics and bind regression to the actual functions.",
       "native_or_runtime_failure": false,
       "source_publication_authorized": false
+    },
+    "749_corrected_source_review": {
+      "source_review": "ACCEPTED corrected offline packet",
+      "proof_sha256": "68de7b989d64e2a8e3279c64e5ec29a8930c921976a0dbcee2bfa56806a3ac04",
+      "patch_sha256": "d7a15f99ef3dfe579d5559b948c23059a717e372153a07357567bd66364fc6f0",
+      "verified_members": 18,
+      "verified_bytes": 887683,
+      "old_actual_flush_next_confirmation_equals_actual_new_helper_second_and_fixture": true,
+      "confirmation_sha256": "32e5c85bc016794c7147f05baa37408d2044399b38eb3dae30faec441f53bc3e",
+      "new_frozen_confirmation_args": true,
+      "focused_pass": 60,
+      "prior_bad_SQL_regression_fails": 1,
+      "original_ordering_regression_fails": 1,
+      "scope": "normal source delivery after fresh actual head, complete canonical copy and owner handback; no physical policy replay",
+      "new_runtime_acceptance": false
     }
   }
 }

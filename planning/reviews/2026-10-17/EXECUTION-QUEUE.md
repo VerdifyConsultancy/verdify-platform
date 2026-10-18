@@ -6,7 +6,7 @@ Jason released implementation and delivery on October17. This finite work queue 
 
 | Packet | Actual execution state | Owner / next handoff |
 |---|---|---|
-| #749 | Producer-coherence source implementation and focused fake regressions are in progress. Previous deployment and finite failed quiet qualification remain recorded. | Retry: return completed exact diff/proof, then normal source/image/deployment verification under the existing authorized scope. |
+| #749 | Corrected producer-coherence source is accepted:60 focused passes with old-code ordering and rejected-SQL negative regressions. Previous deployment and finite failed quiet qualification remain recorded. | Retry: fresh complete canonical composition, normal owner window/source/image qualification, then minimal rollout and finite live verification under existing software authority. |
 | #801 | Assigned as the next small source task after the #749 packet; no implementation or deployment claimed yet. | Retry: two host exclusions and focused contract/render proof; same sole product writer. |
 | #802 | Existing infrastructure owner acknowledged the packet; queued behind current owner qualification. No adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
 | #981 | Source diagnosis started; six provider source files checked at current183b. No current meter/DB sample or source recovery claimed. | Root source trace now; existing product lane performs the bounded source/ingest comparison after #749/#801. |

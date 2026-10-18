@@ -39,3 +39,6 @@ Run overlapping #639/#587 cases together and count shared work once. Missing phy
 S4 carries the remaining #783/#641 work and any physical #639/#587 clauses after their actual inputs. S5 lock/draw/day-1 and the later real pilot/readout remain conditional. This plan grants no new OTA, experiment, cutover, credential or hardware authority.
 
 [Prepared execution queue](EXECUTION-QUEUE.md) · [All issue dispositions](ISSUE-TRIAGE.md) · [Full triage rationale](FULL-TRIAGE.md) · [Dependency graph](DEPENDENCIES.md)
+
+
+Execution update: the corrected #749 producer-coherence source packet is accepted after60 focused passes and independent verification of the exact original confirmation SQL, frozen transaction and post-commit acknowledgement. The initial pre-publication SQL-selection defect is corrected and retained as review history. The existing product session is released for genuine canonical composition and normal delivery after the actual shared-owner window; no new images or runtime acceptance are claimed.
