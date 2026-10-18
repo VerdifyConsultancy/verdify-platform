@@ -49,6 +49,17 @@ def test_source_revision_bound_to_actual_owning_files():
     assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
 
 
+def test_previous_controls_declaration_rejects_current_dwell_source(monkeypatch):
+    # The pre-#367 declaration must not silently accept the new owning bytes.
+    monkeypatch.setitem(
+        wire.FIRMWARE_SOURCES,
+        "firmware/greenhouse/controls.yaml",
+        "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
+    )
+    with pytest.raises(ValueError, match="firmware/greenhouse/controls.yaml"):
+        algorithm_revision()
+
+
 @pytest.mark.parametrize("source", wire.FIRMWARE_SOURCES)
 def test_source_revision_rejects_changed_owning_file(tmp_path, monkeypatch, source):
     root = Path(wire.__file__).resolve().parents[1]
