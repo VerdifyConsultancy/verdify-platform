@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -31,6 +32,7 @@ import re
 import sys
 import tempfile
 from collections.abc import Mapping, Sequence
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +74,194 @@ _CPP_DEFAULT = re.compile(
 
 class PrefixPreparationError(ValueError):
     """The offline inputs cannot produce a truthful replay corpus."""
+
+
+FOG_VENT_INPUT_SCHEMA = "verdify-fog-vent-consumer-inputs-v1"
+FOG_VENT_DWELL_FIELDS = tuple(
+    f"min_{relay}_{edge}_s" for relay in ("fan", "fog", "heat", "vent") for edge in ("on", "off")
+)
+FOG_VENT_BOOLEAN_INPUTS = (
+    "requested_fog",
+    "will_fog",
+    "will_vent",
+    "manual_fog_force",
+    "fan_requires_vent",
+    "sensor_fault_relay_lock",
+    "controller_time_valid",
+    "leak_block",
+    "occupancy_moisture_block",
+    "irrigation_water_conflict",
+    "climate_water_budget_block",
+    "mister_volume_hard_block",
+    "fert_master_on",
+)
+
+
+def fog_vent_input_admission(candidate: Mapping[str, Any] | None, *, root: Path = REPO_ROOT) -> dict[str, Any]:
+    """Check a *synthetic consumer fixture*, never authenticate historical state.
+
+    P1 extracts the actual consumer; this function only admits its explicit
+    boundary inputs for a source test. A caller's provenance labels/hashes
+    cannot authenticate telemetry. No supported historical capture producer or
+    counterfactual replay integration exists yet, so prefix admission is always
+    false, including for a structurally complete or hash-consistent candidate.
+    """
+    blockers: list[str] = []
+    fragment_hashes: dict[str, str] = {}
+    source_hashes: dict[str, str] = {}
+    extractor = root / "scripts/fog_vent_consumer.py"
+    if not extractor.is_file():
+        blockers.append("actual_fog_vent_fragment_extractor_unavailable")
+    else:
+        spec = importlib.util.spec_from_file_location("prefix_fog_vent_fragments", extractor)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        try:
+            sys.modules[spec.name] = module
+            spec.loader.exec_module(module)
+            extracted = module.extract_fragments(root=root)
+            fragment_hashes = {name: row["sha256"] for name, row in extracted["fragments"].items()}
+            source_hashes = {row["path"]: row["sha256"] for row in extracted["source_files"]}
+            source_hashes["scripts/fog_vent_consumer.py"] = _sha256(extractor.read_bytes())
+        except (ValueError, KeyError, OSError) as exc:
+            blockers.append(f"actual_fog_vent_fragment_extraction_refused:{type(exc).__name__}")
+    required = {
+        "policy": ["experiment_active", "snapshot", "legacy"],
+        "policy_fields": ["sw_fog_closes_vent", *FOG_VENT_DWELL_FIELDS],
+        "branch": ["mode", *FOG_VENT_BOOLEAN_INPUTS],
+        "relays": {
+            name: ["state", "last_on_ms", "last_off_ms", "on_stamp_ms", "runtime_ms"] for name in ("fog", "vent")
+        },
+        "time_and_provenance": [
+            "boot_id",
+            "tick_id",
+            "now_ms",
+            "sampled_now_ms",
+            "stage",
+            "origin",
+            "defaults_used",
+        ],
+    }
+    if candidate is None:
+        blockers.append("fog_vent_boundary_inputs_unavailable")
+    else:
+
+        def shape(value: object, keys: set[str], label: str) -> Mapping[str, Any]:
+            if not isinstance(value, Mapping):
+                blockers.append(f"missing_or_invalid:{label}")
+                return {}
+            if set(value) != keys:
+                blockers.append(f"missing_or_unknown_fields:{label}")
+            return value
+
+        def exact_bool(value: object, label: str) -> None:
+            if type(value) is not bool:
+                blockers.append(f"missing_or_nonboolean:{label}")
+
+        def uint32(value: object, label: str) -> None:
+            if type(value) is not int or not 0 <= value <= 0xFFFFFFFF:
+                blockers.append(f"missing_or_invalid_uint32:{label}")
+
+        candidate = shape(
+            candidate,
+            {"schema", "kind", "fragment_sha256", "source_files_sha256", "policy", "branch", "relays", "provenance"},
+            "inputs",
+        )
+        if candidate.get("schema") != FOG_VENT_INPUT_SCHEMA:
+            blockers.append("input_schema_mismatch")
+        if candidate.get("kind") != "synthetic_consumer_fixture":
+            blockers.append("historical_capture_or_reconstruction_producer_unsupported")
+        if not fragment_hashes or candidate.get("fragment_sha256") != fragment_hashes:
+            blockers.append("actual_consumer_fragment_binding_mismatch")
+        if not source_hashes or candidate.get("source_files_sha256") != source_hashes:
+            blockers.append("actual_consumer_source_closure_binding_mismatch")
+        policy = shape(candidate.get("policy"), {"experiment_active", "snapshot", "legacy"}, "policy")
+        exact_bool(policy.get("experiment_active"), "policy.experiment_active")
+        for selection in ("snapshot", "legacy"):
+            values = shape(policy.get(selection), set(required["policy_fields"]), f"policy.{selection}")
+            exact_bool(values.get("sw_fog_closes_vent"), f"policy.{selection}.sw_fog_closes_vent")
+            for field in FOG_VENT_DWELL_FIELDS:
+                value = values.get(field)
+                low, high = wire_value_bounds(field)
+                # Compare bounds first: an arbitrarily large JSON integer must
+                # be refused without overflowing float conversion.
+                if type(value) not in (int, float) or not low <= value <= high or not math.isfinite(value):
+                    blockers.append(f"missing_nonfinite_or_out_of_bounds:policy.{selection}.{field}")
+                elif (Fraction(value) * (REGISTRY[field].wire_scale or 1)).denominator != 1:
+                    blockers.append(f"off_wire_quantum:policy.{selection}.{field}")
+        branch = shape(candidate.get("branch"), set(required["branch"]), "branch")
+        modes = {
+            "SENSOR_FAULT",
+            "SAFETY_COOL",
+            "SAFETY_HEAT",
+            "SEALED_MIST",
+            "THERMAL_RELIEF",
+            "VENTILATE",
+            "DEHUM_VENT",
+            "IDLE",
+        }
+        if not isinstance(branch.get("mode"), str) or branch.get("mode") not in modes:
+            blockers.append("missing_or_unknown_mode")
+        for key in FOG_VENT_BOOLEAN_INPUTS:
+            exact_bool(branch.get(key), f"branch.{key}")
+        if branch.get("sensor_fault_relay_lock") != (branch.get("mode") == "SENSOR_FAULT"):
+            blockers.append("sensor_fault_lock_not_derived_from_mode")
+        relays = shape(candidate.get("relays"), {"fog", "vent"}, "relays")
+        for relay, keys in required["relays"].items():
+            state = shape(relays.get(relay), set(keys), f"relays.{relay}")
+            exact_bool(state.get("state"), f"relays.{relay}.state")
+            for key in keys[1:]:
+                uint32(state.get(key), f"relays.{relay}.{key}")
+        provenance = shape(candidate.get("provenance"), {"policy", "branch", "relays"}, "provenance")
+        contexts = []
+        for group, stage in (
+            ("policy", "tick_policy_selection"),
+            ("branch", "post_resolve_before_fog_suppression"),
+            ("relays", "pre_consumer_relay_state_after_tick_reset"),
+        ):
+            context = shape(provenance.get(group), set(required["time_and_provenance"]), f"provenance.{group}")
+            contexts.append(context)
+            if context.get("origin") != "explicit_synthetic_fixture":
+                # In particular, same-row/prior-row eq_vent/eq_fog are outputs,
+                # never evidence of the state this counterfactual tick consumed.
+                blockers.append(f"unsupported_or_output_derived_origin:{group}")
+            if context.get("stage") != stage:
+                blockers.append(f"wrong_causal_stage:{group}")
+            if context.get("defaults_used") != []:
+                blockers.append(f"missing_or_permissive_defaults:{group}")
+            for key in ("boot_id", "tick_id"):
+                value = context.get(key)
+                if not isinstance(value, str) or not value or len(value) > 128:
+                    blockers.append(f"missing_identity:{group}.{key}")
+            for key in ("now_ms", "sampled_now_ms"):
+                uint32(context.get(key), f"provenance.{group}.{key}")
+            if context.get("sampled_now_ms") != context.get("now_ms"):
+                blockers.append(f"stale_or_future_fixture_state:{group}")
+        for key in ("boot_id", "tick_id", "now_ms"):
+            if any(context.get(key) != contexts[0].get(key) for context in contexts[1:]):
+                blockers.append(f"incoherent_tick:{key}")
+    return {
+        "schema": "verdify-fog-vent-input-admission-v1",
+        "consumer": "sw_fog_closes_vent",
+        "required_boundary_inputs": required,
+        "fragment_sha256": fragment_hashes,
+        "source_files_sha256": source_hashes,
+        "scenario_inputs_admissible": not blockers,
+        "scenario_blockers": sorted(set(blockers)),
+        "historical_prefix_admitted": False,
+        "historical_prefix_blockers": [
+            "supported_authenticated_pre_tick_capture_or_reconstruction_missing",
+            "counterfactual_persistent_state_propagation_not_implemented",
+            "all_prefix_recovery_and_negative_paths_not_exercised",
+        ],
+        "rejected_causal_aliases": ["eq_vent", "eq_fog", "willVent_as_actual_vent_state"],
+        "interpretation": (
+            "Input validation only; explicit synthetic values are not telemetry. The relay snapshot is after "
+            "any midnight reset and before relay application; upstream mode/manual/safety derivation is outside "
+            "this consumer slice. No wall-clock freshness threshold is invented. Historical input remains denied."
+        ),
+        "qualification": "unproven",
+    }
 
 
 def _sha256(raw: bytes) -> str:
@@ -291,6 +481,7 @@ def build_preparation_packet(
     firmware_revision: str,
     grid_revision: str,
     current_states: Mapping[str, Mapping[str, object]],
+    fog_vent_inputs: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Return the canonical replay plan without making a qualification claim."""
     if _GIT_SHA.fullmatch(source_revision) is None:
@@ -393,6 +584,7 @@ def build_preparation_packet(
         },
         "cases": cases,
         "firmware_revision": firmware_revision,
+        "fog_vent_input_admission": fog_vent_input_admission(fog_vent_inputs),
         "grid_revision": grid_revision,
         "orders": {
             "activation": list(ACTIVATION_ORDER),
@@ -495,6 +687,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--firmware-revision", required=True)
     parser.add_argument("--grid-revision", required=True)
     parser.add_argument("--current-state", action="append", default=[], type=_current_arg)
+    parser.add_argument(
+        "--fog-vent-inputs", type=Path, help="explicit consumer input candidate; cannot qualify historical prefixes"
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
 
@@ -522,6 +717,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             firmware_revision=args.firmware_revision,
             grid_revision=args.grid_revision,
             current_states=current,
+            fog_vent_inputs=(
+                _json(_read_bytes(args.fog_vent_inputs, "fog/vent inputs", 256 * 1024), "fog/vent inputs")
+                if args.fog_vent_inputs
+                else None
+            ),
         )
         output = canonical_json_bytes(packet)
         write_preparation_output(output, args.output)

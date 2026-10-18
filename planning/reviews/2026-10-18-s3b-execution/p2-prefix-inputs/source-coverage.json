@@ -1,0 +1,1806 @@
+{
+  "compiled_safety_qualification_supported": false,
+  "declared_assignment_count": 27,
+  "field_count": 48,
+  "fields": [
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 657,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::band_track_fraction",
+      "name": "band_track_fraction",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 619,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cold_vent_guard_delta_f",
+      "firmware_symbol": "Setpoints::cold_vent_guard_delta_f",
+      "name": "cold_vent_guard_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 618,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_exit_hysteresis_f",
+      "firmware_symbol": "Setpoints::cool_exit_hysteresis_f",
+      "name": "cool_exit_hysteresis_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 617,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::cool_stage2_exit_hysteresis_f",
+      "name": "cool_stage2_exit_hysteresis_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 616,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_stage2_over_high_f",
+      "firmware_symbol": "Setpoints::cool_stage2_over_high_f",
+      "name": "cool_stage2_over_high_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 626,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1166,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_min_dew_margin_f",
+      "firmware_symbol": "Setpoints::direct_wet_stress_min_dew_margin_f",
+      "name": "direct_wet_stress_min_dew_margin_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 625,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1164,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_vpd_margin_kpa",
+      "firmware_symbol": "Setpoints::direct_wet_stress_vpd_margin_kpa",
+      "name": "direct_wet_stress_vpd_margin_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 611,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_dwell_gate_ms",
+      "firmware_symbol": "Setpoints::dwell_gate_ms",
+      "name": "dwell_gate_ms",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 376,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 378,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::econ_block",
+      "name": "enthalpy_close",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kEconClose",
+      "source_note": "modelled from controls.yaml:352-370 economiser deadband (dH >= close blocks)"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 375,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 380,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::econ_block",
+      "name": "enthalpy_open",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kEconOpen",
+      "source_note": "modelled from controls.yaml:352-370 economiser deadband (dH <= open unblocks)"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 594,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_fog_escalation_kpa",
+      "firmware_symbol": "Setpoints::fog_escalation_kpa",
+      "name": "fog_escalation_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 584,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_heat_hysteresis",
+      "firmware_symbol": "Setpoints::heat_hysteresis",
+      "name": "heat_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 80,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fan_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:80 MIN_FAN_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 79,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fan_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:79 MIN_FAN_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 84,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fog_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:84 MIN_FOG_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 83,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fog_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:83 MIN_FOG_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 78,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_heat_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:78 MIN_HEAT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 77,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_heat_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:77 MIN_HEAT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 82,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_vent_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:82 MIN_VENT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 81,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_vent_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:81 MIN_VENT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 627,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_mist_backoff_s",
+      "firmware_symbol": "Setpoints::mist_backoff_ms",
+      "name": "mist_backoff_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 588,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sealed_max_s",
+      "firmware_symbol": "Setpoints::sealed_max_ms",
+      "name": "mist_max_closed_vent_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 589,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_relief_duration_s",
+      "firmware_symbol": "Setpoints::relief_duration_ms",
+      "name": "mist_thermal_relief_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 592,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 984,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_mist_s2_delay_s",
+      "firmware_symbol": "Setpoints::mist_s2_delay_ms",
+      "name": "mister_all_delay_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1484,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1513,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_all_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1480/1509 zone-mister arbiter; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1313,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_center_penalty",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1304 zone-mister weighting; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 982,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_engage_delay_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:973 MISTER_ENGAGE_DELAY_MS; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1137,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1271,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1525,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_engage_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1128/1521 zone-mister engage threshold; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1256,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1350,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_min_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1247 zone-mister dwell floor; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1241,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_pulse_gap_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1232 zone-mister cadence; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1239,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_pulse_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1230 zone-mister cadence; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1497,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1498,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1587,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_vpd_weight",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1493 zone-mister pulse weighting; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 874,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1195,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_water_budget_gal",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:865 daily water ceiling; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 499,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "night_vpd_bias_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:483-496 biases the ON-CHIP solar VPD band before it becomes Setpoints::vpd_low/high; the corpus sp_vpd_low/sp_vpd_high columns are already post-bias captures, so re-applying it here would double-count the bias"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 607,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 2119,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_outdoor_staleness_max_s",
+      "firmware_symbol": "Setpoints::outdoor_staleness_max_s",
+      "name": "outdoor_staleness_max_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 621,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_all_fans_at_high_enabled",
+      "firmware_symbol": "Setpoints::cool_all_fans_at_high_enabled",
+      "name": "sw_cool_all_fans_at_high_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1173,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_direct_wet_gate_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1164 wet-gate branch; evaluated in the ESPHome lambda, not in greenhouse_logic.h"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 624,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_override_enabled",
+      "firmware_symbol": "Setpoints::direct_wet_stress_override_enabled",
+      "name": "sw_direct_wet_stress_override_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 610,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sw_dwell_gate_enabled",
+      "firmware_symbol": "Setpoints::sw_dwell_gate_enabled",
+      "name": "sw_dwell_gate_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 930,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1937,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_fog_closes_vent",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:921 post-resolve_equipment relay interlock; not a compiled-logic input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1001,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_mister_closes_vent",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:992 post-resolve_equipment relay interlock; not a compiled-logic input"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 604,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sw_summer_vent_enabled",
+      "firmware_symbol": "Setpoints::sw_summer_vent_enabled",
+      "name": "sw_summer_vent_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 332,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 583,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_temp_hysteresis",
+      "firmware_symbol": "Setpoints::temp_hysteresis",
+      "name": "temp_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 664,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::vent_exchange_fraction",
+      "name": "vent_exchange_fraction",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 606,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vent_prefer_dp_delta_f",
+      "firmware_symbol": "Setpoints::vent_prefer_dp_delta_f",
+      "name": "vent_prefer_dp_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 605,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vent_prefer_temp_delta_f",
+      "firmware_symbol": "Setpoints::vent_prefer_temp_delta_f",
+      "name": "vent_prefer_temp_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 337,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vpd_hysteresis",
+      "firmware_symbol": "Setpoints::vpd_hysteresis",
+      "name": "vpd_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 590,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_watch_dwell_s",
+      "firmware_symbol": "Setpoints::vpd_watch_dwell_ms",
+      "name": "vpd_watch_dwell_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    }
+  ],
+  "fog_vent_input_admission": {
+    "consumer": "sw_fog_closes_vent",
+    "fragment_sha256": {
+      "actual_helper": "97124927fb75f69d70974dc28049e3583068b52640d3731f0c99b86a51bac0d5",
+      "dwell_constants": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827",
+      "fog_apply": "95d343c005c922cf3c6dece3a6d80b057ddb06058599430bf4e1194250caf074",
+      "fog_assist": "584f831872e7b2e1ac2575d22dd2644286775b8f0af7acbc6b6f9ef8b5c5fb6b",
+      "fog_consumer": "4c864e014cdd0a3b52399a822250da341d6697bc4d78f15bfd4ad9a2bdf12d96",
+      "policy_selection": "4f612c5523025e98ab671ae31dc7f0d1272219c811bb935044abbbb03c421596",
+      "relay_helpers": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf",
+      "safety_suppression": "c97c56cb226ecd5a5f5e3feaf4bc11570b25ddadc48204d7baa42ee4d093184a",
+      "sensor_fault_lock": "29baf1feb2ac2f7b2204bbbba6bb6a0735cc2656b4f2d4b4fdee7df71b8526e1",
+      "vent_apply": "4a9798d66fecc7348fb26de1b2f5d5b574edb8a163990b19f456bed53bdbd865",
+      "vent_readback": "1388bf8579a7e34373b01d99fb66c8bde8e38dda52ab6071f44ee41456c61925"
+    },
+    "historical_prefix_admitted": false,
+    "historical_prefix_blockers": [
+      "supported_authenticated_pre_tick_capture_or_reconstruction_missing",
+      "counterfactual_persistent_state_propagation_not_implemented",
+      "all_prefix_recovery_and_negative_paths_not_exercised"
+    ],
+    "interpretation": "Input validation only; explicit synthetic values are not telemetry. The relay snapshot is after any midnight reset and before relay application; upstream mode/manual/safety derivation is outside this consumer slice. No wall-clock freshness threshold is invented. Historical input remains denied.",
+    "qualification": "unproven",
+    "rejected_causal_aliases": [
+      "eq_vent",
+      "eq_fog",
+      "willVent_as_actual_vent_state"
+    ],
+    "required_boundary_inputs": {
+      "branch": [
+        "mode",
+        "requested_fog",
+        "will_fog",
+        "will_vent",
+        "manual_fog_force",
+        "fan_requires_vent",
+        "sensor_fault_relay_lock",
+        "controller_time_valid",
+        "leak_block",
+        "occupancy_moisture_block",
+        "irrigation_water_conflict",
+        "climate_water_budget_block",
+        "mister_volume_hard_block",
+        "fert_master_on"
+      ],
+      "policy": [
+        "experiment_active",
+        "snapshot",
+        "legacy"
+      ],
+      "policy_fields": [
+        "sw_fog_closes_vent",
+        "min_fan_on_s",
+        "min_fan_off_s",
+        "min_fog_on_s",
+        "min_fog_off_s",
+        "min_heat_on_s",
+        "min_heat_off_s",
+        "min_vent_on_s",
+        "min_vent_off_s"
+      ],
+      "relays": {
+        "fog": [
+          "state",
+          "last_on_ms",
+          "last_off_ms",
+          "on_stamp_ms",
+          "runtime_ms"
+        ],
+        "vent": [
+          "state",
+          "last_on_ms",
+          "last_off_ms",
+          "on_stamp_ms",
+          "runtime_ms"
+        ]
+      },
+      "time_and_provenance": [
+        "boot_id",
+        "tick_id",
+        "now_ms",
+        "sampled_now_ms",
+        "stage",
+        "origin",
+        "defaults_used"
+      ]
+    },
+    "scenario_blockers": [
+      "fog_vent_boundary_inputs_unavailable"
+    ],
+    "scenario_inputs_admissible": false,
+    "schema": "verdify-fog-vent-input-admission-v1",
+    "source_files_sha256": {
+      "firmware/greenhouse/controls.yaml": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+      "firmware/lib/greenhouse_logic.h": "1bec80ba9181f66ca7573d16a4f40dd7fc4376f913c7c05a659a39e692ae4823",
+      "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
+      "firmware/lib/greenhouse_types.h": "52eb4b782d6c8d1828875b792710acb929d4897ad75dee6032fdeb8da1b5d4d9",
+      "firmware/lib/policy_rom_baseline_generated.h": "e452e63e50e8497f9bf33b401bd1844f70ca12a455fef73a8647a4b58f7e8763",
+      "firmware/lib/policy_sha256.h": "21cfa69be90231489d83004bf76a7bc592aa0eed3f07223d785cc92a10b96adf",
+      "firmware/lib/policy_vector_generated.h": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0",
+      "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81"
+    }
+  },
+  "missing_path_evidence": [
+    "actual ESPHome relay dwell and post-resolve vent consumers",
+    "actual zone mister cadence, arbiter, wet gate and water budget consumers",
+    "pre-bias solar band inputs (post-bias corpus columns cannot be biased twice)",
+    "recovery and negative scenarios exercising those consumers at every required prefix"
+  ],
+  "remaining_consumer_requirements": [
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 80,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_fan_off_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual fan relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 79,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_fan_on_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual fan relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 84,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_fog_off_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual fog relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 83,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_fog_on_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual fog relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 78,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_heat_off_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual heat relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 77,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_heat_on_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual heat relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 82,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_vent_off_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual vent relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "relay_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 81,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "min_vent_on_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual vent relay state and last_on_ms/last_off_ms",
+        "now_ms, boot identity and wrap/reset history",
+        "on_stamp_ms/runtime_ms after any midnight reset",
+        "requested output and actual force_on/force_off inputs",
+        "selected snapshot/legacy policy at this tick"
+      ]
+    },
+    {
+      "consumer_kind": "mister_stage_transition",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1484,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1513,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_all_kpa",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "avg_vpd",
+        "MISTER_HYST",
+        "mister_state",
+        "humid_s2_duration_ms",
+        "MISTER_ALL_DELAY_MS"
+      ]
+    },
+    {
+      "consumer_kind": "mister_zone_selection",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1313,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_center_penalty",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "avg_vpd",
+        "south/west/east VPD and temperature",
+        "vpd_target_{south,west,east,center}",
+        "target_temp_low_f/target_temp_high_f and Tin",
+        "east_adjacency_factor",
+        "wet-allowed zone mask",
+        "sw_arbiter_zone_enabled, fairness/last_fire state and source-selected zone path"
+      ]
+    },
+    {
+      "consumer_kind": "mister_engage_timer",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 982,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_engage_delay_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "humidity_demand",
+        "humid_s1_duration_ms",
+        "humid_idle_holdoff_ms",
+        "mister_state",
+        "dt_ms",
+        "mister_blocked"
+      ]
+    },
+    {
+      "consumer_kind": "mister_engage_and_hysteresis",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1137,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1271,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1525,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_engage_kpa",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "avg_vpd",
+        "zone stress",
+        "HV",
+        "mister_hysteresis_kpa",
+        "mister_state",
+        "humidity_demand"
+      ]
+    },
+    {
+      "consumer_kind": "mister_zone_dwell",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1256,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1350,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_min_off_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "now_ms",
+        "last_off_{south,west,center}_ms",
+        "selected/pulse zone",
+        "wet-allowed zone mask"
+      ]
+    },
+    {
+      "consumer_kind": "mister_pulse_gap",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1241,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_pulse_gap_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "mister_state",
+        "mister_pulse_zone",
+        "mister_pulse_timer_ms",
+        "dt_ms",
+        "actual pulse completion/turn_off transition"
+      ]
+    },
+    {
+      "consumer_kind": "mister_pulse_duration",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1239,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_pulse_on_s",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "mister_state",
+        "mister_pulse_zone",
+        "mister_pulse_timer_ms",
+        "dt_ms",
+        "zone VPD/weight and pulse selection"
+      ]
+    },
+    {
+      "consumer_kind": "mister_pulse_weighting",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1497,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1498,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1587,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_vpd_weight",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "south/west/east and average VPD",
+        "selected/pulse zone",
+        "PULSE_ON_MS",
+        "mister_state"
+      ]
+    },
+    {
+      "consumer_kind": "shared_fog_mister_water_budget",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 874,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1195,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "mister_water_budget_gal",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "mister_water_today",
+        "house/zone VPD validity",
+        "safety_vpd_max_kpa",
+        "day/reset history"
+      ]
+    },
+    {
+      "consumer_kind": "pre_setpoints_solar_band",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 499,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established",
+        "sp_vpd_low/sp_vpd_high are post-bias outputs; the unbiased historical band is unknown"
+      ],
+      "name": "night_vpd_bias_kpa",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "sv2_phase",
+        "unbiased band_vpd_{low,target,high}_{sr,sm,ss,mid} or target_vpd_low/high",
+        "sw_onchip_band_enabled",
+        "solar/time provenance before Setpoints assembly"
+      ]
+    },
+    {
+      "consumer_kind": "diagnostic_reason_read",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1173,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established",
+        "current read selects a diagnostic reason; actuator influence must be demonstrated, not assumed"
+      ],
+      "name": "sw_direct_wet_gate_enabled",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "mister_blocked",
+        "climate_wet_assist_demand",
+        "wet-time/dew/window state",
+        "earlier reason branches"
+      ]
+    },
+    {
+      "consumer_kind": "post_resolve_mister_vent_gate",
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1001,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "missing_or_unknown": [
+        "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+        "counterfactual state propagation and recovery/negative path evidence not established"
+      ],
+      "name": "sw_mister_closes_vent",
+      "prefix_admitted": false,
+      "qualification": "unproven",
+      "required_common_context": [
+        "this tick's selected snapshot/legacy field value",
+        "validity/provenance and source identity for every upstream value",
+        "same-boot monotonic chronology plus relevant reset/counter history"
+      ],
+      "required_inputs_and_state": [
+        "actual pre-application vent state",
+        "mode",
+        "ctl_state.vent_mist_assist_active",
+        "mist stage"
+      ]
+    }
+  ],
+  "report_sha256": "d65665fa3f326687eed28e9175f444dc9be68bebef3f68d6f4c1a2bfab7e264d",
+  "schema": "verdify-component-prefix-source-coverage-v1",
+  "source_files": {
+    "firmware/greenhouse.yaml": "8cfbb7ce7f3e87f2ba1a0cc9e24b84b715af341a17d845cd3c0bfaf3e4d64b2a",
+    "firmware/greenhouse/controls.yaml": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+    "firmware/greenhouse/external_sensors.yaml": "c88cd1868380b7c501440a5192a36044e8b321c3c6826e846ecb6376094f62e5",
+    "firmware/greenhouse/hardware.yaml": "ccfc661da28cb59e73302b531d888b20bbb5ff6cfe464cace8c03a09ecaa196b",
+    "firmware/greenhouse/policy_engine.yaml": "2f16fb69cd50d4c4f656ee3ba958e01e6a7079bc6e5d4464ab9c53e1896bfdb3",
+    "firmware/greenhouse/sensors.yaml": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563",
+    "firmware/greenhouse/tunables.yaml": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
+    "firmware/lib/greenhouse_logic.h": "1bec80ba9181f66ca7573d16a4f40dd7fc4376f913c7c05a659a39e692ae4823",
+    "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
+    "firmware/lib/greenhouse_types.h": "52eb4b782d6c8d1828875b792710acb929d4897ad75dee6032fdeb8da1b5d4d9",
+    "firmware/lib/policy_rom_baseline_generated.h": "e452e63e50e8497f9bf33b401bd1844f70ca12a455fef73a8647a4b58f7e8763",
+    "firmware/lib/policy_sha256.h": "21cfa69be90231489d83004bf76a7bc592aa0eed3f07223d785cc92a10b96adf",
+    "firmware/lib/policy_vector_generated.h": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0",
+    "firmware/test/invariants.h": "e31ce32554ce4074bb185b376b34fcc6bd93fc5219919bf55e394e8093e659f1",
+    "firmware/test/policy_injection.h": "0ecb44ee34beed1637c0b853d1bd3b08479b71f007ca14c7bb2a75bd83041ab9",
+    "firmware/test/replay_invariants.cpp": "e56a9f41615e8f2b01735cc168a30b17b4a704aefc03b152c231a1d1d06a2005",
+    "scripts/component_prefix_replay.py": "cf5eb800927ab7051abaedc2c8a0530b362e045e9e9f8c5ba5d62f49a9873278",
+    "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81",
+    "scripts/gen-policy-consumer-manifest.py": "3e14de58429575e154e7a47c60f77074c1744ef72cfdc85a6914c9100c89756f",
+    "scripts/prepare_component_prefix_replay.py": "b3ed3b1bdc5be467dc9dffad70ff89b4615fd54ba18a11e7c36d285a1b468677",
+    "verdify_schemas/component_executor.py": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575",
+    "verdify_schemas/policy_vector.py": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c",
+    "verdify_schemas/tunable_registry.py": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+  },
+  "unimposed_fields": [
+    "min_fan_off_s",
+    "min_fan_on_s",
+    "min_fog_off_s",
+    "min_fog_on_s",
+    "min_heat_off_s",
+    "min_heat_on_s",
+    "min_vent_off_s",
+    "min_vent_on_s",
+    "mister_all_kpa",
+    "mister_center_penalty",
+    "mister_engage_delay_s",
+    "mister_engage_kpa",
+    "mister_min_off_s",
+    "mister_pulse_gap_s",
+    "mister_pulse_on_s",
+    "mister_vpd_weight",
+    "mister_water_budget_gal",
+    "night_vpd_bias_kpa",
+    "sw_direct_wet_gate_enabled",
+    "sw_fog_closes_vent",
+    "sw_mister_closes_vent"
+  ]
+}

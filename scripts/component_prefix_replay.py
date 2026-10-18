@@ -445,7 +445,144 @@ def policy_template_injection_coverage(template: str) -> frozenset[str]:
     return frozenset(name for name, injectable in rows.items() if injectable)
 
 
-def source_coverage_report() -> dict[str, Any]:
+def _remaining_consumer_requirements(fields: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Describe the other twenty gaps; a read site alone is not exercised coverage.
+
+    These requirements are a reviewed interpretation of the hashed consumers,
+    not a telemetry mapping or a claim that their entire dependency closure has
+    been captured. Every row retains the actual source scan's read locations.
+    """
+    requirements = {
+        "mister_all_kpa": (
+            "mister_stage_transition",
+            ["avg_vpd", "MISTER_HYST", "mister_state", "humid_s2_duration_ms", "MISTER_ALL_DELAY_MS"],
+        ),
+        "mister_center_penalty": (
+            "mister_zone_selection",
+            [
+                "avg_vpd",
+                "south/west/east VPD and temperature",
+                "vpd_target_{south,west,east,center}",
+                "target_temp_low_f/target_temp_high_f and Tin",
+                "east_adjacency_factor",
+                "wet-allowed zone mask",
+                "sw_arbiter_zone_enabled, fairness/last_fire state and source-selected zone path",
+            ],
+        ),
+        "mister_engage_delay_s": (
+            "mister_engage_timer",
+            [
+                "humidity_demand",
+                "humid_s1_duration_ms",
+                "humid_idle_holdoff_ms",
+                "mister_state",
+                "dt_ms",
+                "mister_blocked",
+            ],
+        ),
+        "mister_engage_kpa": (
+            "mister_engage_and_hysteresis",
+            ["avg_vpd", "zone stress", "HV", "mister_hysteresis_kpa", "mister_state", "humidity_demand"],
+        ),
+        "mister_min_off_s": (
+            "mister_zone_dwell",
+            ["now_ms", "last_off_{south,west,center}_ms", "selected/pulse zone", "wet-allowed zone mask"],
+        ),
+        "mister_pulse_gap_s": (
+            "mister_pulse_gap",
+            [
+                "mister_state",
+                "mister_pulse_zone",
+                "mister_pulse_timer_ms",
+                "dt_ms",
+                "actual pulse completion/turn_off transition",
+            ],
+        ),
+        "mister_pulse_on_s": (
+            "mister_pulse_duration",
+            [
+                "mister_state",
+                "mister_pulse_zone",
+                "mister_pulse_timer_ms",
+                "dt_ms",
+                "zone VPD/weight and pulse selection",
+            ],
+        ),
+        "mister_vpd_weight": (
+            "mister_pulse_weighting",
+            ["south/west/east and average VPD", "selected/pulse zone", "PULSE_ON_MS", "mister_state"],
+        ),
+        "mister_water_budget_gal": (
+            "shared_fog_mister_water_budget",
+            ["mister_water_today", "house/zone VPD validity", "safety_vpd_max_kpa", "day/reset history"],
+        ),
+        "night_vpd_bias_kpa": (
+            "pre_setpoints_solar_band",
+            [
+                "sv2_phase",
+                "unbiased band_vpd_{low,target,high}_{sr,sm,ss,mid} or target_vpd_low/high",
+                "sw_onchip_band_enabled",
+                "solar/time provenance before Setpoints assembly",
+            ],
+        ),
+        "sw_direct_wet_gate_enabled": (
+            "diagnostic_reason_read",
+            ["mister_blocked", "climate_wet_assist_demand", "wet-time/dew/window state", "earlier reason branches"],
+        ),
+        "sw_mister_closes_vent": (
+            "post_resolve_mister_vent_gate",
+            ["actual pre-application vent state", "mode", "ctl_state.vent_mist_assist_active", "mist stage"],
+        ),
+    }
+    for relay in ("fan", "fog", "heat", "vent"):
+        for edge in ("on", "off"):
+            requirements[f"min_{relay}_{edge}_s"] = (
+                "relay_dwell",
+                [
+                    f"actual {relay} relay state and last_on_ms/last_off_ms",
+                    "now_ms, boot identity and wrap/reset history",
+                    "on_stamp_ms/runtime_ms after any midnight reset",
+                    "requested output and actual force_on/force_off inputs",
+                    "selected snapshot/legacy policy at this tick",
+                ],
+            )
+    remaining = [row for row in fields if not row["assignment_declared"] and row["name"] != "sw_fog_closes_vent"]
+    if {row["name"] for row in remaining} != set(requirements):
+        raise PrefixReplayError("unimposed consumer set changed; review the remaining-input requirements")
+    result = []
+    for row in remaining:
+        name = row["name"]
+        kind, needed = requirements[name]
+        unknown = [
+            "authenticated same-tick inputs and persistent-state capture/reconstruction unavailable",
+            "counterfactual state propagation and recovery/negative path evidence not established",
+        ]
+        if name == "night_vpd_bias_kpa":
+            unknown.append("sp_vpd_low/sp_vpd_high are post-bias outputs; the unbiased historical band is unknown")
+        elif name == "sw_direct_wet_gate_enabled":
+            unknown.append(
+                "current read selects a diagnostic reason; actuator influence must be demonstrated, not assumed"
+            )
+        result.append(
+            {
+                "name": name,
+                "consumer_kind": kind,
+                "control_read_sites": row["control_read_sites"],
+                "required_inputs_and_state": needed,
+                "required_common_context": [
+                    "this tick's selected snapshot/legacy field value",
+                    "validity/provenance and source identity for every upstream value",
+                    "same-boot monotonic chronology plus relevant reset/counter history",
+                ],
+                "missing_or_unknown": unknown,
+                "prefix_admitted": False,
+                "qualification": UNPROVEN,
+            }
+        )
+    return result
+
+
+def source_coverage_report(fog_vent_inputs: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Join actual injection declarations to a fresh firmware consumer scan.
 
     No compilation, corpus read or device access. This is a source gap report,
@@ -521,8 +658,12 @@ def source_coverage_report() -> dict[str, Any]:
             root / "verdify_schemas/component_executor.py",
             root / "verdify_schemas/policy_vector.py",
             root / "verdify_schemas/tunable_registry.py",
+            root / "scripts/prepare_component_prefix_replay.py",
         )
     )
+    extractor = root / "scripts/fog_vent_consumer.py"
+    if extractor.is_file():
+        inputs.add(extractor)
     source_files = {str(path.relative_to(root)): _sha256_bytes(path.read_bytes()) for path in sorted(inputs)}
     fields = []
     for name, declaration in declarations.items():
@@ -540,6 +681,9 @@ def source_coverage_report() -> dict[str, Any]:
                 "native_path_qualification": "not_established_by_source_scan",
             }
         )
+    from scripts.prepare_component_prefix_replay import fog_vent_input_admission
+
+    fog_admission = fog_vent_input_admission(fog_vent_inputs, root=root)
     report = {
         "schema": "verdify-component-prefix-source-coverage-v1",
         "field_count": len(fields),
@@ -553,6 +697,8 @@ def source_coverage_report() -> dict[str, Any]:
             "recovery and negative scenarios exercising those consumers at every required prefix",
         ],
         "fields": fields,
+        "fog_vent_input_admission": fog_admission,
+        "remaining_consumer_requirements": _remaining_consumer_requirements(fields),
         "source_files": source_files,
     }
     report["report_sha256"] = _sha256_bytes(canonical_json(report).encode())
@@ -1615,8 +1761,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     probe = sub.add_parser("probe-harness", help="report the compiled harness's injection coverage")
     _common(probe)
-    sub.add_parser(
+    coverage = sub.add_parser(
         "coverage-source", help="report actual source consumers and missing paths without compiling or replaying"
+    )
+    coverage.add_argument(
+        "--fog-vent-inputs",
+        type=Path,
+        help="validate an explicit consumer input candidate; never grants prefix qualification",
     )
 
     args = parser.parse_args(argv)
@@ -1624,7 +1775,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "replay":
             return _run_replay(args)
         if args.command == "coverage-source":
-            print(json.dumps(source_coverage_report(), indent=2, sort_keys=True))
+            candidate = None
+            if args.fog_vent_inputs:
+                from scripts.prepare_component_prefix_replay import PrefixPreparationError, _json, _read_bytes
+
+                try:
+                    candidate = _json(
+                        _read_bytes(args.fog_vent_inputs, "fog/vent inputs", 256 * 1024), "fog/vent inputs"
+                    )
+                except PrefixPreparationError as exc:
+                    raise PrefixReplayError(str(exc)) from exc
+            print(json.dumps(source_coverage_report(candidate), indent=2, sort_keys=True))
             return 0
         return _run_probe(args)
     except PrefixReplayError as exc:
