@@ -6,7 +6,7 @@ Capacity is **40 shared engineering and planning hours per week, 80 per fortnigh
 
 The original outcomes **#396, #419, #643 and #644 are complete**. **#749 remains the sole completion focus**, retaining its existing 8–16 hour allocation. Its snapshot-hold fix is deployed as source `67f08ccf`, image `249c7647`, release `f91602f6`; the actual snapshot mismatch now waits temporarily and resumes naturally.
 
-Four ordinary snapshot waits prevented the required 30 quiet minutes. The finite observation stopped at 23:31 UTC, and the final SQL/readiness packet was never attempted. The existing writer session is implementing one bounded producer-coherence correction offline. It must preserve the strict collector, full 48-field checks, authority, deadlines and history. There is no new physical policy run, approval replay or timer-reset loop.
+Four ordinary snapshot waits prevented the required 30 quiet minutes. The finite observation stopped at 23:31 UTC, and the final SQL/readiness packet was never attempted. The existing writer session has completed the bounded producer-coherence correction and is carrying it through normal delivery. It must preserve the strict collector, full 48-field checks, authority, deadlines and history. There is no new physical policy run, approval replay or timer-reset loop.
 
 ## S3 — October 27–November 9; execution released October 17
 
@@ -42,3 +42,6 @@ S4 carries the remaining #783/#641 work and any physical #639/#587 clauses after
 
 
 Execution update: the corrected #749 producer-coherence source packet is accepted after60 focused passes and independent verification of the exact original confirmation SQL, frozen transaction and post-commit acknowledgement. The initial pre-publication SQL-selection defect is corrected and retained as review history. The existing product session is released for genuine canonical composition and normal delivery after the actual shared-owner window; no new images or runtime acceptance are claimed.
+
+
+October17 delivery handoff: #749 corrected source (60 focused passes) and #801 route source (two focused passes) are accepted and composed together. Root verified all36 destination payloads, including the complete27-file planning snapshot. The existing Agents owner returned shared CI/controller custody after its actual producer completed; Retry now owns the finite product delivery window. #802 source preparation and #981 source diagnosis remain independent. Deployment and final live acceptance are still pending.

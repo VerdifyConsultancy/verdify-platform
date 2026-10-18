@@ -1,13 +1,13 @@
 # Active execution queue — October 17, 2026
 
-Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Agents owner holds shared CI/controller custody. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
+Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Retry now holds the finite product delivery window after the Agents owner explicitly returned shared CI/controller custody. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
 
 ## Work pulled now
 
 | Packet | Actual execution state | Owner / next handoff |
 |---|---|---|
 | #749 | Corrected producer-coherence source is accepted:60 focused passes with old-code ordering and rejected-SQL negative regressions. Previous deployment and finite failed quiet qualification remain recorded. | Retry: fresh complete canonical composition, normal owner window/source/image qualification, then minimal rollout and finite live verification under existing software authority. |
-| #801 | Assigned as the next small source task after the #749 packet; no implementation or deployment claimed yet. | Retry: two host exclusions and focused contract/render proof; same sole product writer. |
+| #801 | Two-file source patch accepted: two focused checks pass; full129-object render changes only the two host exclusions. Runtime acceptance remains pending. | Retry: combine with #749 in the same normal delivery; verify routes after scoped full sync. |
 | #802 | Existing infrastructure owner acknowledged the packet; queued behind current owner qualification. No adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
 | #981 | Source diagnosis started; six provider source files checked at current183b. No current meter/DB sample or source recovery claimed. | Root source trace now; existing product lane performs the bounded source/ingest comparison after #749/#801. |
 | #980 | Intentional NAS pause and owner handoff still constrain live work. | Source review can advance; no NFS probe or unpause to obtain a pass. |
@@ -22,11 +22,11 @@ Current183b source uses two fixed Home Assistant power entities. The existing co
 
 | Packet / owner | First concrete action | Exit / stop / inverse |
 |---|---|---|
-| 749 / Retry | Complete the bounded source-only publisher-coherence diff and meaningful fake regressions, preserving the strict common reader/collector | Review exact source/resource/inverse249before any genuine delivery. One future finite qualification; no pass-hunting or used approval. |
+| 749 / Retry | Deliver the accepted corrected coherence source and compatible route patch through the normal affected-image path | Exact source is accepted; verify current admission/fit, minimal rollout/inverse249 and one finite original qualification. No pass-hunting or used approval. |
 | 981 / data-platform | Trace the actual channel/source timestamp versus ingestion through the existing authorized reader after the credential window is free | Actual intended-source advancement and stale/missing negatives; otherwise name upstream constraint. Never synthesize fresh values. |
 | 980 / observability + storage owner | Inspect actual#983 pause / owner queue state without NFS access; review existing timeout source/evidence while held | Resume only in named owner window; exporter response and real backup freshness separate. Preserve deliberatepause; inverse scoped replica/config restoration, no broad NAS scan. |
 | 639+587 / runtime lead | Bind current source and the existing supported contained device-denied target/identities; run one shared executor/lifecycle failure matrix | Full48/generation/exclusivity/close-first and kill-switch/blinded visibility proof; retain reseal/custody. No new credentials/physical source substitution. Shared execution countedonce. |
-| 801 / platform lead | Add two outside-owner host exclusions and focused contract/render proof | Exact current diff/owner-delivery and affected public-route checks; inverse only those rule clauses. No parent-adoption project gate or writer pin change. |
+| 801 / platform lead | Deliver the accepted two-clause change with #749 and verify actual routes | Exact current diff/owner-delivery and affected public-route checks; inverse only those rule clauses. No parent-adoption project gate or writer pin change. |
 | 802 / platform + Agents owner | Export exact enforce-mode resources and current ownership; prepare minimal manual project/catalog declaration | No spec drift/namespace rewrite/security expansion; actual natural enforcement and tracking proof. Inverse must preserve enforce, never restore stale dry-run. |
 | 977 / storage + product owner | Assemble two-versus-three replica policy, actual placement/backup/exception evidence beforeNovember12 | Record concrete owner decision; optional remount/trim separate. No DB restart or survivability claim from planning. |
 | 782 / science + operator | List authentic missing crop/panel/target/season inputs and produce one concrete decision packet | No guessed observations/calendar/power; final energy eligibility waits981. No draw, random activation or new physical authority. |
