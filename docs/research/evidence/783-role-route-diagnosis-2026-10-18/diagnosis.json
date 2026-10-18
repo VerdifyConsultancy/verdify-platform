@@ -1,0 +1,119 @@
+{
+  "schema": "verdify-783-owner-role-catalog-diagnosis-v1",
+  "captured_at": "2026-10-18T07:45:11.472178+00:00",
+  "source_commit": "c5071566f8e591b86e7c21dd300c4f3a785347a5",
+  "scope": "One read-only clone owner catalog diagnosis; no actual duty LOGIN authentication or complete role acceptance.",
+  "custody": {
+    "query_sha256": "e7345d608a8cdcc84493dae9bd478764dbc988f7cccf5066aa8ecdea7755696f",
+    "stdout_sha256": "1c738eab45f40ccf7fdda08100c1d896d1d635c9ed4dc8863bb93a4a9c237f3b",
+    "operator_receipt_sha256": "1f8005fc4275639daf7b9eb9b2c110458e42ad87124ab025f374a649f34e55a0",
+    "rows": 7,
+    "bytes": 1908,
+    "attempts": 1,
+    "returncode": 0
+  },
+  "bounds": {
+    "statement_timeout_seconds": 2,
+    "lock_timeout_milliseconds": 500,
+    "work_mem": "4MB",
+    "parallel_workers": 0,
+    "transaction_read_only": true
+  },
+  "target": {
+    "database": "verdify_rehearsal",
+    "current_user": "postgres",
+    "session_user": "postgres",
+    "postmaster_start": "2026-10-12 18:37:06.874379+00",
+    "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "primary": "verdify-cnpg-s2-integration-2",
+    "primary_pod_uid": "81790e3e-7f0a-4655-9595-83bf2c95f635",
+    "ready_instances": 3,
+    "restarts": 0,
+    "before_after_identity_stable": true
+  },
+  "role_catalog": [
+    {
+      "duty_oid": "16400",
+      "elevated": false,
+      "can_login": true,
+      "duty_name": "verdify_experiment_component_executor",
+      "login_oid": "16406",
+      "login_name": "verdify_experiment_v2_component_executor_login",
+      "login_exists": true,
+      "direct_member": true,
+      "membership_admin": false,
+      "native_callback_exists": true,
+      "native_callback_execute": false
+    },
+    {
+      "duty_oid": "16402",
+      "elevated": false,
+      "can_login": true,
+      "duty_name": "verdify_experiment_lifecycle",
+      "login_oid": "16408",
+      "login_name": "verdify_experiment_v2_lifecycle_login",
+      "login_exists": true,
+      "direct_member": true,
+      "membership_admin": false,
+      "native_callback_exists": true,
+      "native_callback_execute": false
+    },
+    {
+      "duty_oid": "16403",
+      "elevated": false,
+      "can_login": true,
+      "duty_name": "verdify_experiment_outcome_freezer",
+      "login_oid": "16409",
+      "login_name": "verdify_experiment_v2_outcome_freezer_login",
+      "login_exists": true,
+      "direct_member": true,
+      "membership_admin": false,
+      "native_callback_exists": true,
+      "native_callback_execute": true
+    },
+    {
+      "duty_oid": "16404",
+      "elevated": false,
+      "can_login": true,
+      "duty_name": "verdify_experiment_randomizer",
+      "login_oid": "16411",
+      "login_name": "verdify_experiment_v2_randomizer_login",
+      "login_exists": true,
+      "direct_member": true,
+      "membership_admin": false,
+      "native_callback_exists": true,
+      "native_callback_execute": false
+    },
+    {
+      "duty_oid": "16405",
+      "elevated": false,
+      "can_login": true,
+      "duty_name": "verdify_experiment_shadow_scheduler",
+      "login_oid": "16412",
+      "login_name": "verdify_experiment_v2_shadow_scheduler_login",
+      "login_exists": true,
+      "direct_member": true,
+      "membership_admin": false,
+      "native_callback_exists": true,
+      "native_callback_execute": false
+    }
+  ],
+  "blinded_analyst_group": {
+    "oid": "16399",
+    "can_login": false,
+    "duty_name": "verdify_experiment_blinded_analyst",
+    "interpretation": "Group role metadata only; no blinded-analyst LOGIN identity or authentication proved"
+  },
+  "finding": "The existing clone freezer LOGIN OID16409 is directly in duty16403 and can execute the already-granted native previous-day callback. The other four queried duty LOGINs cannot execute it. This confirms the source/runtime allowlist discrepancy without observing a startup or authenticating as any duty.",
+  "limits": {
+    "actual_duty_login_authentication": false,
+    "password_presence_or_usability_checked": false,
+    "complete_acl_attestation": false,
+    "blinded_analyst_login_identity_verified": false,
+    "stateful_stages_executed": false,
+    "integration_acceptance": false,
+    "production_state_changed": false,
+    "credentials_or_grants_changed": false
+  },
+  "next_action": "Use only existing admitted actual LOGIN routes for the source-bound read-only stage probes. Lifecycle/executor routes have separate prior authentication evidence; this owner diagnosis does not establish scheduler/randomizer/freezer or blinded-analyst credential routes. Preserve unchanged readiness/input requirements and do not substitute owner SET ROLE."
+}
