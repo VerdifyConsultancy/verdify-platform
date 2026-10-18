@@ -33,7 +33,7 @@ metadata:
   name: release-pin-verdify-mcp
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-mcp
-  digest: sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393
+  digest: sha256:ae8a367035a3ae8a06ab2384bc166f444b3decad0da21e5c70e53e76203d9c73
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
