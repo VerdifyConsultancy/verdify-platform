@@ -1,12 +1,12 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T04:35:53.822452Z",
+  "reviewed_at": "2026-10-18T04:51:23.976960Z",
   "issues": [
     639,
     587
   ],
   "accepted": false,
-  "state": "actual_role_subset_passed_typed_custody_verified_alert_pending",
+  "state": "actual_role_subset_and_corrected_begin_bundle_point_passed_alert_pending",
   "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
   "source_functions": 84,
   "finite_write_relations": 29,
@@ -24,7 +24,7 @@
     "rewind sequences below retained committed values"
   ],
   "remaining": [
-    "corrected composite-writer native image and device-denied behavior/sequence proof",
+    "remaining feasible contained cases, including separately reviewed lifecycle extension; other five corrected writer native paths remain unaccepted",
     "uncovered contained prefix/exposure/exclusivity/recovery and locked/armed no-reopen acceptance",
     "explicit one-role ordinary initial-password installation permission and actual ordinary LOGIN proof",
     "separate explicit two-message permission and named alert fire/deliver/clear through owner route"
@@ -108,15 +108,21 @@
   },
   "composite_writer_correction": {
     "accepted_source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
-    "source_only": true,
-    "native_image_and_behavior_proof": "pending",
+    "source_only": false,
+    "native_image_and_behavior_proof": "begin_delivery_bundle point passed; other five writers source coverage only",
     "old_source_bundle_attempts_explanation": "Two competing preview calls, each composite target-list expansion evaluated across seven returned columns; six coupled SQL writers changed to a single FROM invocation.",
-    "corrected_source_plus_two_claimed": false,
+    "corrected_source_plus_two_claimed": true,
     "issue_owner": 639,
     "initial_native_ci": "FAILED at 1d3da515 on current dependency-hash trace guard; original failure retained",
     "trace_correction_revision": "566b9be7fd1639d159dd109dbccf5b8b8a05c33f",
     "published_composed_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
-    "full_native_gate": "pending"
+    "full_native_gate": "Succeeded vb46n at 2026-10-18T04:49:05Z",
+    "point_receipt": "639-composite-writer-point-proof.json",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492",
+    "point_sequence_delta": {
+      "public.experiment_v2_bundle_attempts_attempt_id_seq": 2
+    },
+    "full_issue_acceptance": false
   },
   "alert_progress": {
     "read_only_preview": "FAILED 28P01 before SQL; original retained",
@@ -138,5 +144,15 @@
     "uncertain_outcomes": 0,
     "future_point_or_alert_cleanup_claimed": false,
     "behavior_or_alert_acceptance_claimed": false
+  },
+  "point_proof": {
+    "finished_at": "2026-10-18T04:51:23.976960Z",
+    "passed": true,
+    "public_receipt": "639-composite-writer-point-proof.json",
+    "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+    "before_sha256": "72a30518c41829265497aea89d28840d96053998a3cc83b86d55512036b2e2d4",
+    "after_sha256": "f4a02b8b7742eb5129b63a7afcbd4abac7abd20b5ea4f87ef45d4cb38daea35a",
+    "full_row_supplement_sha256": "bdcca40b6665d5f3b919ce946ba93a0966e73d730f2cbf8d4f401a251f586cb2",
+    "full_issue_acceptance": false
   }
 }

@@ -1,0 +1,117 @@
+{
+  "schema": "verdify-639-composite-writer-point-proof/v1",
+  "reviewed_at": "2026-10-18T04:51:23.976960Z",
+  "issue": 639,
+  "point_proof_passed": true,
+  "issue_accepted": false,
+  "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+  "executor_module_sha256": "0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67",
+  "source_correction_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
+  "source_trace_correction_revision": "566b9be7fd1639d159dd109dbccf5b8b8a05c33f",
+  "native_ci": {
+    "workflow": "verdify-platform-ci-vb46n",
+    "uid": "853ee3a3-f74e-438d-b66b-0eaf20cb3455",
+    "phase": "Succeeded",
+    "finished_at": "2026-10-18T04:49:05Z",
+    "workflow_receipt_sha256": "6e9959dec37cc7fb685390f9147a2a4b33cf274d2f0d042abdd599723b154592",
+    "build_ingestor_phase": "Succeeded"
+  },
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492",
+  "image_baked_source": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+  "verified_image_source_files": 46,
+  "source_manifest_sha256": "3c8303dd0d7de2ed82583abac1489c7d133850632b9c7a23878a75de53b0aab1",
+  "execution": {
+    "job": "s3-component-single-call-20261018-01",
+    "job_uid": "79ce94f3-9cb0-4429-b4b0-2e0e51164e90",
+    "pod_uid": "ff426931-1fbc-4c72-a51c-839eb708e10b",
+    "configmap_uid": "3f6e2006-4925-4d9b-8cd6-ab9692a52a17",
+    "immutable_configmap_verified": true,
+    "completed_at": "2026-10-18T04:50:46Z",
+    "job_phase": "Complete",
+    "pod_phase": "Succeeded",
+    "containers": 2,
+    "all_exit_codes_zero": true,
+    "all_restarts_zero": true,
+    "actual_executor_login_verified": true,
+    "executor_capability_functions": 21,
+    "base_table_denial_sqlstate": "42501",
+    "calls": [
+      "A",
+      "A-replay",
+      "B",
+      "C"
+    ],
+    "query": "_BEGIN_BUNDLE_SQL",
+    "canonical_row_unchanged": true,
+    "whole_transaction_rolled_back": true,
+    "device_calls": 0,
+    "external_messages": 0,
+    "new_credentials_or_fixture_rows": 0,
+    "native_primary_identity_and_three_ready_stable": true
+  },
+  "custody": {
+    "typed_sql_null_markers": true,
+    "genuine_rowsets_unchanged": 29,
+    "synthetic_rowsets_unchanged": 29,
+    "genuine_rows": 7950,
+    "synthetic_rows": 6,
+    "both_writable_tables_empty_before_and_after": true,
+    "writable_tables": [
+      "experiment_v2_delivery_bundles",
+      "experiment_v2_bundle_attempts"
+    ],
+    "source_function_bodies_and_properties_unchanged": 84,
+    "catalog_roles_acl_ledger_unchanged": true,
+    "sequence_inventory": 77,
+    "sequence_definitions_unchanged": true,
+    "exact_point_sequence_deltas": {
+      "public.experiment_v2_bundle_attempts_attempt_id_seq": 2
+    },
+    "sequence_rewind_performed": false,
+    "before_sha256": "72a30518c41829265497aea89d28840d96053998a3cc83b86d55512036b2e2d4",
+    "after_sha256": "f4a02b8b7742eb5129b63a7afcbd4abac7abd20b5ea4f87ef45d4cb38daea35a",
+    "point_comparison_sha256": "774fcb34c029ed490bad72c6fd5589e322563488524e1f8b7d79369b509494aa",
+    "complete_row_supplement_sha256": "bdcca40b6665d5f3b919ce946ba93a0966e73d730f2cbf8d4f401a251f586cb2",
+    "supplement_source_sha256": "02006750e43232c17804a0a4f4f7f29e0202d36be7d34cdab4fe9da9e44c2e0a",
+    "historical_docstring_correction": "Finite v2 captures retain complete synthetic hashes; the frozen original point comparator checked their counts and the empty write closure only."
+  },
+  "retained_evidence": {
+    "terminal_receipt_sha256": "a0e440c69072103674a9dac075032292bf44c23fdf4b6f1ab635eb4cf98f7684",
+    "qualification_log_sha256": "3e33be6b59edf8acabfc83a3edb2b14762211ebf3df5c866b3a14de77c7ca85c",
+    "qualification_log_bytes": 2648,
+    "transport_log_sha256": "627993a5b81a71b09160a1f693ef2a484b0d86838290e57a048d19a95d9c46dd",
+    "owner_admission_sha256": "a35eed9d3a553fc75222769e14267b2a5eeab1e645b85680ec554307752a64f5",
+    "independent_input_review_sha256": "72eae3d0907e9e661d215f3de78007990bf679c731cde7a6092713e9a2486fc4",
+    "independent_input_review_source_sha256": "c5253712dc46d8853c02f0b223832c286e42ac0af556cb771a97c865c666bc1e",
+    "native_metadata_sha256": {
+      "component-single-call-terminal-01/post-log-pod.private.json": "b45c91d395e229923bf6dadf4629744bc9bcbf4af3bd8cdf61fada9c30aa6feb",
+      "component-single-call-terminal-01/poll-9-job.private.json": "9dc41087ac9a3627c971774a158c0fe64a67cda97dcabc5dd4e3a9685b1ccaff",
+      "component-single-call-terminal-01/poll-9-configmap.private.json": "d5f16c890b939945595dacbf50c7e8699f39556bebdd5c1a976c35f6be1d32cf"
+    }
+  },
+  "history": {
+    "old_source_behavior_and_plus14_preserved": true,
+    "failed_bgt98_preserved": true,
+    "failed_bgt98_built_image": false,
+    "cumulative_bundle_attempt_delta_after_this_point": 16,
+    "cumulative_basis": "old-source behavior +14, then this separate corrected-source point +2; later phases not included"
+  },
+  "limits": {
+    "other_five_changed_writers_native_acceptance": false,
+    "other_five_changed_writers_source_regression_coverage": true,
+    "lifecycle_extension_acceptance": false,
+    "locked_or_armed_no_reopen_acceptance": false,
+    "active_prefix_exposure_exclusivity_recovery_acceptance": false,
+    "physical_proof_owner": 641,
+    "physical_acceptance": false,
+    "ordinary_writer_handoff_acceptance": false,
+    "full_database_restore_parity": false,
+    "production_promoted": false,
+    "full_issue_acceptance": false
+  },
+  "permissions_at_this_checkpoint": {
+    "ordinary_role_initial_password": "requested; pending; not installed",
+    "two_synthetic_slack_messages": "not yet requested or granted; none sent"
+  },
+  "scope": "Targeted corrected-source begin_delivery_bundle invocation and rollback proof on the retained device-denied clone. No additional issue checkbox or dependency is completed by this receipt."
+}

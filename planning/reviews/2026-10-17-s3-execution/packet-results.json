@@ -1,6 +1,6 @@
 {
   "schema": "verdify-s3-execution-packets/v1",
-  "reviewed_at": "2026-10-18T04:35:53.822452Z",
+  "reviewed_at": "2026-10-18T04:51:23.976960Z",
   "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
   "composition_status": "Incremental current execution progress; five S3 issues remain open. No final sprint completion asserted.",
   "packets": [
@@ -64,14 +64,16 @@
     },
     {
       "number": 639,
-      "packet_status": "actual_role_subset_passed_typed_custody_verified",
+      "packet_status": "corrected_begin_bundle_point_and_complete_finite_custody_passed",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Qualify the accepted composite-writer source correction through the supported native image and bounded device-denied proof, retaining exact sequence accounting and before/after custody. Preserve uncovered active-prefix/exclusivity/recovery clauses and #641 physical scope.",
+      "remaining": "Reuse the accepted begin-bundle point and full genuine/synthetic custody. Complete the separately reviewed lifecycle extension and remaining feasible contained cases; retain source authority denials and uncovered active-prefix/exposure/exclusivity/recovery and locked/armed no-reopen clauses. Other five corrected writers still need applicable native-path proof; #641 retains physical scope.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",
-        "clone-capture-incident.md"
+        "clone-capture-incident.md",
+        "639-composite-writer-point-proof.md",
+        "639-composite-writer-point-proof.json"
       ]
     },
     {
