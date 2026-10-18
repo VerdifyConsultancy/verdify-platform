@@ -194,6 +194,8 @@ SUCCESSOR_276_SHA256 = "7509d3f84e64c92ef0539be15c3a64c4fb60f9f84bb2e053b4246d9a
 SUCCESSOR_276_DIGESTS = SUCCESSOR_275_DIGESTS
 SUCCESSOR_276_MCP_DIGEST = SUCCESSOR_275_MCP_DIGEST
 # Exact getter replacement measured in a rolled-back production transaction.
+# Keep this successor in the historical-backfill audit's unapplied set;
+# its getter/receipt transition must never be pre-stamped by baseline history.
 # It changes only the MCP function-source seal; ordinary API/ingestor stay276.
 SUCCESSOR_277 = "277-realized-solar-night-readback-timeline.sql"
 SUCCESSOR_277_SHA256 = "a8a0bc063bd655d2e96dd3d424768169edb4ea714c7a1b51dca2b41cc39b29a1"

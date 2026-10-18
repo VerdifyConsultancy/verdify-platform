@@ -329,6 +329,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "275-lighting-minutes-policy-bounded-jit.sql",
         # Maintenance roles must execute through the forward hook, never baseline history.
         "276-ordinary-maintenance-runtime-boundaries.sql",
+        # Getter replacement and its MCP receipt advance remain a forward-only successor.
+        "277-realized-solar-night-readback-timeline.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
