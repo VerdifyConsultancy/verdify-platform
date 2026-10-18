@@ -13,7 +13,22 @@ p = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(p)
 
 
-def test_only_computed_calls_change_and_source_functions_stay_exact():
+@pytest.fixture
+def historical_source(tmp_path, monkeypatch):
+    """Project the exact historical276 inputs; current277 helpers are separate."""
+    for name in p.SOURCE_SHA:
+        source = (
+            ROOT / "tests/fixtures/runtime-bootstrap-276" / Path(name).name
+            if name.startswith("scripts/")
+            else ROOT / name
+        )
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+    monkeypatch.setattr(p, "ROOT", tmp_path)
+
+
+def test_only_computed_calls_change_and_source_functions_stay_exact(historical_source):
     raw = (ROOT / next(iter(p.SOURCE_SHA))).read_text()
     projected, changes = p.migration()
     assert len(changes) == 7
@@ -57,7 +72,7 @@ def test_quoted_catalog_signature_is_not_a_computed_call():
     assert signature in sql and len(changes) == 1
 
 
-def test_source_or_catalog_drift_does_not_create_projection(monkeypatch):
+def test_source_or_catalog_drift_does_not_create_projection(monkeypatch, historical_source):
     monkeypatch.setitem(p.SOURCE_SHA, "scripts/bootstrap-six-runtime-roles.py", "0" * 64)
     with pytest.raises(ValueError, match="exact production source"):
         p.migration()

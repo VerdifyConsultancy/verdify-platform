@@ -355,8 +355,8 @@ def test_lighting_successor_bootstrap_matches_actual_rollback_qualification():
     assert len(stages) == len(negatives) + 5
 
 
-def test_maintenance_successor_whole_helper_matches_genuine_projected_native_receipt():
-    """Current authority binds actual projected proof; old275 remains history."""
+def test_maintenance_successor_whole_helper_matches_genuine_projected_native_receipt(tmp_path):
+    """Historical276 proof binds its original helpers, never later277 authority."""
     import hashlib
     from collections import Counter
 
@@ -366,18 +366,30 @@ def test_maintenance_successor_whole_helper_matches_genuine_projected_native_rec
     def digest(raw):
         return hashlib.sha256(raw).hexdigest()
 
+    historical = root / "tests/fixtures/runtime-bootstrap-276"
+    original_root = tmp_path / "qualified276"
+    (original_root / "scripts").mkdir(parents=True)
+    (original_root / "db/migrations").mkdir(parents=True)
+    for filename in ("bootstrap-six-runtime-roles.py", "bootstrap-maintenance-runtime-roles.py"):
+        (original_root / "scripts" / filename).write_bytes((historical / filename).read_bytes())
+    migration = "276-ordinary-maintenance-runtime-boundaries.sql"
+    (original_root / "db/migrations" / migration).write_bytes((root / "db/migrations" / migration).read_bytes())
+
     def load(name, filename):
-        spec = importlib.util.spec_from_file_location(name, root / "scripts" / filename)
+        directory = historical if filename.startswith("bootstrap-") else root / "scripts"
+        spec = importlib.util.spec_from_file_location(name, directory / filename)
         result = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(result)
         return result
 
+    module = load("native_receipt_six", "bootstrap-six-runtime-roles.py")
     maintenance = load("native_receipt_maintenance", "bootstrap-maintenance-runtime-roles.py")
     projection = load("native_receipt_projection", "cnpg-maintenance-276-qualification.py")
+    projection.ROOT = original_root
     projection.require_source()
-    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert receipt["helper_sha256"] == digest((historical / "bootstrap-six-runtime-roles.py").read_bytes())
     assert receipt["maintenance_helper_sha256"] == digest(
-        (root / "scripts/bootstrap-maintenance-runtime-roles.py").read_bytes()
+        (historical / "bootstrap-maintenance-runtime-roles.py").read_bytes()
     )
     assert receipt["adapter_sha256"] == digest((root / "scripts/cnpg-maintenance-276-qualification.py").read_bytes())
     assert receipt["retained_275_fixture_sha256"] == digest(

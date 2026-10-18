@@ -309,8 +309,45 @@ def sealed_sql_276():
     )
 
 
+SUCCESSOR_277 = {
+    "api": SUCCESSOR_275["api"],
+    "ingestor": SUCCESSOR_275["ingestor"],
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+}
+GETTER_MIGRATION = (
+    277,
+    "277-realized-solar-night-readback-timeline.sql",
+    "a8a0bc063bd655d2e96dd3d424768169edb4ea714c7a1b51dca2b41cc39b29a1",
+)
+
+
+def sealed_sql_277():
+    # Preserve the qualified276 expression. Admit only the measured getter
+    # successor with its exact ledger row, three seals and existing authority.
+    predecessor = sealed_sql_276()
+    current = seal_profile_sql(276, SUCCESSOR_275)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(277, SUCCESSOR_277), 1)
+        + " AND "
+        + ledger_row_sql(*GETTER_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
-    return "(" + sealed_sql_270_274() + " OR " + sealed_sql_275() + " OR " + sealed_sql_276() + ")"
+    return (
+        "("
+        + sealed_sql_270_274()
+        + " OR "
+        + sealed_sql_275()
+        + " OR "
+        + sealed_sql_276()
+        + " OR "
+        + sealed_sql_277()
+        + ")"
+    )
 
 
 def identity_sql(login, duty):
