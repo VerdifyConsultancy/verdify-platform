@@ -45,3 +45,8 @@ full48 prefix qualification or whole-issue acceptance is claimed. #368 and #367
 remain open for their remaining criteria. Compile-only artifacts are never
 last-good firmware. Original source-preparation documents remain historical and
 are not rewritten as executed receipts.
+
+The later [secretless compiler receipt](secretless-compile.md) now records both
+maintained targets compiled at the same exact source, with the expected negative
+and complete compiler provenance. The earlier pending-at-receipt field remains
+historical; physical and whole-issue acceptance remain open.
