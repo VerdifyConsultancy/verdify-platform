@@ -1,0 +1,48 @@
+{
+  "schema": "verdify-587-lifecycle-attempt-history/v1",
+  "lifecycle_acceptance": false,
+  "attempts": [
+    {
+      "attempt": "original-create-and-release-01",
+      "job_uid": "93a8fbda-90fb-422e-b804-9b3aea8f679f",
+      "outcome": "release patch rejected; no Pod or DB execution",
+      "cause": "resourceVersion changed when controller recorded Suspended status",
+      "failed_release_receipt_sha256": "3fadc60296718043fcd7dca30546d98cd589198b8369ca8a8ee0de8b1794b82d",
+      "submission_receipt_sha256": "d02fba75c2096db52e7d10ab4f2159985f7bc6e07b5cda9d2e45a3cb1fe51902",
+      "diagnosis": "Only the resourceVersion test changed: old test refused, fresh test accepted by server dry-run; same UID/spec/generation1 remained suspended and no Pods existed.",
+      "diagnosis_sha256": "c6de8c587ce3689785aae4dc1a5a118d5935f2e5a402f6bd86796bde66d4507e"
+    },
+    {
+      "attempt": "explicit-same-job-release-successor-01",
+      "job_uid": "93a8fbda-90fb-422e-b804-9b3aea8f679f",
+      "new_job_created": false,
+      "release_confirmed": true,
+      "submission_receipt_sha256": "e239e42a32335ca1b589a99ce240c03f4feeac8af12d9326804d4ae04b2a5b09",
+      "native_outcome": "FAILED before first denial or positive transition; actual lifecycle LOGIN25 passed, initial status projection raised TypeError, failure rollback confirmed",
+      "pod_uid": "1dd4804c-dcbc-47d3-8b6e-102a206c2fa5",
+      "terminal_receipt_sha256": "fd4aa5897e9390956f532710a41bbdff357724fe09280df241a65934b671c499",
+      "qualification_log_sha256": "9f2fa5d7266c620bf00a4449e987c5f5726e2e505b365b13d365ab48be9f1655",
+      "cause": "set(asyncpg.Record) iterates values; an array-valued status field is unhashable. Intended column-name guard must use row.keys().",
+      "behavioral_success": false
+    }
+  ],
+  "post_failure_custody": {
+    "before_sha256": "f4a02b8b7742eb5129b63a7afcbd4abac7abd20b5ea4f87ef45d4cb38daea35a",
+    "after_sha256": "03198a3de8424836ff1767ebcfd0f6f4d0b9d13747400af845862638baa21144",
+    "comparison_receipt_sha256": "2d41b194d036b3ac3b117d9e2cbbc932afe2bb3c10d051ab97af8cdfa142237c",
+    "genuine_and_synthetic_rowsets_unchanged": 29,
+    "all_sequence_states_equal": 77,
+    "source_functions": 84,
+    "catalog_roles_acl_ledger_unchanged": true,
+    "sequence_deltas": {},
+    "full_database_restore_parity": false
+  },
+  "source_v2_review": {
+    "change": "set(row) to set(row.keys()) only; builder runner path only",
+    "runner_sha256": "1bc5cf8b2f12517924f70855f6fc7f23d3ff23d28af425b9d86f32609e2c14e0",
+    "actual_asyncpg_0_31_Record_regression_passed_without_DB": true,
+    "source_image_authority_predicates_unchanged": true,
+    "native_v2_result": "Separate later successful attempt: see 587-lifecycle-authority-proof.json; original attempts remain failed."
+  },
+  "original_failures_relabelled_success": false
+}

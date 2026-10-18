@@ -1,6 +1,6 @@
 # S3 execution dependency graph
 
-Full native readback at 2026-10-18T04:21:36.565992Z: **47 open Verdify issues**, **27 active completion edges** (26 local and one actual Home Assistant dependency), plus **24 closed predecessor records on open issues** and one historical closed predecessor retained with accepted #802. Every issue and dependency connection was untruncated. All local active edges equal planning source. [Native receipt](native-graph-readback.json); [normalized graph](graph.json).
+Full native readback at 2026-10-18T05:12:21.614298Z: **47 open Verdify issues**, **27 active completion edges** (26 local and one actual Home Assistant dependency), plus **24 closed predecessor records on open issues** and one historical closed predecessor retained with accepted #802. Every issue and dependency connection was untruncated. All local active edges equal planning source. [Native receipt](native-graph-readback.json); [normalized graph](graph.json).
 
 An arrow gates dependent acceptance, not all preparation. Home Assistant #878 is an external native predecessor, not a fabricated campaign node. #977, #980 and #802 are accepted closed deliveries; the sprint remains in progress.
 

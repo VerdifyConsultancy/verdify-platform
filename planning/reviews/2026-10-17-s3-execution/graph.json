@@ -1,6 +1,6 @@
 {
-  "reviewed_at": "2026-10-18T04:21:36.565992Z",
-  "source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
+  "reviewed_at": "2026-10-18T05:12:21.614298Z",
+  "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
   "open_nodes": [
     14,
     16,
@@ -590,7 +590,7 @@
   },
   "evidence_basis": {
     "baseline": "../2026-10-17-replan/native-graph-readback.json",
-    "full_refresh": "One complete native GitHub GraphQL readback after #802 closure; all issue and blockedBy connections untruncated. All 26 local active edges equal current source; external Home Assistant #878→#981 remains present. The prior closed Agents #4459→#802 record is retained separately in accepted history.",
+    "full_refresh": "Complete native GraphQL readback at 05:12:21 UTC confirms the earlier post-#802 response byte-for-byte: 47 open, 27 active edges (26 local and Home Assistant #878→#981), and 24 closed predecessor records. All connections are untruncated; no state or edge drift, all local edges equal canonical source. Accepted #977/#980/#802 closures and prior Agents #4459→#802 history remain unchanged.",
     "raw_response_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
     "query_sha256": "d6b694f7328cb7e2b0af7c34eeb5fc695ced6f3920d11371c52fc7dcee2a7c01",
     "known_verified_changes": [
@@ -598,7 +598,8 @@
       "#980 closed COMPLETED, acceptance comment6245139260.",
       "Actual external Home Assistant #878 remains the native open predecessor of #981.",
       "#802 already CLOSED COMPLETED at 2026-10-18T04:17:55Z after accepted adoption/natural-run evidence and owner PR #5036 merge; closure preserved."
-    ]
+    ],
+    "fresh_no_drift_receipt": "native-graph-final-confirmation.json"
   },
   "accepted_history": [
     {

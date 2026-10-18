@@ -1,12 +1,12 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T04:51:23.976960Z",
+  "reviewed_at": "2026-10-18T05:10:11.716980Z",
   "issues": [
     639,
     587
   ],
   "accepted": false,
-  "state": "actual_role_subset_and_corrected_begin_bundle_point_passed_alert_pending",
+  "state": "actual_role_subset_begin_bundle_and_named_lifecycle_authority_passed_alert_pending",
   "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
   "source_functions": 84,
   "finite_write_relations": 29,
@@ -24,7 +24,7 @@
     "rewind sequences below retained committed values"
   ],
   "remaining": [
-    "remaining feasible contained cases, including separately reviewed lifecycle extension; other five corrected writer native paths remain unaccepted",
+    "remaining feasible contained cases; other five corrected writer native paths remain unaccepted",
     "uncovered contained prefix/exposure/exclusivity/recovery and locked/armed no-reopen acceptance",
     "explicit one-role ordinary initial-password installation permission and actual ordinary LOGIN proof",
     "separate explicit two-message permission and named alert fire/deliver/clear through owner route"
@@ -153,6 +153,35 @@
     "before_sha256": "72a30518c41829265497aea89d28840d96053998a3cc83b86d55512036b2e2d4",
     "after_sha256": "f4a02b8b7742eb5129b63a7afcbd4abac7abd20b5ea4f87ef45d4cb38daea35a",
     "full_row_supplement_sha256": "bdcca40b6665d5f3b919ce946ba93a0966e73d730f2cbf8d4f401a251f586cb2",
+    "full_issue_acceptance": false
+  },
+  "lifecycle_authority": {
+    "passed": true,
+    "public_receipt": "587-lifecycle-authority-proof.json",
+    "failure_history": "587-lifecycle-failure-history.json",
+    "application_source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+    "harness_sha256": "1bc5cf8b2f12517924f70855f6fc7f23d3ff23d28af425b9d86f32609e2c14e0",
+    "job_completed_at": "2026-10-18T05:09:27Z",
+    "post_custody_completed_at": "2026-10-18T05:10:11.716980Z",
+    "actual_login_functions": 25,
+    "denials": 6,
+    "positive_admission_transitions": 2,
+    "whole_transaction_rolled_back": true,
+    "complete_genuine_and_synthetic_rowsets_unchanged": 29,
+    "retained_synthetic_rows": 6,
+    "exact_sequence_deltas": {
+      "public.experiment_events_event_id_seq": 2
+    },
+    "cumulative_sequence_deltas": {
+      "public.experiment_events_event_id_seq": 4,
+      "public.experiment_v2_bundle_attempts_attempt_id_seq": 16,
+      "public.experiment_v2_runtime_generations_generation_event_id_seq": 3,
+      "public.experiment_v2_work_events_work_event_id_seq": 3
+    },
+    "comparison_receipt_sha256": "b056a6522bace1fe1fc73d1bf1bcad19bf6d66e920a673a7bf8d06f9d9922a2e",
+    "before_sha256": "03198a3de8424836ff1767ebcfd0f6f4d0b9d13747400af845862638baa21144",
+    "after_sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b",
+    "failed_harness_zero_effect_retained": true,
     "full_issue_acceptance": false
   }
 }

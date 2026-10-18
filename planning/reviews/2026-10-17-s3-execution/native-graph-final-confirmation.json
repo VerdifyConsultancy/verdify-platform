@@ -1,0 +1,226 @@
+{
+  "captured_at": "2026-10-18T05:12:21.614298+00:00",
+  "sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
+  "open_count": 47,
+  "active_edges": 27,
+  "closed_predecessor_edges_on_open_issues": 24,
+  "open_issue_numbers": [
+    14,
+    16,
+    31,
+    45,
+    51,
+    52,
+    75,
+    218,
+    245,
+    297,
+    298,
+    299,
+    350,
+    359,
+    367,
+    368,
+    369,
+    370,
+    378,
+    379,
+    386,
+    390,
+    398,
+    410,
+    412,
+    428,
+    430,
+    434,
+    581,
+    587,
+    588,
+    639,
+    640,
+    641,
+    642,
+    749,
+    750,
+    751,
+    775,
+    782,
+    783,
+    784,
+    785,
+    786,
+    787,
+    963,
+    981
+  ],
+  "active_edge_rows": [
+    [
+      "VerdifyConsultancy/verdify-platform",
+      45,
+      297
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      298,
+      398
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      299,
+      434
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      367,
+      370
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      390,
+      299
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      390,
+      367
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      390,
+      369
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      398,
+      45
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      410,
+      787
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      587,
+      641
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      587,
+      783
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      588,
+      642
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      639,
+      641
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      639,
+      783
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      640,
+      784
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      641,
+      588
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      642,
+      640
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      749,
+      641
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      782,
+      588
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      783,
+      588
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      784,
+      785
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      785,
+      378
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      785,
+      786
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      785,
+      787
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      786,
+      379
+    ],
+    [
+      "VerdifyConsultancy/verdify-platform",
+      981,
+      787
+    ],
+    [
+      "jvallery/homeassistant",
+      878,
+      981
+    ]
+  ],
+  "added_open_issues": [],
+  "removed_open_issues": [],
+  "added_active_edges": [],
+  "removed_active_edges": [],
+  "accepted_issues": {
+    "accepted802": {
+      "number": 802,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T04:17:55Z"
+    },
+    "accepted977": {
+      "number": 977,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T02:32:26Z"
+    },
+    "accepted980": {
+      "number": 980,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T03:21:38Z"
+    }
+  },
+  "pagination_complete": true,
+  "issue_writes": 0,
+  "source_open_count": 47,
+  "source_active_local_edges": 26,
+  "source_native_open_numbers_equal": true,
+  "source_native_local_edges_equal": true,
+  "current_published_snapshot_response_byte_hash_identical": true,
+  "previous_observed_at": "2026-10-18T04:21:36.565992Z",
+  "issue_states_or_edges_changed": false
+}

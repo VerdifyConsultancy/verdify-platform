@@ -1,0 +1,129 @@
+{
+  "schema": "verdify-587-contained-lifecycle-authority-proof/v1",
+  "reviewed_at": "2026-10-18T05:10:11.716980Z",
+  "issue": 587,
+  "scoped_lifecycle_database_proof_passed": true,
+  "issue_accepted": false,
+  "application_source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492",
+  "application_source_files_verified": 46,
+  "injected_harness_revision": "v2",
+  "injected_harness_sha256": "1bc5cf8b2f12517924f70855f6fc7f23d3ff23d28af425b9d86f32609e2c14e0",
+  "source_manifest_sha256": "dc7c3c6f2a7324454c373581b5ae9bae5f6d2676a3e0a993a918567c1f366157",
+  "harness_fix": "Only set(row) to set(row.keys()) in the blinded status column-name guard; same application image, DB functions, authority predicates, role, cases and event+2 expectation.",
+  "regression": "Actual asyncpg0.31.0 Record reproduces old TypeError, accepts array-valued status after correction and rejects every forbidden column; 34 focused source tests passed.",
+  "native_execution": {
+    "job": "s3-lifecycle-authority-20261018-02",
+    "job_uid": "aa7b2a2c-b5d8-4ced-b765-6e025bf11a25",
+    "pod_uid": "6401ce46-80bd-426c-98dd-696291abebd3",
+    "configmap_uid": "465f2016-4de7-4118-921c-4e761f6e1d62",
+    "immutable_configmap_verified": true,
+    "job_completed_at": "2026-10-18T05:09:27Z",
+    "post_custody_completed_at": "2026-10-18T05:10:11.716980Z",
+    "job_complete": true,
+    "pod_succeeded": true,
+    "containers": 2,
+    "all_exit_codes_zero": true,
+    "all_restarts_zero": true,
+    "actual_lifecycle_login": true,
+    "exact_function_capabilities": 25,
+    "positive_admission_transitions": [
+      "closed to baseline_recovery",
+      "baseline_recovery to emergency_hold"
+    ],
+    "denials": [
+      "base-table access:42501",
+      "two orthogonal transition axes:P0001",
+      "commissioning without a complete current-revision shadow cycle:P0001",
+      "phase advance while admission is not closed:P0001",
+      "baseline-recovery close without current recovered evidence:P0001",
+      "held recovery without an immutable authorization reference:P0001"
+    ],
+    "whole_transaction_rolled_back": true,
+    "original_status_restored": true,
+    "device_calls": 0,
+    "external_messages": 0,
+    "new_credentials_or_retained_fixture_rows": 0,
+    "native_primary_identity_and_three_ready_stable": true
+  },
+  "custody": {
+    "typed_sql_null_markers": true,
+    "genuine_rowsets_unchanged": 29,
+    "synthetic_rowsets_unchanged": 29,
+    "genuine_rows": 7950,
+    "synthetic_rows": 6,
+    "native_source_function_bodies_and_properties_unchanged": 84,
+    "catalog_roles_acl_ledger_unchanged": true,
+    "sequence_inventory": 77,
+    "sequence_definitions_unchanged": true,
+    "exact_lifecycle_sequence_deltas": {
+      "public.experiment_events_event_id_seq": 2
+    },
+    "sequence_rewind_performed": false,
+    "before_sha256": "03198a3de8424836ff1767ebcfd0f6f4d0b9d13747400af845862638baa21144",
+    "after_sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b",
+    "comparison_receipt_sha256": "b056a6522bace1fe1fc73d1bf1bcad19bf6d66e920a673a7bf8d06f9d9922a2e",
+    "failure_zero_effect_chain": {
+      "status": "ORIGINAL_POINT_THEN_FAILED_HARNESS_ZERO_EFFECT_CHAIN_VERIFIED",
+      "original_point_receipt_sha256": "774fcb34c029ed490bad72c6fd5589e322563488524e1f8b7d79369b509494aa",
+      "original_point_after_sha256": "f4a02b8b7742eb5129b63a7afcbd4abac7abd20b5ea4f87ef45d4cb38daea35a",
+      "failed_harness_zero_effect_receipt_sha256": "2d41b194d036b3ac3b117d9e2cbbc932afe2bb3c10d051ab97af8cdfa142237c",
+      "immediate_prestate_sha256": "03198a3de8424836ff1767ebcfd0f6f4d0b9d13747400af845862638baa21144",
+      "original_failed_terminal_sha256": "fd4aa5897e9390956f532710a41bbdff357724fe09280df241a65934b671c499",
+      "original_failed_log_sha256": "9f2fa5d7266c620bf00a4449e987c5f5726e2e505b365b13d365ab48be9f1655",
+      "all29_genuine_and_synthetic_rowsets_equal": true,
+      "all77_sequence_states_equal": true,
+      "catalog_acl_roles_ledger_source_unchanged": true,
+      "original_failure_relabelled_success": false
+    }
+  },
+  "cumulative_accounting": {
+    "basis": "Original typed two-row seed baseline through old-source behavior, corrected begin-bundle point, zero-effect failed lifecycle harness and successful v2 lifecycle; no alert execution included.",
+    "before_sha256": "764c6841e3d3726433f3c7b9feef171cc2c809ab5b1a0d26bbfcc9fc6db3c7b0",
+    "after_sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b",
+    "exact_sequence_deltas": {
+      "public.experiment_events_event_id_seq": 4,
+      "public.experiment_v2_bundle_attempts_attempt_id_seq": 16,
+      "public.experiment_v2_runtime_generations_generation_event_id_seq": 3,
+      "public.experiment_v2_work_events_work_event_id_seq": 3
+    },
+    "comparison_receipt_sha256": "4bda76d2e8c3f9b3ce16f85a0d564ec3a0cf8f4b9b4db0c3bb102b7bf1f96ec7",
+    "old_source_accounting_files_unchanged": true
+  },
+  "retained_evidence": {
+    "terminal_receipt_sha256": "64e55db36aa65da4b3f9cbad231402cb81902b2fe1bf69ef8f3219117790a73b",
+    "qualification_log_sha256": "164728c47bf8b689c52eb03ab213758257c4c9d5ad8aa75f6fa321212cae7d06",
+    "qualification_log_bytes": 3915,
+    "transport_log_sha256": "ed2a2fa6144954734873341de38ab7ef423fa887104bd854a56c2211f001af3d",
+    "owner_admission_sha256": "ed579d48393aa7ef3460903f3d115c66a8e396374c2a5b30164b22b532914114",
+    "release_wrapper_sha256": "dbdca7c8b885c29bbd7db54b46581187fb83c75abbab7971614305fe621047a2",
+    "release_input_seal_sha256": "a61a51cb07b77fe857eed6d3ec21599a076ad4093d88aa9b0929dce6bdc2fe0f",
+    "independent_input_review_sha256": "eb5c60d28fe3a2cfa91165ce916f04db989ffcce812537342de0860e9429e941",
+    "independent_input_review_source_sha256": "e042f623d63cbf71cca57df76057320630f8cf846f75bb84f44297fbec39e248",
+    "native_metadata_sha256": {
+      "lifecycle-authority-v2-terminal-01/post-log-pod.private.json": "362c6b283ffc8c289d71d8b6cf4115acc40c776b64eca6ee4d70bc5620d6b5e9",
+      "lifecycle-authority-v2-terminal-01/poll-1-job.private.json": "9318eba6379312d521975b964e93da34d8dc7cde6345a379fb907650ea799dfc",
+      "lifecycle-authority-v2-terminal-01/poll-1-configmap.private.json": "964cc591713935681395dcd8e488da968e69dd9deb353e2d9abfab17d173ea9a"
+    }
+  },
+  "failure_history": "587-lifecycle-failure-history.json",
+  "failed_release_and_failed_harness_retained": true,
+  "failed_attempt_relabelled_passed": false,
+  "pending": {
+    "ordinary_initial_password_approval": "requested and unanswered; no ordinary installation",
+    "two_synthetic_slack_messages": "permission not yet requested or granted; none sent",
+    "locked_or_armed_no_reopen": "unaccepted",
+    "active_prefix_exposure_exclusivity_recovery": "current authority guard/remaining contained coverage unaccepted",
+    "other_five_corrected_writers": "source regression coverage only; no native-path acceptance",
+    "physical_epochs_rescue_safe_baseline_handoff": "owned by #641; unaccepted"
+  },
+  "limits": {
+    "physical_recovery_acceptance": false,
+    "actual_exposure_closure_acceptance": false,
+    "ordinary_writer_handoff_acceptance": false,
+    "full_database_restore_parity": false,
+    "production_promoted": false,
+    "full_issue_acceptance": false,
+    "sprint_complete": false
+  }
+}

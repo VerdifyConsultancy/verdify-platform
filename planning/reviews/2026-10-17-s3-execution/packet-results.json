@@ -1,6 +1,6 @@
 {
   "schema": "verdify-s3-execution-packets/v1",
-  "reviewed_at": "2026-10-18T04:51:23.976960Z",
+  "reviewed_at": "2026-10-18T05:12:21.614298Z",
   "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
   "composition_status": "Incremental current execution progress; five S3 issues remain open. No final sprint completion asserted.",
   "packets": [
@@ -52,28 +52,34 @@
     },
     {
       "number": 587,
-      "packet_status": "actual_role_subset_passed_typed_custody_verified",
+      "packet_status": "named_lifecycle_authority_and_begin_bundle_points_passed_full_issue_open",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "After explicit one-role initial-password approval and separate two-message permission, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
+      "remaining": "Reuse the accepted lifecycle database-authority cases. After the pending one-role initial-password approval, verify actual ordinary LOGIN and the read-only alert preview. Separately request permission for the two synthetic messages before named-alert fire/deliver/clear, with bounded rollback and after-seals. No message permission has yet been requested. Keep uncovered contained clauses and #641 physical proof open.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",
-        "clone-capture-incident.md"
+        "clone-capture-incident.md",
+        "587-lifecycle-authority-proof.md",
+        "587-lifecycle-authority-proof.json",
+        "587-lifecycle-failure-history.json"
       ]
     },
     {
       "number": 639,
-      "packet_status": "corrected_begin_bundle_point_and_complete_finite_custody_passed",
+      "packet_status": "named_lifecycle_authority_and_begin_bundle_points_passed_full_issue_open",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Reuse the accepted begin-bundle point and full genuine/synthetic custody. Complete the separately reviewed lifecycle extension and remaining feasible contained cases; retain source authority denials and uncovered active-prefix/exposure/exclusivity/recovery and locked/armed no-reopen clauses. Other five corrected writers still need applicable native-path proof; #641 retains physical scope.",
+      "remaining": "Reuse the accepted begin-bundle and named lifecycle database-authority receipts. Qualify remaining feasible contained cases with authentic current source/target authority; retain uncovered active-prefix/exposure/exclusivity/recovery and locked/armed no-reopen clauses. Other five corrected writers retain source-only coverage; #641 owns physical epochs, rescue and safe baseline handoff.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",
         "clone-capture-incident.md",
         "639-composite-writer-point-proof.md",
-        "639-composite-writer-point-proof.json"
+        "639-composite-writer-point-proof.json",
+        "587-lifecycle-authority-proof.md",
+        "587-lifecycle-authority-proof.json",
+        "587-lifecycle-failure-history.json"
       ]
     },
     {
