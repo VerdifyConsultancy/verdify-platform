@@ -55,7 +55,11 @@ def issue_body(item: WorkItem, plan: Backlog) -> str:
             + ", ".join(f"#{items[key].issue_number or key} ({items[key].status})" for key in item.depends_on)
             + ". Open records gate the stated bounded deliverable; closed records retain their original disposition and are not active blockers. Preparation may proceed earlier."
             if item.depends_on
-            else "No issue-level predecessor. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied."
+            else (
+                "No in-repository predecessor. External blockers, when present, are recorded in the current state and reviewed native graph. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied."
+                if item.status == "open"
+                else "No issue-level predecessor. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied."
+            )
         ),
         "## Acceptance and validation\n\n"
         + "\n".join(f"- [{'x' if item.accepted else ' '}] {line}" for line in item.acceptance),

@@ -1,0 +1,1092 @@
+[
+  {
+    "number": 14,
+    "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+    "execution_state": "deferred_unselected_oracle_program",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Read-only twin image/deployment and agreement-reporter source exists; old design-only descriptions are obsolete.",
+      "#606 was retired as not_planned and its owner-registry/build/runtime obligations were explicitly consolidated here, not accepted."
+    ],
+    "remaining_actual_acceptance": [
+      "An explicit useful oracle question and consumer coverage contract, distinguishing action-compared, default-only, unsupported and identity-only fields.",
+      "Exact owning-registry admission, immutable twin build, device-denied runtime and real output receipts with no startup compiler/pip downloads.",
+      "Positive self-diff and negative injected-divergence evidence before any proposed release gate; current pilot remains independent."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "No selected twin decision question or accepted complete coverage/runtime."
+      },
+      {
+        "owner": "jvallery/agents registry owner",
+        "condition": "verdify-twin is absent from generated eight-image build registration; registration is required only if selected."
+      }
+    ],
+    "next_action": "Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.",
+    "work_actionable_now": [
+      "Source-map reusable coverage findings from #639 prefix qualification without building or deploying the whole twin."
+    ],
+    "concrete_user_decisions": [
+      "No immediate decision required. If this option is pulled, choose the specific oracle question and scope; it is not a pilot prerequisite."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "FUTURE; no near-term build allocation",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "No issue blocker; #31 is a child deliverable, not a parent-child blocking loop. Keep #606 closed/not_planned and preserve its transferred scope.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+      "twin/Dockerfile",
+      "twin/report_agreement.py",
+      "deploy/k8s/components/firmware-twin/twin-shadow-deployment.yaml",
+      ".agent-fleet/ci.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/606"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 31,
+    "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "execution_state": "deferred_coverage_work_with_reusable_source_slice",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "replay_emit.cpp has explicit expected columns and an opt-in full-setpoint failure; twin live driver/reporter source exists.",
+      "The 27/48 component-prefix harness count belongs to a separate harness and is not a fresh count of all twin fields."
+    ],
+    "remaining_actual_acceptance": [
+      "Every current active firmware consumer mapped to export and compiled decision, or excluded from the precise oracle claim with a reason.",
+      "Nondefault injection and required-column omission reach the actual compiled path; identical-source self-diff passes and known divergence fails.",
+      "Unsupported/default-only dimensions cannot silently become full parity or physical exposure qualification."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Firmware/platform lead",
+        "condition": "No complete current consumer/export/action coverage matrix or settled twin runtime output."
+      }
+    ],
+    "next_action": "For a selected oracle question, generate the source consumer-to-export-to-compiled-action matrix and qualify one real missing active input first.",
+    "work_actionable_now": [
+      "Share the source inventory with #639 without conflating replay_emit and replay_invariants coverage.",
+      "Prepare the bounded compiled negative cases; run compilation/replay only via admitted native CI."
+    ],
+    "concrete_user_decisions": [
+      "None for source inventory; twin runtime selection remains a later product decision."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "FUTURE; source slice only if it directly unblocks #639",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "Do not add #14 or monitoring #336/#627 as blanket prerequisites. Consumer interface qualification is the dependency, not completion of unrelated monitoring programs.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+      "firmware/test/replay_emit.cpp",
+      "firmware/test/replay_invariants.cpp",
+      "scripts/export-replay-overrides.sh",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6109897138"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 379,
+    "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+    "execution_state": "deferred_response_model_option",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Historical sensor/score and replay provenance predecessors #371/#419 are accepted within their original scope.",
+      "Historical open-loop runtime comparisons and failed response models remain evidence; none establishes counterfactual MPC benefit."
+    ],
+    "remaining_actual_acceptance": [
+      "If selected, a falsifiable response-model question and genuine chronological held-out prediction/calibration gates against persistence and simpler deterministic baselines.",
+      "No PID/MPC arm or outer-loop authority added to the current pilot.",
+      "A separate bounded controller/release plan only if held-out evidence justifies it; otherwise explicit no-go/retirement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "No demonstrated need or validated response model; #786 comparison decision is future."
+      }
+    ],
+    "next_action": "Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.",
+    "work_actionable_now": [
+      "Write no new model now. A bounded source inventory or explicit no-build rationale can be prepared without waiting on study completion."
+    ],
+    "concrete_user_decisions": [
+      "No immediate decision required. A future request to select MPC would need a named use case and measured validation objective; do not infer it from the pilot."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "FUTURE; zero current implementation commitment",
+    "current_predecessors_including_closed_history": [
+      786,
+      371,
+      419
+    ],
+    "proposed_predecessors_including_closed_history": [
+      786,
+      371,
+      419
+    ],
+    "dependency_correction": "Retain #786 as the chosen decision sequence, not a gate on read-only preparation. Do not add twin, vector transport or generalized firmware engine prerequisites.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/379",
+      "research/planner-efficacy",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 581,
+    "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
+    "execution_state": "pre_draw_rollup_not_a_sprint_task",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Reusable experiment ledger/executor/freezer/analyzer source and a June 1–July 30, 2027 candidate calendar exist.",
+      "Current contained actual-role, corrected begin-bundle, lifecycle and one named-alert proofs are now available; they are child evidence, not a completed pilot."
+    ],
+    "remaining_actual_acceptance": [
+      "All selected child criteria have scoped receipts or explicit stop decisions.",
+      "One genuine completed selected cohort, all assignments/failures/null outcomes retained and a reproducible #785 decision, or an explicit program stop.",
+      "No revived timed shadow/canary/A-A or invented 80% power threshold."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "Physical qualification, authentic scientific input contract, final identity/draw and real seasonal cohort remain incomplete."
+      }
+    ],
+    "next_action": "Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction.",
+    "work_actionable_now": [
+      "Update child ledger and sequencing using the new #587 alert receipt.",
+      "Prepare future day-custody/report templates without changing schedules or drawing."
+    ],
+    "concrete_user_decisions": [
+      "No immediate program decision needed for continued source/measurement work. A later explicit no-go can stop the program without pretending a completed experiment."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "ROLLUP; no duplicate engineering estimate",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "Parentage is roll-up only. Keep #750/#639/#587/#782/#783/#588/#642/#640/#784/#785 as scoped children, never parents-as-blockers.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json",
+      "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 587,
+    "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
+    "execution_state": "partial_contained_native_acceptance_with_named_alert_complete",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Actual lifecycle LOGIN 25 and executor LOGIN 21 authentication/capability attestations and protected-table SQLSTATE 42501 denials passed.",
+      "Named lifecycle packet passed six denials, closed→baseline_recovery→emergency_hold, then rollback/original status; full29 G+S/source 84/catalog/77-sequence custody passed with only events +2.",
+      "Ordinary clone initial password was explicitly approved, installed and authenticated read-only. It is no longer a pending decision.",
+      "Explicitly approved two-message component_experiment_integrity / expired_work_not_terminal test completed at 06:51:39 UTC on f16/531. Native fire/resolution in one thread, deduplication, alert rollback and one committed cancellation event passed.",
+      "Final f46ffe6d same-attempt proof independently joins both actual sender confirmations, completed candidate and typed custody: all 7,950 genuine/29 tables and12425 alert rows unchanged; other 28 synthetic rowsets unchanged; exactly work events +1 and alert IDs +1; seven synthetic rows retained.",
+      "Original bridge timeout/release failure/collector uncertainty remain failed. The separate reconciliation does not rewrite them; no resend/retry occurred. Exact disposable cleanup completed."
+    ],
+    "remaining_actual_acceptance": [
+      "Actual current feature-off emits no experiment call; uncovered readiness/phase/emergency-hold paths cannot actuate.",
+      "Remaining actual lifecycle/locked-armed no-reopen and blinded mapping/comparative-result leakage cases, with real role denials rather than owner scaffolding or read-only errors.",
+      "Inventory and qualify remaining named alert conditions, reusing the accepted transport route instead of resending the proven pair.",
+      "Physical baseline/handoff clauses stay owned by #641 and are not counted as contained acceptance."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Uncovered current-role phase/nonactuation/blinding cases remain."
+      },
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Active positive prefixes are denied by the unchanged source grid/order contract; no fake physical authorization."
+      },
+      {
+        "owner": "Monitoring/product owner",
+        "condition": "Only the named expired-work alert condition has end-to-end route proof; other conditions need scoped evidence."
+      }
+    ],
+    "next_action": "Publish the accepted named-alert scope and map every residual lifecycle/nonactuation/blinding criterion to its source guard and authentic precondition. Reuse the exhausted current-role subset. Prepare only a genuinely missing source case or legitimate current-identity qualification path; no duplicate alert pair, password installation or weak native test.",
+    "work_actionable_now": [
+      "Produce the residual source/role/authority/blinding clause map and distinguish cases already accepted from cases unreachable under current identity/grid/ORDER_REVISION.",
+      "Prepare a minimal source change only for an identified defect; keep locked/armed/no-reopen and recovery positive cases unaccepted until their real preconditions exist.",
+      "Reuse final f46ffe named-alert transport/custody proof; remaining conditions must be named and independently justified before any new external delivery."
+    ],
+    "concrete_user_decisions": [
+      "None remains for the completed password installation or consumed two-message pair.",
+      "Only request a new communication decision if a different concrete message test is necessary; current acceptance does not authorize extra sends."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "S3 closeout / next bounded contained acceptance packet",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "No predecessors. Preserve the scope ledger to #641; do not make #587 wait for physical full-48 proof or ordinary writer handoff.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+      "planning/reviews/2026-10-17-s3-execution/587-lifecycle-authority-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-ordinary-role-progress.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6246816434"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests.",
+    "accepted_named_scope": "component_experiment_integrity:expired_work_not_terminal",
+    "final_scoped_receipt_sha256": "f46ffe6dcafe9f26b246eed5af1e5abb17afceed18c20a5c16e94f2943433d7b",
+    "required_body_correction": "Both current-state and How/next-action still wrongly say ordinary/message approval pending and no messages. Replace with dated accepted scope and the precise remaining cases; preserve earlier dated receipts as history."
+  },
+  {
+    "number": 588,
+    "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+    "execution_state": "final_lock_and_draw_not_admitted",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Lock/no-redraw machinery, commitment interfaces and selected v2 model/calendar source exist.",
+      "Current selected source names gpt-5.6-luna/medium and June–July 2027; old Sol/November narrative is historical."
+    ],
+    "remaining_actual_acceptance": [
+      "Byte-exact qualified model/context/profile/target/sensor/analyzer/source/calendar identity joins #641/#782/#783.",
+      "Actual non-actuating production-provider final-model/profile preflight with strict request limits, no tools/device writes and typed failure/fallback behavior.",
+      "Exactly one internal OS-CSPRNG draw and protected commitment, duplicate/replacement/caller-time denials without disclosure.",
+      "Reproducible future boundary and final-design compatibility; a missing-input decision never authorizes drawing."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "#641 physical, #782 empirical and #783 full current-role path acceptance remain missing."
+      },
+      {
+        "owner": "Provider integration owner",
+        "condition": "Final source/profile provider behavior has no current qualified receipt."
+      }
+    ],
+    "next_action": "Prepare the exact manifest and final compatibility checklist now; perform no lock/draw until the real selected design and prerequisite receipts exist.",
+    "work_actionable_now": [
+      "Resolve manifest field ownership and hash inputs; retain current provider/model as declared source rather than asserting future provider availability.",
+      "Prepare no-tool failure/fallback probe without calling or drawing."
+    ],
+    "concrete_user_decisions": [
+      "Later: accept the actual completed scientific design and select its future launch boundary. No new draw decision is ready now."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "S5 conditional; source manifest preparation can precede prerequisites",
+    "current_predecessors_including_closed_history": [
+      641,
+      782,
+      783
+    ],
+    "proposed_predecessors_including_closed_history": [
+      641,
+      782,
+      783
+    ],
+    "dependency_correction": "Retain #641/#782/#783 completion edges for the actual lock/draw; they are material, not paperwork. Final model preflight is not full pilot acceptance.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+      "experiment_orchestrator/launch_artifacts.py",
+      "experiment_orchestrator/launch_control.py",
+      "experiment_orchestrator/provider.py",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 639,
+    "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
+    "execution_state": "partial_contained_native_acceptance_active_prefix_unqualified",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Actual executor LOGIN 21/lifecycle LOGIN 25, bounded shadow subset and canonical begin-bundle work passed with finite custody and no devices.",
+      "Six volatile composite writer SELECT(fn()).* forms were corrected to one-call FROM forms. Qualified f16/531 native point made A/A-replay/B/C in one rollback transaction and advanced only bundle attempts+2; all 29 G+S rowsets and 77 sequence definitions preserved.",
+      "Other five corrected writers have source regression coverage only; old-source +14 attempts and failed initial CI remain separate history.",
+      "Lifecycle authority and named alert proofs are shared evidence, not executor exposure/exclusivity/recovery acceptance."
+    ],
+    "remaining_actual_acceptance": [
+      "Actual executor/state path enforces full 48-field generation/freshness/confirmation and never opens partial-prefix exposure.",
+      "No ordinary/MCP/forecast/retry interleaving; shadow zero calls and nonrandom no-assignment lineage proven in the complete intended path.",
+      "Contained lease-loss/reconnect/failure/recovery closes exposure first and restores intended state; no physical result invented from FakeTransport.",
+      "Remaining five writer SQL contracts receive meaningful native proof where their authentic preconditions can be met; no instrumentation or DB guard replacement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Firmware/runtime owner",
+        "condition": "Current GRID_REVISION f2ce does not match historical direct-launch risk c10f. ORDER_REVISION is a27/48 accepted-risk receipt, not a full prefix replay; unchanged active route intentionally refuses."
+      },
+      {
+        "owner": "Runtime/release lead",
+        "condition": "No supported current synthetic positive active-prefix path without authentic source qualification; copying genuine experiment/authority is invalid."
+      },
+      {
+        "owner": "ROOT/native CI owner",
+        "condition": "Compilation/full-prefix work requires admitted bounded cluster execution; no Mac heavy replay."
+      }
+    ],
+    "next_action": "Make the next packet the source-bound prefix-coverage gap and supported qualification plan: map all 48 inputs to real decision consumers, cover missing actual paths or select a truthful external full-coverage/HIL runner, then run admitted prefix qualification before changing the source order/grid. Reuse the exhausted contained subset; prepare a new native case only when it adds missing acceptance with authentic reachable preconditions.",
+    "work_actionable_now": [
+      "Inventory actual compiled consumers and the 21 currently unimposed fields against all 48 policy inputs, including exact current-grid and recovery-start provenance.",
+      "Prepare one supported full-coverage prefix-qualification implementation/admission packet; no new ORDER_REVISION until genuine complete evidence.",
+      "Record the five other corrected writer paths as source-only and identify any truly reachable native proof before requesting execution; current useful unchanged-source subset is exhausted."
+    ],
+    "concrete_user_decisions": [
+      "No decision needed for bounded source diagnosis. If true full-coverage/HIL needs physical equipment, present that concrete scope later; do not silently renew the historical accepted-risk exception."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "Next contained-source packet; active native acceptance remains gated by real source evidence",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "No blanket #749/#782/#641 prerequisites for contained source work. Full48 prefix qualification is a concrete source/technical gate; do not turn all of future twin #31 into a new issue gate.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+      "verdify_schemas/component_executor.py:35",
+      "verdify_schemas/component_executor.py:69",
+      "ingestor/tasks/component_experiment.py:2410",
+      "scripts/component_prefix_replay.py",
+      "firmware/test/replay_invariants.cpp",
+      "planning/reviews/2026-10-17-s3-execution/639-composite-writer-point-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "/private/tmp/verdify-s3-active-prefix-source-review.json"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests.",
+    "source_guard_correction_needed": "No boolean/GRID/order string substitution is justified. The accepted-risk receipt is deliberately bound to another historical grid; a fresh supported full-coverage receipt or separately selected authentic path is required."
+  },
+  {
+    "number": 640,
+    "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+    "execution_state": "awaits_real_first_assignment_window",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Freezer/export/analyzer interfaces and historical synthetic retry/null/failure evidence exist.",
+      "No genuine first randomized assigned-day outcome is supplied by the current clone tests."
+    ],
+    "remaining_actual_acceptance": [
+      "Exactly one outcome for every first-day locked assignment, including no exposure, missing data and aborted work.",
+      "Repeated full export has byte-identical canonical rows/hashes and analyzer consumes unchanged bytes.",
+      "Actual freezer cannot mutate assignments/read mapping; analyst sees blinded X/Y only."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#642 launch and an elapsed actual06:00–24:00 Denver window have not occurred."
+      },
+      {
+        "owner": "Data/platform owner",
+        "condition": "Native current-role freeze/export and existing backup custody must join the real assignment."
+      }
+    ],
+    "next_action": "Prepare exact reconciliation/export/backup commands and failure-day checks; execute only after the real assigned window and current source/UID binding.",
+    "work_actionable_now": [
+      "Prepare the assignment-to-outcome reconciliation and export-twice checklist using unchanged existing tooling."
+    ],
+    "concrete_user_decisions": [
+      "None now; do not invent a day or reuse a clone synthetic day to close this issue."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "S5 after real #642 and elapsed window",
+    "current_predecessors_including_closed_history": [
+      642
+    ],
+    "proposed_predecessors_including_closed_history": [
+      642
+    ],
+    "dependency_correction": "Retain #642 as a real completion prerequisite; preparation remains runnable.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+      "experiment_orchestrator/outcome.py",
+      "research/planner-efficacy/switchback/v2_day1_export.py",
+      "docs/research/c1-restored-sql-export-analyzer-2026-09-28.md"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 641,
+    "title": "[C1][P1] Complete one fresh attended physical baseline–target–baseline proof",
+    "execution_state": "physical_proof_blocked_not_attempted_by_s3",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Historical Gate R resolution/retired hooks and emergency-safe ordinary handoff are retained; neither is successful Gate P proof.",
+      "Current #639/#587 contain accepted software subsets; no device epoch/rescue/physical baseline-target-baseline result was added.",
+      "Draft PR #855 remains OPEN/draft at f8bd0cba and mergeStateStatusDIRTY. Four-file diff activates the component and unsuspends a Job with invalid image/time/source placeholders and historical experiment/config/authorization; it is not executable current authority."
+    ],
+    "remaining_actual_acceptance": [
+      "One fresh exact source/lease/UID/window-bound attended successor with actual baseline-before→target→baseline-after evidence.",
+      "Two advancing full 48-field epochs at each boundary and close-exposure-first on mismatch.",
+      "Physical exclusivity/rescue/full-state recovery; finish confirmed baseline, component off, ID cleared, vector off, exposure zero, required draft/shadow/closed state and ordinary-writer handoff.",
+      "Successful proof and safe final state both required; emergency-safe abort does not close the proof."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "#749 has real climate/soil and unresolved wetting-readiness constraints."
+      },
+      {
+        "owner": "Firmware/runtime lead",
+        "condition": "Current prefix/grid route is not physically qualified and relevant #639/#587 contained clauses remain unaccepted."
+      },
+      {
+        "owner": "Attending ROOT/supervisor/rescue owner",
+        "condition": "Fresh exact window/authority and rescue metadata must bind an executable current successor; historical PR #855 authorizations cannot be replayed."
+      }
+    ],
+    "next_action": "Keep PR #855 parked. First close the source/evidence gaps and prepare a current dormant successor diff/rollback manifest; only then bind one fresh remotely attended physical attempt and its cleanup. Do not retry Gate R already resolved.",
+    "work_actionable_now": [
+      "Inventory PR #855 reusable mechanics versus stale experiment/config/source/window/lease assumptions.",
+      "Prepare source/render-only successor plan and current proof clause ledger; do not enable component or unsuspend anything."
+    ],
+    "concrete_user_decisions": [
+      "Later, when technically ready: choose an exact attended proof window with supervisor/rescue owner and concrete proof scope. Remote attendance is sufficient; do not require an invented in-person gate."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "S4 conditional physical lane, not a promised sprint completion",
+    "current_predecessors_including_closed_history": [
+      749,
+      639,
+      587,
+      747
+    ],
+    "proposed_predecessors_including_closed_history": [
+      749,
+      639,
+      587,
+      747
+    ],
+    "dependency_correction": "Retain #749/#639/#587 completion prerequisites only at their contained/source scopes; retain closed #747 as history. No dependency may require #641 physical proof to close #639/#587 first.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/855",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5855420357",
+      "db/migrations/239-experiment-v2-orphaned-preclaim-recovery.sql",
+      "scripts/experiment_v2_proof_packet.py:1908",
+      "verdify_schemas/component_executor.py:69"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests.",
+    "pr855_recommendation": {
+      "action": "KEEP_PARKED_DRAFT",
+      "head_sha": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+      "merge_state": "DIRTY",
+      "reason": "Historical one-shot activation is not a current release candidate. Preserve branch/failures; at selected successor creation either rebase/rewrite exact scoped source or close this draft as superseded with a link. Do not merge or carry forward expired authority."
+    }
+  },
+  {
+    "number": 642,
+    "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+    "execution_state": "randomized_launch_not_admitted",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Activation/source/rollback machinery exists; ordinary policy convergence is separately accepted.",
+      "No current locked draw or actual randomized day1 is evidenced by S3."
+    ],
+    "remaining_actual_acceptance": [
+      "Unique real assignment and choice from exact immutable locked identity, with fresh launch-window authority.",
+      "Actual target, two distinct epochs, exposure lineage, singleton writer and a functioning freezer.",
+      "Current safe rollback and direct first-day custody handoff; failure retained in assigned ITT without redraw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "#588 qualified design/lock/draw incomplete and June–July 2027 is only a candidate future season."
+      },
+      {
+        "owner": "ROOT/runtime owner",
+        "condition": "Physical rollout/launch readiness and scoped attended authority must be current at the boundary."
+      }
+    ],
+    "next_action": "Prepare exact locked-identity/rollback packet now; activate only at the selected future boundary after #588, with no launch date promised by this replan.",
+    "work_actionable_now": [
+      "Update activation preflight and custody handoff templates from current successful source/role proofs."
+    ],
+    "concrete_user_decisions": [
+      "Later separate randomized-launch decision at the actual selected boundary; none requested by this status review."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "S5 conditional seasonal launch",
+    "current_predecessors_including_closed_history": [
+      588
+    ],
+    "proposed_predecessors_including_closed_history": [
+      588
+    ],
+    "dependency_correction": "Retain #588; do not mistake #641 proof or healthy ordinary runtime for launch authority.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+      "experiment_orchestrator/launch_control.py",
+      "ingestor/tasks/component_experiment.py",
+      "docs/runbooks/experiment-rollout.md"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 749,
+    "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+    "execution_state": "original_sealed_readiness_failure_with_resolved_argo_provenance",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Original packet executed unchanged SQL after the retained UUID serializer failure and correctly FAILED spreads 4.86/5.04F against4F plus six unmatched replacement soil identities.",
+      "Eight older identities still match; typed integer IDs/details survived projection, so no projection repair or family exception is justified.",
+      "Later accepted #980 full selector-free 129-resource sync resolves current full-operation provenance; it does not turn the original failed packet into a pass.",
+      "Source-bound soil/hydro dependency declarations were reviewed; f16 six-query change did not introduce a causal soil input."
+    ],
+    "remaining_actual_acceptance": [
+      "Truthful finite/fresh three-contributor quorum and unchanged spread criterion pass a separately identified current packet; stale/loss/contradiction still refuse.",
+      "Hydro and any reviewed soil degradation remain outside causal surfaces under explicit exact boundaries.",
+      "Current original-clause read-only packet binds writer/quiet/full 48-field/Argo/backup/auth/provider identities and grants no physical/randomized authority.",
+      "Gate P still separately requires real #778 wetting-admission/counter-reset/equipment/source-receipt disposition: current collector explicitly emits false. Closing #778 as an investigation did not satisfy that technical evidence."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Evidence/data + firmware owner",
+        "condition": "Actual spread excess and six replacement south_1 soil events need causal diagnosis; do not repeatedly resample to obtain a pass."
+      },
+      {
+        "owner": "Firmware/runtime owner",
+        "condition": "Real wetting correction/physical admission/rails/counter-reset qualification remains unresolved; proof_packet.py emits wetting_incident_778_disposition=False."
+      },
+      {
+        "owner": "ROOT/release owner",
+        "condition": "Any later packet needs current source/runtime bindings and a distinct bounded scope, not a reset of the historical attempt."
+      }
+    ],
+    "next_action": "Join retained climate/probe/alert-producer evidence to identify a real repair or honest hold; prepare exact typed classification plumbing with negative tests. Maintain wetting hold until real qualifying evidence exists, then collect one separately scoped packet with unchanged thresholds.",
+    "work_actionable_now": [
+      "Read-only historical producer/consumer and reference evidence diagnosis; distinguish sensor disagreement from genuine spatial gradient.",
+      "Specify exact new soil identity review and source-bound wetting disposition schema; do not flip the collector boolean or broaden exception matching.",
+      "Update observer language to separate app health/revision from completed full-operation provenance, retaining old failure."
+    ],
+    "concrete_user_decisions": [
+      "No blanket permission is needed for source diagnosis. If real inspection/maintenance is necessary, present the specific measured gap and intervention; no new physical authorization is implied now."
+    ],
+    "proposed_priority": "P0",
+    "proposed_sprint": "Next readiness/measurement repair packet; final physical-ready verdict conditional",
+    "current_predecessors_including_closed_history": [
+      424,
+      778,
+      949
+    ],
+    "proposed_predecessors_including_closed_history": [
+      424,
+      778,
+      949
+    ],
+    "dependency_correction": "Keep #424/#778/#949 closed historical predecessors, not active blockers. Express missing #778 physical evidence explicitly in #749/#641; do not reopen an accepted investigation just to represent its preserved limit.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+      "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md",
+      "planning/reviews/2026-10-17-s3-execution/749-full-sync-supplement.md",
+      "scripts/experiment_v2_proof_packet.py:1908",
+      "scripts/experiment_v2_readiness_guard.py:102",
+      "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6001965453"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 750,
+    "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+    "execution_state": "open_zero_effort_physical_recovery_rollup",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Closed #747 retains its bounded backup/recovery acceptance; accepted core ordinary runtime and later full-sync/exporter delivery are separate receipts.",
+      "Contained #639/#587 now include current-role, begin-bundle, lifecycle and named-alert proof; no need to repeat resolved orphan recovery."
+    ],
+    "remaining_actual_acceptance": [
+      "Current source/runtime/backup packet names all remaining mismatch.",
+      "#749 and #641 have their own actual scoped success receipts.",
+      "Confirmed safe final state and recovery handoff without randomized launch authority."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "#749 readiness and #641 successful physical proof remain unaccepted."
+      }
+    ],
+    "next_action": "Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.",
+    "work_actionable_now": [
+      "Maintain exact child-scope ledger; reuse accepted backup and contained receipts rather than duplicate operations."
+    ],
+    "concrete_user_decisions": [
+      "None independent of the concrete #641 physical-window decision."
+    ],
+    "proposed_priority": "P0",
+    "proposed_sprint": "ROLLUP; no separate hours or completion gate on children",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "No parent completion gate. #747 closed is history; do not treat all recovery history as a fresh fault-injection requirement.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "planning/reviews/2026-10-17-s3-execution/README.md",
+      "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 775,
+    "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+    "execution_state": "campaign_in_progress_three_s3_issues_accepted_five_open",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "All369 records inventoried; original50 open replan published, then #977/#980/#802 accepted and closed with native receipts.",
+      "Latest retained native graph47 open/27 active/24 closed predecessors is source-consistent; parent roll-ups and accepted-vs-retired closure are distinguished.",
+      "Current f16 native CI, role/bundle/lifecycle/named-alert acceptance, finite custody and cleanup are delivered within stated limits."
+    ],
+    "remaining_actual_acceptance": [
+      "Every current issue has a fresh concise contract, accountable owner, actionable next step, exact remaining criteria and valid dependency semantics.",
+      "Native graph/source/current review and rendered issue bodies agree; no stale pending-approval or pending-CI claims.",
+      "Bounded pilot ultimately produces reproducible declared result or explicit stop; neither current sprint nor campaign is complete."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "ROOT/planning publisher",
+        "condition": "Canonical #775 and #587/#639 bodies still lag the actual receipts, despite current proof documentation."
+      },
+      {
+        "owner": "Campaign owners",
+        "condition": "Readiness, source prefix, scientific inputs and later seasonal/physical outcomes remain real work."
+      }
+    ],
+    "next_action": "Publish the complete current summary and revised bounded execution queue; re-estimate only explicitly chosen unfinished packets instead of treating original estimates as a remaining-hours ledger.",
+    "work_actionable_now": [
+      "Reconcile all issue bodies and current review; keep frozen triage/failed receipts unchanged.",
+      "Maintain one product native writer, one independent owner lane and one source/science lane; replace blocked work rather than multiplying concurrent native operations.",
+      "Count roll-ups at zero hours and distinguish an issue closure from completed sprint preparation packets."
+    ],
+    "concrete_user_decisions": [
+      "No old credential or two-message approval is pending.",
+      "Future physical window, exact design/launch and measurement-scope decisions should be raised only with concrete ready packets; not as a blanket planning gate."
+    ],
+    "proposed_priority": "P0",
+    "proposed_sprint": "ROLLUP plus current planning reconciliation; bounded next sprint",
+    "current_predecessors_including_closed_history": [],
+    "proposed_predecessors_including_closed_history": [],
+    "dependency_correction": "Retain an acyclic completion graph. Do not add broad #981 gates to the nine-state pilot, full-database seals to contained finite proofs or roll-up parents as blockers.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "planning/reviews/2026-10-17-s3-execution/README.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.json",
+      "planning/reviews/2026-10-17-s3-execution/802-descheduler-acceptance.json",
+      "planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md",
+      "planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.json"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests.",
+    "replacement_current_summary": "The frozen October 17 triage retained all 369 issue records; accepted S3 closures are #977 three-replica restoration, #980 exporter/full-sync delivery and #802 descheduler adoption. The fresh 06:59:54 UTC native graph remains 47 open, 27 active edges and 24 closed predecessor records, unchanged. Five S3 issues remain open; their original 21–42 hour estimates are neither spent time nor measured remaining work. #749 retains the original 4 F spread and unmatched-soil FAIL; later full-sync provenance is resolved, while the source still retains the real #778 Gate P wetting hold. #981 awaits Home Assistant #878 source-clock qualification. #782 authentic-input decision is complete but empirical selector/target/contributor/joint 18-hour evidence is not. Native f16a8604 CI succeeded, qualified ingestor 53111f35 remains unpromoted, and actual-role subset/corrected begin-bundle/lifecycle proofs passed. Explicitly approved ordinary-role installation/authentication and the exact two-message expired-work alert pair are complete. Final f46ffe6d verifies both native sender confirmations, monitor completion, deduplication, rollback, one retained cancellation event and complete finite/alert custody; original bridge/release/collector timeout failures remain failed, with no resend. All 7,950 genuine rows across 29 relations and 12,425 alert rows are preserved; seven labeled synthetic rows remain, all 77 sequence changes are explicitly accounted. Uncovered nonactuation/blinding/named-condition/prefix/exposure/exclusivity/recovery clauses remain open. Thirty disposable objects across ten Jobs were cleaned with retained hashes, without deleting database fixtures or credentials. No physical proof, draw, randomized launch, ordinary-writer handoff, image promotion or full-database/restore parity is claimed. S3 and campaign are incomplete; next execution is bounded readiness/source/contained qualification, with authentic scientific collection and owner work in parallel.",
+    "replacement_how_2": "Keep 80 shared hours as the original sprint capacity. Three original allocations are accepted; five open allocations retain original 21–42 hour estimates only. Finish current closeout and select/re-estimate bounded remaining packets explicitly; accepted preparation can be complete while its issue stays open. Prioritize real readiness/prefix/source gaps and independent owner inputs, preserving contingency and serialized native execution."
+  },
+  {
+    "number": 782,
+    "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
+    "execution_state": "preparation_packet_complete_empirical_contract_incomplete",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "S3 authentic-input inventory/include-exclude/prospective decision is published and complete.",
+      "June 1–July 30, 2027 candidate, climate-only historical coverage and provisional model-only 0.13776 power/retention sensitivity retained.",
+      "OriginalOct 2 snapshot validates but has zero target/contributor rows and no original selector choice; excluded from empirical joint qualification.",
+      "Nine contributor declarations are route_only; zero pilot contexts/choices. Existing winter/native collectors are active and their no-due/not-declared outcomes were preserved; no duplicate collector needed."
+    ],
+    "remaining_actual_acceptance": [
+      "Frozen narrow exploratory claim with exact authentic inputs and defensible null/inconclusive rules before lock.",
+      "Authentic pre-boundary selector context/choice, target/crop and physical contributor lineage, plus complete eligible 18-hour nine-state continuity.",
+      "Source-faithful empirical power/sensitivity, including  .99^30 / .95^30 retention, without inventing an80% threshold.",
+      "Future compatible calendar/model identity with no prequalification draw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/data lead",
+        "condition": "No selected empirical profile/fallback mix, covariance/carryover or joint endpoint cohort from authentic source inputs."
+      },
+      {
+        "owner": "Facility/contributor owner",
+        "condition": "Current route declarations do not establish physical contributor identity or future crop placement."
+      },
+      {
+        "owner": "Native collector/ROOT owner",
+        "condition": "First due winter day is Nov 2; normal captureNov 3 00:30 MST must verify frozen archived bytes/actual observer/day hash and separate backup custody."
+      }
+    ],
+    "next_action": "Prepare current authentic contributor/crop declarations for a prospective valid interval through supported source guards; collect original as-of selector inputs without fabricated clocks/assignments. Verify the existing winter collector at its naturally due first day. Compute only after usable inputs and native admission.",
+    "work_actionable_now": [
+      "Complete declaration provenance and source-owned pre-boundary collection plan.",
+      "Verify current archive/source contract using bounded metadata; no duplicate collector or broad replay of unusable data.",
+      "Keep no-energy nine-state selected endpoint and document unavailable empirical quantities."
+    ],
+    "concrete_user_decisions": [
+      "Actual facility owner must supply or validate physical contributor/crop identity for the selected prospective window; no current snapshot can assert June 2027 placement.",
+      "A later explicit scientific no-go can retire scope; missing-input/prospective decisions alone cannot authorize #588."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "Next science-source packet plus natural collection; empirical acceptance seasonal/input-bound",
+    "current_predecessors_including_closed_history": [
+      371,
+      779,
+      780,
+      781
+    ],
+    "proposed_predecessors_including_closed_history": [
+      371,
+      779,
+      780,
+      781
+    ],
+    "dependency_correction": "Retain only closed #371/#779/#780/#781 as historical prerequisites. #981 electricity stays conditional and is not a current blocker. No artificial #641/#783 gate on empirical collection preparation.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+      "docs/research/782-input-decision-2026-10-17.md",
+      "docs/research/evidence/782-inputs-2026-10-17/availability.json",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 783,
+    "title": "[C1][P1] Qualify the complete current-login selector-to-frozen-analysis path",
+    "execution_state": "current_role_vertical_path_incomplete_preparation_runnable",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Retained Sept 30 six-assignment/three-pair synthetic connected fixture and7547-byte export/analyzer replay exist; Oct 2 source-faithful byte replay is available.",
+      "New actual role/bundle/lifecycle/alert scope and finite custody can be reused as current component evidence, without claiming a new complete vertical execution."
+    ],
+    "remaining_actual_acceptance": [
+      "One actual current-login selector→executor→receipt→freezer→blinded-analyst path with owner scaffolding explicitly separated and minimum duty allow/deny boundaries.",
+      "First/missing/null/zero-exposure/reset/failed days retained by assignment with no mapping leakage or result-based filtering.",
+      "Whole path repeated with identical canonical export/analysis bytes; #588 rechecks compatibility with final scientific design.",
+      "Unchanged current source/target and complete declared failure matrix; old clock-modified/physical_execution_qualified override fixture cannot supply current guard acceptance."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Complete actual randomizer/freezer/analyst lifecycle path is not proven; current prefix/source qualification blocks active positive segments."
+      },
+      {
+        "owner": "Data/fixture owner",
+        "condition": "Old connected fixture modifies clocks/public functions and must not run on retained genuine SOURCE/A/B or be mislabeled as unchanged-source qualification."
+      },
+      {
+        "owner": "ROOT/native owner",
+        "condition": "Any actual new path needs exact role/source/UID/write-closure custody and supported isolated admission; existing finite29 seal is not broad #396/#643 restore parity."
+      }
+    ],
+    "next_action": "Compose a clause-by-clause current-role command/admission plan now using retained proofs; identify which stages are truly runnable unchanged and which require legitimate source qualification or a separately admitted disposable fixture. Do not alter clocks/guards to reach an active case.",
+    "work_actionable_now": [
+      "Build the interface/case/role manifest and replay retained canonical bytes.",
+      "Prepare missing role allow/deny and source boundary checks using existing authentic identities.",
+      "Separate generic software integration from #782 empirical inputs; do not defer preparatory work to whole-issue closure."
+    ],
+    "concrete_user_decisions": [
+      "No immediate approval required for preparation. If no supported target can meet a proposed stateful case, present its exact target/mutation scope rather than silently creating another clone or fake authority."
+    ],
+    "proposed_priority": "P1",
+    "proposed_sprint": "Pull bounded S4 preparation into current sprint; full integration remains conditional",
+    "current_predecessors_including_closed_history": [
+      639,
+      587
+    ],
+    "proposed_predecessors_including_closed_history": [
+      639,
+      587
+    ],
+    "dependency_correction": "For this replan retain #639/#587 completion edges. Removal is conditional on a source-backed clause ledger proving unchanged #783 acceptance independent of their entire remaining scopes. Current positive-prefix blocker remains explicit. Preparation may start now; removing a graph edge must never manufacture full-path readiness or narrow acceptance.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+      "docs/research/c5-connected-randomized-clock-qualification-2026-09-30.md",
+      "tests/fixtures/experiment_v2_connected/README.md",
+      "docs/runbooks/ordinary-runtime-qualification.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-5956282639",
+      "/private/tmp/verdify-s3-active-prefix-source-review.json"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests.",
+    "conditional_dependency_change": {
+      "remove_if_proven_independent": [
+        639,
+        587
+      ],
+      "not_proposed_for_immediate_native_mutation": true,
+      "proof_required": "Map every unchanged #783 AC to exact accepted/runnable current-source role stages; show no required #639/#587 unaccepted case is silently omitted. Retain any actual prefix/identity/capability prerequisites in the issue contract."
+    }
+  },
+  {
+    "number": 784,
+    "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
+    "execution_state": "awaits_real_locked_cohort_operations",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Warm60-local-day candidate and daily outcome/custody machinery exist; winter observer is separate."
+    ],
+    "remaining_actual_acceptance": [
+      "All locked assignments accounted, including missing/aborted/no-exposure; no replacement pair/redraw.",
+      "Predeclared blinded safety/integrity cadence and immutable deviations.",
+      "Actual final stopped admission/safe closure and complete original custody manifest."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#640 first genuine assigned-day path and full selected60-day calendar have not occurred."
+      }
+    ],
+    "next_action": "Prepare daily blinded ownership/exception/backup handoff now; after #640 operate the entire locked window and preserve failures until final safe closure.",
+    "work_actionable_now": [
+      "Draft a concise day ledger, missing-day/null checklist and operations handoff; reuse tooling without parallel manual exports."
+    ],
+    "concrete_user_decisions": [
+      "Later selected calendar and actual daily operations availability; no schedule or treatment authorization inferred now."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "PILOT; genuine60-day wall-clock duration, not engineering-hours closure",
+    "current_predecessors_including_closed_history": [
+      640
+    ],
+    "proposed_predecessors_including_closed_history": [
+      640
+    ],
+    "dependency_correction": "Retain #640; no readiness/twin/resource platform should be added to the already bounded operated cohort after lock.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+      "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json",
+      "research/planner-efficacy/switchback/v2_day1_export.py",
+      "docs/runbooks/experiment-rollout.md"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 785,
+    "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
+    "execution_state": "awaits_complete_blinded_custody_then_one_reveal",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Frozen analyzer/interface and synthetic inconclusive examples exist."
+    ],
+    "remaining_actual_acceptance": [
+      "Independent rerun from original frozen completed-pilot inputs yields identical tables/decision.",
+      "One audited reveal with uncertainty, low power/null consequences and exact measured scope.",
+      "Explicit stop/repair/retest/follow-on decision, no profit/resource/other-season extrapolation."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#784 complete genuine cohort, closure/custody and authorized one-way reveal are absent."
+      }
+    ],
+    "next_action": "Prepare immutable report skeleton and independent reproduction command now; consume completed #784 custody once and publish the bounded result, including inconclusive/no-benefit if warranted.",
+    "work_actionable_now": [
+      "Prepare output tables and decision categories against existing synthetic fixtures without revealing or computing absent efficacy."
+    ],
+    "concrete_user_decisions": [
+      "Later one-way reveal decision under the exact completed blinded-custody protocol; not an immediate blocker to source preparation."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "PILOT readout after full cohort",
+    "current_predecessors_including_closed_history": [
+      784
+    ],
+    "proposed_predecessors_including_closed_history": [
+      784
+    ],
+    "dependency_correction": "Retain #784. #786/#787 are disposition outputs, not preconditions for readout.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "research/planner-efficacy/switchback/v2_analysis.py",
+      "research/planner-efficacy/protocols/analyzer-interface-v2.golden.json",
+      "docs/research/c1-restored-sql-export-analyzer-2026-09-28.md"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 786,
+    "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
+    "execution_state": "delivered_design_preparation_follow_on_decision_deferred",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "PR #932/efaa4b67 delivered matched-surface comparator preparation with eight input byte identities, genuine as-of/holdout and separate-study constraints."
+    ],
+    "remaining_actual_acceptance": [
+      "Explicit #785-linked go/no-go; if go, finite deterministic rule and genuine chronological held-out corpus.",
+      "No revealed-schedule tuning or physical claims from offline command agreement/replay.",
+      "Any new prospective trial has separate identity, lock/draw and bounded measured claim."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "Completed #785 decision and authentic source-faithful training/covariance/power are absent; numeric thresholds/sample/calendar remain unresolved."
+      }
+    ],
+    "next_action": "Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.",
+    "work_actionable_now": [
+      "Retain delivered source/hash and decision alternatives; no duplicate preparation document or selector implementation needed."
+    ],
+    "concrete_user_decisions": [
+      "Future follow-on selection only after a concrete decision rationale; no immediate question needed."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "FUTURE; zero current implementation commitment",
+    "current_predecessors_including_closed_history": [
+      785,
+      780
+    ],
+    "proposed_predecessors_including_closed_history": [
+      785,
+      780
+    ],
+    "dependency_correction": "Retain #785 and closed #780 history. No automatic #14/#638/#586 platform chain; explicit no-build remains a valid completion outcome.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/932",
+      "research/planner-efficacy/protocols/deterministic-forecast-comparator-preparation-v1.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/786#issuecomment-5948363026"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  },
+  {
+    "number": 787,
+    "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
+    "execution_state": "delivered_preparation_no_eligible_whole_resource_endpoint",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "e52284cf preparation defines circuit/flow/fuel boundaries, calibration/clocks/tariffs/uncertainty and overnight/DST.",
+      "Current claim remains unavailable: partial electricity/shared water cannot establish whole-greenhouse savings; gas and whole-resource calibration/cost are null."
+    ],
+    "remaining_actual_acceptance": [
+      "Explicit post-readout go/no-go and narrow measured claim.",
+      "Every claimed resource has independent eligible calibrated coverage and uncertainty; stale/modeled values stay labeled unavailable/ineligible.",
+      "Prospective season/overnight design without unearned yield/profit/whole-resource benefit; new study has its own identity/draw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#785 follow-on decision absent."
+      },
+      {
+        "owner": "Home Assistant/product energy owners",
+        "condition": "#981/#878 clock/circuit qualification required if electricity is selected."
+      },
+      {
+        "owner": "Control/facility owner",
+        "condition": "#410 realized overnight evidence and actual physical meter/flow/fuel boundaries required only for the selected positive study claim."
+      }
+    ],
+    "next_action": "Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.",
+    "work_actionable_now": [
+      "Clarify conditional measurement dependencies in the contract and preserve accepted #781 scope.",
+      "Do not add this resource program as a prerequisite to the no-energy nine-state pilot."
+    ],
+    "concrete_user_decisions": [
+      "Future: select the resource/overnight claim or no-go; purchase/installation/gas changes require a concrete separately scoped decision. No present decision is needed for source bookkeeping."
+    ],
+    "proposed_priority": "P2",
+    "proposed_sprint": "FUTURE; conditional measured-study program",
+    "current_predecessors_including_closed_history": [
+      785,
+      410,
+      981,
+      781
+    ],
+    "proposed_predecessors_including_closed_history": [
+      785,
+      410,
+      981,
+      781
+    ],
+    "dependency_correction": "Retain current #785/#410/#981 edges for positive measured-study acceptance, with closed #781 history. Explicit no-go does not require finishing all physical/energy work; if no-go is selected, retire with linked rationale rather than treating these edges as mandatory hardware work.",
+    "closure_recommendation": {
+      "action": "KEEP_OPEN",
+      "reason": "The listed remaining acceptance is material and has no complete receipt or explicit stop decision."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/787",
+      "research/planner-efficacy/protocols/whole-resource-study-preparation-v1.md",
+      "research/planner-efficacy/protocols/resource-endpoint-v1.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/787#issuecomment-5917099536"
+    ],
+    "review_source_revision": "c7f57e9907c6e675cfce7ee4120356b924ce76b2",
+    "review_limits": "Read-only source, complete issue inventory, retrieved issue comments and retained native receipts. No fresh device/DB query, deployment, draw, issue mutation or heavy tests."
+  }
+]

@@ -1,0 +1,2114 @@
+[
+  {
+    "number": 14,
+    "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+    "execution_state": "deferred_unselected_oracle_program",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Read-only twin image/deployment and agreement-reporter source exists; old design-only descriptions are obsolete.",
+      "#606 was retired as not_planned and its owner-registry/build/runtime obligations were explicitly consolidated here, not accepted."
+    ],
+    "remaining_acceptance": [
+      "An explicit useful oracle question and consumer coverage contract, distinguishing action-compared, default-only, unsupported and identity-only fields.",
+      "Exact owning-registry admission, immutable twin build, device-denied runtime and real output receipts with no startup compiler/pip downloads.",
+      "Positive self-diff and negative injected-divergence evidence before any proposed release gate; current pilot remains independent."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "No selected twin decision question or accepted complete coverage/runtime."
+      },
+      {
+        "owner": "jvallery/agents registry owner",
+        "condition": "verdify-twin is absent from generated eight-image build registration; registration is required only if selected."
+      }
+    ],
+    "next_action": "Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.",
+    "work_ready_now": [
+      "Source-map reusable coverage findings from #639 prefix qualification without building or deploying the whole twin."
+    ],
+    "decisions": [
+      "No immediate decision required. If this option is pulled, choose the specific oracle question and scope; it is not a pilot prerequisite."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+      "twin/Dockerfile",
+      "twin/report_agreement.py",
+      "deploy/k8s/components/firmware-twin/twin-shadow-deployment.yaml",
+      ".agent-fleet/ci.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/606"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Research/platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Current source contains a read-only twin image/deployment and agreement reporter, so the old design-only description is obsolete. No complete declared oracle coverage or accepted native runtime/output is evidenced. The generated fleet registry still omits verdify-twin. Closed #606 is a not-planned consolidation: its owning-registry registration, immutable build and device-denied runtime obligations remain here. The twin is unselected and outside the current pilot critical path; #31 owns its coverage work.\n\nCurrent execution allocation: FUTURE. Next action: Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "execution_state": "ROLLUP_INCOMPLETE",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "The hardware program is narrowed to evidence-backed sensing and finite seasonal/equipment decisions. Center-fertilizer and automatic motorized-shade premises are not current mandatory scope."
+    ],
+    "remaining_acceptance": [
+      "Each physical item has a named measurement/control need, commissioning worksheet and explicit enabled/disabled state.",
+      "No center-fertilizer path contradicts #434; absent sensors are not synthesized as real observations.",
+      "Operator windows and seasonal triggers are tracked without guessed dates or blanket launch blockers."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator with data/control lead",
+        "condition": "One actual crop/pot/probe/plumbing inventory and separately scoped service/calibration observations."
+      }
+    ],
+    "next_action": "Maintain child results for #751/#298/#51/#52/#412 and #298→#398→#45. Reuse one field inventory and record enabled/disabled/uncommissioned states for each selected item.",
+    "work_ready_now": [
+      "Prepare one shared field worksheet from existing identifiers.",
+      "Link existing child receipts without adding duplicate estimates or a blanket #749 dependency."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "ROLLUP",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: ROLLUP INCOMPLETE.\n\nCompleted or retained scope: The hardware program is narrowed to evidence-backed sensing and finite seasonal/equipment decisions. Center-fertilizer and automatic motorized-shade premises are not current mandatory scope. Physical identity and commissioning remain unverified. Current config still contains Canna Lily, unknown seedlings and Unknown pots; those are configuration assumptions, not present-day observations.\n\nRemaining actual acceptance: Each physical item has a named measurement/control need, commissioning worksheet and explicit enabled/disabled state.; No center-fertilizer path contradicts #434; absent sensors are not synthesized as real observations.; Operator windows and seasonal triggers are tracked without guessed dates or blanket launch blockers.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/16 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Maintain child results for #751/#298/#51/#52/#412 and #298→#398→#45. Reuse one field inventory and record enabled/disabled/uncommissioned states for each selected item.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 31,
+    "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "execution_state": "deferred_coverage_work_with_reusable_source_slice",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "replay_emit.cpp has explicit expected columns and an opt-in full-setpoint failure; twin live driver/reporter source exists.",
+      "The 27/48 component-prefix harness count belongs to a separate harness and is not a fresh count of all twin fields."
+    ],
+    "remaining_acceptance": [
+      "Every current active firmware consumer mapped to export and compiled decision, or excluded from the precise oracle claim with a reason.",
+      "Nondefault injection and required-column omission reach the actual compiled path; identical-source self-diff passes and known divergence fails.",
+      "Unsupported/default-only dimensions cannot silently become full parity or physical exposure qualification."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Firmware/platform lead",
+        "condition": "No complete current consumer/export/action coverage matrix or settled twin runtime output."
+      }
+    ],
+    "next_action": "For a selected oracle question, generate the source consumer-to-export-to-compiled-action matrix and qualify one real missing active input first.",
+    "work_ready_now": [
+      "Share the source inventory with #639 without conflating replay_emit and replay_invariants coverage.",
+      "Prepare the bounded compiled negative cases; run compilation/replay only via admitted native CI."
+    ],
+    "decisions": [
+      "None for source inventory; twin runtime selection remains a later product decision."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+      "firmware/test/replay_emit.cpp",
+      "firmware/test/replay_invariants.cpp",
+      "scripts/export-replay-overrides.sh",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6109897138"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Research/platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Current replay_emit.cpp has an explicit expected-column list and a missing-input failure when REPLAY_EMIT_REQUIRE_FULL_SETPOINTS is enabled; exclusions/default-only fields remain explicit. No complete current consumer/export/action matrix or native twin outcome is accepted. The separate component-prefix harness covers 27/48 fields; this is not a fresh twin coverage count. #639 may reuse a source consumer inventory, but broad twin runtime qualification remains separate.\n\nCurrent execution allocation: FUTURE. Next action: For a selected oracle question, generate the source consumer-to-export-to-compiled-action matrix and qualify one real missing active input first.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 45,
+    "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+    "execution_state": "PHYSICAL_COMMISSIONING_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Existing soil/runoff contracts, feedback check and finalization path exist. October17 warnings were preserved instead of fabricating healthy data."
+    ],
+    "remaining_acceptance": [
+      "Required channels produce credible calibrated data, not merely nonzero rows; current gap counts are measured rather than assumed four.",
+      "Feedback check passes and requirements/alerts close from actual accepted measurements.",
+      "Unknown chemistry, sensor or plumbing state remains visibly unavailable and cannot enable fertilizer or soil feedback."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/data lead; #398",
+        "condition": "Commissioned per-position crop/substrate targets, source mapping and calibration."
+      },
+      {
+        "owner": "Home Assistant owner if entity/publication fault is identified",
+        "condition": "Exact source entity identities and fresh original measurements."
+      }
+    ],
+    "next_action": "After #398, bind every required channel to its real source/location and calibration, collect valid fresh readings, then execute the existing feedback check/finalizer with before/after requirements and warning evidence.",
+    "work_ready_now": [
+      "Prepare the channel/source/calibration checklist and exact existing check invocation; do not create substitute readings or clear warnings."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6008883948"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [
+      398
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: PHYSICAL COMMISSIONING BLOCKED.\n\nCompleted or retained scope: Existing soil/runoff contracts, feedback check and finalization path exist. October17 warnings were preserved instead of fabricating healthy data. The latest reviewed dated baseline has seven missing south/west soil channels and unknown exact HA provenance; no hardware cause or calibrated pH/EC/soil acceptance was established. No fresh hardware probe was performed now.\n\nRemaining actual acceptance: Required channels produce credible calibrated data, not merely nonzero rows; current gap counts are measured rather than assumed four.; Feedback check passes and requirements/alerts close from actual accepted measurements.; Unknown chemistry, sensor or plumbing state remains visibly unavailable and cannot enable fertilizer or soil feedback.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/45 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md · https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6008883948\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: After #398, bind every required channel to its real source/location and calibration, collect valid fresh readings, then execute the existing feedback check/finalizer with before/after requirements and warning evidence.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 51,
+    "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "execution_state": "REFERENCE_CALIBRATION_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "The inverted-linear CO2 transform and plausibility guards are implemented."
+    ],
+    "remaining_acceptance": [
+      "New coefficients derive from recorded field pairs and pass the predeclared independent tolerance.",
+      "Plausibility guards and units remain correct, with uncertainty visible to consumers.",
+      "If the reference/window is unavailable, retain uncalibrated status without guessing anchors or buying equipment implicitly."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/data lead",
+        "condition": "Existing suitable reference meter, colocated ADC/reference observations and independent validation samples."
+      },
+      {
+        "owner": "Firmware/platform lead",
+        "condition": "Any measured coefficient change requires the candidate-specific #390 release path."
+      }
+    ],
+    "next_action": "Prepare paired observations and a predeclared independent tolerance; obtain reference samples before calculating coefficients. Publish the measurement uncertainty and keep uncalibrated status until accepted.",
+    "work_ready_now": [
+      "Create the bounded sample/calibration worksheet from current transform and units; identify an already available reference instrument without purchasing one."
+    ],
+    "decisions": {
+      "needed_now": false,
+      "when_needed": "When selecting a physical calibration window",
+      "decision": "Confirm availability of an existing reference meter and the concrete observation window; no procurement is implied."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/globals.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-4594571817"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: REFERENCE CALIBRATION BLOCKED.\n\nCompleted or retained scope: The inverted-linear CO2 transform and plausibility guards are implemented. Current globals retain explicitly placeholder 2.7V/1.2V anchors. Source presence does not establish an absolute ppm calibration or uncertainty.\n\nRemaining actual acceptance: New coefficients derive from recorded field pairs and pass the predeclared independent tolerance.; Plausibility guards and units remain correct, with uncertainty visible to consumers.; If the reference/window is unavailable, retain uncalibrated status without guessing anchors or buying equipment implicitly.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/51 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/globals.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-4594571817\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Prepare paired observations and a predeclared independent tolerance; obtain reference samples before calculating coefficients. Publish the measurement uncertainty and keep uncalibrated status until accepted.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 52,
+    "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+    "execution_state": "SEASONAL_DECISION_AWAITS_OBSERVATIONS",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "The generic orchid-wide dormancy/calendar premise has been superseded by species-specific observational scope."
+    ],
+    "remaining_acceptance": [
+      "A documented no-change or specific seasonal-care decision is supported by actual crop observations.",
+      "Any new dormancy/light/dry-down setting is versioned, reversible and cannot silently alter a locked study.",
+      "No species-wide agronomic or yield claim is made from uncalibrated DLI or a house-average proxy."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/crop caretaker",
+        "condition": "Actual species, maturity and condition observations, preferably the shared #298 worksheet."
+      }
+    ],
+    "next_action": "Use the shared field observations to record a finite no-change decision or one specific reversible seasonal-care action with its basis and study-intervention handling.",
+    "work_ready_now": [
+      "Prepare the decision worksheet; retain current settings and do not infer a universal photoperiod or calendar trigger."
+    ],
+    "decisions": {
+      "needed_now": false,
+      "when_needed": "After current crop observations are available",
+      "decision": "Choose no change or the specific supported reversible care action; no agronomic choice can be derived from stale labels."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: SEASONAL DECISION AWAITS OBSERVATIONS.\n\nCompleted or retained scope: The generic orchid-wide dormancy/calendar premise has been superseded by species-specific observational scope. No new crop condition evidence supports a dormancy/light/dry-down change. Source configuration cannot establish current species or seasonal need.\n\nRemaining actual acceptance: A documented no-change or specific seasonal-care decision is supported by actual crop observations.; Any new dormancy/light/dry-down setting is versioned, reversible and cannot silently alter a locked study.; No species-wide agronomic or yield claim is made from uncalibrated DLI or a house-average proxy.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/52 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Use the shared field observations to record a finite no-change decision or one specific reversible seasonal-care action with its basis and study-intervention handling.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 75,
+    "title": "[C4][P1] Observability program: prove actionable health from source through device",
+    "execution_state": "rollup_in_progress_exporter_accepted_energy_and_firmware_health_open",
+    "full_issue_accepted": false,
+    "completed_scope": "#980 is accepted/closed after exact selector-free full sync55285aaf, independent backup evidence and delayed HTTP/Prometheus/single-writer checks. The05:05 production checkpoint observed Synced/Healthy comparison5f2f488c (refresh only), smoke9/9, one ESP32 connection, same ready zero-restart ingestor/exporter/DB UIDs and exporter HTTP8080 in0.040856s. #981 remains blocked by installed-source clock qualification; #963 lacks firmware/HA end-state proof; #749 original climate/soil readiness failed. No missing-sensor recovery is inferred.",
+    "remaining_acceptance": [
+      "Installed intended energy source advancement and downstream quality acceptance.",
+      "Full current observability fault coverage including unresolved soil/climate and deployed moisture state compatibility."
+    ],
+    "blockers_and_owners": [
+      {
+        "scope": "energy source clock",
+        "owner": "jvallery/homeassistant#878 via Verdify#981"
+      },
+      {
+        "scope": "moisture firmware/HA state",
+        "owner": "Verdify#963 with shared#390 release packet"
+      },
+      {
+        "scope": "climate/soil readiness",
+        "owner": "Verdify#749; preserve original failure"
+      }
+    ],
+    "next_action": "Reconcile the health matrix to the 07:07 runtime readback and accepted #980 receipt, then consume the concrete #981/#963/#749 next actions. Keep shared alert implementation in monitoring-stack; do not repeat accepted exporter delivery or infer missing sensor recovery from green smoke.",
+    "work_ready_now": [
+      "Correct what/how references that still say execute#980.",
+      "Reconcile current source/data/route/writer health matrix to existing receipts without a new probe or sensor mutation."
+    ],
+    "decisions": [],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.json",
+      "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+      "planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json",
+      "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md"
+    ],
+    "review_lane": "platform",
+    "priority": "P1",
+    "sprint": "ROLLUP",
+    "owner_role": "Platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The 2026-10-18 07:07 UTC read-only runtime receipt observed verdify-prod-dark Synced/Healthy at comparison revision 83e148b60948d0c2328f8a22d819d481ff2c4ca6. Its last actual operation remains the successful selector-free full sync at 55285aafc96855419ba5e50ab11475cb71a60a0f, finished at 02:47:03 UTC; the newer comparison revision does not mean another sync or image promotion occurred. All 15 Deployments and the single verdify-db StatefulSet reported their desired replicas ready. Smoke passed 9/9 with API cb21fd3d/75f510f5, both MCP replicas exposing the expected 23 tools, a fresh complete 48-field setpoint snapshot and exactly one ESP32 writer connection. #980 remains accepted on its independent backup/cache, HTTP/Prometheus and delayed runtime evidence. #981 remains open on installed-source clock qualification under Home Assistant #878. #963 still needs deployed firmware/HA recovery proof, and #749 retains the original climate/soil readiness FAIL. Point-in-time service health does not establish sensor recovery, energy eligibility or those remaining acceptance clauses. Evidence: planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.md, 981-source-clock-packet.json and 749-sealed-diagnosis.md; the fresh runtime receipt is retained with the October 18 full-status review.\n\nCurrent execution allocation: ROLLUP. Next action: Reconcile the health matrix to the 07:07 runtime readback and accepted #980 receipt, then consume the concrete #981/#963/#749 next actions. Keep shared alert implementation in monitoring-stack; do not repeat accepted exporter delivery or infer missing sensor recovery from green smoke.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 218,
+    "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+    "execution_state": "durability_rollup_bounded_restore_role_spool_and_replica_work_accepted_conditional_ha_open",
+    "full_issue_accepted": false,
+    "completed_scope": "Accepted#670/#672 restore-artifact/ownership,#382 persistent-spool,#396 alongside recovery/PITR/failover and#643 production bounded-role receipts remain valid in their declared boundaries. #977 decisionA6 and owner55973ba5 restored three distinct healthy RW replicas;05:05 readback shows no rebuild and unchanged production DB UID. Production still uses verdify-db StatefulSet. Historical#396 PITR19.849/19.070s base and387/418s three-Ready plus8.464s graceful-primary-Pod ACK gap are measured stages, not a production outage/RPO promise. PR982 endpoint source is merged but not verified live in this audit.",
+    "remaining_acceptance": [
+      "Refresh residual failure-domain and measured-recovery summary; remove superseded two-replica and unproved-role/spool wording.",
+      "Production HA remains unexecuted under#245; do not silently count it as complete or as a mandatory prerequisite for unrelated S3 work."
+    ],
+    "blockers_and_owners": [
+      {
+        "scope": "production HA option and downtime/cutover policy",
+        "owner": "Verdify#245 / Data-platform lead"
+      },
+      {
+        "scope": "storage policy, canonical Garage service and backup custody",
+        "owner": "jvallery/storage-infra (PR982 references#795)"
+      },
+      {
+        "scope": "App/secret ownership for rehearsal delivery",
+        "owner": "jvallery/agents; exact live adoption not checked by this source audit"
+      }
+    ],
+    "next_action": "Correct the roll-up to accepted #977 three-replica policy and completed bounded restore/spool/role evidence; refresh the residual failure-domain summary. Preserve PR #982 as merged endpoint source pending owner delivery verification, and keep #245 conditional without reopening accepted rehearsals or adding a new blanket gate.",
+    "work_ready_now": [
+      "Replace the false two-replica decision with accepted#977 source/live evidence.",
+      "Replace stale why/how claims that role completeness, compressed ownership and persistent spool still await their already-accepted bounded proof.",
+      "Prepare exact endpoint desired-versus-live verification instructions for the owning delivery lane, with no new restore or backup implied."
+    ],
+    "decisions": [],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/977",
+      "planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.json",
+      "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/b97176adeae315431a19edeac13c11e3881f2ce3/planning/execution/2026-10-13/recovery-396-handoff/README.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/982",
+      "https://github.com/VerdifyConsultancy/verdify-platform/commit/83e148b60948d0c2328f8a22d819d481ff2c4ca6"
+    ],
+    "review_lane": "platform",
+    "priority": "P1",
+    "sprint": "ROLLUP",
+    "owner_role": "Data/platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Accepted #670/#672/#382/#396/#643 receipts cover their bounded backup-artifact, supported ownership restore, persistent spool, alongside recovery/PITR/failover and production-role scopes. #977 is accepted and closed: Jason selected three replicas, owner decision A6 was delivered at storage-infra 55973ba5, and exact readbacks verified three healthy RW copies on distinct eligible workers with no pending rebuild. This supersedes the temporary two-replica policy. The 07:07 UTC runtime receipt still shows the existing verdify-db StatefulSet at 1/1 ready; production database authority has not moved to CNPG. Argo was Synced/Healthy at comparison 83e148b6, while its last actual operation remains 55285aaf, finished at 02:47:03 UTC. PR #982 merged canonical s3.vallery.net endpoint source at 83e148b6; this is not evidence of current rehearsal ObjectStore adoption, a new backup/restore or production HA. Historical #396 recovery timings and data checks remain reusable within their stated boundaries, with physical-host/NAS dependencies and production cutover RPO/RTO still explicit. Evidence: planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md, the accepted #396 handoff at b97176ad, PR #982 and the October 18 full-status runtime receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Correct the roll-up to accepted #977 three-replica policy and completed bounded restore/spool/role evidence; refresh the residual failure-domain summary. Preserve PR #982 as merged endpoint source pending owner delivery verification, and keep #245 conditional without reopening accepted rehearsals or adding a new blanket gate.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 245,
+    "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
+    "execution_state": "conditional_production_ha_cutover_not_selected_or_executed",
+    "full_issue_accepted": false,
+    "completed_scope": "#382 and#396 are closed accepted bounded prerequisites. Historicalcurrent275 integration retained951/952 relation and role/sequence seals, PITR and read-only client reversal; its October6 data are not a current production replacement. The present clone has later additive/synthetic qualification state and changed primary identity. PR982 changes the canonical S3 endpoint only; no production DB_HOST/architecture switch is evidenced. Production05:05 still uses original DB UID.",
+    "remaining_acceptance": [
+      "Fresh complete mutator/scheduler/hook/session inventory and reversible fence.",
+      "Fresh final coherent pair and full current target parity/admission; copied old clone receipts cannot authorize target.",
+      "Supported before-write reversal and data-preserving post-write recovery, including target ACK/ambiguous outcomes.",
+      "Production Timescale maintenance policy and first execution effects.",
+      "Actual60-minute/seven-day observations and retained old database/PVC."
+    ],
+    "blockers_and_owners": [
+      {
+        "scope": "architectural selection and acceptable outage/window",
+        "owner": "Product/operator decision with Data-platform lead"
+      },
+      {
+        "scope": "selected candidate capacity/storage and backup/WAL custody",
+        "owner": "Data-platform lead with storage-infra and Agents owner lanes"
+      }
+    ],
+    "next_action": "Prepare the current writer-fence, endpoint/pool, final-parity and rollback packet from existing accepted evidence now. Keep runtime cutover conditional on the actual architecture/downtime/window choice; measure its 60-minute observation and seven-day bake only after a real handoff. Do not promote old rehearsal data or repeat accepted recovery drills for planning alone.",
+    "work_ready_now": [
+      "Inventory current declarative mutators, hooks, schedules, DSNs and recovery inverses without runtime change.",
+      "Prepare exact acceptance/admission and Timescale policy choices from existing requirements; identify unresolved downtime tradeoffs."
+    ],
+    "decisions": [
+      "Whether to select production CNPG cutover now versus retain the current single-StatefulSet service.",
+      "An acceptable attended downtime/window if full coherent restore is required and no qualified delta path exists."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/245",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/b97176adeae315431a19edeac13c11e3881f2ce3/docs/runbooks/cnpg/current275-contained-cutover-rollback-packet.md",
+      "docs/runbooks/cnpg/current274-cutover-rollback-packet.md",
+      "docs/runbooks/cnpg/current275-additive-transition.md",
+      "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/982"
+    ],
+    "review_lane": "platform",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Data/platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The bounded #396 recovery/PITR/failover and #382 persistent-spool predecessors are accepted and closed. Their historical current275 cutover/rollback handoff is retained, but its dated data and literal target admission cannot authorize a current production replacement. Later clone qualification does not make that rehearsal database a production candidate. The 07:07 UTC runtime receipt still shows the existing verdify-db StatefulSet at 1/1 ready. Argo comparison revision is 83e148b6; the last actual production operation remains 55285aaf, finished at 02:47:03 UTC. PR #982 changes the canonical rehearsal S3 endpoint source only. No production cutover, fresh final production parity, fence-to-first-write measurement or seven-day bake is evidenced. Source/read-only cutover preparation is already authorized; production architecture selection and an acceptable attended downtime/window remain the concrete unresolved choices. Evidence: the current275 handoff at b97176ad, docs/runbooks/cnpg/current274-cutover-rollback-packet.md, PR #982 and the October 18 full-status runtime receipt.\n\nCurrent execution allocation: FUTURE. Next action: Prepare the current writer-fence, endpoint/pool, final-parity and rollback packet from existing accepted evidence now. Keep runtime cutover conditional on the actual architecture/downtime/window choice; measure its 60-minute observation and seven-day bake only after a real handoff. Do not promote old rehearsal data or repeat accepted recovery drills for planning alone.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 297,
+    "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "execution_state": "ALERT_ONLY_SOURCE_PREPARATION_READY_ACTUATION_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "October2 native input audit and explicit null-input contract exist. Existing soil_dryout/offline/feedback-gap alerts are not equivalent to a sustained saturation evaluator."
+    ],
+    "remaining_acceptance": [
+      "Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.",
+      "One eligible saturated zone’s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.",
+      "No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/data lead; #45 via #398/#298",
+        "condition": "Actual calibrated source/target truth before enabling saturation-based irrigation suppression."
+      },
+      {
+        "owner": "Control/ingestor lead",
+        "condition": "Typed sustained alert semantics, original-source freshness, enter/exit persistence and truthful skip/shrink outcomes."
+      }
+    ],
+    "next_action": "Reuse the existing null-input contract to prepare the smallest alert-only evaluator and missing/stale/persistence/recovery fixtures. Configuration must remain unavailable/disabled until measured values exist; actual eligible drip skip/shrink follows #45.",
+    "work_ready_now": [
+      "Implementable future slice: pure typed validity/persistence evaluator and fail-closed missing-configuration fixtures.",
+      "No OTA, second device writer, guessed thresholds, EC dosing or day-mask workaround."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-5949126837",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/45"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      45
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: ALERT ONLY SOURCE PREPARATION READY ACTUATION BLOCKED.\n\nCompleted or retained scope: October2 native input audit and explicit null-input contract exist. Existing soil_dryout/offline/feedback-gap alerts are not equivalent to a sustained saturation evaluator. Migration064/101 status surfaces compare cached measurements to seeded thresholds. The dated native audit found no commissioned position/calibration/persistence/hysteresis/freshness metadata. Current source retains the seed assumptions.\n\nRemaining actual acceptance: Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.; One eligible saturated zone’s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.; No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/297 · https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-5949126837 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql · https://github.com/VerdifyConsultancy/verdify-platform/issues/45\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Reuse the existing null-input contract to prepare the smallest alert-only evaluator and missing/stale/persistence/recovery fixtures. Configuration must remain unavailable/disabled until measured values exist; actual eligible drip skip/shrink follows #45.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 298,
+    "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+    "execution_state": "PHYSICAL_TOPOLOGY_TRUTH_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Existing location/source inventory provides identifiers to prefill a field worksheet."
+    ],
+    "remaining_acceptance": [
+      "Repo and DB map agree with observed physical positions and crop/substrate identities; no Canna-Lily residue is carried as current fact.",
+      "Each sensor has source ID, location, validity/calibration state and explicit unassigned/disabled status when appropriate.",
+      "No automatic irrigation is enabled by a topology import alone; #398/#45 own threshold and feedback commissioning."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/crop caretaker with data/control lead",
+        "condition": "Observed crop/pot/substrate, source serial/entity, relay and plumbing assignment for actual positions."
+      }
+    ],
+    "next_action": "Complete one field worksheet with assigned and explicitly unassigned positions, then reconcile config and DB from that evidence without enabling irrigation or overwriting valid operator settings.",
+    "work_ready_now": [
+      "Prefill the single shared worksheet and identify fields needed by #398/#45/#434/#52; no separate redundant field surveys."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: PHYSICAL TOPOLOGY TRUTH BLOCKED.\n\nCompleted or retained scope: Existing location/source inventory provides identifiers to prefill a field worksheet. Current config and migration064 still name Canna Lily/Unknown pots and unknown east seedlings. Those values are not evidence of the current crop or installed probe/plumbing map.\n\nRemaining actual acceptance: Repo and DB map agree with observed physical positions and crop/substrate identities; no Canna-Lily residue is carried as current fact.; Each sensor has source ID, location, validity/calibration state and explicit unassigned/disabled status when appropriate.; No automatic irrigation is enabled by a topology import alone; #398/#45 own threshold and feedback commissioning.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/298 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Complete one field worksheet with assigned and explicitly unassigned positions, then reconcile config and DB from that evidence without enabling irrigation or overwriting valid operator settings.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "execution_state": "GUARD_QUALIFICATION_PREPARATION_READY",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Current controls retain per-zone mister_min_off_s re-fire fences. July9 narrowed scope to preserving existing 45-second protection; the old 120-second minimum-on/new-governor proposal was rejected."
+    ],
+    "remaining_acceptance": [
+      "No origin or restart can re-fire before the declared protection permits; hard safety remains dominant.",
+      "Eligible re-fire resumes correctly rather than staying latched without reason.",
+      "Source/firmware/cycle evidence shows protection survived #434-related changes with a rollback canary."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control/platform lead; #390",
+        "condition": "Exact candidate source/native boundary proof and device release identity."
+      },
+      {
+        "owner": "Operator",
+        "condition": "Measured physical re-fire/cycle evidence in the release window."
+      }
+    ],
+    "next_action": "Reuse current pulse logic and add only missing actual-wrapper min-off, exact-boundary, restart and manual-origin cases. Preserve requested pulse duration; carry actual re-fire validation in the next shared #390 packet.",
+    "work_ready_now": [
+      "Prepare source-based origin/boundary inventory and test gaps now; do not design a new governor or extend pulses."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-4929936778"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      390
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: GUARD QUALIFICATION PREPARATION READY.\n\nCompleted or retained scope: Current controls retain per-zone mister_min_off_s re-fire fences. July9 narrowed scope to preserving existing 45-second protection; the old 120-second minimum-on/new-governor proposal was rejected. Source guard presence does not prove all origins/restart boundaries or actual physical re-fire. Pulse paths remain outside the ordinary RelayMeta wrapper and deserve their own boundary evidence.\n\nRemaining actual acceptance: No origin or restart can re-fire before the declared protection permits; hard safety remains dominant.; Eligible re-fire resumes correctly rather than staying latched without reason.; Source/firmware/cycle evidence shows protection survived #434-related changes with a rollback canary.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/299 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-4929936778\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Reuse current pulse logic and add only missing actual-wrapper min-off, exact-boundary, restart and manual-origin cases. Preserve requested pulse duration; carry actual re-fire validation in the next shared #390 packet.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "execution_state": "ROLLUP_INCOMPLETE",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Approved topology is center-only climate mist, intentional south/west irrigation, disabled unconnected center drip and wall-only fertilizer. #296 was explicitly retired as no-build absent a proven dispatcher gap."
+    ],
+    "remaining_acceptance": [
+      "Software allows only the approved plumbing/origin combinations and fails closed without required calibration.",
+      "Overwatering-safe feedback is commissioned on actual crop/substrate sensors before actuation.",
+      "Physical feed, crop safety/yield and irrigation water claims require their own observed evidence."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead and operator",
+        "condition": "Child-specific source safety and commissioning; no independent roll-up implementation."
+      }
+    ],
+    "next_action": "Maintain the physical chain #298→#398→#45→#297 and release/re-fire/topology work #390→#299→#434. Run source preparation independently and do not infer feeding authority.",
+    "work_ready_now": [
+      "Keep one coordinated irrigation packet and zero duplicate estimated hours; preserve disabled/uncommissioned paths."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-4929652937",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "ROLLUP",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: ROLLUP INCOMPLETE.\n\nCompleted or retained scope: Approved topology is center-only climate mist, intentional south/west irrigation, disabled unconnected center drip and wall-only fertilizer. #296 was explicitly retired as no-build absent a proven dispatcher gap. Topology/soil commissioning and actual wall-feed volume/flush/crop safety are not accepted. Source partial routing is not physical plumbing truth.\n\nRemaining actual acceptance: Software allows only the approved plumbing/origin combinations and fails closed without required calibration.; Overwatering-safe feedback is commissioned on actual crop/substrate sensors before actuation.; Physical feed, crop safety/yield and irrigation water claims require their own observed evidence.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/350 · https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-4929652937 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Maintain the physical chain #298→#398→#45→#297 and release/re-fire/topology work #390→#299→#434. Run source preparation independently and do not infer feeding authority.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "execution_state": "ROLLUP_INCOMPLETE",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Scoped historical #371 scoring semantics and #424 lineage acceptance are retained. #324 speculative zonal extension and #361 standalone anchor retuning were consolidated/no-build."
+    ],
+    "remaining_acceptance": [
+      "Measurement and localized safety are trustworthy independently of AI credit.",
+      "Every tuning proposal cites fixed-panel realized climate/resource evidence and explicit guardrails/replay/rollback.",
+      "No PID arm, unvalidated response model, unmeasured efficiency claim or firmware safety delegation to AI enters the current pilot."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead",
+        "condition": "Child acceptance and evidence-based selection; no separate umbrella implementation."
+      }
+    ],
+    "next_action": "Prioritize bounded #368/#367 corrections and #410 outcome evidence before dead-code/arbitration refactoring or #378 retuning. Preserve fixed scientific endpoints and independent physical gates.",
+    "work_ready_now": [
+      "Coordinate existing prepared source and one compatible firmware qualification cohort."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/191-realized-solar-night-dryout-episodes.sql"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "ROLLUP",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: ROLLUP INCOMPLETE.\n\nCompleted or retained scope: Scoped historical #371 scoring semantics and #424 lineage acceptance are retained. #324 speculative zonal extension and #361 standalone anchor retuning were consolidated/no-build. Current correctness work is #368 contributor truth, #367 duration refresh and #410 realized outcomes. None establishes physical/scientific control acceptance by itself.\n\nRemaining actual acceptance: Measurement and localized safety are trustworthy independently of AI credit.; Every tuning proposal cites fixed-panel realized climate/resource evidence and explicit guardrails/replay/rollback.; No PID arm, unvalidated response model, unmeasured efficiency claim or firmware safety delegation to AI enters the current pilot.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/359 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/191-realized-solar-night-dryout-episodes.sql\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Prioritize bounded #368/#367 corrections and #410 outcome evidence before dead-code/arbitration refactoring or #378 retuning. Preserve fixed scientific endpoints and independent physical gates.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "execution_state": "PRESERVED_BOUNDED_FIX_READY_FOR_SOURCE_INTEGRATION",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Retained branch 3ebba10e includes bc351370: refresh eight per-relay dwell limits each tick, preserving original relay timestamps/runtime/overrides. Historical actual-YAML red/green evidence is 72 failing +12 override passes before and84 passing after; related138 and ESPHome compile receipts exist."
+    ],
+    "remaining_acceptance": [
+      "Exactly one documented dwell authority governs ordinary transitions and all safety exceptions remain explicit.",
+      "Boundary/reboot/override tests and #299 center-mister re-fire invariants pass.",
+      "Measured starts/runtime and behavior parity show no new chatter or unsafe starvation; #390 release evidence is present."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead",
+        "condition": "Reconcile the exact preserved fix with current source and retain meaningful actual-wrapper tests."
+      },
+      {
+        "owner": "Platform/operator; #390",
+        "condition": "Candidate-bound native/invariant/replay/compiler receipts and physical start/runtime/no-chatter/recovery acceptance."
+      }
+    ],
+    "next_action": "Reuse bc351370 from 3ebba10e, rebase only the duration-refresh correction onto current main, preserve the84 wrapper cases and submit the smallest compatible firmware cohort through existing admitted native CI. Keep full single-authority/physical acceptance open.",
+    "work_ready_now": [
+      "Source integration/review of the already demonstrated correction can proceed now.",
+      "Do not rebuild the former full workstream or claim the historical27/48 treatment harness is full physical coverage."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6130117468",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/3ebba10e2890ad536fcdf99beeb52aa18d4ec983/planning/execution/2026-10-12/native-replay-coverage/README.md"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      390
+    ],
+    "canonical_current_state": "Reviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. Retained branch 3ebba10e includes bc351370: refresh eight per-relay dwell limits each tick, preserving original relay timestamps/runtime/overrides. Historical actual-YAML red/green evidence is 72 failing +12 override passes before and84 passing after; related138 and ESPHome compile receipts exist. Current main still initializes static RelayMeta durations without the per-tick refresh. The retained fix is not integrated. Historical296698-row climate replay had zero divergence but does not execute this wrapper, so it is not the causal proof. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: CONTROL. Next action: Reuse bc351370 from 3ebba10e, rebase only the duration-refresh correction onto current main, preserve the84 wrapper cases and submit the smallest compatible firmware cohort through existing admitted native CI. Keep full single-authority/physical acceptance open.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "execution_state": "PRESERVED_VALIDITY_PATCH_READY_TESTS_NOT_RUN",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "A small source-only patch and three meaningful native regression cases were prepared during this session and deliberately held. Diff/aggregate-byte checks passed; native tests, build, replay and OTA were not run."
+    ],
+    "remaining_acceptance": [
+      "Synthetic impossible jump/stuck cases are detected without suppressing legitimate steady values.",
+      "Control consumes explicitly valid inputs; degraded quorum and true SENSOR_FAULT behavior are documented and tested, not conflated.",
+      "No silent sensor substitution changes trial endpoints; any firmware portion passes #390 before OTA."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead",
+        "condition": "Review/rebase preserved patch and exercise finite/missing/NaN/Inf/wrap/boundary cases in admitted native path."
+      },
+      {
+        "owner": "Control/data lead",
+        "condition": "Remaining shared stuck/jump/plausibility, legitimate steady values, control validity and distinct safety-quorum versus scientific-panel semantics."
+      },
+      {
+        "owner": "Platform/operator",
+        "condition": "Firmware part requires #390 release before OTA; physical #751 repair is not a source prerequisite."
+      }
+    ],
+    "next_action": "Reuse /private/tmp/verdify-s3-368-source/probe-validity.patch and the retained verdify-probe-validity-368 worktree; review against current main, run the prepared causal native tests and required firmware checks in admitted k3s, then deliver the bounded diagnostic correction without claiming full #368.",
+    "work_ready_now": [
+      "Prepared source is immediately available; do not author another parallel fix.",
+      "Preserve legitimate steady/zero-VPD inputs, uint32 rollover, warning-versus-aggregate thresholds and unchanged scientific panel."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-5468196591",
+      "/private/tmp/verdify-s3-368-source/README.md",
+      "/private/tmp/verdify-s3-368-source/source-preparation.json",
+      "/private/tmp/verdify-s3-368-source/probe-validity.patch"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "ALTERNATE",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Reviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. A small source-only patch and three meaningful native regression cases were prepared during this session and deliberately held. Diff/aggregate-byte checks passed; native tests, build, replay and OTA were not run. Current main count/health use timestamps without finite-value checks; actual aggregate fields omit NaN values and use a different freshness window. The prepared patch makes complete-probe count finite-aware and fresh-invalid health explicit, preserving aggregate cohorts. It does not implement full jump/flatline semantics. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: ALTERNATE. Next action: Reuse /private/tmp/verdify-s3-368-source/probe-validity.patch and the retained verdify-probe-validity-368 worktree; review against current main, run the prepared causal native tests and required firmware checks in admitted k3s, then deliver the bounded diagnostic correction without claiming full #368.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 369,
+    "title": "[C6][P2] Remove dead tunables and code from a verified consumer inventory",
+    "execution_state": "INVENTORY_READY_REMOVAL_DEFERRED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Closed #300/#326 explicitly consolidated surviving registry/readback/comments and direct-wet/fog-window consumers here."
+    ],
+    "remaining_acceptance": [
+      "Each removed property has zero required live consumer or an explicit tested migration; no dangling generated IDs or docs remain.",
+      "Net-negative unused code/entity counts are measured and behavior/safety replay is unchanged.",
+      "No active trial identity changes silently, no safety control is made AI-writable, and #390 release checks pass for firmware changes."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control/schema/ingestor leads",
+        "condition": "Whole consumer/wire/readback/planner/export inventory and zero-required-consumer proof."
+      },
+      {
+        "owner": "Platform/operator; #390",
+        "condition": "Any selected firmware removal enters the actual release qualification."
+      }
+    ],
+    "next_action": "Inventory only the named surviving #300/#326 properties end to end; select a minimal proven-dead set or record no removal. Defer a removal cohort until correctness fixes are delivered.",
+    "work_ready_now": [
+      "Read-only consumer inventory can start independently; retain actual consumed burst controls and all safety/evidence properties."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/verdify_schemas/tunable_registry.py",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/300#issuecomment-5472049329",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/326#issuecomment-5472049470"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      390
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: INVENTORY READY REMOVAL DEFERRED.\n\nCompleted or retained scope: Closed #300/#326 explicitly consolidated surviving registry/readback/comments and direct-wet/fog-window consumers here. Current registry retains the named residual rows; fan burst is consumed by real firmware scripts. A field missing from one file is not evidence that it is dead. Full48 trial identity cannot silently change.\n\nRemaining actual acceptance: Each removed property has zero required live consumer or an explicit tested migration; no dangling generated IDs or docs remain.; Net-negative unused code/entity counts are measured and behavior/safety replay is unchanged.; No active trial identity changes silently, no safety control is made AI-writable, and #390 release checks pass for firmware changes.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/369 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/verdify_schemas/tunable_registry.py · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/300#issuecomment-5472049329 · https://github.com/VerdifyConsultancy/verdify-platform/issues/326#issuecomment-5472049470\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Inventory only the named surviving #300/#326 properties end to end; select a minimal proven-dead set or record no removal. Defer a removal cohort until correctness fixes are delivered.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 370,
+    "title": "[C6][P2] Consolidate equipment conflict resolution into one pure arbitration function",
+    "execution_state": "REFACTOR_DEFERRED_PENDING_DWELL_CONTRACT",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Current source has a pure resolve_equipment decision followed by explicit manual, stage, dwell, fan/vent, heat/fan and water interlocks."
+    ],
+    "remaining_acceptance": [
+      "Exhaustive conflict/origin fixtures produce one deterministic safe result and an auditable block reason.",
+      "Reverse conflicts, manual rescue, restart and partial delivery cannot energize incompatible relays.",
+      "Native/invariant/replay/compile and #390 physical release checks pass without unapproved control-policy changes."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead; #367",
+        "condition": "Specified and source-qualified duration/history contract."
+      },
+      {
+        "owner": "Platform/operator",
+        "condition": "#390 candidate/recovery proof after selected refactor."
+      }
+    ],
+    "next_action": "After #367 source semantics are settled, choose one duplicated decision and capture current origin/reverse-conflict/restart/partial-delivery behavior before moving it into the pure resolver.",
+    "work_ready_now": [
+      "Small source inventory/truth table only; keep safety exceptions and policy unchanged."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/lib/greenhouse_logic.h",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-4734088657"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      367
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: REFACTOR DEFERRED PENDING DWELL CONTRACT.\n\nCompleted or retained scope: Current source has a pure resolve_equipment decision followed by explicit manual, stage, dwell, fan/vent, heat/fan and water interlocks. The June broad deletion list is stale design material, not permission to remove brakes. A correct consolidation needs actual relay/dwell state and preserved exceptions; no new refactor was accepted.\n\nRemaining actual acceptance: Exhaustive conflict/origin fixtures produce one deterministic safe result and an auditable block reason.; Reverse conflicts, manual rescue, restart and partial delivery cannot energize incompatible relays.; Native/invariant/replay/compile and #390 physical release checks pass without unapproved control-policy changes.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/370 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/lib/greenhouse_logic.h · https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-4734088657\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: After #367 source semantics are settled, choose one duplicated decision and capture current origin/reverse-conflict/restart/partial-delivery behavior before moving it into the pure resolver.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 378,
+    "title": "[C6][P2] Decide corridor widths from fixed-target crop and resource evidence",
+    "execution_state": "POST_READOUT_DECISION_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "#361 standalone anchor-retuning tracker was retired and its conditional decision retained here. Fixed crop compliance versus controller-credit semantics exist in closed #371."
+    ],
+    "remaining_acceptance": [
+      "The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.",
+      "No retrospective redefinition rewrites the completed study endpoint.",
+      "Any live band change has bounded scope, exact rollback values and required operator/release authority."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/control lead; #785",
+        "condition": "Versioned fixed-endpoint temperature/VPD and resource readout."
+      },
+      {
+        "owner": "Control lead; conditional #410 evidence",
+        "condition": "Solar-night realized outcomes if a night-anchor adjustment is actually proposed."
+      }
+    ],
+    "next_action": "After #785, record no change, insufficient evidence or one bounded width/anchor proposal with exact rollback values; consume #410 only for the relevant night-anchor question.",
+    "work_ready_now": [
+      "Keep decision criteria and provenance explicit; no tuning or retrospective endpoint redefinition now."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/361",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/191-realized-solar-night-dryout-episodes.sql"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      785
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: POST READOUT DECISION BLOCKED.\n\nCompleted or retained scope: #361 standalone anchor-retuning tracker was retired and its conditional decision retained here. Fixed crop compliance versus controller-credit semantics exist in closed #371. No completed #785 readout or new fixed-target climate/resource basis justifies width or anchor change. Current bands should stay stable.\n\nRemaining actual acceptance: The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.; No retrospective redefinition rewrites the completed study endpoint.; Any live band change has bounded scope, exact rollback values and required operator/release authority.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/378 · https://github.com/VerdifyConsultancy/verdify-platform/issues/785 · https://github.com/VerdifyConsultancy/verdify-platform/issues/361 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/191-realized-solar-night-dryout-episodes.sql\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: FUTURE. Next action: After #785, record no change, insufficient evidence or one bounded width/anchor proposal with exact rollback values; consume #410 only for the relevant night-anchor question.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 379,
+    "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+    "execution_state": "deferred_response_model_option",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Historical sensor/score and replay provenance predecessors #371/#419 are accepted within their original scope.",
+      "Historical open-loop runtime comparisons and failed response models remain evidence; none establishes counterfactual MPC benefit."
+    ],
+    "remaining_acceptance": [
+      "If selected, a falsifiable response-model question and genuine chronological held-out prediction/calibration gates against persistence and simpler deterministic baselines.",
+      "No PID/MPC arm or outer-loop authority added to the current pilot.",
+      "A separate bounded controller/release plan only if held-out evidence justifies it; otherwise explicit no-go/retirement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "No demonstrated need or validated response model; #786 comparison decision is future."
+      }
+    ],
+    "next_action": "Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.",
+    "work_ready_now": [
+      "Write no new model now. A bounded source inventory or explicit no-build rationale can be prepared without waiting on study completion."
+    ],
+    "decisions": [
+      "No immediate decision required. A future request to select MPC would need a named use case and measured validation objective; do not infer it from the pilot."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/379",
+      "research/planner-efficacy",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Research/platform lead",
+    "active_local_predecessors": [
+      786
+    ],
+    "canonical_current_state": "The grey-box/MPC option remains unselected. Closed #371 and #419 provide bounded score/replay provenance, not a calibrated response model or counterfactual benefit. Historical open-loop comparisons and failed models remain evidence. No model implementation, controller authority or new treatment arm is warranted before a falsifiable held-out question and simpler-baseline comparison are selected.\n\nCurrent execution allocation: FUTURE. Next action: Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 386,
+    "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "execution_state": "SOURCE_CORRECTION_DELIVERED_PHYSICAL_BOUNDARY_UNVERIFIED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "PR905/ebef855 makes auto_enabled=false override min-on while ordinary solar cutoff completes min-on. Current main retains that condition and three causal lighting boundary regressions.",
+      "October2 deployed-source/outside-window OFF agreement was recorded; it did not contain an eligible actual boundary/min-on event."
+    ],
+    "remaining_acceptance": [
+      "Premature cycling and unintended overrun are detected with exact transition times and stop reasons.",
+      "Actual source and grow-light state agree through the solar boundary; manual/safety override remains dominant.",
+      "No DLI/lighting-efficiency conclusion is inferred from uncommissioned sensing."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Platform/operator",
+        "condition": "Current actual source/version, original per-circuit decision and authenticated HA/relay observations spanning an eligible natural solar cutoff/min-on boundary."
+      }
+    ],
+    "next_action": "Reuse the existing source policy/tests, prepare a passive per-circuit boundary observation with exact timestamps and expected stop reasons, then record an eligible natural event. Reopen code work only if current evidence contradicts the implemented contract.",
+    "work_ready_now": [
+      "Prepare bounded read-only observation query and event eligibility criteria without sending a light command or changing the clock."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/lib/greenhouse_logic.h",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/test/test_greenhouse_logic.cpp",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-5942760478",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-5947398923",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/965"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "RELEASE",
+    "owner_role": "Platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Reviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. PR905/ebef855 makes auto_enabled=false override min-on while ordinary solar cutoff completes min-on. Current main retains that condition and three causal lighting boundary regressions. October2 deployed-source/outside-window OFF agreement was recorded; it did not contain an eligible actual boundary/min-on event. The intended precedence is already defined. Climate replay is not lighting-toggle evidence, and closed #965 disabled API-route acceptance does not authenticate prior light-history durations. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: RELEASE. Next action: Reuse the existing source policy/tests, prepare a passive per-circuit boundary observation with exact timestamps and expected stop reasons, then record an eligible natural event. Reopen code work only if current evidence contradicts the implemented contract.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "execution_state": "RELEASE_MECHANISM_PARTIAL_PHYSICAL_ACCEPTANCE_OPEN",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "#303/#304 registered Linux amd64 tooling acceptance at82195c1b compiled both maintained targets and expected negative; #419 finite observation-backed freshness/branch replay gate is completed.",
+      "Current preflight includes artifact hash/source guards and an explicitly labeled provisional rollback-candidate path; compile-only fixtures are nondeployable."
+    ],
+    "remaining_acceptance": [
+      "Wrong topology, impossible cycling, stale outdoor inputs and absent required receipts deny release.",
+      "Actual relay/cfg outcomes bind exact source/binary/version and demonstrate a recovery path.",
+      "Failed candidates are never promoted to last-good; ordinary CI never performs OTA."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Platform/control lead",
+        "condition": "Select exact coherent candidate and qualify changed source through supported native CI with durable artifact provenance."
+      },
+      {
+        "owner": "Operator",
+        "condition": "Concrete bounded device window, real topology, actual relay/cfg/cycling and verified rollback evidence."
+      }
+    ],
+    "next_action": "Prepare one candidate-bound release packet for the selected #368/#367 work, reusing accepted tooling and replay coverage while refreshing changed-source tests and exact binary/rollback custody. Execute no OTA from routine CI.",
+    "work_ready_now": [
+      "Resolve candidate composition and current-source test deltas; preserve last-good/provisional labels and all failed histories."
+    ],
+    "decisions": {
+      "needed_now": false,
+      "when_needed": "After exact candidate and rollback packet is reviewable",
+      "decision": "Confirm the concrete attended physical window and any explicit exception actually required by live preflight; no blanket planning approval."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/scripts/firmware-deploy-preflight.sh",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6150900801"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "RELEASE",
+    "owner_role": "Platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: RELEASE MECHANISM PARTIAL PHYSICAL ACCEPTANCE OPEN.\n\nCompleted or retained scope: #303/#304 registered Linux amd64 tooling acceptance at82195c1b compiled both maintained targets and expected negative; #419 finite observation-backed freshness/branch replay gate is completed. Current preflight includes artifact hash/source guards and an explicitly labeled provisional rollback-candidate path; compile-only fixtures are nondeployable. Current release tools are available, but no new candidate source/binary/topology/relay-cycle/recovery/last-good acceptance was performed in this review. Prior compiler receipts must be reused within their original source scope, not called an OTA.\n\nRemaining actual acceptance: Wrong topology, impossible cycling, stale outdoor inputs and absent required receipts deny release.; Actual relay/cfg outcomes bind exact source/binary/version and demonstrate a recovery path.; Failed candidates are never promoted to last-good; ordinary CI never performs OTA.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/390 · https://github.com/VerdifyConsultancy/verdify-platform/issues/303 · https://github.com/VerdifyConsultancy/verdify-platform/issues/304 · https://github.com/VerdifyConsultancy/verdify-platform/issues/419 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/scripts/firmware-deploy-preflight.sh · https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6150900801\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: RELEASE. Next action: Prepare one candidate-bound release packet for the selected #368/#367 work, reusing accepted tooling and replay coverage while refreshing changed-source tests and exact binary/rollback custody. Execute no OTA from routine CI.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 398,
+    "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "execution_state": "MEASURED_TARGETS_BLOCKED_BY_TOPOLOGY",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Existing targets schema and historical seed values are known; #297 native audit documented missing calibration/position/freshness provenance."
+    ],
+    "remaining_acceptance": [
+      "Current map, seed and DB rows agree without overwriting valid operator-specific values.",
+      "No saturation/drip-skip consumer uses an uncommissioned or mismatched target as valid.",
+      "Before/after row receipt and exact rollback data exist; #45 can validate the resulting feedback contract."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/data lead; #298",
+        "condition": "Actual position/crop/substrate/source identity and measured calibration/threshold provenance."
+      }
+    ],
+    "next_action": "From #298 observations, prepare exact before/after target rows, validity/source revision and inverse preserving valid operator values. Apply only a new supported ledgered correction when actual values are known, then verify config/DB agreement.",
+    "work_ready_now": [
+      "Prepare target schema/provenance worksheet and inverse shape now; do not choose threshold constants remotely."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-5949126837"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [
+      298
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: MEASURED TARGETS BLOCKED BY TOPOLOGY.\n\nCompleted or retained scope: Existing targets schema and historical seed values are known; #297 native audit documented missing calibration/position/freshness provenance. Current migration064 remains immutable historical seed data. October2 live rows equalled Canna Lily/Canna Lily/Unknown pots; that database fact is dated and must be refreshed before any correction.\n\nRemaining actual acceptance: Current map, seed and DB rows agree without overwriting valid operator-specific values.; No saturation/drip-skip consumer uses an uncommissioned or mismatched target as valid.; Before/after row receipt and exact rollback data exist; #45 can validate the resulting feedback contract.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/398 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-5949126837\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: From #298 observations, prepare exact before/after target rows, validity/source revision and inverse preserving valid operator values. Apply only a new supported ledgered correction when actual values are known, then verify config/DB agreement.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 410,
+    "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+    "execution_state": "EXISTING_EVIDENCE_ROUTE_READY_FOR_BOUNDED_REFRESH",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Migration191 and MCP already expose realized sunset→sunrise outcomes with same-row relay/floor, outdoor AH advantage, coverage/confound and VPD+AH-response guards.",
+      "Current firmware held-temperature candidate explicitly requires is_night_phase. July daytime admission/failing outcome is retained historical evidence, not proof current code still lacks this predicate."
+    ],
+    "remaining_acceptance": [
+      "Episodes use device solar semantics, never fixed 02:00–06:00, and incomplete/confounded episodes cannot be PASS.",
+      "Solar-day held-temperature admission is zero while ordinary daytime dehumidification remains correctly distinguished.",
+      "Planner/MCP sees realized validity-bearing outcomes and explicit disposition, not a universal VPD target or a crop-safety claim without sensing."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control/data lead",
+        "condition": "Bounded current-source/current-firmware episode extraction using the existing function and authentic complete telemetry."
+      },
+      {
+        "owner": "Operator/platform only if new defect proven",
+        "condition": "Any resulting actual controller change requires its own #390 release; no change inferred from historical failures alone."
+      }
+    ],
+    "next_action": "Run the existing fn_realized_solar_night_dryout on a small admitted date/source window, retain solar semantics, eligible/confounded/incomplete outcomes and current disposition. Verify native function/source identity before trusting results; expand historical work only in k3s.",
+    "work_ready_now": [
+      "Prepare exact bounded read-only function invocation and expected row/timeout bounds.",
+      "Do not create a duplicate extractor or recode a solar-night predicate already present."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/191-realized-solar-night-dryout-episodes.sql",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/mcp/server.py",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/lib/greenhouse_logic.h",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-4929653025",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-4931040760",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-4931409863"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Reviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. Migration191 and MCP already expose realized sunset→sunrise outcomes with same-row relay/floor, outdoor AH advantage, coverage/confound and VPD+AH-response guards. Current firmware held-temperature candidate explicitly requires is_night_phase. July daytime admission/failing outcome is retained historical evidence, not proof current code still lacks this predicate. No current bounded episode analysis establishes zero solar-day held admission or representative realized benefit. Earlier two-night PASS was superseded by expanded failures. Heat-only VPD rise is not dry-out proof. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: CONTROL. Next action: Run the existing fn_realized_solar_night_dryout on a small admitted date/source window, retain solar semantics, eligible/confounded/incomplete outcomes and current disposition. Verify native function/source identity before trusting results; expand historical work only in k3s.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 412,
+    "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+    "execution_state": "FINITE_SEASONAL_ACTION_AWAITS_OBSERVATION",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Current scope ties a seasonal screen decision to measured conditions, with reversible action and study-intervention accounting."
+    ],
+    "remaining_acceptance": [
+      "The trigger and physical completion are recorded from observation, not a reminder date alone.",
+      "Temperature/moisture/ventilation remain within the declared safety envelope after closure.",
+      "Any study receives a visible intervention/deviation record rather than an unexplained seasonal covariate change."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator",
+        "condition": "Actual current position and measured temperature/moisture/ventilation context."
+      }
+    ],
+    "next_action": "At the shared field survey, record current position and the justified no-change or reversible closure decision, then a bounded safety readback if changed and a visible study-intervention record.",
+    "work_ready_now": [
+      "Prepare the finite observation/action worksheet alongside #298/#52; no separate invented deadline."
+    ],
+    "decisions": {
+      "needed_now": false,
+      "when_needed": "When physical observations are recorded",
+      "decision": "Select no change or the evidence-supported reversible screen action."
+    },
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-4880196571"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: FINITE SEASONAL ACTION AWAITS OBSERVATION.\n\nCompleted or retained scope: Current scope ties a seasonal screen decision to measured conditions, with reversible action and study-intervention accounting. No fresh operator observation establishes screen position or benefit/safety of closure. Calendar timing alone cannot satisfy this physical task.\n\nRemaining actual acceptance: The trigger and physical completion are recorded from observation, not a reminder date alone.; Temperature/moisture/ventilation remain within the declared safety envelope after closure.; Any study receives a visible intervention/deviation record rather than an unexplained seasonal covariate change.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/412 · https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-4880196571\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: At the shared field survey, record current position and the justified no-change or reversible closure decision, then a bounded safety readback if changed and a visible study-intervention record.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 428,
+    "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+    "execution_state": "BOUNDED_DIAGNOSIS_READY_NO_CURRENT_CAUSAL_FIX_JUSTIFIED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Historical #433 writer/reconnect acceptance is retained. October17 source-bound heap collector classified its then-current heap state informational, with limits met and no current fragmentation flag."
+    ],
+    "remaining_acceptance": [
+      "Cause is reproduced or uncertainty explicitly bounded with current load/reset evidence; software-reset versus watchdog counts are distinct.",
+      "Candidate meets predeclared heap/fragmentation/timing and clean-runtime criteria under representative worst-case load.",
+      "No last-good promotion occurs solely on compile/replay success, a reset count omission or a projected heap improvement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control/platform lead",
+        "condition": "Current bounded heap/fragmentation/reset/load evidence tied to actual firmware and available rollback artifact."
+      },
+      {
+        "owner": "Operator/platform",
+        "condition": "Representative candidate runtime and #390 last-good/recovery qualification if a firmware change is selected."
+      }
+    ],
+    "next_action": "Reuse the source-bound collector for a bounded passive current heap/reset/load snapshot and inspect exact rollback artifact custody. Explain cause or bound uncertainty; select code work only from a measured causal defect.",
+    "work_ready_now": [
+      "Prepare/read current evidence using existing tooling; no speculative heap rewrite, new monitor stack or immediate OTA."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/428",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/scripts/firmware-deploy-preflight.sh",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/docs/reviews/firmware-simplification-proposal-2026-07-06.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/428#issuecomment-5387604698"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: BOUNDED DIAGNOSIS READY NO CURRENT CAUSAL FIX JUSTIFIED.\n\nCompleted or retained scope: Historical #433 writer/reconnect acceptance is retained. October17 source-bound heap collector classified its then-current heap state informational, with limits met and no current fragmentation flag. Historical low-watermark/watchdog risks remain, but the latest reviewed snapshot does not establish current low heap or a causal need for rewrite. Software reset, socket reconnect and watchdog reset must remain distinct.\n\nRemaining actual acceptance: Cause is reproduced or uncertainty explicitly bounded with current load/reset evidence; software-reset versus watchdog counts are distinct.; Candidate meets predeclared heap/fragmentation/timing and clean-runtime criteria under representative worst-case load.; No last-good promotion occurs solely on compile/replay success, a reset count omission or a projected heap improvement.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/428 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/scripts/firmware-deploy-preflight.sh · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/docs/reviews/firmware-simplification-proposal-2026-07-06.md · https://github.com/VerdifyConsultancy/verdify-platform/issues/428#issuecomment-5387604698\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Reuse the source-bound collector for a bounded passive current heap/reset/load snapshot and inspect exact rollback artifact custody. Explain cause or bound uncertainty; select code work only from a measured causal defect.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 430,
+    "title": "[C6][P2] Simplify firmware only while preserving autonomous control and observable truth",
+    "execution_state": "ROLLUP_DEFERRED_EVIDENCE_LED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Tier1 writer lifecycle is represented by scoped accepted #433."
+    ],
+    "remaining_acceptance": [
+      "Each tier has measured before/after heap/traffic and zero unintended native/replay behavior divergence.",
+      "Network-isolation autonomy, reset/water-budget conservatism and current full-state evidence survive.",
+      "#428/#369/#367/#370 receipts define the achieved scope; theoretical entity or heap savings are labeled projections."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead",
+        "condition": "#428 causal diagnosis and a proven narrow #367/#369/#370 improvement."
+      }
+    ],
+    "next_action": "Keep zero-hour roll-up ownership of those four children. Choose a later simplification only from current measured load and complete consumer inventory; label projected savings explicitly.",
+    "work_ready_now": [
+      "Coordinate current correctness and evidence work; no independent umbrella implementation or arbitrary entity-removal quota."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/docs/reviews/firmware-simplification-proposal-2026-07-06.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/433"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "ROLLUP",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: ROLLUP DEFERRED EVIDENCE LED.\n\nCompleted or retained scope: Tier1 writer lifecycle is represented by scoped accepted #433. Historical612-entity/44:1 traffic figures are not current measurements. Future hash-only readback or server-derived diagnostics cannot silently replace full raw physical evidence or offline autonomy.\n\nRemaining actual acceptance: Each tier has measured before/after heap/traffic and zero unintended native/replay behavior divergence.; Network-isolation autonomy, reset/water-budget conservatism and current full-state evidence survive.; #428/#369/#367/#370 receipts define the achieved scope; theoretical entity or heap savings are labeled projections.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/430 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/docs/reviews/firmware-simplification-proposal-2026-07-06.md · https://github.com/VerdifyConsultancy/verdify-platform/issues/433\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Keep zero-hour roll-up ownership of those four children. Choose a later simplification only from current measured load and complete consumer inventory; label projected savings explicitly.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 434,
+    "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "execution_state": "SOURCE_SAFETY_PREPARATION_READY_PHYSICAL_FEED_BLOCKED",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Current source contains center-only climate routing and water/relay interlocks. #37 center-start-hour and #323 climate-fairness proposals were superseded by this approved topology."
+    ],
+    "remaining_acceptance": [
+      "All command origins and reverse conflicts prove zero south/west climate demand, zero center non-climate mist and zero non-wall fertilizer actuation.",
+      "Missing/stale/nonfinite/zero/out-of-bounds calibration prevents feed; restart/duplicate/missed-window cases cannot double-dose.",
+      "Native/invariant/replay/band/compile and make irrigation-stack-software-check pass; #390 release ties actual routing/readbacks/sequence to exact binary with rollback."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Control lead; #299",
+        "condition": "Preserved re-fire behavior and all-origin/reverse-conflict/missing-calibration/restart/duplicate-window proof."
+      },
+      {
+        "owner": "Operator/data lead",
+        "condition": "Actual #298 topology, calibrated wall flow, chemistry/product/injector/distribution and clean-water flush evidence before feed enablement."
+      },
+      {
+        "owner": "Platform/operator",
+        "condition": "#390 candidate source/binary/readback/recovery qualification; already transitively represented via #299."
+      }
+    ],
+    "next_action": "Prepare the missing origin/conflict/calibration-negative cases in the shared firmware cohort, using current approved topology. After actual field mapping and calibrated dose/flush evidence, qualify the exact physical wall-feed sequence; do not enable automatic feed from a topology import.",
+    "work_ready_now": [
+      "Source inventory and missing native-case preparation can proceed before field commissioning.",
+      "No new center fertilizer path, arbitrary schedule shift, guessed product recipe or independent writer."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-4929652937",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/37#issuecomment-4929655013",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/323#issuecomment-4929655159"
+    ],
+    "review_lane": "control",
+    "priority": "P1",
+    "sprint": "CONTROL",
+    "owner_role": "Control lead",
+    "active_local_predecessors": [
+      299
+    ],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: SOURCE SAFETY PREPARATION READY PHYSICAL FEED BLOCKED.\n\nCompleted or retained scope: Current source contains center-only climate routing and water/relay interlocks. #37 center-start-hour and #323 climate-fairness proposals were superseded by this approved topology. No new all-origin/reverse-conflict/calibration-negative acceptance or physical plumbing/flow/dose/flush commissioning was executed. Center drip remains intentionally unconnected/disabled; crop labels cannot authorize wall feed.\n\nRemaining actual acceptance: All command origins and reverse conflicts prove zero south/west climate demand, zero center non-climate mist and zero non-wall fertilizer actuation.; Missing/stale/nonfinite/zero/out-of-bounds calibration prevents feed; restart/duplicate/missed-window cases cannot double-dose.; Native/invariant/replay/band/compile and make irrigation-stack-software-check pass; #390 release ties actual routing/readbacks/sequence to exact binary with rollback.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/434 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/controls.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-4929652937 · https://github.com/VerdifyConsultancy/verdify-platform/issues/37#issuecomment-4929655013 · https://github.com/VerdifyConsultancy/verdify-platform/issues/323#issuecomment-4929655159\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Prepare the missing origin/conflict/calibration-negative cases in the shared firmware cohort, using current approved topology. After actual field mapping and calibrated dose/flush evidence, qualify the exact physical wall-feed sequence; do not enable automatic feed from a topology import.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 581,
+    "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
+    "execution_state": "pre_draw_rollup_not_a_sprint_task",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Reusable experiment ledger/executor/freezer/analyzer source and a June 1–July 30, 2027 candidate calendar exist.",
+      "Current contained actual-role, corrected begin-bundle, lifecycle and one named-alert proofs are now available; they are child evidence, not a completed pilot."
+    ],
+    "remaining_acceptance": [
+      "All selected child criteria have scoped receipts or explicit stop decisions.",
+      "One genuine completed selected cohort, all assignments/failures/null outcomes retained and a reproducible #785 decision, or an explicit program stop.",
+      "No revived timed shadow/canary/A-A or invented 80% power threshold."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "Physical qualification, authentic scientific input contract, final identity/draw and real seasonal cohort remain incomplete."
+      }
+    ],
+    "next_action": "Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction.",
+    "work_ready_now": [
+      "Update child ledger and sequencing using the new #587 alert receipt.",
+      "Prepare future day-custody/report templates without changing schedules or drawing."
+    ],
+    "decisions": [
+      "No immediate program decision needed for continued source/measurement work. A later explicit no-go can stop the program without pretending a completed experiment."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json",
+      "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "ROLLUP",
+    "owner_role": "Research/release lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The program remains pre-draw. Source selects June 1–July 30, 2027 as the warm 30-pair/60-local-day candidate and a narrow climate-noninferiority plus nine-state burden claim; winter observation is a separate non-treatment study. Current contained actual-role, corrected begin-bundle, lifecycle and one named-alert proofs are accepted within their boundaries. Scientific input qualification, complete current-role integration, successful physical proof, final identity/draw and genuine pilot outcomes remain incomplete. Keep this as a zero-hour roll-up and close only on a completed #785 decision or explicit linked program-stop decision.\n\nCurrent execution allocation: ROLLUP. Next action: Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 587,
+    "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
+    "execution_state": "partial_contained_native_acceptance_with_named_alert_complete",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Actual lifecycle LOGIN 25 and executor LOGIN 21 authentication/capability attestations and protected-table SQLSTATE 42501 denials passed.",
+      "Named lifecycle packet passed six denials, closed→baseline_recovery→emergency_hold, then rollback/original status; full29 G+S/source 84/catalog/77-sequence custody passed with only events +2.",
+      "Ordinary clone initial password was explicitly approved, installed and authenticated read-only. It is no longer a pending decision.",
+      "Explicitly approved two-message component_experiment_integrity / expired_work_not_terminal test completed at 06:51:39 UTC on f16/531. Native fire/resolution in one thread, deduplication, alert rollback and one committed cancellation event passed.",
+      "Final f46ffe6d same-attempt proof independently joins both actual sender confirmations, completed candidate and typed custody: all 7,950 genuine/29 tables and12425 alert rows unchanged; other 28 synthetic rowsets unchanged; exactly work events +1 and alert IDs +1; seven synthetic rows retained.",
+      "Original bridge timeout/release failure/collector uncertainty remain failed. The separate reconciliation does not rewrite them; no resend/retry occurred. Exact disposable cleanup completed."
+    ],
+    "remaining_acceptance": [
+      "Actual current feature-off emits no experiment call; uncovered readiness/phase/emergency-hold paths cannot actuate.",
+      "Remaining actual lifecycle/locked-armed no-reopen and blinded mapping/comparative-result leakage cases, with real role denials rather than owner scaffolding or read-only errors.",
+      "Inventory and qualify remaining named alert conditions, reusing the accepted transport route instead of resending the proven pair.",
+      "Physical baseline/handoff clauses stay owned by #641 and are not counted as contained acceptance."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Uncovered current-role phase/nonactuation/blinding cases remain."
+      },
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Active positive prefixes are denied by the unchanged source grid/order contract; no fake physical authorization."
+      },
+      {
+        "owner": "Monitoring/product owner",
+        "condition": "Only the named expired-work alert condition has end-to-end route proof; other conditions need scoped evidence."
+      }
+    ],
+    "next_action": "Publish the accepted named-alert scope and map every residual lifecycle/nonactuation/blinding criterion to its source guard and authentic precondition. Reuse the exhausted current-role subset. Prepare only a genuinely missing source case or legitimate current-identity qualification path; no duplicate alert pair, password installation or weak native test.",
+    "work_ready_now": [
+      "Produce the residual source/role/authority/blinding clause map and distinguish cases already accepted from cases unreachable under current identity/grid/ORDER_REVISION.",
+      "Prepare a minimal source change only for an identified defect; keep locked/armed/no-reopen and recovery positive cases unaccepted until their real preconditions exist.",
+      "Reuse final f46ffe named-alert transport/custody proof; remaining conditions must be named and independently justified before any new external delivery."
+    ],
+    "decisions": [
+      "None remains for the completed password installation or consumed two-message pair.",
+      "Only request a new communication decision if a different concrete message test is necessary; current acceptance does not authorize extra sends."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+      "planning/reviews/2026-10-17-s3-execution/587-lifecycle-authority-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-ordinary-role-progress.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6246816434"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "S3",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Actual lifecycle/executor authentication and bounded capability denials passed. The named lifecycle packet passed six denials and two admission transitions, then rolled back with all 29 genuine/synthetic rowsets and source/catalog custody unchanged and exactly events +2 across 77 sequences. Ordinary clone password installation and read-only LOGIN are now complete after explicit approval. The separately approved two-message component_experiment_integrity / expired_work_not_terminal route completed on f16a8604/image 53111f35 at 06:51:39 UTC: fire and same-thread resolution, deduplication, alert rollback and one retained cancellation event. Final f46ffe6d reconciliation proves both real sender confirmations, candidate completion and complete typed custody; all 7,950 genuine rows/29 relations and 12,425 alert rows are preserved, with only work events +1 and alert IDs +1 for this phase. Original bridge/release/collector failures remain failed after the second-reply timeout; no retry or resend occurred. The accepted unchanged-source subset is exhausted. Residual feature-off/nonactuation, locked/armed no-reopen, blinding and other named-condition criteria remain open. #641 owns physical recovery/handoff. The newer image is unpromoted; no full issue or full-database/restore acceptance is claimed. Evidence: planning/reviews/2026-10-17-s3-execution/587-lifecycle-authority-proof.md and 587-alert-delivery-proof.md.\n\nCurrent execution allocation: S3. Next action: Publish the accepted named-alert scope and map every residual lifecycle/nonactuation/blinding criterion to its source guard and authentic precondition. Reuse the exhausted current-role subset. Prepare only a genuinely missing source case or legitimate current-identity qualification path; no duplicate alert pair, password installation or weak native test.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 588,
+    "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+    "execution_state": "final_lock_and_draw_not_admitted",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Lock/no-redraw machinery, commitment interfaces and selected v2 model/calendar source exist.",
+      "Current selected source names gpt-5.6-luna/medium and June–July 2027; old Sol/November narrative is historical."
+    ],
+    "remaining_acceptance": [
+      "Byte-exact qualified model/context/profile/target/sensor/analyzer/source/calendar identity joins #641/#782/#783.",
+      "Actual non-actuating production-provider final-model/profile preflight with strict request limits, no tools/device writes and typed failure/fallback behavior.",
+      "Exactly one internal OS-CSPRNG draw and protected commitment, duplicate/replacement/caller-time denials without disclosure.",
+      "Reproducible future boundary and final-design compatibility; a missing-input decision never authorizes drawing."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "#641 physical, #782 empirical and #783 full current-role path acceptance remain missing."
+      },
+      {
+        "owner": "Provider integration owner",
+        "condition": "Final source/profile provider behavior has no current qualified receipt."
+      }
+    ],
+    "next_action": "Prepare the exact manifest and final compatibility checklist now; perform no lock/draw until the real selected design and prerequisite receipts exist.",
+    "work_ready_now": [
+      "Resolve manifest field ownership and hash inputs; retain current provider/model as declared source rather than asserting future provider availability.",
+      "Prepare no-tool failure/fallback probe without calling or drawing."
+    ],
+    "decisions": [
+      "Later: accept the actual completed scientific design and select its future launch boundary. No new draw decision is ready now."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+      "experiment_orchestrator/launch_artifacts.py",
+      "experiment_orchestrator/launch_control.py",
+      "experiment_orchestrator/provider.py",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "S5",
+    "owner_role": "Research/release lead",
+    "active_local_predecessors": [
+      641,
+      782,
+      783
+    ],
+    "canonical_current_state": "Current lock/no-redraw machinery and the v2 gpt-5.6-luna/medium, June–July 2027 candidate exist. No current qualified scientific lock/draw or final-provider preflight is evidenced. #641 physical, #782 authentic empirical and #783 complete current-role path acceptance remain real prerequisites. A missing-input/prospective-collection decision is preparation only and cannot authorize a draw; final provider availability and behavior must be checked at the actual selected source/profile.\n\nCurrent execution allocation: S5. Next action: Prepare the exact manifest and final compatibility checklist now; perform no lock/draw until the real selected design and prerequisite receipts exist.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 639,
+    "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
+    "execution_state": "partial_contained_native_acceptance_active_prefix_unqualified",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Actual executor LOGIN 21/lifecycle LOGIN 25, bounded shadow subset and canonical begin-bundle work passed with finite custody and no devices.",
+      "Six volatile composite writer SELECT(fn()).* forms were corrected to one-call FROM forms. Qualified f16/531 native point made A/A-replay/B/C in one rollback transaction and advanced only bundle attempts+2; all 29 G+S rowsets and 77 sequence definitions preserved.",
+      "Other five corrected writers have source regression coverage only; old-source +14 attempts and failed initial CI remain separate history.",
+      "Lifecycle authority and named alert proofs are shared evidence, not executor exposure/exclusivity/recovery acceptance."
+    ],
+    "remaining_acceptance": [
+      "Actual executor/state path enforces full 48-field generation/freshness/confirmation and never opens partial-prefix exposure.",
+      "No ordinary/MCP/forecast/retry interleaving; shadow zero calls and nonrandom no-assignment lineage proven in the complete intended path.",
+      "Contained lease-loss/reconnect/failure/recovery closes exposure first and restores intended state; no physical result invented from FakeTransport.",
+      "Remaining five writer SQL contracts receive meaningful native proof where their authentic preconditions can be met; no instrumentation or DB guard replacement."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Firmware/runtime owner",
+        "condition": "Current GRID_REVISION f2ce does not match historical direct-launch risk c10f. ORDER_REVISION is a27/48 accepted-risk receipt, not a full prefix replay; unchanged active route intentionally refuses."
+      },
+      {
+        "owner": "Runtime/release lead",
+        "condition": "No supported current synthetic positive active-prefix path without authentic source qualification; copying genuine experiment/authority is invalid."
+      },
+      {
+        "owner": "ROOT/native CI owner",
+        "condition": "Compilation/full-prefix work requires admitted bounded cluster execution; no Mac heavy replay."
+      }
+    ],
+    "next_action": "Make the next packet the source-bound prefix-coverage gap and supported qualification plan: map all 48 inputs to real decision consumers, cover missing actual paths or select a truthful external full-coverage/HIL runner, then run admitted prefix qualification before changing the source order/grid. Reuse the exhausted contained subset; prepare a new native case only when it adds missing acceptance with authentic reachable preconditions.",
+    "work_ready_now": [
+      "Inventory actual compiled consumers and the 21 currently unimposed fields against all 48 policy inputs, including exact current-grid and recovery-start provenance.",
+      "Prepare one supported full-coverage prefix-qualification implementation/admission packet; no new ORDER_REVISION until genuine complete evidence.",
+      "Record the five other corrected writer paths as source-only and identify any truly reachable native proof before requesting execution; current useful unchanged-source subset is exhausted."
+    ],
+    "decisions": [
+      "No decision needed for bounded source diagnosis. If true full-coverage/HIL needs physical equipment, present that concrete scope later; do not silently renew the historical accepted-risk exception."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+      "verdify_schemas/component_executor.py:35",
+      "verdify_schemas/component_executor.py:69",
+      "ingestor/tasks/component_experiment.py:2410",
+      "scripts/component_prefix_replay.py",
+      "firmware/test/replay_invariants.cpp",
+      "planning/reviews/2026-10-17-s3-execution/639-composite-writer-point-proof.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "/private/tmp/verdify-s3-active-prefix-source-review.json"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "S3",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Actual executor/lifecycle role boundaries and the bounded shadow subset passed. All six volatile composite writer forms were corrected to single-call FROM queries; native f16a8604 CI succeeded and its unpromoted 53111f35 image passed the four-call A/A-replay/B/C begin-bundle proof with rollback, unchanged 29 genuine/synthetic rowsets and only bundle attempts +2 across 77 sequences. The other five writer paths retain source regression coverage only. Shared lifecycle and named-alert proofs are now accepted, with complete typed finite/alert custody and no device calls; old-source +14 and every failed attempt remain separate history. Current active-prefix qualification remains intentionally blocked: grid f2ce differs from historical accepted-risk grid c10f, and ORDER_REVISION binds 27/48 historical coverage rather than full prefix qualification. The useful unchanged-source subset is exhausted; copying genuine experiment/authority or modifying clocks/guards is not a valid positive path. No partial-prefix/exposure/exclusivity/recovery acceptance is added by the contained results. #641 retains physical epochs, rescue and safe handoff. Evidence: planning/reviews/2026-10-17-s3-execution/639-composite-writer-point-proof.md and 587-alert-delivery-proof.md; verdify_schemas/component_executor.py and scripts/component_prefix_replay.py.\n\nCurrent execution allocation: S3. Next action: Make the next packet the source-bound prefix-coverage gap and supported qualification plan: map all 48 inputs to real decision consumers, cover missing actual paths or select a truthful external full-coverage/HIL runner, then run admitted prefix qualification before changing the source order/grid. Reuse the exhausted contained subset; prepare a new native case only when it adds missing acceptance with authentic reachable preconditions.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 640,
+    "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+    "execution_state": "awaits_real_first_assignment_window",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Freezer/export/analyzer interfaces and historical synthetic retry/null/failure evidence exist.",
+      "No genuine first randomized assigned-day outcome is supplied by the current clone tests."
+    ],
+    "remaining_acceptance": [
+      "Exactly one outcome for every first-day locked assignment, including no exposure, missing data and aborted work.",
+      "Repeated full export has byte-identical canonical rows/hashes and analyzer consumes unchanged bytes.",
+      "Actual freezer cannot mutate assignments/read mapping; analyst sees blinded X/Y only."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#642 launch and an elapsed actual06:00–24:00 Denver window have not occurred."
+      },
+      {
+        "owner": "Data/platform owner",
+        "condition": "Native current-role freeze/export and existing backup custody must join the real assignment."
+      }
+    ],
+    "next_action": "Prepare exact reconciliation/export/backup commands and failure-day checks; execute only after the real assigned window and current source/UID binding.",
+    "work_ready_now": [
+      "Prepare the assignment-to-outcome reconciliation and export-twice checklist using unchanged existing tooling."
+    ],
+    "decisions": [
+      "None now; do not invent a day or reuse a clone synthetic day to close this issue."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+      "experiment_orchestrator/outcome.py",
+      "research/planner-efficacy/switchback/v2_day1_export.py",
+      "docs/research/c1-restored-sql-export-analyzer-2026-09-28.md"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "S5",
+    "owner_role": "Research lead",
+    "active_local_predecessors": [
+      642
+    ],
+    "canonical_current_state": "Freezer/export/analyzer interfaces and retained synthetic retry/null/failure proofs exist, but no genuine first randomized assigned day is evidenced. Current clone qualification is software/custody evidence, not assigned-day ITT data. Completion still requires #642 and an elapsed actual selected 06:00–24:00 Denver window, with immutable original export and role-bound reconciliation.\n\nCurrent execution allocation: S5. Next action: Prepare exact reconciliation/export/backup commands and failure-day checks; execute only after the real assigned window and current source/UID binding.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 641,
+    "title": "[C1][P1] Complete one fresh attended physical baseline–target–baseline proof",
+    "execution_state": "physical_proof_blocked_not_attempted_by_s3",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Historical Gate R resolution/retired hooks and emergency-safe ordinary handoff are retained; neither is successful Gate P proof.",
+      "Current #639/#587 contain accepted software subsets; no device epoch/rescue/physical baseline-target-baseline result was added.",
+      "Draft PR #855 remains OPEN/draft at f8bd0cba and mergeStateStatusDIRTY. Four-file diff activates the component and unsuspends a Job with invalid image/time/source placeholders and historical experiment/config/authorization; it is not executable current authority."
+    ],
+    "remaining_acceptance": [
+      "One fresh exact source/lease/UID/window-bound attended successor with actual baseline-before→target→baseline-after evidence.",
+      "Two advancing full 48-field epochs at each boundary and close-exposure-first on mismatch.",
+      "Physical exclusivity/rescue/full-state recovery; finish confirmed baseline, component off, ID cleared, vector off, exposure zero, required draft/shadow/closed state and ordinary-writer handoff.",
+      "Successful proof and safe final state both required; emergency-safe abort does not close the proof."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "#749 has real climate/soil and unresolved wetting-readiness constraints."
+      },
+      {
+        "owner": "Firmware/runtime lead",
+        "condition": "Current prefix/grid route is not physically qualified and relevant #639/#587 contained clauses remain unaccepted."
+      },
+      {
+        "owner": "Attending ROOT/supervisor/rescue owner",
+        "condition": "Fresh exact window/authority and rescue metadata must bind an executable current successor; historical PR #855 authorizations cannot be replayed."
+      }
+    ],
+    "next_action": "Keep PR #855 parked. First close the source/evidence gaps and prepare a current dormant successor diff/rollback manifest; only then bind one fresh remotely attended physical attempt and its cleanup. Do not retry Gate R already resolved.",
+    "work_ready_now": [
+      "Inventory PR #855 reusable mechanics versus stale experiment/config/source/window/lease assumptions.",
+      "Prepare source/render-only successor plan and current proof clause ledger; do not enable component or unsuspend anything."
+    ],
+    "decisions": [
+      "Later, when technically ready: choose an exact attended proof window with supervisor/rescue owner and concrete proof scope. Remote attendance is sufficient; do not require an invented in-person gate."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/855",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5855420357",
+      "db/migrations/239-experiment-v2-orphaned-preclaim-recovery.sql",
+      "scripts/experiment_v2_proof_packet.py:1908",
+      "verdify_schemas/component_executor.py:69"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "S4",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [
+      749,
+      639,
+      587
+    ],
+    "canonical_current_state": "No fresh successful baseline→target→baseline physical receipt is evidenced. Historical Gate R resolution and emergency-safe ordinary handoff remain scoped history and do not earn Gate P proof credit. #749 retains real spread/soil failures and the unresolved source-level wetting hold; #639 current grid/order qualification and relevant contained criteria remain incomplete. Draft PR #855 is still open, draft and DIRTY at f8bd0cba: its four-file diff enables the component and unsuspends a one-shot Job with invalid image/time/source placeholders, old config and historical authorization references. Keep it parked; no old one-shot authority is renewed by this plan. A successor must bind actual current source, qualified route, fresh window and supervisor/rescue metadata, then prove both successful physical boundaries and the final safe handoff.\n\nCurrent execution allocation: S4. Next action: Keep PR #855 parked. First close the source/evidence gaps and prepare a current dormant successor diff/rollback manifest; only then bind one fresh remotely attended physical attempt and its cleanup. Do not retry Gate R already resolved.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 642,
+    "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+    "execution_state": "randomized_launch_not_admitted",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Activation/source/rollback machinery exists; ordinary policy convergence is separately accepted.",
+      "No current locked draw or actual randomized day1 is evidenced by S3."
+    ],
+    "remaining_acceptance": [
+      "Unique real assignment and choice from exact immutable locked identity, with fresh launch-window authority.",
+      "Actual target, two distinct epochs, exposure lineage, singleton writer and a functioning freezer.",
+      "Current safe rollback and direct first-day custody handoff; failure retained in assigned ITT without redraw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/release lead",
+        "condition": "#588 qualified design/lock/draw incomplete and June–July 2027 is only a candidate future season."
+      },
+      {
+        "owner": "ROOT/runtime owner",
+        "condition": "Physical rollout/launch readiness and scoped attended authority must be current at the boundary."
+      }
+    ],
+    "next_action": "Prepare exact locked-identity/rollback packet now; activate only at the selected future boundary after #588, with no launch date promised by this replan.",
+    "work_ready_now": [
+      "Update activation preflight and custody handoff templates from current successful source/role proofs."
+    ],
+    "decisions": [
+      "Later separate randomized-launch decision at the actual selected boundary; none requested by this status review."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+      "experiment_orchestrator/launch_control.py",
+      "ingestor/tasks/component_experiment.py",
+      "docs/runbooks/experiment-rollout.md"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "S5",
+    "owner_role": "Research/release lead",
+    "active_local_predecessors": [
+      588
+    ],
+    "canonical_current_state": "Activation machinery exists, but no current completed design lock/draw or real randomized launch receipt is evidenced. Ordinary policy convergence, ready Pods and clone role/alert tests do not substitute for a real assignment, target, two epochs and exposure lineage. The seasonal start remains a selected future candidate, not an execution promise.\n\nCurrent execution allocation: S5. Next action: Prepare exact locked-identity/rollback packet now; activate only at the selected future boundary after #588, with no launch date promised by this replan.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 749,
+    "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+    "execution_state": "original_sealed_readiness_failure_with_resolved_argo_provenance",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Original packet executed unchanged SQL after the retained UUID serializer failure and correctly FAILED spreads 4.86/5.04F against4F plus six unmatched replacement soil identities.",
+      "Eight older identities still match; typed integer IDs/details survived projection, so no projection repair or family exception is justified.",
+      "Later accepted #980 full selector-free 129-resource sync resolves current full-operation provenance; it does not turn the original failed packet into a pass.",
+      "Source-bound soil/hydro dependency declarations were reviewed; f16 six-query change did not introduce a causal soil input."
+    ],
+    "remaining_acceptance": [
+      "Truthful finite/fresh three-contributor quorum and unchanged spread criterion pass a separately identified current packet; stale/loss/contradiction still refuse.",
+      "Hydro and any reviewed soil degradation remain outside causal surfaces under explicit exact boundaries.",
+      "Current original-clause read-only packet binds writer/quiet/full 48-field/Argo/backup/auth/provider identities and grants no physical/randomized authority.",
+      "Gate P still separately requires real #778 wetting-admission/counter-reset/equipment/source-receipt disposition: current collector explicitly emits false. Closing #778 as an investigation did not satisfy that technical evidence."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Evidence/data + firmware owner",
+        "condition": "Actual spread excess and six replacement south_1 soil events need causal diagnosis; do not repeatedly resample to obtain a pass."
+      },
+      {
+        "owner": "Firmware/runtime owner",
+        "condition": "Real wetting correction/physical admission/rails/counter-reset qualification remains unresolved; proof_packet.py emits wetting_incident_778_disposition=False."
+      },
+      {
+        "owner": "ROOT/release owner",
+        "condition": "Any later packet needs current source/runtime bindings and a distinct bounded scope, not a reset of the historical attempt."
+      }
+    ],
+    "next_action": "Join retained climate/probe/alert-producer evidence to identify a real repair or honest hold; prepare exact typed classification plumbing with negative tests. Maintain wetting hold until real qualifying evidence exists, then collect one separately scoped packet with unchanged thresholds.",
+    "work_ready_now": [
+      "Read-only historical producer/consumer and reference evidence diagnosis; distinguish sensor disagreement from genuine spatial gradient.",
+      "Specify exact new soil identity review and source-bound wetting disposition schema; do not flip the collector boolean or broaden exception matching.",
+      "Update observer language to separate app health/revision from completed full-operation provenance, retaining old failure."
+    ],
+    "decisions": [
+      "No blanket permission is needed for source diagnosis. If real inspection/maintenance is necessary, present the specific measured gap and intervention; no new physical authorization is implied now."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+      "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md",
+      "planning/reviews/2026-10-17-s3-execution/749-full-sync-supplement.md",
+      "scripts/experiment_v2_proof_packet.py:1908",
+      "scripts/experiment_v2_readiness_guard.py:102",
+      "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6001965453"
+    ],
+    "review_lane": "science",
+    "priority": "P0",
+    "sprint": "S3",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The original sealed packet remains FAIL: two real spreads 4.8600006103515625F/5.040000915527344F exceed the unchanged 4 F limit, and six new south_1 identities do not match the exact reviewed recovery-only catalog. Typed IDs/details were preserved; no SQL projection fix or family exception is justified. Eight retained identities still match. Later accepted #980 full selector-free 129-resource sync resolves current Argo operation provenance without rewriting the failed packet. There is also a separate Gate P technical hold: current proof_packet.py still emits wetting_incident_778_disposition=False because the closed #778 investigation left physical admission/rails, equipment/counter-reset and source-receipt qualification unresolved. Real evidence must establish that disposition; source plumbing alone or a boolean flip cannot release it. No threshold/catalog relaxation or physical authority is granted. Evidence: planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md and 749-full-sync-supplement.md; scripts/experiment_v2_proof_packet.py and wetting-incident-2026-09-04-disposition-v4.md.\n\nCurrent execution allocation: S3. Next action: Join retained climate/probe/alert-producer evidence to identify a real repair or honest hold; prepare exact typed classification plumbing with negative tests. Maintain wetting hold until real qualifying evidence exists, then collect one separately scoped packet with unchanged thresholds.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 750,
+    "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+    "execution_state": "open_zero_effort_physical_recovery_rollup",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Closed #747 retains its bounded backup/recovery acceptance; accepted core ordinary runtime and later full-sync/exporter delivery are separate receipts.",
+      "Contained #639/#587 now include current-role, begin-bundle, lifecycle and named-alert proof; no need to repeat resolved orphan recovery."
+    ],
+    "remaining_acceptance": [
+      "Current source/runtime/backup packet names all remaining mismatch.",
+      "#749 and #641 have their own actual scoped success receipts.",
+      "Confirmed safe final state and recovery handoff without randomized launch authority."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "#749 readiness and #641 successful physical proof remain unaccepted."
+      }
+    ],
+    "next_action": "Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.",
+    "work_ready_now": [
+      "Maintain exact child-scope ledger; reuse accepted backup and contained receipts rather than duplicate operations."
+    ],
+    "decisions": [
+      "None independent of the concrete #641 physical-window decision."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "planning/reviews/2026-10-17-s3-execution/README.md",
+      "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
+    ],
+    "review_lane": "science",
+    "priority": "P0",
+    "sprint": "ROLLUP",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Core ordinary runtime, closed #747 bounded backup/recovery and later full-sync/exporter delivery retain their separate accepted receipts. Current contained #639/#587 now include actual-role, begin-bundle, lifecycle and named-alert proof. #749 original readiness remains failed and #641 has no successful physical proof. This zero-hour roll-up must not repeat resolved orphan recovery or treat emergency-safe handoff/closed predecessors as current Gate P acceptance.\n\nCurrent execution allocation: ROLLUP. Next action: Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "execution_state": "PHYSICAL_SERVICE_BLOCKED_SOURCE_TRUTH_WORK_SEPARATE",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Maintenance scope is explicitly separate from the three-of-four degraded readiness quorum; no hardware/HA/network replacement was performed by prior readiness work."
+    ],
+    "remaining_acceptance": [
+      "South supplies credible fresh finite temperature/RH/VPD and is validated against reference/neighbors; hydro cause and restored or explicit unresolved state are documented.",
+      "Contributor diagnostics become truthful and alerts resolve from telemetry, not manual deletion.",
+      "No replacement becomes a surprise pilot gate or silently changes the locked analysis panel."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Operator/data lead",
+        "condition": "Bounded actual south serial/bus/power and reference measurement examination."
+      },
+      {
+        "owner": "Home Assistant/network owner if fault is identified there",
+        "condition": "Separate hydro entity/network publication trace and repair in the owning repository."
+      }
+    ],
+    "next_action": "Use one field service worksheet to diagnose south and hydro separately, repair only the identified component, then retain calibrated before/after readings, truthful contributor diagnostics and any panel/intervention history.",
+    "work_ready_now": [
+      "Prepare exact existing identities and test sequence; advance #368 diagnostic software without waiting for replacement."
+    ],
+    "decisions": null,
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml",
+      "https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-5472171222",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6008905248"
+    ],
+    "review_lane": "control",
+    "priority": "P2",
+    "sprint": "PHYSICAL",
+    "owner_role": "Operator with data/control lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Full issue review, October 18, 2026. Delivery state: PHYSICAL SERVICE BLOCKED SOURCE TRUTH WORK SEPARATE.\n\nCompleted or retained scope: Maintenance scope is explicitly separate from the three-of-four degraded readiness quorum; no hardware/HA/network replacement was performed by prior readiness work. Latest reviewed dated baseline has three finite climate contributors, missing south and unavailable hydro. The actual fault cause is not established. Timestamp-only diagnostics can falsely report4/OK; #368 owns that source correction.\n\nRemaining actual acceptance: South supplies credible fresh finite temperature/RH/VPD and is validated against reference/neighbors; hydro cause and restored or explicit unresolved state are documented.; Contributor diagnostics become truthful and alerts resolve from telemetry, not manual deletion.; No replacement becomes a surprise pilot gate or silently changes the locked analysis panel.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/751 · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/planning/reviews/2026-10-17/ISSUE-TRIAGE.md · https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-5472171222 · https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6008905248\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Use one field service worksheet to diagnose south and hydro separately, repair only the identified component, then retain calibrated before/after readings, truthful contributor diagnostics and any panel/intervention history.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 775,
+    "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+    "execution_state": "campaign_in_progress_three_s3_issues_accepted_five_open",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "All369 records inventoried; original50 open replan published, then #977/#980/#802 accepted and closed with native receipts.",
+      "Latest retained native graph47 open/27 active/24 closed predecessors is source-consistent; parent roll-ups and accepted-vs-retired closure are distinguished.",
+      "Current f16 native CI, role/bundle/lifecycle/named-alert acceptance, finite custody and cleanup are delivered within stated limits."
+    ],
+    "remaining_acceptance": [
+      "Every current issue has a fresh concise contract, accountable owner, actionable next step, exact remaining criteria and valid dependency semantics.",
+      "Native graph/source/current review and rendered issue bodies agree; no stale pending-approval or pending-CI claims.",
+      "Bounded pilot ultimately produces reproducible declared result or explicit stop; neither current sprint nor campaign is complete."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "ROOT/planning publisher",
+        "condition": "Canonical #775 and #587/#639 bodies still lag the actual receipts, despite current proof documentation."
+      },
+      {
+        "owner": "Campaign owners",
+        "condition": "Readiness, source prefix, scientific inputs and later seasonal/physical outcomes remain real work."
+      }
+    ],
+    "next_action": "Publish the complete current summary and revised bounded execution queue; re-estimate only explicitly chosen unfinished packets instead of treating original estimates as a remaining-hours ledger.",
+    "work_ready_now": [
+      "Reconcile all issue bodies and current review; keep frozen triage/failed receipts unchanged.",
+      "Maintain one product native writer, one independent owner lane and one source/science lane; replace blocked work rather than multiplying concurrent native operations.",
+      "Count roll-ups at zero hours and distinguish an issue closure from completed sprint preparation packets."
+    ],
+    "decisions": [
+      "No old credential or two-message approval is pending.",
+      "Future physical window, exact design/launch and measurement-scope decisions should be raised only with concrete ready packets; not as a blanket planning gate."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "planning/reviews/2026-10-17-s3-execution/README.md",
+      "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.json",
+      "planning/reviews/2026-10-17-s3-execution/802-descheduler-acceptance.json",
+      "planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md",
+      "planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.json"
+    ],
+    "review_lane": "science",
+    "priority": "P0",
+    "sprint": "ROLLUP",
+    "owner_role": "Evidence/data lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The frozen October 17 triage retained all 369 issue records; accepted S3 closures are #977 three-replica restoration, #980 exporter/full-sync delivery and #802 descheduler adoption. The fresh 06:59:54 UTC native graph remains 47 open, 27 active edges and 24 closed predecessor records, unchanged. Five S3 issues remain open; their original 21–42 hour estimates are neither spent time nor measured remaining work. #749 retains the original 4 F spread and unmatched-soil FAIL; later full-sync provenance is resolved, while the source still retains the real #778 Gate P wetting hold. #981 awaits Home Assistant #878 source-clock qualification. #782 authentic-input decision is complete but empirical selector/target/contributor/joint 18-hour evidence is not. Native f16a8604 CI succeeded, qualified ingestor 53111f35 remains unpromoted, and actual-role subset/corrected begin-bundle/lifecycle proofs passed. Explicitly approved ordinary-role installation/authentication and the exact two-message expired-work alert pair are complete. Final f46ffe6d verifies both native sender confirmations, monitor completion, deduplication, rollback, one retained cancellation event and complete finite/alert custody; original bridge/release/collector timeout failures remain failed, with no resend. All 7,950 genuine rows across 29 relations and 12,425 alert rows are preserved; seven labeled synthetic rows remain, all 77 sequence changes are explicitly accounted. Uncovered nonactuation/blinding/named-condition/prefix/exposure/exclusivity/recovery clauses remain open. Thirty disposable objects across ten Jobs were cleaned with retained hashes, without deleting database fixtures or credentials. No physical proof, draw, randomized launch, ordinary-writer handoff, image promotion or full-database/restore parity is claimed. S3 and campaign are incomplete; next execution is bounded readiness/source/contained qualification, with authentic scientific collection and owner work in parallel.\n\nCurrent execution allocation: ROLLUP. Next action: Publish the complete current summary and revised bounded execution queue; re-estimate only explicitly chosen unfinished packets instead of treating original estimates as a remaining-hours ledger.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 782,
+    "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
+    "execution_state": "preparation_packet_complete_empirical_contract_incomplete",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "S3 authentic-input inventory/include-exclude/prospective decision is published and complete.",
+      "June 1–July 30, 2027 candidate, climate-only historical coverage and provisional model-only 0.13776 power/retention sensitivity retained.",
+      "OriginalOct 2 snapshot validates but has zero target/contributor rows and no original selector choice; excluded from empirical joint qualification.",
+      "Nine contributor declarations are route_only; zero pilot contexts/choices. Existing winter/native collectors are active and their no-due/not-declared outcomes were preserved; no duplicate collector needed."
+    ],
+    "remaining_acceptance": [
+      "Frozen narrow exploratory claim with exact authentic inputs and defensible null/inconclusive rules before lock.",
+      "Authentic pre-boundary selector context/choice, target/crop and physical contributor lineage, plus complete eligible 18-hour nine-state continuity.",
+      "Source-faithful empirical power/sensitivity, including  .99^30 / .95^30 retention, without inventing an80% threshold.",
+      "Future compatible calendar/model identity with no prequalification draw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/data lead",
+        "condition": "No selected empirical profile/fallback mix, covariance/carryover or joint endpoint cohort from authentic source inputs."
+      },
+      {
+        "owner": "Facility/contributor owner",
+        "condition": "Current route declarations do not establish physical contributor identity or future crop placement."
+      },
+      {
+        "owner": "Native collector/ROOT owner",
+        "condition": "First due winter day is Nov 2; normal captureNov 3 00:30 MST must verify frozen archived bytes/actual observer/day hash and separate backup custody."
+      }
+    ],
+    "next_action": "Prepare current authentic contributor/crop declarations for a prospective valid interval through supported source guards; collect original as-of selector inputs without fabricated clocks/assignments. Verify the existing winter collector at its naturally due first day. Compute only after usable inputs and native admission.",
+    "work_ready_now": [
+      "Complete declaration provenance and source-owned pre-boundary collection plan.",
+      "Verify current archive/source contract using bounded metadata; no duplicate collector or broad replay of unusable data.",
+      "Keep no-energy nine-state selected endpoint and document unavailable empirical quantities."
+    ],
+    "decisions": [
+      "Actual facility owner must supply or validate physical contributor/crop identity for the selected prospective window; no current snapshot can assert June 2027 placement.",
+      "A later explicit scientific no-go can retire scope; missing-input/prospective decisions alone cannot authorize #588."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+      "docs/research/782-input-decision-2026-10-17.md",
+      "docs/research/evidence/782-inputs-2026-10-17/availability.json",
+      "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "S3",
+    "owner_role": "Evidence/data lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The S3 authentic-input inventory and include/exclude/prospective decision are complete; #782 is not. Retained source evidence has zero pilot selector contexts/choices, nine route-only contributor declarations and no qualified warm 2027 target/contributor cohort or uninterrupted joint 18-hour endpoint. The authentic Oct 2 capture has zero target/contributor rows and no original selector choice. Reuse June 1–July 30, 2027 and model-only 0.13776/retention sensitivity without calling them empirical joint power. Existing winter/native collectors are active; no-due/not-declared outcomes establish no completed study day. First actual winter window is Nov 2, 2026, with normal collection Nov 3 at 00:30 MST; frozen archived bytes, actual observer/day manifest and backup custody still need verification then. No duplicate collector, fabricated clock/target, draw or broad replay is justified. Energy#981 is not a gate for the selected nine-state endpoint. Evidence: docs/research/782-input-decision-2026-10-17.md and its availability.json.\n\nCurrent execution allocation: S3. Next action: Prepare current authentic contributor/crop declarations for a prospective valid interval through supported source guards; collect original as-of selector inputs without fabricated clocks/assignments. Verify the existing winter collector at its naturally due first day. Compute only after usable inputs and native admission.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 783,
+    "title": "[C1][P1] Qualify the complete current-login selector-to-frozen-analysis path",
+    "execution_state": "current_role_vertical_path_incomplete_preparation_runnable",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Retained Sept 30 six-assignment/three-pair synthetic connected fixture and7547-byte export/analyzer replay exist; Oct 2 source-faithful byte replay is available.",
+      "New actual role/bundle/lifecycle/alert scope and finite custody can be reused as current component evidence, without claiming a new complete vertical execution."
+    ],
+    "remaining_acceptance": [
+      "One actual current-login selector→executor→receipt→freezer→blinded-analyst path with owner scaffolding explicitly separated and minimum duty allow/deny boundaries.",
+      "First/missing/null/zero-exposure/reset/failed days retained by assignment with no mapping leakage or result-based filtering.",
+      "Whole path repeated with identical canonical export/analysis bytes; #588 rechecks compatibility with final scientific design.",
+      "Unchanged current source/target and complete declared failure matrix; old clock-modified/physical_execution_qualified override fixture cannot supply current guard acceptance."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Runtime/release lead",
+        "condition": "Complete actual randomizer/freezer/analyst lifecycle path is not proven; current prefix/source qualification blocks active positive segments."
+      },
+      {
+        "owner": "Data/fixture owner",
+        "condition": "Old connected fixture modifies clocks/public functions and must not run on retained genuine SOURCE/A/B or be mislabeled as unchanged-source qualification."
+      },
+      {
+        "owner": "ROOT/native owner",
+        "condition": "Any actual new path needs exact role/source/UID/write-closure custody and supported isolated admission; existing finite29 seal is not broad #396/#643 restore parity."
+      }
+    ],
+    "next_action": "Compose a clause-by-clause current-role command/admission plan now using retained proofs; identify which stages are truly runnable unchanged and which require legitimate source qualification or a separately admitted disposable fixture. Do not alter clocks/guards to reach an active case.",
+    "work_ready_now": [
+      "Build the interface/case/role manifest and replay retained canonical bytes.",
+      "Prepare missing role allow/deny and source boundary checks using existing authentic identities.",
+      "Separate generic software integration from #782 empirical inputs; do not defer preparatory work to whole-issue closure."
+    ],
+    "decisions": [
+      "No immediate approval required for preparation. If no supported target can meet a proposed stateful case, present its exact target/mutation scope rather than silently creating another clone or fake authority."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+      "docs/research/c5-connected-randomized-clock-qualification-2026-09-30.md",
+      "tests/fixtures/experiment_v2_connected/README.md",
+      "docs/runbooks/ordinary-runtime-qualification.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-5956282639",
+      "/private/tmp/verdify-s3-active-prefix-source-review.json"
+    ],
+    "review_lane": "science",
+    "priority": "P1",
+    "sprint": "S4",
+    "owner_role": "Runtime/release lead",
+    "active_local_predecessors": [
+      639,
+      587
+    ],
+    "canonical_current_state": "Retained Sept 30 six-day/three-pair synthetic connected fixture,7547-byte export and Oct 2 canonical analyzer replay remain valid within their original simulation scope. Current actual role/bundle/lifecycle/named-alert proofs can be reused, but no complete current-login vertical path or repeated genuine freezer/analyst boundary is accepted. The historical connected fixture overrides physical qualification and alters function clocks; it must not run on retained genuine SOURCE/A/B or be relabeled unchanged-source acceptance. Current active-prefix/grid/order refusal remains explicit. Generic source/role/interface composition can proceed now, independently of final #782 empirical inputs, while final #588 binds and rechecks the selected design. Existing #639/#587 completion edges remain unless a source-backed clause map proves the unchanged #783 acceptance independent of their remaining scope.\n\nCurrent execution allocation: S4. Next action: Compose a clause-by-clause current-role command/admission plan now using retained proofs; identify which stages are truly runnable unchanged and which require legitimate source qualification or a separately admitted disposable fixture. Do not alter clocks/guards to reach an active case.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 784,
+    "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
+    "execution_state": "awaits_real_locked_cohort_operations",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Warm60-local-day candidate and daily outcome/custody machinery exist; winter observer is separate."
+    ],
+    "remaining_acceptance": [
+      "All locked assignments accounted, including missing/aborted/no-exposure; no replacement pair/redraw.",
+      "Predeclared blinded safety/integrity cadence and immutable deviations.",
+      "Actual final stopped admission/safe closure and complete original custody manifest."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#640 first genuine assigned-day path and full selected60-day calendar have not occurred."
+      }
+    ],
+    "next_action": "Prepare daily blinded ownership/exception/backup handoff now; after #640 operate the entire locked window and preserve failures until final safe closure.",
+    "work_ready_now": [
+      "Draft a concise day ledger, missing-day/null checklist and operations handoff; reuse tooling without parallel manual exports."
+    ],
+    "decisions": [
+      "Later selected calendar and actual daily operations availability; no schedule or treatment authorization inferred now."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+      "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json",
+      "research/planner-efficacy/switchback/v2_day1_export.py",
+      "docs/runbooks/experiment-rollout.md"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "PILOT",
+    "owner_role": "Research lead",
+    "active_local_predecessors": [
+      640
+    ],
+    "canonical_current_state": "No complete actual pilot is evidenced. The warm candidate requires 60 real local days; winter passive observations and contained synthetic fixtures cannot fill assignments. Daily custody/exception preparation is useful now, but issue acceptance requires the full locked cohort, preserved missing/aborted/no-exposure days and final safe stopped state.\n\nCurrent execution allocation: PILOT. Next action: Prepare daily blinded ownership/exception/backup handoff now; after #640 operate the entire locked window and preserve failures until final safe closure.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 785,
+    "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
+    "execution_state": "awaits_complete_blinded_custody_then_one_reveal",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "Frozen analyzer/interface and synthetic inconclusive examples exist."
+    ],
+    "remaining_acceptance": [
+      "Independent rerun from original frozen completed-pilot inputs yields identical tables/decision.",
+      "One audited reveal with uncertainty, low power/null consequences and exact measured scope.",
+      "Explicit stop/repair/retest/follow-on decision, no profit/resource/other-season extrapolation."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#784 complete genuine cohort, closure/custody and authorized one-way reveal are absent."
+      }
+    ],
+    "next_action": "Prepare immutable report skeleton and independent reproduction command now; consume completed #784 custody once and publish the bounded result, including inconclusive/no-benefit if warranted.",
+    "work_ready_now": [
+      "Prepare output tables and decision categories against existing synthetic fixtures without revealing or computing absent efficacy."
+    ],
+    "decisions": [
+      "Later one-way reveal decision under the exact completed blinded-custody protocol; not an immediate blocker to source preparation."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "research/planner-efficacy/switchback/v2_analysis.py",
+      "research/planner-efficacy/protocols/analyzer-interface-v2.golden.json",
+      "docs/research/c1-restored-sql-export-analyzer-2026-09-28.md"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "PILOT",
+    "owner_role": "Research lead",
+    "active_local_predecessors": [
+      784
+    ],
+    "canonical_current_state": "Frozen analyzer/interface and synthetic inconclusive cases exist. Authentic completed-pilot custody and one audited reveal do not. Noninferiority is distinct from improvement, heterogeneous control-state burden from metered savings, and nonsignificance from no effect. Prepare reproduction/report artifacts now without computing absent outcomes or revealing a schedule.\n\nCurrent execution allocation: PILOT. Next action: Prepare immutable report skeleton and independent reproduction command now; consume completed #784 custody once and publish the bounded result, including inconclusive/no-benefit if warranted.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 786,
+    "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
+    "execution_state": "delivered_design_preparation_follow_on_decision_deferred",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "PR #932/efaa4b67 delivered matched-surface comparator preparation with eight input byte identities, genuine as-of/holdout and separate-study constraints."
+    ],
+    "remaining_acceptance": [
+      "Explicit #785-linked go/no-go; if go, finite deterministic rule and genuine chronological held-out corpus.",
+      "No revealed-schedule tuning or physical claims from offline command agreement/replay.",
+      "Any new prospective trial has separate identity, lock/draw and bounded measured claim."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research/platform lead",
+        "condition": "Completed #785 decision and authentic source-faithful training/covariance/power are absent; numeric thresholds/sample/calendar remain unresolved."
+      }
+    ],
+    "next_action": "Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.",
+    "work_ready_now": [
+      "Retain delivered source/hash and decision alternatives; no duplicate preparation document or selector implementation needed."
+    ],
+    "decisions": [
+      "Future follow-on selection only after a concrete decision rationale; no immediate question needed."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/932",
+      "research/planner-efficacy/protocols/deterministic-forecast-comparator-preparation-v1.md",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/786#issuecomment-5948363026"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Research/platform lead",
+    "active_local_predecessors": [
+      785
+    ],
+    "canonical_current_state": "PR #932/efaa4b67 delivered matched-surface comparator preparation with eight input identities. Numeric rule, genuine training/chronological holdout, sample size/calendar and final #785-linked decision remain unresolved. No-build, measurement repair, inconclusive retest and a separately identified prospective comparison are valid options. No current implementation or additional treatment arm is selected.\n\nCurrent execution allocation: FUTURE. Next action: Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 787,
+    "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
+    "execution_state": "delivered_preparation_no_eligible_whole_resource_endpoint",
+    "full_issue_accepted": false,
+    "completed_scope": [
+      "e52284cf preparation defines circuit/flow/fuel boundaries, calibration/clocks/tariffs/uncertainty and overnight/DST.",
+      "Current claim remains unavailable: partial electricity/shared water cannot establish whole-greenhouse savings; gas and whole-resource calibration/cost are null."
+    ],
+    "remaining_acceptance": [
+      "Explicit post-readout go/no-go and narrow measured claim.",
+      "Every claimed resource has independent eligible calibrated coverage and uncertainty; stale/modeled values stay labeled unavailable/ineligible.",
+      "Prospective season/overnight design without unearned yield/profit/whole-resource benefit; new study has its own identity/draw."
+    ],
+    "blockers_and_owners": [
+      {
+        "owner": "Research lead",
+        "condition": "#785 follow-on decision absent."
+      },
+      {
+        "owner": "Home Assistant/product energy owners",
+        "condition": "#981/#878 clock/circuit qualification required if electricity is selected."
+      },
+      {
+        "owner": "Control/facility owner",
+        "condition": "#410 realized overnight evidence and actual physical meter/flow/fuel boundaries required only for the selected positive study claim."
+      }
+    ],
+    "next_action": "Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.",
+    "work_ready_now": [
+      "Clarify conditional measurement dependencies in the contract and preserve accepted #781 scope.",
+      "Do not add this resource program as a prerequisite to the no-energy nine-state pilot."
+    ],
+    "decisions": [
+      "Future: select the resource/overnight claim or no-go; purchase/installation/gas changes require a concrete separately scoped decision. No present decision is needed for source bookkeeping."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/787",
+      "research/planner-efficacy/protocols/whole-resource-study-preparation-v1.md",
+      "research/planner-efficacy/protocols/resource-endpoint-v1.json",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/787#issuecomment-5917099536"
+    ],
+    "review_lane": "science",
+    "priority": "P2",
+    "sprint": "FUTURE",
+    "owner_role": "Research/platform lead",
+    "active_local_predecessors": [
+      785,
+      410,
+      981
+    ],
+    "canonical_current_state": "e52284cf delivered whole-resource/overnight preparation covering physical meter boundaries, calibration/clocks/tariffs/uncertainty and DST. No eligible whole-resource endpoint exists: partial electricity and ambiguous shared water do not establish gas/economic/whole-greenhouse savings. #981/#878 source-clock work and #410 overnight evidence are relevant to a selected measured study, not mandatory hardware work before an explicit no-go. This future program does not gate the no-energy nine-state pilot.\n\nCurrent execution allocation: FUTURE. Next action: Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 963,
+    "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+    "execution_state": "source_and_compatible_ingestor_delivered_firmware_ha_release_acceptance_open",
+    "full_issue_accepted": false,
+    "completed_scope": "Sourcea949206d and0475ecea separate short action and256-byte compact-detail formatter with checked fallback; details remain native-API-visible and default-disabled in HA. entity_map and schema expansion preserve canonical detail. Existing regression source covers ordering, legacy/compact formats, unsupported/incomplete version refusal and actual C++ normal/extreme formatter. Accepted#303/#304 compiler/toolchain evidence is reusable but not a deployable/physically qualified binary. No current native firmware/HA recovered-state receipt is supplied by this audit.",
+    "remaining_acceptance": [
+      "Candidate-bound binary/source/toolchain identity and accepted rollback artifact.",
+      "Actual firmware/HA state lengths, structured consumer readback and bounded absence of repeated length errors.",
+      "Attended deployment/recovery evidence in the selected shared firmware release."
+    ],
+    "blockers_and_owners": [
+      {
+        "scope": "shared firmware release binary/recovery/window",
+        "owner": "Verdify platform/release lead with#390"
+      },
+      {
+        "scope": "actual HA state observation if owning integration data is needed",
+        "owner": "Home Assistant owner; no new source-change assumption"
+      }
+    ],
+    "next_action": "Prepare the shared #390 candidate/binary/rollback/HA observation packet now from existing source and tooling evidence. Complete the missing exact release and actual-state checks in the selected firmware window; retain the issue until HA recovery and deployed binary/rollback acceptance are proven.",
+    "work_ready_now": [
+      "Bind existing source/tests/consumer delivery and toolchain receipts into the release packet.",
+      "Specify bounded normal/extreme state and HA error/readback acceptance plus exact rollback custody; no new architecture or generic approval gate."
+    ],
+    "decisions": [
+      "Only a materially unresolved firmware recovery/window tradeoff if existing requirements and authorization cannot resolve it; no blanket decision blocks source preparation."
+    ],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+      "firmware/greenhouse/controls.yaml:1691",
+      "firmware/greenhouse/controls.yaml:1727",
+      "firmware/greenhouse/controls.yaml:1864",
+      "firmware/greenhouse/hardware.yaml:184",
+      "ingestor/entity_map.py:430",
+      "tests/test_moisture_state_boundary.py:115",
+      "tests/test_moisture_state_boundary.py:161",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+      "https://github.com/VerdifyConsultancy/verdify-platform/pull/973"
+    ],
+    "review_lane": "platform",
+    "priority": "P2",
+    "sprint": "RELEASE",
+    "owner_role": "Platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "Current source separates the short HA action state from versioned compact detail, bounds the formatter with a checked fallback and maps native detail back to canonical moisture-exchange fields. Combined PR #973 and compatible ingestor delivery are accepted. Existing tests cover legacy/compact formats, ordering, unsupported or incomplete versions, and actual normal/extreme formatter bounds. Accepted #303/#304 toolchain and compilation evidence is reusable, but it does not establish a deployed firmware binary or actual HA recovery. The 07:07 UTC runtime smoke and one-writer check passed; they do not inspect the firmware moisture-state length or establish rollback recovery. Exact deployed binary/source, bounded HA length-error recovery and qualified rollback evidence remain outstanding. Evidence: firmware/greenhouse/controls.yaml, firmware/greenhouse/hardware.yaml, ingestor/entity_map.py, tests/test_moisture_state_boundary.py and the accepted #303/#304/#973 receipts.\n\nCurrent execution allocation: RELEASE. Next action: Prepare the shared #390 candidate/binary/rollback/HA observation packet now from existing source and tooling evidence. Complete the missing exact release and actual-state checks in the selected firmware window; retain the issue until HA recovery and deployed binary/rollback acceptance are proven.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  },
+  {
+    "number": 981,
+    "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+    "execution_state": "bounded_diagnosis_complete_external_installed_source_clock_qualification_open",
+    "full_issue_accepted": false,
+    "completed_scope": "02:05 ordinary-role source/DB readback and02:11 four read-only Shelly RPCs completed with zero mutations. Intendedchannel0 zero watts andHA last_updated/last_reported23:53:51 remained stale; aggregatewatts_total correctly null after300s. Channel1 advanced while its reversed-CT/partial-circuit negative value remained unchanged. Systemclock/zero availability cannot prove per-channel freshness. Source code usesHA last_updated with explicit gateway-clock limitation and separate observed_at; source tests cover stale/future/missing denial.06:59:54 native graph still shows Home Assistant#878 OPEN as the single external blocker.",
+    "remaining_acceptance": [
+      "Actual installed Shelly/HA stable-zero/unavailable/stale reporting contract.",
+      "One later natural intended source/DB advancement comparison after owner qualification and continued stale/missing denial.",
+      "No energy scientific eligibility inferred;#787 remains separately gated."
+    ],
+    "blockers_and_owners": [
+      {
+        "scope": "installed per-channel source clock",
+        "owner": "jvallery/homeassistant#878",
+        "state": "OPEN in06:59:54 native graph",
+        "url": "https://github.com/jvallery/homeassistant/issues/878"
+      }
+    ],
+    "next_action": "Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.",
+    "work_ready_now": [
+      "Correct issue dependency prose to name the existing external blocker.",
+      "Prepare the exact two-identity source-clock acceptance matrix and later single comparison using existing read grants; do not repeatedly collect unchanged source hoping for pass."
+    ],
+    "decisions": [],
+    "evidence": [
+      "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+      "https://github.com/jvallery/homeassistant/issues/878",
+      "planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json",
+      "ingestor/shelly_energy.py:1",
+      "ingestor/shelly_energy.py:62",
+      "tests/test_shelly_source_intervals.py:51",
+      "/Users/jason/maintenance/verdify-s3-execution-20261017/github-progress/alert-final-native-graph-20261018/verified.json"
+    ],
+    "review_lane": "platform",
+    "priority": "P1",
+    "sprint": "S3",
+    "owner_role": "Data/platform lead",
+    "active_local_predecessors": [],
+    "canonical_current_state": "The bounded source/ingestion comparison at 02:05 UTC and four read-only Shelly RPCs at 02:11 UTC on October 18 completed with zero mutations. At those observations, intended channel 0 read zero watts while HA last_updated and last_reported remained 2026-10-17T23:53:51Z; ingestion truthfully marked it stale after 300 seconds and denied the aggregate with null watts_total. Channel 1 source time advanced and its reversed-CT/partial-circuit negative value was preserved. Device system time and an available zero reading do not establish an advancing per-channel sample clock or prove an HA defect. The 06:59:54 UTC native graph still records open jvallery/homeassistant#878 as the single external blocker. The 07:07 product smoke passed, but it does not qualify that source clock or grant energy eligibility. Evidence: planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json and the fresh full-status graph/runtime receipts.\n\nCurrent execution allocation: S3. Next action: Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged."
+  }
+]

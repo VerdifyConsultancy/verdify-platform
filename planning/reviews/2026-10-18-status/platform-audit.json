@@ -1,0 +1,469 @@
+{
+  "schema": "verdify-full-status-platform-audit/v1",
+  "reviewed_at": "2026-10-18T07:09:41.327641+00:00",
+  "scope": [
+    75,
+    218,
+    245,
+    963,
+    981
+  ],
+  "inventory": {
+    "at": "2026-10-18T07:03:51.293034+00:00",
+    "path": "/Users/jason/maintenance/verdify-s3-execution-20261017/full-status-review-20261018/all-issues.private.json",
+    "sha256": "ed926e3910789d6357ec2f7852d2fb856394a2ea60c594a41873ee6cc2c98430",
+    "all_issues": 369,
+    "open": 47,
+    "closed": 322
+  },
+  "source_revision": "83e148b60948d0c2328f8a22d819d481ff2c4ca6",
+  "inspection": "Read-only source and retained authoritative receipts. No new Kubernetes, database, HA/device, GitHub write, test, build, or message action. Historical source/live observations remain dated.",
+  "global_findings": [
+    "#218 current body incorrectly retains the superseded time-bounded two-replica decision; #977 selected and delivered three distinct healthy RW replicas with no pending rebuild.",
+    "#218 why/how text still presents role completeness, compressed ownership restoration and persistent spool as unproved even though #670/#672/#382/#396/#643 have accepted bounded receipts.",
+    "#75 what/how should classify #980 as accepted historical delivery, not remaining execution; #981/#963/#749 retain real acceptance gaps.",
+    "#981 Dependencies says no issue-level predecessor even though its native graph correctly contains open external Home Assistant#878. Correct prose, preserve that single existing edge.",
+    "#245 gate:jason is a stale blanket preparation gate. Remove that label; retain the actual unselected production architecture/downtime/window decision. Source/read-only preparation is already authorized.",
+    "#963 review/tracker-authority-only wording is obsolete under the actual execution request. Replace it with the concrete firmware binary/rollback/attended-device boundary; do not add generic approval or review steps.",
+    "PR982 merged canonical Garage endpoint source in83e148b6. That is not evidence of current ObjectStore live adoption, a new backup/restore, or production CNPG cutover; preserve old accepted recovery scope and do not reopen closed issues merely for this endpoint update."
+  ],
+  "issues": [
+    {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "github_state": "open",
+      "github_updated_at": "2026-10-18T03:33:34Z",
+      "body_sha256": "20f9f1b1027e26ca9a30a77094d6296ce70f8d827a158ed826d7d08718ef4d6f",
+      "labels": [
+        "P1",
+        "epic",
+        "theme:Observability",
+        "epic:product-plane",
+        "lane:L2-obs",
+        "audit:2026-08-29",
+        "triage:valid",
+        "campaign:evidence-2026-09",
+        "campaign:C4",
+        "triage:2026-10-01",
+        "triage:2026-10-05"
+      ],
+      "closure_recommendation": "KEEP_OPEN",
+      "reason_not_closed": "Original issue-specific acceptance remains incomplete; no age-based closure.",
+      "native_mutations_performed": false,
+      "execution_state": "rollup_in_progress_exporter_accepted_energy_and_firmware_health_open",
+      "complete_scope": "Own truthful source-to-device observability and current source/data/route/writer fault coverage. Reuse accepted child boundaries; route shared alert-rule implementation to monitoring-stack, product consumers/dashboards to Verdify, and source meter qualification to Home Assistant.",
+      "current_evidence": "#980 is accepted/closed after exact selector-free full sync55285aaf, independent backup evidence and delayed HTTP/Prometheus/single-writer checks. The05:05 production checkpoint observed Synced/Healthy comparison5f2f488c (refresh only), smoke9/9, one ESP32 connection, same ready zero-restart ingestor/exporter/DB UIDs and exporter HTTP8080 in0.040856s. #981 remains blocked by installed-source clock qualification; #963 lacks firmware/HA end-state proof; #749 original climate/soil readiness failed. No missing-sensor recovery is inferred.",
+      "acceptance_status": [
+        {
+          "clause": "Exporter health and backup freshness independently qualified under#980",
+          "state": "met_with_scoped_accepted_child"
+        },
+        {
+          "clause": "Actual energy source advancement/downstream quality under#981",
+          "state": "unmet_external_source_qualification"
+        },
+        {
+          "clause": "Current source/data/route/writer coverage and outstanding physical faults documented without false green",
+          "state": "partially_met_current_health_receipts_exist_remaining_faults_open"
+        }
+      ],
+      "unmet_acceptance": [
+        "Installed intended energy source advancement and downstream quality acceptance.",
+        "Full current observability fault coverage including unresolved soil/climate and deployed moisture state compatibility."
+      ],
+      "blockers_owners": [
+        {
+          "scope": "energy source clock",
+          "owner": "jvallery/homeassistant#878 via Verdify#981"
+        },
+        {
+          "scope": "moisture firmware/HA state",
+          "owner": "Verdify#963 with shared#390 release packet"
+        },
+        {
+          "scope": "climate/soil readiness",
+          "owner": "Verdify#749; preserve original failure"
+        }
+      ],
+      "next_action": "Refresh the health/child matrix from accepted#980 and the05:05 runtime receipt; explicitly identify#981,#963,#749 gaps and consume their next actions. Keep owner routing, actual alert-rule loading and physical faults visible. Do not repeat accepted exporter deployment or invent a green campaign.",
+      "work_ready_now": [
+        "Correct what/how references that still say execute#980.",
+        "Reconcile current source/data/route/writer health matrix to existing receipts without a new probe or sensor mutation."
+      ],
+      "genuine_user_decisions": [],
+      "authorization_correction": "Normal scoped observability/source delivery is authorized. No generic human/review gate is needed; physical/device changes retain their actual bounded scope.",
+      "dependency_changes": {
+        "add": [],
+        "remove": [],
+        "note": "Parent/child roll-up only; do not make umbrella completion block children."
+      },
+      "priority": "P1",
+      "priority_change": null,
+      "sprint": "ROLLUP",
+      "sprint_change": null,
+      "capacity": "Zero duplicate engineering allocation; child work owns effort.",
+      "evidence": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+        "planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.json",
+        "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+        "planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json",
+        "planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md"
+      ]
+    },
+    {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "github_state": "open",
+      "github_updated_at": "2026-10-18T03:33:36Z",
+      "body_sha256": "6f118aef9d174b2becfdc6e04ec98f12b4996fdb57efb0345e91f2bed437a7ca",
+      "labels": [
+        "P1",
+        "epic",
+        "epic:data-durability",
+        "lane:L6-ha",
+        "audit:2026-08-29",
+        "triage:valid",
+        "campaign:evidence-2026-09",
+        "campaign:C5",
+        "triage:2026-10-01",
+        "triage:2026-10-05"
+      ],
+      "closure_recommendation": "KEEP_OPEN",
+      "reason_not_closed": "Retain existing roll-up scope while conditional#245 remains an explicitly unfulfilled child and residual-domain summary needs reconciliation. Closing would require an explicit bounded scope disposition, not inference from storage replicas or source merge.",
+      "native_mutations_performed": false,
+      "execution_state": "durability_rollup_bounded_restore_role_spool_and_replica_work_accepted_conditional_ha_open",
+      "complete_scope": "Maintain measured recoverability and residual storage/host/NAS failure domains, accepted child evidence, and a clearly separate conditional production HA cutover. Three Longhorn replicas protect storage copies; they do not make the single production StatefulSet a multi-primary or CNPG service.",
+      "current_evidence": "Accepted#670/#672 restore-artifact/ownership,#382 persistent-spool,#396 alongside recovery/PITR/failover and#643 production bounded-role receipts remain valid in their declared boundaries. #977 decisionA6 and owner55973ba5 restored three distinct healthy RW replicas;05:05 readback shows no rebuild and unchanged production DB UID. Production still uses verdify-db StatefulSet. Historical#396 PITR19.849/19.070s base and387/418s three-Ready plus8.464s graceful-primary-Pod ACK gap are measured stages, not a production outage/RPO promise. PR982 endpoint source is merged but not verified live in this audit.",
+      "acceptance_status": [
+        {
+          "clause": "Measured recovery objectives and residual failure domains explicit",
+          "state": "partially_met_historical_measures_exist_rollup_needs_current_reconciliation"
+        },
+        {
+          "clause": "Selected durability children have receipt or scope decision",
+          "state": "bounded_children_accepted_conditional245_uncompleted"
+        },
+        {
+          "clause": "Conditional HA acceptance unclaimed until selected/completed",
+          "state": "boundary_preserved_no_production_cutover"
+        }
+      ],
+      "unmet_acceptance": [
+        "Refresh residual failure-domain and measured-recovery summary; remove superseded two-replica and unproved-role/spool wording.",
+        "Production HA remains unexecuted under#245; do not silently count it as complete or as a mandatory prerequisite for unrelated S3 work."
+      ],
+      "blockers_owners": [
+        {
+          "scope": "production HA option and downtime/cutover policy",
+          "owner": "Verdify#245 / Data-platform lead"
+        },
+        {
+          "scope": "storage policy, canonical Garage service and backup custody",
+          "owner": "jvallery/storage-infra (PR982 references#795)"
+        },
+        {
+          "scope": "App/secret ownership for rehearsal delivery",
+          "owner": "jvallery/agents; exact live adoption not checked by this source audit"
+        }
+      ],
+      "next_action": "Update the roll-up to accepted three-replica policy, bounded restore/spool/role receipts and explicit residual domains. Record PR982 as merged canonical-endpoint source only. Reuse historical data checks and retain#245 as the conditional architecture option; do not rerun large restores to update a status report.",
+      "work_ready_now": [
+        "Replace the false two-replica decision with accepted#977 source/live evidence.",
+        "Replace stale why/how claims that role completeness, compressed ownership and persistent spool still await their already-accepted bounded proof.",
+        "Prepare exact endpoint desired-versus-live verification instructions for the owning delivery lane, with no new restore or backup implied."
+      ],
+      "genuine_user_decisions": [],
+      "authorization_correction": "No new permission is needed for the current evidence reconciliation or normal scoped owner work. Optional HA selection/downtime remains an actual product tradeoff, not a blanket preparation gate.",
+      "dependency_changes": {
+        "add": [],
+        "remove": [],
+        "note": "Keep zero-hour parent; closed670/672/382/396/643/977 remain accepted history. No new endpoint issue/node or estate-wide gate."
+      },
+      "priority": "P1",
+      "priority_change": null,
+      "sprint": "ROLLUP",
+      "sprint_change": null,
+      "capacity": "No duplicate roll-up estimate.",
+      "evidence": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/977",
+        "planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.json",
+        "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+        "https://github.com/VerdifyConsultancy/verdify-platform/blob/b97176adeae315431a19edeac13c11e3881f2ce3/planning/execution/2026-10-13/recovery-396-handoff/README.md",
+        "https://github.com/VerdifyConsultancy/verdify-platform/pull/982",
+        "https://github.com/VerdifyConsultancy/verdify-platform/commit/83e148b60948d0c2328f8a22d819d481ff2c4ca6"
+      ]
+    },
+    {
+      "number": 245,
+      "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
+      "github_state": "open",
+      "github_updated_at": "2026-10-18T01:57:48Z",
+      "body_sha256": "d2428b8e25d09e8393178295b94e1391bbdde1373506413efee7a8cb352a558a",
+      "labels": [
+        "P2",
+        "gate:jason",
+        "theme:Infra/Database",
+        "epic:data-durability",
+        "epic:ha-resilience",
+        "lane:L6-ha",
+        "audit:2026-08-29",
+        "triage:valid",
+        "campaign:evidence-2026-09",
+        "campaign:C5",
+        "triage:2026-10-01",
+        "triage:2026-10-05"
+      ],
+      "closure_recommendation": "KEEP_OPEN",
+      "reason_not_closed": "Original issue-specific acceptance remains incomplete; no age-based closure.",
+      "native_mutations_performed": false,
+      "execution_state": "conditional_production_ha_cutover_not_selected_or_executed",
+      "complete_scope": "A fresh production candidate with all mutators fenced, current role-complete final parity, exact consumer authority handoff, measured fence-to-first-write outage/RPO/RTO and both rollback boundaries;60-minute initial observation and seven-day bake while old storage is retained.",
+      "current_evidence": "#382 and#396 are closed accepted bounded prerequisites. Historicalcurrent275 integration retained951/952 relation and role/sequence seals, PITR and read-only client reversal; its October6 data are not a current production replacement. The present clone has later additive/synthetic qualification state and changed primary identity. PR982 changes the canonical S3 endpoint only; no production DB_HOST/architecture switch is evidenced. Production05:05 still uses original DB UID.",
+      "acceptance_status": [
+        {
+          "clause": "All writers quiescent at final parity",
+          "state": "unmet_no_actual_final_production_fence_or_snapshot"
+        },
+        {
+          "clause": "Measured downtime/RPO/RTO/both rollback boundaries",
+          "state": "unmet_historical_stage_measurements_only"
+        },
+        {
+          "clause": "Authority/health initial observation and seven-day bake",
+          "state": "unmet_no_production_cutover"
+        }
+      ],
+      "unmet_acceptance": [
+        "Fresh complete mutator/scheduler/hook/session inventory and reversible fence.",
+        "Fresh final coherent pair and full current target parity/admission; copied old clone receipts cannot authorize target.",
+        "Supported before-write reversal and data-preserving post-write recovery, including target ACK/ambiguous outcomes.",
+        "Production Timescale maintenance policy and first execution effects.",
+        "Actual60-minute/seven-day observations and retained old database/PVC."
+      ],
+      "blockers_owners": [
+        {
+          "scope": "architectural selection and acceptable outage/window",
+          "owner": "Product/operator decision with Data-platform lead"
+        },
+        {
+          "scope": "selected candidate capacity/storage and backup/WAL custody",
+          "owner": "Data-platform lead with storage-infra and Agents owner lanes"
+        }
+      ],
+      "next_action": "Prepare the source-level complete writer fence, all endpoint/DSN/pool surfaces, fresh parity and rollback checklist now using the accepted handoff. Keep actual cutover in FUTURE until its intended architecture and acceptable downtime/window are selected. Do not switch DB_HOST to the retained rehearsal or infer production RPO from graceful-Pod-loss measurements.",
+      "work_ready_now": [
+        "Inventory current declarative mutators, hooks, schedules, DSNs and recovery inverses without runtime change.",
+        "Prepare exact acceptance/admission and Timescale policy choices from existing requirements; identify unresolved downtime tradeoffs."
+      ],
+      "genuine_user_decisions": [
+        "Whether to select production CNPG cutover now versus retain the current single-StatefulSet service.",
+        "An acceptable attended downtime/window if full coherent restore is required and no qualified delta path exists."
+      ],
+      "authorization_correction": "Remove blanket gate:jason label. Source/read-only preparation is already authorized; current sprint did not select this production architecture handoff. Keep the concrete cutover selection/window boundary without turning every normal action into another approval request.",
+      "dependency_changes": {
+        "add": [],
+        "remove": [],
+        "closed_history": [
+          382,
+          396
+        ],
+        "note": "No active predecessor; do not re-block on already accepted contained rehearsals or make full estate readiness a prerequisite."
+      },
+      "priority": "P2",
+      "priority_change": null,
+      "sprint": "FUTURE",
+      "sprint_change": null,
+      "capacity": "No committed runtime execution estimate while architecture/window unselected; bounded source inventory can proceed without a new gate.",
+      "evidence": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/245",
+        "https://github.com/VerdifyConsultancy/verdify-platform/blob/b97176adeae315431a19edeac13c11e3881f2ce3/docs/runbooks/cnpg/current275-contained-cutover-rollback-packet.md",
+        "docs/runbooks/cnpg/current274-cutover-rollback-packet.md",
+        "docs/runbooks/cnpg/current275-additive-transition.md",
+        "planning/reviews/2026-10-17-s3-execution/production-final-readback.json",
+        "https://github.com/VerdifyConsultancy/verdify-platform/pull/982"
+      ]
+    },
+    {
+      "number": 963,
+      "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+      "github_state": "open",
+      "github_updated_at": "2026-10-18T01:58:48Z",
+      "body_sha256": "6cea060e415a937d8c2b490f11cdb559d9c4dbd3fb123fbd679c6e24e47ffaa9",
+      "labels": [
+        "P2",
+        "triage:valid",
+        "campaign:C4"
+      ],
+      "closure_recommendation": "KEEP_OPEN",
+      "reason_not_closed": "Original issue-specific acceptance remains incomplete; no age-based closure.",
+      "native_mutations_performed": false,
+      "execution_state": "source_and_compatible_ingestor_delivered_firmware_ha_release_acceptance_open",
+      "complete_scope": "Bound every HA moisture state at255 characters while preserving versioned structured diagnostic detail and native analytics compatibility; prove actual HA recovery plus exact deployed binary/source and recoverable rollback.",
+      "current_evidence": "Sourcea949206d and0475ecea separate short action and256-byte compact-detail formatter with checked fallback; details remain native-API-visible and default-disabled in HA. entity_map and schema expansion preserve canonical detail. Existing regression source covers ordering, legacy/compact formats, unsupported/incomplete version refusal and actual C++ normal/extreme formatter. Accepted#303/#304 compiler/toolchain evidence is reusable but not a deployable/physically qualified binary. No current native firmware/HA recovered-state receipt is supplied by this audit.",
+      "acceptance_status": [
+        {
+          "clause": "Every state fitsHA255 and detail schema tested",
+          "state": "source_and_regression_evidence_available_native_firmware_release_binding_pending"
+        },
+        {
+          "clause": "Native consumers compatible and actualHA state recovers without length errors",
+          "state": "consumer_delivery_accepted_actualHA_recovery_unproved"
+        },
+        {
+          "clause": "Exact binary/source and rollback accepted",
+          "state": "unmet_release_packet_and_physical_acceptance"
+        }
+      ],
+      "unmet_acceptance": [
+        "Candidate-bound binary/source/toolchain identity and accepted rollback artifact.",
+        "Actual firmware/HA state lengths, structured consumer readback and bounded absence of repeated length errors.",
+        "Attended deployment/recovery evidence in the selected shared firmware release."
+      ],
+      "blockers_owners": [
+        {
+          "scope": "shared firmware release binary/recovery/window",
+          "owner": "Verdify platform/release lead with#390"
+        },
+        {
+          "scope": "actual HA state observation if owning integration data is needed",
+          "owner": "Home Assistant owner; no new source-change assumption"
+        }
+      ],
+      "next_action": "Reuse the completed source/consumer fix and compiler evidence. Prepare one exact candidate/binary/rollback/HA observation packet with#390 now; run only the selected missing release checks through supported admitted CI, then execute the concrete firmware window when selected. Replace redundant design work with the remaining actual-state proof.",
+      "work_ready_now": [
+        "Bind existing source/tests/consumer delivery and toolchain receipts into the release packet.",
+        "Specify bounded normal/extreme state and HA error/readback acceptance plus exact rollback custody; no new architecture or generic approval gate."
+      ],
+      "genuine_user_decisions": [
+        "Only a materially unresolved firmware recovery/window tradeoff if existing requirements and authorization cannot resolve it; no blanket decision blocks source preparation."
+      ],
+      "authorization_correction": "Remove Review/tracker authority only wording. The user authorized execution through verification; actual physical scope, valid rollback and unattended conflict constraints still matter. Do not infer OTA from source inspection, and do not add a redundant Jason gate.",
+      "dependency_changes": {
+        "add": [],
+        "remove": [],
+        "note": "Share#390 release packet as an execution association, not a new blanket completion edge; accepted#303/#304 history is reused."
+      },
+      "priority": "P2",
+      "priority_change": null,
+      "sprint": "RELEASE",
+      "sprint_change": null,
+      "capacity": "No new S3 runtime allocation; source packet preparation is ready. Avoid rerunning completed implementation.",
+      "evidence": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+        "firmware/greenhouse/controls.yaml:1691",
+        "firmware/greenhouse/controls.yaml:1727",
+        "firmware/greenhouse/controls.yaml:1864",
+        "firmware/greenhouse/hardware.yaml:184",
+        "ingestor/entity_map.py:430",
+        "tests/test_moisture_state_boundary.py:115",
+        "tests/test_moisture_state_boundary.py:161",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+        "https://github.com/VerdifyConsultancy/verdify-platform/pull/973"
+      ]
+    },
+    {
+      "number": 981,
+      "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+      "github_state": "open",
+      "github_updated_at": "2026-10-18T03:34:08Z",
+      "body_sha256": "40853e6f0cd8c0f54fea18a67b1c7cc3fbc764afb7b11ed6009be7e907dde2e8",
+      "labels": [
+        "P1",
+        "theme:Energy accounting / data-integrity"
+      ],
+      "closure_recommendation": "KEEP_OPEN",
+      "reason_not_closed": "Original issue-specific acceptance remains incomplete; no age-based closure.",
+      "native_mutations_performed": false,
+      "execution_state": "bounded_diagnosis_complete_external_installed_source_clock_qualification_open",
+      "complete_scope": "Keep intended source identities and source/ingest clocks distinct; prove actual installed per-channel source advancement or retain explicit upstream handoff, and prevent stale/missing values from gaining aggregate/scientific freshness.",
+      "current_evidence": "02:05 ordinary-role source/DB readback and02:11 four read-only Shelly RPCs completed with zero mutations. Intendedchannel0 zero watts andHA last_updated/last_reported23:53:51 remained stale; aggregatewatts_total correctly null after300s. Channel1 advanced while its reversed-CT/partial-circuit negative value remained unchanged. Systemclock/zero availability cannot prove per-channel freshness. Source code usesHA last_updated with explicit gateway-clock limitation and separate observed_at; source tests cover stale/future/missing denial.06:59:54 native graph still shows Home Assistant#878 OPEN as the single external blocker.",
+      "acceptance_status": [
+        {
+          "clause": "Source/ingest timestamp,identity,quality truthful",
+          "state": "met_in_bounded_source_and_native_comparison"
+        },
+        {
+          "clause": "Actual intended advancement or retained upstream constraint",
+          "state": "upstream_handoff_recorded_actual_qualification_open"
+        },
+        {
+          "clause": "Missing/stale cannot becomefresh/eligible",
+          "state": "source_and_bounded_stale_denial_proven_post_owner_fix_natural_check_pending"
+        }
+      ],
+      "unmet_acceptance": [
+        "Actual installed Shelly/HA stable-zero/unavailable/stale reporting contract.",
+        "One later natural intended source/DB advancement comparison after owner qualification and continued stale/missing denial.",
+        "No energy scientific eligibility inferred;#787 remains separately gated."
+      ],
+      "blockers_owners": [
+        {
+          "scope": "installed per-channel source clock",
+          "owner": "jvallery/homeassistant#878",
+          "state": "OPEN in06:59:54 native graph",
+          "url": "https://github.com/jvallery/homeassistant/issues/878"
+        }
+      ],
+      "next_action": "Continue the existing Home Assistant#878 owner qualification. Consume its actual installed-source result, make only an evidenced owner-lane repair if needed, then perform one bounded natural source/DB comparison with stale/missing negatives. Preserve zero and reversed-CT semantics; no fetch-time replacement, forced load or physical reset.",
+      "work_ready_now": [
+        "Correct issue dependency prose to name the existing external blocker.",
+        "Prepare the exact two-identity source-clock acceptance matrix and later single comparison using existing read grants; do not repeatedly collect unchanged source hoping for pass."
+      ],
+      "genuine_user_decisions": [],
+      "authorization_correction": "No Jason/review gate is present or needed. The remaining blocker is technical owner evidence; neither hardware change nor credential rotation is implied.",
+      "dependency_changes": {
+        "add": [],
+        "remove": [],
+        "external_keep": [
+          "jvallery/homeassistant#878"
+        ],
+        "body_correction": "Replace No issue-level predecessor with the actual existing external blocker. Keep#981→#787; do not add#981→selected nine-state#782."
+      },
+      "priority": "P1",
+      "priority_change": null,
+      "sprint": "S3",
+      "sprint_change": null,
+      "capacity": "Existing3–6h is the original allocation, not a newly measured remaining estimate. Mark waiting_external and pull independent work while owner result is unavailable.",
+      "evidence": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+        "https://github.com/jvallery/homeassistant/issues/878",
+        "planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json",
+        "ingestor/shelly_energy.py:1",
+        "ingestor/shelly_energy.py:62",
+        "tests/test_shelly_source_intervals.py:51",
+        "/Users/jason/maintenance/verdify-s3-execution-20261017/github-progress/alert-final-native-graph-20261018/verified.json"
+      ]
+    }
+  ],
+  "closure_summary": {
+    "new_closures_recommended": [],
+    "keep_open": [
+      75,
+      218,
+      245,
+      963,
+      981
+    ],
+    "accepted_closed_history_preserved": [
+      977,
+      980,
+      670,
+      672,
+      382,
+      396,
+      643,
+      303,
+      304
+    ]
+  },
+  "pr982": {
+    "merge_revision": "83e148b60948d0c2328f8a22d819d481ff2c4ca6",
+    "source_scope": "Canonical https://s3.vallery.net in rendered rehearsal PITR-reader ObjectStore, historical archive-writer profile/renderer, S2 archive-reader script and comments/Secret contract docs; seven files,8 additions/7 removals.",
+    "live_adoption_verified": false,
+    "new_backup_or_restore_verified": false,
+    "production_cutover_verified": false,
+    "action": "Preserve merged source; coordinate exact owner adoption/readback in its existing endpoint-migration lane before relying on current live endpoint. Do not rerun accepted full restores solely for this source change."
+  }
+}

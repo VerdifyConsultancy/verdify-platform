@@ -1,0 +1,18 @@
+{
+  "reviewed_at": "2026-10-18T07:18:12.927696+00:00",
+  "closure_decision": "Keep all47 open; no additional acceptance or obsolete-scope closure justified.",
+  "active_edges_retained": 27,
+  "local_active_edges": 26,
+  "external_edge": "jvallery/homeassistant#878 -> VerdifyConsultancy/verdify-platform#981",
+  "closed_predecessor_records_retained": 24,
+  "remove_labels": {
+    "245": [
+      "gate:jason"
+    ]
+  },
+  "priority_changes": [],
+  "milestone_changes": [],
+  "assignee_changes": [],
+  "acceptance_changes": [],
+  "reason": "Remove stale blanket preparation gate from245 while retaining exact future production-cutover architecture/downtime/window decisions. Keep complete acceptance edges; schedule bounded preparation in parallel."
+}
