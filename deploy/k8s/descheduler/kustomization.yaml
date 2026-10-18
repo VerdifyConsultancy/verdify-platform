@@ -1,19 +1,12 @@
-# HA-1.9 (#234) — descheduler kustomization (cluster-scoped tool).
-#
-# Applied via TARGETED additive `kubectl apply -k` (descheduler-arm.md), NOT an
-# ArgoCD auto-sync — so it never risks pruning/reverting any live workload.
-#
-# ENFORCE mode, matching live since #234 GATE 6 (2026-06-08); see cronjob.yaml.
-# STAGED-rebalanceable-labels-patch.yaml is deliberately NOT listed here (it
-# relabels live stateless deploys; its effect was applied by patch, #802).
-# Prefer `kubectl apply -f cronjob.yaml` for CronJob-only changes: applying the
-# whole kustomization also re-applies namespace.yaml, whose labels differ from
-# live (#802).
+# VP-01 (#802): the manual verdify-descheduler Argo Application owns exactly
+# these seven existing objects. The Agents repository owns the Application and
+# AppProject. Namespace labels and product workload labels stay outside this
+# source; namespace.yaml and STAGED-rebalanceable-labels-patch.yaml are historical.
+# See descheduler-arm.md for adoption, verification and the non-cascading inverse.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - namespace.yaml
   - rbac.yaml
   - policy-configmap.yaml
   - cronjob.yaml

@@ -1,105 +1,107 @@
-# HA-1.9 (#234) — descheduler: deploy (dry-run), PROVE exclusion, gated enforce
+# Descheduler ownership and attended adoption (#802)
 
-> **Historical record (updated 2026-10-11).** Every step below was completed:
-> GATE 6 of #234 armed enforce mode on 2026-06-08, and the Step 4 patch was
-> re-applied after the 2026-07-28 maintenance proofs. `cronjob.yaml` now carries
-> the enforce args itself (no `--dry-run`, VP-01 #802), so `STAGED-enforce-patch.yaml`
-> was removed and the "EXPECT: contains --dry-run" check in Step 1 no longer
-> holds. Apply CronJob changes with `kubectl apply -f deploy/k8s/descheduler/cronjob.yaml`
-> after `kubectl diff -f` shows only the intended fields. The Rollback section
-> (re-add `--dry-run`) still applies.
+The source runs in enforce mode, matching the live CronJob since #234 GATE 6
+(2026-06-08). It runs hourly at `15 * * * *`, with exactly these arguments:
 
-**Status:** Step 1 (dry-run) is laptop-root-autonomous (evicts nothing). Steps 3–4
-(relabel + enforce flip) are **GATED — root executor** (they mutate live pods).
-**Tracks:** #234 · **Epic:** #225 · **Design:** §2.4.
-
-The descheduler keeps the multi-replica stateless verdify surfaces
-(www/lab/api/mcp/planner/traefik) spread after node events. It MUST NEVER evict the
-device-writer ingestor or ANY singleton. It ships DRY-RUN and is only armed after a
-dry-run run proves the eviction set excludes every singleton.
-
----
-
-## Step 1 — Deploy DRY-RUN (autonomous; evicts NOTHING)
-
-```bash
-K="ssh jason@192.168.30.32 sudo k3s kubectl"
-# Apply the cluster-scoped, dry-run descheduler (own namespace; no ArgoCD coupling):
-$K apply -k deploy/k8s/descheduler/
-$K -n verdify-descheduler get cronjob descheduler -o jsonpath='{.spec.jobTemplate.spec.template.spec.containers[0].args}'
-#   EXPECT: contains "--dry-run"
+```text
+--policy-config-file=/policy-dir/policy.yaml
+--descheduling-interval=0
+--v=4
 ```
 
-## Step 2 — PROVE the ingestor + singletons are NOT in the eviction set
+This adoption changes ownership only. It preserves the pinned image, policy,
+RBAC, resource limits, cadence and pod-template `evict: "true"` annotation.
+The policy restricts candidates to labelled pods in `verdify-prod`; existing
+PDBs, priority exclusions and the per-node eviction limit remain in force.
+Do not relabel product workloads or force an eviction to prove adoption.
 
-Trigger one dry-run job immediately and read its log:
+## Source and ownership boundary
 
-```bash
-$K -n verdify-descheduler create job --from=cronjob/descheduler desched-dryrun-proof
-$K -n verdify-descheduler wait --for=condition=complete job/desched-dryrun-proof --timeout=120s
-$K -n verdify-descheduler logs job/desched-dryrun-proof | tee /tmp/desched-dryrun.log
+`VerdifyConsultancy/verdify-platform/deploy/k8s/descheduler` renders seven objects:
 
-# HARD GATE — the proof. These MUST ALL hold:
-# a) The ingestor is NEVER named as evicted/would-evict:
-grep -iE 'verdify-ingestor' /tmp/desched-dryrun.log && echo "STOP: ingestor in set" || echo "PASS: ingestor never listed"
-# b) No singleton is named:
-grep -iE 'verdify-(grafana|hermes-iris|mqtt|db-0|db-backup-exporter)' /tmp/desched-dryrun.log \
-  && echo "STOP: singleton in set" || echo "PASS: no singleton listed"
-# c) Any 'would evict' lines reference ONLY www/lab/api/mcp/planner/traefik:
-grep -iE 'evict' /tmp/desched-dryrun.log
-$K -n verdify-descheduler delete job desched-dryrun-proof
-```
+| Kind | Name | Namespace |
+| --- | --- | --- |
+| CronJob | descheduler | verdify-descheduler |
+| ConfigMap | descheduler-policy | verdify-descheduler |
+| ServiceAccount | descheduler | verdify-descheduler |
+| Role | descheduler | verdify-descheduler |
+| RoleBinding | descheduler | verdify-descheduler |
+| ClusterRole | verdify-descheduler | cluster |
+| ClusterRoleBinding | verdify-descheduler | cluster |
 
-NOTE on the FIRST dry-run (before the relabel of Step 3): the L1 allowlist
-(`verdify.ai/rebalanceable=true`) matches NOTHING yet, so the evictor set is EMPTY
-— the proof trivially passes (no pod is a candidate, the ingestor included). After
-Step 3 the allowlist matches the 6 stateless deploys ONLY; re-run Step 2 and confirm
-the eviction set is still singleton-free before Step 4.
+`jvallery/agents` declares the `verdify-descheduler` AppProject in
+`platform/gitops/projects/` and manual Application in
+`platform/gitops/applications/local-prod/`. The Application uses an accepted
+immutable product revision, has no resource-deletion finalizer, and cannot create
+the namespace. Its AppProject allows only the seven resource kinds above.
+`Namespace`, Secret, Job, Pod and Deployment are outside that allowlist.
 
-## Step 3 — GATED: label the stateless surfaces rebalanceable (one rolling restart)
+The existing namespace and its external labels are not adopted. Neither
+`namespace.yaml` nor `STAGED-rebalanceable-labels-patch.yaml` is rendered; both are
+historical material, not apply instructions. The previous dry-run/relabel/arm
+procedure is preserved in Git history and #234.
 
-verify the exact target and prerequisites a window. This restarts ONLY www/lab/api/mcp/planner/traefik
-(RollingUpdate, PDB-protected). It does NOT touch the ingestor or any singleton.
+The live `spec.suspend` flag remains an operator pause. Git deliberately omits
+it; the Application ignores that exact CronJob field and uses
+`RespectIgnoreDifferences=true` so a manual reconciliation preserves the pause.
+Keep automation and pruning off. Normal operation must not use `kubectl apply -k`
+or the old staged patches as a second desired-state writer.
 
-```bash
-$K apply -f deploy/k8s/descheduler/STAGED-rebalanceable-labels-patch.yaml
-# Confirm the ingestor did NOT get the label (must be empty):
-$K -n verdify-prod get pod -l app.kubernetes.io/component=ingestor -o jsonpath='{.items[0].metadata.labels.verdify\.ai/rebalanceable}'
-#   EXPECT: <empty>
-# Re-run Step 2 — confirm dry-run now lists only stateless duplicates, no singleton.
-```
+## Attended adoption
 
-## Step 4 — GATED: ARM enforcement (drop --dry-run) — verify the exact target and prerequisites
+1. Confirm context `vallery`, accepted product and Agents commits, and current
+   ownership. Export the seven full objects and the Namespace separately; retain
+   UIDs, server-defaulted specs, labels and tracking annotations before applying
+   anything. Read the CronJob's suspend flag and active Jobs. Confirm the exact
+   Application and AppProject are absent or still match the reviewed plan.
+2. Render this source at the accepted product commit. Require seven objects and
+   no Namespace. Compare every source leaf, including array members, with the
+   export; review API defaults separately. The final server-defaulted comparison
+   must show no spec, policy, RBAC or namespace-label change. Stop for any drift
+   beyond the intended Argo ownership metadata.
+3. Deliver only the reviewed Agents AppProject and Application through their
+   owning catalogs. The catalog roots are independently pinned and automated;
+   advancing either root requires review of its entire pending delta. Do not
+   advance an unrelated root or reconcile the whole estate for this adoption.
+   Bind the Application to the accepted product commit before its first sync.
+4. Diff the exact `verdify-descheduler` Application and sync that revision with
+   pruning disabled. The resource set must be exactly the seven objects above.
+   Do not use replace/force or delete/recreate. No new Job is part of the sync.
+5. Read back all seven UIDs, specs and ownership metadata, plus Namespace labels.
+   Require unchanged UIDs and specs, unchanged namespace labels, the expected
+   tracking owner and `Synced`/`Healthy` at the accepted product revision. Confirm
+   the live suspend value is unchanged. Check namespace access: the descheduler
+   identity owns its existing scoped rules; unrelated observers must remain
+   read-only and retired coding-pod writers absent.
+6. Observe the next natural hourly Job to terminal completion. Record its
+   CronJob owner UID, pod image/arguments, timestamps and logs. Check actual
+   eviction outcomes and exclusion-policy behavior; an empty candidate set is
+   valid but does not prove a forced relocation. Verify the product's single
+   ingestor connection remains one and no singleton is evicted. Re-read the
+   seven objects and Application after that run for reconciliation durability.
+7. Refresh the Agents live ring snapshot and assign the now-existing Application
+   to its manual ring using actual evidence. Do not put a prospective Application
+   into the live snapshot. Update #802 only with the observed acceptance results.
 
-ONLY after Step 2 (post-relabel) is green.
+## Pause and inverse
 
-```bash
-$K -n verdify-descheduler patch cronjob descheduler --type=json \
-  -p='[{"op":"replace","path":"/spec/jobTemplate/spec/template/spec/containers/0/args","value":["--policy-config-file=/policy-dir/policy.yaml","--descheduling-interval=0","--v=4"]}]'
-# Force-stack test (design §2.4): cordon a worker, scale a stateless deploy so 2
-# replicas land on one node, uncordon, run a job, assert it rebalances WITHOUT
-# evicting the ingestor or any singleton and WITHOUT a PDB violation:
-$K -n verdify-descheduler create job --from=cronjob/descheduler desched-enforce-test
-$K -n verdify-descheduler logs job/desched-enforce-test
-# Oracle MUST stay 1 throughout (the ingestor must never be evicted):
-$K -n observability exec deploy/prometheus -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=sum(verdify_esp32_writer_estab)'
-#   EXPECT: "1"  — re-probe ≥60 min for durability.
-```
+For an operational pause, set only the live CronJob's `spec.suspend: true` under
+the current operator's authority. This prevents new Jobs; it does not stop an
+already-running Job. The ignored field remains paused across manual Argo syncs.
+Do not change enforce arguments as an ownership rollback.
 
-## Rollback (instant, any step)
+To reverse adoption while preserving service, first remove the Application and
+AppProject from their owning Agents declarations/catalogs (and their sync-policy
+entry/generated classification), or otherwise restore the reviewed prior catalog
+revision without unrelated changes. Ensure the automated parents cannot recreate
+them. Delete only the `verdify-descheduler` Application **without cascading**;
+verify it has no resources finalizer before deletion. Preserve all seven objects,
+Jobs, the Namespace and product workloads. Remove only that Application's Argo
+tracking metadata from the seven objects, restoring the pre-adoption metadata,
+then remove the dedicated AppProject if no Application references it. Re-read
+UIDs, specs, suspend state and namespace labels against the export. The CronJob
+continues its existing schedule. Never use `kubectl delete -k` as this inverse.
 
-```bash
-# Back to dry-run:
-$K -n verdify-descheduler patch cronjob descheduler --type=json \
-  -p='[{"op":"add","path":"/spec/jobTemplate/spec/template/spec/containers/0/args/-","value":"--dry-run"}]'
-# Remove the descheduler entirely (never touches verdify-prod):
-$K delete -k deploy/k8s/descheduler/
-# Remove the rebalanceable label (one more rolling restart of stateless only):
-$K -n verdify-prod get deploy -l app.kubernetes.io/part-of=verdify \
-  -o name | xargs -I{} $K -n verdify-prod patch {} --type=json \
-  -p='[{"op":"remove","path":"/spec/template/metadata/labels/verdify.ai~1rebalanceable"}]' 2>/dev/null || true
-```
-
-The descheduler never touches firmware, the DB, the ESP32, or any singleton. The
-exactly-one oracle is the life-safety backstop throughout.
+Source-only preparation, a successful sync, or a pre-adoption Job does not by
+itself complete #802: the unchanged-object proof and natural post-adoption Job
+remain required.
