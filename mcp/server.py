@@ -88,6 +88,11 @@ from verdify_schemas.plan import (  # noqa: E402
     plan_current_coverage_error,
 )
 from verdify_schemas.policy_vector import WIRE_COMPONENT_INDEXES  # noqa: E402
+from verdify_schemas.realized_dryout import (  # noqa: E402
+    RealizedDryoutEvidence,
+    project_realized_solar_night_dryout,
+    read_realized_dryout_evidence,
+)
 from verdify_schemas.route_only_crop_band_reader import read_route_only_crop_band_evidence  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
@@ -1224,7 +1229,7 @@ async def read_physical_crop_band_evidence(conn, day, greenhouse_id="vallery"):
 
 
 @mcp.tool()
-async def scorecard(target_date: str = "") -> str:
+async def scorecard(target_date: str = "", include_realized_dryout: bool = False) -> str:
     """Get a daily scorecard; pass YYYY-MM-DD or omit for today.
 
     Inspect scorecard_contract_version and metric_semantics first. Only contract
@@ -1265,6 +1270,18 @@ async def scorecard(target_date: str = "") -> str:
     physical crop outcome, controller credit or experiment endpoint. Keep
     physical_crop_band_evidence unavailable until its own qualification exists.
 
+    For ordinary Iris outcome review, explicitly call scorecard with a single
+    target_date (YYYY-MM-DD) and include_realized_dryout=true for the prior
+    completed solar night. target_date is both the scalar scorecard calendar day
+    and the separate dry-out night START date; that night crosses local midnight.
+    The opt-in adds one read under the existing DB budget, at most 500 episodes
+    and 64 KiB of dry-out evidence. Ordinary calls do not run this query. Reuse
+    the returned result within a planning cycle; do not poll or retry unavailable
+    evidence. Inspect availability, evidence_status, confound_reasons, relay
+    truth and observed AH/VPD response before using any disposition. Safety pass
+    alone is not effectiveness; empty episodes or missing daylight evidence
+    cannot prove zero admission, complete coverage or a causal crop benefit.
+
     Response is validated through verdify_schemas.ScorecardResponse. Partial days
     may contain null metrics; inspect evidence limitations before using a score."""
     conn = await _db()
@@ -1298,6 +1315,12 @@ async def scorecard(target_date: str = "") -> str:
         sc.physical_crop_band_evidence = await read_physical_crop_band_evidence(conn, d)
         sc.route_only_crop_band_evidence = await read_route_only_crop_band_evidence(conn, d)
         sc.native_fixed_panel_route_evidence = await read_native_fixed_panel_route_evidence(conn, d)
+        if include_realized_dryout:
+            sc.realized_solar_night_dryout = (
+                await read_realized_dryout_evidence(conn, d, MCP_DB_STATEMENT_TIMEOUT_MS)
+                if target_date
+                else RealizedDryoutEvidence(unavailable_reason="explicit_night_date_required")
+            )
         return sc.model_dump_json(by_alias=True)
     finally:
         await conn.close()
@@ -2410,45 +2433,7 @@ async def outcome_kpi(target_date: str = "") -> str:
             "equipment": cycle_quality,
         }
         vpd_policy["firmware_counter_diagnostics"] = firmware_counter_diagnostics
-        vpd_policy["realized_solar_night_dryout"] = {
-            "semantics": (
-                "Measured solar-night demand and relay truth; projected planner "
-                "intent is never labeled as realized outcome."
-            ),
-            "episodes": dryout,
-            "dispositions": {
-                disposition: sum(row["dryout_disposition"] == disposition for row in dryout)
-                for disposition in (
-                    "effective",
-                    "ineffective",
-                    "blocked",
-                    "insufficient_evidence",
-                )
-            },
-            # The bounded SQL function repeats adjacent-day counts on each night
-            # episode, so take maxima rather than multiplying by episode count.
-            # General daytime VPD dehum remains visible and allowed; only an
-            # admitted held-temp flavor fails the solar-night safety gate.
-            "daytime_dry_action_samples": max(
-                (row["daytime_dry_action_samples"] or 0 for row in dryout),
-                default=0,
-            ),
-            "daytime_hold_admission_samples": max(
-                (row["daytime_hold_admission_samples"] or 0 for row in dryout),
-                default=0,
-            ),
-            "safety_gate_status": (
-                "pending"
-                if not dryout
-                else (
-                    "fail"
-                    if any(row["safety_gate_status"] == "fail" for row in dryout)
-                    else "pass"
-                    if all(row["safety_gate_status"] == "pass" for row in dryout)
-                    else "incomplete"
-                )
-            ),
-        }
+        vpd_policy["realized_solar_night_dryout"] = project_realized_solar_night_dryout(dryout)
         pending_metrics = []
         if not moisture_sample_count:
             pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")

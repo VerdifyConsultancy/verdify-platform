@@ -22,7 +22,13 @@ def project(rows):
         and any(ast.unparse(target) == "vpd_policy['realized_solar_night_dryout']" for target in node.targets)
     ]
     assert len(assignments) == 1
-    namespace = {"dryout": rows, "vpd_policy": {}}
+    from verdify_schemas.realized_dryout import project_realized_solar_night_dryout
+
+    namespace = {
+        "dryout": rows,
+        "vpd_policy": {},
+        "project_realized_solar_night_dryout": project_realized_solar_night_dryout,
+    }
     # Execute only this repository-owned assignment; never supplied input code.
     exec(compile(ast.Module(body=assignments, type_ignores=[]), str(source), "exec"), namespace)  # noqa: S102
     return namespace["vpd_policy"]["realized_solar_night_dryout"]
@@ -87,6 +93,8 @@ def test_no_rows_is_pending_not_measured_zero_daytime_admission():
     assert result["episodes"] == []
     assert result["safety_gate_status"] == "pending"
     assert all(count == 0 for count in result["dispositions"].values())
+    assert result["daytime_dry_action_samples"] is None
+    assert result["daytime_hold_admission_samples"] is None
 
 
 def test_pass_safety_does_not_convert_incomplete_outcome_to_effective():

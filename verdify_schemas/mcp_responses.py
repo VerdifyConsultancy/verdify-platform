@@ -27,6 +27,7 @@ from .fixed_panel_native_route import NativeFixedPanelRouteEvidence
 from .lessons import LessonConfidence
 from .observed_minutes import ObservedMinuteEvidence
 from .physical_crop_band import PhysicalCropBandEvidence, RouteOnlyCropBandEvidence
+from .realized_dryout import RealizedDryoutEvidence
 from .telemetry import DliEvidence
 
 
@@ -114,6 +115,8 @@ class ScorecardResponse(BaseModel):
     native_fixed_panel_route_evidence: NativeFixedPanelRouteEvidence = Field(
         default_factory=NativeFixedPanelRouteEvidence
     )
+
+    realized_solar_night_dryout: RealizedDryoutEvidence = Field(default_factory=RealizedDryoutEvidence)
 
     # ── Score + compliance ──────────────────────────────────────────
     scorecard_contract_version: float | None = None
@@ -264,6 +267,7 @@ class ScorecardResponse(BaseModel):
                 "physical_crop_band_evidence",
                 "route_only_crop_band_evidence",
                 "native_fixed_panel_route_evidence",
+                "realized_solar_night_dryout",
             }:
                 continue
             names.add(field.alias or field_name)

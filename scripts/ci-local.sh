@@ -216,6 +216,7 @@ $PY -m pytest -q -rs \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
+  tests/test_scorecard_realized_dryout.py \
   tests/test_solar_night_packet.py \
   tests/test_mcp_semantic_dependency_lifecycle.py \
   tests/test_mqtt_fanout.py \
