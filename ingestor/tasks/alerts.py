@@ -2308,170 +2308,259 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
 
         # Reactive trigger marker removed in Sprint 5 P6 — deviation monitor handles replans
 
-        # ── Deduplicate + insert + resolve ──
-        active_keys = {(a["alert_type"], a["sensor_id"]) for a in alerts}
-        # Sprint 25-omnibus (setpoint_unconfirmed lifecycle fix): only
-        # consider alerts THIS monitor owns (source='system') for auto-resolve.
-        # Alerts inserted by other monitors (setpoint_confirmation_monitor
-        # writes source='ingestor'; iris_planner writes source='iris_planner';
-        # dispatcher writes source='dispatcher') have their own lifecycle
-        # — auto-resolving them here caused setpoint_unconfirmed to flap
-        # open↔resolved every alert_monitor cycle.
-        open_rows = await conn.fetch(
-            "SELECT id, alert_type, severity, sensor_id, slack_ts, disposition FROM alert_log "
-            "WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND source = 'system'"
+        await _sync_monitor_alerts(
+            conn,
+            alerts,
+            component_status_available=component_status_available,
+            component_closure_resolutions=component_closure_resolutions,
         )
-        open_keys = {(r["alert_type"], r["sensor_id"]): r for r in open_rows}
-        if not component_status_available:
-            # A missing/denied status function is unknown state, never evidence
-            # that a previously actionable experiment condition recovered.
-            active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
 
-        slack_token = None
-        new_count = 0
-        escalated_count = 0
-        for a in alerts:
-            key = (a["alert_type"], a["sensor_id"])
-            if key in open_keys:
-                existing = open_keys[key]
-                try:
-                    env = AlertEnvelope.model_validate(a)
-                except ValidationError as e:
-                    # Fail LOUD (2026-07-11 audit): schema drift froze open-alert
-                    # context silently. Refresh with a fallback envelope that
-                    # preserves the original severity so drift is visible.
-                    log.error("alert refresh failed validation; degrading to fallback: %s: %r", e, a)
-                    env = build_validation_failed_envelope(a, e, producer="alert_monitor")
-                is_escalation = env.severity == "critical" and existing["severity"] != "critical"
-                await conn.execute(
-                    """
-                    UPDATE alert_log
-                       SET severity=$1,
-                           message=$2,
-                           details=$3,
-                           metric_value=$4,
-                           threshold_value=$5
-                     WHERE id=$6
-                    """,
-                    env.severity,
-                    env.message,
-                    json.dumps(env.details) if env.details else None,
-                    env.metric_value,
-                    env.threshold_value,
-                    existing["id"],
-                )
-                # F14 (Sprint 24.6): escalate severity in place and re-notify.
-                # Same-severity updates intentionally stay quiet but keep DB
-                # context fresh for dashboards and deploy preflights.
-                if is_escalation:
-                    if slack_token is None:
-                        try:
-                            slack_token = _load_token(SLACK_TOKEN_FILE)
-                        except Exception:
-                            slack_token = ""
-                    if slack_token:
-                        runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
-                        _post_slack(
-                            slack_token,
-                            SLACK_CHANNEL,
-                            f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}\n"
-                            f"{format_runbook(runbook, compact=True)}",
-                            thread_ts=existing["slack_ts"],
-                        )
-                    escalated_count += 1
-                continue
+
+async def _sync_monitor_alerts(
+    conn,
+    alerts,
+    *,
+    component_status_available,
+    component_closure_resolutions,
+    scope=None,
+    scope_greenhouse_id=None,
+    post_message=None,
+    message_prefix="",
+):
+    """Persist, deduplicate, deliver and resolve the same producer envelopes.
+
+    A supplied scope restricts both input envelopes and existing open rows.
+    Transport injection is allowed only with that exact scope. Normal monitor
+    calls retain the existing token custody, policy, runbook and thread route.
+    """
+    # Validate the complete scope before the first database or transport mutation.
+    if scope is not None:
+        if not isinstance(scope_greenhouse_id, str) or not scope_greenhouse_id.startswith("synthetic-"):
+            raise ValueError("explicit_synthetic_greenhouse_required")
+        if len(alerts) > 1 or any((a["alert_type"], a["sensor_id"]) != scope for a in alerts):
+            raise ValueError("component_alert_scope_mismatch")
+    elif message_prefix or post_message is not None or scope_greenhouse_id is not None:
+        raise ValueError("qualified_transport_requires_exact_alert_scope")
+    # ── Deduplicate + insert + resolve ──
+    active_keys = {(a["alert_type"], a["sensor_id"]) for a in alerts}
+    # Sprint 25-omnibus (setpoint_unconfirmed lifecycle fix): only
+    # consider alerts THIS monitor owns (source='system') for auto-resolve.
+    # Alerts inserted by other monitors (setpoint_confirmation_monitor
+    # writes source='ingestor'; iris_planner writes source='iris_planner';
+    # dispatcher writes source='dispatcher') have their own lifecycle
+    # — auto-resolving them here caused setpoint_unconfirmed to flap
+    # open↔resolved every alert_monitor cycle.
+    open_query = (
+        "SELECT id, alert_type, severity, sensor_id, slack_ts, disposition FROM alert_log "
+        "WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND source = 'system'"
+    )
+    if scope is None:
+        open_rows = await conn.fetch(open_query)
+    else:
+        open_rows = await conn.fetch(open_query + " AND alert_type=$1 AND sensor_id=$2", *scope)
+        if len(open_rows) > 1 or any((r["alert_type"], r["sensor_id"]) != scope for r in open_rows):
+            raise ValueError("component_open_alert_scope_mismatch")
+    open_keys = {(r["alert_type"], r["sensor_id"]): r for r in open_rows}
+    if not component_status_available:
+        # A missing/denied status function is unknown state, never evidence
+        # that a previously actionable experiment condition recovered.
+        active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
+
+    slack_token = None
+
+    def transport_ready():
+        nonlocal slack_token
+        if post_message is not None:
+            return True
+        if slack_token is None:
+            try:
+                slack_token = _load_token(SLACK_TOKEN_FILE)
+            except Exception:
+                slack_token = ""
+        return bool(slack_token)
+
+    def send(text, *, thread_ts=None):
+        text = message_prefix + text
+        if post_message is not None:
+            receipt = post_message(SLACK_CHANNEL, text, thread_ts=thread_ts)
+            if not isinstance(receipt, str) or not receipt:
+                raise ValueError("component_alert_delivery_unconfirmed")
+            return receipt
+        return _post_slack(slack_token, SLACK_CHANNEL, text, thread_ts=thread_ts)
+
+    new_count = 0
+    escalated_count = 0
+    for a in alerts:
+        key = (a["alert_type"], a["sensor_id"])
+        if key in open_keys:
+            existing = open_keys[key]
             try:
                 env = AlertEnvelope.model_validate(a)
             except ValidationError as e:
-                # Fail LOUD (2026-07-11 audit): the planner_required_plan_missed
-                # CRITICALs of 2026-07-10/11 were dropped here as log lines. A
-                # fallback row with the ORIGINAL severity still lands and pages.
-                log.error("alert failed validation; writing alert_validation_failed fallback: %s: %r", e, a)
+                if scope is not None:
+                    raise ValueError("component_alert_validation_failed") from e
+                # Fail LOUD (2026-07-11 audit): schema drift froze open-alert
+                # context silently. Refresh with a fallback envelope that
+                # preserves the original severity so drift is visible.
+                log.error("alert refresh failed validation; degrading to fallback: %s: %r", e, a)
                 env = build_validation_failed_envelope(a, e, producer="alert_monitor")
-                fallback_key = (env.alert_type, env.sensor_id)
-                # Keep one open fallback per sensor while the drift persists
-                # (no per-cycle duplicate inserts, no auto-resolve flapping).
-                active_keys.add(fallback_key)
-                if fallback_key in open_keys:
-                    continue
-            should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
-            slack_ts = None
-            if should_slack:
-                if slack_token is None:
-                    try:
-                        slack_token = _load_token(SLACK_TOKEN_FILE)
-                    except Exception:
-                        slack_token = ""
-                if slack_token:
-                    emoji = {
-                        "critical": "\U0001f534",
-                        "warning": "\U0001f7e1",
-                        "warn": "\U0001f7e1",
-                        "info": "\u2139\ufe0f",
-                    }.get(env.severity, "")
-                    runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
-                    slack_ts = _post_slack(
-                        slack_token,
-                        SLACK_CHANNEL,
-                        f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}\n"
-                        f"{format_runbook(runbook, compact=True)}",
-                    )
-
+            is_escalation = env.severity == "critical" and existing["severity"] != "critical"
             await conn.execute(
-                "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)",
-                env.alert_type,
+                """
+                UPDATE alert_log
+                   SET severity=$1,
+                       message=$2,
+                       details=$3,
+                       metric_value=$4,
+                       threshold_value=$5
+                 WHERE id=$6
+                """,
                 env.severity,
-                env.category,
-                env.sensor_id,
-                env.zone,
                 env.message,
                 json.dumps(env.details) if env.details else None,
-                slack_ts,
                 env.metric_value,
                 env.threshold_value,
+                existing["id"],
             )
-            new_count += 1
-
-        # Auto-resolve (or suppress accepted hardware/occupancy gaps \u2014 M5/B10).
-        resolved = 0
-        suppressed = 0
-        for key, row in open_keys.items():
-            if key not in active_keys:
-                disposition, resolution = _auto_close_disposition(row["alert_type"], row["disposition"])
-                if key[0] == "component_experiment_integrity" and key[1] in component_closure_resolutions:
-                    disposition, resolution = "resolved", component_closure_resolutions[key[1]]
-                await conn.execute(
-                    "UPDATE alert_log SET disposition = $2, resolved_at = now(), resolved_by = 'system', "
-                    "resolution = $3 WHERE id = $1",
-                    row["id"],
-                    disposition,
-                    resolution,
+            # F14 (Sprint 24.6): escalate severity in place and re-notify.
+            # Same-severity updates intentionally stay quiet but keep DB
+            # context fresh for dashboards and deploy preflights.
+            if is_escalation and transport_ready():
+                runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
+                send(
+                    f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}\n"
+                    f"{format_runbook(runbook, compact=True)}",
+                    thread_ts=existing["slack_ts"],
                 )
-                if row["slack_ts"]:
-                    if slack_token is None:
-                        try:
-                            slack_token = _load_token(SLACK_TOKEN_FILE)
-                        except Exception:
-                            slack_token = ""
-                    if slack_token:
-                        verb = "Suppressed" if disposition == "suppressed" else "Resolved"
-                        emoji = "\U0001f507" if disposition == "suppressed" else "\u2705"
-                        _post_slack(
-                            slack_token,
-                            SLACK_CHANNEL,
-                            f"{emoji} {verb}: `{row['alert_type']}` for `{row['sensor_id']}`",
-                            thread_ts=row["slack_ts"],
-                        )
-                if disposition == "suppressed":
-                    suppressed += 1
-                else:
-                    resolved += 1
-
-        if new_count or resolved or suppressed or escalated_count:
-            log.info(
-                "Alerts: %d new, %d resolved, %d suppressed, %d escalated",
-                new_count,
-                resolved,
-                suppressed,
-                escalated_count,
+            if is_escalation:
+                escalated_count += 1
+            continue
+        try:
+            env = AlertEnvelope.model_validate(a)
+        except ValidationError as e:
+            if scope is not None:
+                raise ValueError("component_alert_validation_failed") from e
+            # Fail LOUD (2026-07-11 audit): the planner_required_plan_missed
+            # CRITICALs of 2026-07-10/11 were dropped here as log lines. A
+            # fallback row with the ORIGINAL severity still lands and pages.
+            log.error("alert failed validation; writing alert_validation_failed fallback: %s: %r", e, a)
+            env = build_validation_failed_envelope(a, e, producer="alert_monitor")
+            fallback_key = (env.alert_type, env.sensor_id)
+            # Keep one open fallback per sensor while the drift persists
+            # (no per-cycle duplicate inserts, no auto-resolve flapping).
+            active_keys.add(fallback_key)
+            if fallback_key in open_keys:
+                continue
+        should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
+        slack_ts = None
+        if should_slack and transport_ready():
+            emoji = {
+                "critical": "\U0001f534",
+                "warning": "\U0001f7e1",
+                "warn": "\U0001f7e1",
+                "info": "\u2139\ufe0f",
+            }.get(env.severity, "")
+            runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
+            slack_ts = send(
+                f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}\n"
+                f"{format_runbook(runbook, compact=True)}",
             )
+
+        insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)"
+        extra_values = ()
+        if scope is not None:
+            insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value, greenhouse_id) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10,$11)"
+            extra_values = (scope_greenhouse_id,)
+        await conn.execute(
+            insert_sql,
+            env.alert_type,
+            env.severity,
+            env.category,
+            env.sensor_id,
+            env.zone,
+            env.message,
+            json.dumps(env.details) if env.details else None,
+            slack_ts,
+            env.metric_value,
+            env.threshold_value,
+            *extra_values,
+        )
+        new_count += 1
+
+    # Auto-resolve (or suppress accepted hardware/occupancy gaps \u2014 M5/B10).
+    resolved = 0
+    suppressed = 0
+    for key, row in open_keys.items():
+        if key not in active_keys:
+            disposition, resolution = _auto_close_disposition(row["alert_type"], row["disposition"])
+            if key[0] == "component_experiment_integrity" and key[1] in component_closure_resolutions:
+                disposition, resolution = "resolved", component_closure_resolutions[key[1]]
+            await conn.execute(
+                "UPDATE alert_log SET disposition = $2, resolved_at = now(), resolved_by = 'system', "
+                "resolution = $3 WHERE id = $1",
+                row["id"],
+                disposition,
+                resolution,
+            )
+            if row["slack_ts"] and transport_ready():
+                verb = "Suppressed" if disposition == "suppressed" else "Resolved"
+                emoji = "\U0001f507" if disposition == "suppressed" else "\u2705"
+                send(
+                    f"{emoji} {verb}: `{row['alert_type']}` for `{row['sensor_id']}`",
+                    thread_ts=row["slack_ts"],
+                )
+            if disposition == "suppressed":
+                suppressed += 1
+            else:
+                resolved += 1
+
+    if new_count or resolved or suppressed or escalated_count:
+        log.info(
+            "Alerts: %d new, %d resolved, %d suppressed, %d escalated",
+            new_count,
+            resolved,
+            suppressed,
+            escalated_count,
+        )
+    return {"new": new_count, "escalated": escalated_count, "resolved": resolved, "suppressed": suppressed}
+
+
+async def component_experiment_alert_cycle(conn, experiment_id, *, greenhouse_id, post_message, message_prefix):
+    """One component-only cycle using the production producer and sync path.
+
+    The caller owns native target/role admission and transaction lifetime.
+    No ordinary greenhouse evaluator or planner SLA refresh runs here. A
+    qualification caller must supply its explicitly authorized transport;
+    this entrypoint never discovers or exports production credentials.
+    """
+    from uuid import UUID
+
+    experiment_id = str(UUID(str(experiment_id)))
+    if not isinstance(greenhouse_id, str) or not greenhouse_id.startswith("synthetic-"):
+        raise ValueError("explicit_synthetic_greenhouse_required")
+    if post_message is None or not message_prefix.startswith("[NONPRODUCTION SYNTHETIC QUALIFICATION] "):
+        raise ValueError("explicit_qualified_transport_and_label_required")
+    rows = await conn.fetch(
+        "SELECT experiment_id, lifecycle_status, execution_phase, admission_state, "
+        "operation_kind, observation_age_seconds, observation_truth, open_exposure_count, "
+        "writer_generation, connection_generation, safety_state, outcomes_complete, "
+        "rollback_ready, alert_severity, alert_reason "
+        "FROM public.fn_experiment_v2_ops_status() WHERE experiment_id=$1::uuid",
+        experiment_id,
+    )
+    if len(rows) != 1 or str(rows[0]["experiment_id"]) != experiment_id:
+        raise ValueError("component_status_scope_mismatch")
+    row = rows[0]
+    envelope = _component_experiment_integrity_alert(row)
+    sensor = f"experiment.v2.{experiment_id}"
+    closure = _component_experiment_closure_resolution(row)
+    return await _sync_monitor_alerts(
+        conn,
+        [envelope] if envelope is not None else [],
+        component_status_available=True,
+        component_closure_resolutions={sensor: closure} if closure else {},
+        scope=("component_experiment_integrity", sensor),
+        scope_greenhouse_id=greenhouse_id,
+        post_message=post_message,
+        message_prefix=message_prefix,
+    )
