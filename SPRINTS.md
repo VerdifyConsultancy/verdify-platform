@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T15:03:48.222486+00:00** against source `261092b079044e363ca7a6929116b4a6344429da`. [planning/reviews/2026-10-18-next-sprint/README.md](planning/reviews/2026-10-18-next-sprint/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T15:35:12.583197+00:00** against source `d52bc8cc71c8267a2fefab0dd3286737d4ed0150`. [planning/reviews/2026-10-18-next-sprint/README.md](planning/reviews/2026-10-18-next-sprint/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -29,9 +29,9 @@ Exit: Each selected packet has exact source/input/output custody and a truthful 
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | P3: verify installed fn_realized_solar_night_dryout identity, then one bounded complete-night pilot and at most three genuine nights using device solar semantics, same-day held-admission counters and authentic relay/coverage/confound evidence. Retain PASS/FAIL/INCOMPLETE/no-eligible outcomes, and verify the MCP/planner quality-bearing projection. No tuning or water-removal claim from heat-only VPD. |
-| [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | 4–6 | P4: reuse the passive heap/reset/load collector, distinguish software reset/watchdog/reconnect, and bind actual current firmware plus independently retained rollback metadata/bytes. Produce one shared #390/#963 custody/observation matrix; dummy-credential compiler output remains NONDEPLOYABLE. No stress, restart, last-good promotion or OTA; missing representative runtime remains open. |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 14–22 | P1 (8–12h): actual fog/vent source extraction, selected/unselected values, actual helper/readback/relay dwell and deleted/inverted-consumer negative. P2 (6–10h): machine-readable pre-tick input/state requirements and fail-closed admission report for the 21 missing consumers; reject same-row output-as-input and permissive missing-state defaults. Keep the actual prefix claim at 27/48 UNPROVEN absent complete row-wise causal proof. |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | P3 completed its bounded attempt: source identity matched, then the October 16 getter timed out at 2s with no episode result; do not retry or widen it. Integrate the tested MCP incomplete-status correction through existing native CI and verify actual MCP/planner delivery when that scoped release is selected. Any further getter diagnosis needs a new bounded query plan; no zero held-admission or dry-out benefit is established. |
+| [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | 4–6 | P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion. |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 14–22 | P2 source/input packet is complete with 116 focused pure checks and explicit refusal of unsupported historical state. P1 actual-source fixture is prepared with 35 pure checks; qualify its 56 positive and 8 completed causal-negative cases through the single admitted native run, then integrate exact source/CI receipts. Keep 27/48 UNPROVEN and full exposure/exclusivity/recovery acceptance open; no output-as-input or new order/grid. |
 
 ## WAIT — Await authentic inputs or owner qualification
 
@@ -109,8 +109,8 @@ Exit: Each release meets its physical/runtime contract; no OTA is implied by thi
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
 | [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) | Platform lead | Unestimated | Reuse the existing source policy/tests, prepare a passive per-circuit boundary observation with exact timestamps and expected stop reasons, then record an eligible natural event. Reopen code work only if current evidence contradicts the implemented contract. |
-| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | Platform lead | Unestimated | Consume P4 passive heap/rollback/candidate custody with existing #985 compiler/causal/replay receipts. Actual candidate binary, contributor/topology truth, operator window, rollback and physical runtime gates remain separate from this sprint; no OTA. |
-| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | Unestimated | Share P4 source/binary/rollback/HA observation matrix with #390, without duplicate estimate or redoing delivered formatter/ingestor source. Exact deployed firmware and actual HA recovery remain outstanding. |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | Platform lead | Unestimated | Reuse completed P4 shared custody and #985 compiler/causal/replay receipts. Resolve exact candidate/topology/configuration, live binary provenance, independently available recovery evidence and predeclared runtime canaries for a selected release. The matching-version local binary is retained, but missing adjacent archive/bake/recovery evidence prevents treating it as newly qualified last-good. No OTA in S3B. |
+| [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) | Platform lead | Unestimated | Reuse P4 shared source/binary/rollback/HA matrix and the delivered formatter/ingestor fix. Actual HA length-error recovery, exact deployed firmware and qualified rollback remain unobserved; bind these in the selected #390 release instead of repeating source design or allocating duplicate hours. |
 
 ## CONTROL — Control and irrigation backlog
 
@@ -175,7 +175,7 @@ Exit: Every required child has accepted evidence or an explicit recorded scope d
 | [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | Unestimated | Keep #428/#367/#369/#370 child scope and zero duplicated effort. P4 only bounds current heap/reset/rollback uncertainty; it does not justify broad simplification. |
 | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581) | Research/release lead | Unestimated | Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction. |
 | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Runtime/release lead | Unestimated | Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop. |
-| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Use the S3B four-packet plan and 47-issue readiness register; count 22–34h selected work plus at least 6h integration reserve once. Maintain exact completion edges and original criteria; source preparation does not spend another 80-hour historical envelope. |
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Close out S3B source/native integration: P2 input-admission and P4 passive-custody packets are complete; P3 retained its one bounded timeout and prepared the MCP correction; P1 native result and source PR integration remain pending. Reuse original 22–34h selected estimates plus at least 6h reserve in the 40h plan; these are not measured remaining hours. Preserve all open criteria and completion edges. |
 
 ## Campaign stage contracts
 

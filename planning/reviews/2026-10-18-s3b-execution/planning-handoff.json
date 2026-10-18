@@ -1,0 +1,30 @@
+{
+  "source_base": "d52bc8cc71c8267a2fefab0dd3286737d4ed0150",
+  "changed_issue_baseline_and_how": [
+    775,
+    639,
+    390,
+    428,
+    410,
+    963
+  ],
+  "unchanged_contract_fields": "All fields except baseline/how on the six selected issues",
+  "canonical_records": 93,
+  "open_records": 47,
+  "open_acceptance_clauses": 143,
+  "statuses_acceptance_dependencies_parentage_priorities_estimates_unchanged": true,
+  "native_graph": "27 active edges/24 closed predecessors retained from prior readback; this edit performs no native graph operation",
+  "execution_allocation_changes": "next_action only on the six selected issues; capacities and estimates unchanged",
+  "s3b_capacity_hours": 40,
+  "s3b_selected_hours_min": 22,
+  "s3b_selected_hours_max": 34,
+  "native_P1_result": "PENDING",
+  "source_PR_integration": "PENDING",
+  "checks": {
+    "render": "PASSED93 issues/seven views",
+    "render_check": "PASSED",
+    "published_schema": "PASSED93 issues/nine stages/73 canonical edges",
+    "diff_whitespace": "PASSED",
+    "exact_base_comparison": "PASSED only six baseline/how and six allocation next_action values; execution reviewed_at/source_revision refreshed"
+  }
+}
