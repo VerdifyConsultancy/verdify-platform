@@ -1,0 +1,51 @@
+# Preserve the qualified winter collector runtime during API service promotion.
+# These exact resource pins run after release-pins.yaml. The active collector
+# writes retained observations to its archive; its Sync init hook must not be
+# recreated merely to attribute a different Iris model on the serving API.
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: preserve-verdify-winter-archive-init-runtime
+target:
+  group: batch
+  version: v1
+  kind: Job
+  name: verdify-winter-archive-init
+  namespace: verdify-prod
+patch: |-
+  [
+    {
+      "op": "test",
+      "path": "/spec/template/spec/containers/0/name",
+      "value": "init-archive"
+    },
+    {
+      "op": "replace",
+      "path": "/spec/template/spec/containers/0/image",
+      "value": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+    }
+  ]
+---
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: preserve-verdify-winter-feasibility-runtime
+target:
+  group: batch
+  version: v1
+  kind: CronJob
+  name: verdify-winter-feasibility
+  namespace: verdify-prod
+patch: |-
+  [
+    {
+      "op": "test",
+      "path": "/spec/jobTemplate/spec/template/spec/containers/0/name",
+      "value": "collect"
+    },
+    {
+      "op": "replace",
+      "path": "/spec/jobTemplate/spec/template/spec/containers/0/image",
+      "value": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+    }
+  ]

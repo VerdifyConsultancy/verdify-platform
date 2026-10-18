@@ -304,3 +304,5 @@ images:
 # release-pins.yaml followed by the gated sync.
 transformers:
   - release-pins.yaml
+  # Preserve the exact winter observation runtime after global API promotion.
+  - winter-runtime-pins.yaml

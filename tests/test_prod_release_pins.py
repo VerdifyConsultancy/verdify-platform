@@ -34,6 +34,8 @@ ACTUATOR_IMAGES = {
     "verdify-migrate",
     "verdify-experiment-v2-orchestrator",
 }
+WINTER_RUNTIME = ZOT + "verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+WINTER_OBJECTS = {("Job", "verdify-winter-archive-init"), ("CronJob", "verdify-winter-feasibility")}
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 
 
@@ -86,7 +88,7 @@ def test_release_pins_cover_exactly_the_actuator_managed_images() -> None:
 
 def test_candidates_keep_the_actuator_shape_and_release_pins_apply_last() -> None:
     kustomization = yaml.safe_load(KUSTOMIZATION.read_text())
-    assert kustomization["transformers"] == ["release-pins.yaml"]
+    assert kustomization["transformers"] == ["release-pins.yaml", "winter-runtime-pins.yaml"]
     for image in ACTUATOR_IMAGES:
         (entry,) = [row for row in kustomization["images"] if row["name"] == CANONICAL + image]
         assert entry == {"name": CANONICAL + image, "newName": ZOT + image, "digest": entry["digest"]}
@@ -98,13 +100,28 @@ def test_candidates_keep_the_actuator_shape_and_release_pins_apply_last() -> Non
         assert len(re.findall(rf"^  - name: .*/{re.escape(image)}$", text, flags=re.M)) == 1
 
 
+def _assert_release_images(rendered: str, pins: dict[str, str]) -> None:
+    seen_winter = set()
+    for document in yaml.safe_load_all(rendered):
+        if not document:
+            continue
+        identity = (document["kind"], document["metadata"]["name"])
+        images = _container_images(document)
+        if identity in WINTER_OBJECTS:
+            assert document["metadata"]["namespace"] == "verdify-prod"
+            assert images == [WINTER_RUNTIME], "API promotion must preserve the winter runtime"
+            seen_winter.add(identity)
+            continue
+        for ref in images:
+            for image in ACTUATOR_IMAGES:
+                assert ref != CANONICAL + image, f"{image} rendered without a digest"
+                if ref.split("@")[0] == ZOT + image:
+                    assert ref == f"{ZOT}{image}@{pins[image]}", f"{identity} does not render its release pin"
+    assert seen_winter == WINTER_OBJECTS
+
+
 def test_prod_render_runs_only_the_release_pins(prod_render: str) -> None:
-    pins = _release_pins()
-    images = _container_images([document for document in yaml.safe_load_all(prod_render) if document])
-    for image in ACTUATOR_IMAGES:
-        assert CANONICAL + image not in images, f"{image} rendered without a digest"
-        refs = {ref for ref in images if ref.split("@")[0] == ZOT + image}
-        assert refs == {f"{ZOT}{image}@{pins[image]}"}, f"{image} does not render its release pin"
+    _assert_release_images(prod_render, _release_pins())
 
 
 def test_a_build_candidate_change_leaves_the_prod_render_unchanged(tmp_path: Path, prod_render: str) -> None:
@@ -136,11 +153,7 @@ def test_promote_script_makes_the_render_run_the_candidates(tmp_path: Path) -> N
         for row in kustomization["images"]
         if row["name"].removeprefix(CANONICAL) in ACTUATOR_IMAGES
     }
-    images = _container_images(
-        [document for document in yaml.safe_load_all(_render(tmp_path / "deploy/k8s/overlays/prod")) if document]
-    )
-    for image, digest in candidates.items():
-        assert {ref for ref in images if ref.split("@")[0] == ZOT + image} == {f"{ZOT}{image}@{digest}"}
+    _assert_release_images(_render(tmp_path / "deploy/k8s/overlays/prod"), candidates)
 
 
 def _promotion_checkout(tmp_path: Path) -> Path:
