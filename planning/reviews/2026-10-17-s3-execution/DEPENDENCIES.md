@@ -1,8 +1,8 @@
 # S3 execution dependency graph
 
-Full native readback at 2026-10-18T03:24:33Z: **48 open Verdify issues**, **27 active completion edges** (26 local and one actual Home Assistant dependency), plus **25 retained closed predecessor records**. Every issue and dependency connection was untruncated. All local active edges equal planning source. [Native receipt](native-graph-readback.json); [normalized graph](graph.json).
+Full native readback at 2026-10-18T04:21:36.565992Z: **47 open Verdify issues**, **27 active completion edges** (26 local and one actual Home Assistant dependency), plus **24 closed predecessor records on open issues** and one historical closed predecessor retained with accepted #802. Every issue and dependency connection was untruncated. All local active edges equal planning source. [Native receipt](native-graph-readback.json); [normalized graph](graph.json).
 
-An arrow gates dependent acceptance, not all preparation. Home Assistant #878 is an external native predecessor, not a fabricated campaign node. #977 and #980 are accepted closed deliveries; the sprint remains in progress.
+An arrow gates dependent acceptance, not all preparation. Home Assistant #878 is an external native predecessor, not a fabricated campaign node. #977, #980 and #802 are accepted closed deliveries; the sprint remains in progress.
 
 ```mermaid
 flowchart TD
@@ -51,7 +51,6 @@ flowchart TD
   i785["#785 Reveal once, reproduce the frozen analysis and decide the pr"]
   i786["#786 Decide whether a deterministic forecast comparator merits a "]
   i787["#787 Decide and scope a measured heating/overnight/resource study"]
-  i802["#802 Adopt the enforcing descheduler under manual Argo ownership"]
   i963["#963 Bound moisture-exchange state and preserve structured consum"]
   i981["#981 Restore truthful energy source freshness and trace stale met"]
   ha878["jvallery/homeassistant#878: qualify per-channel source clock"]
@@ -138,7 +137,8 @@ flowchart TD
 | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | open | #787 |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | closed | #787 |
 | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | open | #787 |
-| [jvallery/agents#4459](https://github.com/jvallery/agents/issues/4459) | closed | #802 |
 | [jvallery/homeassistant#878](https://github.com/jvallery/homeassistant/issues/878) | open | #981 |
 
 #782 stays independent of #981 for its selected nine-state endpoint; #787 retains its energy dependency. #783 generic integration follows contained #639/#587 independently of final #782 inputs, with exact design binding at #588. #641 retains successful attended physical proof and safe handoff.
+
+Accepted history: the previously observed closed `jvallery/agents#4459 → #802` relationship remains in [graph.json](graph.json), outside the current open-issue projection. The native relationship itself was not edited.

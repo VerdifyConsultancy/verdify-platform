@@ -1,0 +1,237 @@
+{
+  "schema": "verdify-descheduler-acceptance/v1",
+  "reviewed_at": "2026-10-18T04:21:36.565992Z",
+  "issue": 802,
+  "accepted": true,
+  "issue_state": {
+    "number": 802,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "closedAt": "2026-10-18T04:17:55Z"
+  },
+  "closure_reconciled_without_reopen_or_reclose": true,
+  "closure_trigger": "GitHub associated owner PR #5036 with this cross-repository issue despite negated closing prose; all scoped acceptance had passed before the merge. Existing closure is preserved.",
+  "source": {
+    "product_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+    "owner_declaration_pr": 5033,
+    "owner_declaration_revision": "ac5b084d5060613ac05adc60afa13702f659a85f",
+    "owner_root_pin_pr": 5034,
+    "owner_root_pin_revision": "5a701f75d2a446a3fece6f5c1eb0cbd6cb3c2015",
+    "owner_classification_pr": 5036,
+    "owner_classification_revision": "ee1383d2ffb972af666c0392932e518084eea691",
+    "owner_classification_merged_at": "2026-10-18T04:17:54Z",
+    "product_closeout_base": "1d3da5150920b1e49b5371a027ea171136a778ea"
+  },
+  "classification_native_ci": {
+    "qualified_head": "ecf61da7be10f92520a06ca43a06718d0b6c1659",
+    "qualified_base": "5a701f75d2a446a3fece6f5c1eb0cbd6cb3c2015",
+    "native_operation_id": "eb521912-f670-54af-ac1c-c68dfd4ef081",
+    "native_run_id": "f069a9a3-4ede-5df0-afd7-fd2d4241e281",
+    "tested_merge": "660a95d35bf09c64bdddf5ed117a0f815d0f23ae",
+    "native_required": 14,
+    "native_accepted": 14,
+    "github_required_status_id": 56617753234,
+    "github_required_status": "success"
+  },
+  "live_application": {
+    "name": "verdify-descheduler",
+    "uid": "2452e668-6e69-46b3-9d6d-cabfeff8ac35",
+    "sync": "Synced",
+    "health": "Healthy",
+    "revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+    "manual_sync": true,
+    "prune": false,
+    "selective_resources": false,
+    "parents_synced_healthy_revision": "ac5b084d5060613ac05adc60afa13702f659a85f"
+  },
+  "adopted_resources": [
+    {
+      "object": [
+        "ServiceAccount",
+        "verdify-descheduler",
+        "descheduler"
+      ],
+      "uid": "7bd8fc67-bfcc-465e-a4d5-f1ca48d1dedc",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "Role",
+        "verdify-descheduler",
+        "descheduler"
+      ],
+      "uid": "82a5823f-3809-40cd-b983-9b7fe4a5f2de",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "ClusterRole",
+        "",
+        "verdify-descheduler"
+      ],
+      "uid": "49612888-396d-48f2-9121-70ba1db65e20",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "RoleBinding",
+        "verdify-descheduler",
+        "descheduler"
+      ],
+      "uid": "1eb7ecd8-55a9-4400-adeb-69a9a52eedf3",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "ClusterRoleBinding",
+        "",
+        "verdify-descheduler"
+      ],
+      "uid": "06e5beac-e2d8-4e60-994f-d65730b95888",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "ConfigMap",
+        "verdify-descheduler",
+        "descheduler-policy"
+      ],
+      "uid": "0235fc61-6cbe-40b0-b34a-0e4c60b9834c",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    },
+    {
+      "object": [
+        "CronJob",
+        "verdify-descheduler",
+        "descheduler"
+      ],
+      "uid": "44197533-2941-4edc-9467-69cba41bebc8",
+      "source_leaves_equal": true,
+      "api_defaulted_body_equal": true
+    }
+  ],
+  "preservation": {
+    "uids_specs_generations": true,
+    "namespace_excluded": true,
+    "namespace_uid": "f45e99c6-ddc7-4fa0-94d9-ff61d741e923",
+    "namespace_labels_and_rbac_unchanged": true,
+    "operator_suspend_preserved": true,
+    "held_ci_applications_untouched": true,
+    "residual_permissions": "Existing descheduler cluster-wide pod-delete exception remains; kepler-estate-operations namespace Role/Binding stays read-only. Adoption does not revoke pre-existing cluster administrator access."
+  },
+  "natural_job": {
+    "verified_at": "2026-10-18T04:16:06.021939+00:00",
+    "scheduled_at": "2026-10-18T04:15:00Z",
+    "job_name": "descheduler-29871615",
+    "job_uid": "f7f83ba9-62a7-4a8f-a52a-187e4f3335a7",
+    "cronjob_owner_uid": "44197533-2941-4edc-9467-69cba41bebc8",
+    "completion_time": "2026-10-18T04:15:07Z",
+    "controller_schedule_annotation_verified": true,
+    "forced_job": false,
+    "exit_code": 0,
+    "restarts": 0,
+    "pinned_image_and_enforce_args_verified": true,
+    "evicted_pods": 0,
+    "eviction_requests": 0,
+    "descheduler_error_or_warning_lines": 0,
+    "singleton_exclusions_observed": [
+      "priority threshold",
+      "positive label selector",
+      "PVC protection",
+      "local-storage protection"
+    ],
+    "protected_product_pod_uids_ready_unchanged": true,
+    "esp32_connections_before": 1,
+    "esp32_connections_after": 1,
+    "ingestor_10min_log_patterns": {
+      "ValidationError": 0,
+      "row failed schema validation": 0
+    },
+    "limits": "Empty eligible candidate set observed; no forced relocation or eviction-path proof is claimed. Existing policy intentionally excludes local-storage/PVC workloads.",
+    "pod_name": "descheduler-29871615-s5l8f",
+    "pod_uid": "744ca66b-15aa-4fc7-81da-345279117828",
+    "node": "vm-k3s-node6",
+    "image": "registry.k8s.io/descheduler/descheduler:v0.36.0@sha256:7ca92c0a7b4f1c51d306409da6b832005fcadb224e384795646376726734c6e5",
+    "enforce_args": [
+      "--policy-config-file=/policy-dir/policy.yaml",
+      "--descheduling-interval=0",
+      "--v=4"
+    ],
+    "cronjob_schedule": "15 * * * *"
+  },
+  "root_independent_verification": {
+    "at": "2026-10-18T04:18:08.650430+00:00",
+    "natural_job_uid_owner_schedule_terminal_verified": true,
+    "current_child_synced_healthy_seven_resources": true,
+    "classification_merge_reconciled_from_native_github_readback": true
+  },
+  "acceptance": [
+    {
+      "criterion": "Seven owned objects adopt under the manual parented Application with exact unchanged relevant specs/UIDs and intended generation behavior.",
+      "passed": true
+    },
+    {
+      "criterion": "Namespace labels and exact ownership stay preserved; residual direct-writer permissions are accurately recorded.",
+      "passed": true
+    },
+    {
+      "criterion": "Natural enforce Job and live ownership/sync classification pass.",
+      "passed": true
+    }
+  ],
+  "preserved_corrections": {
+    "tracking_expectation": {
+      "at": "2026-10-18T03:59:28.192757+00:00",
+      "original_verification": "FAILED tracking format expectation for ClusterRole; no native mutation or sync retry",
+      "original_driver_sha256": "16927379155d0c0fb3c02da92536b0db05b4ac629aa50fb16905decfef723ede",
+      "corrected_verification": "PASS all7 UID/spec/generation/Namespace/RBAC and exact tracking",
+      "corrected_driver_sha256": "475b79c2eda48c8b49e2e46ac7b3c67ae6bb159d3a4ec38134bf94763c7ac601",
+      "source": "https://github.com/argoproj/argo-cd/blob/v3.4.0/util/argo/resource_tracking.go#L97-L113",
+      "reason": "UnstructuredToAppInstanceValue defaults absent resource namespace to Application destination namespace",
+      "native_tracking_changed_by_verifier": false,
+      "natural_job_acceptance": false
+    },
+    "natural_receipt_reference": {
+      "original_receipt": "/private/tmp/verdify-802-natural-20261018T0415/acceptance.json",
+      "original_receipt_sha256": "50c4c800eec224fdc5087ddc3e881c3c90347343ba6d855bb90e823d37ba7997",
+      "original_receipt_preserved": true,
+      "reason": "The original receipt keyed a nested artifact by basename. Its hash refers to this observer’s seven-recheck/after.json, not the earlier ROOT adoption after.json. Correct only the relative evidence path; no probe or mutation was rerun.",
+      "corrected_relative_reference": "seven-recheck/after.json",
+      "actual_original_artifact": "/private/tmp/verdify-802-natural-20261018T0415/seven-recheck/after.json"
+    },
+    "old_checkpoint_status": "Original 04:01 adoption, 04:16 natural and 04:18 ROOT receipts retain their then-known classification-CI/merge-pending fields. Exact later GitHub merge/readback supplies the final source state; historical receipts were not rewritten."
+  },
+  "private_custody": "/Users/jason/maintenance/verdify-s3-execution-20261017",
+  "evidence_sha256": {
+    "802-natural-0415/job.json": "fd8e983cb46833344931ffb81b8e384dce52643ea88977bb0da8d1b543f1130e",
+    "802-natural-0415/pods.json": "a8d14f28b614962948bb8def90da6d890d5eb3fec20210374f6f33d16c19f862",
+    "802-natural-0415/cronjob.json": "5b54aaedc4a562d6688bc787a64cf8797f3d5a5073570a74400f7ddb1e21592f",
+    "802-natural-0415/pod.private.log": "73830fa468b6ace6cd34233dda15a7d82b00def27e5dc38282e7ad72973f3bd1",
+    "802-natural-0415/application.json": "75d2b01f62ee68fb2891005d7ce2894c93f6ef10a8677bccbec7865acc40e031",
+    "802-natural-0415/device-after-natural.txt": "4cc96ff1ef7fcfb9c81c9ff2ab972c5a6484ab50758dad1c5264f88b260ace1b",
+    "802-natural-0415/seven-recheck/after.json": "e2dbe4496ec63b10336e38830a0b40b8baa63618fd8dc1ae98c0d6f27d6fbe47",
+    "802-natural-0415/acceptance.json": "50c4c800eec224fdc5087ddc3e881c3c90347343ba6d855bb90e823d37ba7997",
+    "802-natural-0415/acceptance-v2.json": "68df5b0c4ee2d5581c8d3ac5decf2637cea6f7ee33d41ff8171ccf0db4557785",
+    "802-natural-0415/root-independent-readback.json": "4f118fb31662d281dbe01fc3e6fd7cc26610c4a4f1918ad32df742158e5d3073",
+    "802-parent-delivery/review.json": "6132e285b31e9cf98293590afa6d775752ea76f56d14b855d0e5e10ed81cf7d3",
+    "802-parent-delivery/full-path-proof.json": "e6fcae9fb9f9fb9d11fbf398a4cb76b08c6154c039631813827d6c6762f956fb",
+    "802-seven-adoption/proof.json": "52a376685fce631e6068c25e9abe5e97efd136b05a997002f68a428d8b6481f5",
+    "802-seven-adoption/tracking-verification-correction.json": "53b2aa7a94f8a8358fd7b2c2398def6274475993f35209b9348f2c2364029066"
+  },
+  "public_source_urls": [
+    "https://github.com/jvallery/agents/pull/5033",
+    "https://github.com/jvallery/agents/pull/5034",
+    "https://github.com/jvallery/agents/pull/5036"
+  ],
+  "limits": [
+    "No forced Job or forced eviction-path proof.",
+    "No Namespace adoption, new security scope or production image promotion.",
+    "The original triage and all failed original receipts remain retained."
+  ]
+}

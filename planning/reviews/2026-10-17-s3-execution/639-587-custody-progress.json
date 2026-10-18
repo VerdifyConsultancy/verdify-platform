@@ -1,12 +1,12 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T03:24:33Z",
+  "reviewed_at": "2026-10-18T04:21:36.565992Z",
   "issues": [
     639,
     587
   ],
   "accepted": false,
-  "state": "finite_before_preseal_complete_behavior_pending",
+  "state": "actual_role_subset_passed_typed_custody_verified_alert_pending",
   "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
   "source_functions": 84,
   "finite_write_relations": 29,
@@ -24,10 +24,10 @@
     "rewind sequences below retained committed values"
   ],
   "remaining": [
-    "actual-role permitted behavioral subset",
-    "after reseal and exact authorized delta/sequence correlation",
-    "uncovered contained prefix/exclusivity/recovery acceptance",
-    "named alert fire/deliver/clear through owner route"
+    "corrected composite-writer native image and device-denied behavior/sequence proof",
+    "uncovered contained prefix/exposure/exclusivity/recovery and locked/armed no-reopen acceptance",
+    "explicit one-role ordinary initial-password installation permission and actual ordinary LOGIN proof",
+    "separate explicit two-message permission and named alert fire/deliver/clear through owner route"
   ],
   "physical_proof_owner": 641,
   "full_database_restore_parity_claimed": false,
@@ -45,5 +45,82 @@
     "source_body_and_property_parity_functions": 84,
     "full_database_fingerprint": false,
     "restore_parity_claimed": false
+  },
+  "initial_credentials": {
+    "at": "2026-10-18T03:31:26.773588+00:00",
+    "existing_roles": 2,
+    "initial_only": true,
+    "grants_hba_roles_production_changed": false,
+    "password_free_role_metadata_unchanged": true,
+    "receipt_sha256": "1bb037fa90fe2f43008494d90ec734d35e125d0fac962e335f48f4b406a35653"
+  },
+  "actual_authentication": {
+    "at": "2026-10-18T03:52:07.438680+00:00",
+    "actual_authentication_passed": true,
+    "role_function_counts": [
+      25,
+      21
+    ],
+    "base_table_denial_sqlstate": "42501",
+    "read_only": true,
+    "persistent_database_writes": false,
+    "full_issue_acceptance": false,
+    "auth_log_sha256": "6c543d037b3b0d1cea5de30cbec282ff587391d9f39fbebfdff8159d31930476",
+    "failed_v1_retained": true,
+    "startup_refusals_retained": true
+  },
+  "permitted_behavior": {
+    "at": "2026-10-18T04:02:55.181108+00:00",
+    "status": "CONTAINED_SUBSET_PASSED",
+    "passed": true,
+    "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+    "zero_device_calls": true,
+    "retained_labeled_synthetic_rows": 6,
+    "subsequent_stateful_transactions_rolled_back": true,
+    "full_issue_acceptance": false,
+    "physical_acceptance": false,
+    "log_sha256": "350ad0420fe3bb1ac2447cb2386303a0c42334c2fdb4e998b438c92a7aa071bb"
+  },
+  "typed_sqlnull_custody": {
+    "format": "sqlnull-v2",
+    "typed_sql_null_markers": true,
+    "genuine_relations": 29,
+    "genuine_rows": 7950,
+    "genuine_rows_equal": true,
+    "before_synthetic_rows": 2,
+    "after_synthetic_rows": 6,
+    "sequences": 77,
+    "sequence_definitions_unchanged": true,
+    "no_rewind": true,
+    "old_source_exact_sequence_delta": {
+      "experiment_events": 2,
+      "work_events": 3,
+      "runtime_generation": 3,
+      "bundle_attempts": 14
+    },
+    "before_sha256": "764c6841e3d3726433f3c7b9feef171cc2c809ab5b1a0d26bbfcc9fc6db3c7b0",
+    "after_sha256": "c0e020522063671900f451706c6b1cb6834416cd10721fac43483b83bf040494",
+    "comparison_receipt_sha256": "2a294e79718ee05d8a3f66f4e46b9e31374b807482bb7f6a8639b448605a8670",
+    "source_sequence_accounting_sha256": "fdd9130f35ccb3be12986c8e2a94bf51dc0a8a672ccd9dfd640be5b2c51e1b5b",
+    "source_functions_unchanged": 84,
+    "catalog_stable": true,
+    "scope": "Exact finite possible-write closure; not full database or restore parity. Original untyped b317 capture retained as historical evidence."
+  },
+  "composite_writer_correction": {
+    "accepted_source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
+    "source_only": true,
+    "native_image_and_behavior_proof": "pending",
+    "old_source_bundle_attempts_explanation": "Two competing preview calls, each composite target-list expansion evaluated across seven returned columns; six coupled SQL writers changed to a single FROM invocation.",
+    "corrected_source_plus_two_claimed": false,
+    "issue_owner": 639
+  },
+  "alert_progress": {
+    "read_only_preview": "FAILED 28P01 before SQL; original retained",
+    "ordinary_role_initial_install": "human exception requested, pending; not performed",
+    "two_synthetic_slack_messages": "separate human authorization absent; none sent",
+    "typed_alert_log_before_rows": 12425,
+    "typed_alert_log_before_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
+    "experiment29_scope_expanded": false,
+    "full_issue_acceptance": false
   }
 }

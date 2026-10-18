@@ -98,4 +98,4 @@ Hierarchy means ownership/roll-up only. Native blocked-by edges separately encod
   - [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586) Qualify a future atomic firmware policy engine with crash-safe recovery (C8; closed)
   - [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) Decide whether a deterministic forecast comparator merits a new study (C8; open)
   - [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) Decide and scope a measured heating/overnight/resource study (C8; open)
-- [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) Adopt the enforcing descheduler under manual Argo ownership (C4; open)
+- [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) Adopt the enforcing descheduler under manual Argo ownership (C4; closed)

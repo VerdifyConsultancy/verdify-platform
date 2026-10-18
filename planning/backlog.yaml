@@ -1,7 +1,7 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
   "snapshot_date": "2026-10-17",
   "original_open_issues": [
     14,
@@ -590,7 +590,7 @@
       "what": "Qualify the component executor, exclusivity and recovery behavior in containment",
       "why": "The implementation is substantial, but mocks can hide setter schema, SQL resolver, prefix and epoch seams. Requiring day-1 closure here while launch depends on it creates a dependency cycle.",
       "how": [
-        "Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.",
+        "Qualify the accepted composite-writer source correction through the supported native image and bounded device-denied proof, retaining exact sequence accounting and before/after custody. Preserve uncovered active-prefix/exclusivity/recovery clauses and #641 physical scope.",
         "Use actual operational role calls and generated setter grid; retain failures, inverses and sequence/catalog reseal.",
         "Close contained behavior scope when passed; #641 owns real device epochs, rescue and final baseline handoff, and must reuse this source receipt."
       ],
@@ -607,7 +607,7 @@
         "tests",
         "research/planner-efficacy"
       ],
-      "baseline": "S3 execution is in progress on the retained CNPG clone. The source packet covers 84 current functions and the exact 29-relation possible-write closure, with actual operational LOGIN and private before/after custody required. The first broad custody capture caused a confirmed 6 GiB pod-cgroup OOM before credential installation, fixture or behavior execution. CNPG failed over to primary2 and recovered three Ready instances; production DB/ingestor identities stayed unchanged. The failed input is reconstructed from current bytes and attestation, not retrospectively presealed.\n\nReplacement inputs are sealed before each attempt; bounded per-relation hashes stay inside the existing primary pod, with parallelism disabled and fixed time/temp/serialization limits. A compressed-receipt pilot passed. The first full finite attempt hashed all 29 genuine rowsets, then failed closed on a legitimate compressed catalog ACL guard; that attempt is incomplete. After the bounded catalog-array correction, the complete finite before-capture passed at 03:19:48 UTC: 29 rowsets, 7,950 genuine rows, zero synthetic rows and all 77 sequences; all 29 data hashes match the earlier partial capture. Native 84-function body, argument-signature and execution-property checks pass. Exact primary2 identity, zero restarts and three Ready remained stable. Credential/fixture installation, actual-role behavioral execution and the after-reseal are still pending at this checkpoint.\n\nCurrent source intentionally denies the active prefix: its historical 27/48 order is bound to a different grid and genuine study. Do not copy genuine approvals, override qualification or fabricate proof. Authentic shadow/full-48 and lifecycle/denial work can advance only after source-bound custody; this does not establish active-prefix or physical proof.\n\nNext action: Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Named alert fire/deliver/clear remains pending the owning route; #641 retains real device epochs, rescue and final baseline handoff.",
+      "baseline": "Actual lifecycle and executor LOGIN authentication passed on the retained clone after initial passwords were installed only for those two existing roles: exact 25/21 function capabilities, default read-only and base-table denial SQLSTATE 42501. The admitted device-denied behavior subset passed at 04:02:55 UTC with zero device calls and six retained labeled synthetic rows. Typed SQL-NULL-aware before/after custody preserves all 7,950 genuine rows across 29 relations and source properties, and accounts for all 77 sequence definitions/states; the original broader/OOM and fail-closed attempts remain retained. The old-source sequence delta is accounted explicitly (+2 experiment events, +3 work events, +3 runtime generations, +14 bundle attempts); it exposed repeated composite-writer evaluation, whose source correction at 1d3da515 is awaiting native image/behavior proof. No corrected-source +2 claim is made.\n\nCurrent grid/authority guards still intentionally deny genuine active-prefix/exposure/recovery/exclusivity qualification. Locked/armed no-reopen and remaining contained clauses are not accepted. #641 retains actual device epochs, rescue and successful baseline handoff.\n\nThe first read-only alert preview failed authentication (28P01) before SQL; the existing ordinary role has no password. Its one-role initial installation and the separate two-message synthetic alert delivery both still require the requested human authorization. Neither ordinary installation nor Slack delivery has occurred. The separate typed alert_log before-seal covers 12,425 rows and does not expand the 29-relation experiment seal.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Neither #639 nor #587 is accepted.\n\nNext action: Qualify the accepted composite-writer source correction through the supported native image and bounded device-denied proof, retaining exact sequence accounting and before/after custody. Preserve uncovered active-prefix/exclusivity/recovery clauses and #641 physical scope.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -627,7 +627,7 @@
       "what": "Qualify lifecycle authority and blinded monitoring in containment",
       "why": "Ready pods and green dashboards do not prove correct phase authority or safe rollback; comparative outcome leakage would corrupt the blinded study.",
       "how": [
-        "Use the completed shared finite preseal; finish existing central credential custody and actual-role attestation, then run lifecycle, feature-off and blinded denial cases alongside #639. Deliver and verify the named alert interface through its owning monitoring route; source work alone is not alert delivery acceptance.",
+        "After the explicitly requested one-role initial-password and two-message permissions arrive, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
         "Exercise actual operational LOGIN and preserve source/UID/sequence/catalog custody.",
         "Coordinate named alert interfaces; transfer actual device baseline/handoff to #641 with explicit scope ledger."
       ],
@@ -643,7 +643,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "S3 execution is in progress on the retained CNPG clone. The source packet covers 84 current functions and the exact 29-relation possible-write closure, with actual operational LOGIN and private before/after custody required. The first broad custody capture caused a confirmed 6 GiB pod-cgroup OOM before credential installation, fixture or behavior execution. CNPG failed over to primary2 and recovered three Ready instances; production DB/ingestor identities stayed unchanged. The failed input is reconstructed from current bytes and attestation, not retrospectively presealed.\n\nReplacement inputs are sealed before each attempt; bounded per-relation hashes stay inside the existing primary pod, with parallelism disabled and fixed time/temp/serialization limits. A compressed-receipt pilot passed. The first full finite attempt hashed all 29 genuine rowsets, then failed closed on a legitimate compressed catalog ACL guard; that attempt is incomplete. After the bounded catalog-array correction, the complete finite before-capture passed at 03:19:48 UTC: 29 rowsets, 7,950 genuine rows, zero synthetic rows and all 77 sequences; all 29 data hashes match the earlier partial capture. Native 84-function body, argument-signature and execution-property checks pass. Exact primary2 identity, zero restarts and three Ready remained stable. Credential/fixture installation, actual-role behavioral execution and the after-reseal are still pending at this checkpoint.\n\nCurrent source intentionally denies the active prefix: its historical 27/48 order is bound to a different grid and genuine study. Do not copy genuine approvals, override qualification or fabricate proof. Authentic shadow/full-48 and lifecycle/denial work can advance only after source-bound custody; this does not establish active-prefix or physical proof.\n\nNext action: Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Named alert fire/deliver/clear remains pending the owning route; #641 retains real device epochs, rescue and final baseline handoff.",
+      "baseline": "Actual lifecycle and executor LOGIN authentication passed on the retained clone after initial passwords were installed only for those two existing roles: exact 25/21 function capabilities, default read-only and base-table denial SQLSTATE 42501. The admitted device-denied behavior subset passed at 04:02:55 UTC with zero device calls and six retained labeled synthetic rows. Typed SQL-NULL-aware before/after custody preserves all 7,950 genuine rows across 29 relations and source properties, and accounts for all 77 sequence definitions/states; the original broader/OOM and fail-closed attempts remain retained. The old-source sequence delta is accounted explicitly (+2 experiment events, +3 work events, +3 runtime generations, +14 bundle attempts); it exposed repeated composite-writer evaluation, whose source correction at 1d3da515 is awaiting native image/behavior proof. No corrected-source +2 claim is made.\n\nCurrent grid/authority guards still intentionally deny genuine active-prefix/exposure/recovery/exclusivity qualification. Locked/armed no-reopen and remaining contained clauses are not accepted. #641 retains actual device epochs, rescue and successful baseline handoff.\n\nThe first read-only alert preview failed authentication (28P01) before SQL; the existing ordinary role has no password. Its one-role initial installation and the separate two-message synthetic alert delivery both still require the requested human authorization. Neither ordinary installation nor Slack delivery has occurred. The separate typed alert_log before-seal covers 12,425 rows and does not expand the 29-relation experiment seal.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Neither #639 nor #587 is accepted.\n\nNext action: After the explicitly requested one-role initial-password and two-message permissions arrive, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -3494,11 +3494,11 @@
       "parent": null,
       "depends_on": [],
       "what": "Bring the existing descheduler into Git and manual Argo ownership without changing its enforcement behavior.",
-      "why": "Current Git dry-run declarations differ from the enforcing live controller; blindly applying them disables enforcement.",
+      "why": "The former dry-run declaration could silently disable the enforcing live controller. Source now preserves enforcement and the exact seven resources have been adopted under manual Argo ownership.",
       "how": [
-        "Complete owning Agents PR #5033 exact-head enforced checks/delivery, then adopt the exact seven resources without spec or Namespace changes and verify tracking plus one natural successful enforce Job.",
-        "Prepare the product declaration and owning Agents AppProject/catalog entries; exclude Namespace management and preserve resource scope.",
-        "Adopt the exact seven resources in the owner window, verify tracking and unchanged specification, then inspect one natural successful enforcement run."
+        "Completed product enforce-mode source and owning Agents PRs #5033/#5034; ROOT adopted only the two reviewed parents and seven existing child resources, preserving their specifications, UIDs and generations.",
+        "Verified exact tracking with the Argo CD 3.4 namespace-default rule, unchanged Namespace labels/RBAC, and unchanged operator suspend behavior; retained the original failed verifier and corrected only its expectation.",
+        "Observed the controller-scheduled 2026-10-18T04:15Z enforce Job complete with exit 0, zero evictions and unchanged protected product pods; owning Agents PR #5036 records the actual live ownership/sync classification."
       ],
       "acceptance": [
         "Seven owned objects adopt under the manual parented Application with exact unchanged relevant specs/UIDs and intended generation behavior.",
@@ -3507,18 +3507,20 @@
       ],
       "paths": [
         "deploy/k8s/descheduler",
-        "deploy/k8s/overlays/prod"
+        "deploy/k8s/overlays/prod",
+        "planning/reviews/2026-10-17-s3-execution/802-descheduler-acceptance.md"
       ],
-      "baseline": "Product declaration now excludes Namespace and retains the exact seven existing descheduler objects, enforcing behavior and maintenance suspend state. Owning Agents PR #5033 is prepared for AppProject/catalog/estate ownership; exact-head enforced CI, delivery and live adoption remain pending. Whole-estate Agents #4451 closure is not a prerequisite.\n\nNext action: Complete the exact-head owning Agents PR checks and delivery, then perform spec-preserving manual adoption of the exact seven identities and verify tracking, Namespace preservation and one natural successful enforce Job.\n\nEvidence: https://github.com/jvallery/agents/pull/5033 and deploy/k8s/descheduler/kustomization.yaml. #802 remains open; source preparation is not live ownership acceptance.",
-      "delivery": "Coordinate product source with the owning Agents catalog; verify live tracking, unchanged resource specifications and a natural job outcome.",
+      "baseline": "Accepted and already closed COMPLETED at 2026-10-18T04:17:55Z. ROOT independently verified the manual parented verdify-descheduler Application Synced/Healthy at product b523a9b1ffecf0f82f8952763a1c0de207e540b5, with all seven resource UIDs, relevant specs and generations unchanged. Both owning parents are Synced/Healthy at accepted Agents source ac5b084d5060613ac05adc60afa13702f659a85f; source and root pins were delivered by Agents PRs #5033/#5034. Namespace identity/labels and RBAC remain unchanged, including the existing read-only kepler-estate-operations Role/Binding. The registered descheduler cluster-wide pod-delete exception remains; adoption does not revoke other pre-existing cluster administrator access.\n\nThe natural 04:15 Job descheduler-29871615 (UID f7f83ba9-62a7-4a8f-a52a-187e4f3335a7) completed at 04:15:07 with exit 0, zero eviction requests and zero evictions. Existing policy excluded the current candidates; this is a successful natural enforce run, not forced relocation proof. Protected product pod identities/readiness, the single ESP32 connection and ingestor schema-validation checks stayed healthy. Agents PR #5036 merged the actual ownership/sync classification after 14/14 required native checks.\n\nNext action: None within this scoped issue. Preserve its existing completed closure; this update reconciles the body and planning source only. The first tracking-expectation failure and a later evidence-path correction remain retained, with no sync or Job retry.\n\nEvidence: [accepted source and runtime receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-17-s3-execution/802-descheduler-acceptance.md), [structured receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/main/planning/reviews/2026-10-17-s3-execution/802-descheduler-acceptance.json), and https://github.com/jvallery/agents/pull/5036.",
+      "delivery": "Accepted: exact parent and seven-object manual non-pruning, selector-free sync; source/API-default comparison and unchanged identity/spec/generation/Namespace/RBAC checks; natural scheduled enforce Job; single-writer checks; and merged live ownership/sync classification. No runtime delivery is needed for this planning reconciliation.",
       "rollback": "Retain stripped resource exports. Undo only adoption metadata or withdraw the child without cascade; never reapply the old dry-run specification.",
       "decision": "External parent is jvallery/agents#4493. Current specific owner/project/catalog proof is required; whole-estate issue closure is not a prerequisite.",
-      "status": "open"
+      "status": "closed",
+      "accepted": true
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T03:24:33Z",
-    "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+    "reviewed_at": "2026-10-18T04:21:36.565992Z",
+    "source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-17-s3-execution/README.md",
     "open_issues": [
@@ -3567,7 +3569,6 @@
       785,
       786,
       787,
-      802,
       963,
       981
     ],
@@ -3577,8 +3578,8 @@
         "title": "S3 — Runtime truth and contained qualification (October 19–30, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Complete the eight original bounded packets within 80 shared hours. #977 and #980 are accepted; six open allocations retain original estimates totaling 25–50 hours. These are not measured remaining hours or time spent. Preserve the original 22-hour contingency and one product, one independent owner and one source/science lane.",
-        "exit": "Record every scoped packet outcome and remaining acceptance. #977 storage and #980 exporter delivery are accepted. #749 original readiness remains failed; #981 has a named upstream owner; #782 input decision is complete without scientific acceptance. #639/#587 actual-role qualification and #802 owner adoption remain in progress. The sprint is not complete."
+        "goal": "Complete the eight original bounded packets within 80 shared hours. #977, #980 and #802 are accepted; five open allocations retain original estimates totaling 21–42 hours. These are not measured remaining hours or time spent. Preserve the original 22-hour contingency and one product, one independent owner and one source/science lane.",
+        "exit": "Record every scoped packet outcome and remaining acceptance. #977 storage, #980 exporter and #802 manual descheduler adoption/natural-run delivery are accepted. #749 original readiness remains failed; #981 has a named upstream owner; #782 input decision is complete without scientific acceptance. #639/#587 passed an actual-role subset with typed custody, but uncovered contained clauses and named alert delivery remain open. The sprint is not complete."
       },
       {
         "id": "ALTERNATE",
@@ -3891,7 +3892,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Use the completed shared finite preseal; finish existing central credential custody and actual-role attestation, then run lifecycle, feature-off and blinded denial cases alongside #639. Deliver and verify the named alert interface through its owning monitoring route; source work alone is not alert delivery acceptance.",
+        "next_action": "After the explicitly requested one-role initial-password and two-message permissions arrive, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3907,7 +3908,7 @@
         "sprint": "S3",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.",
+        "next_action": "Qualify the accepted composite-writer source correction through the supported native image and bounded device-denied proof, retaining exact sequence accounting and before/after custody. Preserve uncovered active-prefix/exclusivity/recovery clauses and #641 physical scope.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -4013,14 +4014,6 @@
         "hours_max": null,
         "next_action": "Retain as conditional post-readout work; reuse specification and do not gate the nine-state pilot.",
         "owner_role": "Research/platform lead"
-      },
-      {
-        "issue_number": 802,
-        "sprint": "S3",
-        "hours_min": 4,
-        "hours_max": 8,
-        "next_action": "Complete owning Agents PR #5033 exact-head enforced checks/delivery, then adopt the exact seven resources without spec or Namespace changes and verify tracking plus one natural successful enforce Job.",
-        "owner_role": "Platform lead with Agents owner"
       },
       {
         "issue_number": 963,

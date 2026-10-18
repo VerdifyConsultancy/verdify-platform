@@ -1,12 +1,12 @@
 {
-  "observed_at": "2026-10-18T03:24:33Z",
-  "query_sha256": "303cfa59ccc1a741bc7d59a4ff714721356d2e500f90afe95165886b778ea3cf",
-  "response_sha256": "6f77371bcbe287e2145c64b6c02b841072bad26f8e29d922ed27256abe447f33",
+  "observed_at": "2026-10-18T04:21:36.565992Z",
+  "query_sha256": "d6b694f7328cb7e2b0af7c34eeb5fc695ced6f3920d11371c52fc7dcee2a7c01",
+  "response_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
   "response": {
     "data": {
       "repository": {
         "issues": {
-          "totalCount": 48,
+          "totalCount": 47,
           "pageInfo": {
             "hasNextPage": false,
             "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMC0xN1QxNTo1MTo1M1rPAAAAAV-tsy8="
@@ -1070,29 +1070,6 @@
               }
             },
             {
-              "number": 802,
-              "title": "[C4][P2] Adopt the enforcing descheduler under manual Argo ownership",
-              "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/802",
-              "state": "OPEN",
-              "blockedBy": {
-                "totalCount": 1,
-                "pageInfo": {
-                  "hasNextPage": false,
-                  "endCursor": "MQ"
-                },
-                "nodes": [
-                  {
-                    "number": 4459,
-                    "state": "CLOSED",
-                    "url": "https://github.com/jvallery/agents/issues/4459",
-                    "repository": {
-                      "nameWithOwner": "jvallery/agents"
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "number": 963,
               "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
               "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
@@ -1131,6 +1108,12 @@
             }
           ]
         },
+        "accepted802": {
+          "number": 802,
+          "state": "CLOSED",
+          "stateReason": "COMPLETED",
+          "closedAt": "2026-10-18T04:17:55Z"
+        },
         "accepted977": {
           "number": 977,
           "state": "CLOSED",
@@ -1146,12 +1129,15 @@
       },
       "owner": {
         "pullRequest": {
-          "number": 5033,
-          "state": "OPEN",
-          "url": "https://github.com/jvallery/agents/pull/5033",
-          "headRefOid": "f3396c5d06711e30967a74951795a1776a63b96e",
-          "mergedAt": null,
-          "mergeStateStatus": "BLOCKED"
+          "number": 5036,
+          "state": "MERGED",
+          "url": "https://github.com/jvallery/agents/pull/5036",
+          "headRefOid": "ecf61da7be10f92520a06ca43a06718d0b6c1659",
+          "mergedAt": "2026-10-18T04:17:54Z",
+          "mergeStateStatus": "UNKNOWN",
+          "mergeCommit": {
+            "oid": "ee1383d2ffb972af666c0392932e518084eea691"
+          }
         }
       }
     }

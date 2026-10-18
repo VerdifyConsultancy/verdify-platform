@@ -153,7 +153,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "9d876fdb31386e73477296ee898a8c3e5f670a1faa2f6a17bca8551cfa38e8e2"
+      "body_sha256": "be63570d6f92ef54f380bf315b88be2d7b95beedb99d88d75aeb945c1cedff93"
     },
     {
       "key": "587",
@@ -164,7 +164,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "b2c98c2bcc84a70b871ebd035dbe990b1b73e99b3fce6f82993619236f6b9a81"
+      "body_sha256": "33bdd9a98ffe902d692c23011850a7a6966fe919f0a4c0daaef6979d4ff29431"
     },
     {
       "key": "study_design",
@@ -1132,11 +1132,11 @@
       "number": 802,
       "title": "[C4][P2] Adopt the enforcing descheduler under manual Argo ownership",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "870138897188dafc29876de6c2652b8924a5d50b5d71b2acfa843a50e5cd2633"
+      "body_sha256": "aa57b8c8828c2ff335ae6c1b30ae66b7ea9b70f6de1a89db8cf30be25f17a366"
     }
   ]
 }

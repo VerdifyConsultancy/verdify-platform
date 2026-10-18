@@ -64,7 +64,7 @@ flowchart TD
     i976["#976 (closed) Qualify safe recovery of Lab publication receipt metadata"]
     i980["#980 (closed) Resolve backup-exporter readiness timeouts without obscuri"]
     i981["#981 (open) Restore truthful energy source freshness and trace stale m"]
-    i802["#802 (open) Adopt the enforcing descheduler under manual Argo ownershi"]
+    i802["#802 (closed) Adopt the enforcing descheduler under manual Argo ownershi"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 (open) Durability program: recoverable backups, measured RPO/RTO "]

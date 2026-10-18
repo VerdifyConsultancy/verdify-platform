@@ -1,6 +1,6 @@
 {
-  "reviewed_at": "2026-10-18T03:24:33Z",
-  "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "reviewed_at": "2026-10-18T04:21:36.565992Z",
+  "source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
   "open_nodes": [
     14,
     16,
@@ -47,7 +47,6 @@
     785,
     786,
     787,
-    802,
     963,
     981
   ],
@@ -560,17 +559,6 @@
       ]
     },
     {
-      "number": 802,
-      "blocked_by": [
-        {
-          "number": 4459,
-          "repository": "jvallery/agents",
-          "state": "closed",
-          "url": "https://github.com/jvallery/agents/issues/4459"
-        }
-      ]
-    },
-    {
       "number": 963,
       "blocked_by": []
     },
@@ -595,19 +583,42 @@
     }
   ],
   "counts": {
-    "local_open_issues": 48,
+    "local_open_issues": 47,
     "active_completion_edges": 27,
-    "closed_predecessor_records": 25
+    "closed_predecessor_records": 24,
+    "accepted_history_closed_predecessor_records": 1
   },
   "evidence_basis": {
     "baseline": "../2026-10-17-replan/native-graph-readback.json",
-    "full_refresh": "One complete GitHub GraphQL readback after ROOT closed #980; issue and each blockedBy connection untruncated. All26 local active edges equal current source; external Home Assistant #878→#981 independently present.",
-    "raw_response_sha256": "6f77371bcbe287e2145c64b6c02b841072bad26f8e29d922ed27256abe447f33",
-    "query_sha256": "303cfa59ccc1a741bc7d59a4ff714721356d2e500f90afe95165886b778ea3cf",
+    "full_refresh": "One complete native GitHub GraphQL readback after #802 closure; all issue and blockedBy connections untruncated. All 26 local active edges equal current source; external Home Assistant #878→#981 remains present. The prior closed Agents #4459→#802 record is retained separately in accepted history.",
+    "raw_response_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
+    "query_sha256": "d6b694f7328cb7e2b0af7c34eeb5fc695ced6f3920d11371c52fc7dcee2a7c01",
     "known_verified_changes": [
       "#977 closed COMPLETED, acceptance comment6244758504.",
       "#980 closed COMPLETED, acceptance comment6245139260.",
-      "Actual external Home Assistant #878 remains the native open predecessor of #981."
+      "Actual external Home Assistant #878 remains the native open predecessor of #981.",
+      "#802 already CLOSED COMPLETED at 2026-10-18T04:17:55Z after accepted adoption/natural-run evidence and owner PR #5036 merge; closure preserved."
     ]
-  }
+  },
+  "accepted_history": [
+    {
+      "number": 802,
+      "state": "closed",
+      "accepted": true,
+      "closed_at": "2026-10-18T04:17:55Z",
+      "prior_relationship_record": {
+        "number": 802,
+        "blocked_by": [
+          {
+            "number": 4459,
+            "repository": "jvallery/agents",
+            "state": "closed",
+            "url": "https://github.com/jvallery/agents/issues/4459"
+          }
+        ]
+      },
+      "relationship_observed_at": "2026-10-18T03:24:33Z",
+      "evidence": "802-descheduler-acceptance.json"
+    }
+  ]
 }
