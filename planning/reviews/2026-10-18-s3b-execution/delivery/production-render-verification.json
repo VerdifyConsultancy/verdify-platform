@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-18T16:38:23.532135+00:00",
+  "status": "PRODUCTION_RENDER_BYTE_IDENTICAL_AFTER_CANDIDATE_PIN",
+  "renders": [
+    {
+      "label": "source",
+      "revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "sha256": "32e84bd8ca706af15b9700e55eb06835d1144a2d5ace60f60f10fd3679fd4741",
+      "bytes": 2449925,
+      "resources": 129,
+      "Secret_resources": 0
+    },
+    {
+      "label": "candidate",
+      "revision": "40d5fc40e5b401f98ab513b2ed095747f027ccd3",
+      "sha256": "32e84bd8ca706af15b9700e55eb06835d1144a2d5ace60f60f10fd3679fd4741",
+      "bytes": 2449925,
+      "resources": 129,
+      "Secret_resources": 0
+    }
+  ]
+}

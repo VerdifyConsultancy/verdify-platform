@@ -1,0 +1,22 @@
+{
+  "workflow_name": "verdify-platform-ci-twshb",
+  "workflow_uid": "edb9db4d-e0b5-4c24-aab0-81239af94d60",
+  "source": "40d5fc40e5b401f98ab513b2ed095747f027ccd3",
+  "phase": "Succeeded",
+  "finishedAt": "2026-10-18T16:36:14Z",
+  "mode": "skip",
+  "actual_type_Pod_exit_code": "0",
+  "outputs": {
+    "mode": "skip",
+    "path-impact-receipt": "{\"base_revision\": \"d298f1ecca8249a3898339045e69dc08e7a85ab1\", \"mode\": \"skip\", \"paths_sha256\": \"fc77875941072744cea81cf4ddfccd6f8f8c345268337540ae4d0e72ab43fe1f\", \"profiles\": [], \"reasons\": {\"skip\": \"digest-only pin diff; no source/runtime input change\"}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"40d5fc40e5b401f98ab513b2ed095747f027ccd3\"}",
+    "api": "false",
+    "mcp": "false",
+    "ingestor": "false",
+    "planner": "false",
+    "migrate": "false",
+    "orchestrator": "false",
+    "setpoint-server": "false",
+    "lab-publisher": "false"
+  },
+  "scope": "Existing candidate-pin-only classifier; no image rebuild or production promotion"
+}

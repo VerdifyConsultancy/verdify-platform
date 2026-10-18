@@ -1,0 +1,64 @@
+{
+  "at": "2026-10-18T16:39:39.790045+00:00",
+  "status": "ALL_THREE_PUBLISHED_MANIFESTS_AND_SOURCE_LABELS_VERIFIED",
+  "identity_metadata_only": {
+    "namespace": "agent-fleet-ci",
+    "secret_name": "zot-origin-cluster-pull",
+    "secret_uid": "33313627-d9e7-483d-9c2d-d861891953db",
+    "scope": "existing CI pull identity; no credential changes or values retained"
+  },
+  "images": [
+    {
+      "stage": "build-mcp",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "manifest_bytes": 2379,
+      "manifest_digest": "sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "registry_content_digest": "sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "media_type": "application/vnd.docker.distribution.manifest.v2+json",
+      "config_digest": "sha256:f2af3aa6c7bc57a194bf6caba825a49e8fc6a8388a6763a04b81a00bb6e207cb",
+      "config_bytes": 8213,
+      "revision_label": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source_label": "https://github.com/VerdifyConsultancy/verdify-platform",
+      "title_label": "verdify-mcp",
+      "layer_count": 13,
+      "source_revision_output": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved_tree_output": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "dockerfile_sha256_output": "sha256:0fab57634ac98002857152bfb937eba86c0178e09658f8c5a03b12a71b1e2f2f"
+    },
+    {
+      "stage": "build-ingestor",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+      "manifest_bytes": 3028,
+      "manifest_digest": "sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+      "registry_content_digest": "sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+      "media_type": "application/vnd.docker.distribution.manifest.v2+json",
+      "config_digest": "sha256:6a383251dd71e57b8533dcb452788eff35317fb6a03a2d44df6511ec6a4714b0",
+      "config_bytes": 8790,
+      "revision_label": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source_label": "https://github.com/VerdifyConsultancy/verdify-platform",
+      "title_label": "verdify-ingestor",
+      "layer_count": 17,
+      "source_revision_output": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved_tree_output": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "dockerfile_sha256_output": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4"
+    },
+    {
+      "stage": "build-lab-publisher",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:2b56c6f37b8b41c317f075eba2166b1d04152c42fd873633da09307ccb4e6686",
+      "manifest_bytes": 3690,
+      "manifest_digest": "sha256:2b56c6f37b8b41c317f075eba2166b1d04152c42fd873633da09307ccb4e6686",
+      "registry_content_digest": "sha256:2b56c6f37b8b41c317f075eba2166b1d04152c42fd873633da09307ccb4e6686",
+      "media_type": "application/vnd.docker.distribution.manifest.v2+json",
+      "config_digest": "sha256:efec9d0816aaeaafe3081a561334f2eef3b9808ad1898c3fb380edea7ef5c8a5",
+      "config_bytes": 11846,
+      "revision_label": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source_label": "https://github.com/VerdifyConsultancy/verdify-platform",
+      "title_label": "verdify-lab-publisher",
+      "layer_count": 21,
+      "source_revision_output": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved_tree_output": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "dockerfile_sha256_output": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670"
+    }
+  ],
+  "scope": "Immutable manifests/config digests and source labels only. No image execution/layer extraction/deployment/product behavior claim; full config environment is processed in memory and never retained. Initial anonymous request returned401 and is not a build failure."
+}

@@ -1,0 +1,118 @@
+{
+  "status": "FULL_PR_GATE_VERIFIED",
+  "source": "49f3cd1794100887485372feea444b90394b1e47",
+  "workflow_name": "verdify-platform-pr-ci-qtg4p",
+  "workflow_uid": "73fef53b-adac-4f53-a257-f24523ad6095",
+  "finishedAt": "2026-10-18T16:07:59Z",
+  "validate_pod_uid": "11c7124a-d10d-4876-9b52-b8f5570e1600",
+  "validate_node_id": "verdify-platform-pr-ci-qtg4p-1324738341",
+  "validate_pod_snapshot": "20261018T160741686573Z-pods.private.json",
+  "image_ids": [
+    {
+      "name": "init",
+      "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+    },
+    {
+      "name": "fetch-validate-context",
+      "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28"
+    },
+    {
+      "name": "main",
+      "imageID": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779"
+    },
+    {
+      "name": "wait",
+      "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+    }
+  ],
+  "all_declared_container_exits_zero_restarts_zero": true,
+  "log_file": "verdify-platform-pr-ci-qtg4p-validate-1324738341-055a8ff6306eab2ac1e7852cbb987521e015f7a2b752629f4d0833139f5b9529.main.log",
+  "log_bytes": 38253,
+  "log_sha256": "055a8ff6306eab2ac1e7852cbb987521e015f7a2b752629f4d0833139f5b9529",
+  "ALL_GATES_GREEN": true,
+  "github_status": [
+    {
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "success",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "created_at": "2026-10-18T16:07:48Z"
+    }
+  ],
+  "impact_outputs": {
+    "exitCode": "0",
+    "parameters": [
+      {
+        "name": "mode",
+        "value": "build",
+        "valueFrom": {
+          "path": "/impact/mode"
+        }
+      },
+      {
+        "globalName": "verdify-path-impact",
+        "name": "path-impact-receipt",
+        "value": "{\"base_revision\": \"261092b079044e363ca7a6929116b4a6344429da\", \"mode\": \"build\", \"paths_sha256\": \"2068e64f3585843be8ac380b4a49bfcd5f0e2f3cb832a1517474806e6a35c745\", \"profiles\": [\"mcp\", \"ingestor\", \"lab-publisher\"], \"reasons\": {\"ingestor\": [\"scripts/ci-local.sh\", \"scripts/component_prefix_replay.py\", \"scripts/fog_vent_consumer.py\", \"scripts/prepare_component_prefix_replay.py\", \"scripts/qualify_fog_vent_consumer.py\"], \"lab-publisher\": [\"mcp/server.py\", \"scripts/ci-local.sh\", \"scripts/component_prefix_replay.py\", \"scripts/fog_vent_consumer.py\", \"scripts/prepare_component_prefix_replay.py\", \"scripts/qualify_fog_vent_consumer.py\"], \"mcp\": [\"mcp/server.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"49f3cd1794100887485372feea444b90394b1e47\"}",
+        "valueFrom": {
+          "path": "/impact/receipt.json"
+        }
+      },
+      {
+        "name": "api",
+        "value": "false",
+        "valueFrom": {
+          "path": "/impact/api"
+        }
+      },
+      {
+        "name": "mcp",
+        "value": "true",
+        "valueFrom": {
+          "path": "/impact/mcp"
+        }
+      },
+      {
+        "name": "ingestor",
+        "value": "true",
+        "valueFrom": {
+          "path": "/impact/ingestor"
+        }
+      },
+      {
+        "name": "planner",
+        "value": "false",
+        "valueFrom": {
+          "path": "/impact/planner"
+        }
+      },
+      {
+        "name": "migrate",
+        "value": "false",
+        "valueFrom": {
+          "path": "/impact/migrate"
+        }
+      },
+      {
+        "name": "orchestrator",
+        "value": "false",
+        "valueFrom": {
+          "path": "/impact/orchestrator"
+        }
+      },
+      {
+        "name": "setpoint-server",
+        "value": "false",
+        "valueFrom": {
+          "path": "/impact/setpoint-server"
+        }
+      },
+      {
+        "name": "lab-publisher",
+        "value": "true",
+        "valueFrom": {
+          "path": "/impact/lab-publisher"
+        }
+      }
+    ]
+  },
+  "limitation": "Normal precheck/pending reporter Pods had already GCd before first snapshot. Their type:Pod terminal success remains in Workflow; validate terminal Pod bytes/log retained directly. Reader selected node by actual Pod annotation after a templateName-based selector returned no node; no workload retry."
+}

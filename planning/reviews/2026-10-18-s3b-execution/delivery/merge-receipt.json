@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-18T16:09:00.141501+00:00",
+  "PR": 986,
+  "merge_method": "squash without admin bypass",
+  "qualified_PR_head": "49f3cd1794100887485372feea444b90394b1e47",
+  "merge_revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "tree_equal": true,
+  "tree": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+  "main_at_readback": "d298f1ecca8249a3898339045e69dc08e7a85ab1"
+}

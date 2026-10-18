@@ -1,0 +1,89 @@
+{
+  "at": "2026-10-18T16:44:14.561542+00:00",
+  "status": "SOURCE_MERGED_CANDIDATES_VERIFIED_PRODUCTION_UNCHANGED",
+  "source_merge": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "candidate_pin": "40d5fc40e5b401f98ab513b2ed095747f027ccd3",
+  "PR": 986,
+  "qualified_PR_head": "49f3cd1794100887485372feea444b90394b1e47",
+  "qualified_native_source": "e844a40976068e93b52420e2d536eb230078ec5c",
+  "main_workflow": {
+    "name": "verdify-platform-ci-whvn7",
+    "uid": "a4330c3b-5c97-46c2-a886-b07d0da0b13c",
+    "phase": "Succeeded",
+    "finishedAt": "2026-10-18T16:35:30Z",
+    "actual_Pod_nodes": [
+      {
+        "id": "verdify-platform-ci-whvn7-1038025893",
+        "stage": "build-mcp",
+        "phase": "Succeeded",
+        "exitCode": "0",
+        "startedAt": "2026-10-18T16:26:15Z",
+        "finishedAt": "2026-10-18T16:28:26Z"
+      },
+      {
+        "id": "verdify-platform-ci-whvn7-1819447658",
+        "stage": "classify-push(0)",
+        "phase": "Succeeded",
+        "exitCode": "0",
+        "startedAt": "2026-10-18T16:13:57Z",
+        "finishedAt": "2026-10-18T16:26:09Z"
+      },
+      {
+        "id": "verdify-platform-ci-whvn7-3490877940",
+        "stage": "pin-digests",
+        "phase": "Succeeded",
+        "exitCode": "0",
+        "startedAt": "2026-10-18T16:34:55Z",
+        "finishedAt": "2026-10-18T16:35:20Z"
+      },
+      {
+        "id": "verdify-platform-ci-whvn7-449748557",
+        "stage": "build-ingestor",
+        "phase": "Succeeded",
+        "exitCode": "0",
+        "startedAt": "2026-10-18T16:28:37Z",
+        "finishedAt": "2026-10-18T16:31:16Z"
+      },
+      {
+        "id": "verdify-platform-ci-whvn7-900166493",
+        "stage": "build-lab-publisher",
+        "phase": "Succeeded",
+        "exitCode": "0",
+        "startedAt": "2026-10-18T16:31:20Z",
+        "finishedAt": "2026-10-18T16:34:44Z"
+      }
+    ]
+  },
+  "verification": {
+    "native_compiles": 3,
+    "native_positive_scenarios": 56,
+    "completed_causal_negatives": 8,
+    "composed_pure_checks": 178,
+    "planning_checks": 43,
+    "PR_full_gate": "direct terminal validate Pod and full main log",
+    "main_full_gate": "Succeeded typed Pod; ALL GATES GREEN recovered from bounded exact-Pod Loki query",
+    "registry_manifests_and_config_digests_and_source_labels": 3,
+    "candidate_pin_commit_only_two_digest_values": true,
+    "production_render_byte_identical": true,
+    "core_live_UID_images_container_states_unchanged": true,
+    "open_issue_contracts": 47,
+    "open_acceptance_clauses": 143,
+    "active_edges": 27,
+    "issue_closures": 0
+  },
+  "limitations": [
+    "Main validation and ingestor publisher terminal Pod/container metadata were garbage-collected before capture. Strict full-main-custody receipt remains incomplete; successful Workflow/typed Pod outputs and independent immutable registry readback are separate evidence.",
+    "Original reader environment mismatches and corrections are retained; they are not workload failures.",
+    "P3 sole preselected getter timed out at 2 seconds. No episode/daytime-held result or causal performance diagnosis.",
+    "MCP quality aggregation source correction is merged and built, not production promoted or runtime verified.",
+    "P1/P2 provide synthetic/source consumer evidence only: historical prefix remains 27/48 UNPROVEN.",
+    "P4 passive snapshot and local binary custody do not prove live flashed hash, candidate bake, timing/load or tested rollback."
+  ],
+  "next_work": [
+    "Admit authentic causal pre-tick state before historical prefix expansion.",
+    "Choose one bounded getter-performance diagnosis before any further query.",
+    "Select an attended MCP release with its restart and actual runtime/planner acceptance.",
+    "Retain firmware timing/load/recovery and HA report-clock prerequisites as separate acceptance work."
+  ],
+  "authority": "No pending user approval question for completed sprint scope. No promotion, sync, OTA, new credentials or Slack send performed. Shared CI consumer window returned after terminal pipelines."
+}

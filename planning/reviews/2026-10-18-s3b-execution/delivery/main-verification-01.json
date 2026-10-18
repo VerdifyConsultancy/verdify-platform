@@ -1,0 +1,2891 @@
+{
+  "all_gates_green": false,
+  "attempts": [
+    {
+      "displayName": "classify-push(0)",
+      "finishedAt": "2026-10-18T16:26:09Z",
+      "node_id": "verdify-platform-ci-whvn7-1819447658",
+      "phase": "Succeeded",
+      "phase_history": [
+        {
+          "capture": "20261018T161433003144Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T161604343814Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T161743855754Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T161852395539Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162018326218Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162157812280Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162320097559Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162439755972Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162607127133Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T162655269336Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T162836112393Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163043111128Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163130250134Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163140460778Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163150657039Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163200849241Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163211051673Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163221404108Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163231608222Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163241864336Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163252130836Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163302405835Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163312607504Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163322840339Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163333021646Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163343210728Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163353430867Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163403666191Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163413866207Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163424071832Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163434914850Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163445175878Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163455440776Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163505689287Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163515920690Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163526157612Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163536367568Z",
+          "phase": "Succeeded"
+        }
+      ],
+      "pods": [
+        {
+          "containers": [
+            {
+              "group": "initContainers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "init",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://f20e06b4fbc3986d7dd8c21c50587b17763d7d327d693ed78b98c6a4eedd6411",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:13:59Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:13:58Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "name": "fetch-validate-context",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://f45613495352910392cb97c85d99ebd5aeb7ed4849f5c30bfc70ae5f5af2cbc2",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:14:55Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:14:00Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "wait",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            },
+            {
+              "group": "containers",
+              "image": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+              "imageID": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+              "name": "main",
+              "resources": {
+                "limits": {
+                  "cpu": "2",
+                  "ephemeral-storage": "10Gi",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "500m",
+                  "ephemeral-storage": "10Gi",
+                  "memory": "768Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            }
+          ],
+          "name": "verdify-platform-ci-whvn7-validate-1819447658",
+          "node": "vm-k3s-node6",
+          "phase": "Running",
+          "phase_history": [
+            {
+              "capture": "20261018T161433003144Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T161604343814Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T161743855754Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T161852395539Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T162018326218Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T162157812280Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T162320097559Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T162439755972Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T162607127133Z",
+              "phase": "Running"
+            }
+          ],
+          "terminal_capture": null,
+          "terminal_main_logs": [],
+          "uid": "22edd189-952c-4c09-a6e2-a266c84f6ce4"
+        }
+      ],
+      "stage": "classify-push",
+      "startedAt": "2026-10-18T16:13:57Z"
+    },
+    {
+      "displayName": "build-mcp",
+      "finishedAt": "2026-10-18T16:28:26Z",
+      "node_id": "verdify-platform-ci-whvn7-1038025893",
+      "phase": "Succeeded",
+      "phase_history": [
+        {
+          "capture": "20261018T162655269336Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T162836112393Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T163043111128Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163130250134Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163140460778Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163150657039Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163200849241Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163211051673Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163221404108Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163231608222Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163241864336Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163252130836Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163302405835Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163312607504Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163322840339Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163333021646Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163343210728Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163353430867Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163403666191Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163413866207Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163424071832Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163434914850Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163445175878Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163455440776Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163505689287Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163515920690Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163526157612Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163536367568Z",
+          "phase": "Succeeded"
+        }
+      ],
+      "pods": [
+        {
+          "containers": [
+            {
+              "group": "initContainers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "init",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://344308db4484718f82cb6033e55e9c2fc12515ea73bffaf2d8b3ec579b0bfdf5",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:17Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:16Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "registry-capacity-preflight",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://72402c509f08bb92b7a53a540b0c08cb30e8d7da98e28fa56fae5443819c1630",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:25Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:18Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "name": "fetch-context",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://5e601a4d8eadae3035989d2a01a6e0fe96c5bacb7ba21caaeb1630aa71b8cfba",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:47Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:25Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "capture-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://7b54bd502d2d5bf87c0605978f6561d85e1d8fcef85342fe7cf2d09a61a1b795",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:51Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:48Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "imageID": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "name": "test",
+              "resources": {
+                "limits": {
+                  "cpu": "1500m",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "500m",
+                  "memory": "1Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://3e289af85a335e44edc65e28182e86143242d5190651e1103b379ffdf8e2695e",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:52Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:52Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "verify-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://52af4f86abfb5e95bd0d2c522f61b53f54fe08cc9ae1ba1fff7cb18dedbb9ebb",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:26:56Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:53Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "imageID": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "name": "kaniko-build",
+              "resources": {
+                "limits": {
+                  "cpu": "3",
+                  "ephemeral-storage": "40Gi",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "1",
+                  "ephemeral-storage": "32Gi",
+                  "memory": "2Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://dfc8178d5dcc67eee5e3a224c1056ed1528dd2d82244d3acfceda1deaca8ac8e",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:16Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:26:57Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "registry-capacity-publish-gate",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://30621179e408c09776b2fd89c3f1248e5e0cbb854e020f5a5fa23f6110d64f4a",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:23Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:18Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "wait",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://ba460d208367b5917837f89ddb97292c98cb0b7bee32d53065304a562bb5ac2e",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:26Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:24Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+              "imageID": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+              "name": "main",
+              "resources": {
+                "limits": {
+                  "cpu": "1",
+                  "memory": "1Gi"
+                },
+                "requests": {
+                  "cpu": "50m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://be799d6409513a61af69e11c526c4262119e33fc117c0f66058e20ab55de2170",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:25Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:24Z"
+              }
+            }
+          ],
+          "name": "verdify-platform-ci-whvn7-build-1038025893",
+          "node": "vm-k3s-node7",
+          "phase": "Succeeded",
+          "phase_history": [
+            {
+              "capture": "20261018T162655269336Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T162836112393Z",
+              "phase": "Succeeded"
+            }
+          ],
+          "terminal_capture": "20261018T162836112393Z",
+          "terminal_main_logs": [
+            {
+              "bytes": 4204,
+              "capture": "20261018T162836112393Z",
+              "path": "verdify-platform-ci-whvn7-build-1038025893-7a9beba4e647bdd46906ca92c2c3b7643d0d43dea1fe5672a15b6b312ab55c54.main.log",
+              "sha256": "7a9beba4e647bdd46906ca92c2c3b7643d0d43dea1fe5672a15b6b312ab55c54"
+            }
+          ],
+          "uid": "89e6feb8-7621-4ea7-9a89-b5b4f661f62e"
+        }
+      ],
+      "stage": "build-mcp",
+      "startedAt": "2026-10-18T16:26:15Z"
+    },
+    {
+      "displayName": "build-ingestor",
+      "finishedAt": "2026-10-18T16:31:16Z",
+      "node_id": "verdify-platform-ci-whvn7-449748557",
+      "phase": "Succeeded",
+      "phase_history": [
+        {
+          "capture": "20261018T163043111128Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163130250134Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163140460778Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163150657039Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163200849241Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163211051673Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163221404108Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163231608222Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163241864336Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163252130836Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163302405835Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163312607504Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163322840339Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163333021646Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163343210728Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163353430867Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163403666191Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163413866207Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163424071832Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163434914850Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163445175878Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163455440776Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163505689287Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163515920690Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163526157612Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163536367568Z",
+          "phase": "Succeeded"
+        }
+      ],
+      "pods": [
+        {
+          "containers": [
+            {
+              "group": "initContainers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "init",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://229dcbb020c88c1d69eae540da3e26803cc52d28196c9b9d733bd32bc76fac08",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:38Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:38Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "registry-capacity-preflight",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://cbc994d35de02968ebca5e5daa22fe2249a3245007dc92a8cb9f9f8b3d4f6a03",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:28:46Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:40Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "name": "fetch-context",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://456f8403a93d3f8cab743a68908d8d44c07623cb4227ed891734b662d3b323b4",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:29:04Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:28:47Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "capture-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://bcf30e2b02f5b2a141398f54f4c4069570d16fdc144677ab2714dab3a4cf1e2a",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:29:09Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:29:06Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "imageID": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "name": "test",
+              "resources": {
+                "limits": {
+                  "cpu": "1500m",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "500m",
+                  "memory": "1Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://dcc2146abafd9fb2a9c13c65ce1e98a6afda349a61722235de8273d8772614d5",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:29:10Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:29:10Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "verify-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://15a281f0cf70ba71ca8a897ecdf6eeb65db9ed53fbbf2dcf01e98d67b79882e9",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:29:14Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:29:11Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "imageID": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "name": "kaniko-build",
+              "resources": {
+                "limits": {
+                  "cpu": "3",
+                  "ephemeral-storage": "40Gi",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "1",
+                  "ephemeral-storage": "32Gi",
+                  "memory": "2Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "",
+              "name": "registry-capacity-publish-gate",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            },
+            {
+              "group": "containers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "",
+              "name": "wait",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            },
+            {
+              "group": "containers",
+              "image": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+              "imageID": "",
+              "name": "main",
+              "resources": {
+                "limits": {
+                  "cpu": "1",
+                  "memory": "1Gi"
+                },
+                "requests": {
+                  "cpu": "50m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {}
+            }
+          ],
+          "name": "verdify-platform-ci-whvn7-build-449748557",
+          "node": "vm-k3s-node7",
+          "phase": "Pending",
+          "phase_history": [
+            {
+              "capture": "20261018T163043111128Z",
+              "phase": "Pending"
+            }
+          ],
+          "terminal_capture": null,
+          "terminal_main_logs": [],
+          "uid": "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa"
+        }
+      ],
+      "stage": "build-ingestor",
+      "startedAt": "2026-10-18T16:28:37Z"
+    },
+    {
+      "displayName": "build-lab-publisher",
+      "finishedAt": "2026-10-18T16:34:44Z",
+      "node_id": "verdify-platform-ci-whvn7-900166493",
+      "phase": "Succeeded",
+      "phase_history": [
+        {
+          "capture": "20261018T163130250134Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163140460778Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163150657039Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163200849241Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163211051673Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163221404108Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163231608222Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163241864336Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163252130836Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163302405835Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163312607504Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163322840339Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163333021646Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163343210728Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163353430867Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163403666191Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163413866207Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163424071832Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163434914850Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163445175878Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T163455440776Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163505689287Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163515920690Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163526157612Z",
+          "phase": "Succeeded"
+        },
+        {
+          "capture": "20261018T163536367568Z",
+          "phase": "Succeeded"
+        }
+      ],
+      "pods": [
+        {
+          "containers": [
+            {
+              "group": "initContainers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "init",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://84b8639ed1e5e26e0bbe47fc330c1a3d52d257579cad3bb32a32e80ee2c604cd",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:21Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:21Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "registry-capacity-preflight",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://e4a30007df08fca0b6b5074c2f745ebc6d60a4e7acebe34b4c1be0e3edc11556",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:29Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:23Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "name": "fetch-context",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://bda5a6d227a3e0cee6c3ef05dd0af151fb982836e5d467715ffa5027cebb1272",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:47Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:30Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "capture-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://8d94124053d298e32cf283c102ee25be4004743dbf3ee6b68f6f55fdcc8272ba",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:52Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:48Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "imageID": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+              "name": "test",
+              "resources": {
+                "limits": {
+                  "cpu": "1500m",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "500m",
+                  "memory": "1Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://aadf122bf3e6b0fb07317d08ab71669d6e46439841e4013882a884a0cb920f24",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:53Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:53Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "verify-build-inputs",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://fb4226b1e423d44dbd2110d4c532c463e49d0868c7223f1b1b7de52b15a9b2ec",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:31:58Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:54Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "imageID": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+              "name": "kaniko-build",
+              "resources": {
+                "limits": {
+                  "cpu": "3",
+                  "ephemeral-storage": "40Gi",
+                  "memory": "4Gi"
+                },
+                "requests": {
+                  "cpu": "1",
+                  "ephemeral-storage": "32Gi",
+                  "memory": "2Gi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://697b44650ef09617578bd23ff80467c9fb9b8272819beb97baa1ec68eb9d36dd",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:31Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:31:59Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "registry-capacity-publish-gate",
+              "resources": {
+                "limits": {
+                  "cpu": "100m",
+                  "memory": "64Mi"
+                },
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://0ba2b87c637b1d513b5bbe391d7ab639112b039011a0bf9c822542391d289615",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:37Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:34:32Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "wait",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://0a83fe12443637bf5f0fb52e350199c97f0af6087928fe1b1d1ba4c35351dca9",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:44Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:34:38Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+              "imageID": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+              "name": "main",
+              "resources": {
+                "limits": {
+                  "cpu": "1",
+                  "memory": "1Gi"
+                },
+                "requests": {
+                  "cpu": "50m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://fb54f08baa12241cf3ee43b80316e81cbd7274a1a8496321c5bed3799dcbd904",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:43Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:34:38Z"
+              }
+            }
+          ],
+          "name": "verdify-platform-ci-whvn7-build-900166493",
+          "node": "vm-k3s-node7",
+          "phase": "Succeeded",
+          "phase_history": [
+            {
+              "capture": "20261018T163130250134Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163140460778Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163150657039Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163200849241Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163211051673Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163221404108Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163231608222Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163241864336Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163252130836Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163302405835Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163312607504Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163322840339Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163333021646Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163343210728Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163353430867Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163403666191Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163413866207Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163424071832Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163434914850Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163445175878Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T163455440776Z",
+              "phase": "Succeeded"
+            }
+          ],
+          "terminal_capture": "20261018T163455440776Z",
+          "terminal_main_logs": [
+            {
+              "bytes": 5102,
+              "capture": "20261018T163445175878Z",
+              "path": "verdify-platform-ci-whvn7-build-900166493-394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528.main.log",
+              "sha256": "394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528"
+            },
+            {
+              "bytes": 5102,
+              "capture": "20261018T163455440776Z",
+              "path": "verdify-platform-ci-whvn7-build-900166493-394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528.main.log",
+              "sha256": "394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528"
+            }
+          ],
+          "uid": "7c36675e-5ed3-40b9-b4f0-afce07a66761"
+        }
+      ],
+      "stage": "build-lab-publisher",
+      "startedAt": "2026-10-18T16:31:20Z"
+    },
+    {
+      "displayName": "pin-digests",
+      "finishedAt": "2026-10-18T16:35:20Z",
+      "node_id": "verdify-platform-ci-whvn7-3490877940",
+      "phase": "Succeeded",
+      "phase_history": [
+        {
+          "capture": "20261018T163455440776Z",
+          "phase": "Pending"
+        },
+        {
+          "capture": "20261018T163505689287Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T163515920690Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T163526157612Z",
+          "phase": "Running"
+        },
+        {
+          "capture": "20261018T163536367568Z",
+          "phase": "Succeeded"
+        }
+      ],
+      "pods": [
+        {
+          "containers": [
+            {
+              "group": "initContainers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "init",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://cabe21d4ebde571f2e43166de89465e343744175375e97616d9e2fc246c1c153",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:56Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:34:56Z"
+              }
+            },
+            {
+              "group": "initContainers",
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "mint-publisher-token",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://8d6fd15a83ceb2bc6233bdc4f574d18582dd6bc08ec3f0d13ef43128aa09cc29",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:34:59Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:34:57Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "quay.io/argoproj/argoexec:v4.0.5",
+              "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+              "name": "wait",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "100m",
+                  "memory": "128Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://86f8ac61c7fdf75cb1f1dfd6758b1568cca6387c9305a4cd8fd63c6d0d04748f",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:35:20Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:35:00Z"
+              }
+            },
+            {
+              "group": "containers",
+              "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+              "name": "main",
+              "resources": {
+                "limits": {
+                  "cpu": "300m",
+                  "memory": "256Mi"
+                },
+                "requests": {
+                  "cpu": "50m",
+                  "memory": "64Mi"
+                }
+              },
+              "restart_counts": [
+                0
+              ],
+              "terminal": {
+                "containerID": "containerd://01d3568283efbf82373216ecf0ba6d98962db3b1891bcb2e2e858d9833e46ccb",
+                "exitCode": 0,
+                "finishedAt": "2026-10-18T16:35:20Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-18T16:35:00Z"
+              }
+            }
+          ],
+          "name": "verdify-platform-ci-whvn7-pin-digests-3490877940",
+          "node": "vm-k3s-node7",
+          "phase": "Succeeded",
+          "phase_history": [
+            {
+              "capture": "20261018T163455440776Z",
+              "phase": "Pending"
+            },
+            {
+              "capture": "20261018T163505689287Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T163515920690Z",
+              "phase": "Running"
+            },
+            {
+              "capture": "20261018T163526157612Z",
+              "phase": "Succeeded"
+            },
+            {
+              "capture": "20261018T163536367568Z",
+              "phase": "Succeeded"
+            }
+          ],
+          "terminal_capture": "20261018T163536367568Z",
+          "terminal_main_logs": [
+            {
+              "bytes": 2684,
+              "capture": "20261018T163526157612Z",
+              "path": "verdify-platform-ci-whvn7-pin-digests-3490877940-c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361.main.log",
+              "sha256": "c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361"
+            },
+            {
+              "bytes": 2684,
+              "capture": "20261018T163536367568Z",
+              "path": "verdify-platform-ci-whvn7-pin-digests-3490877940-c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361.main.log",
+              "sha256": "c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361"
+            }
+          ],
+          "uid": "2a83260c-954d-465a-94a8-11cb7f8a5226"
+        }
+      ],
+      "stage": "pin-digests",
+      "startedAt": "2026-10-18T16:34:55Z"
+    }
+  ],
+  "build_outputs": {
+    "build-ingestor": {
+      "digest": "sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+      "dockerfile-sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+      "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+      "output-contract-version": "agent-fleet.repo-build.outputs/2",
+      "resolved-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved-tree": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "short-sha": "d298f1ecca82",
+      "source-closure": "{\"image\":\"verdifyconsultancy/verdify-ingestor\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}",
+      "source-released-at": "2026-10-18T16:08:43Z",
+      "source-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source-url": "https://github.com/VerdifyConsultancy/verdify-platform"
+    },
+    "build-lab-publisher": {
+      "digest": "sha256:2b56c6f37b8b41c317f075eba2166b1d04152c42fd873633da09307ccb4e6686",
+      "dockerfile-sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670",
+      "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:2b56c6f37b8b41c317f075eba2166b1d04152c42fd873633da09307ccb4e6686",
+      "output-contract-version": "agent-fleet.repo-build.outputs/2",
+      "resolved-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved-tree": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "short-sha": "d298f1ecca82",
+      "source-closure": "{\"image\":\"verdifyconsultancy/verdify-lab-publisher-k3s\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}",
+      "source-released-at": "2026-10-18T16:08:43Z",
+      "source-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source-url": "https://github.com/VerdifyConsultancy/verdify-platform"
+    },
+    "build-mcp": {
+      "digest": "sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "dockerfile-sha256": "sha256:0fab57634ac98002857152bfb937eba86c0178e09658f8c5a03b12a71b1e2f2f",
+      "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "output-contract-version": "agent-fleet.repo-build.outputs/2",
+      "resolved-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "resolved-tree": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+      "short-sha": "d298f1ecca82",
+      "source-closure": "{\"image\":\"verdifyconsultancy/verdify-mcp\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}",
+      "source-released-at": "2026-10-18T16:08:43Z",
+      "source-revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+      "source-url": "https://github.com/VerdifyConsultancy/verdify-platform"
+    }
+  },
+  "checked_at": "2026-10-18T16:40:02.103450+00:00",
+  "errors": [
+    "22edd189-952c-4c09-a6e2-a266c84f6ce4: no retained successful terminal Pod",
+    "22edd189-952c-4c09-a6e2-a266c84f6ce4/wait: terminal exit not zero",
+    "22edd189-952c-4c09-a6e2-a266c84f6ce4/main: terminal exit not zero",
+    "22edd189-952c-4c09-a6e2-a266c84f6ce4: no hash-bound main log captured after main termination",
+    "terminal validation log lacks ALL GATES GREEN",
+    "89e6feb8-7621-4ea7-9a89-b5b4f661f62e/test: owner environment binding differs: TEST_CMD",
+    "89e6feb8-7621-4ea7-9a89-b5b4f661f62e/kaniko-build: owner environment binding differs: DOCKER_TARGET",
+    "89e6feb8-7621-4ea7-9a89-b5b4f661f62e/kaniko-build: owner environment binding differs: BUILD_ARG_2_NAME",
+    "89e6feb8-7621-4ea7-9a89-b5b4f661f62e/kaniko-build: owner environment binding differs: BUILD_ARG_2_VALUE",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa: no retained successful terminal Pod",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/test: owner environment binding differs: TEST_CMD",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/kaniko-build: terminal exit not zero",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/kaniko-build: owner environment binding differs: DOCKER_TARGET",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/kaniko-build: owner environment binding differs: BUILD_ARG_2_NAME",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/kaniko-build: owner environment binding differs: BUILD_ARG_2_VALUE",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/registry-capacity-publish-gate: terminal exit not zero",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/registry-capacity-publish-gate: missing immutable observed imageID",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/registry-capacity-publish-gate: requested/observed image digest mismatch",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/wait: terminal exit not zero",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/wait: missing immutable observed imageID",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/main: terminal exit not zero",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/main: missing immutable observed imageID",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa/main: requested/observed image digest mismatch",
+    "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa: no hash-bound main log captured after main termination",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/test: owner environment binding differs: TEST_CMD",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/kaniko-build: owner environment binding differs: DOCKER_TARGET",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/kaniko-build: owner environment binding differs: BUILD_ARG_1_NAME",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/kaniko-build: owner environment binding differs: BUILD_ARG_1_VALUE",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/kaniko-build: owner environment binding differs: BUILD_ARG_2_NAME",
+    "7c36675e-5ed3-40b9-b4f0-afce07a66761/kaniko-build: owner environment binding differs: BUILD_ARG_2_VALUE",
+    "2a83260c-954d-465a-94a8-11cb7f8a5226/main: owner environment binding differs: API_REF",
+    "2a83260c-954d-465a-94a8-11cb7f8a5226/main: owner environment binding differs: MIGRATE_REF",
+    "2a83260c-954d-465a-94a8-11cb7f8a5226/main: owner environment binding differs: ORCHESTRATOR_REF"
+  ],
+  "evidence_gaps": [
+    {
+      "latest_captured_phase": "Running",
+      "missing": "terminal Pod and complete init/main/wait statuses",
+      "node_id": "verdify-platform-ci-whvn7-1819447658",
+      "pod_uid": "22edd189-952c-4c09-a6e2-a266c84f6ce4"
+    },
+    {
+      "missing": "complete main log bound to main termination",
+      "node_id": "verdify-platform-ci-whvn7-1819447658",
+      "pod_uid": "22edd189-952c-4c09-a6e2-a266c84f6ce4",
+      "retained_partial_log_count": 8
+    },
+    {
+      "latest_captured_phase": "Pending",
+      "missing": "terminal Pod and complete init/main/wait statuses",
+      "node_id": "verdify-platform-ci-whvn7-449748557",
+      "pod_uid": "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa"
+    },
+    {
+      "missing": "complete main log bound to main termination",
+      "node_id": "verdify-platform-ci-whvn7-449748557",
+      "pod_uid": "9dcf1ee5-937e-4f59-89b6-a1e10b93e0aa",
+      "retained_partial_log_count": 0
+    }
+  ],
+  "expected_candidate_changes": [
+    "mcp",
+    "ingestor"
+  ],
+  "expected_source": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "expected_tree": "28e904335de8e7d2837c0bfa8cb84d68bf2adb43",
+  "inputs": [
+    {
+      "bytes": 59083,
+      "path": "/private/tmp/verdify-s3b-main-template.json",
+      "sha256": "42cd73d9876d207387c7daebebc719e7f64cec6830eb3bc3724513a19934444b"
+    },
+    {
+      "bytes": 253,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-impact-readback.json",
+      "sha256": "deabcae875d9816d1576274f7f5b8c21917689f533f11888ec74b56f17ef7f5a"
+    },
+    {
+      "bytes": 251,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T160934945781Z-capture.json",
+      "sha256": "f2dec01885c61c2c6c0532c13abe99753121825b3253ebf99619c04b9858f362"
+    },
+    {
+      "bytes": 141154,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T160934945781Z-workflow.private.json",
+      "sha256": "cfe513b816f62c7d400ae3d8f896125cefc4e35925809a2f30fd908c8d09ffbb"
+    },
+    {
+      "bytes": 3,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T160934945781Z-pods.private.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 251,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161049604741Z-capture.json",
+      "sha256": "6fa1f2428c1b31d248dd9e2b4f27f52c0396fe1aabc1328d8b024564dd04d993"
+    },
+    {
+      "bytes": 141155,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161049604741Z-workflow.private.json",
+      "sha256": "a93f4ae72d6b795e7c9acb5bdf0b8840bbaf658266ce0bc293854e6bed6a0a56"
+    },
+    {
+      "bytes": 3,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161049604741Z-pods.private.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 251,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161145172466Z-capture.json",
+      "sha256": "5ba6c817b81ab012122e5a4c9a699a70ff4e02b16acbb551035916da6c72471e"
+    },
+    {
+      "bytes": 141155,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161145172466Z-workflow.private.json",
+      "sha256": "238513bb1209ab719eefdd62cda61f7781bb7c8540e648a5dcdb00b8e9ba2694"
+    },
+    {
+      "bytes": 3,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161145172466Z-pods.private.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 251,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161250823364Z-capture.json",
+      "sha256": "d7566fa075db52db42bfd16c3499450899cf685722036a3287510d4dfc8f466c"
+    },
+    {
+      "bytes": 141155,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161250823364Z-workflow.private.json",
+      "sha256": "b72d41f056c93adc752bd115858807039648a41d72d5521079410bd4076cba7c"
+    },
+    {
+      "bytes": 3,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161250823364Z-pods.private.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 251,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161342177293Z-capture.json",
+      "sha256": "8b90326e1118f5522c13f62c2dda4a6662f2ba33b3494a290ccacd04eba78c04"
+    },
+    {
+      "bytes": 141750,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161342177293Z-workflow.private.json",
+      "sha256": "3ab12bdb3707bb5bafd159a5bb9c7715483a5aa6f350e7f59ee5c8d9ad9c7966"
+    },
+    {
+      "bytes": 3,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161342177293Z-pods.private.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "bytes": 2686,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161433003144Z-capture.json",
+      "sha256": "5cc76d51b97945b2af2f35a7d2c8c85d35e58e2c6271e37320b87b46ee39a405"
+    },
+    {
+      "bytes": 142878,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161433003144Z-workflow.private.json",
+      "sha256": "8ad39109f6d3bc3d8a52d371487d028e32e10aab264c9744ee4aa4d0d0df6126"
+    },
+    {
+      "bytes": 54877,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161433003144Z-pods.private.json",
+      "sha256": "6efa30a2d17fde935b56d75433aaab7c94e9f165a7aaa83fcd5467bf07e7cc02"
+    },
+    {
+      "bytes": 3557,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161604343814Z-capture.json",
+      "sha256": "499be5063e88630b1805ed1f83a11a860858e9531ec8b404bb8aa0c928ddb8d5"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161604343814Z-workflow.private.json",
+      "sha256": "e04417642ae4cc951b6fa0941b5effdb6ceb9172ce527240e0e90d7cb67f74ae"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161604343814Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 118,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-670236f4293ba9cbff70703cc18e3485165c93b9330b504229161377550c337b.main.log",
+      "sha256": "670236f4293ba9cbff70703cc18e3485165c93b9330b504229161377550c337b"
+    },
+    {
+      "bytes": 3666,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161743855754Z-capture.json",
+      "sha256": "c0318b56ff41abaaf43faf7e409585f33c5d935d8d108828ce0488ccb33ef6e9"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161743855754Z-workflow.private.json",
+      "sha256": "e7727a9b569b239f87845c93aa49b45408b5d342880fab6e429a2daa394ab9a7"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161743855754Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 2344,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-3cb505162c580ad6ce0d9a370d5e1566fccfa7e0dd49c567905423c30adfd984.main.log",
+      "sha256": "3cb505162c580ad6ce0d9a370d5e1566fccfa7e0dd49c567905423c30adfd984"
+    },
+    {
+      "bytes": 3791,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161852395539Z-capture.json",
+      "sha256": "54c385d2d3764daed0999b38262271f91e0596cb639deee6668ba3c458f2a1a4"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161852395539Z-workflow.private.json",
+      "sha256": "9d3cb9ef4e96dcca68e4d9c670e76f6bd0e01c76928b1dfbc8e8d9529c3be3ad"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T161852395539Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 3224,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-4e8c22102ea3cca58f8df70405321e271947566e128c1c65e4bcf9beb91fe5b4.main.log",
+      "sha256": "4e8c22102ea3cca58f8df70405321e271947566e128c1c65e4bcf9beb91fe5b4"
+    },
+    {
+      "bytes": 3791,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162018326218Z-capture.json",
+      "sha256": "d833854d9ab0169a3a926f54529d78397ae297ca894234ee726593ff4323a4e8"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162018326218Z-workflow.private.json",
+      "sha256": "698f87153cbafd735d8b53f7c79168e8cf85b39910869d72a12481e3e2415398"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162018326218Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 4104,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-1ceae8d65ce93c003688123101cd069ee81aec773bfb85d29c4462bf1d42c62c.main.log",
+      "sha256": "1ceae8d65ce93c003688123101cd069ee81aec773bfb85d29c4462bf1d42c62c"
+    },
+    {
+      "bytes": 3791,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162157812280Z-capture.json",
+      "sha256": "c17ce6c32ce8b193d9be6293de1948aed236c612b2ade9e314b8e9e41ce204ed"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162157812280Z-workflow.private.json",
+      "sha256": "6404badbc222be2b56ed54734953b994c8a0e23f728d7a584d8784db176e9d7e"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162157812280Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 5064,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-2af29f92ec0866151c38f79f9682f1eb4507cf0f85e8589dc437bb4a1d604125.main.log",
+      "sha256": "2af29f92ec0866151c38f79f9682f1eb4507cf0f85e8589dc437bb4a1d604125"
+    },
+    {
+      "bytes": 3791,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162320097559Z-capture.json",
+      "sha256": "1ca238b72976e6bc14ccd0a577507b5ad5cdd7dfacdc7b6580d0a1bad1db8da3"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162320097559Z-workflow.private.json",
+      "sha256": "7a5f22e4a61b9309f4a453434573512196d9f1807d2b824a28e79812503a3da4"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162320097559Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 5704,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-878292162237247661461e898f7e36b4e8211338a51e2ab75e639a1f655eb685.main.log",
+      "sha256": "878292162237247661461e898f7e36b4e8211338a51e2ab75e639a1f655eb685"
+    },
+    {
+      "bytes": 3791,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162439755972Z-capture.json",
+      "sha256": "6583f51e87f67107ead0bca1efe6494b7a652b0dbc74c73709eeec289289b051"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162439755972Z-workflow.private.json",
+      "sha256": "579c88bf04700c5c3defb88c92a68bdb4a8e0bd795435e8a763388b071a4946f"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162439755972Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 6104,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-a9639d99df857bf50e75de3005874be6fc877b46132a11ef3adc32cb4e36b5f5.main.log",
+      "sha256": "a9639d99df857bf50e75de3005874be6fc877b46132a11ef3adc32cb4e36b5f5"
+    },
+    {
+      "bytes": 3550,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162607127133Z-capture.json",
+      "sha256": "ebb8989d7a6622e5f2a235bff5e88dc7ff1b3a307a8bc3b7c430c1b55a9bbc45"
+    },
+    {
+      "bytes": 142841,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162607127133Z-workflow.private.json",
+      "sha256": "ef6474f07a3ec9fc4d7030a94ad4ce71bb943abed27c08bbf2702dada94971ea"
+    },
+    {
+      "bytes": 56333,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162607127133Z-pods.private.json",
+      "sha256": "6d5a1173cfaa4516733123668144e60daa747460f24c112dcd77a709c4e0892b"
+    },
+    {
+      "bytes": 36310,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-validate-1819447658-901f5f325cb4c6f4d71c9a20f8865f8ff0b54f8fa833c36e2224b80fb4a7d945.main.log",
+      "sha256": "901f5f325cb4c6f4d71c9a20f8865f8ff0b54f8fa833c36e2224b80fb4a7d945"
+    },
+    {
+      "bytes": 8261,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162655269336Z-capture.json",
+      "sha256": "5a5873b3eb90dfd7d765f4aba0fe36189aecf8f758728f0f050ac955a1646eb8"
+    },
+    {
+      "bytes": 154988,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162655269336Z-workflow.private.json",
+      "sha256": "54c2b6bfdc35f824940463ae404efe67d516e1ff346147b8571f0dccd52f6c9f"
+    },
+    {
+      "bytes": 363199,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162655269336Z-pods.private.json",
+      "sha256": "9e72b7354b811dba40b6d8bba7dc6a8cca17c92c1a9fd64b13eedec4b0f73af2"
+    },
+    {
+      "bytes": 13532,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162836112393Z-capture.json",
+      "sha256": "f68178912c1d8ca1bc48064d3cb289446d8cd8e1981950ccc75f9c674c37bacb"
+    },
+    {
+      "bytes": 158012,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162836112393Z-workflow.private.json",
+      "sha256": "3cc3e8879000c027cc22c70cad37d85f60c4e614470ba41a987427f9cc066a53"
+    },
+    {
+      "bytes": 367050,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T162836112393Z-pods.private.json",
+      "sha256": "a22dba5c407faa92647d412a02e66533a4928f574c9853f15917d4e740fbed07"
+    },
+    {
+      "bytes": 4204,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-build-1038025893-7a9beba4e647bdd46906ca92c2c3b7643d0d43dea1fe5672a15b6b312ab55c54.main.log",
+      "sha256": "7a9beba4e647bdd46906ca92c2c3b7643d0d43dea1fe5672a15b6b312ab55c54"
+    },
+    {
+      "bytes": 11710,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163043111128Z-capture.json",
+      "sha256": "10862d54ad9f84d9f427bb2942e91514e4275784f61d26a0df1c6416a0b9803b"
+    },
+    {
+      "bytes": 162211,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163043111128Z-workflow.private.json",
+      "sha256": "a4dd0e1b214ab08b08ccaaaa78148780913b00a5ddfb97be96f549f05185957f"
+    },
+    {
+      "bytes": 364534,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163043111128Z-pods.private.json",
+      "sha256": "da5bf0cd20b670b347562612bc1280a953b377036341b4209466aae22ad7c8a9"
+    },
+    {
+      "bytes": 13345,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163130250134Z-capture.json",
+      "sha256": "839726fa4d3bd2a344d906c5895ee8044bdfbdc786067a240a1abc872f00e0b6"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163130250134Z-workflow.private.json",
+      "sha256": "aa35cffb1ae0af46ef6788db42b01073b17e5741b8bf763e7d710840694cf12c"
+    },
+    {
+      "bytes": 359761,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163130250134Z-pods.private.json",
+      "sha256": "092c37e1588d4ee2f4cbc5f49790dff4a1ec879ed34f4f081f239df21470c41a"
+    },
+    {
+      "bytes": 13447,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163140460778Z-capture.json",
+      "sha256": "0ef64fd399442c03540633507eaa60e59801b55fc09fb5ad8f59395e17d6bbb2"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163140460778Z-workflow.private.json",
+      "sha256": "751e8b8a3edd1f6c2051418791a3eb9cf249b16f23d6f22c40b228676deb3a3f"
+    },
+    {
+      "bytes": 360691,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163140460778Z-pods.private.json",
+      "sha256": "2f6977f79c3b4f9e38d8f086bfaabd63505ad958a3fca2a1a9ea615462410211"
+    },
+    {
+      "bytes": 13782,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163150657039Z-capture.json",
+      "sha256": "d390f795cbe300db5f6fd191af63103d0181f30f8aa9bd05961c7c2e8c9a8145"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163150657039Z-workflow.private.json",
+      "sha256": "323c7699f3e21c5005f65e1b9e84d7ed17ecf79e87e794c0e53a968f698d4350"
+    },
+    {
+      "bytes": 361617,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163150657039Z-pods.private.json",
+      "sha256": "89fae6a64407c49a76da676fcafd79c63fdd1cb0787ee452d90d3bc93f88e99d"
+    },
+    {
+      "bytes": 14685,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163200849241Z-capture.json",
+      "sha256": "2d69b3efee8708304cdd277464fe4c16cf5cc1a47ebbdee969f66d513837b1bb"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163200849241Z-workflow.private.json",
+      "sha256": "1e708d2d8e732802ccdeedf36a2988a243345bfc64d79c71a8d11a47c61120e1"
+    },
+    {
+      "bytes": 363684,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163200849241Z-pods.private.json",
+      "sha256": "f8b09922ded7f3afdf6880275eb64ac5a8e86e2c1742179f8844776bcc1b557c"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163211051673Z-capture.json",
+      "sha256": "3d5140c2585ddf9aaa11c5a01a4fdbb13ac6148a36dfe7a6d08729182f2a858e"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163211051673Z-workflow.private.json",
+      "sha256": "08606524d618d4e4f15becdb8a94c6dad949958ff5fb83f45e43f3b9258671c1"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163211051673Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163221404108Z-capture.json",
+      "sha256": "116577a51501c5ff47e029a1efb683302a85f0df8b9ba5393bceaf3fc9e01907"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163221404108Z-workflow.private.json",
+      "sha256": "b81b3b59c6b85b756fbbd2c29fdf3f1b41550684508739bf5982b14dc09ed04b"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163221404108Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163231608222Z-capture.json",
+      "sha256": "fab47c0d56ba675763dbdcb266abffa84a53431270e85231dec0ccb712afd31e"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163231608222Z-workflow.private.json",
+      "sha256": "abeeedff9f7a16c97bad760ea45ecc3c0684c96e11eef15885a344922ca37a23"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163231608222Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163241864336Z-capture.json",
+      "sha256": "e1faae7b4b48510720c46422c15beaac0772f3bf655ce4c6283a3500517d47b2"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163241864336Z-workflow.private.json",
+      "sha256": "d25c61db4fd6bfff7b107d561bd088d22c0ea5c1fa60a4034848ce0fd038a9e2"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163241864336Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163252130836Z-capture.json",
+      "sha256": "5255ec98cf4e40063ef37e38e8ea53f2c8baab718a5890141927626a94ae1cde"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163252130836Z-workflow.private.json",
+      "sha256": "9b35a4c64335476376ac69749a4b8a894f7e5aada25ba320aeb4cc1e3737fb0e"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163252130836Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163302405835Z-capture.json",
+      "sha256": "4258193b873daf23817f240d9f9d9f2b9f27a6651c6949e4bad63d2ec748b86f"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163302405835Z-workflow.private.json",
+      "sha256": "255f575a795868b90c40ca8a53f62bf0ad3a9c00f64675afb20628c1c5f4fc5e"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163302405835Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163312607504Z-capture.json",
+      "sha256": "bd7512c5b1cf518845b8c579d7dcd830ac76d57f96556aa3f684dc925d88e727"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163312607504Z-workflow.private.json",
+      "sha256": "41dae18fd6507edcb0a8c8d6e5f4667c427d9e51de4baee819cb17c6dd8d0766"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163312607504Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163322840339Z-capture.json",
+      "sha256": "a77be80deb8869f77d98d7548a1c5d25c9e61dc798b131afb557a94638d767e4"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163322840339Z-workflow.private.json",
+      "sha256": "4da0e68a87d777e4bcef9dc29deb263ba473219c078a8948295aa66ffe27ae72"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163322840339Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163333021646Z-capture.json",
+      "sha256": "a3d3a22b943523c189d0ee2ca77a7e43e416c165c7abf814083533e45f565557"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163333021646Z-workflow.private.json",
+      "sha256": "db7463c0ef9cd974a7e77d25c6f05d877d6c8e57d76ad6ea410716e7e02c7b90"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163333021646Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163343210728Z-capture.json",
+      "sha256": "35a06eb5d33bde57859f3db1ed8bbe369032b89d6aeb83a5a54e64f8ceea0421"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163343210728Z-workflow.private.json",
+      "sha256": "dae31f49ac2fe328c0a8d9ec795592c22cf7e16cadac05fcee209955aac0011d"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163343210728Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163353430867Z-capture.json",
+      "sha256": "f4ff96410b8932cda7b0d9f42f3818c5dc9f1f4088eb86664f3d3440e7064775"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163353430867Z-workflow.private.json",
+      "sha256": "808241d95d26c425185a9570f29a079b1a5351e648f2bac2965372a75f5bbd12"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163353430867Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163403666191Z-capture.json",
+      "sha256": "3b5f23e6495f3171fc1d296d8a07a4d29daa91a1c350fd497a55bfd3ca9cad72"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163403666191Z-workflow.private.json",
+      "sha256": "aeb533f33ff87d4096bbf01cfd893882bec4486c31b97bfa51b42c5c8a0d2c6c"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163403666191Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163413866207Z-capture.json",
+      "sha256": "7029233a75ac180d36c46f5c762fcc54359c96ffce3831c4e59920de5a3cd173"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163413866207Z-workflow.private.json",
+      "sha256": "34f854f1e13f1b4be5bfa18b19a1c282a7380dce0291fdbb696038556403d18d"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163413866207Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 14817,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163424071832Z-capture.json",
+      "sha256": "0ed2309722c741fa79d02c5f83b48d4d1d4929c1a2e882c7b7ed79bb8ca1ca0e"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163424071832Z-workflow.private.json",
+      "sha256": "34f854f1e13f1b4be5bfa18b19a1c282a7380dce0291fdbb696038556403d18d"
+    },
+    {
+      "bytes": 364500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163424071832Z-pods.private.json",
+      "sha256": "e4630a7ada8b290339a01c51f49e3814ba753a508373009cc6410315414449f8"
+    },
+    {
+      "bytes": 15152,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163434914850Z-capture.json",
+      "sha256": "6bff014caf29a7e630c317b93f7df93664288caf0a6e0f178f69f39e3319c69b"
+    },
+    {
+      "bytes": 174297,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163434914850Z-workflow.private.json",
+      "sha256": "ea0e5be09c095254ee206aad0d3533b968c362cc7ebcfb706f5a5437ad15f801"
+    },
+    {
+      "bytes": 365426,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163434914850Z-pods.private.json",
+      "sha256": "01e322fe7f82afa29c53771b2061a3fc615ce5503ceee8ce459d461ab209b315"
+    },
+    {
+      "bytes": 19548,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163445175878Z-capture.json",
+      "sha256": "1390a89c4a2de5cd0ba0c82e81fe404b877ee81f7b4b66c7b96452f3aebea00e"
+    },
+    {
+      "bytes": 177253,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163445175878Z-workflow.private.json",
+      "sha256": "6924be8c2b27bff225f5365f378ca84810838cb73eb1399b0a1b94242db2404f"
+    },
+    {
+      "bytes": 367190,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163445175878Z-pods.private.json",
+      "sha256": "9ff7136d2f4b91a617c43f2433c57e6fd47c69b0ef01a1de246e1ee0d690ddfb"
+    },
+    {
+      "bytes": 5102,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-build-900166493-394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528.main.log",
+      "sha256": "394ef00339984c21eae011966f1c1f11e3700926374d4c6c7dbb29c4ac3b3528"
+    },
+    {
+      "bytes": 21693,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163455440776Z-capture.json",
+      "sha256": "744f0d1bfb5cbfbcb25d2a46517fc8eec36d8ab4124699757db9effafaf8cbaa"
+    },
+    {
+      "bytes": 180460,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163455440776Z-workflow.private.json",
+      "sha256": "a20561cdf2d7c01a102af7c400f978bdc8d24edf8cee40e8b527f5b3409074cf"
+    },
+    {
+      "bytes": 413103,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163455440776Z-pods.private.json",
+      "sha256": "4484e9a58b3b8bf90566b7cdb86b40e38f45327240ff63482e39b0f7f8f42d97"
+    },
+    {
+      "bytes": 15780,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163505689287Z-capture.json",
+      "sha256": "c5ae804c65c27927074b16a6d04438a028ed7961555a1324641dbb709dc0a764"
+    },
+    {
+      "bytes": 180500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163505689287Z-workflow.private.json",
+      "sha256": "5bd2942a75929d1fe3590c398286f09292a0b809b27a600ecf1f96585e53589f"
+    },
+    {
+      "bytes": 49403,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163505689287Z-pods.private.json",
+      "sha256": "27afa5be9bf2eed431a214ec7d78b30f022722bc88d149fe26f9b989213ded77"
+    },
+    {
+      "bytes": 142,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-pin-digests-3490877940-1146d347cb272620d0083d4c9bdc44123cfe38323bcc7d0d3b527d9a081eb52c.main.log",
+      "sha256": "1146d347cb272620d0083d4c9bdc44123cfe38323bcc7d0d3b527d9a081eb52c"
+    },
+    {
+      "bytes": 15780,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163515920690Z-capture.json",
+      "sha256": "068afa0f656e096d97b8fa2c1e2819f14bbe75e2aab8b1890d6f902fd1e68895"
+    },
+    {
+      "bytes": 180500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163515920690Z-workflow.private.json",
+      "sha256": "5bd2942a75929d1fe3590c398286f09292a0b809b27a600ecf1f96585e53589f"
+    },
+    {
+      "bytes": 49403,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163515920690Z-pods.private.json",
+      "sha256": "27afa5be9bf2eed431a214ec7d78b30f022722bc88d149fe26f9b989213ded77"
+    },
+    {
+      "bytes": 16424,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163526157612Z-capture.json",
+      "sha256": "cc7def2ddfaa0c0ab7fbff5e2d80a6852a182b61aecfb24bc6569a82ea0fe14c"
+    },
+    {
+      "bytes": 180500,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163526157612Z-workflow.private.json",
+      "sha256": "5bd2942a75929d1fe3590c398286f09292a0b809b27a600ecf1f96585e53589f"
+    },
+    {
+      "bytes": 49982,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163526157612Z-pods.private.json",
+      "sha256": "3ff240e7cfffd748a62df37e2a0bfc1463a3932c737bc6ff3d4b4a7027aca93d"
+    },
+    {
+      "bytes": 2684,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/verdify-platform-ci-whvn7-pin-digests-3490877940-c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361.main.log",
+      "sha256": "c36e4383c9cad8084bb74d3975a6c3e086e330de945d2b0ada6a53e35e41e361"
+    },
+    {
+      "bytes": 16493,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163536367568Z-capture.json",
+      "sha256": "21fbef5fc2d347440604b94d57af7d93f426d2d7ea2d40b7a1260f36c6fe674d"
+    },
+    {
+      "bytes": 179244,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163536367568Z-workflow.private.json",
+      "sha256": "7ea030880a9f17d8abd054d9496d064f56d1e4317c9905c890ceebee9c389485"
+    },
+    {
+      "bytes": 49982,
+      "path": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163536367568Z-pods.private.json",
+      "sha256": "3ff240e7cfffd748a62df37e2a0bfc1463a3932c737bc6ff3d4b4a7027aca93d"
+    }
+  ],
+  "last_capture": "/Users/jason/maintenance/verdify-s3b-execution-20261018/main-ci-d298f1ec/20261018T163536367568Z-capture.json",
+  "limits": {
+    "candidate_git_diff_verified": false,
+    "init_and_wait_logs_available": false,
+    "live_state_verified": false,
+    "main_logs_and_all_container_metadata_only": true,
+    "native_execution": false,
+    "production_deployment_claimed": false,
+    "production_lab_handpin_unchanged_verified": false,
+    "registry_readback": false,
+    "release_pins_unchanged_verified": false,
+    "same_tree_pr_cannot_substitute_main_terminal_metadata": true,
+    "verification_errors_do_not_relabel_workflow_or_workload": true
+  },
+  "non_success_node_history": [],
+  "path_impact": {
+    "base_revision": "261092b079044e363ca7a6929116b4a6344429da",
+    "mode": "build",
+    "paths_sha256": "2068e64f3585843be8ac380b4a49bfcd5f0e2f3cb832a1517474806e6a35c745",
+    "profiles": [
+      "mcp",
+      "ingestor",
+      "lab-publisher"
+    ],
+    "reasons": {
+      "ingestor": [
+        "scripts/ci-local.sh",
+        "scripts/component_prefix_replay.py",
+        "scripts/fog_vent_consumer.py",
+        "scripts/prepare_component_prefix_replay.py",
+        "scripts/qualify_fog_vent_consumer.py"
+      ],
+      "lab-publisher": [
+        "mcp/server.py",
+        "scripts/ci-local.sh",
+        "scripts/component_prefix_replay.py",
+        "scripts/fog_vent_consumer.py",
+        "scripts/prepare_component_prefix_replay.py",
+        "scripts/qualify_fog_vent_consumer.py"
+      ],
+      "mcp": [
+        "mcp/server.py"
+      ]
+    },
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1"
+  },
+  "pin_inputs": {
+    "api-ref": "",
+    "ingestor-ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6",
+    "mcp-ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+    "migrate-ref": "",
+    "orchestrator-ref": "",
+    "revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1"
+  },
+  "pin_outcome": "PUSH_REPORTED_GIT_DIFF_NOT_YET_INDEPENDENTLY_VERIFIED",
+  "pod_node_count": 5,
+  "published_not_promoted": [
+    "mcp",
+    "ingestor",
+    "lab-publisher"
+  ],
+  "reader_exception": null,
+  "schema": "verdify.s3b.main-delivery-offline/v1",
+  "snapshot_count": 42,
+  "status": "EVIDENCE_INCOMPLETE_OR_CONTRACT_MISMATCH",
+  "verifier_sha256": "4d0c984a92418a27d073cf0fee0636841b27da53aa3efa8d3b6a83016a09e264",
+  "workflow": {
+    "finishedAt": "2026-10-18T16:35:30Z",
+    "name": "verdify-platform-ci-whvn7",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-18T16:08:48Z",
+    "uid": "a4330c3b-5c97-46c2-a886-b07d0da0b13c"
+  },
+  "workflow_policy_history": [
+    {
+      "capture": "20261018T160934945781Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161049604741Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161145172466Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161250823364Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161342177293Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161433003144Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161604343814Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161743855754Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T161852395539Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162018326218Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162157812280Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162320097559Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162439755972Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162607127133Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162655269336Z",
+      "podGC": null
+    },
+    {
+      "capture": "20261018T162836112393Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163043111128Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163130250134Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163140460778Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163150657039Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163200849241Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163211051673Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163221404108Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163231608222Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163241864336Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163252130836Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163302405835Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163312607504Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163322840339Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163333021646Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163343210728Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163353430867Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163403666191Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163413866207Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163424071832Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163434914850Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163445175878Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163455440776Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163505689287Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163515920690Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163526157612Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    },
+    {
+      "capture": "20261018T163536367568Z",
+      "podGC": {
+        "deleteDelayDuration": "3600s",
+        "strategy": "OnPodCompletion"
+      }
+    }
+  ],
+  "workload_non_success_observed": false
+}

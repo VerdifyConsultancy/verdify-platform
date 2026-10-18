@@ -1,0 +1,24 @@
+{
+  "reason": "Loki entries may contain newline-terminated or multiline records; compare splitlines to the direct log without removing other whitespace. Original Loki response and first comparison remain unchanged.",
+  "previous_direct_nonempty_lines": 468,
+  "ordered_lines_matched": 468,
+  "all_previous_direct_nonempty_lines_matched": true,
+  "gate_markers": [
+    {
+      "timestamp_ns": 1792340767900547825,
+      "original_entry_sha256": "a921785d743665b3cb083509160503fbb63cab60213f74bdc5734eb3156480d7"
+    }
+  ],
+  "labels": [
+    {
+      "container": "main",
+      "namespace": "agent-fleet-ci",
+      "pod": "verdify-platform-ci-whvn7-validate-1819447658"
+    },
+    {
+      "container": "main",
+      "namespace": "agent-fleet-ci",
+      "pod": "verdify-platform-ci-whvn7-validate-1819447658"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-18T16:43:10.270554+00:00",
+  "workflow": "verdify-platform-ci-whvn7",
+  "uid": "a4330c3b-5c97-46c2-a886-b07d0da0b13c",
+  "removed_owned_override": {
+    "deleteDelayDuration": "3600s",
+    "strategy": "OnPodCompletion"
+  },
+  "inherited_stored_template_policy": {
+    "strategy": "OnPodSuccess"
+  },
+  "shared_template_mutated": false,
+  "phase_after": "Succeeded",
+  "note": "Temporary override did not preserve terminal validation/ingestor Pods; restored original inherited spec after completion."
+}

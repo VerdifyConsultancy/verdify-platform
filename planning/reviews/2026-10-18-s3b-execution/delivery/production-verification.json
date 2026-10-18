@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-18T16:37:34.907658+00:00",
+  "status": "CORE_PRODUCTION_STATE_UNCHANGED",
+  "core_pods": [
+    "verdify-api-75c7959d86-9s6dm",
+    "verdify-api-75c7959d86-lgks6",
+    "verdify-db-0",
+    "verdify-ingestor-654648cdf6-94bwz",
+    "verdify-mcp-799f47fbf6-kcf65",
+    "verdify-mcp-799f47fbf6-z6zh8"
+  ],
+  "core_pod_UID_image_container_state_unchanged": true,
+  "database_UID_and_container_state_unchanged": true,
+  "ingestor_deployment_spec_and_single_ready_writer_unchanged": true,
+  "Argo_spec_and_last_applied_revision_unchanged": true,
+  "last_applied_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "comparison_revision": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "routine_watchdog_job_turnover": {
+    "before": [
+      "verdify-db-watchdog-29872316-md8hx"
+    ],
+    "after": [
+      "verdify-db-watchdog-29872356-5fjb5"
+    ]
+  },
+  "reader_note": "The first broad prefix equality also included routine verdify-db-watchdog CronJob Pods; that comparison failed on ordinary cron turnover. Original captures are retained; named core workload comparison above is exact."
+}
