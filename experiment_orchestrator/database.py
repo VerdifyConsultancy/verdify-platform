@@ -60,6 +60,7 @@ ROLE_FUNCTIONS: dict[OrchestratorMode, tuple[str, ...]] = {
         "public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)",
         "public.fn_experiment_v2_freeze_export(uuid,text,text)",
         "public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)",
+        "public.fn_freeze_fixed_panel_native_previous_day()",
     ),
 }
 

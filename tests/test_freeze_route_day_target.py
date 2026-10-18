@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -81,3 +82,30 @@ def test_remaining_today_is_strictly_future_and_preserves_missing_past():
 def test_partial_target_rejects_unaligned_outside_or_naive_start(start):
     with pytest.raises(ValueError):
         target.build(snapshot(), date(2026, 9, 29), datetime(2026, 9, 29, 20, tzinfo=UTC), effective_from=start)
+
+
+def test_future_claimed_source_clock_is_not_authentic_current_input():
+    source = snapshot()
+    source["captured_at"] = "2026-09-28T16:00:00+00:00"
+    with pytest.raises(ValueError, match="future window"):
+        target.build(source, date(2026, 9, 29), datetime(2026, 9, 28, 15, tzinfo=UTC))
+
+
+@pytest.mark.parametrize("mutation", ["hash", "values", "injection", "revision", "calendar", "nan"])
+def test_tampered_target_draft_never_emits_sql(mutation):
+    draft = target.build(snapshot(), date(2026, 9, 29), datetime(2026, 9, 28, 15, tzinfo=UTC))
+    draft = copy.deepcopy(draft)
+    if mutation == "hash":
+        draft["target_bins_sha256"] = "b" * 64
+    elif mutation == "values":
+        draft["target_bins"][0]["temp_high"] += 1
+    elif mutation == "injection":
+        draft["target_version"] = "x'; COMMIT; --"
+    elif mutation == "revision":
+        draft["profile_revision_ids"][0] = True
+    elif mutation == "calendar":
+        draft["local_day"] = "2026-09-30"
+    else:
+        draft["target_bins"][0]["temp_low"] = float("nan")
+    with pytest.raises(ValueError):
+        target.declaration_sql(draft)

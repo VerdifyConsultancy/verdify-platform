@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib.util
+import io
 import json
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -31,6 +34,38 @@ BASE = json.loads((FIXTURES / "base-proof.json").read_text())
 CASES = json.loads((FIXTURES / "cases.json").read_text())
 RECOVERY_OVERLAY = json.loads((FIXTURES / "recovery-gate-r.overlay.json").read_text())
 EXPECTED = guard.ExpectedPins(GIT_PIN, APP_SOURCE, EXPERIMENT_ID)
+
+# Passing guard/chain fixtures use only an isolated synthetic accepted-source
+# tree. The real repository's current #778 manifest remains unresolved.
+WETTING_ROOT = ROOT
+ORIGINAL_BASE = copy.deepcopy(BASE)
+REAL_WETTING_BLOCKERS = guard.wetting.blockers
+
+
+def _fixture_wetting_contract(raw, **kwargs):
+    # Only isolate the unavailable physical adapter in generic chain/climate
+    # unit tests. Production has no such override and unmocked tests below
+    # require the current/null and arbitrary pinned-byte attempts to fail.
+    blockers = REAL_WETTING_BLOCKERS(raw, **kwargs)
+    if kwargs["root"] == WETTING_ROOT and WETTING_ROOT != ROOT:
+        return [b for b in blockers if ":unsupported_measurement_contract:" not in b]
+    return blockers
+
+
+@pytest.fixture(autouse=True)
+def isolated_wetting_evidence(tmp_path, monkeypatch):
+    from test_experiment_v2_wetting_disposition import qualified_fixture_root
+
+    local = qualified_fixture_root(tmp_path / "accepted-source")
+    packet = copy.deepcopy(ORIGINAL_BASE)
+    row = next(
+        r
+        for r in packet["issue_state"]["gate_p_641"]["prerequisites"]
+        if r["name"] == "wetting_incident_778_disposition"
+    )
+    row["disposition"] = guard.wetting.collect(local, application_source=APP_SOURCE, experiment_id=EXPERIMENT_ID)
+    monkeypatch.setattr(sys.modules[__name__], "BASE", packet)
+    monkeypatch.setattr(sys.modules[__name__], "WETTING_ROOT", local)
 
 
 def _pointer(document: object, pointer: str) -> tuple[object, str | int]:
@@ -77,6 +112,11 @@ def _prior(raw: dict | None):
 
 
 def _evaluate(packet: dict, case: dict):
+    with patch.object(guard.wetting, "blockers", _fixture_wetting_contract):
+        return _evaluate_isolated(packet, case)
+
+
+def _evaluate_isolated(packet: dict, case: dict):
     return guard.evaluate_packet(
         packet,
         expected=EXPECTED,
@@ -84,7 +124,7 @@ def _evaluate(packet: dict, case: dict):
         mode=case.get("mode", "proof"),
         boundary=case.get("boundary", "gate-p"),
         prior=_prior(case.get("prior")),
-        repo_root=ROOT,
+        repo_root=WETTING_ROOT,
     )
 
 
@@ -183,7 +223,11 @@ def test_unresolved_or_missing_wetting_incident_disposition_blocks_proof_not_rec
 
 def test_current_packet_producer_does_not_claim_the_incident_is_resolved():
     source = (ROOT / "scripts/experiment_v2_proof_packet.py").read_text()
-    assert '("wetting_incident_778_disposition", False)' in source
+    assert '("wetting_incident_778_disposition", wetting_complete)' in source
+    packet = guard.wetting.collect(ROOT, application_source=APP_SOURCE, experiment_id=EXPERIMENT_ID)
+    assert guard.wetting.blockers(
+        packet, root=ROOT, application_source=APP_SOURCE, experiment_id=EXPERIMENT_ID, now=guard._timestamp(NOW, "now")
+    )
 
 
 @pytest.mark.parametrize(
@@ -371,16 +415,18 @@ def _run(
         NOW,
         "--state",
         str(state),
+        "--repo-root",
+        str(WETTING_ROOT),
     ]
     if next_state is not None:
         command.extend(("--next-state", str(next_state)))
-    return subprocess.run(
-        command,
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    # Exercise the real CLI parser/state writer in-process so the physical
+    # adapter can be isolated without changing production source/CLI behavior.
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with patch.object(guard.wetting, "blockers", _fixture_wetting_contract):
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            returncode = guard.main(command[2:])
+    return subprocess.CompletedProcess(command, returncode, stdout.getvalue(), stderr.getvalue())
 
 
 def _set_generations(packet: dict, *, lease: int, writer: int, connection: int) -> None:
@@ -689,3 +735,75 @@ def test_raw_nonfinite_json_constant_is_malformed_not_a_value(tmp_path: Path) ->
     assert completed.returncode == 2
     result = json.loads(completed.stdout)
     assert any("non-finite JSON constant: NaN" in blocker for blocker in result["blockers"])
+
+
+def test_bare_true_cannot_replace_typed_wetting_evidence():
+    packet = copy.deepcopy(BASE)
+    row = next(
+        r
+        for r in packet["issue_state"]["gate_p_641"]["prerequisites"]
+        if r["name"] == "wetting_incident_778_disposition"
+    )
+    del row["disposition"]
+    assert row["complete"] is True
+    result = _evaluate(packet, {})
+    assert "wetting_incident_778_disposition:typed_evidence_missing" in result["blockers"]
+    assert result["authorized_gate"] is None
+    assert _evaluate(_apply(packet, RECOVERY_OVERLAY["operations"]), RECOVERY_OVERLAY)["authorized_gate"] == "R"
+
+
+def test_duplicate_prerequisite_cannot_mask_an_incident_result():
+    packet = copy.deepcopy(BASE)
+    rows = packet["issue_state"]["gate_p_641"]["prerequisites"]
+    rows.append(copy.deepcopy(rows[-1]))
+    with pytest.raises(guard.PacketError, match="duplicate"):
+        _evaluate(packet, {})
+
+
+def test_unmocked_guard_denies_arbitrary_pinned_measurements():
+    result = _evaluate_isolated(copy.deepcopy(BASE), {})
+    assert result["authorized_gate"] is None and result["status"] == "fail"
+    assert sum(":unsupported_measurement_contract:" in b for b in result["blockers"]) == 4
+
+
+def test_unmocked_cli_current_source_denies_hold_and_writes_no_chain(tmp_path):
+    packet = copy.deepcopy(BASE)
+    row = next(
+        r
+        for r in packet["issue_state"]["gate_p_641"]["prerequisites"]
+        if r["name"] == "wetting_incident_778_disposition"
+    )
+    row["disposition"] = guard.wetting.collect(ROOT, application_source=APP_SOURCE, experiment_id=EXPERIMENT_ID)
+    path = tmp_path / "current-input.json"
+    path.write_text(json.dumps(packet))
+    state = tmp_path / "forbidden-chain.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--input",
+            str(path),
+            "--mode",
+            "proof",
+            "--boundary",
+            "gate-p",
+            "--expected-git-pin",
+            GIT_PIN,
+            "--expected-application-source",
+            APP_SOURCE,
+            "--expected-experiment-id",
+            EXPERIMENT_ID,
+            "--now",
+            NOW,
+            "--repo-root",
+            str(ROOT),
+            "--state",
+            str(state),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["authorized_gate"] is None and not state.exists()

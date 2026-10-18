@@ -35,6 +35,11 @@ from typing import Any
 
 import asyncpg
 
+try:
+    from scripts import experiment_v2_wetting_disposition as wetting
+except ModuleNotFoundError:  # direct /app/scripts entrypoint
+    import experiment_v2_wetting_disposition as wetting
+
 INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v2"
 STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
 PREFLIGHT_CACHE_SCHEMA = "verdify-experiment-v2-proof-preflight-cache-v2"
@@ -1755,6 +1760,14 @@ def assemble(
     preflights: Mapping[str, Any],
 ) -> dict[str, Any]:
     packet = copy.deepcopy(template)
+    disposition = wetting.collect(repo_root, application_source=application_source, experiment_id=experiment_id)
+    wetting_complete = not wetting.blockers(
+        disposition,
+        root=repo_root,
+        application_source=application_source,
+        experiment_id=experiment_id,
+        now=datetime.now(UTC),
+    )
     now = zulu(datetime.now(UTC))
     status = db["status"]
     runtime = db["runtime"]
@@ -1889,7 +1902,11 @@ def assemble(
                 "gate_p_641": {
                     "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
                     "prerequisites": [
-                        {"name": name, "complete": complete}
+                        {
+                            "name": name,
+                            "complete": complete,
+                            **({"disposition": disposition} if name == "wetting_incident_778_disposition" else {}),
+                        }
                         for name, complete in (
                             ("boundary_observation_contract", True),
                             ("climate_quorum", True),
@@ -1905,7 +1922,7 @@ def assemble(
                             # remain unresolved. Closing the analysis issue cannot
                             # release this hold: see research/planner-efficacy/
                             # wetting-incident-2026-09-04-disposition-v4.md.
-                            ("wetting_incident_778_disposition", False),
+                            ("wetting_incident_778_disposition", wetting_complete),
                             ("zero_exposure", int(status["open_exposure_count"]) == 0),
                         )
                     ],
