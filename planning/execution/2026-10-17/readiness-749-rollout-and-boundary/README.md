@@ -1,6 +1,23 @@
+# #749 — deployed snapshot fix and residual readiness blocker
+
+**The snapshot-hold fix is deployed and its live temporary-wait/resumption behavior is verified. #749 remainsOPEN: a finite observation did not achieve the strict30minutequiet boundary.**
+
+Snapshot-hold fix67f/image249c/releasef916 is deployed and live temporary-wait/resumption behavior is verified. Normal source/promotion CI, one full129-resource nonpruning selector-free sync/all9fresh hook resources,5actual source files, singleton/socket/smoke9/9 and five-minute schema watch pass. Four normal snapshot waits prevented the strict30-minute quiet interval; the finite observer stopped23:31, same writer Ready/restart0 and ArgoSyncedHealthy. Final readiness/SQL were NEVER attempted. All212 sealed evidence members/6,563,822bytes are root-hash verified. Actual callback-versus-durable-batch cadence and immutable-copy ordering motivate one bounded producer-coherence correction; failure-time numeric direction and hardware cause remain unknown. Strict collector/48-field/generation/freshness/equality/authority/history remain unchanged. No timer reset, approval replay, extra physical policy run or repeated observation loop. Current backup and scoped exposure remainUNKNOWN until a legitimate final packet.
+
+SAME Retry implements the root-reviewed finite SOURCE/OFFLINE producer-coherence scope: same existing flush task, immutable full cfg batch and FW4 confirmation transaction, fanout/ack only after commit, content/generation coalescing and periodic timer alignment, one bounded demand before eligible live admission; common readback helper stays read-only and takes current values after SQL await. Preserve original deadlines, full48/singleTS/120s/equality/generation/authority/history and strict30-minute collector. Focused meaningful regressions/diff/resource/inverse review precede any source push. No new worker/pool/RBAC/SQL probe/physical run. A next genuine delivery needs the fresh complete canonical manifest and actual shared-owner CI handback; no ledger-only main update.
+
+Original396/419/643/644acceptancesremainclosed. No extraexplicitpolicyrun/approvalrefresh/physicalrecovery/experiment/OTA/credentialchange occurred. Read-onlypacketgrantsno physical/randomauthority; missingsoil/south/hydrovaluesremainvisible. [Current full triage](../../../reviews/2026-10-17/FULL-TRIAGE.md).
+
+## Later owner desired-state change
+
+At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.
+
+<details>
+<summary>Earlier dated rollout, hold and boundary history (not current acceptance)</summary>
+
 # #749 — current rollout and readiness boundary
 
-**The fix rollout and runtime checks pass. #749 remains open because a current retained-state/snapshot hold blocks readiness.**
+**The snapshot-wait fix is deployed and its live temporary-wait behavior is verified. Runtime checks pass; the quiet interval and final current readiness packet remain. #749 is open.**
 
 Source10dd58a7 contains the ordered-history reporting correction, producer-owned corpus-alert lifecycle fix and exact recovery-only soil classification. All33 intended provider payloads match; native full offline qualification and all three selected images succeeded. The normal actuator published the candidate pins. Only the ingestor image was promoted in release11cd6a92; other release pins, Lab, migrate211 and applied276 remain unchanged.
 
@@ -10,9 +27,15 @@ A local follower stopped on an expected pre-lease startup continuity marker. Ind
 
 ## Current hold and restart recovery
 
-At21:24UTC, the new writer rejected an atomic snapshot that differed from its current misting readback, while a completed run from the previous writer remained retained. The source-bound collector reports an unresolved hold. Later source-bound previews prove the snapshot caught up naturally. The producer had classified that temporary wait against completed historical custody as a terminal hold; the strict collector retains it. An exact two-file producer correction is reviewed with27 focused passes and an old-source failure. Only its completed-state snapshot-wait branch changes, preserving the stored history and every authority/confirmation check. Normal source, image and runtime delivery remain before new live acceptance. The original hold remains a dated denied result; elapsed time or equality logs cannot clear it.
+At21:24UTC, the new writer rejected an atomic snapshot that differed from its current misting readback, while a completed run from the previous writer remained retained. The source-bound collector reports an unresolved hold. Later source-bound previews prove the snapshot caught up naturally. The producer had classified that temporary wait against completed historical custody as a terminal hold; the strict collector retains it. An exact two-file producer correction is reviewed with27 focused passes and an old-source failure. Only its completed-state snapshot-wait branch changes, preserving the stored history and every authority/confirmation check. Source67f08ccf is published with all27 intended provider payloads exact. Normal full qualification and both selected images succeeded; the candidate actuator and all32 started-container log hashes are verified. Root reviewed the actual current diff and ingestor-only inverse. Promotionf91602f6 is published for normal validation and one attended full sync; the new image is249c7647. Other release pins, Lab and migrate211 remain unchanged. Runtime and current readiness acceptance remain. The original hold remains a dated denied result; elapsed time or equality logs cannot clear it.
 
 The laptop restart interrupted local observation. One bounded21:41UTC read verified the same production writer, zero restarts, exact source and Synced/Healthy release. Recovered logs cover the gap retrospectively; continuous observation across the restart is not claimed. Existing owner sessions resumed, and the planning checkout was restored from its published branch into persistent storage. No deployment, approval, policy run or SQL was repeated.
+
+## Current corrected deployment —23:15UTC
+
+The completed-state snapshot-wait correction is deployed at releasef91602f6/source67f08ccf/image249c7647. Normal source and promotion qualification passed; all32 source-build and four promotion container logs are retained with verified hashes. One full exact-revision nonpruning sync completed23:09:13UTC with129 resource results and all nine fresh hook resources (seven Jobs and two ConfigMaps), with eight successful container logs. At23:15, Argo is Synced/Healthy, all16 controllers/21 requested replicas are Ready, all PVCs are Bound, the singleton writer has zero restarts, all five running source files match, smoke passes9/9 with one device connection, and the first five minutes contain zero schema-validation errors. The actual same snapshot mismatch now produces a temporary pending wait and ordinary dispatch resumes naturally; the old terminal hold remains historical evidence. State, used approval and original halt archive are preserved. Other release/hand pins, Lab and migrate211/applied276 remain unchanged. Shared CI/controller custody was returned at promotion terminal and log closure, before the product observation. The30-minute source-defined quiet interval and one current bounded read-only original-clause packet remain; no final readiness acceptance is claimed. Historical19:36 denial, missing typed report, unresolved soil warnings and corrected UNKNOWN exposure remain preserved. No extra explicit policy run or approval refresh is authorized. Original acceptance remains binding; see planning/reviews/2026-10-17/ISSUE-TRIAGE.md.
+
+Finish the current source-defined quiet interval on the SAME qualifiedf916/67f writer; the initial earliest boundary is23:40:44UTC, subject to actual new errors or holds. Then execute the accepted read-only original-clause packet ONCE using its fresh authoritative timestamped whole-Pod log, current same-writer preview/lease and typed alert projection. Verify newest two climate cycles, exact source/backup/authentication boundaries and scoped protocol-v2 randomized exposure; unknown or nonzero exposure blocks acceptance. Keep749 open until actual original clauses pass. Shared CI is already returned; no duplicate observer, clock reset, new physical run, approval replay, manual refresh, state/history rewrite or further product source/pin copy.
 
 ## Remaining acceptance
 
@@ -29,3 +52,5 @@ The19:36UTC packet was BLOCKED by16 unclassified alerts. It independently passed
 The current software inverse restores only the previous ingestor release pin; it does not undo device settings or erase alert history. No extra explicit run, refreshed approval, physical recovery, experiment, OTA or credential change follows from this rollout.
 
 [Machine-readable coarse receipt](receipt.json). Detailed operator identities, native streams, physical values, state and approval material remain private. This is a dated boundary, not permanent readiness.
+
+</details>

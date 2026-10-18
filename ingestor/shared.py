@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from datetime import UTC, datetime
 
 log = logging.getLogger("shadow")
 
@@ -258,6 +259,83 @@ _cfg_drift_version = 0
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
 
+# The existing flush_loop is the only publisher. A writer admission can ask
+# that same task for a committed batch; readers and native observation clocks
+# never use this coordination as evidence or as permission to write.
+setpoint_snapshot_requested = asyncio.Event()
+_setpoint_snapshot_completed = asyncio.Event()
+_setpoint_snapshot_publisher: asyncio.Task | None = None
+_setpoint_snapshot_publication: tuple[int, dict[str, float], datetime] | None = None
+SETPOINT_SNAPSHOT_WAIT_SECONDS = 10.0
+
+
+def register_setpoint_snapshot_publisher() -> None:
+    global _setpoint_snapshot_publisher
+    current = asyncio.current_task()
+    if _setpoint_snapshot_publisher is not None and not _setpoint_snapshot_publisher.done():
+        if _setpoint_snapshot_publisher is not current:
+            raise RuntimeError("setpoint snapshot already has a publisher")
+    _setpoint_snapshot_publisher = current
+
+
+def owns_setpoint_snapshot_publication() -> bool:
+    return _setpoint_snapshot_publisher is asyncio.current_task()
+
+
+def setpoint_snapshot_is_current(generation: int) -> bool:
+    publication = _setpoint_snapshot_publication
+    if publication is None or not transport_readbacks_ready(generation) or is_shadow_mode():
+        return False
+    published_generation, values, batch_at = publication
+    age = (datetime.now(UTC) - batch_at).total_seconds()
+    return published_generation == generation and 0 <= age < 120 and values == current_cfg_readbacks(generation)
+
+
+def finish_setpoint_snapshot_publication(
+    generation: int, values: dict[str, float], batch_at: datetime, *, canonical_complete: bool
+) -> None:
+    """Called only after the existing publisher committed the actual batch."""
+    global _setpoint_snapshot_publication
+    if not owns_setpoint_snapshot_publication():
+        raise RuntimeError("setpoint snapshot publication belongs to flush_loop")
+    _setpoint_snapshot_publication = (
+        (generation, dict(values), batch_at)
+        if canonical_complete and generation == transport_generation and not is_shadow_mode()
+        else None
+    )
+    _setpoint_snapshot_completed.set()
+
+
+def fail_setpoint_snapshot_publication() -> None:
+    global _setpoint_snapshot_publication
+    _setpoint_snapshot_publication = None
+    _setpoint_snapshot_completed.set()
+
+
+def coalesce_setpoint_snapshot_request(generation: int) -> bool:
+    if not owns_setpoint_snapshot_publication() or not setpoint_snapshot_is_current(generation):
+        return False
+    setpoint_snapshot_requested.clear()
+    _setpoint_snapshot_completed.set()
+    return True
+
+
+async def request_setpoint_snapshot(generation: int) -> bool:
+    """One bounded wait for the sole publisher; SQL validation stays mandatory."""
+    publisher = _setpoint_snapshot_publisher
+    if is_shadow_mode() or publisher is None or publisher.done() or not transport_readbacks_ready(generation):
+        return False
+    if setpoint_snapshot_is_current(generation):
+        return True
+    _setpoint_snapshot_completed.clear()
+    setpoint_snapshot_requested.set()
+    try:
+        await asyncio.wait_for(_setpoint_snapshot_completed.wait(), timeout=SETPOINT_SNAPSHOT_WAIT_SECONDS)
+    except TimeoutError:
+        return False
+    return setpoint_snapshot_is_current(generation)
+
+
 # Compatibility reconnect event. This event is set only when the exact current
 # generation finishes its initial replay; generic cfg drift must never set it.
 force_setpoint_push = asyncio.Event()
@@ -278,6 +356,8 @@ def note_transport_connected(expected_cfg_readbacks: frozenset[str] = frozenset(
     transport_readbacks_generation = 0
     cfg_readback.clear()
     cfg_readback_generation.clear()
+    setpoint_snapshot_requested.clear()
+    fail_setpoint_snapshot_publication()
     force_setpoint_push.clear()
     setpoint_dispatch_requested.clear()
     return transport_generation

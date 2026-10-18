@@ -19,9 +19,11 @@
 #
 # HOST SET: a catch-all HostRegexp for product subdomains, EXCEPT the hosts that
 # have their own non-verdify-prod backends or are deliberately off-edge
-# (www/auth/analytics/logs/botauth/mqtt/traefik) plus crm.verdify.ai, which is
+# (www/www-dev/auth/analytics/logs/botauth/mqtt/traefik/proposals-hello) plus crm.verdify.ai, which is
 # reserved for the separate Verdify CRM/Twenty rollout. Apex and www are owned
-# by the standalone VerdifyConsultancy/verdify-www repo.
+# by the standalone VerdifyConsultancy/verdify-www repo; www-dev is owned there too.
+# Every single-label host routed outside verdify-prod must be excluded here.
+# Route priority is not an ownership mechanism.
 #
 # CUTOVER ORDER (so there is never a double-claim of verdify.ai on the apps Traefik):
 #   This route and the network-infra `verdify-sites` route both match verdify.ai on
@@ -48,6 +50,8 @@ spec:
       match: >-
         HostRegexp(`^[a-z0-9-]+\.verdify\.ai$`)
         && !Host(`www.verdify.ai`)
+        && !Host(`www-dev.verdify.ai`)
+        && !Host(`proposals-hello.verdify.ai`)
         && !Host(`auth.verdify.ai`)
         && !Host(`analytics.verdify.ai`)
         && !Host(`logs.verdify.ai`)

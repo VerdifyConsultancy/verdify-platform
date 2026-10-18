@@ -370,7 +370,6 @@ def approval_file_stamp(state_dir: Path) -> tuple[int, int, int] | None:
 async def _fresh_readbacks(conn, generation: int) -> dict[str, float]:
     if not shared.transport_readbacks_ready(generation):
         raise ValueError("current-generation replay incomplete")
-    current = shared.current_cfg_readbacks(generation)
     canonical = [field.name for field in wire_fields()]
     rows = await conn.fetch(
         """
@@ -382,6 +381,9 @@ async def _fresh_readbacks(conn, generation: int) -> dict[str, float]:
         """,
         canonical,
     )
+    if not shared.transport_readbacks_ready(generation):
+        raise ValueError("current-generation replay changed during snapshot read")
+    current = shared.current_cfg_readbacks(generation)
     if len(rows) != len(canonical) or set(canonical) != {row["parameter"] for row in rows}:
         raise ValueError("canonical 48-field snapshot incomplete or stale")
     if len({row["ts"] for row in rows}) != 1:
@@ -391,6 +393,15 @@ async def _fresh_readbacks(conn, generation: int) -> dict[str, float]:
         if param not in current:
             raise ValueError(f"current connection missing readback: {param}")
         if not _equal(current[param], row["value"]):
+            _observation_log.info(
+                "setpoint_snapshot_compare status=mismatch parameter=%s generation=%d "
+                "batch_at=%s durable_value=%r current_cfg_value=%r",
+                param,
+                generation,
+                row["ts"].isoformat(),
+                row["value"],
+                current[param],
+            )
             raise SnapshotBehindReadbacks(f"snapshot does not match current connection: {param}")
     return current
 

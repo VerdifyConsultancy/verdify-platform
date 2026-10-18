@@ -147,6 +147,7 @@ from verdify_schemas.experiment_config import (
     policy_vector_mode,
 )
 from verdify_schemas.policy_transport import POLICY_IDENTITY_SENSOR
+from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.telemetry import expand_moisture_exchange_wire
 from verdify_schemas.tunable_registry import get as get_tunable
 
@@ -3746,6 +3747,91 @@ def _report_spool_health() -> None:
             log.error("ingestor_spool_health_failed queue=%s reason=%s", name, type(exc).__name__)
 
 
+async def _publish_setpoint_snapshot(pool: asyncpg.Pool, ts: datetime, *, reason: str = "periodic") -> None:
+    """Commit one immutable cached-readback batch before fanout or admission ACK."""
+    if shared.is_shadow_mode():
+        shared.fail_setpoint_snapshot_publication()
+        return
+    if not shared.owns_setpoint_snapshot_publication():
+        raise RuntimeError("setpoint snapshot publication belongs to flush_loop")
+    started = asyncio.get_event_loop().time()
+    generation = int(shared.transport_generation)
+    frozen = dict(state.cfg_readback)
+    snapshot_rows: list[tuple[datetime, str, float]] = []
+    for param, val in frozen.items():
+        try:
+            SetpointSnapshot(ts=ts, parameter=param, value=val, greenhouse_id=GREENHOUSE_ID)
+        except ValidationError as error:
+            log.error("setpoint_snapshot skipped (validation failed: %s): param=%s value=%s", error, param, val)
+            continue
+        snapshot_rows.append((ts, param, val))
+    try:
+        async with asyncio.timeout(shared.SETPOINT_SNAPSHOT_WAIT_SECONDS):
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    await conn.executemany(
+                        "INSERT INTO v_runtime_setpoint_snapshot_write (ts, parameter, value) VALUES ($1, $2, $3)",
+                        snapshot_rows,
+                    )
+                    # FW-4 uses the SAME immutable values as this committed batch.
+                    # Its existing tolerance and superseding-request predicates stay unchanged.
+                    await conn.executemany(
+                        """
+                            UPDATE v_runtime_setpoint_changes_write sc
+                               SET confirmed_at = now(),
+                                   delivery_status = 'confirmed'
+                             WHERE sc.parameter = $1
+                               AND sc.confirmed_at IS NULL
+                               AND COALESCE(sc.delivery_status, 'pending') IN ('sent', 'pending')
+                               AND sc.ts > now() - interval '7 days'
+                               AND (
+                                   abs(sc.value - $2::double precision)
+                                         / greatest(abs($2::double precision), 1e-3) < 0.01
+                                   OR abs(sc.value - $2::double precision) <= $3::double precision
+                               )
+                               AND NOT EXISTS (
+                                   SELECT 1
+                                     FROM setpoint_changes newer
+                                   WHERE newer.parameter = sc.parameter
+                                     AND COALESCE(newer.greenhouse_id, '') = COALESCE(sc.greenhouse_id, '')
+                                     AND COALESCE(newer.source, '') <> 'esp32'
+                                     AND newer.ts > sc.ts
+                                     AND NOT (
+                                         abs(newer.value - $2::double precision)
+                                               / greatest(abs($2::double precision), 1e-3) < 0.01
+                                         OR abs(newer.value - $2::double precision) <= $3::double precision
+                                     )
+                               )
+                            """,
+                        [(param, val, readback_abs_tolerance(param)) for _ts, param, val in snapshot_rows],
+                    )
+    except BaseException:
+        shared.fail_setpoint_snapshot_publication()
+        raise
+    # Both statements have committed. A confirmation failure cannot broadcast
+    # rolled-back snapshots or acknowledge a batch that never became durable.
+    for snap_ts, param, val in snapshot_rows:
+        _fanout_publish("setpoint_snapshot", {"ts": snap_ts, "parameter": param, "value": val})
+    published = {param: val for _ts, param, val in snapshot_rows}
+    shared.finish_setpoint_snapshot_publication(
+        generation,
+        published,
+        ts,
+        canonical_complete=shared.transport_readbacks_ready(generation)
+        and {field.name for field in wire_fields()} <= published.keys(),
+    )
+    log.info(
+        "setpoint_snapshot publication=committed reason=%s generation=%d rows=%d "
+        "batch_at=%s elapsed_ms=%.1f current_content=%s",
+        reason,
+        generation,
+        len(snapshot_rows),
+        ts.isoformat(),
+        (asyncio.get_event_loop().time() - started) * 1000,
+        shared.setpoint_snapshot_is_current(generation),
+    )
+
+
 async def flush_loop(
     pool: asyncpg.Pool,
     equipment_source_pool: asyncpg.Pool | None = None,
@@ -3756,6 +3842,8 @@ async def flush_loop(
         # fail-closed as well so a future/direct caller cannot inject a
         # separately credentialed source writer around the ordinary pool proxy.
         equipment_source_pool = None
+    shared.register_setpoint_snapshot_publisher()
+    last_snapshot_attempt = 0.0
     last_climate = 0.0
     last_climate_action_log = 0.0
     last_diag = 0.0
@@ -3815,75 +3903,24 @@ async def flush_loop(
             except Exception as e:
                 log.error(f"diagnostics write error: {e}")
 
-            # Setpoint snapshot: write ESP32 configured values (cfg_* readback)
-            # FW-4 (Sprint 20): same pass also closes the confirmation loop —
-            # any setpoint_changes row whose value matches the cfg readback
-            # within the 1% dispatcher dead-band gets confirmed_at = now().
-            # Backfill a short historical window too: when firmware gains a
-            # new cfg_* readback, otherwise-matching rows pushed before that
-            # sensor existed should not stay permanently "unconfirmed".
-            # Rows that never match stay NULL; the setpoint_confirmation_monitor
-            # task in tasks.py (FB-1) alerts after 5 min.
-            if state.cfg_readback:
+        # Diagnostics keep their60s cadence. The same publisher additionally
+        # services a bounded live-writer admission request on its existing loop.
+        snapshot_due = now - last_snapshot_attempt >= DIAG_FLUSH_INTERVAL
+        if state.cfg_readback and (snapshot_due or shared.setpoint_snapshot_requested.is_set()):
+            generation = int(shared.transport_generation)
+            if not snapshot_due and shared.coalesce_setpoint_snapshot_request(generation):
+                pass  # Reuse the actual committed content; do not retime its batch.
+            else:
+                publication_reason = "writer_admission" if shared.setpoint_snapshot_requested.is_set() else "periodic"
+                shared.setpoint_snapshot_requested.clear()
+                # A demand publication also schedules the next periodic batch.
+                # Failed attempts retain a bounded cadence without a busy retry.
+                last_snapshot_attempt = now
                 try:
-                    snapshot_rows: list[tuple[datetime, str, float]] = []
-                    for param, val in state.cfg_readback.items():
-                        try:
-                            SetpointSnapshot(ts=ts, parameter=param, value=val, greenhouse_id=GREENHOUSE_ID)
-                        except ValidationError as e:
-                            log.error(f"setpoint_snapshot skipped (validation failed: {e}): param={param} value={val}")
-                            continue
-                        snapshot_rows.append((ts, param, val))
-                    async with pool.acquire() as conn:
-                        await conn.executemany(
-                            "INSERT INTO v_runtime_setpoint_snapshot_write (ts, parameter, value) VALUES ($1, $2, $3)",
-                            snapshot_rows,
-                        )
-                        # #113: fan-out each setpoint snapshot to the bus.
-                        for snap_ts, param, val in snapshot_rows:
-                            _fanout_publish(
-                                "setpoint_snapshot",
-                                {"ts": snap_ts, "parameter": param, "value": val},
-                            )
-                        # FW-4 confirmation loop — one UPDATE per readback param
-                        # (tiny batch; no worse than the INSERT above).
-                        # Dead-band: abs(sc.value - cfg_val) / max(|cfg_val|, 1e-3) < 0.01
-                        # — same math as ingestor.tasks._should_skip. Avoid
-                        # confirming through a later differing request for the
-                        # same greenhouse/parameter; those older rows were
-                        # superseded, not proven by the current readback.
-                        await conn.executemany(
-                            """
-                            UPDATE v_runtime_setpoint_changes_write sc
-                               SET confirmed_at = now(),
-                                   delivery_status = 'confirmed'
-                             WHERE sc.parameter = $1
-                               AND sc.confirmed_at IS NULL
-                               AND COALESCE(sc.delivery_status, 'pending') IN ('sent', 'pending')
-                               AND sc.ts > now() - interval '7 days'
-                               AND (
-                                   abs(sc.value - $2::double precision)
-                                         / greatest(abs($2::double precision), 1e-3) < 0.01
-                                   OR abs(sc.value - $2::double precision) <= $3::double precision
-                               )
-                               AND NOT EXISTS (
-                                   SELECT 1
-                                     FROM setpoint_changes newer
-                                   WHERE newer.parameter = sc.parameter
-                                     AND COALESCE(newer.greenhouse_id, '') = COALESCE(sc.greenhouse_id, '')
-                                     AND COALESCE(newer.source, '') <> 'esp32'
-                                     AND newer.ts > sc.ts
-                                     AND NOT (
-                                         abs(newer.value - $2::double precision)
-                                               / greatest(abs($2::double precision), 1e-3) < 0.01
-                                         OR abs(newer.value - $2::double precision) <= $3::double precision
-                                     )
-                               )
-                            """,
-                            [(param, val, readback_abs_tolerance(param)) for param, val in state.cfg_readback.items()],
-                        )
-                except Exception as e:
-                    log.error(f"setpoint_snapshot write error: {e}")
+                    await _publish_setpoint_snapshot(pool, ts, reason=publication_reason)
+                except Exception as error:
+                    shared.fail_setpoint_snapshot_publication()
+                    log.error("setpoint_snapshot write error: %s", error)
 
         # Equipment events (flush immediately)
         try:

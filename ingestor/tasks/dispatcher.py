@@ -11,6 +11,7 @@ from esp32_push import (
     LifecyclePersistenceError,
     delivery_failure_retryable,
     delivery_transition_prior_statuses,
+    device_writes_enabled,
     preserved_terminal_status,
     push_to_esp32_detailed,
 )
@@ -146,6 +147,20 @@ async def _choose_bounded_stage_if_required(
         and not (state_dir / bounded_reconcile.STATE_NAME).exists()
     ):
         return bounded_reconcile.Decision("ordinary")
+    if device_writes_enabled() and not shared.is_shadow_mode():
+        # No transaction/row lock may wait for the existing publisher's other
+        # pool connection. The sole dispatcher holds only this idle connection.
+        if conn.is_in_transaction():
+            return bounded_reconcile.Decision("hold", reason="snapshot publication cannot wait inside a transaction")
+        if not shared.writer_lease_strictly_held():
+            return bounded_reconcile.Decision("hold", reason="writer lease not held for snapshot publication")
+        if not await shared.request_setpoint_snapshot(generation):
+            bounded_reconcile._wake_for_confirmation()
+            return bounded_reconcile.Decision(
+                "hold", reason="awaiting fresh atomic snapshot: current-generation publication unavailable"
+            )
+        if not shared.writer_lease_strictly_held():
+            return bounded_reconcile.Decision("hold", reason="writer lease lost during snapshot publication")
     return await bounded_reconcile.choose_stage(
         conn,
         changes,

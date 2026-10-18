@@ -2687,3 +2687,51 @@ async def test_guardrail_reapplication_completion_retains_settlement_boundaries(
         native.update(delivery_status="confirmed", confirmed_at=datetime.now(UTC))
         complete = await bounded.completion_observation(fixture, tmp_path, done, 10)
         assert complete["handoff_requested_count"] == complete["handoff_confirmed_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_new_publication_wait_consumes_original_approval_expiry(fixture, tmp_path, monkeypatch):
+    import asyncio
+
+    changes = [(name, 1.0) for name in fixture.parameters]
+    await bounded.choose_stage(fixture, changes, fixture.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    approval = bounded._read(tmp_path / bounded.APPROVAL_NAME)
+    approval["expires_at"] = (datetime.now(UTC) + timedelta(milliseconds=10)).isoformat()
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+    retained = (tmp_path / bounded.APPROVAL_NAME).read_bytes()
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
+    monkeypatch.setattr(fixture, "is_in_transaction", lambda: False, raising=False)
+
+    async def publish(_generation):
+        await asyncio.sleep(0.02)
+        return True
+
+    monkeypatch.setattr(shared, "request_setpoint_snapshot", publish)
+    result = await dispatcher._choose_bounded_stage_if_required(
+        fixture, changes, fixture.planned(), 3, tmp_path, None, {}
+    )
+    assert result.action == "hold" and "expired" in result.reason
+    assert not result.changes and (tmp_path / bounded.APPROVAL_NAME).read_bytes() == retained
+    assert not (tmp_path / bounded.STATE_NAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_revoked_approval_during_publication_wait_cannot_select_stage(fixture, tmp_path, monkeypatch):
+    changes = [(name, 1.0) for name in fixture.parameters]
+    await bounded.choose_stage(fixture, changes, fixture.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
+    monkeypatch.setattr(fixture, "is_in_transaction", lambda: False, raising=False)
+
+    async def publish(_generation):
+        (tmp_path / bounded.APPROVAL_NAME).unlink()
+        return True
+
+    monkeypatch.setattr(shared, "request_setpoint_snapshot", publish)
+    result = await dispatcher._choose_bounded_stage_if_required(
+        fixture, changes, fixture.planned(), 3, tmp_path, None, {}
+    )
+    assert result.action != "send" and not result.changes
+    assert not (tmp_path / bounded.STATE_NAME).exists()
+    assert not (tmp_path / bounded.APPROVAL_NAME).exists()

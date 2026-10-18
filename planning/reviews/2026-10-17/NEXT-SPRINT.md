@@ -1,43 +1,44 @@
-# Current sprint and next sprint — October 17, 2026
+# Current and next sprint — October 17, 2026
 
-This is the current execution plan, superseding prior checkpoints. Capacity is **40 shared planning/engineering hours per week, 80 per two-week sprint**, America/Denver. Estimates are remaining work ranges, not actual hours worked, elapsed runtime, wakeups, or capacity automatically freed by closures.
+Capacity is **40 shared engineering and planning hours per week, 80 per fortnight**, America/Denver. These are planned work ranges. Closures, CI runtime, waiting and wakeups do not establish hours worked or capacity freed.
 
-## Current S2 — October13–26
+## Current S2 — October 13–26
 
-The original four outcomes **#396, #419, #643 and #644 are complete**. **#749 is the sole selected completion focus**, retaining its8–16h planning range until actual acceptance. All follow-up source/image qualification is complete. The ingestor-only fix is deployed at release11cd; runtime basics pass, but a current retained-state/snapshot hold blocks quiet qualification and the final read-only packet. The smallest producer correction is reviewed with27 focused passes; finish its normal source-to-runtime delivery and current acceptance. The earlier19:36 blocked result and missing historical report are preserved. No further explicit physical-policy run is needed merely for a log.
+The original outcomes **#396, #419, #643 and #644 are complete**. **#749 remains the sole completion focus**, retaining its existing 8–16 hour allocation. Its snapshot-hold fix is deployed as source `67f08ccf`, image `249c7647`, release `f91602f6`; the actual snapshot mismatch now waits temporarily and resumes naturally.
 
-Adopt the complete current25-path canonical snapshot with SAME Retry's accepted two-file snapshot-wait correction, verify the exact copy ACK, then use the existing shared-CI owner's actual handback and fresh normal admission for one normal source/native build/pin path. Review actual qualified image, minimal ingestor-only runtime diff and inverse, then promote and perform one full nonpruning sync. Verify the new writer, actual quiet interval and one bounded read-only original-clause packet. Preserve the old typed hold and missing report as dated history; no collector weakening, approval replay, extra explicit policy run or physical recovery. Close749 only on actual original acceptance.
+Four ordinary snapshot waits prevented the required 30 quiet minutes. The finite observation stopped at 23:31 UTC, and the final SQL/readiness packet was never attempted. The existing writer session is implementing one bounded producer-coherence correction offline. It must preserve the strict collector, full 48-field checks, authority, deadlines and history. There is no new physical policy run, approval replay or timer-reset loop.
 
-Carry unfinished749 inside S3's reserve. The old4–8h follow-on and28–56h original-outcome estimates remain historical. Neither completed delivery nor elapsed runtime measures hours worked or frees a quantified capacity balance. The specific rollout/run approval is used; do not replay it or infer physical recovery authority.
+## S3 — October 27–November 9; execution released October 17
 
-## Next S3 — October 27–November 9
+Jason authorized implementation and delivery on October17. Ready packets start now as early pulls from this sprint; the milestone dates, scope and 80-hour envelope remain unchanged. #749 retains first delivery priority. Work is limited to the existing product writer, existing infrastructure owner, and root planning/source diagnosis.
 
-| Priority/pull | Bounded outcome | Shared engineering hours |
+| Pull | Bounded outcome | Shared hours |
 |---|---|---:|
-| #981 | Trace stale energy source; recover actual source advancement and preserve fail-closed quality | 3–6 |
-| #980 | Diagnose and resolve exporter response failures while keeping backup health truthful | 2–4 |
-| #977 | Record two-versus-three database replica policy and owner delivery before November 12 | 2–4 |
-| #639 | Execute the prepared contained, device-denied behavior scope with actual source/target/reseal binding | 8–16 |
-| #963 | Final exact firmware/rollback choice and separately authorized native/HA acceptance; reuse accepted compiler/source work | 6–12 |
-| #782 | Obtain authentic target/panel/prospective inputs and finish the bounded exploratory scientific contract | 12–20 |
-| **Base pull set** | **Six issues** | **33–62** |
-| **Reserve** | **Any #749 carryover (up to 16 hours) and unexpected work share this reserve** | **18 maximum** |
-| **Ceiling** | **62 + 18; never additive to another sprint's capacity** | **80** |
+| #981 | Recover authentic energy source advancement; retain source and ingest clocks separately. | 3–6 |
+| #980 | Review intentional NAS-window exporter pause and resume handoff; qualify exporter/backup separately after owner release, no NFS load during the hold. | 2–4 |
+| #639 | One contained device-denied executor/recovery qualification; preserve unproved physical portions. | 8–16 |
+| #587 | Incremental lifecycle/kill-switch/visibility cases in SAME639 run; count shared execution only once; physical portions stay separately scoped. | 4–8 |
+| #801 | Small owner-exclusion route fix and exact owner-delivery proof; no blanket parent-adoption prerequisite. | 1–2 |
+| #802 | Spec-preserving manual Argo descheduler adoption with exact owner/project/catalog record; preserve enforce mode. | 4–8 |
+| #977 | Record replica-policy decision beforeNovember12; optional remount/reclaim stays separate and unapproved. | 2–4 |
+| #782 | Authentic seasonal/panel/target input and a concrete scientific decision packet; full design/power/approval acceptance remains when inputs allow. | 4–8 |
+| **Base** | **Eight packets; shared #639/#587 execution counted once** | **28–56** |
+| **Reserve** | **Any #749 carryover, up to 16 hours of this reserve, plus unexpected work** | **24 maximum** |
+| **Ceiling** | **56 + 24** | **80** |
 
-The reserve is unassigned capacity, not a promise to spend 18 hours. #802, at 4–8 hours, is the first substitute when genuine #963/#782 decisions or inputs are unavailable; release it only by replacing blocked scope within 80 hours. Its enforce-mode source fix is already delivered; remaining adoption must preserve enforcement and use the actual owner.
+The #782 allocation buys authentic inputs and a concrete decision packet; it does not promise its full scientific/power contract in 4–8 hours. Physical or scientific clauses remain open when a bounded packet does not satisfy them.
 
-#639 and #587 can share the same finite contained evidence run where their clauses overlap. Count that execution once, attach its receipt to both, and estimate only distinct remaining work later. Neither read-only role seams nor fixtures complete physical full-state recovery. #587/#783/#641 remain in the subsequent integrated-qualification pull set; #588/#642/#640 then require true predecessor acceptance and a specific launch decision. No calendar launch is promised.
+If the NAS window holds #980, review existing source/evidence and advance other ready work. Do not force NFS access or reverse another owner's pause. #963 is a substitute only after its exact binary, rollback and operator inputs are ready; replace held scope within 80 hours rather than adding it.
 
-## Decisions and external constraints
+## Execution cadence
 
-- **#977:** choose keep-two or restore-three before November 12; S3 finishes November 9. Optional remount/trim is separate and not part of this default estimate.
-- **#963:** the exact candidate/accepted rollback floor and a specifically authorized OTA window are still required. Do not recompile just to repeat completed #303/#304.
-- **#782:** actual physical panel/targets and eligible prospective observations remain necessary. The warm June–July 2027 exploratory candidate and fixed 30-pair analysis are retained; no invented 80% power gate or synthetic inputs. Elapsed sampling and the real 60-day pilot cannot be compressed into engineering hours.
-- **#749:** the specific earlier rollout/run approval is consumed. The reviewed minimal fix rollout and current read-only qualification are authorized and underway; no new explicit run, approval refresh or physical recovery is authorized. Keep the final original-clause result distinct from source, image and deployment success.
+Use one product writer and one independent owner lane. Diagnose the actual source first, finish a bounded correction, and batch compatible changes into one genuine delivery wave. Capture native logs before collection expires and verify the deployed behavior. Return shared CI after terminal completion and log closure, before a long product observation.
+
+Run overlapping #639/#587 cases together and count shared work once. Missing physical inputs lead to one concrete decision packet while independent work continues. Source, images, deployment, behavior and physical proof remain distinct.
+
+S4 carries the remaining #783/#641 work and any physical #639/#587 clauses after their actual inputs. S5 lock/draw/day-1 and the later real pilot/readout remain conditional. This plan grants no new OTA, experiment, cutover, credential or hardware authority.
+
+[Prepared execution queue](EXECUTION-QUEUE.md) · [All issue dispositions](ISSUE-TRIAGE.md) · [Full triage rationale](FULL-TRIAGE.md) · [Dependency graph](DEPENDENCIES.md)
 
 
-The #749 decision above is consumed; the other listed decisions remain scoped to their own future execution. Planning introduces no OTA, physical experiment, randomized activation, production DB cutover, credential rotation or custody deletion.
-
-## Evidence and delivery
-
-[Live status](STATUS.md), [all 58 dispositions](ISSUE-TRIAGE.md), [native active/historical graph](DEPENDENCIES.md), [PR/work disposition](PRS-AND-WORK.md), [fresh-session instructions](GOAL.md). Canonical allocations are in `planning/backlog.yaml`; all seven generated views derive from it. Native GitHub milestones/sub-issues/dependencies and body readbacks are verified separately from the local generator. Parent/program estimates are not double-counted.
+Execution update: the corrected #749 producer-coherence source packet is accepted after60 focused passes and independent verification of the exact original confirmation SQL, frozen transaction and post-commit acknowledgement. The initial pre-publication SQL-selection defect is corrected and retained as review history. The existing product session is released for genuine canonical composition and normal delivery after the actual shared-owner window; no new images or runtime acceptance are claimed.

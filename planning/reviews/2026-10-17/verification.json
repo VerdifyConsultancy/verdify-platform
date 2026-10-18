@@ -7,7 +7,7 @@
     980,
     981
   ],
-  "planned_open_issues": 58,
+  "planned_open_issues": 51,
   "recent_closed_issues": [
     303,
     304,
@@ -21,13 +21,13 @@
     976
   ],
   "canonical_issue_count": 92,
-  "expected_active_native_edges": 41,
-  "expected_satisfied_native_edges": 27,
+  "expected_active_native_edges": 31,
+  "expected_satisfied_native_edges": 25,
   "sprint3_base_hours": [
-    33,
-    62
+    28,
+    56
   ],
-  "sprint3_reserve_hours": 18,
+  "sprint3_reserve_hours": 24,
   "shared_fortnight_ceiling": 80,
   "provider_publication_verified": true,
   "evidence_hashes": [
@@ -1242,11 +1242,142 @@
     "all_other_production_AST_unchanged": true,
     "strict_collector_unchanged": true,
     "history_and_authority_unchanged": true,
-    "published": false,
+    "published": true,
     "built": false,
     "deployed": false,
     "new_explicit_physical_run": false,
-    "shared_CI_handback_pending": true,
+    "shared_CI_handback_pending": false,
     "runtime_inverse": "Forward ingestor release pin only back to current6e; keep all other pins, migrate211/applied276 and state/history."
+  },
+  "snapshot_wait_source_publication": {
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "sole_parent": "11cd6a92a0d2e0df14b0227432957b73f9a8fb5f",
+    "tree": "533d1cf229c86a7e3618ad324ad076a06a97f1dd",
+    "pushed_at": "2026-10-17T22:30:57Z",
+    "root_all27_provider_payloads_exact": true,
+    "actual_changed_paths": 15,
+    "deployment_files_changed": 0,
+    "root_provider_proof_sha256": "571fe1fcaf3659b34d205b77272670ad7f4fa2df41ccc75a753235e1e69c7e4e",
+    "fresh_normal_admission_sha256": "530a7aca12d213137c7a62e261f816c276736a4cd032bac7cb8726094fdcf746",
+    "normal_native_workflow": "verdify-platform-ci-hrfrg",
+    "normal_native_uid": "9d3f4952-091c-4c20-ad6e-867f6bcccfa5",
+    "normal_native_started_at": "2026-10-17T22:31:02Z",
+    "native_terminal": "Pending; no image or runtime acceptance claimed",
+    "canonical_snapshot": "6e3450780b88e003611863084a32775b48838623",
+    "complete25_copy_ack_sha256": "cd138669c2cf9ffa2355ad6d203e3c0f0e943d9ceca75ff9140e6ef55d2e8428",
+    "root_unfrozen": true,
+    "new_explicit_physical_run": false
+  },
+  "snapshot_wait_runtime_delivery": {
+    "release": "f91602f69e6f3a5dca0bcc9c28fbaef43a3bf6cf",
+    "source": "67f08ccfd2dab0d3ae1c3962057ddc7832d2593a",
+    "observed_at": "2026-10-17T23:15:09.331370Z",
+    "runtime_receipt_sha256": "6be145e3b43691bd4961489a65a08adfa64affbb69d723e11b0151ce6fa2296e",
+    "root_runtime_review_sha256": "1458ee197eb1003e609d34a861a8a08af6eea1b1cf7bf8915be09d66d126ace7",
+    "runtime_pass": true,
+    "current_final_packet_pending": true,
+    "shared_CI_returned_before_observation": true
+  },
+  "full_triage_second_pass": {
+    "provider_verified_at": "2026-10-17T23:38:45.548698+00:00",
+    "intake_open": 58,
+    "comments_reviewed": 624,
+    "closed_not_planned": [
+      296,
+      317,
+      324,
+      361,
+      586,
+      606,
+      638
+    ],
+    "open_after": 51,
+    "all58body_readbacks_exact": true,
+    "original_tails_labels_assignees_preserved": true,
+    "native_active_edges": 31,
+    "native_accepted_historical_edges": 25,
+    "acyclic": true,
+    "removed_whole_program_gates": [
+      "801->jvallery/agents4461",
+      "802->jvallery/agents4451"
+    ],
+    "actual_milestone_memberships": {
+      "33": [
+        749
+      ],
+      "34": [
+        587,
+        639,
+        782,
+        801,
+        802,
+        977,
+        980,
+        981
+      ]
+    },
+    "provider_proof_sha256": "16de08184808b06266e4927275ca2a80e2e4fe635c758602097dc160ec1a1f5e",
+    "retired_is_not_engineering_completion": true,
+    "canonical_nodes_stages_historical_edges": [
+      92,
+      9,
+      78
+    ],
+    "later_owner_source_revision": "183b6f2bdd58cb6cc3df1110d6f722a7b9d3c6f6",
+    "PR983_merged_adoption_pending_verified_at": "2026-10-17T23:44:32.606407Z",
+    "final_open_PRs": [
+      982,
+      855
+    ]
+  },
+  "sprint_execution_release": {
+    "authorized": "Jason direct instruction October17: carve off next sprint and begin implementation and delivery",
+    "verified_at": "2026-10-17T23:55:13.586401+00:00",
+    "sprint": "S3",
+    "early_pulls_begin_now": true,
+    "calendar_dates_unchanged": true,
+    "base_hours": [
+      28,
+      56
+    ],
+    "reserve_hours_max": 24,
+    "total_envelope_hours": 80,
+    "product_first": 749,
+    "product_next": 801,
+    "owner_queue_acknowledged": 802,
+    "root_source_diagnosis_started": 981,
+    "github3bodies_and_milestone_readback_exact": true,
+    "planning_tests_passed": 35,
+    "schema_nodes_stages_edges": [
+      92,
+      9,
+      78
+    ],
+    "generated_views_fresh": 7,
+    "product_delivery_claimed_from_start": false,
+    "749_initial_source_review": {
+      "decision": "Revise before delivery",
+      "packet_sha256": "a008901e757203eb47955fc14ee4b44cf9bdb3763edbcf97e95b5a1247d4ccfe",
+      "sealed_members_root_verified": 39,
+      "sealed_bytes_root_verified": 1091700,
+      "defect": "New helper selected a different setpoint-change SQL statement instead of retaining the existing confirmation statement; same owner instructed to restore exact semantics and bind regression to the actual functions.",
+      "native_or_runtime_failure": false,
+      "source_publication_authorized": false
+    },
+    "749_corrected_source_review": {
+      "source_review": "ACCEPTED corrected offline packet",
+      "proof_sha256": "68de7b989d64e2a8e3279c64e5ec29a8930c921976a0dbcee2bfa56806a3ac04",
+      "patch_sha256": "d7a15f99ef3dfe579d5559b948c23059a717e372153a07357567bd66364fc6f0",
+      "verified_members": 18,
+      "verified_bytes": 887683,
+      "old_actual_flush_next_confirmation_equals_actual_new_helper_second_and_fixture": true,
+      "confirmation_sha256": "32e5c85bc016794c7147f05baa37408d2044399b38eb3dae30faec441f53bc3e",
+      "new_frozen_confirmation_args": true,
+      "focused_pass": 60,
+      "prior_bad_SQL_regression_fails": 1,
+      "original_ordering_regression_fails": 1,
+      "scope": "normal source delivery after fresh actual head, complete canonical copy and owner handback; no physical policy replay",
+      "new_runtime_acceptance": false
+    }
   }
 }
