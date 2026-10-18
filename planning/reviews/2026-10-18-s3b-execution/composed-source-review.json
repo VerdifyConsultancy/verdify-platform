@@ -1,0 +1,33 @@
+{
+  "schema": "verdify-s3b-composed-source-review-v1",
+  "at": "2026-10-18T15:34:31.804457+00:00",
+  "composed_revision": "85bd5cdacd3100689405d3c96ddca3bfb623cea0",
+  "pure_checks": {
+    "passed": 178,
+    "elapsed_seconds": 4.43,
+    "command": "/Users/jason/repos/verdify-platform/.venv/bin/python -m pytest -o addopts= -q tests/test_fog_vent_consumer.py tests/test_component_prefix_inputs.py tests/test_component_prefix_replay.py tests/test_prepare_component_prefix_replay.py tests/test_outcome_kpi_dryout_projection.py tests/test_solar_night_packet.py",
+    "compiler_replay_or_production_calls": false
+  },
+  "ruff": "All checks passed; --no-cache used after default cache path write failed in sandbox",
+  "source_reviews": {
+    "P1": "Independent P2 agent: no actionable bugs; literal expectations independent of source, both selection modes opposite unused values, physical preapply vent separate from desired; all8 mutation failures require exact completed behavior assertions.",
+    "P2_P3": "Independent P1 agent: no actionable bugs; strict shape/state/provenance/time source admission, historical_prefix_admitted alwaysfalse; MCP fail precedence and explicit all-pass requirement.",
+    "P4": "Independent P3 agent recomputed80rows and all4known OTAcopies/metadata/sourcepairs; independent-readback.json retained."
+  },
+  "CI_registration": [
+    "tests/test_fog_vent_consumer.py",
+    "tests/test_component_prefix_inputs.py",
+    "tests/test_outcome_kpi_dryout_projection.py",
+    "tests/test_solar_night_packet.py"
+  ],
+  "native_qualification": "PENDING shared window return and fresh admission",
+  "whole_issue_acceptance": false,
+  "source_inputs": {
+    "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81",
+    "scripts/qualify_fog_vent_consumer.py": "a93d69d4c5984da3ffd314f6cf626dda22e4eaab3c8bc7b478ee31443cfd3600",
+    "scripts/component_prefix_replay.py": "cf5eb800927ab7051abaedc2c8a0530b362e045e9e9f8c5ba5d62f49a9873278",
+    "scripts/prepare_component_prefix_replay.py": "b3ed3b1bdc5be467dc9dffad70ff89b4615fd54ba18a11e7c36d285a1b468677",
+    "mcp/server.py": "db8cb106eb397219750548c9ab9e0ecc2a740f741d6cf58720d040fc0437ed91",
+    "scripts/ci-local.sh": "82b005b100bbfd0951d10d778caa933554229110676fb43ac17243f25e052cec"
+  }
+}
