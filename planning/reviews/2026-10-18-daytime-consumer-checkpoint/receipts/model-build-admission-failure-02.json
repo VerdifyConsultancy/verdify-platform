@@ -1,0 +1,31 @@
+{
+  "status": "SOURCE_GATE_PASSED_BUILD_ADMISSION_BLOCKED",
+  "workflow": "verdify-platform-ci-87whm",
+  "workflow_uid": "410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f",
+  "source": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+  "finished_at": "2026-10-18T20:50:26Z",
+  "step": "build-api",
+  "receipt": {
+    "expected": {
+      "capacity_contract_id": "1a13ecbbdce57c47c4550c4098925eacb5a305dfbd6ef85941f9dfe0d67083ec",
+      "max_age_seconds": 300,
+      "min_free_bytes": 150323855360,
+      "protected_count": 313,
+      "protected_current_count": 38,
+      "protected_generation": 176,
+      "protected_max_age_seconds": 604800,
+      "protected_rollback_count": 275,
+      "protected_set_hash": "ada3653a84e65fb18f0da0df1cd19f5b10140519c09b7c2eb71f33caaff15bf8"
+    },
+    "gate": "admission",
+    "observed": {},
+    "outcome": "blocked",
+    "reason": "protected-set-mismatch",
+    "schema": "agent-fleet.registry-capacity-preflight-receipt/2"
+  },
+  "workflow_sha256": "22a120da8f4ab9fe2902d3d590516b6cb0b2f4750239d183291deedf3f7ebf14",
+  "image_compilation_started": false,
+  "production_model_unchanged": true,
+  "owner_notified": true,
+  "bypass_or_retry": false
+}

@@ -1,0 +1,18 @@
+{
+  "status": "MODEL_SOURCE_FULL_NATIVE_GATE_PASSED_BUILD_ADMISSION_SEPARATE",
+  "source_revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+  "workflow": "verdify-platform-ci-87whm",
+  "workflow_uid": "410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f",
+  "pod": "verdify-platform-ci-87whm-validate-1952540191",
+  "pod_uid": "763f7954-a454-4afc-ad95-27dbb2504ce7",
+  "node": "vm-k3s-node6",
+  "declared_container_count": 4,
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "full_main_log": "model-source-ci-02/verdify-platform-ci-87whm-validate-1952540191-main-00a6f92a8bf9180e9067a4ca19904660ac3efe2dae7c933e8fea040d0adc9ae8.log",
+  "full_main_log_sha256": "00a6f92a8bf9180e9067a4ca19904660ac3efe2dae7c933e8fea040d0adc9ae8",
+  "full_main_log_bytes": 38570,
+  "terminal_summary": "model-source-ci-02/verdify-platform-ci-87whm-validate-1952540191-summary-e8aa6bde7295bd350123a5aaad5a8766e30ab521cc38889baff01069d54f1ff1.json",
+  "terminal_summary_sha256": "e8aa6bde7295bd350123a5aaad5a8766e30ab521cc38889baff01069d54f1ff1",
+  "whole_workflow_status": "Failed_due_to_build_admission",
+  "image_build_or_deployment_success_claimed": false
+}

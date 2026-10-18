@@ -1,0 +1,17 @@
+# Daytime/MCP delivery and model-upgrade checkpoint
+
+Both #410 and #775 remain open. This is a dated checkpoint; the final source-bound report and raw custody follow completion. Main is held at `56b316f3fda666b25665dfc0f791d6be6db0fa46` for the paused normal candidate publisher.
+
+The complete selected daytime audit found October16 coverage644/669 minutes (25 missing), and October17 coverage643/666 (23 missing). Recorded samples have zero known held admissions and12/2 ordinary dry-action minutes. Complete recorded daytime zero remains NULL; missing buckets were not rewritten or counted twice, and continuous physical absence is unproved.
+
+The default-off ordinary Iris `scorecard` reader is deployed: MCP source `b814f35e`, image `ae8a367035a3`, release `e545380a`. Exactly3 selective resources succeeded. Both MCP replicas and the fresh Hermes inventory process passed source/image/auth/file checks. All9 smoke checks and exactly1ESP32 writer connection passed; database/API/ingestor Pod states were preserved. Normal source/build/publisher CI and release CI passed. The existing23-tool Iris inventory and admin denial remain intact. No DB/getter/ACL/credential/device-write change occurred.
+
+Jason then explicitly authorized the selected historical payload export and requested GPT-6 Luna for live Iris and qualification. That upgrade is **not live yet**; live profile is still GPT-5.6 Luna. The existing Hermes Responses adapter preserves xhigh; requested model availability returned HTTP200. No generation or historical consumer read has been launched for the new qualification.
+
+Original model source `18269108` failed before image builds on one stale live-model test expectation; the original full log is retained. Corrected source `56b316f3` passed its actual full native gate at20:50:00UTC (all4 declared containers0/no restarts, log `00a6f92a…`,38,570 bytes). Workflow `87whm` then correctly failed before compilation on a protected-set integrity mismatch. The receipt's empty observed object is an early-failure shape, not an empty protected registry.
+
+The CI owner reports capacity/policy are coherent at generation176 while the separate integrity attestation still names175. Existing integrity audit UID`8826c86f-d9d1-40ae-8a15-6cf5fa32e114` completed successfully at20:53:01UTC. The owner reported actual integrity176 verified20:52:50 and coherent capacity/profile at20:54:06. No duplicate audit, bypass or resubmit was started. Supported recovery is now ready: retry only failed build-api in the same exact Workflow, retaining the passed validation node; ROOT owns that single retry. API and orchestrator are the normal build profiles; only API will be promoted. Planned rollout is exactly the Hermes profile CM, paired vision planner-audit CM, API Deployment and Hermes Deployment; all other rendered objects must match.
+
+Remaining execution: failed-build-only recovery and candidate publication → API-only promotion → exact4-resource model rollout → actual runtime and two bounded historical GPT-6 Luna consumer cases → final canonical planning/native graph and terminal CI/raw custody. No issue closure, natural-cycle acceptance, complete daytime coverage or physical efficacy is claimed here.
+
+Included receipts are scoped derived proof with exact original byte hashes. Full native/CI logs and all original attempts remain in private custody pending the complete final evidence packet. The active GitHub checkpoint is https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6254249246.

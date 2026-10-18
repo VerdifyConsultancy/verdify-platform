@@ -1,0 +1,16 @@
+{
+  "status": "FAILED_SOURCE_GATE_RETAINED_AND_CORRECTED",
+  "workflow": "verdify-platform-ci-99648",
+  "workflow_uid": "c1b8cc6d-88ed-456d-b105-dde24c2bf903",
+  "source_revision": "182691082420466dc1c5b39bae2fd84f49f38dbf",
+  "finished_at": "2026-10-18T20:36:13Z",
+  "full_log": "model-source-ci/verdify-platform-ci-99648-validate-1798198490-main-808974c4647742d0e6a0a6824447df3ad0653e721dcc26aac88fa537482bf6f3.log",
+  "full_log_sha256": "808974c4647742d0e6a0a6824447df3ad0653e721dcc26aac88fa537482bf6f3",
+  "failure": "stale live model expectation in audience-auth drift test; no runtime auth/firewall failure",
+  "images_built": 0,
+  "production_mutations": 0,
+  "correction_source": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+  "focused_correction_tests": 2,
+  "all_remaining_old_model_test_occurrences_reviewed": "synthetic experiment fixtures or unchanged prompt prose; not live-profile expectations",
+  "success_not_claimed": true
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "daytime-recorded-coverage-review-v1",
+  "result_integrity_passed": true,
+  "prior_observed_counts_match": true,
+  "days": [
+    {
+      "local_date": "2026-10-16",
+      "recorded_coverage": "incomplete",
+      "expected_solar_day_minutes": 669,
+      "missing_climate_minutes": 25,
+      "missing_action_minutes": 25,
+      "unknown_held_classification_minutes": 0,
+      "source_daytime_held_admission_minutes": 0,
+      "known_ordinary_daytime_dehumidification_minutes": 12,
+      "measured_zero_for_complete_recorded_minutes": null
+    },
+    {
+      "local_date": "2026-10-17",
+      "recorded_coverage": "incomplete",
+      "expected_solar_day_minutes": 666,
+      "missing_climate_minutes": 23,
+      "missing_action_minutes": 23,
+      "unknown_held_classification_minutes": 0,
+      "source_daytime_held_admission_minutes": 0,
+      "known_ordinary_daytime_dehumidification_minutes": 2,
+      "measured_zero_for_complete_recorded_minutes": null
+    }
+  ],
+  "complete_recorded_daytime_zero": false,
+  "continuous_physical_absence_proven": false,
+  "full_issue_acceptance": false,
+  "limits": [
+    "Source produces sampled state and lacks per-relay freshness; full minute coverage does not prove every controller tick.",
+    "No authenticated MCP dispatch, planner consumption, crop-safety or daytime effectiveness proof.",
+    "ROOT must bind submitted SQL, native target/admission, exit code and complete output custody separately."
+  ],
+  "stdout_sha256": "096d74b1c43b9565ff3c2c1514146bbe228a07d124e600f0b155f0a5f640287b"
+}

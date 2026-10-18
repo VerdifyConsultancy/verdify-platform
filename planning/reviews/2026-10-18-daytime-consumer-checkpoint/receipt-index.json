@@ -1,0 +1,44 @@
+[
+  {
+    "source_path": "daytime-native-01/verified.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/daytime-native-01/verified.json",
+    "sha256": "013071a1dc49023c792c115e50c1a6ce5353b8737430f9d59e7ffb5b8d28bf67",
+    "bytes": 1552
+  },
+  {
+    "source_path": "runtime-01/verified.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/runtime-01/verified.json",
+    "sha256": "a9c05666e60d68feaeaab5edcb3797aa2f19bff4c6e0df388cc254d099cca138",
+    "bytes": 26751
+  },
+  {
+    "source_path": "source-ci-verified.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/source-ci-verified.json",
+    "sha256": "26a7ae9165c2de368320ec1f75916564119d7ea22126f844dcf006da869c14b2",
+    "bytes": 32079
+  },
+  {
+    "source_path": "release-ci-verified.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/release-ci-verified.json",
+    "sha256": "5c8ec99bbe9653cb246834fb5310b8ee1dd976f2c8c9b4b48612b676bb378d92",
+    "bytes": 2146
+  },
+  {
+    "source_path": "model-source-ci-failure-01.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/model-source-ci-failure-01.json",
+    "sha256": "e47ec400c744a81feeef8640e550aec7e7a565d868591cc46118c9f1c49dffca",
+    "bytes": 942
+  },
+  {
+    "source_path": "model-source-validation-verified-02.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/model-source-validation-verified-02.json",
+    "sha256": "17ccf563a5060bfae6299c5a1c27f92fa3e136ff81fc51b39749907b7f39b0dc",
+    "bytes": 1141
+  },
+  {
+    "source_path": "model-build-admission-failure-02.json",
+    "repo_path": "planning/reviews/2026-10-18-daytime-consumer-checkpoint/receipts/model-build-admission-failure-02.json",
+    "sha256": "066fecbcc38f2bca1cd83cec20a5a242eafa0095cb0ac9edb5b6be331bdde3af",
+    "bytes": 1168
+  }
+]
