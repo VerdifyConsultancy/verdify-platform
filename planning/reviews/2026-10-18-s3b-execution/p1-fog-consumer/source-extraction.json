@@ -1,0 +1,177 @@
+{
+  "format": "verdify-fog-vent-consumer-v1",
+  "fragments": {
+    "policy_selection": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 64,
+      "last_line": 70,
+      "sha256": "4f612c5523025e98ab671ae31dc7f0d1272219c811bb935044abbbb03c421596",
+      "text": "const auto pol = [&](uint8_t f, float legacy) -> float {\n              return psnap.experiment_active ? psnap.values[f] : legacy;\n          };\n          const auto polb = [&](uint8_t f, bool legacy) -> bool {\n              return psnap.experiment_active ? (psnap.values[f] != 0.0f) : legacy;\n          };\n          "
+    },
+    "dwell_constants": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 77,
+      "last_line": 86,
+      "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827",
+      "text": "const uint32_t MIN_HEAT_ON_MS    = uint32_t(pol(verdify_policy::kPF_min_heat_on_s, id(min_heat_on_s)))  * 1000UL;\n          const uint32_t MIN_HEAT_OFF_MS   = uint32_t(pol(verdify_policy::kPF_min_heat_off_s, id(min_heat_off_s))) * 1000UL;\n          const uint32_t MIN_FAN_ON_MS     = uint32_t(pol(verdify_policy::kPF_min_fan_on_s, id(min_fan_on_s)))   * 1000UL;\n          const uint32_t MIN_FAN_OFF_MS    = uint32_t(pol(verdify_policy::kPF_min_fan_off_s, id(min_fan_off_s)))  * 1000UL;\n          const uint32_t MIN_VENT_ON_MS    = uint32_t(pol(verdify_policy::kPF_min_vent_on_s, id(min_vent_on_s)))  * 1000UL;\n          const uint32_t MIN_VENT_OFF_MS   = uint32_t(pol(verdify_policy::kPF_min_vent_off_s, id(min_vent_off_s))) * 1000UL;\n          const uint32_t MIN_FOG_ON_MS     = uint32_t(pol(verdify_policy::kPF_min_fog_on_s,  id(min_fog_on_s)))  * 1000UL;\n          const uint32_t MIN_FOG_OFF_MS    = uint32_t(pol(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s))) * 1000UL;\n\n          "
+    },
+    "relay_helpers": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 132,
+      "last_line": 188,
+      "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf",
+      "text": "struct RelayMeta {\n            esphome::switch_::Switch *sw;\n            uint32_t on_stamp_ms = 0;\n            uint32_t runtime_ms = 0;\n            uint32_t min_on_ms;\n            uint32_t min_off_ms;\n            uint32_t last_on_ms = 0;\n            uint32_t last_off_ms = 0;\n          };\n\n          static RelayMeta R[] = {\n            { id(heat1_rly), 0,0, MIN_HEAT_ON_MS, MIN_HEAT_OFF_MS }, // H1\n            { id(heat2_rly), 0,0, MIN_HEAT_ON_MS, MIN_HEAT_OFF_MS }, // H2\n            { id(fan1_rly) , 0,0, MIN_FAN_ON_MS , MIN_FAN_OFF_MS  }, // F1\n            { id(fan2_rly) , 0,0, MIN_FAN_ON_MS , MIN_FAN_OFF_MS  }, // F2\n            { id(fog_rly)  , 0,0, MIN_FOG_ON_MS , MIN_FOG_OFF_MS  }, // Fog\n            { id(vent_rly) , 0,0, MIN_VENT_ON_MS, MIN_VENT_OFF_MS }  // Vent\n          };\n\n          // Refresh policy/legacy dwell limits without resetting transition\n          // history: mid-cycle changes still measure from the original edge.\n          R[0].min_on_ms = R[1].min_on_ms = MIN_HEAT_ON_MS;\n          R[0].min_off_ms = R[1].min_off_ms = MIN_HEAT_OFF_MS;\n          R[2].min_on_ms = R[3].min_on_ms = MIN_FAN_ON_MS;\n          R[2].min_off_ms = R[3].min_off_ms = MIN_FAN_OFF_MS;\n          R[4].min_on_ms = MIN_FOG_ON_MS;\n          R[4].min_off_ms = MIN_FOG_OFF_MS;\n          R[5].min_on_ms = MIN_VENT_ON_MS;\n          R[5].min_off_ms = MIN_VENT_OFF_MS;\n\n          auto update_runtime = [&](RelayMeta &r){\n            if(!r.sw->state && r.on_stamp_ms){\n              r.runtime_ms += now_ms - r.on_stamp_ms;\n              r.on_stamp_ms = 0;\n            }\n          };\n          auto can_on  = [&](RelayMeta &r){ return now_ms - r.last_off_ms >= r.min_off_ms; };\n          auto can_off = [&](RelayMeta &r){ return now_ms - r.last_on_ms  >= r.min_on_ms; };\n\n          auto set_relay = [&](RelayMeta &r,bool want,bool force_on,bool force_off=false){\n            update_runtime(r);\n            if(want){\n              if(!r.sw->state && (force_on || can_on(r))){\n                r.sw->turn_on();\n                r.last_on_ms = now_ms;\n                r.on_stamp_ms= now_ms;\n              }\n            }else{\n              if(r.sw->state && (force_off || can_off(r))){\n                r.sw->turn_off();\n                r.last_off_ms = now_ms;\n                update_runtime(r);\n              }\n            }\n          };\n\n          "
+    },
+    "sensor_fault_lock": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 683,
+      "last_line": 683,
+      "sha256": "29baf1feb2ac2f7b2204bbbba6bb6a0735cc2656b4f2d4b4fdee7df71b8526e1",
+      "text": "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;"
+    },
+    "vent_readback": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 788,
+      "last_line": 788,
+      "sha256": "1388bf8579a7e34373b01d99fb66c8bde8e38dda52ab6071f44ee41456c61925",
+      "text": "const bool vent_is_open = id(vent_rly)->state;"
+    },
+    "fog_assist": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 852,
+      "last_line": 853,
+      "sha256": "584f831872e7b2e1ac2575d22dd2644286775b8f0af7acbc6b6f9ef8b5c5fb6b",
+      "text": "const bool open_vent_fog_assist =\n              open_vent_fog_assist_permitted(mode, relay_out);"
+    },
+    "safety_suppression": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 911,
+      "last_line": 913,
+      "sha256": "c97c56cb226ecd5a5f5e3feaf4bc11570b25ddadc48204d7baa42ee4d093184a",
+      "text": "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on) {\n              willFog = false;\n          }"
+    },
+    "fog_consumer": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 930,
+      "last_line": 932,
+      "sha256": "4c864e014cdd0a3b52399a822250da341d6697bc4d78f15bfd4ad9a2bdf12d96",
+      "text": "if (polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist) {\n              willFog = false;\n          }"
+    },
+    "vent_apply": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 952,
+      "last_line": 952,
+      "sha256": "4a9798d66fecc7348fb26de1b2f5d5b574edb8a163990b19f456bed53bdbd865",
+      "text": "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);"
+    },
+    "fog_apply": {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "first_line": 958,
+      "last_line": 975,
+      "sha256": "95d343c005c922cf3c6dece3a6d80b057ddb06058599430bf4e1194250caf074",
+      "text": "set_relay(\n              R[4],\n              willFog,\n              // CYC-4: force_on bypasses MIN_FOG_OFF_MS so a \u22645s micro-pulse can\n              // start even if the fogger toggled recently; force_off bypasses\n              // MIN_FOG_ON_MS so the pulse is cut at its \u22645s cap (and on any\n              // safety interlock). The safety disjunction below is unchanged.\n              manual_fog_force,\n              sensor_fault_relay_lock\n                  || leak_block\n                  || occupancy_moisture_block\n                  || irrigation_water_conflict\n                  || !controller_time_valid\n                  || climate_water_budget_block\n                  || mister_volume_hard_block\n                  || fert_master_on);\n\n          "
+    },
+    "actual_helper": {
+      "source_path": "firmware/lib/greenhouse_logic.h",
+      "first_line": 2678,
+      "last_line": 2681,
+      "sha256": "97124927fb75f69d70974dc28049e3583068b52640d3731f0c99b86a51bac0d5",
+      "text": "inline bool open_vent_fog_assist_permitted(Mode mode,\n                                           const RelayOutputs& requested) noexcept {\n    return requested.fog && (mode == VENTILATE || mode == SAFETY_COOL);\n}"
+    }
+  },
+  "source_files": [
+    {
+      "path": "firmware/greenhouse/controls.yaml",
+      "sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e"
+    },
+    {
+      "path": "firmware/lib/greenhouse_logic.h",
+      "sha256": "1bec80ba9181f66ca7573d16a4f40dd7fc4376f913c7c05a659a39e692ae4823"
+    },
+    {
+      "path": "firmware/lib/greenhouse_solar.h",
+      "sha256": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e"
+    },
+    {
+      "path": "firmware/lib/greenhouse_types.h",
+      "sha256": "52eb4b782d6c8d1828875b792710acb929d4897ad75dee6032fdeb8da1b5d4d9"
+    },
+    {
+      "path": "firmware/lib/policy_rom_baseline_generated.h",
+      "sha256": "e452e63e50e8497f9bf33b401bd1844f70ca12a455fef73a8647a4b58f7e8763"
+    },
+    {
+      "path": "firmware/lib/policy_sha256.h",
+      "sha256": "21cfa69be90231489d83004bf76a7bc592aa0eed3f07223d785cc92a10b96adf"
+    },
+    {
+      "path": "firmware/lib/policy_vector_generated.h",
+      "sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0"
+    }
+  ],
+  "inputs": {
+    "now_ms": "uint32 monotonic milliseconds; wrap is deliberate in one scenario",
+    "experiment_active": "bool; chooses snapshot or legacy storage",
+    "snapshot/legacy.sw_fog_closes_vent": "bool; unselected value is opposite",
+    "snapshot/legacy.min_{heat,fan,vent,fog}_{on,off}_s": "eight wire-valid durations; selected 60, unselected 120 seconds",
+    "mode": "actual Mode enum",
+    "relay_out.fog": "bool; upstream controller request used by actual exemption helper",
+    "willFog": "bool; request entering the extracted safety and fog consumer",
+    "willVent": "bool; desired vent before actual relay application",
+    "vent_rly.state/fog_rly.state": "bool; actual pre-apply storage readback, never same-row telemetry output",
+    "RelayMeta[4,5]": "persistent last_on_ms,last_off_ms,on_stamp_ms,runtime_ms; initialized once per process and advanced by actual relay code",
+    "manual_fog_force/fan_requires_vent": "bool; upstream authority decisions, not reconstructed here",
+    "controller_time_valid": "bool",
+    "leak_block/occupancy_moisture_block/irrigation_water_conflict/climate_water_budget_block/mister_volume_hard_block/fert_master_on": "six explicit bool upstream safety decisions",
+    "sensor_fault_relay_lock": "actual extracted expression mode == SENSOR_FAULT"
+  },
+  "scenario_names": [
+    "gate_true_open_close",
+    "gate_true_open_open",
+    "gate_false_open_close",
+    "gate_false_open_open",
+    "gate_true_closed_close",
+    "gate_true_closed_open",
+    "gate_false_closed_close",
+    "gate_false_closed_open",
+    "ventilate_requested",
+    "safety_cool_requested",
+    "ventilate_manual_only",
+    "unrelated_mode",
+    "preblocked_true_open",
+    "preblocked_false_open",
+    "preblocked_true_closed",
+    "preblocked_false_closed",
+    "minimum_on",
+    "minimum_on_wrap",
+    "minimum_off",
+    "manual_force_on",
+    "blocked_clock",
+    "blocked_leak",
+    "blocked_occupancy",
+    "blocked_irrigation",
+    "blocked_budget",
+    "blocked_hard_limit",
+    "blocked_fertilizer",
+    "sensor_fault_preblocked"
+  ],
+  "selection_modes": [
+    "snapshot",
+    "legacy"
+  ],
+  "negative_witnesses": [
+    "gate_true_open_close",
+    "gate_true_open_open"
+  ],
+  "scope": "synthetic single-consumer scenarios; upstream inputs explicit; actual helper and relay code",
+  "corpus_prefix_coverage": "27/48 UNPROVEN; no row-wise credit added",
+  "physical_acceptance": false,
+  "firmware_changed": false,
+  "state": "SOURCE_PREPARED_NATIVE_NOT_EXECUTED",
+  "source_base": "541c11ad0786e00e50e45f52ca4828173ddc58c2",
+  "generated_variants": {
+    "original": "64c41006ffb7d9147d0a0b21a04f20cfd6d5203ae7a07f5076e7771f1f3120ac",
+    "deleted_consumer": "5d78870dcce9beb8cd62b1ac115963eab1478cf2899b650026a78d98a3a66103",
+    "inverted_consumer": "74db5802f5873f33748fe7d7310ed7362670822273f4e8867208049d006cc7d7"
+  }
+}
