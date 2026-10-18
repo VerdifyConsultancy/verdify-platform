@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import struct
 import sys
 from datetime import UTC, datetime, timedelta
@@ -440,9 +441,33 @@ def test_invalid_uptime_never_forges_a_reset(value: object) -> None:
 
 def test_ingestor_callback_hook_is_separate_from_periodic_snapshot_flush() -> None:
     source = (Path(__file__).resolve().parents[1] / "ingestor" / "ingestor.py").read_text()
-    callback = source.index("record_component_cfg_readback(cfg_param, val)")
-    snapshot = source.index("Setpoint snapshot: write ESP32 configured values")
-    assert callback < snapshot
+    tree = ast.parse(source)
+
+    def function(name: str) -> ast.FunctionDef | ast.AsyncFunctionDef:
+        matches = [
+            node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
+        ]
+        assert len(matches) == 1
+        return matches[0]
+
+    def calls(node: ast.AST, name: str) -> int:
+        return sum(
+            isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id == name
+            for child in ast.walk(node)
+        )
+
+    callback = function("_record_cfg_readback")
+    snapshot = function("_publish_setpoint_snapshot")
+    flush = function("flush_loop")
+    assert callback.lineno < snapshot.lineno < flush.lineno
+    assert calls(callback, "record_component_cfg_readback") == 1
+    assert calls(callback, "_publish_setpoint_snapshot") == 0
+    assert calls(flush, "_publish_setpoint_snapshot") == 1
+    for publication in (snapshot, flush):
+        assert calls(publication, "record_component_cfg_readback") == 0
+        assert calls(publication, "_record_cfg_readback") == 0
     assert source.count("record_component_cfg_readback(cfg_param, val)") == 1
     assert source.count("record_component_device_uptime(value)") == 1
     assert source.count("client.subscribe_states(on_generation_state)") == 1
