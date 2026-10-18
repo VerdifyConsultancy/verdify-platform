@@ -1,0 +1,928 @@
+{
+  "additional_evidence": [
+    {
+      "attempt_directories_to_include": [
+        "model-source-ci"
+      ],
+      "path": "model-source-ci/workflow-final-bc3371b31530738bbfc59a0da775670cffd008e27cf47084c35107b1c1a8dbd8.json",
+      "reviewed_by_root": true,
+      "sha256": "bc3371b31530738bbfc59a0da775670cffd008e27cf47084c35107b1c1a8dbd8"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-source-ci-failure-01.json",
+      "reviewed_by_root": true,
+      "sha256": "e47ec400c744a81feeef8640e550aec7e7a565d868591cc46118c9f1c49dffca"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-source-validation-verified-02.json",
+      "reviewed_by_root": true,
+      "sha256": "17ccf563a5060bfae6299c5a1c27f92fa3e136ff81fc51b39749907b7f39b0dc"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-build-admission-failure-02.json",
+      "reviewed_by_root": true,
+      "sha256": "066fecbcc38f2bca1cd83cec20a5a242eafa0095cb0ac9edb5b6be331bdde3af"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-ci-owner-diagnosis-02.json",
+      "reviewed_by_root": true,
+      "sha256": "b484cd199ff3ff106eba61b3d29693abdf13c31913a1945b727b629133b092db"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-build-recovery-04/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "711074b7662f1540b7036ef166db69a3cf383aacd7703cbb061c2bbeeb84cf6d"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "model-release-source-initial.json",
+      "reviewed_by_root": true,
+      "sha256": "3b58096d3ae93d1da2a9d594e99e85a1f5a40509d3001a946e68a789ddd5b626"
+    },
+    {
+      "attempt_directories_to_include": [
+        "model-rollout"
+      ],
+      "path": "model-rollout/preflight-refusal.json",
+      "reviewed_by_root": true,
+      "sha256": "0903f77378d03713235e52f64d120e78e5dd38db2e22273ef73e5ea91db3b309"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "checkpoint-publication.json",
+      "reviewed_by_root": true,
+      "sha256": "acf3df55e6541189ec9b61cf77354e0a607067f13e8c31763bb193c645f23ba6"
+    },
+    {
+      "attempt_directories_to_include": [
+        "runtime-model-01"
+      ],
+      "path": "runtime-model-01/attempt-result.json",
+      "reviewed_by_root": true,
+      "sha256": "a3e72217863793f92ae351356114743a0c018a871086b231769336d7f7f42941"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "runtime-model-settle-review.json",
+      "reviewed_by_root": true,
+      "sha256": "066b6b3c5882279b44ae5a882b22a0f3ed2e0b2123eb90e4b62a88cad261a8f1"
+    },
+    {
+      "attempt_directories_to_include": [
+        "model-render-after-02"
+      ],
+      "path": "model-release-source.json",
+      "reviewed_by_root": true,
+      "sha256": "2ab5180775d33898f60023fbc602d40d64afff296fd87b7c8c0cea64e7c9deee"
+    },
+    {
+      "attempt_directories_to_include": [
+        "model-rollout-02"
+      ],
+      "path": "model-rollout-02/terminal-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "47b7f87e7b096e1160b74e5c37ea6a01ba022139df8f96ae13b752724c46983a"
+    },
+    {
+      "attempt_directories_to_include": [
+        "consumer-native-v3-01"
+      ],
+      "path": "consumer-native-v3-01/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "096f5e3187c5da5a04ecccee765d44a00f215dd266c23775614392306fcd3f63"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "science/consumer-v3-actual-independent-review.json",
+      "reviewed_by_root": true,
+      "sha256": "1bb7db6c37238fa0f66b2fe2f03d5f90a903e93e7f31cd36dba73319b7ca4a30"
+    },
+    {
+      "attempt_directories_to_include": [
+        "final-planning-publication"
+      ],
+      "path": "final-planning-publication/handoff.json",
+      "reviewed_by_root": true,
+      "sha256": "353cc3f2bce22a37597de391ab87fd55cff7d3a2eff7504c423e6194d1ecb1fc"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "final-planning-publication/semantic-format-readback.json",
+      "reviewed_by_root": true,
+      "sha256": "a6e74a823d08f3bd55b7c46f6491b9e1135611811447d693a27f5bf05174351f"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "final-planning-inputs.json",
+      "reviewed_by_root": true,
+      "sha256": "a6f9ef83d8178ceae24257a75f54977031066fd3b2f759df6c19a881759c9fe0"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "planning-validation-final.json",
+      "reviewed_by_root": true,
+      "sha256": "7bc55bfa7f6b059bc670ac82849be1f4a015c1a311791a5a9f78c3948ae9eade"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "github-final-progress-payload.json",
+      "reviewed_by_root": true,
+      "sha256": "73a900caed96e225669aad87da685b1e7f70a4f2911e923673e1a238d7b93969"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "github-final-progress.json",
+      "reviewed_by_root": true,
+      "sha256": "c8f7a379ac015f030e9b7b691933c34522811fa97b4e01326b0aca43d837a2dc"
+    },
+    {
+      "attempt_directories_to_include": [
+        "graph-after"
+      ],
+      "path": "read-graph-after.py",
+      "reviewed_by_root": true,
+      "sha256": "1a1298f7635f8b224af9178f67c8aeaff64bd82116a6b2985ee0364cc6d20c6a"
+    },
+    {
+      "attempt_directories_to_include": [],
+      "path": "runtime-model-02/attempt-result.json",
+      "reviewed_by_root": true,
+      "sha256": "ba67cda9198f7e7d9019fd95a10caa4d33a5aa22d60f5e2ff9ffeb461ddf268b"
+    },
+    {
+      "path": "acceptance-summary.json",
+      "sha256": "9023a705c849d857f3f5d0d98f10ed45795e2bfdfbee1fa4964f2e460a5cbb7f",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "prepare-final-custody-bindings.py",
+      "sha256": "83a9cbc978bd6b30dcaa11c4f4d35b4f44aa8f14a7113216bc6c7eee88d848b0",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "model-render-refusal-review.json",
+      "sha256": "ec848a1415e550cab84fa54eac23703d83f7a9f8477207b9d0343d5c798b0ec1",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "prepare-model-rollout-03.py",
+      "sha256": "878996f7b2e06a98419e74293b4348a640ece919ce2023e291a4f1b2d56454e5",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "prepare-runtime-model-execution.py",
+      "sha256": "c7464eb725f8a3fd1ac1ed40a311c30054016e68b37a47bab756ed019c49c871",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "prepare-runtime-model-execution-02.py",
+      "sha256": "b197e1cab640fb76a6dba9e27cbdf212d4b1683c767b2252713de42b0ff9dd50",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "read-database-final-model.py",
+      "sha256": "9ea0021643656d74ad2a4d21a9ee90964843146d4b7fc8497e5ed2eb1b2bcb95",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "COORDINATOR_STATE.json",
+      "sha256": "d1dbc855593cf3dac295e29f251d6d84c628d343cb672ad94be4e2ddf1e3230a",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "verify-final-remote-custody.py",
+      "sha256": "6702678666f45f5870a51ae099a0028efe4097ac69127914e6702b296dfb6de0",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "install-custody-materials.py",
+      "sha256": "94b4d993d998f54be72c35f096a614901e9e327260b9bf022b2e8c1c3aeab781",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "ingress-readonly-01/public-metadata.json",
+      "sha256": "8e14991c5a74cd0eb02942645614e6a4268ad47cd5fc469e5eaac7f29e6ff34f",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "final-application.json",
+      "sha256": "11de646064b8be3b5e54be71e9b6fefc5ac9d57be937dc1feddf969ce22672d3",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "final-live-status.json",
+      "sha256": "3bdd5cf58a88f4f0032549f5ca26bc054a9e6c52c52bfc15786929a7ce2fa30a",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": []
+    },
+    {
+      "path": "control/ingress-source-scope.json",
+      "sha256": "fbbf0b16d4718035b6fc16ff99497bc7d40034c44da640f5572b394df0db2cd3",
+      "reviewed_by_root": true,
+      "attempt_directories_to_include": [
+        "ingress-readonly-01"
+      ]
+    }
+  ],
+  "all_attempts_included_reviewed_by_root": true,
+  "credential_exceptions_added": 0,
+  "instructions": [
+    "Prepared from actual completed receipts. ONLY historical_model_release_ci, model_release_ci and final_report_ci remain null pending actual terminals. ROOT must review every false flag and bind those actual CI outcomes/whole directories before READY_FOR_BINDING. No CI future success is asserted. Science actual consumer independent review is included explicitly. All source/runtime/consumer/graph assertions below were checked against retained bytes, not replayed.",
+    "Final release is actual1f132f20 / Workflow6l8w9 / UIDfd2e81ec. Bind current model_runtime only to actual terminal successor runtime-model-02, retaining failed runtime-model-01 and settle review. Keep both render-after generations, the original rollout refusal and final four-object operation; operation success alone is not runtime acceptance. Bind historical and final release CI receipts by their actual final filenames; no future receipt filename is fabricated.",
+    "Bind historical_model_release_ci only to actual terminal12e3/dslbn, preserving its whole model-release-ci directory. Current model_release_source must be the new final release; final model_release_ci and model_rollout must match that revision and cannot reuse12e3/dslbn. Include final CI02 and rollout02 directories; both old refusal and new actual results remain distinct.",
+    "Same87whm/UID410/source56 current model_source_ci receipt must combine final recovery terminal with original source-gate02 custody. Do not relabel any failed/historical attempt; all original admission/failure/recovery03/04 paths stay selected. Add actual later checkpoint-publication proof through additional_evidence using its exact supplied path/hash; no future checkpoint success is assumed.",
+    "Set status READY_FOR_BINDING only when all real records are bound. Current model_source_ci must be56b316f3/87whm; original18269/99648 remains FAILED and its whole original directory plus terminal evidence remain selected. Do not reuse the failed original as current success.",
+    "ROOT fills actual missing terminal/source bindings and reviews fixed entries. Nulls and false review flags refuse; no future status or success is assumed.",
+    "For each terminal role: path,sha256,reviewed_by_root,terminal,outcome,terminal_indicator {field:[keys],equals:actual},assertions:[{field:[keys],equals:actual}],attempt_directories_to_include. Source roles need path/hash/review and directories.",
+    "Add exact actual model-release and report-CI Workflow metadata bindings. Include every failed/refused original and successor attempt in roles/additional_evidence; preserve complete logs.",
+    "Both consumer roles may bind one aggregate actual receipt with respective case assertions. If a case was never started due to first-case failure, bind actual terminal wrapper with outcome incomplete and exact evidence of that limit; never invent a case receipt.",
+    "Additional new ROOT source helpers/checks and frozen failures use additional_evidence entries {path,sha256,reviewed_by_root,attempt_directories_to_include}; existing platform/control/science directories stay selected.",
+    "This only finalizes custody selection. Existing scanner, byte/member limits, final broader credential scan and publication are separate."
+  ],
+  "roles": {
+    "consumer_oct04": {
+      "assertions": [
+        {
+          "equals": "PASSED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "2026-10-04",
+          "field": [
+            "actual_result",
+            "date"
+          ]
+        },
+        {
+          "equals": 2,
+          "field": [
+            "actual_result",
+            "provider_calls"
+          ]
+        },
+        {
+          "equals": 1,
+          "field": [
+            "actual_result",
+            "scorecard_calls"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "actual_result",
+            "natural_cycle_verified"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "actual_result",
+            "whole_issue_acceptance"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "consumer-native-v3-01"
+      ],
+      "outcome": "passed",
+      "path": "consumer-native-v3-01/oct04-case-result.json",
+      "reviewed_by_root": true,
+      "sha256": "8d927bb3721814ae829f06bd18019a9a60b6a4092abb8fc0847a69bf6a7492e8",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "PASSED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "consumer_oct16": {
+      "assertions": [
+        {
+          "equals": "PASSED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "2026-10-16",
+          "field": [
+            "actual_result",
+            "date"
+          ]
+        },
+        {
+          "equals": 2,
+          "field": [
+            "actual_result",
+            "provider_calls"
+          ]
+        },
+        {
+          "equals": 1,
+          "field": [
+            "actual_result",
+            "scorecard_calls"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "actual_result",
+            "natural_cycle_verified"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "actual_result",
+            "whole_issue_acceptance"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "consumer-native-v3-01"
+      ],
+      "outcome": "passed",
+      "path": "consumer-native-v3-01/oct16-case-result.json",
+      "reviewed_by_root": true,
+      "sha256": "a93b7b76a28d6f9750e0df88b1569adbc50a25b60128869fa767d0d591664b04",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "PASSED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "final_database_identity": {
+      "assertions": [
+        {
+          "equals": "INSTALLED_GETTER277_SOURCE_DATABASE_IDENTITY_VERIFIED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "on",
+          "field": [
+            "database",
+            "read_only"
+          ]
+        },
+        {
+          "equals": 277,
+          "field": [
+            "database",
+            "ledger_max"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "database-final-model"
+      ],
+      "outcome": "passed",
+      "path": "database-final-model/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "6491a92c423560484e4809e09696387868a1710f830da6f8fdf27fe3378b7f3b",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "INSTALLED_GETTER277_SOURCE_DATABASE_IDENTITY_VERIFIED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "final_native_graph": {
+      "assertions": [
+        {
+          "equals": "MATCH",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "af46d263352d6403201a4642378197e9ca00303c",
+          "field": [
+            "source_revision"
+          ]
+        },
+        {
+          "equals": 47,
+          "field": [
+            "open_issues"
+          ]
+        },
+        {
+          "equals": 143,
+          "field": [
+            "open_acceptance_clauses"
+          ]
+        },
+        {
+          "equals": 27,
+          "field": [
+            "total_active_edges"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "graph-after"
+      ],
+      "outcome": "passed",
+      "path": "graph-after/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "b1f626241086edee6e1fb0bc6aef5c3f40bed2f17932496527ace8616862694e",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "MATCH",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "final_publication_source": {
+      "attempt_directories_to_include": [
+        "final-planning-publication"
+      ],
+      "path": "final-publication-source.json",
+      "reviewed_by_root": true,
+      "sha256": "3e9246b25b461161aa83edab427819da2149dbb8fe9d790d7c1e3c431c2059ca"
+    },
+    "final_report": {
+      "attempt_directories_to_include": [
+        "final-planning-publication"
+      ],
+      "path": "final-planning-publication/README.md",
+      "reviewed_by_root": true,
+      "sha256": "426ae6c8e873c67f6e913014bcb927c2f6b40f3132dd054a7b5f2d3b647b66fb"
+    },
+    "final_report_ci": {
+      "path": "report-ci-verified.json",
+      "sha256": "0056e35afb0c17395c49f62a3d8888efd692e2dfaa092149663b84455ebf6042",
+      "reviewed_by_root": true,
+      "terminal": true,
+      "outcome": "passed",
+      "terminal_indicator": {
+        "field": [
+          "status"
+        ],
+        "equals": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED"
+      },
+      "assertions": [
+        {
+          "field": [
+            "source_revision"
+          ],
+          "equals": "af46d263352d6403201a4642378197e9ca00303c"
+        },
+        {
+          "field": [
+            "workflow_uid"
+          ],
+          "equals": "ee2a9d27-5236-426d-b39d-abe9f24b2f3e"
+        },
+        {
+          "field": [
+            "actual_build_pods"
+          ],
+          "equals": 0
+        }
+      ],
+      "attempt_directories_to_include": [
+        "report-ci"
+      ]
+    },
+    "historical_model_release_ci": {
+      "path": "model-release-ci-initial-verified.json",
+      "sha256": "016ff8b2e6abb0ec28b7b18fedf686e1de02f1a656d84af60e19b7cedef6bedc",
+      "reviewed_by_root": true,
+      "terminal": true,
+      "outcome": "passed",
+      "terminal_indicator": {
+        "field": [
+          "status"
+        ],
+        "equals": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED"
+      },
+      "assertions": [
+        {
+          "field": [
+            "source_revision"
+          ],
+          "equals": "12e3cd6e01ee6e2e3a989ce2e78d2c9e30f09ffe"
+        },
+        {
+          "field": [
+            "workflow_uid"
+          ],
+          "equals": "5422fa2a-2d13-405a-afb8-45fddcbca593"
+        },
+        {
+          "field": [
+            "actual_build_pods"
+          ],
+          "equals": 0
+        }
+      ],
+      "attempt_directories_to_include": [
+        "model-release-ci"
+      ]
+    },
+    "model_promotion_source": {
+      "attempt_directories_to_include": [],
+      "path": "api-promotion-source.json",
+      "reviewed_by_root": true,
+      "sha256": "c83e5f3f2c6911f5e23b67d6dd3b7162503978571a6640ef8669c8dec6fab7f9"
+    },
+    "model_release_ci": {
+      "path": "model-release-ci-verified.json",
+      "sha256": "4fc3f486a971b5b0b2ec32638c82ebc3b40206b4f279dfbea0c4f78026a31087",
+      "reviewed_by_root": true,
+      "terminal": true,
+      "outcome": "passed",
+      "terminal_indicator": {
+        "field": [
+          "status"
+        ],
+        "equals": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED"
+      },
+      "assertions": [
+        {
+          "field": [
+            "source_revision"
+          ],
+          "equals": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf"
+        },
+        {
+          "field": [
+            "workflow_uid"
+          ],
+          "equals": "fd2e81ec-ac60-4525-be14-d02a056f0438"
+        },
+        {
+          "field": [
+            "actual_build_pods"
+          ],
+          "equals": 0
+        }
+      ],
+      "attempt_directories_to_include": [
+        "model-release-ci-02"
+      ]
+    },
+    "model_release_source": {
+      "attempt_directories_to_include": [
+        "model-render-after",
+        "model-render-after-02"
+      ],
+      "path": "model-release-source.json",
+      "reviewed_by_root": true,
+      "sha256": "2ab5180775d33898f60023fbc602d40d64afff296fd87b7c8c0cea64e7c9deee"
+    },
+    "model_rollout": {
+      "assertions": [
+        {
+          "equals": "EXACT_FOUR_RESOURCE_OPERATION_SUCCEEDED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+          "field": [
+            "revision"
+          ]
+        },
+        {
+          "equals": true,
+          "field": [
+            "winter_resources_unchanged"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "prune"
+          ]
+        },
+        {
+          "equals": 0,
+          "field": [
+            "hooks"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "model-rollout",
+        "model-rollout-02"
+      ],
+      "outcome": "passed",
+      "path": "model-rollout-02/terminal-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "47b7f87e7b096e1160b74e5c37ea6a01ba022139df8f96ae13b752724c46983a",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "EXACT_FOUR_RESOURCE_OPERATION_SUCCEEDED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "model_runtime": {
+      "assertions": [
+        {
+          "equals": "POST_ROLLOUT_RUNTIME_CUSTODY_PASSED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+          "field": [
+            "release_sha"
+          ]
+        },
+        {
+          "equals": 15,
+          "field": [
+            "deployment_uids_preserved"
+          ]
+        },
+        {
+          "equals": 13,
+          "field": [
+            "unchanged_deployment_specs"
+          ]
+        },
+        {
+          "equals": false,
+          "field": [
+            "natural_cycle_verified"
+          ]
+        },
+        {
+          "equals": 0,
+          "field": [
+            "provider_calls"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "runtime-model-01",
+        "runtime-model-02"
+      ],
+      "outcome": "passed",
+      "path": "runtime-model-02/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "76dbf3abe663533a1cd07e30a4e49c9138e95a3cc53f82db65006e3947b66126",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "POST_ROLLOUT_RUNTIME_CUSTODY_PASSED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "model_source_ci": {
+      "assertions": [
+        {
+          "equals": "SOURCE_GATE_TWO_BUILDS_AND_PIN_PUBLISHER_VERIFIED",
+          "field": [
+            "status"
+          ]
+        },
+        {
+          "equals": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+          "field": [
+            "source_revision"
+          ]
+        },
+        {
+          "equals": "410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f",
+          "field": [
+            "workflow_uid"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "model-source-ci",
+        "model-source-ci-02",
+        "model-source-ci-recovery-04",
+        "model-build-recovery-03",
+        "model-build-recovery-04"
+      ],
+      "outcome": "passed",
+      "path": "model-source-ci-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "8326b85a7821232df5126e01082be1e57153cf7b323904e33da0c8e53cac99d4",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "SOURCE_GATE_TWO_BUILDS_AND_PIN_PUBLISHER_VERIFIED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "original_release_ci": {
+      "assertions": [
+        {
+          "equals": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+          "field": [
+            "status"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "release-ci",
+        "release-ci-checkpoint-01"
+      ],
+      "outcome": "passed",
+      "path": "release-ci-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "5c8ec99bbe9653cb246834fb5310b8ee1dd976f2c8c9b4b48612b676bb378d92",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "original_rollout": {
+      "assertions": [
+        {
+          "equals": "EXACT_THREE_RESOURCE_OPERATION_SUCCEEDED",
+          "field": [
+            "status"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "rollout"
+      ],
+      "outcome": "passed",
+      "path": "rollout/terminal-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "909fda3b6e3c015ac6ae38145cd8cbf95bd6396007e8272cdc415f578aed7396",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "EXACT_THREE_RESOURCE_OPERATION_SUCCEEDED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "original_runtime": {
+      "assertions": [
+        {
+          "equals": "POST_ROLLOUT_RUNTIME_CUSTODY_PASSED",
+          "field": [
+            "status"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "runtime-01"
+      ],
+      "outcome": "passed",
+      "path": "runtime-01/verified.json",
+      "reviewed_by_root": true,
+      "sha256": "a9c05666e60d68feaeaab5edcb3797aa2f19bff4c6e0df388cc254d099cca138",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "POST_ROLLOUT_RUNTIME_CUSTODY_PASSED",
+        "field": [
+          "status"
+        ]
+      }
+    },
+    "original_source_ci": {
+      "assertions": [
+        {
+          "equals": "SOURCE_GATE_FIVE_BUILDS_AND_PIN_PUBLISHER_VERIFIED",
+          "field": [
+            "status"
+          ]
+        }
+      ],
+      "attempt_directories_to_include": [
+        "source-ci"
+      ],
+      "outcome": "passed",
+      "path": "source-ci-verified.json",
+      "reviewed_by_root": true,
+      "sha256": "26a7ae9165c2de368320ec1f75916564119d7ea22126f844dcf006da869c14b2",
+      "terminal": true,
+      "terminal_indicator": {
+        "equals": "SOURCE_GATE_FIVE_BUILDS_AND_PIN_PUBLISHER_VERIFIED",
+        "field": [
+          "status"
+        ]
+      }
+    }
+  },
+  "schema": "daytime-consumer-completion-bindings/v5",
+  "selection_reviewed_by_root": true,
+  "status": "READY_FOR_BINDING",
+  "taskbase": "/private/tmp/verdify-daytime-consumer-20261018",
+  "workflow_evidence": [
+    {
+      "identity": {
+        "name": "verdify-platform-ci-bgf2f",
+        "namespace": "agent-fleet-ci",
+        "uid": "f2083616-e793-4994-bd3b-9a48b1fbb376"
+      },
+      "path": "source-ci-discovery.json",
+      "reviewed_by_root": true,
+      "sha256": "0034d59172ec746ad930aeab7977bfd7beed39476d278ae46b15dcc24a539805",
+      "source_revision": "b814f35e228fcb35c11593c47ea1e021e5fd73de"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-bq2rq",
+        "namespace": "agent-fleet-ci",
+        "uid": "ec8026c4-6986-4443-8559-c1931b4c754a"
+      },
+      "path": "release-ci-discovery.json",
+      "reviewed_by_root": true,
+      "sha256": "10bbb16c9fcdbb33868a267edf197f33786dde5ec784aaa5743926e12778a728",
+      "source_revision": "e545380a23129eb1830e9d6d804334f46f8fdcfe"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-99648",
+        "namespace": "agent-fleet-ci",
+        "uid": "c1b8cc6d-88ed-456d-b105-dde24c2bf903"
+      },
+      "path": "model-source-ci-discovery.json",
+      "reviewed_by_root": true,
+      "sha256": "b161abbd77cf063f904bf1e9932c0a926f23932decb9023f585c6c2fec0839be",
+      "source_revision": "182691082420466dc1c5b39bae2fd84f49f38dbf"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-87whm",
+        "namespace": "agent-fleet-ci",
+        "uid": "410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f"
+      },
+      "path": "model-source-ci-discovery-02.json",
+      "reviewed_by_root": true,
+      "sha256": "67a2da9c033abbbea1ae7b791d153151942a2944abbff03b5501c0049966b5d1",
+      "source_revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-dslbn",
+        "namespace": "agent-fleet-ci",
+        "uid": "5422fa2a-2d13-405a-afb8-45fddcbca593"
+      },
+      "path": "model-release-ci/workflow-1b97c5b20ede0241aa8bd4c0f9763306b7c60e0666ba0ea4c3405348976c37e7.json",
+      "reviewed_by_root": true,
+      "sha256": "1b97c5b20ede0241aa8bd4c0f9763306b7c60e0666ba0ea4c3405348976c37e7",
+      "source_revision": "12e3cd6e01ee6e2e3a989ce2e78d2c9e30f09ffe"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-6l8w9",
+        "namespace": "agent-fleet-ci",
+        "uid": "fd2e81ec-ac60-4525-be14-d02a056f0438"
+      },
+      "path": "model-release-ci-02/workflow-61e61a83fdf4dbd7e22ea5af8dcdf303de5e92f8ac70a60d2e22600b20d62967.json",
+      "reviewed_by_root": true,
+      "sha256": "61e61a83fdf4dbd7e22ea5af8dcdf303de5e92f8ac70a60d2e22600b20d62967",
+      "source_revision": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf"
+    },
+    {
+      "identity": {
+        "name": "verdify-platform-ci-hp5dw",
+        "namespace": "agent-fleet-ci",
+        "uid": "ee2a9d27-5236-426d-b39d-abe9f24b2f3e"
+      },
+      "path": "report-ci/workflow-7dab6e768b25d8be57bcbbcfd996357946b03547e08a50104cc4b101df81c8dd.json",
+      "reviewed_by_root": true,
+      "sha256": "7dab6e768b25d8be57bcbbcfd996357946b03547e08a50104cc4b101df81c8dd",
+      "source_revision": "af46d263352d6403201a4642378197e9ca00303c"
+    }
+  ]
+}

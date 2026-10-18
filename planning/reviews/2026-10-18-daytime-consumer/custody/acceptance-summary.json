@@ -1,0 +1,20 @@
+{
+  "status": "SOURCE_RUNTIME_CONSUMER_ACCEPTANCE_COMPLETE",
+  "report_revision": "af46d263352d6403201a4642378197e9ca00303c",
+  "live_release": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+  "model": "gpt-6-luna",
+  "reasoning_effort": "xhigh",
+  "runtime_sha256": "76dbf3abe663533a1cd07e30a4e49c9138e95a3cc53f82db65006e3947b66126",
+  "consumer_sha256": "096f5e3187c5da5a04ecccee765d44a00f215dd266c23775614392306fcd3f63",
+  "source_gate": "model-source-ci-verified.json",
+  "actual_provider_calls": 4,
+  "actual_scorecard_calls": 2,
+  "output_tokens": 818,
+  "scope": "BoundedforcedordinaryMCPread+actualmodelinterpretation. No naturalcycle/complete daytime/physicalefficacy orcrop safety acceptance.",
+  "issue_states": {
+    "410": "open",
+    "775": "open"
+  },
+  "open_user_decisions": [],
+  "remaining_delivery": "Normalrelease/reportCIterminalcapture; fullrawcustodyandremoteverification"
+}

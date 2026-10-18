@@ -1,0 +1,33 @@
+{
+  "status": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+  "workflow": "verdify-platform-ci-6l8w9",
+  "workflow_uid": "fd2e81ec-ac60-4525-be14-d02a056f0438",
+  "source_revision": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+  "finished_at": "2026-10-18T21:17:35Z",
+  "actual_pods": 1,
+  "actual_build_pods": 0,
+  "all_eight_build_flags_false": true,
+  "path_impact": {
+    "base_revision": "12e3cd6e01ee6e2e3a989ce2e78d2c9e30f09ffe",
+    "mode": "validate",
+    "paths_sha256": "90963518992831e1199578e0726a39adef05b31620fb953f595220b525ea7d63",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf"
+  },
+  "pod": "verdify-platform-ci-6l8w9-validate-2240900164",
+  "pod_uid": "94c8d305-5b3d-4bb2-ae2f-10374501f54f",
+  "node": "vm-k3s-node6",
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "workflow_file": "model-release-ci-02/workflow-final-af32b411eb97fcef68ed8729aebb7f6a422d2cf996e640e79a900019907b032e.json",
+  "workflow_sha256": "af32b411eb97fcef68ed8729aebb7f6a422d2cf996e640e79a900019907b032e",
+  "terminal_pod_file": "model-release-ci-02/verdify-platform-ci-6l8w9-validate-2240900164-MODIFIED-9dd412eb1c384e2e88b4c0dc9b1fe310c097a8556d8592319e9a61eabf81305a.json",
+  "terminal_pod_sha256": "9dd412eb1c384e2e88b4c0dc9b1fe310c097a8556d8592319e9a61eabf81305a",
+  "terminal_summary_file": "model-release-ci-02/verdify-platform-ci-6l8w9-validate-2240900164-summary-5075fc3f9ee03e982e67eaa918a0229c33cd90892b6c710d08f721681fbf4152.json",
+  "terminal_summary_sha256": "5075fc3f9ee03e982e67eaa918a0229c33cd90892b6c710d08f721681fbf4152",
+  "full_main_log_file": "model-release-ci-02/verdify-platform-ci-6l8w9-validate-2240900164-main-d6c1bc88e0f18ec83feb8ad905baa63ca836a1abbd9040a89693463cad154a2a.log",
+  "full_main_log_sha256": "d6c1bc88e0f18ec83feb8ad905baa63ca836a1abbd9040a89693463cad154a2a",
+  "full_main_log_bytes": 38570,
+  "verified_at": "2026-10-18T21:18:14.277877+00:00"
+}

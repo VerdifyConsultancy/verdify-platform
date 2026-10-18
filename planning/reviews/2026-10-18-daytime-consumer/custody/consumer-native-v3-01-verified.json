@@ -1,0 +1,330 @@
+{
+  "actual_scorecard_calls": 2,
+  "all46_oct04_values_preserved": true,
+  "automatic_retries": 0,
+  "cases": [
+    {
+      "date": "2026-10-04",
+      "historical_row_comparison": {
+        "all46_exact_after_timestamp_normalization": true,
+        "canonical_rows_sha256": "c6333c5dfdd0529e0241af787ee0b49ac9cb7bfdb6781166607067817b3b45e8",
+        "old_stdout_sha256": "3cfc70df66dd6d95c4d2f4b59e2ee62a7be1a1752ac1a2424ce709680f62f487",
+        "rows": 4,
+        "same_database_snapshot_claimed": false
+      },
+      "interpretation": {
+        "availability": "available",
+        "complete_daytime_zero_proven": false,
+        "crop_safety_proven": false,
+        "daytime_dry_action_samples": 0,
+        "daytime_hold_admission_samples": 0,
+        "dispositions": {
+          "blocked": 0,
+          "effective": 0,
+          "ineffective": 2,
+          "insufficient_evidence": 2
+        },
+        "efficacy_proven": false,
+        "episode_count": 4,
+        "evidence_complete": false,
+        "night_date": "2026-10-04",
+        "safety_gate_status": "pass",
+        "scope_statement": "This read-only qualification does not prove natural-cycle use, complete daytime coverage, causal efficacy, or crop safety."
+      },
+      "native_elapsed_seconds": 12.51,
+      "native_stdout_sha256": "6806564458fb968b74470b3d6bad8f7f5d27554e70573e95e95dc6d70a699726",
+      "natural_cycle_verified": false,
+      "output_tokens": 458,
+      "pod": "verdify-mcp-6f66749cff-4ctnz",
+      "provider_calls": 2,
+      "scorecard_calls": 1,
+      "uid": "e833fc8f-467e-4b3b-a11a-5a5d10b4e9ab",
+      "whole_issue_acceptance": false
+    },
+    {
+      "date": "2026-10-16",
+      "historical_row_comparison": null,
+      "interpretation": {
+        "availability": "no_episodes",
+        "complete_daytime_zero_proven": false,
+        "crop_safety_proven": false,
+        "daytime_dry_action_samples": null,
+        "daytime_hold_admission_samples": null,
+        "dispositions": {
+          "blocked": 0,
+          "effective": 0,
+          "ineffective": 0,
+          "insufficient_evidence": 0
+        },
+        "efficacy_proven": false,
+        "episode_count": 0,
+        "evidence_complete": false,
+        "night_date": "2026-10-16",
+        "safety_gate_status": "pending",
+        "scope_statement": "This read-only qualification does not prove natural-cycle use, complete daytime coverage, causal efficacy, or crop safety."
+      },
+      "native_elapsed_seconds": 11.134,
+      "native_stdout_sha256": "8302f7138ed174974b87fb825dca7bc0e414d880a614a4436b0e784d30cc5f07",
+      "natural_cycle_verified": false,
+      "output_tokens": 360,
+      "pod": "verdify-mcp-6f66749cff-vsfss",
+      "provider_calls": 2,
+      "scorecard_calls": 1,
+      "uid": "92e09677-5ccd-49a0-99e0-f20f8446b297",
+      "whole_issue_acceptance": false
+    }
+  ],
+  "daytime_complete_zero_proven": false,
+  "image": "ae8a367035a3ae8a06ab2384bc166f444b3decad0da21e5c70e53e76203d9c73",
+  "natural_cycle_verified": false,
+  "other_tools_dispatched": 0,
+  "provider_calls": 4,
+  "records": [
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-before-app",
+      "returncode": 0,
+      "seconds": 0.07645566700375639,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-before-pods",
+      "returncode": 0,
+      "seconds": 0.07164566598657984,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-before-source",
+      "returncode": 0,
+      "seconds": 0.3388508339994587,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 414,
+      "stdout_sha256": "ba6d689c060fb05febe265d694fdcb559c5a1b48c59673a0e8825b354080dbe5",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-before-profile-pod",
+      "returncode": 0,
+      "seconds": 0.07833495800150558,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 19812,
+      "stdout_sha256": "7400cda57e2a095921fae4c50cd6637ca9011ed315955b23db8980f5b82b46b4",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-before-profile-files",
+      "returncode": 0,
+      "seconds": 0.2386584589985432,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 293,
+      "stdout_sha256": "12c21b1aa4f445c79299d5b5182fbe8139a1f51c0f4b6d3db93b2318cc7616a6",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-native",
+      "returncode": 0,
+      "seconds": 13.162013875000412,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 33733,
+      "stdout_sha256": "6806564458fb968b74470b3d6bad8f7f5d27554e70573e95e95dc6d70a699726",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-after-pods",
+      "returncode": 0,
+      "seconds": 0.12294200000178535,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-after-source",
+      "returncode": 0,
+      "seconds": 0.33772354100074153,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 414,
+      "stdout_sha256": "ba6d689c060fb05febe265d694fdcb559c5a1b48c59673a0e8825b354080dbe5",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-after-profile-pod",
+      "returncode": 0,
+      "seconds": 0.07552679198852275,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 19812,
+      "stdout_sha256": "7400cda57e2a095921fae4c50cd6637ca9011ed315955b23db8980f5b82b46b4",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-after-profile-files",
+      "returncode": 0,
+      "seconds": 0.2402498749870574,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 293,
+      "stdout_sha256": "12c21b1aa4f445c79299d5b5182fbe8139a1f51c0f4b6d3db93b2318cc7616a6",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct04-after-app",
+      "returncode": 0,
+      "seconds": 0.12710704198980238,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-before-app",
+      "returncode": 0,
+      "seconds": 0.07488629200088326,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-before-pods",
+      "returncode": 0,
+      "seconds": 0.07315758299955633,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-before-source",
+      "returncode": 0,
+      "seconds": 0.2841316249978263,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 414,
+      "stdout_sha256": "ba6d689c060fb05febe265d694fdcb559c5a1b48c59673a0e8825b354080dbe5",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-before-profile-pod",
+      "returncode": 0,
+      "seconds": 0.07243833300890401,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 19812,
+      "stdout_sha256": "7400cda57e2a095921fae4c50cd6637ca9011ed315955b23db8980f5b82b46b4",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-before-profile-files",
+      "returncode": 0,
+      "seconds": 0.1803577079990646,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 293,
+      "stdout_sha256": "12c21b1aa4f445c79299d5b5182fbe8139a1f51c0f4b6d3db93b2318cc7616a6",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-native",
+      "returncode": 0,
+      "seconds": 11.673041208006907,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 22375,
+      "stdout_sha256": "8302f7138ed174974b87fb825dca7bc0e414d880a614a4436b0e784d30cc5f07",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-after-pods",
+      "returncode": 0,
+      "seconds": 0.13455579199944623,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-after-source",
+      "returncode": 0,
+      "seconds": 0.29198541698860936,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 414,
+      "stdout_sha256": "ba6d689c060fb05febe265d694fdcb559c5a1b48c59673a0e8825b354080dbe5",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-after-profile-pod",
+      "returncode": 0,
+      "seconds": 0.0721754999976838,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 19812,
+      "stdout_sha256": "7400cda57e2a095921fae4c50cd6637ca9011ed315955b23db8980f5b82b46b4",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-after-profile-files",
+      "returncode": 0,
+      "seconds": 0.18068079199292697,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 293,
+      "stdout_sha256": "12c21b1aa4f445c79299d5b5182fbe8139a1f51c0f4b6d3db93b2318cc7616a6",
+      "timeout": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "oct16-after-app",
+      "returncode": 0,
+      "seconds": 0.07090129099378828,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timeout": false
+    }
+  ],
+  "source": "b814f35e228fcb35c11593c47ea1e021e5fd73de",
+  "status": "TWO_BOUNDED_ORDINARY_CONSUMERS_PASSED",
+  "total_output_tokens": 818,
+  "whole_issue_acceptance": false
+}

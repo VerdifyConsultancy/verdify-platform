@@ -1,0 +1,17 @@
+{
+  "status": "EXACT_SOURCE_REFERENCE_AND_FIXTURE_DELTA_INDEPENDENTLY_REVIEWED",
+  "helper_sha256": "dff41070ab6d80da8baf9847666619a21658f9dcc550473330be79050638fc34",
+  "reviewer": "triage_control",
+  "root_reviewed": true,
+  "additional_match_hashes": [
+    "9eeed8f6ed34c8d3c57040a1b52562ececfd1c954f7be8edd272232d4bdc7eda",
+    "f3b37ee2a7a7738174c0af213c4f4eab4469962c61eb08f6569c28873c0e4d40"
+  ],
+  "exact_public_source_and_GitHub_provenance_controls": 8,
+  "fixture_excluded": "control/winter-image-preservation/render-check",
+  "original_sealed_selection_union_and_failed_packet_preserved": true,
+  "secret_token_env_guard_patterns_unchanged": true,
+  "original_limits_unchanged": true,
+  "actual_both_archives_passed_exact_member_readback": true,
+  "publication_authorized_by_review": false
+}

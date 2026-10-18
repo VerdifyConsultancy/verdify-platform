@@ -1,0 +1,109 @@
+{
+  "accepted_scope": "Two bounded actual Iris-authenticated scorecard reads and GPT-6 Luna interpretation of their genuine negative and empty evidence; current installed source/profile and native identity stayed unchanged during the cases.",
+  "all46_oct04_fields_equal_original_four_rows": true,
+  "all_command_exits_zero": true,
+  "all_command_stderr_empty": true,
+  "all_sealed_inputs_verified": 12,
+  "attempt_result_sha256": "80044f7f3f42ff46b464b726b7e97517b95c1d436d7418ca99c8688e7f36f79b",
+  "attempt_start_sha256": "0c822353494a2bb2af0b5bf302ac043c96c09b8f37d475b4967772a480b7b5c6",
+  "before_after_app_mcp_and_hermes_metadata_source_identical": true,
+  "cases": [
+    {
+      "date": "2026-10-04",
+      "daytime_dry_action_samples": 0,
+      "daytime_hold_admission_samples": 0,
+      "dispositions": {
+        "blocked": 0,
+        "effective": 0,
+        "ineffective": 2,
+        "insufficient_evidence": 2
+      },
+      "elapsed_seconds": 12.51,
+      "episode_count": 4,
+      "evidence_status_counts": {
+        "complete": 2,
+        "incomplete": 2
+      },
+      "native_stdout_sha256": "6806564458fb968b74470b3d6bad8f7f5d27554e70573e95e95dc6d70a699726",
+      "output_tokens": 458,
+      "safety_summary": "pass",
+      "usage": [
+        {
+          "input_tokens": 13256,
+          "ordinal": 1,
+          "output_tokens": 58,
+          "reasoning_tokens": 23
+        },
+        {
+          "input_tokens": 16021,
+          "ordinal": 2,
+          "output_tokens": 400,
+          "reasoning_tokens": 220
+        }
+      ]
+    },
+    {
+      "date": "2026-10-16",
+      "daytime_dry_action_samples": null,
+      "daytime_hold_admission_samples": null,
+      "dispositions": {
+        "blocked": 0,
+        "effective": 0,
+        "ineffective": 0,
+        "insufficient_evidence": 0
+      },
+      "elapsed_seconds": 11.134,
+      "episode_count": 0,
+      "evidence_status_counts": {},
+      "native_stdout_sha256": "8302f7138ed174974b87fb825dca7bc0e414d880a614a4436b0e784d30cc5f07",
+      "output_tokens": 360,
+      "safety_summary": "pending",
+      "usage": [
+        {
+          "input_tokens": 13256,
+          "ordinal": 1,
+          "output_tokens": 45,
+          "reasoning_tokens": 10
+        },
+        {
+          "input_tokens": 14151,
+          "ordinal": 2,
+          "output_tokens": 315,
+          "reasoning_tokens": 135
+        }
+      ]
+    }
+  ],
+  "effective_config_sha256": "2261f5c1a236202b3bfccedd82f1284f50ab27445767dcb09439a92a8d58b56b",
+  "full_provider_response_or_encrypted_reasoning_retained_in_stdout": false,
+  "historical_stdout_sha256": "3cfc70df66dd6d95c4d2f4b59e2ee62a7be1a1752ac1a2424ce709680f62f487",
+  "limits": [
+    "Forced bounded read/interpretation is not a natural Iris planning cycle or a downstream action outcome.",
+    "Oct4 safety pass is the narrow recorded gate aggregate; the two ineffective and two insufficient-evidence dispositions remain unchanged and no efficacy/crop-safety claim is accepted.",
+    "Oct4 selected-night daytime counters of zero do not establish complete daytime coverage. Oct16 empty result retains null daytime counters and pending safety.",
+    "The separate complete daylight-grid review still has 48 missing clock buckets and no complete-daytime-zero acceptance.",
+    "No same-snapshot comparison, whole-issue closure, physical proof, or admin-audience dispatch is claimed."
+  ],
+  "model": "gpt-6-luna",
+  "native_calls_by_reviewer": 0,
+  "native_command_records_verified": 22,
+  "no_retry_or_action_dispatch": true,
+  "output_budget": 4000,
+  "provider": "OpenAI Responses",
+  "provider_calls_by_reviewer": 0,
+  "reasoning_effort": "xhigh",
+  "release_sha": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+  "review_method": "Independent read-only parsing of retained native outputs, sealed inputs and before/after receipts; no wrapper execution or provider/native request. Episode multiset comparison independently normalizes only the two aware timestamp strings and compares all 46 typed JSON fields.",
+  "runtime_verified_sha256": "76dbf3abe663533a1cd07e30a4e49c9138e95a3cc53f82db65006e3947b66126",
+  "same_database_snapshot_claimed": false,
+  "schema": "consumer-v3-independent-actual-review-v1",
+  "status": "PASSED_WITH_EXPLICIT_SCOPE_LIMITS",
+  "total_input_tokens": 56684,
+  "total_output_tokens": 818,
+  "total_provider_requests": 4,
+  "total_reasoning_tokens": 388,
+  "total_scorecard_reads": 2,
+  "total_tokens": 57502,
+  "verified_sha256": "096f5e3187c5da5a04ecccee765d44a00f215dd266c23775614392306fcd3f63",
+  "whole_issue_acceptance": false
+}

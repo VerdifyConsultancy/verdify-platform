@@ -1,0 +1,20 @@
+# Final immutable custody — daytime and GPT-6 Luna consumer packet
+
+Source/report main: `af46d263352d6403201a4642378197e9ca00303c`. Live model release: `1f132f20eea07ab57c5d705a9bd626ac6fe72faf`. The [execution report](README.md) retains its report-preparation boundary. This custody supplies the later actual CI terminals, native graph match, full logs, failed attempts and accepted runtime/consumer evidence. Evidence publication uses this separate branch, with no main or runtime change.
+
+Live Iris and the bounded qualification use GPT-6 Luna/xhigh. Exact-four operation, actual profile/API source, nine smoke checks and one writer passed. Two actual Iris-authenticated historical reads and four provider requests passed with 818 output tokens, zero other tools and no retries. Oct4 preserves all 46 fields across four rows: two ineffective and two insufficient-evidence; October 16 remained empty/pending/NULL. Complete October 16/17 recorded daytime zero remainsNULL because 25/23 minute buckets are missing. #410/#775 remain open. Natural-cycle use/cost, physical efficacy and crop safety remain separate requirements. No full gateway cycle, firmware/tuning, experiment or database change was performed.
+
+Final preservation release CI `verdify-platform-ci-6l8w9` completed `2026-10-18T21:17:35Z`. Final report CI `verdify-platform-ci-hp5dw` completed `2026-10-18T21:22:00Z`. Each has its actual owning Workflow/Pod UID, all declared containers exit 0/restarts 0, full main log and source binding in [custody](custody/). Earlier successful delivery, original failed model test, stale-integrity refusal, one supported failed-build-only recovery, premutation six-object guard refusal and unsettled runtime precondition remain preserved; no historical failure is relabeled.
+
+Native graph matched all 47 open issues, 143 acceptance clauses and 27 active edges at report source; issue bodies match canonical. The subsequent Argo read remained Healthy/Synced at published report revision. All states, acceptance, parents, dependencies and effort values remain unchanged.
+
+| Packet | Selected original files | Selected bytes | Compressed bytes | SHA256 |
+|---|---:|---:|---:|---|
+| [A: original MCP/source/release](evidence/packet-a/evidence.tar.gz) | 874 | 99474352 | 15693164 | `4684b980dc094f92cefee7838884ac25c74179940df8419fb3a600a2e1af9353` |
+| [B: model/final acceptance](evidence/packet-b/evidence.tar.gz) | 1098 | 106985699 | 16687716 | `cc3fedf6eda17f8116e3c9bce8f2c3ea48c4cffefa8df07ef4d25daa2cdf45fc` |
+
+Each manifest records every retained member's bytes/SHA256; archive readback is exact. The partition index proves the complete selected union, with required shared provenance. Original file 32 MiB / packet 128 MiB / 10,000 members / depth 2 limits remain. Raw node/metrics inventory, source-check fixture trees, symlinks and caches are excluded; no original acceptance/failure/CI evidence is removed. Exact retry actor metadata is byte/UID/owner/image-bound; this adds no credential exception. Public source DSN expressions and metadata-only references are separately reviewed; independent credential scan/readback is retained alongside custody. No credential values, provider reasoning/ciphertext or Secret objects are intended for publication.
+
+A separate ingress observation is retained with bounded scope. Public API health returned 200 and unauthenticated public MCP returned 403 at 21:15:35 UTC. The existing metrics proxy failed 502 before the first query, so the supplied aggregate 5xx ratio/denominator was not independently verified. Internal service/consumer acceptance does not assert authenticated public MCP health, sustained ingress recovery or deployment causation. No ingress mutation or alert acknowledgement occurred.
+
+Next execution: define supported freshness/observation semantics and collect a prospective complete recorded daytime window; observe intended consumption in a naturally scheduled ordinary planner cycle; advance authentic physical/scientific requirements independently. No user decision is pending for this completed bounded packet.

@@ -1,0 +1,10 @@
+{
+  "status": "CANONICAL_REPORT_PUSHED",
+  "source_revision": "af46d263352d6403201a4642378197e9ca00303c",
+  "branch": "main",
+  "report_path": "planning/reviews/2026-10-18-daytime-consumer/README.md",
+  "report_sha256": "426ae6c8e873c67f6e913014bcb927c2f6b40f3132dd054a7b5f2d3b647b66fb",
+  "canonical_json_equals_private_finalizer": true,
+  "serialization": "Original ensure_ascii=True preserved; no semantic change from finalizer",
+  "at": "2026-10-18T21:11:01.546540+00:00"
+}

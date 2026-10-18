@@ -1,0 +1,234 @@
+{
+  "status": "SOURCE_GATE_TWO_BUILDS_AND_PIN_PUBLISHER_VERIFIED",
+  "workflow": "verdify-platform-ci-87whm",
+  "workflow_uid": "410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f",
+  "source_revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+  "source_tree": "2137fe2befe7e19a7827ccb17dbdc9840c067d15",
+  "finished_at": "2026-10-18T21:02:34Z",
+  "workflow_file": "model-source-ci-recovery-04/workflow-final-c9bbac1e3e113d7ea0a2cd92219d459d3d13e0f6d9f8becf1b5b5cb0a54e1c1b.json",
+  "workflow_sha256": "c9bbac1e3e113d7ea0a2cd92219d459d3d13e0f6d9f8becf1b5b5cb0a54e1c1b",
+  "profile_set": [
+    "api",
+    "orchestrator"
+  ],
+  "images": {
+    "api": {
+      "digest": "sha256:67c0705274d699d21f257e4787f2a8f7c1fcc33d152aa567a4de534e45d9dedf",
+      "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:67c0705274d699d21f257e4787f2a8f7c1fcc33d152aa567a4de534e45d9dedf",
+      "short-sha": "56b316f3fda6",
+      "source-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+      "source-released-at": "2026-10-18T20:38:51Z",
+      "resolved-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "resolved-tree": "2137fe2befe7e19a7827ccb17dbdc9840c067d15",
+      "output-contract-version": "agent-fleet.repo-build.outputs/2",
+      "dockerfile-sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+      "source-closure": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+    },
+    "orchestrator": {
+      "digest": "sha256:b43822f50820d5668babb5e3546cfebeec2d68f6e7d60ce0ac8da2c3d2498fcd",
+      "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:b43822f50820d5668babb5e3546cfebeec2d68f6e7d60ce0ac8da2c3d2498fcd",
+      "short-sha": "56b316f3fda6",
+      "source-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+      "source-released-at": "2026-10-18T20:38:51Z",
+      "resolved-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "resolved-tree": "2137fe2befe7e19a7827ccb17dbdc9840c067d15",
+      "output-contract-version": "agent-fleet.repo-build.outputs/2",
+      "dockerfile-sha256": "sha256:30a9d4b38b3969e09d13308da1901bae32ac6a8b6f6f60ae5d8eee7b249bcd0c",
+      "source-closure": "{\"image\":\"verdifyconsultancy/verdify-experiment-v2-orchestrator\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+    }
+  },
+  "pods": [
+    {
+      "step": "build-api",
+      "pod": "verdify-platform-ci-87whm-build-1558317609",
+      "pod_uid": "5abb080e-ad05-42c6-93e2-6f210e8d96e4",
+      "node": "vm-k3s-node7",
+      "terminal_summary": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-1558317609-summary-cd6b64f17406dd0cd642cb1f84f628ec1bf4d8fda930ea638936fe19a6795f0f.json",
+      "terminal_summary_sha256": "cd6b64f17406dd0cd642cb1f84f628ec1bf4d8fda930ea638936fe19a6795f0f",
+      "terminal_pod": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-1558317609-MODIFIED-c61d7b08c9c541c1ed6e8973b7e3f387f24f6957e7b4054045f29ef9e7dc726c.json",
+      "terminal_pod_sha256": "c61d7b08c9c541c1ed6e8973b7e3f387f24f6957e7b4054045f29ef9e7dc726c",
+      "main_log": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-1558317609-main-8d50a2923c8be7ac9fda4ac7f3f62571a45ab14451b4f2e5df2a10cc98015c83.log",
+      "main_log_sha256": "8d50a2923c8be7ac9fda4ac7f3f62571a45ab14451b4f2e5df2a10cc98015c83",
+      "main_log_bytes": 4204,
+      "all_declared_containers_zero_exit_zero_restarts": true,
+      "observed_images": {
+        "init": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+        "registry-capacity-preflight": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "fetch-context": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+        "capture-build-inputs": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "test": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+        "verify-build-inputs": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "kaniko-build": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+        "registry-capacity-publish-gate": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "main": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+        "wait": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+      },
+      "build_inputs": {
+        "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "dockerfile": "api/Dockerfile",
+        "context": ".",
+        "image": "verdifyconsultancy/verdify-api",
+        "test": "",
+        "docker_target": "",
+        "build_arg_1_name": "GIT_SHA",
+        "build_arg_1_value": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "build_arg_2_name": "",
+        "build_arg_2_value": "",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "40Gi",
+        "allowed_publish_scopes": "verdifyconsultancy"
+      },
+      "outputs": {
+        "digest": "sha256:67c0705274d699d21f257e4787f2a8f7c1fcc33d152aa567a4de534e45d9dedf",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:67c0705274d699d21f257e4787f2a8f7c1fcc33d152aa567a4de534e45d9dedf",
+        "short-sha": "56b316f3fda6",
+        "source-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-18T20:38:51Z",
+        "resolved-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "resolved-tree": "2137fe2befe7e19a7827ccb17dbdc9840c067d15",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+      }
+    },
+    {
+      "step": "classify-push(0)",
+      "pod": "verdify-platform-ci-87whm-validate-1952540191",
+      "pod_uid": "763f7954-a454-4afc-ad95-27dbb2504ce7",
+      "node": "vm-k3s-node6",
+      "terminal_summary": "model-source-ci-02/verdify-platform-ci-87whm-validate-1952540191-summary-e8aa6bde7295bd350123a5aaad5a8766e30ab521cc38889baff01069d54f1ff1.json",
+      "terminal_summary_sha256": "e8aa6bde7295bd350123a5aaad5a8766e30ab521cc38889baff01069d54f1ff1",
+      "terminal_pod": "model-source-ci-02/verdify-platform-ci-87whm-validate-1952540191-MODIFIED-95226d25da125cb61600e382ff2803d7319fbf03e5e3b5bfadc28cb7aba53a4d.json",
+      "terminal_pod_sha256": "95226d25da125cb61600e382ff2803d7319fbf03e5e3b5bfadc28cb7aba53a4d",
+      "main_log": "model-source-ci-02/verdify-platform-ci-87whm-validate-1952540191-main-00a6f92a8bf9180e9067a4ca19904660ac3efe2dae7c933e8fea040d0adc9ae8.log",
+      "main_log_sha256": "00a6f92a8bf9180e9067a4ca19904660ac3efe2dae7c933e8fea040d0adc9ae8",
+      "main_log_bytes": 38570,
+      "all_declared_containers_zero_exit_zero_restarts": true,
+      "observed_images": {
+        "init": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+        "fetch-validate-context": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+        "main": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+        "wait": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+      },
+      "path_impact": {
+        "base_revision": "182691082420466dc1c5b39bae2fd84f49f38dbf",
+        "mode": "build",
+        "paths_sha256": "db22d87e94a09d5da5c86bdc1ca740b6a9f487cb8a6d0eba41beb6b91a991e9c",
+        "profiles": [
+          "api",
+          "orchestrator"
+        ],
+        "reasons": {
+          "api": [
+            "api/main.py"
+          ],
+          "orchestrator": [
+            "deploy/k8s/components/hermes-iris/hermes-config.yaml"
+          ]
+        },
+        "schema": "verdify.path-impact/v1",
+        "source_revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46"
+      }
+    },
+    {
+      "step": "build-orchestrator",
+      "pod": "verdify-platform-ci-87whm-build-3702328914",
+      "pod_uid": "3866d494-a31f-448a-beff-f8d4e43fe493",
+      "node": "vm-k3s-node7",
+      "terminal_summary": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-3702328914-summary-dbe34d44f3de59c68483b9d0dc6900ddfecfc87a9193c3617c8770c67541a78c.json",
+      "terminal_summary_sha256": "dbe34d44f3de59c68483b9d0dc6900ddfecfc87a9193c3617c8770c67541a78c",
+      "terminal_pod": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-3702328914-MODIFIED-cdf15457fe97dba249ca167e0b7dac1f7a7f06d046dce61a81c8ee2ff1586861.json",
+      "terminal_pod_sha256": "cdf15457fe97dba249ca167e0b7dac1f7a7f06d046dce61a81c8ee2ff1586861",
+      "main_log": "model-source-ci-recovery-04/verdify-platform-ci-87whm-build-3702328914-main-4a88ce57db5d8498e7ef86d69a6184f15760192c180d211677c035622df2ed98.log",
+      "main_log_sha256": "4a88ce57db5d8498e7ef86d69a6184f15760192c180d211677c035622df2ed98",
+      "main_log_bytes": 4926,
+      "all_declared_containers_zero_exit_zero_restarts": true,
+      "observed_images": {
+        "init": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+        "registry-capacity-preflight": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "fetch-context": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+        "capture-build-inputs": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "test": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+        "verify-build-inputs": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "kaniko-build": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+        "registry-capacity-publish-gate": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "main": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+        "wait": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+      },
+      "build_inputs": {
+        "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "dockerfile": "experiment_orchestrator/Dockerfile",
+        "context": ".",
+        "image": "verdifyconsultancy/verdify-experiment-v2-orchestrator",
+        "test": "",
+        "docker_target": "",
+        "build_arg_1_name": "GIT_SHA",
+        "build_arg_1_value": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "build_arg_2_name": "",
+        "build_arg_2_value": "",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "40Gi",
+        "allowed_publish_scopes": "verdifyconsultancy"
+      },
+      "outputs": {
+        "digest": "sha256:b43822f50820d5668babb5e3546cfebeec2d68f6e7d60ce0ac8da2c3d2498fcd",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:b43822f50820d5668babb5e3546cfebeec2d68f6e7d60ce0ac8da2c3d2498fcd",
+        "short-sha": "56b316f3fda6",
+        "source-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-18T20:38:51Z",
+        "resolved-revision": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "resolved-tree": "2137fe2befe7e19a7827ccb17dbdc9840c067d15",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:30a9d4b38b3969e09d13308da1901bae32ac6a8b6f6f60ae5d8eee7b249bcd0c",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-experiment-v2-orchestrator\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+      }
+    },
+    {
+      "step": "pin-digests",
+      "pod": "verdify-platform-ci-87whm-pin-digests-4002805379",
+      "pod_uid": "227135ad-12b8-4dff-823c-4c8c22138234",
+      "node": "vm-k3s-node7",
+      "terminal_summary": "model-source-ci-recovery-04/verdify-platform-ci-87whm-pin-digests-4002805379-summary-0a87cb8ad8203ba0258ada925c451d9f73f985e98f129487bd6ce582cd4e0c2e.json",
+      "terminal_summary_sha256": "0a87cb8ad8203ba0258ada925c451d9f73f985e98f129487bd6ce582cd4e0c2e",
+      "terminal_pod": "model-source-ci-recovery-04/verdify-platform-ci-87whm-pin-digests-4002805379-MODIFIED-46b4aa3ea6d784464dfd03e6d386a4ee7a753afd7b9b0d7fd1eaed1853aacb17.json",
+      "terminal_pod_sha256": "46b4aa3ea6d784464dfd03e6d386a4ee7a753afd7b9b0d7fd1eaed1853aacb17",
+      "main_log": "model-source-ci-recovery-04/verdify-platform-ci-87whm-pin-digests-4002805379-main-d4ac0410a506c67d787c9978c0209af73c27ce26f264f1ab6d7545054593715a.log",
+      "main_log_sha256": "d4ac0410a506c67d787c9978c0209af73c27ce26f264f1ab6d7545054593715a",
+      "main_log_bytes": 2585,
+      "all_declared_containers_zero_exit_zero_restarts": true,
+      "observed_images": {
+        "init": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+        "mint-publisher-token": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+        "main": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+        "wait": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb"
+      },
+      "candidate_publisher_log_verified": true
+    }
+  ],
+  "scope": "existing native full gate, two actual impacted serial builds, managed candidate publisher; only API promotion intended; no DB migration or production mutation by this receipt",
+  "candidate_commit": "fresh remote readback remains required",
+  "production_applied": false,
+  "verified_at": "2026-10-18T21:02:57.116719+00:00"
+}

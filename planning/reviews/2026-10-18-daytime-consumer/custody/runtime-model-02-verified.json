@@ -1,0 +1,667 @@
+{
+  "accepted_mcp_deployment_and_pods_unchanged": true,
+  "actual_scorecard_calls": 0,
+  "api": [
+    {
+      "pod": "verdify-api-b69dfb8b5-6fvtq",
+      "result": {
+        "actual_scorecard_calls": 0,
+        "http_status": 200,
+        "main_sha256": "9fd787454709b8c4650e14b9ec54dba4b29d7b848477b55b3d5ca5e1a606b1e0",
+        "model_label": "hermes-iris/custom:gpt-6-luna/xhigh",
+        "provider_calls": 0,
+        "response_bytes": 18590,
+        "response_sha256": "010fd976cd6e05559484e86e59fe2cee687ed6a8b0a105b2f59626e9c7d74b05",
+        "source_sha": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "status": "API_MODEL_ATTRIBUTION_READONLY_PASSED",
+        "writes": 0
+      },
+      "uid": "f384afcd-f77d-43ec-93fe-aec17d2ecb08"
+    },
+    {
+      "pod": "verdify-api-b69dfb8b5-k6hkj",
+      "result": {
+        "actual_scorecard_calls": 0,
+        "http_status": 200,
+        "main_sha256": "9fd787454709b8c4650e14b9ec54dba4b29d7b848477b55b3d5ca5e1a606b1e0",
+        "model_label": "hermes-iris/custom:gpt-6-luna/xhigh",
+        "provider_calls": 0,
+        "response_bytes": 18590,
+        "response_sha256": "d0ef18e12a511997b65e4515bd43d69c6b071f75798efd9d6f7d39d1861940f1",
+        "source_sha": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+        "status": "API_MODEL_ATTRIBUTION_READONLY_PASSED",
+        "writes": 0
+      },
+      "uid": "707dd965-2d6e-4a4b-bb80-bbad7bb38de5"
+    }
+  ],
+  "api_ci_receipt_sha256": "8326b85a7821232df5126e01082be1e57153cf7b323904e33da0c8e53cac99d4",
+  "api_digest": "67c0705274d699d21f257e4787f2a8f7c1fcc33d152aa567a4de534e45d9dedf",
+  "api_source_sha": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+  "argo_exact_four_resource_operation_proof": "separate_ROOT_dispatcher_receipt_required",
+  "automatic_retries": 0,
+  "ci_receipt_sha256": "26a7ae9165c2de368320ec1f75916564119d7ea22126f844dcf006da869c14b2",
+  "critical_pods_and_container_states_unchanged": 2,
+  "deployment_uids_preserved": 15,
+  "effective_model_config_sha256": "2261f5c1a236202b3bfccedd82f1284f50ab27445767dcb09439a92a8d58b56b",
+  "exactly_one_device_writer_observed": true,
+  "gateway_live_schema_registry_introspected": false,
+  "hermes": {
+    "files": {
+      "file_sha256": {
+        "/etc/verdify/hermes-config/config.yaml": "2261f5c1a236202b3bfccedd82f1284f50ab27445767dcb09439a92a8d58b56b",
+        "/etc/verdify/hermes-config/tool-readiness.py": "6f0ec53b599f0c55424978612d63c6604affca4e72a2b241991eb4d66e4dbf6d",
+        "/opt/data/SOUL.md": "11a0fdc4be8f31b0f7872ea2184ea4e502b8be7902b11a85275c9b8af8809f1f",
+        "/opt/data/config.yaml": "2261f5c1a236202b3bfccedd82f1284f50ab27445767dcb09439a92a8d58b56b",
+        "/opt/data/skills/devops/greenhouse-planning-mcp/references/full-plan-payload-preflight.md": "cace1f0c1769ade8026ce43cab638727b61423b71c0daa1859b3746f7fed0f23",
+        "/opt/data/skills/devops/greenhouse-planning-mcp/references/greenhouse-playbook.md": "38396eb74de01f4b09eae4175801a2e6e9ff5802aa489c6c59ab5c1d78a03a95"
+      },
+      "learned_skill_read_or_overwritten": false,
+      "natural_cycle_verified": false,
+      "registry_pid_introspection": false,
+      "status": "HERMES_SOURCE_OWNED_FILES_MATCH"
+    },
+    "pod": "verdify-hermes-iris-756c75f6bb-6c6k6",
+    "seed": {
+      "learned_skill_preserved": true,
+      "schema": "verdify-iris-inventory-v1",
+      "sha256": {
+        "SOUL.md": "11a0fdc4be8f31b0f7872ea2184ea4e502b8be7902b11a85275c9b8af8809f1f",
+        "skills/devops/greenhouse-planning-mcp/references/full-plan-payload-preflight.md": "cace1f0c1769ade8026ce43cab638727b61423b71c0daa1859b3746f7fed0f23",
+        "skills/devops/greenhouse-planning-mcp/references/greenhouse-playbook.md": "38396eb74de01f4b09eae4175801a2e6e9ff5802aa489c6c59ab5c1d78a03a95"
+      },
+      "skill_name": "greenhouse-planning-mcp"
+    },
+    "uid": "4a3a563f-be72-4f50-8f2e-d5a17e64f4e3"
+  },
+  "mcp": [
+    {
+      "pod": "verdify-mcp-6f66749cff-4ctnz",
+      "result": {
+        "actual_scorecard_calls": 0,
+        "admin_configured": false,
+        "audiences": [
+          "iris",
+          "observer"
+        ],
+        "elapsed_seconds": 0.30794701795093715,
+        "existing_gateway_registry_introspected": false,
+        "iris_initialize": true,
+        "iris_tools": [
+          "acknowledge_trigger",
+          "alerts",
+          "climate",
+          "crop_history",
+          "crop_lifecycle",
+          "crops",
+          "equipment_state",
+          "forecast",
+          "get_setpoints",
+          "history",
+          "knowledge_search",
+          "lessons",
+          "lessons_manage",
+          "lessons_search",
+          "observations",
+          "plan_evaluate",
+          "plan_status",
+          "position_current",
+          "scorecard",
+          "set_plan",
+          "set_tunable",
+          "slack_ops",
+          "topology"
+        ],
+        "module_sha256": {
+          "/app/mcp/server.py": "d8926ec1bca28c10cd0109b62238b395a3d233158879e51dbb073acdc7372a9f",
+          "/app/verdify_schemas/mcp_responses.py": "edccf0a7740421aaeaa9b402e446c769fc1cd4b3fbfdc646e13cb83d1e3b82ee",
+          "/app/verdify_schemas/realized_dryout.py": "7364d30ddea52fc5d5588f174b95de67c70a966224a5746c33f1838ba7586479"
+        },
+        "natural_cycle_verified": false,
+        "outcome_kpi_iris_denied": true,
+        "provider_calls": 0,
+        "ready_http_status": 200,
+        "scorecard_schema": {
+          "description": "Get a daily scorecard; pass YYYY-MM-DD or omit for today.\n\nInspect scorecard_contract_version and metric_semantics first. Only contract\n2 verifies that compliance_pct / temp_compliance_pct / vpd_compliance_pct are\nBINARY fractions of scored house-average readings against historical desired\nsetpoints. Earlier versions mislabeled graded credit under those keys.\nThese fractions are not duration-weighted, fixed-panel crop outcomes or proof\nof firmware-consumed targets. Coverage is unverified; no center probe is\nmeasured. Binary stress hours assume one minute per scored reading and axes\ncan overlap; graded_*_stress_h are separate deficit-integral diagnostics.\n\ncompliance_v2_raw_pct, compliance_v2_attributable_pct, graded axis fields and\ncompliance_v2_unachievable_frac describe the historical grading/feasibility\nper-zone model, not measured crop compliance. Controller-attributable credit refunds\nmodeled unachievable misses; it must not hide physical exposure. The legacy\ncenter zone uses a house-average proxy, not a center measurement. Never widen\nserved bands to improve credit or treat target-distance as a crop outcome.\n\nplanner_score retains historical graded credit and resource rules: cost\nreceives 20% weight only when conserved water and the whole-runtime energy\nmodel are scoring-eligible. Otherwise resource weight is zero. Inspect\nplanner_score_resource_weight_pct and resource_terms_available before comparing\nscores. Null means unavailable, not zero or perfect. Composite outcome fields\nremain null until their physical evidence contract is implemented.\n\nobserved_minute_evidence is a separately versioned, captured house-average\ndiagnostic with per-axis/joint eligible counts, coverage and distance. Inspect\navailability, window and revision; snapshot freshness is not assessed. It is\nnot continuous exposure, fixed-panel crop compliance, a confirmed consumed\ntarget or an experiment endpoint. Never substitute it for the scalar metrics.\n\nnative_fixed_panel_route_evidence exposes actual source-route axis/joint\neligible 15-minute bins, high/low distance and severity, worst source route\nand explicit future/undeclared/missing bins under a prospective target and\nexact firmware/collector binding. Availability route_measurement is sampled\nhost-received callback evidence; physical serial, Modbus poll time and crop\nplacement remain unverified. Partial windows are explicit. It is not a\nphysical crop outcome, controller credit or experiment endpoint. Keep\nphysical_crop_band_evidence unavailable until its own qualification exists.\n\nFor ordinary Iris outcome review, explicitly call scorecard with a single\ntarget_date (YYYY-MM-DD) and include_realized_dryout=true for the prior\ncompleted solar night. target_date is both the scalar scorecard calendar day\nand the separate dry-out night START date; that night crosses local midnight.\nThe opt-in adds one read under the existing DB budget, at most 500 episodes\nand 64 KiB of dry-out evidence. Ordinary calls do not run this query. Reuse\nthe returned result within a planning cycle; do not poll or retry unavailable\nevidence. Inspect availability, evidence_status, confound_reasons, relay\ntruth and observed AH/VPD response before using any disposition. Safety pass\nalone is not effectiveness; empty episodes or missing daylight evidence\ncannot prove zero admission, complete coverage or a causal crop benefit.\n\nResponse is validated through verdify_schemas.ScorecardResponse. Partial days\nmay contain null metrics; inspect evidence limitations before using a score.",
+          "inputSchema": {
+            "properties": {
+              "include_realized_dryout": {
+                "default": false,
+                "title": "Include Realized Dryout",
+                "type": "boolean"
+              },
+              "target_date": {
+                "default": "",
+                "title": "Target Date",
+                "type": "string"
+              }
+            },
+            "title": "scorecardArguments",
+            "type": "object"
+          },
+          "name": "scorecard",
+          "outputSchema": {
+            "properties": {
+              "result": {
+                "title": "Result",
+                "type": "string"
+              }
+            },
+            "required": [
+              "result"
+            ],
+            "title": "scorecardOutput",
+            "type": "object"
+          }
+        },
+        "source_sha": "b814f35e228fcb35c11593c47ea1e021e5fd73de",
+        "status": "MCP_READONLY_RUNTIME_PASSED"
+      },
+      "uid": "e833fc8f-467e-4b3b-a11a-5a5d10b4e9ab"
+    },
+    {
+      "pod": "verdify-mcp-6f66749cff-vsfss",
+      "result": {
+        "actual_scorecard_calls": 0,
+        "admin_configured": false,
+        "audiences": [
+          "iris",
+          "observer"
+        ],
+        "elapsed_seconds": 0.34317168709822,
+        "existing_gateway_registry_introspected": false,
+        "iris_initialize": true,
+        "iris_tools": [
+          "acknowledge_trigger",
+          "alerts",
+          "climate",
+          "crop_history",
+          "crop_lifecycle",
+          "crops",
+          "equipment_state",
+          "forecast",
+          "get_setpoints",
+          "history",
+          "knowledge_search",
+          "lessons",
+          "lessons_manage",
+          "lessons_search",
+          "observations",
+          "plan_evaluate",
+          "plan_status",
+          "position_current",
+          "scorecard",
+          "set_plan",
+          "set_tunable",
+          "slack_ops",
+          "topology"
+        ],
+        "module_sha256": {
+          "/app/mcp/server.py": "d8926ec1bca28c10cd0109b62238b395a3d233158879e51dbb073acdc7372a9f",
+          "/app/verdify_schemas/mcp_responses.py": "edccf0a7740421aaeaa9b402e446c769fc1cd4b3fbfdc646e13cb83d1e3b82ee",
+          "/app/verdify_schemas/realized_dryout.py": "7364d30ddea52fc5d5588f174b95de67c70a966224a5746c33f1838ba7586479"
+        },
+        "natural_cycle_verified": false,
+        "outcome_kpi_iris_denied": true,
+        "provider_calls": 0,
+        "ready_http_status": 200,
+        "scorecard_schema": {
+          "description": "Get a daily scorecard; pass YYYY-MM-DD or omit for today.\n\nInspect scorecard_contract_version and metric_semantics first. Only contract\n2 verifies that compliance_pct / temp_compliance_pct / vpd_compliance_pct are\nBINARY fractions of scored house-average readings against historical desired\nsetpoints. Earlier versions mislabeled graded credit under those keys.\nThese fractions are not duration-weighted, fixed-panel crop outcomes or proof\nof firmware-consumed targets. Coverage is unverified; no center probe is\nmeasured. Binary stress hours assume one minute per scored reading and axes\ncan overlap; graded_*_stress_h are separate deficit-integral diagnostics.\n\ncompliance_v2_raw_pct, compliance_v2_attributable_pct, graded axis fields and\ncompliance_v2_unachievable_frac describe the historical grading/feasibility\nper-zone model, not measured crop compliance. Controller-attributable credit refunds\nmodeled unachievable misses; it must not hide physical exposure. The legacy\ncenter zone uses a house-average proxy, not a center measurement. Never widen\nserved bands to improve credit or treat target-distance as a crop outcome.\n\nplanner_score retains historical graded credit and resource rules: cost\nreceives 20% weight only when conserved water and the whole-runtime energy\nmodel are scoring-eligible. Otherwise resource weight is zero. Inspect\nplanner_score_resource_weight_pct and resource_terms_available before comparing\nscores. Null means unavailable, not zero or perfect. Composite outcome fields\nremain null until their physical evidence contract is implemented.\n\nobserved_minute_evidence is a separately versioned, captured house-average\ndiagnostic with per-axis/joint eligible counts, coverage and distance. Inspect\navailability, window and revision; snapshot freshness is not assessed. It is\nnot continuous exposure, fixed-panel crop compliance, a confirmed consumed\ntarget or an experiment endpoint. Never substitute it for the scalar metrics.\n\nnative_fixed_panel_route_evidence exposes actual source-route axis/joint\neligible 15-minute bins, high/low distance and severity, worst source route\nand explicit future/undeclared/missing bins under a prospective target and\nexact firmware/collector binding. Availability route_measurement is sampled\nhost-received callback evidence; physical serial, Modbus poll time and crop\nplacement remain unverified. Partial windows are explicit. It is not a\nphysical crop outcome, controller credit or experiment endpoint. Keep\nphysical_crop_band_evidence unavailable until its own qualification exists.\n\nFor ordinary Iris outcome review, explicitly call scorecard with a single\ntarget_date (YYYY-MM-DD) and include_realized_dryout=true for the prior\ncompleted solar night. target_date is both the scalar scorecard calendar day\nand the separate dry-out night START date; that night crosses local midnight.\nThe opt-in adds one read under the existing DB budget, at most 500 episodes\nand 64 KiB of dry-out evidence. Ordinary calls do not run this query. Reuse\nthe returned result within a planning cycle; do not poll or retry unavailable\nevidence. Inspect availability, evidence_status, confound_reasons, relay\ntruth and observed AH/VPD response before using any disposition. Safety pass\nalone is not effectiveness; empty episodes or missing daylight evidence\ncannot prove zero admission, complete coverage or a causal crop benefit.\n\nResponse is validated through verdify_schemas.ScorecardResponse. Partial days\nmay contain null metrics; inspect evidence limitations before using a score.",
+          "inputSchema": {
+            "properties": {
+              "include_realized_dryout": {
+                "default": false,
+                "title": "Include Realized Dryout",
+                "type": "boolean"
+              },
+              "target_date": {
+                "default": "",
+                "title": "Target Date",
+                "type": "string"
+              }
+            },
+            "title": "scorecardArguments",
+            "type": "object"
+          },
+          "name": "scorecard",
+          "outputSchema": {
+            "properties": {
+              "result": {
+                "title": "Result",
+                "type": "string"
+              }
+            },
+            "required": [
+              "result"
+            ],
+            "title": "scorecardOutput",
+            "type": "object"
+          }
+        },
+        "source_sha": "b814f35e228fcb35c11593c47ea1e021e5fd73de",
+        "status": "MCP_READONLY_RUNTIME_PASSED"
+      },
+      "uid": "92e09677-5ccd-49a0-99e0-f20f8446b297"
+    }
+  ],
+  "mcp_digest": "ae8a367035a3ae8a06ab2384bc166f444b3decad0da21e5c70e53e76203d9c73",
+  "natural_cycle_verified": false,
+  "new_gateway_process_verified": true,
+  "provider_calls": 0,
+  "records": [
+    {
+      "automatic_retries": 0,
+      "phase": "kube-context",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.02478129199880641,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 8,
+      "stdout_sha256": "f4b1abe3fe66c85c26711605496f62ae4c0b383e47ff4ed77ce1b13097683c07",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-application",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.050458208002964966,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-deployments",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.07083954200788867,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 269299,
+      "stdout_sha256": "33c6ea63973c2f5863eb30f9a531c424d8159f0d0cc34a6ac19e17aab737d693",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-critical-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.05142937500204425,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 52341,
+      "stdout_sha256": "75b11a5e9e8cbe931fdeff96115b6ff9cff853102e8a3fa638f0909ae0a3c7e9",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-database-statefulset",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04384191699500661,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10894,
+      "stdout_sha256": "5e723a24ea9b653e35203f37fdf047335045765c1e0ecc6882d73ea6a1a8f17e",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-mcp-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04912433399294969,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-mcp-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.05208275000040885,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 11016,
+      "stdout_sha256": "d0a13cef26ad57ff32ae2611025ee9f8f131fcfc8791874c60469e3fda4f86f1",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-api-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04841833299724385,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 47958,
+      "stdout_sha256": "dc7ac256af2fa84b0e70bd93056a8456c5f03a5e2b71fd5bc5cb0c6b2b44e3af",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-api-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04384666698751971,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 13368,
+      "stdout_sha256": "502ce6394a1c33e4ac9ac583457d8fd02cfdfc1d82f1acfaf26647e77558dd37",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-hermes-iris-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.0750829999888083,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 24224,
+      "stdout_sha256": "03608459a74829de718c9ed5424671ab89e9f8bf7f920f006e7d98df5ec01c8f",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-hermes-iris-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04719208399183117,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 12473,
+      "stdout_sha256": "8c8b98306aafa0b3600fc293ba41bc41eedd273bb3e9671e68ad4e10c4ba47fd",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "before-mcp-endpoints",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04620862498995848,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 3112,
+      "stdout_sha256": "c4d769a50e60c5ac0f357ccb3c82d364dbd950307fe36540fad2f3e9a9620090",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "cm-verdify-hermes-iris-config",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.06196724998881109,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 39064,
+      "stdout_sha256": "5919f0c15717f92a6dcedc147e03115a0594dba5aaa065c675604db9f5303e0b",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "cm-verdify-iris-inventory",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.0457290830090642,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 64790,
+      "stdout_sha256": "9f1c9186cb1bf585d8b676ec48c175c8746c884baac81560412eab05ea63fc65",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "cm-verdify-vision-src",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.05073895900568459,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 54998,
+      "stdout_sha256": "e9005ee294ad2de828b81526c0fc3fc8cdb00f62c13e8194b25d64f6aa6156e5",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "mcp-readonly-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.9074495419918094,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 5172,
+      "stdout_sha256": "1097077fed2f84c1e73d9e60d47e16e30b9bda388ea3881a25cffb76d6832b34",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "mcp-readonly-1",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 1.013342999998713,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 5169,
+      "stdout_sha256": "72c619b759ebb937450912518006ff4ec7d2d0c12487929fdf8955d566532bc7",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "api-readonly-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.45016750000650063,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 442,
+      "stdout_sha256": "56c4a5de907a014446aa6ec0da35f9e07f31f9a853f1a463641514f7bcca74b0",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "api-readonly-1",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.5591245830000844,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 442,
+      "stdout_sha256": "b1220efd66a4e16167347e39417615be08204fbfa3b69d8139204615016db8b4",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "hermes-files",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.1776745000097435,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 899,
+      "stdout_sha256": "fddc4a172b2e896b3fd2cde467fd28255e05815e4b88db7fa02093e7c34e03ea",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "hermes-seed-log",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.05456645799858961,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 560,
+      "stdout_sha256": "8440bd0a454996eb5f3efb14f4f49e9feae1ea8c071d1dcdf8e9de994da5a2f5",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "supported-smoke",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 5.443517209001584,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1467,
+      "stdout_sha256": "4b38b4ba4262b8391658d520ab027aea2d50573efe5da861d384b9a6f5888119",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "supported-device-monitor",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 4.9066200829984155,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 2104,
+      "stdout_sha256": "ff1f2787f738f5b74da0a76cf12e0dff490b8ba822950f5af575462addb5e81f",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-application",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.050152833995525725,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 48482,
+      "stdout_sha256": "ccd13131de0dfea42d2c18b24af4c0bfa754f14a0b0ea860f850652be60ecc22",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-deployments",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.06959975000063423,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 269299,
+      "stdout_sha256": "33c6ea63973c2f5863eb30f9a531c424d8159f0d0cc34a6ac19e17aab737d693",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-critical-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04666333300701808,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 52341,
+      "stdout_sha256": "75b11a5e9e8cbe931fdeff96115b6ff9cff853102e8a3fa638f0909ae0a3c7e9",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-database-statefulset",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04338162500062026,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10894,
+      "stdout_sha256": "5e723a24ea9b653e35203f37fdf047335045765c1e0ecc6882d73ea6a1a8f17e",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-mcp-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.043878665994270705,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 36655,
+      "stdout_sha256": "4eb87dd602741cfc73970ee48a7d25daa0829205c543e55dcd2572a8ec4a5bd3",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-mcp-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04894416699244175,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 11016,
+      "stdout_sha256": "d0a13cef26ad57ff32ae2611025ee9f8f131fcfc8791874c60469e3fda4f86f1",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-api-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.050853249995270744,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 47958,
+      "stdout_sha256": "dc7ac256af2fa84b0e70bd93056a8456c5f03a5e2b71fd5bc5cb0c6b2b44e3af",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-api-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.04174562499974854,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 13368,
+      "stdout_sha256": "502ce6394a1c33e4ac9ac583457d8fd02cfdfc1d82f1acfaf26647e77558dd37",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-hermes-iris-pods",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.056925917000626214,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 24224,
+      "stdout_sha256": "03608459a74829de718c9ed5424671ab89e9f8bf7f920f006e7d98df5ec01c8f",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-hermes-iris-rs-0",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.041856790994643234,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 12473,
+      "stdout_sha256": "8c8b98306aafa0b3600fc293ba41bc41eedd273bb3e9671e68ad4e10c4ba47fd",
+      "timed_out": false
+    },
+    {
+      "automatic_retries": 0,
+      "phase": "after-mcp-endpoints",
+      "raw_stderr_retained": false,
+      "returncode": 0,
+      "seconds": 0.047005041007651016,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 3112,
+      "stdout_sha256": "c4d769a50e60c5ac0f357ccb3c82d364dbd950307fe36540fad2f3e9a9620090",
+      "timed_out": false
+    }
+  ],
+  "release_sha": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+  "smoke_checks": 9,
+  "source_sha": "b814f35e228fcb35c11593c47ea1e021e5fd73de",
+  "status": "POST_ROLLOUT_RUNTIME_CUSTODY_PASSED",
+  "unchanged_deployment_specs": 13,
+  "unrelated_deployment_specs_unchanged": 12
+}

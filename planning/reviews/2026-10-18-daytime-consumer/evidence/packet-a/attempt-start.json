@@ -1,0 +1,8 @@
+{
+  "helper_sha256": "dff41070ab6d80da8baf9847666619a21658f9dcc550473330be79050638fc34",
+  "publication_authorized_by_this_helper": false,
+  "schema": "verdify-daytime-consumer-packaging-attempt-v1",
+  "selection_sha256": "9adebd34588d7c91c074b8d9f7cc6425dbf39cc5be99549182826ad671dd6bc7",
+  "status": "started",
+  "taskbase": "/private/tmp/verdify-daytime-consumer-20261018"
+}
