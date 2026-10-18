@@ -1,0 +1,50 @@
+# replay_invariants --policy-state template (all 48 canonical components required)
+# values are engineering units on the wire scale in policy_vector_generated.h
+band_track_fraction                    0             # wire_id=1 scale=20 raw=[0,20]
+cold_vent_guard_delta_f                10            # wire_id=2 scale=2 raw=[0,30]
+cool_exit_hysteresis_f                 1.5           # wire_id=3 scale=10 raw=[3,30]
+cool_stage2_exit_hysteresis_f          1             # wire_id=4 scale=10 raw=[3,30]
+cool_stage2_over_high_f                1             # wire_id=5 scale=10 raw=[0,30]
+direct_wet_stress_min_dew_margin_f     8             # wire_id=7 scale=2 raw=[6,30]
+direct_wet_stress_vpd_margin_kpa       0.05          # wire_id=8 scale=20 raw=[0,10]
+dwell_gate_ms                          300000        # wire_id=9 scale=1 raw=[60000,1800000]
+enthalpy_close                         1             # wire_id=10 scale=2 raw=[-10,40]
+enthalpy_open                          -2            # wire_id=11 scale=2 raw=[-10,0]
+fog_escalation_kpa                     0.4           # wire_id=12 scale=10 raw=[1,5]
+heat_hysteresis                        1             # wire_id=13 scale=10 raw=[0,30]
+min_fan_off_s                          90            # wire_id=14 scale=1 raw=[30,300] NOT-IMPOSABLE
+min_fan_on_s                           120           # wire_id=15 scale=1 raw=[30,300] NOT-IMPOSABLE
+min_fog_off_s                          60            # wire_id=16 scale=1 raw=[15,300] NOT-IMPOSABLE
+min_fog_on_s                           60            # wire_id=17 scale=1 raw=[15,300] NOT-IMPOSABLE
+min_heat_off_s                         180           # wire_id=18 scale=1 raw=[60,600] NOT-IMPOSABLE
+min_heat_on_s                          120           # wire_id=19 scale=1 raw=[30,300] NOT-IMPOSABLE
+min_vent_off_s                         60            # wire_id=20 scale=1 raw=[10,300] NOT-IMPOSABLE
+min_vent_on_s                          60            # wire_id=21 scale=1 raw=[10,300] NOT-IMPOSABLE
+mist_backoff_s                         600           # wire_id=22 scale=1 raw=[60,3600]
+mist_max_closed_vent_s                 600           # wire_id=23 scale=1 raw=[120,900]
+mist_thermal_relief_s                  90            # wire_id=24 scale=1 raw=[30,300]
+mister_all_delay_s                     300           # wire_id=25 scale=1 raw=[60,600]
+mister_all_kpa                         1.9           # wire_id=26 scale=20 raw=[20,50] NOT-IMPOSABLE
+mister_center_penalty                  0.5           # wire_id=27 scale=10 raw=[0,10] NOT-IMPOSABLE
+mister_engage_delay_s                  45            # wire_id=28 scale=1 raw=[30,300] NOT-IMPOSABLE
+mister_engage_kpa                      1.6           # wire_id=29 scale=20 raw=[10,50] NOT-IMPOSABLE
+mister_min_off_s                       45            # wire_id=30 scale=1 raw=[30,120] NOT-IMPOSABLE
+mister_pulse_gap_s                     45            # wire_id=31 scale=1 raw=[10,60] NOT-IMPOSABLE
+mister_pulse_on_s                      60            # wire_id=32 scale=1 raw=[30,90] NOT-IMPOSABLE
+mister_vpd_weight                      1.5           # wire_id=33 scale=2 raw=[1,6] NOT-IMPOSABLE
+mister_water_budget_gal                300           # wire_id=34 scale=10 raw=[1000,3000] NOT-IMPOSABLE
+night_vpd_bias_kpa                     0             # wire_id=35 scale=100 raw=[0,25] NOT-IMPOSABLE
+outdoor_staleness_max_s                600           # wire_id=36 scale=1 raw=[120,1800]
+sw_cool_all_fans_at_high_enabled       0             # wire_id=37 scale=1 raw=[0,1]
+sw_direct_wet_gate_enabled             1             # wire_id=38 scale=1 raw=[0,1] NOT-IMPOSABLE
+sw_direct_wet_stress_override_enabled  0             # wire_id=39 scale=1 raw=[0,1]
+sw_dwell_gate_enabled                  0             # wire_id=40 scale=1 raw=[0,1]
+sw_fog_closes_vent                     1             # wire_id=41 scale=1 raw=[0,1] NOT-IMPOSABLE
+sw_mister_closes_vent                  0             # wire_id=42 scale=1 raw=[0,1] NOT-IMPOSABLE
+sw_summer_vent_enabled                 1             # wire_id=43 scale=1 raw=[0,1]
+temp_hysteresis                        1.5           # wire_id=44 scale=10 raw=[5,30]
+vent_exchange_fraction                 0.3           # wire_id=45 scale=20 raw=[2,12]
+vent_prefer_dp_delta_f                 5             # wire_id=46 scale=2 raw=[4,30]
+vent_prefer_temp_delta_f               5             # wire_id=47 scale=2 raw=[4,30]
+vpd_hysteresis                         0.3           # wire_id=48 scale=20 raw=[1,10]
+vpd_watch_dwell_s                      60            # wire_id=49 scale=1 raw=[15,120]
