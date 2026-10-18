@@ -1,0 +1,172 @@
+{
+  "schema": "verdify-s3b-p4-passive-diagnosis-v1",
+  "at": "2026-10-18T15:25:13.037614+00:00",
+  "application_source_revision": "541c11ad0786e00e50e45f52ca4828173ddc58c2",
+  "capture": {
+    "schema": "verdify-s3b-bounded-readonly-capture-v1",
+    "name": "p4-diagnostics-01",
+    "started_at": "2026-10-18T15:21:47.630419+00:00",
+    "finished_at": "2026-10-18T15:21:48.098388+00:00",
+    "context": "vallery",
+    "namespace": "verdify-prod",
+    "database": "verdify",
+    "database_role": "verdify",
+    "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "node": "vm-k3s-node7",
+    "pod_identity_and_container_state_unchanged": true,
+    "sql_sha256": "73a0ee622b50c97d626efae5c9c9d58b4bb25b47c4175eaafc312b42f49dae41",
+    "exit_code": 0,
+    "stdout_bytes": 34883,
+    "stdout_sha256": "28793081fbe09cbf2aa3815f291017a2fd7b8f956cfe94891a668cfc8509be39",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "output_lines": 81,
+    "no_retries": true,
+    "read_only_rollback_transaction": true
+  },
+  "window": {
+    "earliest": "2026-10-18T13:58:53.022649+00:00",
+    "latest": "2026-10-18T15:20:41.176224+00:00",
+    "requested_lookback_hours": 24,
+    "actual_diagnostic_rows": 80,
+    "actual_profile_rows": 0,
+    "actual_reset_log_rows": 0,
+    "maximum_data_rows_requested": 100
+  },
+  "firmware_versions": {
+    "2026.10.2.0637.620a218a-wifi-bound": 80
+  },
+  "reset_reason_samples": {
+    "Software reset": 80
+  },
+  "observed_uptime_decreases": 0,
+  "reset_count_limit": "80 repeated last-boot reason samples are not 80 resets. No uptime decrease observed in this bounded window; historical/watchdog event counts are not established.",
+  "metric_ranges": {
+    "heap_bytes": {
+      "nonnull": 80,
+      "missing": 0,
+      "min": 63.2109375,
+      "max": 63.25
+    },
+    "heap_min_free_kb": {
+      "nonnull": 78,
+      "missing": 2,
+      "min": 2.3359375,
+      "max": 2.3359375
+    },
+    "heap_largest_free_block_kb": {
+      "nonnull": 78,
+      "missing": 2,
+      "min": 54,
+      "max": 60
+    },
+    "uptime_s": {
+      "nonnull": 80,
+      "missing": 0,
+      "min": 1382839.125,
+      "max": 1387699.25
+    },
+    "wifi_rssi": {
+      "nonnull": 80,
+      "missing": 0,
+      "min": -62,
+      "max": -52
+    }
+  },
+  "heap_units": {
+    "database_column": "heap_bytes",
+    "actual_unit": "KiB-equivalent firmware kB",
+    "reason": "The actual firmware Free Heap template returns gh_free_heap_kb() (bytes/1024) with unit_of_measurement kB; existing ingestor mapping persists free_heap as heap_bytes without a unit rename. Values are not divided by1024 again."
+  },
+  "existing_source_floors": {
+    "free_heap_kb": 32,
+    "largest_block_kb": 16,
+    "valid_available_pairs": 78,
+    "passing_pairs": 78,
+    "unknown_pairs": 2,
+    "loop_timing_observed": false,
+    "API_heap_profile_observed": false,
+    "loop_warn_threshold_us": 250000
+  },
+  "interpretation": "Current available free/contiguous-block samples meet existing floors; the low lifetime minimum is historical. Missing profile/loop data and two incomplete pairs remain unknown. No current fragmentation/leak/watchdog cause or safe release is established by this sample.",
+  "source_bindings": [
+    {
+      "path": "firmware/lib/heap_diagnostics.h",
+      "retained_firmware_source": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+      "retained_source_sha256": "610783d500cc0f3f6de8483cf4c9c69ed540000bec077ae4baa8dd3bfdb53e2a",
+      "current_source_sha256": "610783d500cc0f3f6de8483cf4c9c69ed540000bec077ae4baa8dd3bfdb53e2a",
+      "identical": true
+    },
+    {
+      "path": "firmware/greenhouse/sensors.yaml",
+      "retained_firmware_source": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+      "retained_source_sha256": "56f6e75095fd15f4e80e296ecac221090953c6255fd005bd5d3b028f2e1a0abd",
+      "current_source_sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563",
+      "identical": false
+    },
+    {
+      "path": "ingestor/entity_map.py",
+      "retained_firmware_source": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+      "retained_source_sha256": "7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+      "current_source_sha256": "24b29cfcdd155feeb5c4512c7173b849262da3c0564038c1c86ac3e83f168bb7",
+      "identical": false
+    },
+    {
+      "path": "scripts/archive-firmware-artifacts.sh",
+      "retained_firmware_source": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+      "retained_source_sha256": "37bc5f8c7054309fe773199d5357fa78dbf6bf820e2441cfbf0875da008fc08a",
+      "current_source_sha256": "37bc5f8c7054309fe773199d5357fa78dbf6bf820e2441cfbf0875da008fc08a",
+      "identical": true
+    },
+    {
+      "path": "scripts/firmware-deploy-preflight.sh",
+      "retained_firmware_source": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+      "retained_source_sha256": "8d4e9b5b992fd26207d2d68370000d2e399fe25cd028e1fd2ea9d613f63d7d01",
+      "current_source_sha256": "8d4e9b5b992fd26207d2d68370000d2e399fe25cd028e1fd2ea9d613f63d7d01",
+      "identical": true
+    }
+  ],
+  "known_local_artifact_copies": 4,
+  "unique_known_OTA_hashes": 2,
+  "matching_observed_version_artifact": {
+    "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.ota.bin",
+    "bytes": 1106304,
+    "sha256": "0f84ea9a06a8c96928d3675361515aa8fa1ab39528d256353babb59717bd9176",
+    "mtime": "2026-10-02T14:07:39+00:00",
+    "symlink": false,
+    "last-good.version": {
+      "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.version",
+      "bytes": 35,
+      "sha256": "55961e4716aeb5a34f7efcdb6579202567a2faff8b9a8c9a42ca347f1fe93871",
+      "version": "2026.10.2.0637.620a218a-wifi-bound"
+    },
+    "last-good.metadata.env": {
+      "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.metadata.env",
+      "bytes": 1195,
+      "sha256": "0e6d39b6445523bc7b90db34bfc5f127de00bf124ba8644161e3a0ea5b7c906a",
+      "metadata": {
+        "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+        "archived_at": "2026-10-02T06:54:55-0600",
+        "source_ref": "codex/c1-consumed-evidence-cadence-20261002",
+        "source_sha": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+        "source_dirty": "0",
+        "deployed_at": "2026-10-02T14:07:39+0000"
+      }
+    }
+  },
+  "matching_named_version_archive_present_next_to_local_copy": false,
+  "artifact_limitations": [
+    "One retained local OTA binary matches the observed version metadata; the live flash bytes were not hashed.",
+    "Clean source_sha/deployed_at in copied metadata are custody facts, not independently re-established bake or worst-case runtime.",
+    "The matching version archive/provenance directory is absent beside this known local copy; other encrypted custody is retained but not decrypted or recertified in this packet.",
+    "These known copies are operator-local/cluster-independent; no additional independent failure domain or tested restore path is inferred.",
+    "Compiler output from the prior dummy-credential qualification remains NONDEPLOYABLE and cannot be used as last-good."
+  ],
+  "full_428_acceptance": {
+    "cause_or_bounded_uncertainty": "Bounded current sample and missing-observation limits recorded; no cause reproduced.",
+    "representative_candidate_load_timing_clean_runtime": "NOT ESTABLISHED",
+    "last_good_promotion": "NONE"
+  },
+  "no_new_device_session_stress_reset_OTA_or_data_mutation": true,
+  "issue_closure_justified": false
+}

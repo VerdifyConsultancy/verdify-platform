@@ -1,0 +1,22 @@
+{
+  "schema": "verdify-s3b-bounded-readonly-capture-v1",
+  "name": "p4-diagnostics-01",
+  "started_at": "2026-10-18T15:21:47.630419+00:00",
+  "finished_at": "2026-10-18T15:21:48.098388+00:00",
+  "context": "vallery",
+  "namespace": "verdify-prod",
+  "database": "verdify",
+  "database_role": "verdify",
+  "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+  "node": "vm-k3s-node7",
+  "pod_identity_and_container_state_unchanged": true,
+  "sql_sha256": "73a0ee622b50c97d626efae5c9c9d58b4bb25b47c4175eaafc312b42f49dae41",
+  "exit_code": 0,
+  "stdout_bytes": 34883,
+  "stdout_sha256": "28793081fbe09cbf2aa3815f291017a2fd7b8f956cfe94891a668cfc8509be39",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "output_lines": 81,
+  "no_retries": true,
+  "read_only_rollback_transaction": true
+}
