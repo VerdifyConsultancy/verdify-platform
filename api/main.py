@@ -1392,6 +1392,7 @@ async def noindex_api_responses(request: Request, call_next):
 
 DEFAULT_GREENHOUSE = "vallery"
 PLANNER_GATEWAY_LABEL = os.environ.get("VERDIFY_PLANNER_GATEWAY_LABEL", "hermes-iris")
+# Keep this fallback aligned with the declarative live Iris profile and API env label.
 PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/custom:gpt-6-luna/xhigh")
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"

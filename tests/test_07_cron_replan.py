@@ -72,7 +72,7 @@ class TestPlannerConfig:
         planner = ai.model("planner")
         assert planner == {
             "provider": "custom",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-6-luna",
             "base_url": "https://api.openai.com/v1",
             "reasoning_effort": "xhigh",
             "purpose": "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml.",
