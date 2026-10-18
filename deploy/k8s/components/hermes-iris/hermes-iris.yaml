@@ -87,7 +87,7 @@ spec:
         # this Recreate Deployment so seed-config refreshes the state PVC before
         # startup. Keep this independent of provider-specific runtime patches.
         verdify.io/iris-inventory-revision: "5733c1c6b35d"
-        verdify.io/hermes-profile-revision: "51de00576417"
+        verdify.io/hermes-profile-revision: "2261f5c1a236"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris

@@ -27,7 +27,7 @@ from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
-ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-5.6-luna/xhigh"
+ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-6-luna/xhigh"
 
 
 def _install_fastmcp_test_stub() -> None:
@@ -341,7 +341,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def test_hermes_profile_pins_openai_gpt_5_6_luna_xhigh_at_the_runtime_key():
+def test_hermes_profile_pins_openai_gpt_6_luna_xhigh_at_the_runtime_key():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
     experiment_manifest = yaml.safe_load(
@@ -353,7 +353,7 @@ def test_hermes_profile_pins_openai_gpt_5_6_luna_xhigh_at_the_runtime_key():
         embedded["model"]
         == canonical["model"]
         == {
-            "default": "gpt-5.6-luna",
+            "default": "gpt-6-luna",
             "provider": "custom",
             "base_url": "https://api.openai.com/v1",
         }
@@ -380,7 +380,7 @@ def test_hermes_profile_pins_openai_gpt_5_6_luna_xhigh_at_the_runtime_key():
     assert normalized == canonical
 
 
-def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
+def test_planner_audit_metadata_and_readme_match_live_hermes_profile():
     """Keep secondary planner truth aligned without rewriting dated evidence."""
     _manifest, profile, _readiness_source = _hermes_config_documents()
     expected_audit = {
@@ -395,29 +395,12 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     assert ai_config["models"]["planner"] == expected_audit
     assert vision_copy == ai_config
 
-    current_docs = (
-        "docs/iris-planner-contract.md",
-        "docs/RUNBOOK.md",
-        "docs/planner/greenhouse-playbook.md",
-        "docs/planner/langgraph-external-implementation-context.md",
-        "docs/SYSTEM-ARCHITECTURE.md",
-    )
-    for relative_path in current_docs:
-        source = (REPO_ROOT / relative_path).read_text()
-        assert "GPT-5.6 Luna" in source, relative_path
-        assert "xhigh" in source, relative_path
-        assert "llm.primary.longctx" not in source, relative_path
-        assert "pending profile" not in source, relative_path
-
-    current_code_surfaces = (
-        "ingestor/iris_planner.py",
-        "scripts/planner-dry.py",
-        "tests/test_prompt_variants.py",
-    )
-    for relative_path in current_code_surfaces:
-        source = (REPO_ROOT / relative_path).read_text()
-        assert "GPT-5.6 Luna" in source, relative_path
-        assert "Cortex" not in source, relative_path
+    # Model truth is the source-owned runtime profile, audit copies, README and
+    # public API label. Installed prompt/playbook text is separately source-bound;
+    # changing a model must not force an ingestor or inventory payload rollout.
+    readme = (REPO_ROOT / "README.md").read_text()
+    assert "GPT-6 Luna / xhigh" in readme
+    assert "GPT-5.6 Luna" not in readme
 
 
 def test_api_public_planner_model_label_is_declarative_and_matches_active_profile():
