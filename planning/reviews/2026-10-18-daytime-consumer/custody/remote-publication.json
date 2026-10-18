@@ -1,0 +1,487 @@
+{
+  "status": "SOURCE_REPORT_TWO_ARCHIVES_AND_ALL_REMOTE_BYTES_VERIFIED",
+  "source_revision": "af46d263352d6403201a4642378197e9ca00303c",
+  "evidence_commit": "dffdcc9ce9fbffffd62981dc16463fadb5e44a53",
+  "evidence_branch": "codex/daytime-consumer-evidence-20261018",
+  "main_not_mutated_by_evidence": true,
+  "custody_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/dffdcc9ce9fbffffd62981dc16463fadb5e44a53/planning/reviews/2026-10-18-daytime-consumer/CUSTODY.md",
+  "files": [
+    {
+      "path": "LANES.md",
+      "bytes": 30729,
+      "sha256": "c9d4dfa041ae1480ef8cdbec2c898f920997b0053f177e9710f17cf4c3d70cd9",
+      "github_blob_sha": "e1b1114263f593c438cf77a005ba6ed57a4d5c06",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "MILESTONES.md",
+      "bytes": 14855,
+      "sha256": "d1876658aae83bc224ba3dc5ef62ffcb90ce633f8be15fedb4bb375c6d75080f",
+      "github_blob_sha": "8691105d03ea70becc7ad7010f590ae58bd1d511",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "bytes": 14878,
+      "sha256": "50d4dacc74bea1894694b4b3f3daf8c4f40f7fee36c9f032b3db2ec847496061",
+      "github_blob_sha": "7e782ef99f5308786a232fa98ec40c04c0fdb179",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "README.md",
+      "bytes": 4933,
+      "sha256": "89cdeb0001edf11a10f1f92540ab3b4b12ee97068ec0e2dc287d9d84f17428b2",
+      "github_blob_sha": "48b0c2df476514e1d707b260949b64c81276c072",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "bytes": 30981,
+      "sha256": "ebbfec781a9fc53a6e47358d8098bb1f2ee9c982e3e8df08aee7980788c97e9a",
+      "github_blob_sha": "ece5de0e29129a31eb1ee3a6f475f756ea5fbaf8",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "api/main.py",
+      "bytes": 277613,
+      "sha256": "9fd787454709b8c4650e14b9ec54dba4b29d7b848477b55b3d5ca5e1a606b1e0",
+      "github_blob_sha": "dac3d3762bf124990a23a75ae0555ab6758bb26e",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "config/ai.yaml",
+      "bytes": 5029,
+      "sha256": "52c212a5735041206a29b53de3684b753aad0a8ce46c8cb1586d88804b8adfff",
+      "github_blob_sha": "18dcacb43ff6f2bffe6f7dfcad63f036beba4b2e",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/base/api-deployment.yaml",
+      "bytes": 9937,
+      "sha256": "617df172fcf4e6266bae1113b1c3746cb806ebb68a1f73e92a2451a72b8ef9ae",
+      "github_blob_sha": "0f056478c1256decb2cba072c49b51dfa865b3b5",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/components/hermes-iris/hermes-config.yaml",
+      "bytes": 20839,
+      "sha256": "f44876d75a8b0821e331349f995242f948178ff32a0bfdc016845f2b73c5c224",
+      "github_blob_sha": "f40f999a531644cba0cd839b2afa662a1ecd0617",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/components/hermes-iris/hermes-iris.yaml",
+      "bytes": 12689,
+      "sha256": "dcb45d1000ea2109983a7cabea8ef932900b66c0e96d8fbfaf65e31bc07664e2",
+      "github_blob_sha": "cc049eff67cbb86fca0d8dc76c8ee1024fbdea15",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/components/hermes-iris/iris-inventory.yaml",
+      "bytes": 32360,
+      "sha256": "3d2858feddce8a563c51c7f7d8ed5df7433e01617e3216a8468964b39725fd45",
+      "github_blob_sha": "03d07494ecef2dea78b72c97057e1e3a7a75d189",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/kustomization.yaml",
+      "bytes": 19219,
+      "sha256": "3792d144f65e654d79388e2b9f82f70b6d71725b5427b8c35ab4f937b4312124",
+      "github_blob_sha": "aadab294fb51e4fbb464288a54550aefe3cb301b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/release-pins.yaml",
+      "bytes": 2629,
+      "sha256": "ad40057f2c206ce2e4ee2aada3ec22a8ef080caf463a367291171e26a37c89fe",
+      "github_blob_sha": "82be59e2a4e8e5fe54230f008564edc4903dbbd7",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/winter-runtime-pins.yaml",
+      "bytes": 1516,
+      "sha256": "6e488c2e1127cfd9c38fa1d6959978e605d127b2368b99ec6132e5f85e015d1e",
+      "github_blob_sha": "a6314d6e7dc5b1a254f8bd2d91a84d3d371a44de",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/vision/src/ai.yaml",
+      "bytes": 5029,
+      "sha256": "52c212a5735041206a29b53de3684b753aad0a8ce46c8cb1586d88804b8adfff",
+      "github_blob_sha": "18dcacb43ff6f2bffe6f7dfcad63f036beba4b2e",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "hermes/iris/SOUL.md",
+      "bytes": 4070,
+      "sha256": "11a0fdc4be8f31b0f7872ea2184ea4e502b8be7902b11a85275c9b8af8809f1f",
+      "github_blob_sha": "f6f73ff4903f9eafcf7f4b46be0bd4f1a68e1128",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "hermes/iris/config.yaml",
+      "bytes": 3532,
+      "sha256": "9de98a78fe240a0aff0de7b951160c5039de13a67cfc430a26a6e3d95caeddb2",
+      "github_blob_sha": "35da97a1eac63868511162079cb854de64726bb4",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "mcp/server.py",
+      "bytes": 248926,
+      "sha256": "d8926ec1bca28c10cd0109b62238b395a3d233158879e51dbb073acdc7372a9f",
+      "github_blob_sha": "39a2a41a5da6c01516b73ae668cfba28d230d552",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/DEPENDENCIES.md",
+      "bytes": 22840,
+      "sha256": "109f32ce9d11dab100442d5914a3e99d34edbc25433f95e5fddbac017101462a",
+      "github_blob_sha": "4f162f0a9a42498cee18c08fa5cdda160bb51d38",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "bytes": 385303,
+      "sha256": "ae9c5cb0d14954d89ae56b66ced1dfa079d0f6a6c339c1caf6ab17c4d690016f",
+      "github_blob_sha": "71e961e6383dd0b45eed5042f228dc2f863714aa",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "bytes": 34723,
+      "sha256": "820363f747d6b3c36c173f89d1130a7f4bbdc342a5e1c84c6d53fb3bf99db12c",
+      "github_blob_sha": "3502fe9fe9375557d13a45a3a9b6d346f8ba98bd",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/CUSTODY.md",
+      "bytes": 4087,
+      "sha256": "2a234de42932c2ae566a6acce40083c438a308fe4b73d19f53ded73f5335116e",
+      "github_blob_sha": "f21e81844e865aa8139a278bd01773912874bb00",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/DEPENDENCIES.md",
+      "bytes": 512,
+      "sha256": "9397dbd7c622adb7aac2ea9f3d28fba155ae1c1b0cb6b40466f4d5bb76029016",
+      "github_blob_sha": "3f5f83a8343e83d5e5ac6a8c4a09f46702a37f90",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/README.md",
+      "bytes": 14067,
+      "sha256": "426ae6c8e873c67f6e913014bcb927c2f6b40f3132dd054a7b5f2d3b647b66fb",
+      "github_blob_sha": "f4c40c3289a190b0c7b6232771b316220cf1cfac",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/acceptance-summary.json",
+      "bytes": 896,
+      "sha256": "9023a705c849d857f3f5d0d98f10ed45795e2bfdfbee1fa4964f2e460a5cbb7f",
+      "github_blob_sha": "8d19f2e3c9b940b7bf9be34069ead92b867130f7",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/completion-bindings.final.json",
+      "bytes": 29805,
+      "sha256": "18c07658bae1dd2e852f9f69ee03d5976c8048efb4f9b4158d9e81c45aa78363",
+      "github_blob_sha": "946510f16dba4c62029f178e1ee7657feab1d805",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/consumer-native-v3-01-verified.json",
+      "bytes": 12052,
+      "sha256": "096f5e3187c5da5a04ecccee765d44a00f215dd266c23775614392306fcd3f63",
+      "github_blob_sha": "e37175c83ad6a7ba38d6808bf1e0939a1feccf3a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/credential-scan-metadata-02.json",
+      "bytes": 125,
+      "sha256": "7c341b79bfeeaf8a5ccea4a0e3bb3c870c5a2cbf9ce51ab1755b8b2f702d65fa",
+      "github_blob_sha": "b7ce7d8dd5ec1eee8b84c02b685c43d8c5a111a1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/credential-scan-metadata.json",
+      "bytes": 125,
+      "sha256": "12f6637b9cde732a16fa2a9d851279e9125c5e0668336d03955b6e089bf2678f",
+      "github_blob_sha": "11e097bb6e4aa72ec1cf9586766690fcdee13c07",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/credential-scan-review.json",
+      "bytes": 1637,
+      "sha256": "66b21a28406050d554e04316c0fe35c52c27a8a9783d46619d0899283d14792b",
+      "github_blob_sha": "03bb2f7de356ca30bcaff58837becf43f0500cd5",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/credential-scan.json",
+      "bytes": 62865,
+      "sha256": "bd13d55f9cc70cbf0d18a707ba90b3e8bad973b1a1b6224dd8ea2783e10e7f1f",
+      "github_blob_sha": "f3882b0ad8647e543071bf9b0aac5ee092d7b3cb",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/final-live-status.json",
+      "bytes": 355,
+      "sha256": "3bdd5cf58a88f4f0032549f5ca26bc054a9e6c52c52bfc15786929a7ce2fa30a",
+      "github_blob_sha": "19a51656ac22397eae59a13471e586d8b76d487b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/final-publication-source.json",
+      "bytes": 478,
+      "sha256": "3e9246b25b461161aa83edab427819da2149dbb8fe9d790d7c1e3c431c2059ca",
+      "github_blob_sha": "4dcbc0e55aa3a29969b2e4eb11e903343040ca72",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/graph-after-verified.json",
+      "bytes": 41918,
+      "sha256": "b1f626241086edee6e1fb0bc6aef5c3f40bed2f17932496527ace8616862694e",
+      "github_blob_sha": "a7c4794e7a4d9b8848e37b5eeef358a4f8cf33fd",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/model-release-ci-initial-verified.json",
+      "bytes": 1982,
+      "sha256": "016ff8b2e6abb0ec28b7b18fedf686e1de02f1a656d84af60e19b7cedef6bedc",
+      "github_blob_sha": "041fc97fdc9da0988ea564e552ae411c342ef398",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/model-release-ci-verified.json",
+      "bytes": 1994,
+      "sha256": "4fc3f486a971b5b0b2ec32638c82ebc3b40206b4f279dfbea0c4f78026a31087",
+      "github_blob_sha": "c114c71911ff0f350a475c77da8438213eea7325",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/model-source-ci-verified.json",
+      "bytes": 15699,
+      "sha256": "8326b85a7821232df5126e01082be1e57153cf7b323904e33da0c8e53cac99d4",
+      "github_blob_sha": "30af3ee268a682c0771bccdd3a2d904d8e96f8fb",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/packager-v3-review.json",
+      "bytes": 803,
+      "sha256": "07445ff619a6b7817d7e672e5855097c3223c6440d6049b65d61632e873fe48c",
+      "github_blob_sha": "f84a5bbd230e03eb3cade44796850303762ea98a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/partition/selection-a.json",
+      "bytes": 97724,
+      "sha256": "9adebd34588d7c91c074b8d9f7cc6425dbf39cc5be99549182826ad671dd6bc7",
+      "github_blob_sha": "4e71870ccc08dc1a45d0abdd3a9d603d38b5f461",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/partition/selection-b.json",
+      "bytes": 111895,
+      "sha256": "8af3d96f4ab33f73e9baf22b116fa4f3bcb1c0b1b798ecc2e2ddb19aa485ea63",
+      "github_blob_sha": "908c9ceee745494775c85dcee6c418a43ec4363c",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/partition/union-index.json",
+      "bytes": 509596,
+      "sha256": "570cd57d06df1f3221af276e3bb3a30466b24bf57dfe1d17377b0a28f1fedefd",
+      "github_blob_sha": "71b9eec347197990550a0ee8b2034e4bd82be329",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/planning-validation-final.json",
+      "bytes": 311,
+      "sha256": "7bc55bfa7f6b059bc670ac82849be1f4a015c1a311791a5a9f78c3948ae9eade",
+      "github_blob_sha": "d82a3194249fcd0a25318f6fabd50b2c572d7d78",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/release-ci-verified.json",
+      "bytes": 2146,
+      "sha256": "5c8ec99bbe9653cb246834fb5310b8ee1dd976f2c8c9b4b48612b676bb378d92",
+      "github_blob_sha": "a46a3a0900e23918106eb86b1522e3310812df39",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/report-ci-verified.json",
+      "bytes": 1946,
+      "sha256": "0056e35afb0c17395c49f62a3d8888efd692e2dfaa092149663b84455ebf6042",
+      "github_blob_sha": "7c98abe7ab0b6e91295638eca7b7f652c4e44da8",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/runtime-model-02-verified.json",
+      "bytes": 31559,
+      "sha256": "76dbf3abe663533a1cd07e30a4e49c9138e95a3cc53f82db65006e3947b66126",
+      "github_blob_sha": "2edbbc35bd23dba269a24e88369fe79d14000775",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/science-consumer-v3-actual-independent-review.json",
+      "bytes": 4561,
+      "sha256": "1bb7db6c37238fa0f66b2fe2f03d5f90a903e93e7f31cd36dba73319b7ca4a30",
+      "github_blob_sha": "a6803d984e1532f4735b1e87d9aacc239c1198c2",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/selection/completion-binding-receipt.json",
+      "bytes": 10094,
+      "sha256": "b6bffaf68c84ebd46fff66197fa10a2a14111f289a2b235611e7a90a7b865574",
+      "github_blob_sha": "37f998d7fd533e298ed1fe8558c2f80b2492e6f8",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/selection/selection.json",
+      "bytes": 22135,
+      "sha256": "bf801529ec0b8d280efe7851575a2687c715d80e35e0f47f8dd9b79e56d7205e",
+      "github_blob_sha": "c6dccde4e7fa1fd1e1c74c5eea0251bbce76a3fc",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/source-ci-verified.json",
+      "bytes": 32079,
+      "sha256": "26a7ae9165c2de368320ec1f75916564119d7ea22126f844dcf006da869c14b2",
+      "github_blob_sha": "c13046324dbcf2ae86a691c341f4629f51461060",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/tools/install-custody-materials-02.py",
+      "bytes": 7034,
+      "sha256": "2e0483feb02ddaf1b3709f50ddcbed047effd3ce3fbd2086f777cad9e9b1603b",
+      "github_blob_sha": "48e73e146cf8bba5616a88a891d442cf4de91065",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/custody/tools/verify-final-remote-custody.py",
+      "bytes": 2330,
+      "sha256": "8ce337d75d4b7463cfbc6a353c4a20c5c764a6354047869ac5ee585e264a6ec6",
+      "github_blob_sha": "4494fdaccaa82bf86a05d223be32b81624f2c0a0",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-a/attempt-result.json",
+      "bytes": 268,
+      "sha256": "940f1ec3680e2f9d0de8150c65724ebada4ae0f9aa694a0051ed531997b296be",
+      "github_blob_sha": "aff14119ee0e31b09329c8ee0f9eeeb0da65eb49",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-a/attempt-start.json",
+      "bytes": 378,
+      "sha256": "f9cda1e58a2815a15f9df891be599a271e7a017dd982eb4eed30e31e699d654a",
+      "github_blob_sha": "74596fd03b5645ab2f57413046a527d20894649c",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-a/evidence.tar.gz",
+      "bytes": 15693164,
+      "sha256": "4684b980dc094f92cefee7838884ac25c74179940df8419fb3a600a2e1af9353",
+      "github_blob_sha": "45e156adc395aeda817b94796bee2e62ab6dda02",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-a/manifest.json",
+      "bytes": 222830,
+      "sha256": "9feaff92d43c7d76f7570f2fea02f7330dc18ba045ce0905b9f49a0ee6e9f09a",
+      "github_blob_sha": "dc31719e8d4d135be0ab018cbb2324776664e1c3",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-b/attempt-result.json",
+      "bytes": 268,
+      "sha256": "0984b42acd0463da2c7ea6620e3bfe907cc97bfa61a6c7274001452d8f112d23",
+      "github_blob_sha": "e8b9eeeca464cd0d95c38e9b3bb49e434b71191b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-b/attempt-start.json",
+      "bytes": 378,
+      "sha256": "67ace2738e0fa39a383e6eda2a24cd85c6d89ea797901082029e2b18571be6a4",
+      "github_blob_sha": "ef6a66bc8015dada2594f8e7e34f3adb67592b0e",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-b/evidence.tar.gz",
+      "bytes": 16687716,
+      "sha256": "cc3fedf6eda17f8116e3c9bce8f2c3ea48c4cffefa8df07ef4d25daa2cdf45fc",
+      "github_blob_sha": "d7f6db0b46db4b0f7f1d32a50bbba964e317d379",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-daytime-consumer/evidence/packet-b/manifest.json",
+      "bytes": 276118,
+      "sha256": "e4dd8d18dc32c2e007610065bb3e4b697ad82e28050ece77bf5296bf6dea752e",
+      "github_blob_sha": "1f157c8d6d6fc93c21671f6fd71a7154f1dd193d",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "scripts/ci-local.sh",
+      "bytes": 15648,
+      "sha256": "85723be58634da27233cb54fdc983499bc6bfd38247704ffa090ea81d977c73a",
+      "github_blob_sha": "0f751aa3702aea8d302a3ea1c8a45118b043114a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_07_cron_replan.py",
+      "bytes": 4693,
+      "sha256": "453a87efc6caa084ba28c3f1fab93e8b5a897c3cbc633aee59af8ce560694b7c",
+      "github_blob_sha": "850e0fe2303a852d306d04672d0cefe19bd0d37f",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_17_planner_health_surface.py",
+      "bytes": 68715,
+      "sha256": "4c3084ab0c977c9bc235dd4b5f9755fd94f423c2fde1e8196fdc0626525ffb58",
+      "github_blob_sha": "0595990b0e48d384f4ec8a0b6f7ab85b51f2acc1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_mcp_audience_auth.py",
+      "bytes": 45854,
+      "sha256": "6e7a0b101e3c4c4179afde6e3264e757db91bb13610bb2cf8b26712e36032161",
+      "github_blob_sha": "45298e26e4535e29206cf7d316cd35d5669c7087",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_outcome_kpi_dryout_projection.py",
+      "bytes": 3775,
+      "sha256": "9d660224cb86b20785ac311e3ee7fa9c28de8bfc81da668e3c4244bd0e6253df",
+      "github_blob_sha": "ab5580cae435847fa8d2bc558f294462d53f99fd",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_prod_release_pins.py",
+      "bytes": 9808,
+      "sha256": "abd4365fd59c1aede2c3dbdfe50110433adbf99757fe5b65473832ebfdfdbb81",
+      "github_blob_sha": "22e3f435faf31f5a663f9b094502ce7c4d6a7969",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_scorecard_realized_dryout.py",
+      "bytes": 9656,
+      "sha256": "6656daae2a73ffe078b65d8b16a99521c02c4aa74453ed73fec5a9cd9f392226",
+      "github_blob_sha": "186029daa2d5dbd148987ee4d8c19f51b49b3756",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "verdify_schemas/mcp_responses.py",
+      "bytes": 18955,
+      "sha256": "edccf0a7740421aaeaa9b402e446c769fc1cd4b3fbfdc646e13cb83d1e3b82ee",
+      "github_blob_sha": "7466e0bbc997d3deb137009e388360ed30b8ef1b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "verdify_schemas/realized_dryout.py",
+      "bytes": 7730,
+      "sha256": "7364d30ddea52fc5d5588f174b95de67c70a966224a5746c33f1838ba7586479",
+      "github_blob_sha": "da3bb4667297c706ab8999e1b58688d9427b18c6",
+      "exact_remote_bytes": true
+    }
+  ],
+  "verified_at": "2026-10-18T21:29:58.944250+00:00"
+}
