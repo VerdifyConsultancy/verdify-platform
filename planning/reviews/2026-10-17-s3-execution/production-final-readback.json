@@ -1,0 +1,219 @@
+{
+  "format": "verdify-production-final-readback-v1",
+  "observed_at": "2026-10-18T05:05:24.919444+00:00",
+  "scope": "Bounded read-only production checkpoint; no promotion, sync, restart, backup or restore performed by this readback.",
+  "application": {
+    "name": "verdify-prod-dark",
+    "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+    "sync": "Synced",
+    "health": "Healthy",
+    "observed_comparison_revision": "5f2f488cc50ec2747fb2f07774f43434abd23ccb",
+    "comparison_refresh_only": true,
+    "last_full_sync_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+    "last_full_sync_finished_at": "2026-10-18T02:47:03Z",
+    "last_full_sync_phase": "Succeeded",
+    "new_product_sync_performed": false
+  },
+  "smoke": {
+    "passed": 9,
+    "failed": 0,
+    "api_build_sha": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "api_digest": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+    "ready_api_replicas": 2,
+    "ready_mcp_replicas": 2,
+    "authenticated_mcp_tool_count_per_replica": 23,
+    "canonical_setpoint_fields": 48,
+    "setpoint_age_seconds": 8
+  },
+  "device_route": {
+    "established_esp32_writer_connections": 1,
+    "writer": "verdify-ingestor",
+    "device_operation_performed": false
+  },
+  "pods": {
+    "ingestor": {
+      "name": "verdify-ingestor-654648cdf6-94bwz",
+      "uid": "44386520-a799-468c-ae13-fe93ec9e1f1c",
+      "node": "vm-k3s-node4",
+      "ready": true,
+      "restarts": 0,
+      "observed_image_ids": [
+        "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000"
+      ]
+    },
+    "exporter": {
+      "name": "verdify-db-backup-exporter-854574dd78-sxsk7",
+      "uid": "de49c954-0ba4-42c8-8e73-146b52db7772",
+      "node": "vm-k3s-node6",
+      "ready": true,
+      "restarts": 0,
+      "observed_image_ids": [
+        "docker.io/library/python@sha256:236173eb74001afe2f60862de935b74fcbd00adfca247b2c27051a70a6a39a2d"
+      ]
+    },
+    "database": {
+      "name": "verdify-db-0",
+      "uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+      "node": "vm-k3s-node7",
+      "ready": true,
+      "restarts": 0,
+      "observed_image_ids": [
+        "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+      ]
+    }
+  },
+  "pod_uids_unchanged_from_977_980_acceptance": true,
+  "database_storage": {
+    "volume": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+    "volume_uid": "ce8bee30-faf5-41a6-a086-d9237fc78615",
+    "state": "attached",
+    "robustness": "healthy",
+    "desired_replicas": 3,
+    "rebuild_in_progress": false,
+    "replicas": [
+      {
+        "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-a0948cb2",
+        "uid": "672ad232-aa51-4261-bd71-b28372b456d7",
+        "node": "vm-k3s-node5",
+        "state": "running",
+        "mode": "RW"
+      },
+      {
+        "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-c5470818",
+        "uid": "afa40551-d43c-4387-9ff5-f5ab7d226be3",
+        "node": "vm-k3s-node8",
+        "state": "running",
+        "mode": "RW"
+      },
+      {
+        "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-eb4a73da",
+        "uid": "39d0aa79-8a8f-4120-9539-a5b39da99fc1",
+        "node": "vm-k3s-node7",
+        "state": "running",
+        "mode": "RW"
+      }
+    ]
+  },
+  "exporter": {
+    "source_port": 8080,
+    "http_status": 200,
+    "response_seconds": 0.040856454987078905,
+    "exporter_up": 1,
+    "dump_count": 15,
+    "last_success_timestamp_seconds": "1792225121.8947577",
+    "last_success_timestamp_unchanged": true,
+    "new_backup_or_restore_performed": false
+  },
+  "verification_corrections": [
+    {
+      "attempt": "production-final-readback-01",
+      "result": "Stopped before smoke checks because KUBECONFIG was unset; empty stdout and original error retained.",
+      "service_failure_claimed": false
+    },
+    {
+      "attempt": "production-final-readback-02 initial exporter probe",
+      "result": "Operator used incorrect port9100; connection refused. Source port8080 probe then returnedHTTP200. Both outcomes retained.",
+      "service_failure_claimed": false
+    }
+  ],
+  "production_images_promoted": false,
+  "ingestor_restart_requested": false,
+  "source_or_ci_substituted_for_runtime_evidence": false,
+  "acceptance_limits": [
+    "Point-in-time runtime observation; no new sustained-window claim.",
+    "No new backup, restore, physical-control or full issue acceptance.",
+    "New source/build candidates remain separate from production release pins."
+  ],
+  "private_custody": [
+    {
+      "attempt": "production-final-readback-01",
+      "files": [
+        {
+          "name": "attempt-start.json",
+          "sha256": "b44dc3af7d51d0ec9a8ba9469286f0ee005075294c3b5589dcec8a7b45b7abd6"
+        },
+        {
+          "name": "smoke.stderr.private.log",
+          "sha256": "bc035089790ef19bd874696930f653c89489f47ab9a8192cde54d1b343c83a6f"
+        },
+        {
+          "name": "smoke.stdout.private.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "attempt": "production-final-readback-02",
+      "files": [
+        {
+          "name": "application.private.json",
+          "sha256": "307920ac0f07151839d841ea242172361479f8fcd8895fe897b0afd33a6a3d7a"
+        },
+        {
+          "name": "attempt-start.json",
+          "sha256": "dadab5e1d84880e65ce5000a56463108f86571b6ec07010c6488c3308d3a0744"
+        },
+        {
+          "name": "db-engines.private.json",
+          "sha256": "87375704c39f48f19ab329be8ac99bd2364124007fe08977f744b7e0acdb17f7"
+        },
+        {
+          "name": "db-pod.private.json",
+          "sha256": "18356fa00543203dfb8f5b66f821b6bca49fc37a7071c2af76ea45fa7d34e050"
+        },
+        {
+          "name": "db-replicas.private.json",
+          "sha256": "e5dc18218bbcac03a1f6a8a72607d6d09d77e07606d36f27379b09e1b501dcab"
+        },
+        {
+          "name": "db-volume.private.json",
+          "sha256": "296b17e3b84ed9ff7b164b96299ed55852ae6816307b35aeb425b8ce2ede9bfd"
+        },
+        {
+          "name": "device-monitor.stderr.private.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "device-monitor.stdout.private.log",
+          "sha256": "ab927be6f56e1b8c88a029898821b6e52d0ecfa80cf8fce243de5a5ad378c2ae"
+        },
+        {
+          "name": "exporter-http-command-result.json",
+          "sha256": "d741409f91004bd1ae688c0eb9fb47f835e381242f935bc2447a8aa42e5e8357"
+        },
+        {
+          "name": "exporter-source-port-http-result.json",
+          "sha256": "480903a679e46956ded4db6437472c818a478347a03925e432030b0fbcb4f20d"
+        },
+        {
+          "name": "extended-verified.json",
+          "sha256": "0b235dc6ec1da6a6e0862884bdcdf65af24c969dfa3f74ffaff3758832d96c73"
+        },
+        {
+          "name": "final-application.private.json",
+          "sha256": "0a411646897615c7cec1e3d311250f2965629cd2c0a2393d09068679850f26fc"
+        },
+        {
+          "name": "smoke.stderr.private.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "smoke.stdout.private.log",
+          "sha256": "a7de001124f3515e8fac1c54ca705b3e97520f2fa0dbe0f5a626d8d57b1d6d18"
+        },
+        {
+          "name": "verdify-db-backup-exporter-pods.private.json",
+          "sha256": "c551ad301881efeaf6cd7e181649a2b84ab11a2f2004fee3c99362bdabd001c4"
+        },
+        {
+          "name": "verdify-ingestor-pods.private.json",
+          "sha256": "f5ffe9f2b61c8713920b32262d6a171f2f765e6add9a29e6f9008d38277408c6"
+        },
+        {
+          "name": "verified.json",
+          "sha256": "1cafc8a3497d4b36033ca17828586249cbfcb275ece4d80fefa9b5cbcb8f2daf"
+        }
+      ]
+    }
+  ]
+}
