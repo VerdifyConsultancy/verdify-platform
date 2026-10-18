@@ -28,6 +28,6 @@ The original eight S3 packets were estimated at 29–58 shared engineering hours
 
 This planning update performs no live mutation or new collection. It records authorized execution without publishing credentials, raw genuine study data, alert identities or source device identifiers. Failed original custody input is honestly labeled reconstructed, not presealed; replacement inputs and all terminal failures are retained. Further execution outcomes will be added as they occur.
 
-The [04:38 disposable cleanup receipt](639-587-disposable-cleanup.md) verifies 15 exact completed-attempt Job/Pod/ConfigMap removals while retaining all 57 original evidence/log hashes. It does not cover future point-proof/alert resources or change issue acceptance.
+The [04:38 cleanup receipt](639-587-disposable-cleanup.md) retains the first 15 exact Job/Pod/ConfigMap removals and 57 original evidence/log hashes. The [final proof cleanup](proof-cleanup-final.md) separately verifies the remaining nine removals and all 535 retained evidence hashes. Together these removed 24 disposable objects across eight Jobs. Six synthetic database rows remain retained; cleanup changes no issue acceptance.
 
 The contained execution checkpoint above remains separate from the [final production readback](production-final-readback.md). No newer image is promoted by this planning update, and no final S3 completion is claimed.
