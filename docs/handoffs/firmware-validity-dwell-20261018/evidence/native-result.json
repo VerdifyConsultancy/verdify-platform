@@ -1,0 +1,327 @@
+{
+  "schema": "verdify.firmware-validity-dwell-native-evidence/v1",
+  "status": "NATIVE_STRICT_AND_CAUSAL_PASSED",
+  "issues": [
+    368,
+    367
+  ],
+  "source": "bdef62c1d640636411995c23aedeee85f342303f",
+  "base": "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+  "source_pr": "https://github.com/VerdifyConsultancy/verdify-platform/pull/985",
+  "execution": {
+    "context": "vallery",
+    "namespace": "agent-fleet-ci",
+    "workflow": "verdify-ready-firmware-native-bdef62c1-02",
+    "workflow_uid": "86ac6e0d-ac96-43a1-811f-4f79f1a775e5",
+    "workflow_started_at": "2026-10-18T07:41:12Z",
+    "workflow_finished_at": "2026-10-18T07:43:43Z",
+    "workflow_phase": "Succeeded",
+    "check_pod_name": "verdify-ready-firmware-native-bdef62c1-02-run-check-2036764753",
+    "check_pod_uid": "dab2cb9d-2da9-4038-890b-0fd241b3d481",
+    "node": "vm-k3s-node6",
+    "main_image_id": "registry.vallery.net/jvallery/agents-ci-tools@sha256:7d61fca39280efb3b26419a111609f4713f3a1cc54b736a7af624fdf03c8f0e6",
+    "main_exit_code": 0,
+    "main_restarts": 0,
+    "actual_check_pod_attempts": 1,
+    "template": "repo-validate-568985cdbf6b4e3f",
+    "template_spec_sha256": "568985cdbf6b4e3fdec9724f096b9816e18ace2a0b001bc52dfe9fb6e417246e",
+    "deadline_seconds": 7200,
+    "resources_per_check": {
+      "limits": {
+        "cpu": "2",
+        "ephemeral-storage": "12Gi",
+        "memory": "4Gi"
+      },
+      "requests": {
+        "cpu": "500m",
+        "ephemeral-storage": "4Gi",
+        "memory": "1Gi"
+      }
+    },
+    "submitted_command_sha256": "0b414677ea796b636a060e5a4da1c220e109eff202f4ad2780635ae6dc0c1a60",
+    "retained_command_file_sha256": "61547fa1adae06aced123e5eb461cddffd9b1a9bda1d0ef43029058e101629b1",
+    "command_file_note": "Exact submitted command plus one trailing newline."
+  },
+  "checks": {
+    "strict_stage_exit_codes": {
+      "native": 0,
+      "causal": 0,
+      "worktree_replay": 0
+    },
+    "native_unit_checks": {
+      "policy_vector": 273,
+      "policy_engine": 251,
+      "policy_recovery": 30,
+      "policy_injection": 14,
+      "greenhouse_logic": 291
+    },
+    "junit": {
+      "before-probe": {
+        "tests": 70,
+        "failures": 49,
+        "errors": 0,
+        "skipped": 0
+      },
+      "before-relay": {
+        "tests": 84,
+        "failures": 72,
+        "errors": 0,
+        "skipped": 0
+      },
+      "current-probe": {
+        "tests": 70,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "current-relay": {
+        "tests": 84,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "current_actual_yaml_passes": 154,
+    "invariants": {
+      "rows": 296698,
+      "violations": 0,
+      "strict_exit_code": 0,
+      "legacy_exit2_waiver_used": false,
+      "fully_imposed_policy_fields": 0,
+      "compiled_injection_ceiling": 27,
+      "field_count": 48,
+      "full_policy_qualification": false,
+      "coverage_record": "native-invariant-coverage.json"
+    },
+    "worktree_replay": {
+      "source_pair": [
+        "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+        "bdef62c1d640636411995c23aedeee85f342303f"
+      ],
+      "rows": 296698,
+      "divergent_rows": 0,
+      "diagnostic_only_rows": 0,
+      "threshold_percent": 0,
+      "chronology": "After source commit; never precommit evidence.",
+      "scope": "replay_emit does not execute changed ESPHome diagnostic/relay wrappers.",
+      "missing_defaulted_corpus_columns": [
+        "sp_sw_wet_taper_enabled",
+        "sp_wet_taper_before_sunset_min",
+        "sp_sw_night_stress_wet_enabled",
+        "sp_night_stress_min_dew_margin_f",
+        "sp_dawn_boost_offset_min",
+        "sp_midday_boost_offset_min"
+      ],
+      "committed_corpus": {
+        "path": "firmware/test/data/replay_overrides.csv.gz",
+        "bytes": 17172732,
+        "sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b",
+        "git_blob_oid_in_both_source_revisions": "348a0789d4c0a60cb5257962a0eb14838d947887",
+        "hash_scope": "Independent source-input hash; native decoded CSV hash was not emitted."
+      }
+    }
+  },
+  "toolchain": {
+    "cxx": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "python": "3.12.14 (main, Sep  1 2026, 14:16:52) [Clang 22.1.3 ]"
+  },
+  "preserved_history": {
+    "initial_submission": {
+      "at": "2026-10-18T07:41:12.203795+00:00",
+      "phase": "Error",
+      "workflow_uid": "650d1c10-cc78-4b12-80c9-904110ff0b96",
+      "message": "fields [Parallelism] are not permitted when using workflowTemplateRef with templateReferencing restriction",
+      "pods_started": 0,
+      "workload_executed": false,
+      "resolution": "Remove redundant forbidden parallelism override. Exactly one check remains; preserve failure unchanged."
+    },
+    "initial_submission_receipt_sha256": "8a03d3a3d3af07c7f47ff020322229c04c2f8fc7823f7ae6e46848ffcb016004",
+    "initial_submission_workflow_sha256": "1f6f2248541867234487e4a450e4643a1582a7b6bce2803dd466f9b1fa9f2e25",
+    "collector_cardinality_repair": "Initial independent collector selected Retry/TaskGroup as well as Pod and stopped on cardinality; corrected to actual Pod nodes before acceptance. Native results were not changed or rerun.",
+    "collector_history_source": "Private firmware-native-02/verified.json; no native rerun or output mutation."
+  },
+  "custody": {
+    "private_directory": "/Users/jason/maintenance/verdify-next-ready-20261018/firmware-native-02",
+    "verified_receipt_sha256": "6e257a2f2fad177c66c525e3f0594241c7030483aabfd040572b98c6399e304e",
+    "workflow_terminal_sha256": "a085930b3579537773b5d9c042ff55f824b78ee45006dbaa60ad161b79debeb3",
+    "progress_receipt_sha256": "02580d8ffbe7776a63195af1a0a70cc44f2c74d8f8a1789e130b80566975c80c",
+    "main_log_sha256": "db6691818833896e12c865159872e73d39a209b79c52074059c5159bd7791dda",
+    "main_log_bytes": 1637072,
+    "decoded_files_independently_rehashed": 31,
+    "decoded_artifacts": [
+      {
+        "path": "base-revision.txt",
+        "bytes": 41,
+        "sha256": "da97e4b448334789901543a3e8c907518ed5b402223b891ad676ec73dcc88598"
+      },
+      {
+        "path": "before/firmware/policy_consumer_manifest.json",
+        "bytes": 73325,
+        "sha256": "df9a0159d0180f9a59b38808d9cecc4d719f5c59f8d239781c9f119efda9e652"
+      },
+      {
+        "path": "before/firmware/test/replay_emit.cpp",
+        "bytes": 34016,
+        "sha256": "9cb80569db3fc73e6df6589dfe6289904c6057261024bad5927d1a4e4eb44af7"
+      },
+      {
+        "path": "before/firmware/test/replay_invariants.cpp",
+        "bytes": 29184,
+        "sha256": "e56a9f41615e8f2b01735cc168a30b17b4a704aefc03b152c231a1d1d06a2005"
+      },
+      {
+        "path": "before/firmware/test/replay_overrides.cpp",
+        "bytes": 30433,
+        "sha256": "4fed66b6df996704de3b0663102c6bb3cf1be2222e8dd0b89ac82f5049c19e1d"
+      },
+      {
+        "path": "before/firmware/test/test_greenhouse_logic.cpp",
+        "bytes": 248399,
+        "sha256": "4423fb0b9fce120c4a998e2f1ea80eff6120d9b62d2b13f25110a0f32ff5c108"
+      },
+      {
+        "path": "before/firmware/test/test_policy_engine.cpp",
+        "bytes": 51876,
+        "sha256": "6c484cdadabdd0c0d66698d18c2f84b1c34dc4fa8687dd641d0d1e2853fa651e"
+      },
+      {
+        "path": "before/firmware/test/test_policy_injection.cpp",
+        "bytes": 28172,
+        "sha256": "a5b66257b168520f52d1acab9fdde63976a4e3ddd95b931c603d4e182796d38a"
+      },
+      {
+        "path": "before/firmware/test/test_policy_recovery.cpp",
+        "bytes": 7694,
+        "sha256": "29ff3f7a4c284105b83c8c1107bb6d500dc09f8f1846618bfe98687c4cb5cf08"
+      },
+      {
+        "path": "before/firmware/test/test_policy_vector.cpp",
+        "bytes": 9667,
+        "sha256": "a926984ba3ecc120c6ff62d81b53f1ebd2869f2e667f32ed4527ba7251158830"
+      },
+      {
+        "path": "before-probe-native/probe-diagnostics0/diagnostics.cpp",
+        "bytes": 2719,
+        "sha256": "736e912be92871f9f3b972a21a78abf98cb32daa3711d473b993c513364c6fa5"
+      },
+      {
+        "path": "before-probe-native/probe-diagnostics0/source-manifest.json",
+        "bytes": 430,
+        "sha256": "c5f2bc356af304ac68c51549be3712c91f789351a1765694927d12f205032f15"
+      },
+      {
+        "path": "before-probe.log",
+        "bytes": 55428,
+        "sha256": "3a75225c07a7d53dd0618b8efb9a6da798dd35038f21aee9d9ac9b0b46d287fd"
+      },
+      {
+        "path": "before-probe.xml",
+        "bytes": 64292,
+        "sha256": "d6a814b1ba9f51f5736958212c3143d13fcf7be800767878cc4c4e6269daa84b"
+      },
+      {
+        "path": "before-relay-native/policy-relay-dwell0/relay_consumer.cpp",
+        "bytes": 10543,
+        "sha256": "21bf7dc93b99fab9507a6ba3aae44ba00d0bf24642c1e9f0d491f380c3281777"
+      },
+      {
+        "path": "before-relay-native/policy-relay-dwell0/source-manifest.json",
+        "bytes": 941,
+        "sha256": "d8e249eb1ecc8aeab05a9007560e4360529c05d88793ca014ef5e7905619bf22"
+      },
+      {
+        "path": "before-relay.log",
+        "bytes": 195832,
+        "sha256": "048ee271a5c2f87bedff9357c6e7a09e34f4c44efe804877466a789ceab1b583"
+      },
+      {
+        "path": "before-relay.xml",
+        "bytes": 311706,
+        "sha256": "4b9f9762185d550f1a0676c2aa67817d5104839d9f1d999f05cc6390b3d2e808"
+      },
+      {
+        "path": "candidate-revision.txt",
+        "bytes": 41,
+        "sha256": "1ea34f5f7c521f2df61a2f56bb6884af15f23b056d340cb4d5be1dd32a8a6fc8"
+      },
+      {
+        "path": "current-probe-native/probe-diagnostics0/diagnostics.cpp",
+        "bytes": 3755,
+        "sha256": "58ea5131d000b3c9565658999959ca0b63506e38a7e2ff746eebd6f0418b166d"
+      },
+      {
+        "path": "current-probe-native/probe-diagnostics0/source-manifest.json",
+        "bytes": 492,
+        "sha256": "00766438142b92baa4795607fd5da0598722d0c525266d6394ec512946450524"
+      },
+      {
+        "path": "current-probe.log",
+        "bytes": 99,
+        "sha256": "79efc852296f96ff5af6b04e7c8e2d208da2323c712c904500741411c437293c"
+      },
+      {
+        "path": "current-probe.xml",
+        "bytes": 11131,
+        "sha256": "4b64dd0990bb76ceda83c048e50c6d231a8267c2598897cb82988ad020b6e243"
+      },
+      {
+        "path": "current-relay-native/policy-relay-dwell0/relay_consumer.cpp",
+        "bytes": 11117,
+        "sha256": "d43867a45ee4cf9250200bc41782b61545474747ef333fb0ac4a221e1980bd4f"
+      },
+      {
+        "path": "current-relay-native/policy-relay-dwell0/source-manifest.json",
+        "bytes": 941,
+        "sha256": "1b32175608b6d9923cf8f51f3bdc39bd99f2be0b9c96009486805a66bfe4a57c"
+      },
+      {
+        "path": "current-relay.log",
+        "bytes": 179,
+        "sha256": "d70fef61d37630ad70806e08c5906d490e2558b4eb572befeff09c5a8f9dfef4"
+      },
+      {
+        "path": "current-relay.xml",
+        "bytes": 13409,
+        "sha256": "f5330b2ad59a8cbc479538d4f7606192c31145a2cef88aa80e0db9b3cc1de0f8"
+      },
+      {
+        "path": "native-compiler.txt",
+        "bytes": 240,
+        "sha256": "caf794435afe6be08582cd57c892872e093d9b6a9d45df9940cfe7d2398e3c91"
+      },
+      {
+        "path": "python-version.txt",
+        "bytes": 54,
+        "sha256": "204bef92bdaa2a60fed1ef2fcc424fab23223eac76c93ea60809eaa3b39f9f9c"
+      },
+      {
+        "path": "result.txt",
+        "bytes": 70,
+        "sha256": "3b4702d9647627dd6f9cefce533d5f620780e496265d0d89e9c5df3eb22e32b6"
+      },
+      {
+        "path": "tracked-worktree-status.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "public_artifacts": {
+      "causal-junit-index.json": "4d2384ed88a284511b2248a020035c9a274b47131c908e7619034a13d25eb55c",
+      "native-invariant-coverage.json": "772122df3b31b779599efffb7ac1cf1c2a4d9afc6a5b0a7bd63520285acc4a3e",
+      "original-causal-failure-examples.json": "0c41dfaca0863f8602b3a6d0ff85a7cfcb0d9bee65e9d02a51d7f41a10f9bb55"
+    }
+  },
+  "pending_at_this_receipt": [
+    "Independent secretless ESPHome compilation result.",
+    "Actual firmware deployment, sensor-health readback and physical chatter/recovery acceptance."
+  ],
+  "full_issue_acceptance": false,
+  "ota_performed": false,
+  "production_mutated": false,
+  "limits": [
+    "No controller policy/tunable/aggregate change or new physical sensor authority.",
+    "No full48 policy-prefix qualification or ORDER_REVISION.",
+    "Native recovery tests exercise the source harness, not physical restart/recovery.",
+    "Current source compilation alone cannot establish live repaired diagnostics or hardware cause."
+  ]
+}

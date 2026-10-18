@@ -1,0 +1,1596 @@
+{
+  "schema": "verdify.firmware-causal-junit-index/v1",
+  "source": "bdef62c1d640636411995c23aedeee85f342303f",
+  "base": "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+  "note": "Derived case index; original XML bytes and hashes remain in private custody, not rewritten. The expected old-source failures are causal proof, not a successful old-source suite.",
+  "suites": {
+    "before-probe": {
+      "original_xml_sha256": "d6a814b1ba9f51f5736958212c3143d13fcf7be800767878cc4c4e6269daa84b",
+      "original_xml_bytes": 64292,
+      "totals": {
+        "tests": 70,
+        "failures": 49,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[nan-temperature]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[nan-humidity]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[inf-temperature]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[inf-humidity]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[-inf-temperature]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[-inf-humidity]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-Case]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-North]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-West]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-South]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-East]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_multiple_invalid_probes_have_truthful_count_and_complete_health",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_steady_and_saturated_air_remain_valid_and_recover",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_recent_samples_remain_fresh_across_uint32_rollover",
+          "outcome": "passed"
+        }
+      ]
+    },
+    "before-relay": {
+      "original_xml_sha256": "4b9f9762185d550f1a0676c2aa67817d5104839d9f1d999f05cc6390b3d2e808",
+      "original_xml_bytes": 311706,
+      "totals": {
+        "tests": 84,
+        "failures": 72,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-vent]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-heat1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-heat2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fan1]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fan2]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fog]",
+          "outcome": "failed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-vent]",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "current-probe": {
+      "original_xml_sha256": "4b64dd0990bb76ceda83c048e50c6d231a8267c2598897cb82988ad020b6e243",
+      "original_xml_bytes": 11131,
+      "totals": {
+        "tests": 70,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-temperature-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-humidity-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[nan-vpd-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-temperature-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-humidity-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[inf-vpd-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-temperature-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-humidity-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_fresh_nonfinite_wall_field_cannot_report_four_and_ok[-inf-vpd-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[nan-temperature]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[nan-humidity]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[inf-temperature]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[inf-humidity]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[-inf-temperature]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_case_health_requires_its_two_fields_but_does_not_change_wall_count[-inf-humidity]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[119999-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[120000-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[299999-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_exact_health_and_aggregate_freshness_boundaries[300000-East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[Case]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[North]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[West]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[South]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_missing_timestamp_precedes_nonfinite_reason[East]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_multiple_invalid_probes_have_truthful_count_and_complete_health",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_steady_and_saturated_air_remain_valid_and_recover",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_probe_diagnostics_native",
+          "name": "test_recent_samples_remain_fresh_across_uint32_rollover",
+          "outcome": "passed"
+        }
+      ]
+    },
+    "current-relay": {
+      "original_xml_sha256": "f5330b2ad59a8cbc479538d4f7606192c31145a2cef88aa80e0db9b3cc1de0f8",
+      "original_xml_bytes": 13409,
+      "totals": {
+        "tests": 84,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_on-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_on-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[extend_off-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[shorten_off-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[force-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_on-legacy-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-snapshot-vent]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-heat1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-heat2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fan1]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fan2]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-fog]",
+          "outcome": "passed"
+        },
+        {
+          "classname": "tests.test_policy_relay_dwell_refresh",
+          "name": "test_policy_dwell_uses_original_relay_history[rollover_off-legacy-vent]",
+          "outcome": "passed"
+        }
+      ]
+    }
+  }
+}
