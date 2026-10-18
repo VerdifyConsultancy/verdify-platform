@@ -1388,3 +1388,12 @@ Actual adoption00:36:06UTC (October17Denver) receipt d5aae7ba creates only immut
 The five-path canonical counterpart is remotely preserved as Agents PR5031/headf9edebea/base247842; source qualification pending. Operational repair is accepted within its exact released scope, not claimed as merged desired state or whole-App convergence. No separate product planning copy, new physical run or additional human decision.
 
 One genuine c386 source push is now actual; normal6nkms started00:40:12UTC. ROOT independently fetched providercommit/tree and matched all37 retained payload blob identities/1,642,967bytes, soleparentdaaa/treecd2b9171/currentmainc386. Owner JIT confirms actualv3/WFT binding, normalcoherent172/workerfit and observerreadybeforepush. No images, promotion or newruntimeacceptance inferred.
+
+
+## October17 recovered source qualifies; minimal promotion published
+
+Normal c386 source workflow6nkms succeeded00:58:52UTC and candidate follow-upstm9t succeeded00:59:35. Root read native receipt971c9707 and independently verified all32 started-container stdout/stderr lengths and hashes,267,023bytes, every reader return0. Full source validation exit0 and actual build outputs bind c386/treecd2b; ingestor4b4994bc and Lab54db9834 qualified. Closure-v4 status remains not-applicable; no full OCI claim. Candidateb037 soleparentc386 changes only the candidate file; accepted37 payloads and other candidates/handpins preserved.
+
+Root independently verified candidate and promotion provider commits. Publishedfc057 soleparentb037 changes only ingestor release249 to4b4994; release payload0d884e2f exact. Owner scope254b849b and root full-diff read confirm exactlyfive nonhook changes: three ingestor refs,801two exclusions and approved983exporter1to0. Six normal PreSync Job recreations match complete desired source; other changes metadata only. Render129/zeroSecrets/e6b06a25. Software inverse is ingestor249 only, preserving pause0, other pins, migration211/applied276 and immutable history; route inverse onlytwo added clauses. No physical recovery authority. Promotion native x8hd4 is running; no sync/runtime acceptance yet.
+
+Agents5031 counterpart merged normally01:00:17UTC as41670/headf9ed. Root verified allfive provider payload bytes exactly against reviewed packet; provider fleet-ci/native success00:57:35. This completes canonical source durability for the already accepted operational recovery. No new controller mutation/whole-App convergence or extra product gate. Retry retains finite shared window until promotion terminal/log custody.
