@@ -1,0 +1,19 @@
+{
+  "schema": "verdify-s3b-ci-registration-source-review-v1",
+  "source_revision": "85bd5cdacd3100689405d3c96ddca3bfb623cea0",
+  "ci_source_sha256": "82b005b100bbfd0951d10d778caa933554229110676fb43ac17243f25e052cec",
+  "registered_once_in_pure_contract_block": [
+    "tests/test_component_prefix_inputs.py",
+    "tests/test_fog_vent_consumer.py",
+    "tests/test_outcome_kpi_dryout_projection.py",
+    "tests/test_solar_night_packet.py"
+  ],
+  "all_registered_files_present_at_revision": true,
+  "bash_n_exit_code": 0,
+  "native_or_test_suite_executed": false,
+  "backlog_byte_equal_to_plan_541c11ad": true,
+  "backlog_sha256": "e5348793cf274f48fab5667405f28ec9057cf6b043ae934cdde132ceef19ffc5",
+  "draft_path": "/private/tmp/verdify-s3b-review-draft.md",
+  "draft_sha256": "d2164a85db139fd2caa954c47f124b38f0e3c942903ef0bd5e1e02cd5f8b54b0",
+  "review_result": "NO_SOURCE_REGISTRATION_BLOCKER"
+}

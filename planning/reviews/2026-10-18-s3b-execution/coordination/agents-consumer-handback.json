@@ -1,0 +1,177 @@
+{
+  "at": "2026-10-18T15:37:22.856727+00:00",
+  "ci_quota": [
+    {
+      "name": "agent-fleet-ci-budget",
+      "status": {
+        "hard": {
+          "limits.cpu": "108",
+          "limits.memory": "184Gi",
+          "pods": "80",
+          "requests.cpu": "52",
+          "requests.memory": "52Gi"
+        },
+        "used": {
+          "limits.cpu": "17",
+          "limits.memory": "26240Mi",
+          "pods": "23",
+          "requests.cpu": "3250m",
+          "requests.memory": "8752Mi"
+        }
+      }
+    },
+    {
+      "name": "agent-fleet-ci-foreign-budget",
+      "status": {
+        "hard": {
+          "limits.cpu": "52",
+          "limits.memory": "116Gi",
+          "pods": "56",
+          "requests.cpu": "14",
+          "requests.memory": "28Gi"
+        },
+        "used": {
+          "limits.cpu": "20",
+          "limits.memory": "36Gi",
+          "pods": "8",
+          "requests.cpu": "4800m",
+          "requests.memory": "9Gi"
+        }
+      }
+    }
+  ],
+  "nonterminal_ci_workflows": [
+    {
+      "name": "native-ci-eddea22907dfcb3b76ae9b16303085c4ab1cc937",
+      "uid": "8676efd8-2d13-4739-9e35-2107e1ef81e5",
+      "phase": "Running",
+      "created": "2026-10-14T10:58:40Z"
+    },
+    {
+      "name": "native-ci-fd3aa327bf4b39b7787433b42b6a41cc59a03cbf",
+      "uid": "04b61290-17cb-4edb-8a41-721d2414cf0d",
+      "phase": "Running",
+      "created": "2026-10-18T15:26:09Z"
+    },
+    {
+      "name": "registry-integrity-audit-1792336680",
+      "uid": "d47465fd-8919-4368-9605-9c231ed62f9e",
+      "phase": "Running",
+      "created": "2026-10-18T15:18:00Z"
+    },
+    {
+      "name": "repo-validate-jvallery-homeassistant-0bb3a28073da-pr",
+      "uid": "161756dc-53b8-41fb-a173-1e7b9ce05fb6",
+      "phase": "Running",
+      "created": "2026-10-18T15:31:48Z"
+    },
+    {
+      "name": "repo-validate-jvallery-homeassistant-891bfc310228-pr",
+      "uid": "29278f32-5901-4c6b-9f3d-012135c0fbcc",
+      "phase": "Running",
+      "created": "2026-10-18T15:26:44Z"
+    },
+    {
+      "name": "repo-validate-jvallery-homeassistant-eb65d767f185-pr",
+      "uid": "d8bf2a20-2465-4e58-b8e2-ba98360e891f",
+      "phase": "Running",
+      "created": "2026-10-18T15:35:57Z"
+    },
+    {
+      "name": "repo-validate-jvallery-sentinel-1068e5dd7e68-pr",
+      "uid": "13a547ff-6850-4e78-b3ed-0863a785d263",
+      "phase": "Running",
+      "created": "2026-10-18T15:25:49Z"
+    },
+    {
+      "name": "repo-validate-jvallery-sentinel-e9413b9afccb-pr",
+      "uid": "50324a52-2281-41f8-b7a3-7aa84eabc274",
+      "phase": "Running",
+      "created": "2026-10-18T15:37:06Z"
+    }
+  ],
+  "applications": [
+    {
+      "name": "agent-fleet-local-staging-apps",
+      "uid": "ccc8b6ac-c8e1-4fb3-923f-ee015c248f04",
+      "source": "392064e9898910b7d3018998dea26d38a250c1f3",
+      "spec_sha256": "c6440c0a1f1d6efb0f64de702bacd46d27166411f467b2550ed88407aa6e2529",
+      "operation_active": false,
+      "phase": "Succeeded"
+    },
+    {
+      "name": "agent-fleet-appprojects",
+      "uid": "4f06ba3b-e292-4527-a26d-48461c06168c",
+      "source": "9800a601c7a0ba9252c53a0776c1261745c68435",
+      "spec_sha256": "5c4caa54124156863a89ca20d9197f6e77516075bef8444bc9cefb70dc8ee9e8",
+      "operation_active": false,
+      "phase": "Succeeded"
+    },
+    {
+      "name": "agent-fleet-ci-workflows",
+      "uid": "a4695af0-fcff-4c97-a53b-ef5f6c6e1643",
+      "source": "1bfdcf228b8884f6a4fbe3a38d23dde12e192eda",
+      "spec_sha256": "23e61fc13cc6941280af7ec55319295bd79e4b95549ce9aedb7150dc8610a068",
+      "operation_active": false,
+      "phase": "Succeeded"
+    },
+    {
+      "name": "agent-fleet-ci-admission",
+      "uid": "1b353430-9a42-48ac-8e44-a9d18a9ad3a8",
+      "source": "4bc9caacac9bc88112d147f0a625aa46f029a2b1",
+      "spec_sha256": "9a639b90c33c62c3a67d5a95f1430ef510253e8bbb90e6d17cd0f76529ab3966",
+      "operation_active": false,
+      "phase": "Succeeded"
+    },
+    {
+      "name": "research-vault-dev-services",
+      "uid": "dec1c3c1-1e22-441e-a7f1-069bc119f243",
+      "source": "1bfdcf228b8884f6a4fbe3a38d23dde12e192eda",
+      "spec_sha256": "6a9f03828fa60b6df78cdfb57eee45a978e22339bb617666c237f031e2e58213",
+      "operation_active": false,
+      "phase": "Succeeded"
+    },
+    {
+      "name": "research-vault",
+      "uid": "18b6d41e-757f-4a2e-964f-59b6097ae5a5",
+      "source": "687dbc8fe7d60a4ba13dc4dc94b4da9f024fdd9a",
+      "spec_sha256": "0c055df176dfd5df16e6f6eb10a9256655810a9634b4b2f536f3b2178ec43195",
+      "operation_active": false,
+      "phase": "Succeeded"
+    }
+  ],
+  "native_controller": {
+    "uid": "4e1afc09-a48b-437b-8792-f7dfa374a202",
+    "spec_sha256": "6fd8b23f8cbb67c36bc4d5f1c2d3990b9a1d7839a3b0950a9190f670196971c7",
+    "pod_source_annotations": {
+      "argocd.argoproj.io/sync-options": "Replace=true",
+      "argocd.argoproj.io/sync-wave": "1",
+      "native-ci.vallery.net/catalog-sha256": "5e97731bbe1a386cf6a05efad2ecb963174afa80af0a2f9f7a0b7f8aa9527002",
+      "native-ci.vallery.net/config-sha256": "e34e17e4bf9c85f3527783775f7ef1440f592e2d2fd62a8336722e319acd6e1a",
+      "native-ci.vallery.net/execution-sha256": "dc28503bdbc06ce996481c9a93a2d78c6c7d9e5a20f587cf220b0621052f9629",
+      "native-ci.vallery.net/source-bundle-sha256": "be264ee8ca0f6734972272e2fb3aaf763f3e42db5f0e95d6ad05010ff024ca8b",
+      "native-ci.vallery.net/source-image": "registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2"
+    }
+  },
+  "registry_policy": {
+    "at": "2026-10-18T15:31:15.766330+00:00",
+    "G": "1bfdcf228b8884f6a4fbe3a38d23dde12e192eda",
+    "generation": 175,
+    "count": 312,
+    "all_prior_ids_and_digests_preserved": 311,
+    "resources": [
+      {
+        "name": "agent-fleet-registry-capacity-profile",
+        "uid": "707744d9-f35b-4912-9579-c00f0222ae72",
+        "data_sha256": "4b130f445897c51cfc9957e2d90b74bf5d3f56d2a77dc9c60fbb1ff6dfab4648"
+      },
+      {
+        "name": "agent-fleet-registry-protected-digests",
+        "uid": "cbda3dd6-2c4f-4b3b-9b34-0bdac3bde7bf",
+        "data_sha256": "fea9047143bd25d331372bf974aeac549a5471900bd7ba8c8c0bd0afd56c5eab"
+      }
+    ]
+  },
+  "consumer_window": "one bounded serial Verdify qualification then normalPRCI; existing supported paths/admission, no controller/catalog/DB/prod/provider changes",
+  "retained_writer_scope": "Agents exact RAG production Application declaration and four-service follow-through; no additional CI source/catalog/policy operation queued"
+}

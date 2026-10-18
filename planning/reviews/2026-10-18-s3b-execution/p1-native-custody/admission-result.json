@@ -1,0 +1,39 @@
+{
+  "actual_check_count": 1,
+  "admission_at": "2026-10-18T15:42:13.007580+00:00",
+  "at": "2026-10-18T15:42:11.595005+00:00",
+  "command_deadline_seconds": 660,
+  "command_sha256": "6fb4b49fe3810fa6448d1a0481555876d9832dd2668e7d3f3dffe9c4e58eaa5e",
+  "existing_git_fetch_identity_unchanged": true,
+  "failure": null,
+  "finished_at": "2026-10-18T15:42:13.095689+00:00",
+  "full_prefix_or_physical_acceptance": false,
+  "handback_sha256": "1a4129864cf8d9f42bd851baf0557df8a203a5fee96dca7d06da5f703e0127d8",
+  "image": "registry.vallery.net/jvallery/agents-ci-tools@sha256:7d61fca39280efb3b26419a111609f4713f3a1cc54b736a7af624fdf03c8f0e6",
+  "inherited_retry_strategy": {
+    "expression": "asInt(lastRetry.duration) < 600",
+    "limit": "1",
+    "retryPolicy": "Always"
+  },
+  "manifest_sha256": "4c8c9111ab2c6d4d1defa96fe16c42113882fcc2fe2a779ca1c5ef78d5a898ef",
+  "possible_multiple_pod_attempts": true,
+  "root_must_watch_and_abort_unexpected_retry": true,
+  "service_account": "argo-ci-workflow",
+  "source": "e844a40976068e93b52420e2d536eb230078ec5c",
+  "source_inputs_sha256": {
+    "planning/reviews/2026-10-18-s3b-execution/p1-fog-consumer/source-extraction.json": "dba56ecaeca944d3e02433ffd8901c32161409a6232b8ff333391853d45423e5",
+    "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81",
+    "scripts/qualify_fog_vent_consumer.py": "a93d69d4c5984da3ffd314f6cf626dda22e4eaab3c8bc7b478ee31443cfd3600",
+    "tests/fixtures/fog_vent_consumer.cpp.in": "4b340f2bc2bb8664297f5192604a128218b96c4e94ac0df8a3544b27d85be653",
+    "tests/test_fog_vent_consumer.py": "55cafaafd3ba2581d47261c02aa7168cd4198f125f7b9dad6cd3f5aefea43d16"
+  },
+  "status": "SUBMITTED_TERMINAL_UNVERIFIED",
+  "submission_attempted": true,
+  "submission_requested": true,
+  "template_spec_sha256": "568985cdbf6b4e3fdec9724f096b9816e18ace2a0b001bc52dfe9fb6e417246e",
+  "template_uid": "09f8d5e5-68bf-484e-b5a3-1181d1a1ee50",
+  "token_mount_not_overridden_or_claimed_absent": true,
+  "whole_workflow_deadline_seconds": 900,
+  "workflow_name": "verdify-s3b-p1-e844a409-01",
+  "workflow_uid": "3c602c25-3934-485c-9039-3d0517a61c74"
+}
