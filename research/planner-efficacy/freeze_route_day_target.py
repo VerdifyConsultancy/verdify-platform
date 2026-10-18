@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import subprocess
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
@@ -24,10 +25,14 @@ DB_SCRIPT = REPO / "scripts/verdify-db.sh"
 ZONES = ("north", "east", "west")
 SNAPSHOT_SQL = """
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
+SET LOCAL statement_timeout='2s';
+SET LOCAL lock_timeout='500ms';
+SET LOCAL work_mem='4MB';
+SET LOCAL max_parallel_workers_per_gather=0;
 WITH profiles AS (
-    SELECT p.* FROM public.crop_target_profiles p WHERE p.greenhouse_id='vallery'
+    SELECT p.* FROM public.crop_target_profiles p WHERE p.greenhouse_id='vallery' ORDER BY p.id LIMIT 1001
 ), assignments AS (
-    SELECT c.* FROM public.crops c WHERE c.greenhouse_id='vallery'
+    SELECT c.* FROM public.crops c WHERE c.greenhouse_id='vallery' ORDER BY c.id LIMIT 1001
 ), profile_ids AS (
     SELECT p.id,r.revision_id FROM profiles p JOIN LATERAL (
         SELECT revision_id,operation,profile FROM public.crop_target_profile_revisions
@@ -123,13 +128,13 @@ def build(snapshot: dict, day: date, now: datetime | None = None, *, effective_f
     if snapshot.get("greenhouse_id") != "vallery":
         raise ValueError("wrong greenhouse")
     captured = datetime.fromisoformat(snapshot["captured_at"])
-    if captured.tzinfo is None or captured >= start or now >= start:
+    if now.tzinfo is None or captured.tzinfo is None or captured > now or captured >= start or now >= start:
         raise ValueError("target source must be captured before the future window")
     for key, revisions in (("profiles", "profile_revision_ids"), ("assignments", "assignment_revision_ids")):
         rows = snapshot[key]
         ids = [r.get("id") for r in rows]
         revs = snapshot[revisions]
-        if not rows or ids != sorted(set(ids)) or len(revs) != len(rows) or revs != sorted(set(revs)):
+        if not 1 <= len(rows) <= 1000 or ids != sorted(set(ids)) or len(revs) != len(rows) or revs != sorted(set(revs)):
             raise ValueError(f"incomplete or unordered {key} source lineage")
     season = (
         "fall"
@@ -156,7 +161,7 @@ def build(snapshot: dict, day: date, now: datetime | None = None, *, effective_f
         "schema": "verdify-route-day-target-draft-v1",
         "local_day": day.isoformat(),
         "greenhouse_id": "vallery",
-        "target_version": f"native-route-{day.isoformat()}" + (f"-{start:%H%MZ}" if effective_from is not None else ""),
+        "target_version": f"native-route-{day.isoformat()}" + (f"-{start:%H%MZ}" if start != bounds(day)[0] else ""),
         "target_rule": "fixed_panel_equal_zone_ideal_mean_v1",
         "source_captured_at": snapshot["captured_at"],
         "source_snapshot_sha256": sha(canonical(snapshot)),
@@ -171,7 +176,64 @@ def build(snapshot: dict, day: date, now: datetime | None = None, *, effective_f
     }
 
 
+def validate_draft(draft: dict) -> None:
+    """Refuse changed bytes/lineage before emitting executable SQL."""
+    if draft.get("schema") != "verdify-route-day-target-draft-v1":
+        raise ValueError("wrong target draft schema")
+    day = date.fromisoformat(draft["local_day"])
+    full_start, full_end = bounds(day)
+    start = datetime.fromisoformat(draft["effective_from"])
+    end = datetime.fromisoformat(draft["effective_to"])
+    captured = datetime.fromisoformat(draft["source_captured_at"])
+    if (
+        start.tzinfo is None
+        or end.tzinfo is None
+        or captured.tzinfo is None
+        or not full_start <= start < end
+        or end != full_end
+        or captured >= start
+        or start.second
+        or start.microsecond
+        or start.minute % 15
+    ):
+        raise ValueError("target interval/source clock differs from declared local day")
+    version = f"native-route-{day.isoformat()}" + (f"-{start:%H%MZ}" if start != full_start else "")
+    if (
+        draft["greenhouse_id"] != "vallery"
+        or draft["target_rule"] != "fixed_panel_equal_zone_ideal_mean_v1"
+        or draft["target_version"] != version
+    ):
+        raise ValueError("target identity changed")
+    for key in (
+        "source_snapshot_sha256",
+        "source_profile_state_sha256",
+        "source_assignment_state_sha256",
+        "target_bins_sha256",
+    ):
+        if not isinstance(draft[key], str) or re.fullmatch(r"[0-9a-f]{64}", draft[key]) is None:
+            raise ValueError("invalid target source hash")
+    for key in ("profile_revision_ids", "assignment_revision_ids"):
+        ids = draft[key]
+        if (
+            not isinstance(ids, list)
+            or not 1 <= len(ids) <= 1000
+            or any(type(i) is not int or i <= 0 for i in ids)
+            or ids != sorted(set(ids))
+        ):
+            raise ValueError("invalid target source revision identities")
+    bins = draft["target_bins"]
+    if not isinstance(bins, list) or sha(canonical(bins)) != draft["target_bins_sha256"]:
+        raise ValueError("target bins hash mismatch")
+    for row in bins:
+        if set(row) != {"bucket_start", "temp_low", "temp_high", "vpd_low", "vpd_high"}:
+            raise ValueError("target bin shape changed")
+        values = {key: _number(row, key) for key in ("temp_low", "temp_high", "vpd_low", "vpd_high")}
+        if values["temp_low"] > values["temp_high"] or values["vpd_low"] > values["vpd_high"]:
+            raise ValueError("inverted target bin")
+
+
 def declaration_sql(draft: dict) -> str:
+    validate_draft(draft)
     if draft.get("schema") != "verdify-route-day-target-draft-v1" or not 1 <= len(draft["target_bins"]) <= 72:
         raise ValueError("one prospective day or partial-day target required")
     start = datetime.fromisoformat(draft["effective_from"])
@@ -230,6 +292,9 @@ def main() -> None:
     parser.add_argument("--day", type=date.fromisoformat, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument(
+        "--snapshot", type=Path, help="prepare offline from an authentic retained source snapshot; performs no DB call"
+    )
+    parser.add_argument(
         "--effective-from",
         type=datetime.fromisoformat,
         help="future 15-minute boundary for remaining bins today; never backdated",
@@ -240,16 +305,20 @@ def main() -> None:
         start = args.effective_from
     if start.tzinfo is None or datetime.now(UTC) >= start:
         raise SystemExit("prospective window already began")
-    result = subprocess.run(
-        [str(DB_SCRIPT), "prod", "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", SNAPSHOT_SQL],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    lines = [line for line in result.stdout.splitlines() if line.startswith("{")]
-    if len(lines) != 1:
-        raise SystemExit("source capture did not return exactly one snapshot")
-    snapshot = json.loads(lines[0])
+    if args.snapshot is not None:
+        snapshot = json.loads(args.snapshot.read_text())
+    else:
+        result = subprocess.run(
+            [str(DB_SCRIPT), "prod", "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", SNAPSHOT_SQL],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=20,
+        )
+        lines = [line for line in result.stdout.splitlines() if line.startswith("{")]
+        if len(lines) != 1:
+            raise SystemExit("source capture did not return exactly one snapshot")
+        snapshot = json.loads(lines[0])
     draft = build(snapshot, args.day, effective_from=args.effective_from)
     write_new(args.out / "target-source-snapshot.json", canonical(snapshot) + b"\n")
     write_new(args.out / "target-draft.json", canonical(draft) + b"\n")
