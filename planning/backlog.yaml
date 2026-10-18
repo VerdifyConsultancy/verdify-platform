@@ -3518,10 +3518,10 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T08:48:17.168640+00:00",
-    "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+    "reviewed_at": "2026-10-18T15:03:48.222486+00:00",
+    "source_revision": "261092b079044e363ca7a6929116b4a6344429da",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-10-18-execution/README.md",
+    "review_path": "planning/reviews/2026-10-18-next-sprint/README.md",
     "open_issues": [
       14,
       16,
@@ -3573,20 +3573,36 @@
     ],
     "sprints": [
       {
-        "id": "S3",
-        "title": "S3 \u2014 Runtime truth and contained qualification (October 19\u201330, 2026)",
+        "id": "S3B",
+        "title": "S3B \u2014 Unblocked source and diagnosis (October 19\u201323, 2026)",
         "kind": "sprint",
-        "capacity_hours": 80,
-        "goal": "80 shared planning hours remain an execution envelope, not measured hours left. The selected next-ready seven-issue source cohort has source integration and bounded firmware/prefix qualification within its retained limits; no full issue acceptance follows. Pull one actual missing-consumer qualification source packet, one authentic input/physical evidence lane and one supported current-role composition lane. Reuse completed proofs and preserve every failed attempt.",
-        "exit": "Every scoped packet has a truthful terminal outcome and preserved evidence. #749 needs a real readiness/incident disposition; #639/#587 need the remaining unchanged acceptance clauses; #981 needs upstream clock qualification; #782 needs authentic scientific inputs. A blocked packet is a recorded outcome, not issue completion. Firmware/physical proof, lock/draw and production candidate promotion remain separate downstream deliverables."
+        "capacity_hours": 40,
+        "goal": "Deliver four bounded packets across #639, #410 and #428: actual fog/vent causal proof, prefix input/state admission, realized solar-night disposition and passive heap/rollback diagnosis. Source work can start independently; native checks require the existing Agents #5048\u2192#5044\u2192#5045 shared window to return and fresh exact admission. This is a new prospective one-week budget, not measured remaining hours from original S3.",
+        "exit": "Each selected packet has exact source/input/output custody and a truthful tested or blocked outcome. Whole issues retain all original criteria. The compiled prefix stays UNPROVEN unless independently demonstrated otherwise; no OTA, production promotion, active experiment or draw."
+      },
+      {
+        "id": "WAIT",
+        "title": "Await authentic inputs or owner qualification",
+        "kind": "conditional",
+        "capacity_hours": null,
+        "goal": "Keep #587/#749/#782/#783/#981 residuals visible without allocating nominal engineering hours to unavailable active routes, physical receipts, scientific inputs or the Home Assistant source clock.",
+        "exit": "Pull only a concrete newly reachable packet when its authentic input/identity/owner prerequisite exists; consumed approvals and old contained denials are not reused."
+      },
+      {
+        "id": "S3",
+        "title": "Prior S3 qualification scope \u2014 retained context",
+        "kind": "conditional",
+        "capacity_hours": null,
+        "goal": "Original 80-hour S3 envelope and prior estimates remain historical planning context. The source cohort merged in #985; scoped role/alert and native/compiler receipts are reused. Original ranges are not spent time or measured remaining hours.",
+        "exit": "Remaining whole-issue physical/runtime/scientific acceptance stays explicit; this historical cohort is not allocated a second time."
       },
       {
         "id": "ALTERNATE",
         "title": "Alternate pull when an S3 packet is blocked",
         "kind": "conditional",
         "capacity_hours": null,
-        "goal": "The retained #368/#367 corrections are now integrated and bounded native qualification is complete. Reuse them in the next #390 actual release packet; select another demonstrated source gap only when it replaces blocked capacity.",
-        "exit": "Current-source correction and original causal/compiler/replay receipts are retained. Full #368/#367 and firmware delivery remain governed by their actual runtime and physical acceptance."
+        "goal": "Only replace a genuinely blocked S3B packet with a demonstrated current source gap. #368 jump/stuck contract, #297 alert-only source or origin/re-fire cases are alternatives after prerequisite inspection; completed validity/dwell corrections are not repeated.",
+        "exit": "A replacement has a concrete defect/input contract, bounded estimate and causal acceptance; no speculative refactor or physical authority is introduced."
       },
       {
         "id": "S4",
@@ -3707,7 +3723,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Reconcile the health matrix to the 07:07 runtime readback and accepted #980 receipt, then consume the concrete #981/#963/#749 next actions. Keep shared alert implementation in monitoring-stack; do not repeat accepted exporter delivery or infer missing sensor recovery from green smoke.",
+        "next_action": "Maintain accepted exporter delivery and explicit #981/#963/#749 residuals; consume S3B findings and avoid duplicate source qualification or false-green physical health.",
         "owner_role": "Platform lead"
       },
       {
@@ -3763,7 +3779,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Reuse the qualified #368/#367 corrections in #390 and pull the documented actual fog/vent consumer proof before broader refactoring; collect authentic contributor and #410 outcome evidence in parallel.",
+        "next_action": "Consume bounded #410 realized outcomes and #639 source findings; preserve fixed bands, physical validity gaps and no tuning without actual evidence.",
         "owner_role": "Control lead"
       },
       {
@@ -3827,7 +3843,7 @@
         "sprint": "RELEASE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Reuse the current native/compiler/causal packet for the bounded diagnostic and dwell corrections. Bind actual source/binary/last-good, contributor truth and real runtime/rollback acceptance before selecting a release; source qualification does not imply an OTA.",
+        "next_action": "Consume P4 passive heap/rollback/candidate custody with existing #985 compiler/causal/replay receipts. Actual candidate binary, contributor/topology truth, operator window, rollback and physical runtime gates remain separate from this sprint; no OTA.",
         "owner_role": "Platform lead"
       },
       {
@@ -3840,10 +3856,10 @@
       },
       {
         "issue_number": 410,
-        "sprint": "CONTROL",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Run the existing fn_realized_solar_night_dryout on a small admitted date/source window, retain solar semantics, eligible/confounded/incomplete outcomes and current disposition. Verify native function/source identity before trusting results; expand historical work only in k3s.",
+        "sprint": "S3B",
+        "hours_min": 4,
+        "hours_max": 6,
+        "next_action": "P3: verify installed fn_realized_solar_night_dryout identity, then one bounded complete-night pilot and at most three genuine nights using device solar semantics, same-day held-admission counters and authentic relay/coverage/confound evidence. Retain PASS/FAIL/INCOMPLETE/no-eligible outcomes, and verify the MCP/planner quality-bearing projection. No tuning or water-removal claim from heat-only VPD.",
         "owner_role": "Control lead"
       },
       {
@@ -3856,10 +3872,10 @@
       },
       {
         "issue_number": 428,
-        "sprint": "CONTROL",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Reuse the source-bound collector for a bounded passive current heap/reset/load snapshot and inspect exact rollback artifact custody. Explain cause or bound uncertainty; select code work only from a measured causal defect.",
+        "sprint": "S3B",
+        "hours_min": 4,
+        "hours_max": 6,
+        "next_action": "P4: reuse the passive heap/reset/load collector, distinguish software reset/watchdog/reconnect, and bind actual current firmware plus independently retained rollback metadata/bytes. Produce one shared #390/#963 custody/observation matrix; dummy-credential compiler output remains NONDEPLOYABLE. No stress, restart, last-good promotion or OTA; missing representative runtime remains open.",
         "owner_role": "Control lead"
       },
       {
@@ -3867,7 +3883,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Maintain the four-child #428/#367/#369/#370 zero-hour roll-up, reusing the completed bounded #367 source/native packet. Select further simplification only from measured current load and verified consumer inventory; preserve release/physical acceptance and avoid a second estimate.",
+        "next_action": "Keep #428/#367/#369/#370 child scope and zero duplicated effort. P4 only bounds current heap/reset/rollback uncertainty; it does not justify broad simplification.",
         "owner_role": "Control lead"
       },
       {
@@ -3888,10 +3904,10 @@
       },
       {
         "issue_number": 587,
-        "sprint": "S3",
-        "hours_min": 4,
-        "hours_max": 8,
-        "next_action": "Reuse the completed actual-LOGIN lifecycle and one delivered alert pair. Continue the per-clause nonactuation/blinding/named-condition map, joining #783 actual identities and authentic populated data only when legitimately reachable. Do not repeat exhausted denials, create another password route or send another message under the consumed approval.",
+        "sprint": "WAIT",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Keep exhausted contained subset and named-alert pair accepted within scope. Select a new active/nonactuation/populated-blinding case only after a legitimate source-qualified isolated route and actual identity/authority exist; no repeat password/message request or nominal unblocked allocation.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3904,10 +3920,10 @@
       },
       {
         "issue_number": 639,
-        "sprint": "S3",
-        "hours_min": 8,
-        "hours_max": 16,
-        "next_action": "Implement the scoped actual fog/vent consumer packet: source extraction, opposite selected/unselected policy values, real helper and relay dwell behavior, plus a deleted/inverted-consumer causal negative. Keep this single-consumer scenario distinct from full-prefix/corpus coverage. Then continue the remaining21 missing consumers and qualified input/state contract; no order/grid can be minted from assignment counts.",
+        "sprint": "S3B",
+        "hours_min": 14,
+        "hours_max": 22,
+        "next_action": "P1 (8\u201312h): actual fog/vent source extraction, selected/unselected values, actual helper/readback/relay dwell and deleted/inverted-consumer negative. P2 (6\u201310h): machine-readable pre-tick input/state requirements and fail-closed admission report for the 21 missing consumers; reject same-row output-as-input and permissive missing-state defaults. Keep the actual prefix claim at 27/48 UNPROVEN absent complete row-wise causal proof.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3936,10 +3952,10 @@
       },
       {
         "issue_number": 749,
-        "sprint": "S3",
-        "hours_min": 2,
-        "hours_max": 4,
-        "next_action": "Keep the sealed spread/soil FAIL and four physical wetting criteria open. Reuse the bounded diagnosis and typed fail-closed plumbing. Obtain real source-bound equipment/binary/rails/counter measurements and implement their criterion-specific native receipt semantics before one new readiness packet; a hash or boolean cannot release the hold.",
+        "sprint": "WAIT",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Await actual binary/equipment/rails/counter measurements and criterion-specific native receipt semantics. Keep four null wetting criteria, original spread/soil FAIL and unchanged thresholds; no new positive readiness packet from source hashes alone.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3947,7 +3963,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.",
+        "next_action": "Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3963,23 +3979,23 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Publish the three parallel lane outcomes, retained first failed CI, corrected qualification and actual remaining criteria. Pull the next real missing-consumer source packet while authentic field/science inputs are collected. Do not treat this bounded source cohort as completed physical/runtime qualification.",
+        "next_action": "Use the S3B four-packet plan and 47-issue readiness register; count 22\u201334h selected work plus at least 6h integration reserve once. Maintain exact completion edges and original criteria; source preparation does not spend another 80-hour historical envelope.",
         "owner_role": "Evidence/data lead"
       },
       {
         "issue_number": 782,
-        "sprint": "S3",
-        "hours_min": 4,
-        "hours_max": 8,
-        "next_action": "Use the guarded offline authentic-snapshot target preparation for a genuinely prospective selected interval. The facility owner must supply actual contributor/crop identity; preserve original selector/context/choice clocks and the existing Nov 2 winter collector. Wait for usable original inputs before empirical joint-power or lock work.",
+        "sprint": "WAIT",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Await actual facility contributor/crop identity, original pre-boundary selector/context and a usable 18-hour interval. Preserve the June\u2013July 2027 candidate and existing November 2 winter observation. No new collector, artificial clocks, backfill, empirical-power fabrication or draw.",
         "owner_role": "Evidence/data lead"
       },
       {
         "issue_number": 783,
-        "sprint": "S4",
+        "sprint": "WAIT",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Use the source-derived five-role admission ledger and corrected six-function freezer runtime. Establish actual supported own-LOGIN routes, analyst identity and authentic reachable stages; owner catalog and SET ROLE do not qualify them. Reuse current contained proofs; preserve #639/#587 completion edges and all real-clock/input/prefix guards.",
+        "next_action": "Retain prepared five-role admission ledger and six-function freezer source. Wait for actual supported own-LOGIN/analyst identities, authentic reachable stages and #639/#587 completion before full twice-repeated vertical proof; owner catalog and image packaging do not qualify it.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -4019,15 +4035,15 @@
         "sprint": "RELEASE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Prepare the shared #390 candidate/binary/rollback/HA observation packet now from existing source and tooling evidence. Complete the missing exact release and actual-state checks in the selected firmware window; retain the issue until HA recovery and deployed binary/rollback acceptance are proven.",
+        "next_action": "Share P4 source/binary/rollback/HA observation matrix with #390, without duplicate estimate or redoing delivered formatter/ingestor source. Exact deployed firmware and actual HA recovery remain outstanding.",
         "owner_role": "Platform lead"
       },
       {
         "issue_number": 981,
-        "sprint": "S3",
-        "hours_min": 3,
-        "hours_max": 6,
-        "next_action": "Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.",
+        "sprint": "WAIT",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Home Assistant #878 remains the actual native external blocker. Consume its installed-source qualification before one natural source/DB advancement comparison; do not substitute fetch timestamps or infer a repair from a stable zero value.",
         "owner_role": "Data/platform lead"
       }
     ]

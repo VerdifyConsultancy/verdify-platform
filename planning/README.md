@@ -1,3 +1,5 @@
+[The next one-week sprint plan](reviews/2026-10-18-next-sprint/README.md) reviews all 47 open issues and commits four bounded source/diagnostic packets under #639/#410/#428 for October 19–23: 22–34 hours plus at least 6 hours integration reserve in a 40-hour budget. Native execution follows the current Agents shared-window handback; planning submits no workloads. All issue contracts and native completion edges remain unchanged.
+
 [The next-ready execution review](reviews/2026-10-18-execution/README.md) records the three parallel #639/#587, #368/#367 and #749/#782/#783 source/native lanes. It advances fourteen issue and roll-up contracts while preserving all47 open states, original acceptance and27 active dependency edges. No credential or message approval is pending.
 
 # Verdify planning source
