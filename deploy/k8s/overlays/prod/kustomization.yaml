@@ -267,10 +267,10 @@ images:
     digest: sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:89b52c8a7d3f6bb5175c11ca6406633df300b526deac171a951aaae97e34b2a6
+    digest: sha256:9458e685393673abcc936f63244b7e082d135e04e6a92773c90c875e40a90f6f
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962
+    digest: sha256:0bdb10cfd458de4b1bd4e201024efbf19aa724e0087cf5dcf88ce02c9a0043ae
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.
