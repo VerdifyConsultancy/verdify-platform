@@ -1,6 +1,8 @@
+[The next-ready execution review](reviews/2026-10-18-execution/README.md) records the three parallel #639/#587, #368/#367 and #749/#782/#783 source/native lanes. It advances fourteen issue and roll-up contracts while preserving all47 open states, original acceptance and27 active dependency edges. No credential or message approval is pending.
+
 # Verdify planning source
 
-[The October18 full status review](reviews/2026-10-18-status/README.md) is the current landing page: **369 total issues,47 open,322 closed**. Every open acceptance contract has a current disposition, accountable role, remaining criteria and bounded next action. No additional closure is justified in this pass. #977/#980/#802 are accepted S3 deliveries; #639/#587 have substantial scoped native proof including the delivered named alert, with full-issue residuals still open. No credential or Slack approval remains pending.
+[The October18 full status review](reviews/2026-10-18-status/README.md) is the complete issue-register baseline: **369 total issues,47 open,322 closed**. Every open acceptance contract has a current disposition, accountable role, remaining criteria and bounded next action. No additional closure is justified in this pass. #977/#980/#802 are accepted S3 deliveries; #639/#587 have substantial scoped native proof including the delivered named alert, with full-issue residuals still open. No credential or Slack approval remains pending.
 
 [The reviewed native graph](reviews/2026-10-18-status/DEPENDENCIES.md) has27 active edges, including Home Assistant878→981, and24 closed predecessor records on open issues. Local source and native edges agree. Full completion gates remain; bounded source preparation proceeds in parallel. [The full369-issue index](reviews/2026-10-18-status/all-issue-dispositions.json), [all47 issue assessments](reviews/2026-10-18-status/issue-status.json), execution cadence and real future decisions are durable.
 

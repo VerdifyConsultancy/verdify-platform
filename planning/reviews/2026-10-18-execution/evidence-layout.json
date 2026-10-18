@@ -1,0 +1,8 @@
+{
+  "schema": "verdify-ready-evidence-layout-v1",
+  "compiler_evidence_original_commit": "db948490bfc117fb1b45203cf73b529c8a624728",
+  "compiler_evidence_composed_commit": "22e0b325",
+  "original_receipts_preserved": true,
+  "public_custody": "planning/reviews/2026-10-18-execution/native-custody",
+  "reason": "Post-merge evidence belongs to planning custody, outside the product docs copied into ingestor images. Preserve the qualified source/image tree while publishing complete original qualification outputs. Historical native receipt remains accurate at its own pending-compiler timestamp; current execution review records later actual success."
+}

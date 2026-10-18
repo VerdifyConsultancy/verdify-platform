@@ -1,0 +1,1134 @@
+{
+  "at": "2026-10-18T08:06:25.597575+00:00",
+  "open_issues": 47,
+  "active_edges": 27,
+  "local_active_edges": 26,
+  "closed_predecessor_records": 24,
+  "all_connections_untruncated": true,
+  "local_matches_native": true,
+  "graph_changed": false,
+  "source_revision": "7479ef94de767be75d1ea79d02ebe552b35bc472",
+  "native": {
+    "issues": {
+      "totalCount": 47,
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMC0xN1QxNTo1MTo1M1rPAAAAAV-tsy8="
+      },
+      "nodes": [
+        {
+          "number": 14,
+          "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 16,
+          "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 31,
+          "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 45,
+          "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 398,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 51,
+          "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 52,
+          "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 75,
+          "title": "[C4][P1] Observability program: prove actionable health from source through device",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 218,
+          "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 245,
+          "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/245",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 396,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 382,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 297,
+          "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 45,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 298,
+          "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 299,
+          "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 390,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 350,
+          "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 359,
+          "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 367,
+          "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 390,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 368,
+          "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 424,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 369,
+          "title": "[C6][P2] Remove dead tunables and code from a verified consumer inventory",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 433,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 390,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 370,
+          "title": "[C6][P2] Consolidate equipment conflict resolution into one pure arbitration function",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 367,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 378,
+          "title": "[C6][P2] Decide corridor widths from fixed-target crop and resource evidence",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 785,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 371,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 379,
+          "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/379",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 3,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mw"
+            },
+            "nodes": [
+              {
+                "number": 786,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 419,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 371,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 386,
+          "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 303,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 390,
+          "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 419,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 303,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 398,
+          "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 298,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 410,
+          "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 3,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mw"
+            },
+            "nodes": [
+              {
+                "number": 424,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 419,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 371,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 412,
+          "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 428,
+          "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/428",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 433,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 430,
+          "title": "[C6][P2] Simplify firmware only while preserving autonomous control and observable truth",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 434,
+          "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 299,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 581,
+          "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 587,
+          "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 588,
+          "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 3,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mw"
+            },
+            "nodes": [
+              {
+                "number": 783,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 782,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 641,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 639,
+          "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 640,
+          "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 642,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 641,
+          "title": "[C1][P1] Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 4,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "NA"
+            },
+            "nodes": [
+              {
+                "number": 749,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 747,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 639,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 587,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 642,
+          "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 588,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 749,
+          "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 3,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mw"
+            },
+            "nodes": [
+              {
+                "number": 949,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 778,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 424,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 750,
+          "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 751,
+          "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 775,
+          "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 782,
+          "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 4,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "NA"
+            },
+            "nodes": [
+              {
+                "number": 781,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 780,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 779,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 371,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 783,
+          "title": "[C1][P1] Qualify the complete current-login selector-to-frozen-analysis path",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 639,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 587,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 784,
+          "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 640,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 785,
+          "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 784,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 786,
+          "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 2,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "Mg"
+            },
+            "nodes": [
+              {
+                "number": 785,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 780,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 787,
+          "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/787",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 4,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "NA"
+            },
+            "nodes": [
+              {
+                "number": 981,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 785,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 781,
+                "state": "CLOSED",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              },
+              {
+                "number": 410,
+                "state": "OPEN",
+                "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+                "repository": {
+                  "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "number": 963,
+          "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 0,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "number": 981,
+          "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+          "state": "OPEN",
+          "blockedBy": {
+            "totalCount": 1,
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "MQ"
+            },
+            "nodes": [
+              {
+                "number": 878,
+                "state": "OPEN",
+                "url": "https://github.com/jvallery/homeassistant/issues/878",
+                "repository": {
+                  "nameWithOwner": "jvallery/homeassistant"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "accepted802": {
+      "number": 802,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T04:17:55Z"
+    },
+    "accepted977": {
+      "number": 977,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T02:32:26Z"
+    },
+    "accepted980": {
+      "number": 980,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "closedAt": "2026-10-18T03:21:38Z"
+    }
+  }
+}

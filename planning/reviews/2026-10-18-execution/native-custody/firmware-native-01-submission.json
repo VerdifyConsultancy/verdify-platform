@@ -1,0 +1,46 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Workflow",
+  "metadata": {
+    "name": "verdify-ready-firmware-native-bdef62c1-01",
+    "namespace": "agent-fleet-ci",
+    "labels": {
+      "agent-fleet.vallery.net/repo": "verdify-platform"
+    },
+    "annotations": {
+      "verdify.ai/qualification-source": "bdef62c1d640636411995c23aedeee85f342303f",
+      "verdify.ai/qualification-scope": "368-367-strict-native-causal-worktree"
+    }
+  },
+  "spec": {
+    "workflowTemplateRef": {
+      "name": "repo-validate-568985cdbf6b4e3f"
+    },
+    "arguments": {
+      "parameters": [
+        {
+          "name": "repo",
+          "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+        },
+        {
+          "name": "revision",
+          "value": "bdef62c1d640636411995c23aedeee85f342303f"
+        },
+        {
+          "name": "base_revision",
+          "value": "2999abe5f4348ff17b8fd11931247f2c3c5fd107"
+        },
+        {
+          "name": "checks_json",
+          "value": "[{\"name\": \"firmware-strict-native-causal\", \"command\": \"bash -lc 'set -euo pipefail\\nexport VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null\\nunset PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD DATABASE_URL GITHUB_TOKEN GH_TOKEN\\ntest \\\"$(git rev-parse HEAD)\\\" = \\\"bdef62c1d640636411995c23aedeee85f342303f\\\"\\nuv sync --python 3.12 --extra dev --extra api --extra planner --extra planner-graph\\nexport PYTHON=\\\"$PWD/.venv/bin/python\\\"\\nexport QUALIFICATION_DIR=/tmp/verdify-native-causal-bdef62c1-01\\nset +e\\nmake test-firmware firmware-invariants\\nnative_rc=$?\\ntimeout 600s bash docs/handoffs/firmware-validity-dwell-20261018/causal-regressions.sh\\ncausal_rc=$?\\nTHRESHOLD_PCT=0 BUILD_DIR=/tmp/verdify-native-worktree-bdef62c1-01 DIFF_OUT=/tmp/verdify-native-worktree-bdef62c1-01.diff make firmware-replay-worktree OLD=2999abe5f4348ff17b8fd11931247f2c3c5fd107\\nworktree_rc=$?\\nset -e\\npython3 - \\\"$QUALIFICATION_DIR\\\" <<\\\"CUSTODY\\\"\\nimport base64,hashlib,json,os,stat,sys\\nfrom pathlib import Path\\nroot=Path(sys.argv[1]); total=0; count=0\\nif root.is_dir():\\n for p in sorted(root.rglob(\\\"*\\\")):\\n  st=p.lstat()\\n  if not stat.S_ISREG(st.st_mode) or st.st_nlink!=1:continue\\n  if p.suffix not in {\\\".log\\\",\\\".xml\\\",\\\".json\\\",\\\".txt\\\",\\\".cpp\\\"}:continue\\n  if st.st_size>4*1024*1024:raise RuntimeError(\\\"native custody file exceeds4MiB\\\")\\n  total+=st.st_size\\n  if total>16*1024*1024:raise RuntimeError(\\\"native custody exceeds16MiB\\\")\\n  data=p.read_bytes();count+=1\\n  print(\\\"NATIVE_CUSTODY_FILE=\\\"+json.dumps({\\\"path\\\":str(p.relative_to(root)),\\\"bytes\\\":len(data),\\\"sha256\\\":hashlib.sha256(data).hexdigest(),\\\"data_b64\\\":base64.b64encode(data).decode()},sort_keys=True),flush=True)\\nprint(\\\"NATIVE_CUSTODY_SUMMARY=\\\"+json.dumps({\\\"files\\\":count,\\\"bytes\\\":total}),flush=True)\\nCUSTODY\\nprintf \\\"FIRMWARE_STRICT_RESULTS={\\\\\\\"native\\\\\\\":%d,\\\\\\\"causal\\\\\\\":%d,\\\\\\\"worktree_replay\\\\\\\":%d}\\\\n\\\" \\\"$native_rc\\\" \\\"$causal_rc\\\" \\\"$worktree_rc\\\"\\n[ \\\"$native_rc\\\" -eq 0 ] && [ \\\"$causal_rc\\\" -eq 0 ] && [ \\\"$worktree_rc\\\" -eq 0 ]\\n' \"}]"
+        }
+      ]
+    },
+    "parallelism": 1,
+    "activeDeadlineSeconds": 7200,
+    "podGC": {
+      "strategy": "OnPodCompletion",
+      "deleteDelayDuration": "3600s"
+    }
+  }
+}

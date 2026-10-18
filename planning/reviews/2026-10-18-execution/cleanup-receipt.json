@@ -1,0 +1,102 @@
+{
+  "schema": "verdify-ready-native-cleanup-v1",
+  "at": "2026-10-18T08:10:50.830108+00:00",
+  "context": "vallery",
+  "namespace": "agent-fleet-ci",
+  "workflow_count": 4,
+  "pod_count": 12,
+  "all_exact_UID_preconditions": true,
+  "all_terminal_before_delete": true,
+  "all_absent_after_delete": true,
+  "outputs_independently_verified_before_cleanup": true,
+  "scope": "Only four disposable manual qualification Workflow objects and their own terminal Pods. No shared templates, credentials, DB rows, PVCs or PR CI objects changed.",
+  "objects": [
+    {
+      "name": "verdify-ready-firmware-native-bdef62c1-01",
+      "uid": "650d1c10-cc78-4b12-80c9-904110ff0b96",
+      "terminal_phase": "Error",
+      "pods": []
+    },
+    {
+      "name": "verdify-ready-firmware-native-bdef62c1-02",
+      "uid": "86ac6e0d-ac96-43a1-811f-4f79f1a775e5",
+      "terminal_phase": "Succeeded",
+      "pods": [
+        {
+          "name": "verdify-ready-firmware-native-bdef62c1-02-conclusion-488778552",
+          "uid": "0f764833-8861-4a84-9a51-51a69fe293b3",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-native-bdef62c1-02-enforce-conclusion-649148905",
+          "uid": "7191d220-aaab-4f75-ab32-2e727a74c935",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-native-bdef62c1-02-prepare-129471406",
+          "uid": "756ee2ab-b0f5-48b8-b62f-f03afe87eea0",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-native-bdef62c1-02-run-check-2036764753",
+          "uid": "dab2cb9d-2da9-4038-890b-0fd241b3d481",
+          "phase": "Succeeded"
+        }
+      ]
+    },
+    {
+      "name": "verdify-ready-prefix-f48c889e-01",
+      "uid": "8b11a3b7-b2cf-44da-aba3-a5c98873bd04",
+      "terminal_phase": "Succeeded",
+      "pods": [
+        {
+          "name": "verdify-ready-prefix-f48c889e-01-conclusion-1589130952",
+          "uid": "707f59a6-0a49-4232-bd64-eada5753e7f9",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-prefix-f48c889e-01-enforce-conclusion-2174504601",
+          "uid": "1d1e2822-8976-4ebc-b8ba-c57781883ba4",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-prefix-f48c889e-01-prepare-2721356702",
+          "uid": "8f50d5dc-2946-42a6-9851-d5425140606d",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-prefix-f48c889e-01-run-check-2241985753",
+          "uid": "8fde1d9a-a963-4da7-96d8-c373edeab59f",
+          "phase": "Succeeded"
+        }
+      ]
+    },
+    {
+      "name": "verdify-ready-firmware-compile-bdef62c1-01",
+      "uid": "fa64bd6e-ef65-49c9-9692-b4f8063c9a8d",
+      "terminal_phase": "Succeeded",
+      "pods": [
+        {
+          "name": "verdify-ready-firmware-compile-bdef62c1-01-conclusion-136281547",
+          "uid": "844115fb-803e-4acd-ba57-5f30779da25c",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-compile-bdef62c1-01-enforce-conclusion-1151296158",
+          "uid": "5925ec9b-8894-4a74-bf95-52be7e28c902",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-compile-bdef62c1-01-prepare-2232514583",
+          "uid": "fe925dd8-970c-41f3-9a4b-231b2cbab487",
+          "phase": "Succeeded"
+        },
+        {
+          "name": "verdify-ready-firmware-compile-bdef62c1-01-run-check-1238560392",
+          "uid": "5fc27e62-ce19-4769-8ecf-d383eee2dd6b",
+          "phase": "Succeeded"
+        }
+      ]
+    }
+  ]
+}

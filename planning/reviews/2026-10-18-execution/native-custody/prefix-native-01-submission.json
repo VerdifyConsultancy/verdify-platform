@@ -1,0 +1,45 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Workflow",
+  "metadata": {
+    "name": "verdify-ready-prefix-f48c889e-01",
+    "namespace": "agent-fleet-ci",
+    "labels": {
+      "agent-fleet.vallery.net/repo": "verdify-platform"
+    },
+    "annotations": {
+      "verdify.ai/qualification-source": "f48c889ecb5124949dcbcba29af7cf525f8ba7b5",
+      "verdify.ai/qualification-scope": "639-587-bounded-source-pilot-not-order-qualification"
+    }
+  },
+  "spec": {
+    "workflowTemplateRef": {
+      "name": "repo-validate-568985cdbf6b4e3f"
+    },
+    "arguments": {
+      "parameters": [
+        {
+          "name": "repo",
+          "value": "https://github.com/VerdifyConsultancy/verdify-platform.git"
+        },
+        {
+          "name": "revision",
+          "value": "f48c889ecb5124949dcbcba29af7cf525f8ba7b5"
+        },
+        {
+          "name": "base_revision",
+          "value": "2999abe5f4348ff17b8fd11931247f2c3c5fd107"
+        },
+        {
+          "name": "checks_json",
+          "value": "[{\"name\": \"prefix-source-bounded-native-pilot\", \"command\": \"timeout 600s bash -lc 'set -euo pipefail\\nexport VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null\\nunset PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD DATABASE_URL GITHUB_TOKEN GH_TOKEN\\ntest \\\"$(git rev-parse HEAD)\\\" = \\\"f48c889ecb5124949dcbcba29af7cf525f8ba7b5\\\"\\nuv sync --python 3.12 --extra dev --extra api --extra planner --extra planner-graph\\n.venv/bin/python docs/research/639-587-source-qualification-2026-10-18/native-prefix-pilot.py\\n'\"}]"
+        }
+      ]
+    },
+    "activeDeadlineSeconds": 900,
+    "podGC": {
+      "strategy": "OnPodCompletion",
+      "deleteDelayDuration": "3600s"
+    }
+  }
+}

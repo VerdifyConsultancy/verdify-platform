@@ -1,0 +1,17 @@
+{
+  "schema": "verdify-ready-corrected-pr-ci-v1",
+  "source": "7479ef94de767be75d1ea79d02ebe552b35bc472",
+  "workflow": "verdify-platform-pr-ci-gzkck",
+  "workflow_uid": "8cfb4896-e6bf-42ad-abe0-098b51e4ffb3",
+  "phase": "Succeeded",
+  "finished_at": "2026-10-18T08:17:23Z",
+  "validation_pod": "verdify-platform-pr-ci-gzkck-956464647",
+  "validation_finished_at": "2026-10-18T08:16:51Z",
+  "validation_exit_code": 0,
+  "validation_attempts": 1,
+  "github_context": "Verdify Platform / Argo PR CI",
+  "github_state": "success",
+  "original_first_run_remains_failed": true,
+  "full_log_retained": false,
+  "log_custody_limitation": "Routine Pod garbage collection removed the completed validation Pod before final capture. A failed shell redirect overwrote the progress-only file; no complete corrected PR main log is claimed. Authoritative workflow Pod exit0, terminal Succeeded and GitHub status independently establish the supported gate result. Strict firmware/compiler/prefix raw outputs remain separately complete. The ensuing main validation log will be streamed to avoid this collector failure."
+}

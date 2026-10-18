@@ -1,0 +1,51 @@
+{
+  "schema": "verdify-public-native-output-custody-v1",
+  "source_firmware": "bdef62c1d640636411995c23aedeee85f342303f",
+  "source_prefix": "f48c889ecb5124949dcbcba29af7cf525f8ba7b5",
+  "causal_artifact_count": 31,
+  "records": [
+    {
+      "path": "firmware-causal-31-artifacts.tar.gz",
+      "bytes": 124170,
+      "sha256": "e296469ac78ad904838376cd49d96febf3650220784499b3b13f74889a4ec449",
+      "uncompressed_sha256": "e08c5ec3c09da88141ca219daf637bb98b238400e7345fbbf7415ba85b792cf2",
+      "uncompressed_bytes": 1228800
+    },
+    {
+      "path": "firmware-strict-main.log.gz",
+      "bytes": 224793,
+      "sha256": "e8217b338a4fe120f96bfae715c05897cc543b277271dc8f2c70caf1e7aa0ad1",
+      "uncompressed_sha256": "db6691818833896e12c865159872e73d39a209b79c52074059c5159bd7791dda",
+      "uncompressed_bytes": 1637072
+    },
+    {
+      "path": "firmware-secretless-main.log.gz",
+      "bytes": 251447,
+      "sha256": "c1c7c7fedb16f96f0307dd539881695e53ee07463a4293f63c6c7b338514b5f6",
+      "uncompressed_sha256": "3527d76fa938f65c3ff012da44a885cd0a21c355fc5c5e13417ba1d51b6a397d",
+      "uncompressed_bytes": 1858510
+    },
+    {
+      "path": "firmware-native-01-submission.json",
+      "bytes": 3400,
+      "sha256": "badab66930cd4ea245e432f19245e970def4bc72e755fd3ce39dae5624367e8e"
+    },
+    {
+      "path": "firmware-native-02-submission.json",
+      "bytes": 3378,
+      "sha256": "02dacf7dfe6b137835af0d2e6637020810b12343c145beb69b2c1a5f15a8f585"
+    },
+    {
+      "path": "firmware-secretless-01-submission.json",
+      "bytes": 9913,
+      "sha256": "42ec32dad682526ebdb6e4b448c101140380c92f28bfb11aae85fb49f0c3fd95"
+    },
+    {
+      "path": "prefix-native-01-submission.json",
+      "bytes": 1706,
+      "sha256": "f541e53b3014d7fe83166090760f095cce3d6a214d5aebf78906ff6989c53eb5"
+    }
+  ],
+  "no_compiled_binaries_retained": true,
+  "qualification_boundaries_unchanged": true
+}

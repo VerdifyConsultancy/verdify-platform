@@ -1,0 +1,35 @@
+{
+  "schema": "verdify-ready-planning-verification-v1",
+  "at": "2026-10-18T08:15:09.671843+00:00",
+  "qualified_application_source": "7479ef94de767be75d1ea79d02ebe552b35bc472",
+  "campaign_rows": 93,
+  "open_issues": 47,
+  "open_acceptance_clauses": 143,
+  "all93_acceptance_states_dependencies_parents_priorities_preserved": true,
+  "updated_contracts": [
+    775,
+    750,
+    749,
+    641,
+    639,
+    587,
+    782,
+    783,
+    390,
+    75,
+    359,
+    430,
+    368,
+    367
+  ],
+  "planning_tests": 43,
+  "planning_tests_passed": true,
+  "schema_and_generated_render_check_passed": true,
+  "independent_review_corrections": [
+    "remove stale preparation/rebase instructions",
+    "align selected next consumer with actual fog/vent packet",
+    "preserve430 four-child zero-hour scope",
+    "record actual compiler success and keep full combined CI pending"
+  ],
+  "native_local_active_edges_equal": true
+}

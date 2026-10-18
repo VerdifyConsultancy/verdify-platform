@@ -23,7 +23,7 @@ This expected failure is retained as evidence and is not a failed main build.
 The actual Linux x86_64 receipt records ten package manifests and all sixteen
 required compiler filenames, sizes and hashes before private scratch removal.
 These are native observations of downloaded bytes, not ARM64 image assumptions.
-The complete main log is retained privately: 1,858,510 bytes, SHA256
+The complete original main log is retained in private custody and in [the public compressed capsule](firmware-secretless-main.log.gz): 1,858,510 bytes, SHA256
 `3527d76fa938f65c3ff012da44a885cd0a21c355fc5c5e13417ba1d51b6a397d`.
 The negative compiler output was consumed by the registered check and is not
 separately retained; its final result and exit code are retained. Temporary
@@ -34,6 +34,6 @@ All compile credentials were explicit public dummy values. Both outputs are
 **NONDEPLOYABLE**, never last-good firmware. No OTA, production change, live
 sensor-health readback, physical chatter/recovery or whole-issue acceptance is
 claimed. This evidence applies to the named source, not later combined PR edits.
-The earlier [strict native evidence](README.md), its original causal failures and
+The earlier [strict native evidence](../../../../docs/handoffs/firmware-validity-dwell-20261018/evidence/README.md), its original causal failures and
 submission/collector history remain unchanged. #367 and #368 remain open for
 remaining acceptance.
