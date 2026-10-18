@@ -1,0 +1,22 @@
+{
+  "candidate_file_sha256": "88611d27b2516954508758705de9dd70614d8069b7bf19dcfb282754c880a993",
+  "changes": {
+    "verdify-migrate": {
+      "after": "sha256:0bdb10cfd458de4b1bd4e201024efbf19aa724e0087cf5dcf88ce02c9a0043ae",
+      "before": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962"
+    }
+  },
+  "evidence_scope": "source-only pin promotion; build provenance, CI and live adoption remain separate",
+  "promotion_input_source_sha": "22b99aa8740208e772d676ddfe2ed9ea2833fcd9",
+  "recorded_at": "2026-10-18T19:00:43.311086+00:00",
+  "release_pins_after_sha256": "2e1e0fc9aef046b4e1e185cdc3bfd05d9a744ba3045c0d02a8445338ee7dafe5",
+  "release_pins_before_sha256": "48b006ee49ecbdf6aa0991933f7b9f09d5cf5e62fb86ec42aadb215d81e31e81",
+  "rollback_pins": {
+    "verdify-api": "sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624",
+    "verdify-experiment-v2-orchestrator": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0",
+    "verdify-ingestor": "sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000",
+    "verdify-mcp": "sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+    "verdify-migrate": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962"
+  },
+  "schema": "verdify-release-pin-promotion-v1"
+}

@@ -1,0 +1,218 @@
+{
+  "schema": "verdify-getter277-installed-checkpoint/v1",
+  "status": "GETTER277_INSTALLED_REAL_RESULTS_AND_RUNTIME_VERIFIED",
+  "build_source": "8d7ff1a2829c246600da4f15027121e9c7193913",
+  "release_commit": "8c2243020e82f52fbdf3169278715302f7688edf",
+  "workflow": {
+    "workflow": "verdify-platform-ci-26nj4",
+    "workflow_uid": "74fa9db5-5fd2-4a52-abf5-6a210ec8c49f",
+    "finished_at": "2026-10-18T18:59:57Z"
+  },
+  "source_ci_pods": 5,
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "built_profiles": [
+    "ingestor",
+    "migrate",
+    "lab-publisher"
+  ],
+  "promoted_profiles": [
+    "migrate"
+  ],
+  "migrate_image": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:0bdb10cfd458de4b1bd4e201024efbf19aa724e0087cf5dcf88ce02c9a0043ae",
+  "owning_jobs": [
+    {
+      "mode": "plan",
+      "job": "verdify-getter277-plan-20261018-01",
+      "uid": "acb9cac5-d4fa-41dc-b3e1-ee5d95cddda8",
+      "pod": "verdify-getter277-plan-20261018-01-sgdqn",
+      "pod_uid": "4a8de013-69de-4a9c-af45-4428c3e256c2",
+      "finished": "2026-10-18T19:02:13.471457+00:00"
+    },
+    {
+      "mode": "apply",
+      "job": "verdify-getter277-apply-20261018-01",
+      "uid": "288535fc-7290-4954-bf65-ea206eb5ea5b",
+      "pod": "verdify-getter277-apply-20261018-01-l4bdz",
+      "pod_uid": "e769103d-aaf7-4bae-b5f9-0138012727d1",
+      "finished": "2026-10-18T19:03:13.394988+00:00"
+    }
+  ],
+  "runner277": {
+    "seq": 277,
+    "sha256": "a8a0bc063bd655d2e96dd3d424768169edb4ea714c7a1b51dca2b41cc39b29a1",
+    "source": "db/migrations",
+    "filename": "db/migrations/277-realized-solar-night-readback-timeline.sql",
+    "applied_at": "2026-10-18T19:03:05.611609+00:00",
+    "applied_by": "verdify",
+    "duration_ms": 1768,
+    "stamp_method": "runner"
+  },
+  "getter": {
+    "oid": "411453",
+    "definition_sha256": "89782089fd6ae3ecfeecdfbc1b730f6ab6a272c0da7b35ef562788eddbfa42c0",
+    "body_sha256": "578a07bed56714cd2dfe2308ca30ced1f6fc6916fd7db9d79630a7b82b261655"
+  },
+  "mcp_boundary_sha256": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+  "plan_state_unchanged": true,
+  "applied_state_exact_successor": true,
+  "state_comparison_scope": [
+    "api_boundary",
+    "context",
+    "getter",
+    "ingestor_boundary",
+    "ledger",
+    "mcp_boundary",
+    "mcp_receipt",
+    "memberships",
+    "ordinary_receipts",
+    "password_presence_only",
+    "role_metadata",
+    "role_settings",
+    "study"
+  ],
+  "all_database_tables_or_objects_claimed": false,
+  "password_verifier_value_equality_claimed": false,
+  "ordinary_results": {
+    "status": "INSTALLED_ORDINARY_REAL_EPISODES_PASSED",
+    "calls": [
+      {
+        "capture": "installed-oct16-custom-01",
+        "pod": "verdify-mcp-67bdb8d8c8-dwfdm",
+        "pod_uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+        "night": "2026-10-16",
+        "plan_mode": "force_custom_plan",
+        "getter_seconds": 11.816649,
+        "rows": 0,
+        "rows_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "dispositions": {
+          "blocked": 0,
+          "effective": 0,
+          "ineffective": 0,
+          "insufficient_evidence": 0
+        },
+        "evidence_status_counts": {},
+        "safety_gate_status": "pending",
+        "result_sha256": "6dd725d7911af925bae7cc7768bc01c6f2ad1801a52e612f128bcaceb7424d9e"
+      },
+      {
+        "capture": "installed-oct04-custom-01",
+        "pod": "verdify-mcp-67bdb8d8c8-dwfdm",
+        "pod_uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+        "night": "2026-10-04",
+        "plan_mode": "force_custom_plan",
+        "getter_seconds": 11.269874,
+        "rows": 4,
+        "rows_sha256": "00cb760f21aac7b49d15bc8be7fb5e45425b1f2d875efae4bd767c74ca4a1884",
+        "dispositions": {
+          "blocked": 0,
+          "effective": 0,
+          "ineffective": 2,
+          "insufficient_evidence": 2
+        },
+        "evidence_status_counts": {
+          "complete": 2,
+          "incomplete": 2
+        },
+        "safety_gate_status": "pass",
+        "result_sha256": "5c39277c88076f39d13da45dc8d1b42884b715a03eda8b50a89aeef1d233de68"
+      },
+      {
+        "capture": "installed-oct04-generic-01",
+        "pod": "verdify-mcp-67bdb8d8c8-jzfrn",
+        "pod_uid": "c5c8b3d2-0b0f-474a-a4c1-1ed0fbb33095",
+        "night": "2026-10-04",
+        "plan_mode": "force_generic_plan",
+        "getter_seconds": 4.966761,
+        "rows": 4,
+        "rows_sha256": "00cb760f21aac7b49d15bc8be7fb5e45425b1f2d875efae4bd767c74ca4a1884",
+        "dispositions": {
+          "blocked": 0,
+          "effective": 0,
+          "ineffective": 2,
+          "insufficient_evidence": 2
+        },
+        "evidence_status_counts": {
+          "complete": 2,
+          "incomplete": 2
+        },
+        "safety_gate_status": "pass",
+        "result_sha256": "a870e56371a9aa770fc975bcd093100e87ed33873fde2025dd63fe1f2b6d4a39"
+      }
+    ],
+    "custom_generic_all46_values_equal": true,
+    "snapshot_scope": "Three separate read-only repeatable-read sessions; October4 comparisons use separately captured historical snapshots",
+    "configured_product_timeout_ms": 15000,
+    "timeout_increased": false,
+    "original_oct16_empty_is_pending": true,
+    "complete_daylight_coverage_not_proved": true,
+    "positive_admin_dispatch_verified": false,
+    "planner_consumption_verified": false,
+    "whole_issue_410_acceptance": false
+  },
+  "synthetic_native_parity_cases": 20,
+  "same_snapshot_real_readback_rows": 2673,
+  "runtime_http_smoke_complete": true,
+  "native_graph_last_verified_at": "2026-10-18T18:13:18.623653+00:00",
+  "open_issues": 47,
+  "open_acceptance_clauses": 143,
+  "local_active_edges": 26,
+  "external_active_edges": [
+    {
+      "predecessor": "jvallery/homeassistant#878",
+      "dependent": "VerdifyConsultancy/verdify-platform#981"
+    }
+  ],
+  "full_issue_410_accepted": false,
+  "full_campaign_775_accepted": false,
+  "original_failures_preserved": true,
+  "receipt_sha256": {
+    "corrected-source-ci-verified.json": "b9dd82382c8746dd6d6323e5bfb58fb59811a50644cf607865e7cb40268fefa9",
+    "plan-state-unchanged.json": "bedf036c7afa4c2de7eb4fed1fc2f97eff7bb6d5d1abaf3e32c83dd3836d2ec2",
+    "applied-state-verified.json": "7c9679cb45921b0ec154ca7a45f1cc8f03d359bf04bd7d0556c3d9cdd5621ce3",
+    "owner-installed-receipt.json": "315668a95cd80357c5e806e14dbe4e561a4687bec45e88dac487baf9cdeb5776",
+    "installed-getter-results-verified.json": "67a8c7c6d3ebb7e9076cee7f1caddd7755c4475a12e61e2dc57090949d5e3abd",
+    "owning-plan-01/result.json": "274fbfb166d5612cf3d87b8113491040549f8ae7033d03f54648e9ec7f2867c3",
+    "owning-apply-01/result.json": "fc3825b90e8060c17ef62ce892d269751fb78be4d1032c25e86f8a22d460949b",
+    "graph-before-final/verified.json": "6ee9c542a867a5954262bbd5c1ba608b67d408998227caeb4b23bb2bb4ce2de7",
+    "native-fixtures-b-01/receipt.json": "6f290ae3780ed4618cd1261c485bbec7d704c49ff275b298a1e6d7d8891cefda",
+    "native-fixtures-b-02/receipt.json": "e90fd40d681015fb7e11108a089e00e032a8e2d400298bcb7f3b3810117e5eae",
+    "clone-a-b-comparison.json": "7ad1635b577b24d01cd351f41bb38d3eaff729ea92d7566b0a82a0cb465b97e9",
+    "rollback-fresh-state-verification.json": "8b61b0eb42cd01f6367bab66c2fa1fac591242750dc55e99cd57169d7b9af732"
+  },
+  "runtime": {
+    "status": "RUNTIME_HTTP_SMOKE_WRITER_IDENTITIES_PASSED",
+    "smoke_passed": 9,
+    "smoke_failed": 0,
+    "device_writer_connections": 1,
+    "writer": "verdify-ingestor-654648cdf6-94bwz",
+    "http_mcp_replicas": 2,
+    "iris_tools": 23,
+    "admin_outcome_iris_denied": true,
+    "unchanged_deployment_specs_and_uids": 15,
+    "unchanged_db_api_ingestor_mcp_serving_pods": 6,
+    "baseline_completed_job_exclusions": [
+      {
+        "name": "verdify-db-watchdog-29872426-wq2vw",
+        "uid": "c63d08da-3ee3-42d8-92cc-0651632e400b",
+        "phase_at_baseline": "Succeeded",
+        "reason": "completed temporary Job naturally removed; not serving database StatefulSet"
+      }
+    ],
+    "argo_sync_status": "Synced",
+    "argo_health": "Healthy",
+    "argo_compared_revision": "8c2243020e82f52fbdf3169278715302f7688edf",
+    "last_argo_operation_revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+    "new_argo_operation_submitted": false,
+    "migration_delivery": "standalone exact owning Jobs",
+    "baked_mcp_source": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+    "api_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+    "operator_auth": "existing ROOT kubeconfig currentvallery, no credential creation/copy/globalcontextmutation",
+    "failed_harnesses_retained": [
+      "runtime-after277:missingKUBECONFIG localprecheck",
+      "runtime-after277-v2:broadDBprefixincludednaturallyremovedcompletedwatchdog"
+    ],
+    "passed_native_calls_not_repeated_for_filter_correction": true,
+    "finished": "2026-10-18T19:08:26.575939+00:00"
+  },
+  "final_state_comparison_sha256": "27b23b4ac19f4d2e197e36f10d60ecea567c90371224b1a6bc87eebd2c28395d"
+}

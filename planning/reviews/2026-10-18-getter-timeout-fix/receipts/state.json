@@ -1,0 +1,102 @@
+{
+  "after_ledger_rows": 285,
+  "all_table_data_or_all_database_objects_captured": false,
+  "allowed_changes": [
+    "one runner-stamped277 ledger row",
+    "getter definition/body hashes",
+    "MCP receipt boundary hash",
+    "MCP computed boundary hash"
+  ],
+  "api_ingestor_ordinary_receipts_security_study_equal": true,
+  "before_ledger_rows": 284,
+  "compared_kinds": [
+    "api_boundary",
+    "context",
+    "getter",
+    "ingestor_boundary",
+    "ledger",
+    "mcp_boundary",
+    "mcp_receipt",
+    "memberships",
+    "ordinary_receipts",
+    "password_presence_only",
+    "role_metadata",
+    "role_settings",
+    "study"
+  ],
+  "getter_other_pg_proc_metadata_equal": true,
+  "input_sha256": {
+    "/Users/jason/.codex/worktrees/getter-timeout-fix-20261018/verdify-platform/db/migrations/277-realized-solar-night-readback-timeline.sql": "a8a0bc063bd655d2e96dd3d424768169edb4ea714c7a1b51dca2b41cc39b29a1",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-after-plan/query.sql": "e3c543b5d829a94d3a23df909933bf8a431d5e261913b432f9b61045abeaa835",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-after-plan/receipt.json": "ce70c86dff5da833b2a0ec5de5adf6fdab3e5c2847b4af4c497a3adefc426c6f",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-after-plan/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-after-plan/stdout": "fc5857b8ac6a412cd37f8c12f0353da99e47b666d8b4707149ac16377e1a7526",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-final/query.sql": "e3c543b5d829a94d3a23df909933bf8a431d5e261913b432f9b61045abeaa835",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-final/receipt.json": "f5d61662c822a53bcb9c363b458aada8fc3d5179999ddb8a817f8f374107d283",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-final/stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/verdify-getter-fix-20261018/production-state-final/stdout": "5f1d3dd21dff5fd77f7b70ff8dbda7b3313d107da6634a557b87ce396be1748e"
+  },
+  "mode": "apply",
+  "native_calls_performed": false,
+  "old_ledger_rows_exactly_preserved": true,
+  "passed": true,
+  "password_proof": "presence-only plus role metadata/source custody; not verifier-value equality",
+  "schema": "getter277-production-state-comparison-v1",
+  "source_sha256": "4fd102ffd68b9e736978e1f4fad0d6c15287b70c7d025664ccad0c669f09b443",
+  "state_record_sha256": {
+    "api_boundary": {
+      "after": "13f096081a52aa5cf0616b98ff50c86e7ff2f7ee64b359e046f41ba25e740de1",
+      "before": "13f096081a52aa5cf0616b98ff50c86e7ff2f7ee64b359e046f41ba25e740de1"
+    },
+    "context": {
+      "after": "818db96ea0091f8c92b991004b8b9021cc6a1a16b2163d31b8d14010b63e960a",
+      "before": "818db96ea0091f8c92b991004b8b9021cc6a1a16b2163d31b8d14010b63e960a"
+    },
+    "getter": {
+      "after": "435e336862e192e2b013dfa046c13115cb77e801f7cde89d72f3da38daa450e8",
+      "before": "78378892435a9464142fc69fbf77294d08dcf63bffc8fc89bb1447868184cfe1"
+    },
+    "ingestor_boundary": {
+      "after": "4b266c139f782b7ef284d26baf64cfb7420424d4de130203eb485aa1cf107a00",
+      "before": "4b266c139f782b7ef284d26baf64cfb7420424d4de130203eb485aa1cf107a00"
+    },
+    "ledger": {
+      "after": "fd0606f54d75a1a48734877b61b0205cfaaddef348be83045481d9a562cc6455",
+      "before": "a62ef6dc6208d56227ee3786f242b3bcc5fb416eeb58c8cd1f29804b6eee03a1"
+    },
+    "mcp_boundary": {
+      "after": "1af32a566dc6999248dd3b1786d03c294f9bb287d249ceece9a6f9656e4c8321",
+      "before": "970442a4eba3bc3074f6e6a28c5f02bb3783265be131ed0601c0a860219ce063"
+    },
+    "mcp_receipt": {
+      "after": "7b79646eb2172029ed2e35b37e9ff736b336a870143a921a1e0cce77c9aa1af0",
+      "before": "29ca994b807986e3bc84dc601a11c59a9db00f8162b7947e36fd288a0b99fce3"
+    },
+    "memberships": {
+      "after": "8ad3e74c073a5d8b9f64081e97e26317003522b49df988b4043df6c6327214b9",
+      "before": "8ad3e74c073a5d8b9f64081e97e26317003522b49df988b4043df6c6327214b9"
+    },
+    "ordinary_receipts": {
+      "after": "8914698d241223558bb66a8319b9e1a1be12d03cc8f450d0af1f4588fe154883",
+      "before": "8914698d241223558bb66a8319b9e1a1be12d03cc8f450d0af1f4588fe154883"
+    },
+    "password_presence_only": {
+      "after": "acc64f9f0bf1688b3777ae5910ee4006ac00b191fc1bb4b9a3c87b4723014180",
+      "before": "acc64f9f0bf1688b3777ae5910ee4006ac00b191fc1bb4b9a3c87b4723014180"
+    },
+    "role_metadata": {
+      "after": "d7c697a14616ea1bcde623f53bd6e3882f469e1374248b1a565396ec0312672b",
+      "before": "d7c697a14616ea1bcde623f53bd6e3882f469e1374248b1a565396ec0312672b"
+    },
+    "role_settings": {
+      "after": "f26d580e9dbab1be987050589a1cf82f428ec1fc984305a604f3376fb3db55df",
+      "before": "f26d580e9dbab1be987050589a1cf82f428ec1fc984305a604f3376fb3db55df"
+    },
+    "study": {
+      "after": "9e85265832378e7452aa83d8a7eac42fda3e7d674a036e7f1095debc9af707b4",
+      "before": "9e85265832378e7452aa83d8a7eac42fda3e7d674a036e7f1095debc9af707b4"
+    }
+  },
+  "status": "EXACT_GETTER277_SUCCESSOR",
+  "whole_issue_acceptance": false
+}

@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T17:13:24.049604+00:00** against source `7b48a210e8c44620320b929df6ad2ed8cf0d43c1`. [planning/reviews/2026-10-18-getter-mcp-release/README.md](planning/reviews/2026-10-18-getter-mcp-release/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T19:10:46.011606+00:00** against source `8c2243020e82f52fbdf3169278715302f7688edf`. [planning/reviews/2026-10-18-getter-timeout-fix/README.md](planning/reviews/2026-10-18-getter-timeout-fix/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -23,13 +23,13 @@ Sprint allocations may cover bounded preparation. Full issue acceptance still de
 
 ## S3B — Unblocked source and diagnosis (October 19–23, 2026)
 
-Kind: sprint. Capacity: 40 engineering hours. Goal: Deliver four bounded packets across #639, #410 and #428: actual fog/vent causal proof, prefix input/state admission, realized solar-night disposition and passive heap/rollback diagnosis. Source work can start independently; native checks require the existing Agents #5048→#5044→#5045 shared window to return and fresh exact admission. This is a new prospective one-week budget, not measured remaining hours from original S3.
+Kind: sprint. Capacity: 40 engineering hours. Goal: Deliver four bounded packets across #639, #410 and #428: actual fog/vent causal proof, prefix input/state admission, realized solar-night disposition and passive heap/rollback diagnosis. The later getter277 follow-up is installed. The previously returned Agents shared window is not an outstanding blocker; further native checks use fresh exact admission and normal shared-CI coordination. This is a new prospective one-week budget, not measured remaining hours from original S3.
 
-Exit: Each selected packet has exact source/input/output custody and a truthful tested or blocked outcome. Whole issues retain all original criteria. The compiled prefix stays UNPROVEN unless independently demonstrated otherwise; no OTA, production promotion, active experiment or draw.
+Exit: Retain original bounded packet source/input/output custody and truthful outcomes; whole issues retain all original criteria. Getter277 follow-up is installed and qualified on real ordinary-role results. The compiled prefix stays UNPROVEN unless independently demonstrated; no OTA, active experiment or draw is part of this follow-up. Only migrate was promoted, with no serving workload rollout.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | Reuse accepted MCP-only live release and sealed bounded diagnosis. Prepare a separately selected immutable bounds/resolved-stage optimization with full semantic parity; no further getter query, new audience or planner route is implied. Genuine episode/daytime-held/planner acceptance remains open. |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | Use the installed validity-bearing results to complete a bounded daytime-coverage assessment and verify the intended admin/planner consumption paths through existing approved identities. Distinguish observed zero holds from complete measured absence, preserve ineffective/incomplete outcomes, and keep crop-sensing and physical-efficacy requirements explicit. Reuse the accepted getter delivery; no repair retry, new credential or broader audience is required by this checkpoint. |
 | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | 4–6 | P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion. |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 14–22 | P1 native packet and P2 source/input admission are complete within scope. Reuse3 compiles/56 positives/8 completed causal negatives and strict refusal report; obtain a legitimate causal pre-tick state producer/reconstruction and prove row-wise propagation/recovery before prefix credit. Historical prefix stays27/48 UNPROVEN; do not repeat the accepted synthetic matrix. |
 
@@ -175,7 +175,7 @@ Exit: Every required child has accepted evidence or an explicit recorded scope d
 | [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | Unestimated | Keep #428/#367/#369/#370 child scope and zero duplicated effort. P4 only bounds current heap/reset/rollback uncertainty; it does not justify broad simplification. |
 | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581) | Research/release lead | Unestimated | Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction. |
 | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Runtime/release lead | Unestimated | Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop. |
-| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Publish accepted MCP release and bounded getter diagnosis with final CI/custody; preserve47open/27edges and all estimates. Pull remaining source/authentic input/physical work only for a demonstrated gap. |
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Advance the remaining measured daytime evidence, intended outcome-consumer route, authentic scientific inputs and physical/recovery work. Reuse the installed getter and accepted MCP/S3B receipts; retain negative and inconclusive outcomes, unchanged acceptance edges and the original effort estimates without inferring remaining hours. |
 
 ## Campaign stage contracts
 

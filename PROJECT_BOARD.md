@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T17:13:24.049604+00:00** against source `7b48a210e8c44620320b929df6ad2ed8cf0d43c1`. [planning/reviews/2026-10-18-getter-mcp-release/README.md](planning/reviews/2026-10-18-getter-mcp-release/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T19:10:46.011606+00:00** against source `8c2243020e82f52fbdf3169278715302f7688edf`. [planning/reviews/2026-10-18-getter-timeout-fix/README.md](planning/reviews/2026-10-18-getter-timeout-fix/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|

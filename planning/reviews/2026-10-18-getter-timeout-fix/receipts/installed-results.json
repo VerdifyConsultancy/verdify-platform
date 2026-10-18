@@ -1,0 +1,77 @@
+{
+  "status": "INSTALLED_ORDINARY_REAL_EPISODES_PASSED",
+  "calls": [
+    {
+      "capture": "installed-oct16-custom-01",
+      "pod": "verdify-mcp-67bdb8d8c8-dwfdm",
+      "pod_uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+      "night": "2026-10-16",
+      "plan_mode": "force_custom_plan",
+      "getter_seconds": 11.816649,
+      "rows": 0,
+      "rows_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "dispositions": {
+        "blocked": 0,
+        "effective": 0,
+        "ineffective": 0,
+        "insufficient_evidence": 0
+      },
+      "evidence_status_counts": {},
+      "safety_gate_status": "pending",
+      "result_sha256": "6dd725d7911af925bae7cc7768bc01c6f2ad1801a52e612f128bcaceb7424d9e"
+    },
+    {
+      "capture": "installed-oct04-custom-01",
+      "pod": "verdify-mcp-67bdb8d8c8-dwfdm",
+      "pod_uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+      "night": "2026-10-04",
+      "plan_mode": "force_custom_plan",
+      "getter_seconds": 11.269874,
+      "rows": 4,
+      "rows_sha256": "00cb760f21aac7b49d15bc8be7fb5e45425b1f2d875efae4bd767c74ca4a1884",
+      "dispositions": {
+        "blocked": 0,
+        "effective": 0,
+        "ineffective": 2,
+        "insufficient_evidence": 2
+      },
+      "evidence_status_counts": {
+        "complete": 2,
+        "incomplete": 2
+      },
+      "safety_gate_status": "pass",
+      "result_sha256": "5c39277c88076f39d13da45dc8d1b42884b715a03eda8b50a89aeef1d233de68"
+    },
+    {
+      "capture": "installed-oct04-generic-01",
+      "pod": "verdify-mcp-67bdb8d8c8-jzfrn",
+      "pod_uid": "c5c8b3d2-0b0f-474a-a4c1-1ed0fbb33095",
+      "night": "2026-10-04",
+      "plan_mode": "force_generic_plan",
+      "getter_seconds": 4.966761,
+      "rows": 4,
+      "rows_sha256": "00cb760f21aac7b49d15bc8be7fb5e45425b1f2d875efae4bd767c74ca4a1884",
+      "dispositions": {
+        "blocked": 0,
+        "effective": 0,
+        "ineffective": 2,
+        "insufficient_evidence": 2
+      },
+      "evidence_status_counts": {
+        "complete": 2,
+        "incomplete": 2
+      },
+      "safety_gate_status": "pass",
+      "result_sha256": "a870e56371a9aa770fc975bcd093100e87ed33873fde2025dd63fe1f2b6d4a39"
+    }
+  ],
+  "custom_generic_all46_values_equal": true,
+  "snapshot_scope": "Three separate read-only repeatable-read sessions; October4 comparisons use separately captured historical snapshots",
+  "configured_product_timeout_ms": 15000,
+  "timeout_increased": false,
+  "original_oct16_empty_is_pending": true,
+  "complete_daylight_coverage_not_proved": true,
+  "positive_admin_dispatch_verified": false,
+  "planner_consumption_verified": false,
+  "whole_issue_410_acceptance": false
+}

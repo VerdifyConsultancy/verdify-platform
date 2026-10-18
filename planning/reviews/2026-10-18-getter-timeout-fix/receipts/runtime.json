@@ -1,0 +1,35 @@
+{
+  "status": "RUNTIME_HTTP_SMOKE_WRITER_IDENTITIES_PASSED",
+  "smoke_passed": 9,
+  "smoke_failed": 0,
+  "device_writer_connections": 1,
+  "writer": "verdify-ingestor-654648cdf6-94bwz",
+  "http_mcp_replicas": 2,
+  "iris_tools": 23,
+  "admin_outcome_iris_denied": true,
+  "unchanged_deployment_specs_and_uids": 15,
+  "unchanged_db_api_ingestor_mcp_serving_pods": 6,
+  "baseline_completed_job_exclusions": [
+    {
+      "name": "verdify-db-watchdog-29872426-wq2vw",
+      "uid": "c63d08da-3ee3-42d8-92cc-0651632e400b",
+      "phase_at_baseline": "Succeeded",
+      "reason": "completed temporary Job naturally removed; not serving database StatefulSet"
+    }
+  ],
+  "argo_sync_status": "Synced",
+  "argo_health": "Healthy",
+  "argo_compared_revision": "8c2243020e82f52fbdf3169278715302f7688edf",
+  "last_argo_operation_revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+  "new_argo_operation_submitted": false,
+  "migration_delivery": "standalone exact owning Jobs",
+  "baked_mcp_source": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "api_source": "cb21fd3d3295aa8d7183f70b0d5ac82405410b1a",
+  "operator_auth": "existing ROOT kubeconfig currentvallery, no credential creation/copy/globalcontextmutation",
+  "failed_harnesses_retained": [
+    "runtime-after277:missingKUBECONFIG localprecheck",
+    "runtime-after277-v2:broadDBprefixincludednaturallyremovedcompletedwatchdog"
+  ],
+  "passed_native_calls_not_repeated_for_filter_correction": true,
+  "finished": "2026-10-18T19:08:26.575939+00:00"
+}

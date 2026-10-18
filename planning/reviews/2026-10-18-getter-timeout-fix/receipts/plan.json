@@ -1,0 +1,145 @@
+{
+  "orchestrator_sha256": "e87e6d44701c95b84696510333fbf0dfda7a68a71c7c786797288e3462c249db",
+  "init_identity_scope": "declared owning image reference and observed resolved digest; no independent init digest pin claimed",
+  "final_logs": {
+    "wait-for-db": {
+      "bytes": 40,
+      "sha256": "b3facfdebf2be8787e90247f4605c9a25233212b3c809f505ec28459920f2054"
+    },
+    "migrate": {
+      "bytes": 162,
+      "sha256": "434270a6cc3bb333c2b8474d25da51335b1741579612a833b009514545ad6583"
+    }
+  },
+  "mode": "plan",
+  "job": "verdify-getter277-plan-20261018-01",
+  "uid": "acb9cac5-d4fa-41dc-b3e1-ee5d95cddda8",
+  "manifest_sha256": "7ec966d8e23fe3356c42a1d66604e565d9076791d1874b9280830b5754621592",
+  "finished": "2026-10-18T19:02:13.471457+00:00",
+  "conditions": [
+    {
+      "lastProbeTime": "2026-10-18T19:01:50Z",
+      "lastTransitionTime": "2026-10-18T19:01:50Z",
+      "message": "Job resumed",
+      "reason": "JobResumed",
+      "status": "False",
+      "type": "Suspended"
+    },
+    {
+      "lastProbeTime": "2026-10-18T19:02:09Z",
+      "lastTransitionTime": "2026-10-18T19:02:09Z",
+      "message": "Reached expected number of succeeded pods",
+      "reason": "CompletionsReached",
+      "status": "True",
+      "type": "SuccessCriteriaMet"
+    },
+    {
+      "lastProbeTime": "2026-10-18T19:02:09Z",
+      "lastTransitionTime": "2026-10-18T19:02:09Z",
+      "message": "Reached expected number of succeeded pods",
+      "reason": "CompletionsReached",
+      "status": "True",
+      "type": "Complete"
+    }
+  ],
+  "pod": "verdify-getter277-plan-20261018-01-sgdqn",
+  "pod_uid": "4a8de013-69de-4a9c-af45-4428c3e256c2",
+  "node": "vm-k3s-node7",
+  "containers": [
+    {
+      "allocatedResources": {
+        "cpu": "25m",
+        "memory": "32Mi"
+      },
+      "containerID": "containerd://5f77a52798e7f34713af0f38942d20787a2817a1397f2159e9d43121420cde21",
+      "image": "docker.io/timescale/timescaledb:2.25.2-pg16",
+      "imageID": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6",
+      "lastState": {},
+      "name": "wait-for-db",
+      "ready": true,
+      "resources": {
+        "limits": {
+          "memory": "1Gi"
+        },
+        "requests": {
+          "cpu": "25m",
+          "memory": "32Mi"
+        }
+      },
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://5f77a52798e7f34713af0f38942d20787a2817a1397f2159e9d43121420cde21",
+          "exitCode": 0,
+          "finishedAt": "2026-10-18T19:01:51Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-18T19:01:51Z"
+        }
+      },
+      "user": {
+        "linux": {
+          "gid": 1000,
+          "supplementalGroups": [
+            1000
+          ],
+          "uid": 999
+        }
+      }
+    },
+    {
+      "allocatedResources": {
+        "cpu": "25m",
+        "memory": "32Mi"
+      },
+      "containerID": "containerd://6ddcf61798dded85d4668e9f61ad98e2eebd3e83014c4d9946fe6b71399c7a52",
+      "image": "sha256:8ed8f68f87cd6ad0acbaaa8f831c0de7b9fae87f84eea4f38fee80f3a3372f0c",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:0bdb10cfd458de4b1bd4e201024efbf19aa724e0087cf5dcf88ce02c9a0043ae",
+      "lastState": {},
+      "name": "migrate",
+      "ready": false,
+      "resources": {
+        "limits": {
+          "memory": "1Gi"
+        },
+        "requests": {
+          "cpu": "25m",
+          "memory": "32Mi"
+        }
+      },
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://6ddcf61798dded85d4668e9f61ad98e2eebd3e83014c4d9946fe6b71399c7a52",
+          "exitCode": 0,
+          "finishedAt": "2026-10-18T19:02:07Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-18T19:02:04Z"
+        }
+      },
+      "user": {
+        "linux": {
+          "gid": 1000,
+          "supplementalGroups": [
+            1000
+          ],
+          "uid": 1000
+        }
+      },
+      "volumeMounts": [
+        {
+          "mountPath": "/db/c0-boundary-contract.json",
+          "name": "c0-boundary-contract",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/tmp",
+          "name": "tmp"
+        }
+      ]
+    }
+  ],
+  "passed": true
+}
