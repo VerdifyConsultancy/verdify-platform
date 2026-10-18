@@ -1,0 +1,57 @@
+{
+  "schema": "verdify.firmware-validity-dwell-source/v1",
+  "issues": [
+    368,
+    367
+  ],
+  "base_revision": "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+  "scope": "Finite complete-probe diagnostics and per-tick relay dwell-duration refresh, preserving aggregates and relay history.",
+  "retained_368": {
+    "archive": "planning/reviews/2026-10-18-status/368-source-candidate.json",
+    "patch_sha256": "1aa3c1e2122375af31a385ce6f80db327e4ade7944339445cc313733f1b4b2a6",
+    "applied_exactly": true
+  },
+  "retained_367": {
+    "source_commit": "bc35137017b49deac04495c11ef88b48086c5802",
+    "evidence_branch_head": "3ebba10e2890ad536fcdf99beeb52aa18d4ec983",
+    "controls_patch_and_native_test_byte_equal": true
+  },
+  "files": {
+    "firmware/greenhouse.yaml": "8cfbb7ce7f3e87f2ba1a0cc9e24b84b715af341a17d845cd3c0bfaf3e4d64b2a",
+    "firmware/greenhouse/controls.yaml": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+    "firmware/greenhouse/sensors.yaml": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563",
+    "firmware/lib/probe_validity.h": "b55de7077fce6efeccc2f298d394399cae204965cacda0a9dae30017af2807c8",
+    "firmware/policy_consumer_manifest.json": "23eaa01e66d6f2eba6a653305a945f6ffb61e74826ff7fc1229f8eb4ab159259",
+    "firmware/test/test_greenhouse_logic.cpp": "426d8e98800a3a26d21126659a849fe71b8a9e2a6093fabf36c83d1d7197bde4",
+    "tests/test_policy_relay_dwell_refresh.py": "40778ec20c9e34b3e65ce5157f87421febad640b2cfdba7669429067c256703b",
+    "tests/test_probe_diagnostics_native.py": "8b8f7fef8a528efe9b489ff25ae64b4c3a6ad67712c225058152913d1a85d135"
+  },
+  "source_checks": {
+    "ruff_two_test_modules": "PASS",
+    "diff_check": "PASS",
+    "aggregate_definitions": "all three unchanged",
+    "policy_consumer_manifest": "line offsets only; semantic equality",
+    "ast_and_shell_syntax": "PASS",
+    "focused_test_collection": "154 collected (70 diagnostic +84 dwell); fixtures not executed"
+  },
+  "native_checks": "PENDING; no compilation or replay on the Mac",
+  "physical_acceptance": false,
+  "ota_attempted": false,
+  "remaining": [
+    "#368 impossible jumps/stuck-in-range plausibility, control validity and scientific panel/quorum contracts",
+    "#367 broader single-authority/physical chatter and starvation acceptance",
+    "#390 actual firmware/binary/relay/readback/recovery release proof"
+  ],
+  "dated_runtime_evidence": {
+    "observed_climate_at": "2026-10-18T07:32:45.365624+00:00",
+    "observed_diagnostics_at": "2026-10-18T07:32:44.680182+00:00",
+    "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+    "south_climate_fields": "SQL NULL",
+    "other_wall_probes": "three finite temperature/RH/VPD triples",
+    "reported_count": 4,
+    "reported_health": "OK",
+    "receipt_sha256": "e5eba2d0b1fd3f9d2b68a15ffdd7452403dfc3af4dcfe210deba72900f2809b3",
+    "raw_stdout_sha256": "317266ec180e0c49c4bf41b4fc9ba6d6e04596d6c8502d4a20e011647011e3e7",
+    "scope": "ROOT read-only diagnosis, stable database identity; no hardware cause or candidate deployment proof"
+  }
+}

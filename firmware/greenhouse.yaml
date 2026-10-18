@@ -28,6 +28,7 @@ esphome:
   includes:
     - lib/heap_diagnostics.h
     - lib/sntp_acquisition.h
+    - lib/probe_validity.h
     - lib/greenhouse_types.h
     - lib/greenhouse_solar.h
     - lib/irrigation_policy.h

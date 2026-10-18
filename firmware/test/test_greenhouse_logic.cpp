@@ -8,6 +8,7 @@
 #include "greenhouse_logic.h"
 #include "irrigation_policy.h"
 #include "sntp_acquisition.h"
+#include "probe_validity.h"
 #include "invariants.h"
 #include <cstdio>
 #include <cstring>
@@ -35,6 +36,37 @@ static int tests_failed = 0;
 
 struct TestEntry { const char* name; void (*fn)(); };
 static std::vector<TestEntry> test_registry;
+
+// Truthful diagnostics reject nonfinite fields even when a temperature
+// callback refreshed the shared probe timestamp. Steady values remain valid.
+TEST(probe_validity_rejects_missing_stale_and_nonfinite_fields) {
+    ASSERT_FALSE(probe_sample_fresh(300001u, 0u, 300000u));
+    ASSERT_TRUE(probe_sample_fresh(300000u, 1u, 300000u));
+    ASSERT_FALSE(probe_sample_fresh(300001u, 1u, 300000u));
+    ASSERT_FALSE(probe_triple_finite(NAN, 60.0f, 1.0f));
+    ASSERT_FALSE(probe_triple_finite(75.0f, NAN, 1.0f));
+    ASSERT_FALSE(probe_triple_finite(75.0f, 60.0f, NAN));
+    ASSERT_FALSE(probe_triple_finite(INFINITY, 60.0f, 1.0f));
+    ASSERT_FALSE(probe_triple_finite(75.0f, -INFINITY, 1.0f));
+    ASSERT_FALSE(probe_triple_finite(75.0f, 60.0f, INFINITY));
+    PASS();
+}
+
+TEST(probe_validity_preserves_steady_values_and_uint32_wrap) {
+    const uint32_t before_wrap = UINT32_MAX - 14u;
+    ASSERT_TRUE(probe_sample_fresh(15u, before_wrap, 120000u));
+    ASSERT_TRUE(probe_pair_finite(75.0f, 60.0f));
+    ASSERT_TRUE(probe_triple_finite(75.0f, 60.0f, 1.0f));
+    ASSERT_TRUE(probe_triple_finite(75.0f, 60.0f, 1.0f));
+    ASSERT_TRUE(probe_triple_finite(32.0f, 100.0f, 0.0f));
+    PASS();
+}
+
+TEST(probe_health_warns_before_aggregate_eligibility_expires) {
+    ASSERT_FALSE(probe_sample_fresh(120001u, 1u, 120000u));
+    ASSERT_TRUE(probe_sample_fresh(120001u, 1u, 300000u));
+    PASS();
+}
 
 static SensorInputs make_inputs(float temp, float vpd, float rh = 60.0f) {
     // Sprint-15: outdoor data defaults to STALE so the new summer-vent
