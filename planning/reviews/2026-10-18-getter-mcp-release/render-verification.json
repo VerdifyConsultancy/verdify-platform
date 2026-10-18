@@ -1,0 +1,18 @@
+{
+  "resource_count": 129,
+  "changed_resources": [
+    [
+      "apps/v1",
+      "Deployment",
+      "verdify-prod",
+      "verdify-mcp"
+    ]
+  ],
+  "before_image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+  "after_image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+  "only_semantic_change": "MCP Deployment container image",
+  "all_other_resources_and_hooks_byte_semantic_equal": true,
+  "before_sha256": "32e84bd8ca706af15b9700e55eb06835d1144a2d5ace60f60f10fd3679fd4741",
+  "after_sha256": "e1b14fead448e12a5a60ef08910f65c1f659860a45b0d99dd2b30bb0936f2f06",
+  "zero_secrets": true
+}

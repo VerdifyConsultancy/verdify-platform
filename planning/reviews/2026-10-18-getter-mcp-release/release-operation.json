@@ -1,0 +1,216 @@
+{
+  "at": "2026-10-18T17:13:24.047500+00:00",
+  "release_revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+  "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "operation": {
+    "finishedAt": "2026-10-18T17:09:37Z",
+    "message": "successfully synced (all tasks run)",
+    "operation": {
+      "initiatedBy": {
+        "username": "laptop-root"
+      },
+      "retry": {},
+      "sync": {
+        "resources": [
+          {
+            "group": "apps",
+            "kind": "Deployment",
+            "name": "verdify-mcp",
+            "namespace": "verdify-prod"
+          }
+        ],
+        "revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1"
+      }
+    },
+    "phase": "Succeeded",
+    "startedAt": "2026-10-18T17:09:36Z",
+    "syncResult": {
+      "resources": [
+        {
+          "group": "apps",
+          "hookPhase": "Running",
+          "images": [
+            "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393"
+          ],
+          "kind": "Deployment",
+          "message": "deployment.apps/verdify-mcp configured",
+          "name": "verdify-mcp",
+          "namespace": "verdify-prod",
+          "status": "Synced",
+          "syncPhase": "Sync",
+          "version": "v1"
+        }
+      ],
+      "revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+      "source": {
+        "path": "deploy/k8s/overlays/prod",
+        "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "targetRevision": "main"
+      }
+    }
+  },
+  "sync": {
+    "comparedTo": {
+      "destination": {
+        "namespace": "verdify-prod",
+        "server": "https://kubernetes.default.svc"
+      },
+      "ignoreDifferences": [
+        {
+          "group": "apps",
+          "jsonPointers": [
+            "/spec/volumeClaimTemplates/0/spec/volumeMode",
+            "/spec/volumeClaimTemplates/0/status"
+          ],
+          "kind": "StatefulSet",
+          "name": "verdify-db",
+          "namespace": "verdify-prod"
+        },
+        {
+          "jsonPointers": [
+            "/spec/volumeMode",
+            "/spec/volumeName"
+          ],
+          "kind": "PersistentVolumeClaim",
+          "name": "verdify-lab-site-cache",
+          "namespace": "verdify-prod"
+        },
+        {
+          "jsonPointers": [
+            "/spec/volumeMode",
+            "/spec/volumeName"
+          ],
+          "kind": "PersistentVolumeClaim",
+          "name": "verdify-hermes-iris-data-portable-20260801",
+          "namespace": "verdify-prod"
+        }
+      ],
+      "source": {
+        "path": "deploy/k8s/overlays/prod",
+        "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "targetRevision": "main"
+      }
+    },
+    "revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+    "status": "Synced"
+  },
+  "health": {
+    "lastTransitionTime": "2026-10-18T17:10:41Z",
+    "status": "Healthy"
+  },
+  "MCP_pods": [
+    {
+      "name": "verdify-mcp-67bdb8d8c8-dwfdm",
+      "uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+      "containers": [
+        {
+          "allocatedResources": {
+            "cpu": "250m",
+            "memory": "256Mi"
+          },
+          "containerID": "containerd://7756c76d3e94d08df4cbb670ec80ad2acf7126d941ff5d636a4c7c7557f170f2",
+          "image": "sha256:f2af3aa6c7bc57a194bf6caba825a49e8fc6a8388a6763a04b81a00bb6e207cb",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+          "lastState": {},
+          "name": "mcp",
+          "ready": true,
+          "resources": {
+            "limits": {
+              "cpu": "2",
+              "memory": "1Gi"
+            },
+            "requests": {
+              "cpu": "250m",
+              "memory": "256Mi"
+            }
+          },
+          "restartCount": 0,
+          "started": true,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-18T17:10:22Z"
+            }
+          },
+          "user": {
+            "linux": {
+              "gid": 1000,
+              "supplementalGroups": [
+                1000
+              ],
+              "uid": 1000
+            }
+          },
+          "volumeMounts": [
+            {
+              "mountPath": "/tmp",
+              "name": "tmp"
+            },
+            {
+              "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+              "name": "kube-api-access-nmnqp",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp-67bdb8d8c8-jzfrn",
+      "uid": "c5c8b3d2-0b0f-474a-a4c1-1ed0fbb33095",
+      "containers": [
+        {
+          "allocatedResources": {
+            "cpu": "250m",
+            "memory": "256Mi"
+          },
+          "containerID": "containerd://7bdf4e2195edc8e3e2834f1e114f5184f5c6446fb8547fb2477a58ad8154a0ec",
+          "image": "sha256:f2af3aa6c7bc57a194bf6caba825a49e8fc6a8388a6763a04b81a00bb6e207cb",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+          "lastState": {},
+          "name": "mcp",
+          "ready": true,
+          "resources": {
+            "limits": {
+              "cpu": "2",
+              "memory": "1Gi"
+            },
+            "requests": {
+              "cpu": "250m",
+              "memory": "256Mi"
+            }
+          },
+          "restartCount": 0,
+          "started": true,
+          "state": {
+            "running": {
+              "startedAt": "2026-10-18T17:09:51Z"
+            }
+          },
+          "user": {
+            "linux": {
+              "gid": 1000,
+              "supplementalGroups": [
+                1000
+              ],
+              "uid": 1000
+            }
+          },
+          "volumeMounts": [
+            {
+              "mountPath": "/tmp",
+              "name": "tmp"
+            },
+            {
+              "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+              "name": "kube-api-access-fvmh5",
+              "readOnly": true,
+              "recursiveReadOnly": "Disabled"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "no_sync_history_expected": "Selective fallback skips hooks and ordinary history by design; actual operation/result and live identities retained."
+}

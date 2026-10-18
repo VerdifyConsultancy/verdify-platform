@@ -1,0 +1,53 @@
+{
+  "schema": "verdify.mcp-selective-release-source-review/v1",
+  "reviewed_at": "2026-10-18T16:55:24.892728+00:00",
+  "scope": "source-only reviewed fallback; no cluster or DB calls and no operations submitted",
+  "decision": "Use one selective MCP Deployment sync; do not full-sync or change bootstrap source for this release.",
+  "supersedes_full_sync_option_in": "/private/tmp/verdify-mcp-only-release-source-review.json",
+  "reason": "ROOT fresh directlaunch readiness found shadow/closed/feature-off lease19 recovered attempt3; settled-emergency-hold predicate failed. Full sync can enter unrelated CONFIGURE/REGISTER path. This failure remains retained.",
+  "source_basis": [
+    "AGENTS.md: explicit resources fallback allowed only for change with no migration or hook part",
+    "docs/runbooks/attended-convergence.md: fallback only for proven migration/hook-independent change",
+    "docs/runbooks/laptop-operator.md: selective skips all hooks and does not record normal sync history",
+    "scripts/gen-sync-resource-vector.sh: group/kind/name/namespace tuple shape"
+  ],
+  "operation_sync": {
+    "revision": "<EXACT-MCP-ONLY-PROMOTION-COMMIT-SHA>",
+    "prune": false,
+    "resources": [
+      {
+        "group": "apps",
+        "kind": "Deployment",
+        "name": "verdify-mcp",
+        "namespace": "verdify-prod"
+      }
+    ]
+  },
+  "submission_invariants": [
+    "Fresh Application UID matches retainedcae977c6-dcd1-42aa-a526-dc9ff2bd8c69; operation absent and prior operation terminal. Bind current resourceVersion.",
+    "One atomic JSON patch tests current resourceVersion, clears status.operationState, and installs exact-revision operation containing sole MCP tuple. Preserve failed/readback outcomes; no automatic retry.",
+    "Source promotion helper selects only verdify-mcp. All four other managed release pins plus planner/setpoint/lab handpins remain identical.",
+    "Final source render diff is exactly Deployment/verdify-mcp container image cf26b0df\u2026 ->264f5fcb\u2026; no replicas/env/auth/config/SA/RBAC/policy/service/schema or controller changes.",
+    "Do not use full129-resource generator output, enable prune, invoke migration/bootstrap, mutate study state, or manufacture admin credentials."
+  ],
+  "compatibility": {
+    "mcp_candidate": "sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+    "candidate_source": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+    "mcp_rollback": "sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c",
+    "migrate_unchanged": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+    "projection_fix_requires_migration": false,
+    "existing_migrate_source5e992d_to_candidate_db_migrations_equal": true,
+    "new_SQL_functions_or_return_types": false,
+    "MCP_Dockerfile_requirements_and_slack_modules_vs_cb21_changed": false
+  },
+  "acceptance": [
+    "New operation start/revision and exact one-item resources vector; terminal successful syncResult covers only apps/Deployment/verdify-mcp. No migration/bootstrap/directlaunch/winter hook launches.",
+    "Two new MCP Pods Ready with candidate requested digest and imageID, baked source d298, preserved expected Deployment UID and normal rolling generation. Retain actual UIDs, old+new ReplicaSets and restart states.",
+    "No unrelated workload rollout or device/DB mutation from release. Preserve ingestor/DB and other core UID/digest/restart state, existing role/config metadata, and exactly one device connection.",
+    "Authenticated existing-Iris initialize/tools inventory and readiness DB/auth checks; outcome_kpi remains correctly denied for Iris.",
+    "Positive authenticated outcome_kpi projection requires an already-authorized actual admin route, currently absent from captured Deployment. No credential creation or audience bypass inferred. A direct loaded-function call is separate function evidence.",
+    "Genuine nonempty incomplete/unknown/no-fail data distinguishes the fixed aggregate; no rows must remain pending, anyfail fail, all explicitpass pass. Preserve episode and confound details and timeout failures. Planner consumption remains separate."
+  ],
+  "history_semantics": "Selective operation does not add normal Argo sync history. Preserve explicit operation, Git revision and live Pod custody instead; absence of history is not a release failure.",
+  "rollback": "If needed, restore only old MCP pin in Git and use the same exact MCP-only selective path at the rollback revision; do not full-sync as rollback."
+}

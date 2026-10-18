@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-18T17:11:15.603282+00:00",
+  "status": "TWO_REPLICAS_INSTALLED_PROJECTION_AND_SERVICE_AUTH_PASSED",
+  "replicas": [
+    {
+      "pod": "verdify-mcp-67bdb8d8c8-dwfdm",
+      "uid": "863f88e7-cc66-42d9-8a79-a78b7676e0ad",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "http": {
+        "exit": 0,
+        "stdout_sha256": "4015c4520a0a424910c8d293e0b6d6c750c9facae75f7f77544be78c7e04d76c",
+        "script_sha256": "f287d481c9287b9d78152c4e8421a0394b95df6db04bc4eaf389325e51c5b390",
+        "status": "PASSED"
+      },
+      "projection": {
+        "exit": 0,
+        "stdout_sha256": "f15c341825ff15d305cfdd13a392fb949fc6afe5903beaad1aa73d8127621923",
+        "script_sha256": "751079f0367daedf68795395cb98f4c052997c1e1c54cbed21647a4697575ff8",
+        "status": "PASSED"
+      }
+    },
+    {
+      "pod": "verdify-mcp-67bdb8d8c8-jzfrn",
+      "uid": "c5c8b3d2-0b0f-474a-a4c1-1ed0fbb33095",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:264f5fcb4da78a068c5bc64ec2b70d9efe122a473a1f92bb5d923565fb47a393",
+      "http": {
+        "exit": 0,
+        "stdout_sha256": "97626af42a6480a1a4f9f4b6b897afa0e67c632fc0d2f2c06077068a283816b2",
+        "script_sha256": "f287d481c9287b9d78152c4e8421a0394b95df6db04bc4eaf389325e51c5b390",
+        "status": "PASSED"
+      },
+      "projection": {
+        "exit": 0,
+        "stdout_sha256": "a15fad2ae445b8bbf93b7b33d49209c7f2da49a1c7533b34dd157d3d16220363",
+        "script_sha256": "751079f0367daedf68795395cb98f4c052997c1e1c54cbed21647a4697575ff8",
+        "status": "PASSED"
+      }
+    }
+  ],
+  "synthetic_installed_projection_cases_per_replica": 10,
+  "genuine_episode_payload_available": false,
+  "authenticated_positive_admin_outcome_dispatch": false,
+  "planner_consumption": false,
+  "no_database_fixtures_or_writes": true,
+  "limitation": "Installed hash-bound projection execution is distinct from authenticated positive admin dispatch or genuine episode/planner acceptance."
+}

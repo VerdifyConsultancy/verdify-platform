@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T15:35:12.583197+00:00** against source `d52bc8cc71c8267a2fefab0dd3286737d4ed0150`. [planning/reviews/2026-10-18-next-sprint/README.md](planning/reviews/2026-10-18-next-sprint/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T17:13:24.049604+00:00** against source `7b48a210e8c44620320b929df6ad2ed8cf0d43c1`. [planning/reviews/2026-10-18-getter-mcp-release/README.md](planning/reviews/2026-10-18-getter-mcp-release/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -29,7 +29,7 @@ Exit: Each selected packet has exact source/input/output custody and a truthful 
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | P3 completed its bounded attempt: source identity matched, then the October 16 getter timed out at 2s with no episode result; do not retry or widen it. Integrate the tested MCP incomplete-status correction through existing native CI and verify actual MCP/planner delivery when that scoped release is selected. Any further getter diagnosis needs a new bounded query plan; no zero held-admission or dry-out benefit is established. |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | Control lead | 4–6 | Reuse accepted MCP-only live release and sealed bounded diagnosis. Prepare a separately selected immutable bounds/resolved-stage optimization with full semantic parity; no further getter query, new audience or planner route is implied. Genuine episode/daytime-held/planner acceptance remains open. |
 | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) | Control lead | 4–6 | P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion. |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 14–22 | P1 native packet and P2 source/input admission are complete within scope. Reuse3 compiles/56 positives/8 completed causal negatives and strict refusal report; obtain a legitimate causal pre-tick state producer/reconstruction and prove row-wise propagation/recovery before prefix credit. Historical prefix stays27/48 UNPROVEN; do not repeat the accepted synthetic matrix. |
 
@@ -175,7 +175,7 @@ Exit: Every required child has accepted evidence or an explicit recorded scope d
 | [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | Unestimated | Keep #428/#367/#369/#370 child scope and zero duplicated effort. P4 only bounds current heap/reset/rollback uncertainty; it does not justify broad simplification. |
 | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581) | Research/release lead | Unestimated | Keep a zero-effort roll-up that links the current child evidence and completed packet versus unfinished issue distinction. |
 | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Runtime/release lead | Unestimated | Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop. |
-| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Publish S3B bounded outcomes and existing PR CI/candidate delivery receipts through the current execution handoff. P1/P2/P4 packets are complete; P3 retains its one actual timeout and source correctness fix. Preserve47open/27active edges, all acceptance clauses and original22–34h/40h estimates; select only demonstrated remaining work. |
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | Publish accepted MCP release and bounded getter diagnosis with final CI/custody; preserve47open/27edges and all estimates. Pull remaining source/authentic input/physical work only for a demonstrated gap. |
 
 ## Campaign stage contracts
 

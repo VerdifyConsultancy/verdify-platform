@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-18T17:08:17.447071+00:00",
+  "PR": 987,
+  "head": "071c51abd9aa9f2375d5825dbd9dfe6ebd2160fd",
+  "merge": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+  "exact_tree_equal": true,
+  "tree": "ddc6a11e828a94cf98d030140970ba87345b9140",
+  "merge_method": "squash without bypass"
+}

@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "status": "FINITE_DIAGNOSIS_COMPLETE_GETTER_UNREPAIRED",
+  "created_at": "2026-10-18T17:04:33.758680+00:00",
+  "scope": {
+    "issue": 410,
+    "source_revision": "c8cbc74266bd155db2c73ad495e19299d7b6555c",
+    "greenhouse": "vallery",
+    "night_date": "2026-10-16",
+    "source_window_utc": [
+      "2026-10-16T06:00:00Z",
+      "2026-10-18T06:00:00Z"
+    ],
+    "statement_timeout_ms": 2000,
+    "lock_timeout_ms": 500,
+    "read_only": true,
+    "database_pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "postmaster_started_at": "2026-09-29T00:40:56.280382+00:00",
+    "function_definition_count_guarded": 13,
+    "migration_ledger_count_guarded": 8
+  },
+  "evidence_integrity": "All six query files match actual captured query.sql bytes; stdout/stderr bytes and hashes match original receipts; all fresh guards passed and exact before/after database container metadata remained equal with Ready and zero restarts.",
+  "attempts": [
+    {
+      "attempt": "getter-plan-01",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-plan-01",
+      "query_sha256": "9c8a36a2810abd68d67d34882a77e311cf18a49023592c4b116ee16aa78fc385",
+      "receipt_sha256": "74f337f42ea8bd47d5c15e13957d53d2ca4ebc5002506f08764b2e8814c9de3a",
+      "stdout_sha256": "23a52033e430cef86822e22c5c5cc6fb05eff9e70be39d577660d1b321d1cf67",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_code": 0,
+      "started_at": "2026-10-18T16:52:46.533605+00:00",
+      "finished_at": "2026-10-18T16:52:47.528184+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "EXPLAIN_WITHOUT_ANALYZE_COMPLETED",
+      "json_documents": 3
+    },
+    {
+      "attempt": "getter-plan-02",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-plan-02",
+      "query_sha256": "f28e5fbcbcc651b79b508e485594fed1984196fc99781a80a6f1d64ac90ee838",
+      "receipt_sha256": "c7c036b0a422de6ff9304fd9b0ed1e6158f57e6107971a7a8cefbe8dba845de9",
+      "stdout_sha256": "f4c31eb9ed39631ce1488693a11a6dca2a4990e14db83bcd9cbee0df65d71b11",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_code": 0,
+      "started_at": "2026-10-18T16:55:14.637617+00:00",
+      "finished_at": "2026-10-18T16:55:15.583446+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "EXPLAIN_WITHOUT_ANALYZE_COMPLETED",
+      "json_documents": 5
+    },
+    {
+      "attempt": "getter-candidate-03",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-candidate-03",
+      "query_sha256": "77fd3df153bc561b3d9d49f7fedebf33bbf0b123ce6f57bd0048067970374dcd",
+      "receipt_sha256": "d90cdf22c2131a1cedc5d988494ac9dac3077b3695ad762e051ba77e8eb05239",
+      "stdout_sha256": "9467eeff5e93dd700524f21f43aee0194bdba4b936f95725c71f6aa109eac4b7",
+      "stderr_sha256": "01a652dc1c6bcbebc306958f4296b17db6fdd0749fb0a653ae27d210161e3495",
+      "exit_code": 3,
+      "started_at": "2026-10-18T16:57:51.168420+00:00",
+      "finished_at": "2026-10-18T16:57:53.370292+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "STATEMENT_TIMEOUT_2S",
+      "result_rows_returned": false,
+      "elapsed_query_completion_clock_available": false
+    },
+    {
+      "attempt": "getter-isolate-04a",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-isolate-04a",
+      "query_sha256": "4c855a6589317a5b9f7974a7ec990182db9d2b653783d99b41de0cf3c026131a",
+      "receipt_sha256": "c9bb2d68f1e2ba745a4c85fecc2ff86cc711f06b34d14e946444aa781b8b0e71",
+      "stdout_sha256": "3fe5b7e288bf5db81dee620e79d7ef8acb1b9c82ee33d200905ba0f15dc25f2d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_code": 0,
+      "started_at": "2026-10-18T17:02:36.164252+00:00",
+      "finished_at": "2026-10-18T17:02:36.561080+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "BOUNDED_STAGE_COMPLETED",
+      "counts": {
+        "action_minute": {
+          "rows": 2785,
+          "evaluated_row_json_bytes": 1094944
+        },
+        "climate_minute": {
+          "rows": 2785,
+          "evaluated_row_json_bytes": 545058
+        },
+        "setpoint_intervals": {
+          "rows": 5628,
+          "evaluated_row_json_bytes": 894306
+        }
+      },
+      "server_statement_elapsed_ms": 214.317
+    },
+    {
+      "attempt": "getter-isolate-04b",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-isolate-04b",
+      "query_sha256": "7764403a605139fc057a457d1f462aaaf35789216f180e5202e8b92cdb14de20",
+      "receipt_sha256": "5668a5b170f426a36ff523862435f1903257709a18caad4def08ca21777466df",
+      "stdout_sha256": "c65dd15876ffe2b8436d46a9480343580e5bcc0a8642f2ac743f2145c75fb353",
+      "stderr_sha256": "6b25decbde4ab098cd193e65ef1d8336a0aad829e3af89548faa73130e008992",
+      "exit_code": 3,
+      "started_at": "2026-10-18T17:02:44.527304+00:00",
+      "finished_at": "2026-10-18T17:02:46.703799+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "STATEMENT_TIMEOUT_2S",
+      "result_rows_returned": false,
+      "elapsed_query_completion_clock_available": false
+    },
+    {
+      "attempt": "getter-isolate-04c",
+      "retained_directory": "/Users/jason/maintenance/verdify-getter-mcp-20261018/getter-isolate-04c",
+      "query_sha256": "cd06adf133554a668555d8fa2ef50160b504d347bee1bb233043d3bab2c8196e",
+      "receipt_sha256": "efe4c07b63fed755c76df11a425af6c9baabbd0b79410cc8ded08a8647107cfd",
+      "stdout_sha256": "5918d5fac3aaa79b415c49ec6174e9218b88a19673053b725787379b3c6aed32",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_code": 0,
+      "started_at": "2026-10-18T17:03:24.701950+00:00",
+      "finished_at": "2026-10-18T17:03:25.016690+00:00",
+      "identity_guard_passed": true,
+      "same_database_container_state": true,
+      "status": "BOUNDED_STAGE_COMPLETED",
+      "counts": {
+        "helper_result_rows": 64,
+        "evaluated_row_json_bytes": 24162,
+        "selected_climate_minutes": 64
+      },
+      "server_statement_elapsed_ms": 149.637
+    }
+  ],
+  "planner_findings": {
+    "confirmed": "Materialized one-row bounds prevents literal timestamp pruning in original source plan. Sole NOT MATERIALIZED change exposes literal bounds and prunes each window scan to one chunk; historical seed remains its existing 14-chunk SkipScan.",
+    "baseline_direct_body_matches_original_getter_plan_except_numeric_estimates": true,
+    "baseline_operator_nodes": 252,
+    "candidate_operator_nodes": 101,
+    "baseline_estimated_total_cost": 77632.82,
+    "candidate_estimated_total_cost": 5380.99,
+    "baseline_planning_ms": 657.626,
+    "candidate_planning_ms": 12.436,
+    "jit_enabled": false,
+    "planning_improvement_is_execution_cure": false,
+    "comparison_sha256": "f068173cdd21cd2bb5e1e3d6bbf496f28d5f89fa1253ae2654a8b1b34462f039",
+    "candidate_bound_body_sha256": "70e4638b118ca6572e40a2808cc3d06d493054c7d9e846666def4252cc08730c"
+  },
+  "executor_findings": [
+    "The one actual candidate full query still timed out at 2 seconds and returned no episode result.",
+    "A consumed every climate_minute, action_minute, and setpoint_intervals field via materialized full-row JSON and byte-count aggregates: 2785 climate minutes, 2785 action minutes, 5628 intervals, 214.317 ms server statement elapsed.",
+    "B consumed all 25 resolved fields and timed out at 2 seconds before any episode/daytime/response work was requested. Remaining cost reproduces in the resolved prefix, including its joins and per-minute helpers.",
+    "C consumed the first 64 genuine climate minute rows and relevant band/house/solar/AH helper outputs without interval/action/response joins: 64 selected rows, 64 helper rows, 24162 evaluated JSON bytes, 149.637 ms server statement elapsed."
+  ],
+  "limits": [
+    "Cannot partition the resolved stage cost between interval joins, helper evaluation, planner choices, and forcing overhead from these probes.",
+    "Do not linearly extrapolate 64 helper samples to 2785 minutes. C forces fallback helper values even where the full getter might satisfy COALESCE from readback.",
+    "No complete installed-getter or candidate episode output, solar-night efficacy verdict, daytime admission count, or physical causal conclusion was obtained.",
+    "EXPLAIN estimates are not measured execution costs. Reported statement clocks include planning and the diagnostic aggregate/serialization work.",
+    "No byte-for-byte runtime parity is established: existing DISTINCT ON timestamp ties and floating aggregate order remain underdetermined; current-season and historical readback fallback semantics must be preserved.",
+    "No installed function, migration, schema, production setting, credential, or device state was changed by this diagnosis."
+  ],
+  "preservation": {
+    "all_original_attempts_and_failures_unmodified": true,
+    "original_getter_pilot_timeout_directory": "/Users/jason/maintenance/verdify-s3b-execution-20261018/p3-pilot-20261016-01",
+    "candidate_timeout_preserved": true,
+    "resolved_timeout_preserved": true,
+    "historical_plan_comparison_pending_text_preserved": true,
+    "new_queries_after_04c": false
+  },
+  "next_followup": "Separate performance follow-up: preserve the demonstrated NOT MATERIALIZED pruning improvement, select a narrowly evidenced resolved-stage optimization, and validate unchanged cardinality, timestamp-tie, solar, historical readback/current-season fallback and negative/incomplete verdict semantics before an immutable new migration. No getter migration is part of the current MCP release.",
+  "acceptance": {
+    "getter_repaired": false,
+    "issue_410_complete": false,
+    "episode_acceptance": false,
+    "mcp_release_acceptance_substituted": false,
+    "diagnosis_stopped": true
+  }
+}

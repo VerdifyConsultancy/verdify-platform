@@ -155,7 +155,7 @@
       "how": [
         "Maintain one current status-aware contract per issue with matching native dependencies and no parent-as-blocker loops.",
         "Preserve original S3 estimates as historical planning and the S3B 40-hour budget / 22\u201334h selected estimates plus at least 6h reserve. Record completed bounded packets separately from full issue acceptance and measured effort.",
-        "Reuse completed P1 native/P2 admission/P4 custody packets and the retained P3 timeout/source correction. Finish existing PR/candidate delivery and select further work only for demonstrated remaining source, runtime or authentic input gaps."
+        "Reuse completed P1 native/P2 admission/P4 custody and accepted MCP release. Consume the sealed getter diagnosis before a separately selected immutable optimization; keep genuine outcomes, authenticated admin/planner route and physical/input gaps visible without repeating accepted delivery."
       ],
       "acceptance": [
         "Each current open issue has a disposition, accountable role, next action and actual remaining acceptance.",
@@ -170,7 +170,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "S3B native closeout: P1 passed3 compiles,56 positive scenarios and8 completed causal negatives across74 processes at sourcee844a409; full output and actual terminal custody are verified. P2 admission/report and P4 passive-custody packets are complete; P3 retained the sole2s getter timeout and fixes the demonstrated MCP aggregate defect. The source cohort is integrated for existing PR CI and candidate delivery; exact PR/merge/build results are maintained in issue775 current execution handoff. No whole issue acceptance, production promotion, OTA or physical efficacy is claimed.\n\nCurrent execution allocation: ROLLUP. Next action: Publish S3B bounded outcomes and existing PR CI/candidate delivery receipts through the current execution handoff. P1/P2/P4 packets are complete; P3 retains its one actual timeout and source correctness fix. Preserve47open/27active edges, all acceptance clauses and original22\u201334h/40h estimates; select only demonstrated remaining work.\n\nEvidence: planning/reviews/2026-10-18-s3b-execution/README.md. Original acceptance, state and completion edges remain unchanged.",
+      "baseline": "S3B bounded source/native/custody packets and source delivery are retained. The selected October18 follow-up released the MCP incomplete-status correction: PR987/7b48a210, exact two-replica source/digest and installed projection/HTTP auth guards, smoke9/9 and one writer verified. Only MCP rolled; other Deployment specs, core Pod identities and feature-off study state are unchanged. Getter diagnosis confirms a bounds-pruning defect and resolved-stage cost, but the full candidate still timed out2s; no real episode/daytime-held result or planner consumption exists.\n\nCurrent execution allocation: ROLLUP. Next action: Reuse completed native and MCP release receipts. Select only the remaining immutable getter optimization/parity, authentic prefix input, measurement and physical/recovery work; retain47open/27active edges and original22\u201334h/40h estimates without inferring remaining hours.\n\nEvidence: planning/reviews/2026-10-18-getter-mcp-release/README.md. Acceptance clauses, states, parentage and dependencies remain unchanged.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "No old credential or two-message approval is pending. Future physical window, exact design/launch and measurement-scope decisions should be raised only with concrete ready packets; not as a blanket planning gate.",
@@ -2071,9 +2071,10 @@
       "what": "Deliver validity-bearing solar-night moisture-removal episodes and a measured effective/ineffective/blocked/insufficient-evidence disposition.",
       "why": "Projected gain, a fixed clock window and a few favorable nights cannot establish reliable greenhouse-wide dry-out or justify a Vanda watering program.",
       "how": [
-        "Retain the source-matched October 16 pilot timeout as a failed bounded extraction with unavailable episode/held-admission outcomes. Do not repeat or broaden this attempt; prepare a concrete bounded performance diagnosis only if selected next.",
-        "Integrate the MCP aggregate correction through existing native CI, then verify actual quality-bearing MCP/planner output in its selected delivery. Preserve each SQL episode disposition; incomplete/unknown safety cannot become pass.",
-        "Reuse migration191 solar/response/coverage/confound guards and current is_night_phase predicate. Keep heat2 forbidden, wind/dwell/temperature safeguards and ordinary daytime dehumidification; no tuning or water-removal claim from heat-only VPD."
+        "Reuse the sealed six-session bounded diagnosis and preserve every original timeout. Date-bound pruning is demonstrated; resolved-stage interval/helper attribution remains incomplete. Qualify a minimal immutable migration with actual rowset/tie/fallback/solar/response parity before installing it.",
+        "Reuse the accepted MCP-only production release and installed projection/HTTP guard receipts. Genuine outcome payload and positive admin transport remain unverified; do not treat installed synthetic qualification as real greenhouse evidence or widen Iris/experiment access.",
+        "Preserve episode dispositions, confounds and evidence status. Require actual available complete daytime evidence for measured-zero held admission; legacy empty/null0 is unknown for acceptance. Keep solar, heat2, wind/dwell/temperature safeguards and ordinary daytime dehumidification.",
+        "Qualify an explicitly scoped ordinary-planner input route separately; outcome_kpi is admin-only and absent from Iris context. Physical efficacy, crop safety and tuning need their own evidence."
       ],
       "acceptance": [
         "Episodes use device solar semantics, never fixed 02:00\u201306:00, and incomplete/confounded episodes cannot be PASS.",
@@ -2087,10 +2088,10 @@
         "mcp",
         "scripts"
       ],
-      "baseline": "S3B source integration retains the sole actual getter timeout and the demonstrated MCP aggregate correction; existing PR CI/candidate delivery results are recorded in issue775 current execution handoff. No real episode envelope, daytime held count or running corrected MCP/planner consumption is established. Production promotion remains outside this sprint.\n\nCurrent execution allocation: S3B. Next action: P3 completed its bounded attempt: source identity matched, then the October 16 getter timed out at 2s with no episode result; do not retry or widen it. Integrate the tested MCP incomplete-status correction through existing native CI and verify actual MCP/planner delivery when that scoped release is selected. Any further getter diagnosis needs a new bounded query plan; no zero held-admission or dry-out benefit is established.\n\nEvidence: planning/reviews/2026-10-18-s3b-execution/p3-solar-night/README.md. Existing acceptance clauses, issue state and completion edges are unchanged.",
+      "baseline": "The October18 follow-up diagnosed materialized date bounds preventing chunk pruning and isolated remaining execution cost in the resolved prefix. The NOT MATERIALIZED candidate improved planning657.626\u219212.436ms but still timed out2s; raw scans/intervals214.317ms,64-minute helper sample149.637ms. Installed getter is unchanged and no episode/daytime-held count exists. MCP correction is released via PR987/7b48a210, actual two-replica source/digest, ten installed projection cases each, real Iris authentication/inventory/denial, smoke9/9 and exactly one writer verified. No configured admin outcome route or planner consumption is established.\n\nCurrent execution allocation: S3B follow-up. Next action: Prepare a separately selected immutable getter optimization preserving all source semantics and parity; keep actual outcome/admin/planner/daytime-count gaps open. No more getter retries or date/timeout expansion is queued.\n\nEvidence: planning/reviews/2026-10-18-getter-mcp-release/README.md. All three acceptance clauses and completion edges remain unchanged.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
-      "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
+      "decision": "The selected getter diagnosis and MCP-only release are executed within their recorded boundaries. No new credential, admin audience, planner expansion, migration, controller tuning, physical experiment or OTA was created. Remaining source/runtime/scientific acceptance stays explicit.",
       "status": "open"
     },
     {
@@ -3518,10 +3519,10 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T15:35:12.583197+00:00",
-    "source_revision": "d52bc8cc71c8267a2fefab0dd3286737d4ed0150",
+    "reviewed_at": "2026-10-18T17:13:24.049604+00:00",
+    "source_revision": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-10-18-next-sprint/README.md",
+    "review_path": "planning/reviews/2026-10-18-getter-mcp-release/README.md",
     "open_issues": [
       14,
       16,
@@ -3859,7 +3860,7 @@
         "sprint": "S3B",
         "hours_min": 4,
         "hours_max": 6,
-        "next_action": "P3 completed its bounded attempt: source identity matched, then the October 16 getter timed out at 2s with no episode result; do not retry or widen it. Integrate the tested MCP incomplete-status correction through existing native CI and verify actual MCP/planner delivery when that scoped release is selected. Any further getter diagnosis needs a new bounded query plan; no zero held-admission or dry-out benefit is established.",
+        "next_action": "Reuse accepted MCP-only live release and sealed bounded diagnosis. Prepare a separately selected immutable bounds/resolved-stage optimization with full semantic parity; no further getter query, new audience or planner route is implied. Genuine episode/daytime-held/planner acceptance remains open.",
         "owner_role": "Control lead"
       },
       {
@@ -3979,7 +3980,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Publish S3B bounded outcomes and existing PR CI/candidate delivery receipts through the current execution handoff. P1/P2/P4 packets are complete; P3 retains its one actual timeout and source correctness fix. Preserve47open/27active edges, all acceptance clauses and original22\u201334h/40h estimates; select only demonstrated remaining work.",
+        "next_action": "Publish accepted MCP release and bounded getter diagnosis with final CI/custody; preserve47open/27edges and all estimates. Pull remaining source/authentic input/physical work only for a demonstrated gap.",
         "owner_role": "Evidence/data lead"
       },
       {

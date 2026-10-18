@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-18T17:12:08.518169+00:00",
+  "status": "ONLY_MCP_RELEASED_CORE_AND_STUDY_UNCHANGED",
+  "changed_deployment_specs": [
+    "verdify-mcp"
+  ],
+  "unchanged_deployment_specs": [
+    "experiment-v2-freezer",
+    "experiment-v2-lifecycle",
+    "experiment-v2-selector",
+    "verdify-api",
+    "verdify-db-backup-exporter",
+    "verdify-grafana",
+    "verdify-grafana-render-cache",
+    "verdify-hermes-iris",
+    "verdify-ingestor",
+    "verdify-lab",
+    "verdify-mqtt",
+    "verdify-planner",
+    "verdify-setpoint-server",
+    "verdify-traefik"
+  ],
+  "all15_deployment_UIDs_preserved": true,
+  "no_new_Argo_hook_jobs": true,
+  "API_ingestor_database_exact_UID_and_container_state_unchanged": [
+    "verdify-api-75c7959d86-9s6dm",
+    "verdify-api-75c7959d86-lgks6",
+    "verdify-db-0",
+    "verdify-ingestor-654648cdf6-94bwz"
+  ],
+  "feature_off_study_and_recovered_attempt_exactly_unchanged": true,
+  "other_image_release_pins_unchanged": true
+}

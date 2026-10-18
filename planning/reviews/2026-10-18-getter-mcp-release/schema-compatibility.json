@@ -1,0 +1,8 @@
+{
+  "existing_migrate_source": "5e992d1747eb77d6f596d7e880db1f30862dae06",
+  "new_mcp_source": "d298f1ecca8249a3898339045e69dc08e7a85ab1",
+  "db_migrations_and_migrate_source_equal": true,
+  "new_MCP_server_sha256": "db8cb106eb397219750548c9ab9e0ecc2a740f741d6cf58720d040fc0437ed91",
+  "new_MCP_server_bytes": 249121,
+  "no_new_schema_dependency": true
+}
