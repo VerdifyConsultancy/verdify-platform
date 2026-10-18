@@ -10,7 +10,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "5923b07d24daa0d392132718220e96e94a0684fccc1fefedb2f45c035364cae4"
+      "body_sha256": "d335ea0b670516421f105382dc2805f874c98babed948883abf761e950876676"
     },
     {
       "key": "incident",
@@ -126,7 +126,7 @@
         778,
         949
       ],
-      "body_sha256": "16e30df199249c06cefd99bc6832cceda3fdf9ea5ceeb371d414a9efa4bf2e1c"
+      "body_sha256": "54b7ccb08dac442d32bd59a69492e7726727e3adf3dbe55a368a92999d68f9f3"
     },
     {
       "key": "641",
@@ -153,7 +153,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "e25565e3ba0859bef065b829f7033b650579af1d1d192b4a2b89024de7556cb4"
+      "body_sha256": "9d876fdb31386e73477296ee898a8c3e5f670a1faa2f6a17bca8551cfa38e8e2"
     },
     {
       "key": "587",
@@ -164,7 +164,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "077c2c0c343683d8273de5331e139ae74d33b9a1e9e856983e06866f946baab9"
+      "body_sha256": "b2c98c2bcc84a70b871ebd035dbe990b1b73e99b3fce6f82993619236f6b9a81"
     },
     {
       "key": "study_design",
@@ -359,7 +359,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "fb56f43f184dc395e75de4276a9606ab436d2b5a3737d9f0834b574536cd7d1c"
+      "body_sha256": "20f9f1b1027e26ca9a30a77094d6296ce70f8d827a158ed826d7d08718ef4d6f"
     },
     {
       "key": "563",
@@ -1110,11 +1110,11 @@
       "number": 980,
       "title": "[C4][P2] Resolve backup-exporter readiness timeouts without obscuring backup health",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "3b336e50e36b2b24b11c039ef363e1ecd61571c015bc7df6b500693097ff746e"
+      "body_sha256": "6fda15d77f66a0c4f277f7c66b1c3a7cf5110c5fed323bebed80793d03eca104"
     },
     {
       "key": "981",
@@ -1136,7 +1136,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "7e0f586ae1b6dfcd20fe45aac167461728885936a0c2a035402942bce5eb5f1e"
+      "body_sha256": "870138897188dafc29876de6c2652b8924a5d50b5d71b2acfa843a50e5cd2633"
     }
   ]
 }

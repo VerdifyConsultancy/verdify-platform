@@ -1,8 +1,8 @@
 {
   "schema": "verdify-s3-execution-packets/v1",
-  "reviewed_at": "2026-10-18T02:34:19Z",
-  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
-  "composition_status": "Partial execution closeout; remaining deliveries and complete native graph refresh belong to ROOT before publication.",
+  "reviewed_at": "2026-10-18T03:24:33Z",
+  "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "composition_status": "Incremental current execution progress; six S3 issues remain open. No final sprint completion asserted.",
   "packets": [
     {
       "number": 977,
@@ -22,9 +22,11 @@
       "accepted": false,
       "evidence": [
         "749-sealed-diagnosis.md",
-        "749-sealed-diagnosis.json"
+        "749-sealed-diagnosis.json",
+        "749-full-sync-supplement.md",
+        "749-full-sync-supplement.json"
       ],
-      "remaining": "Unchanged climate spread, six unclassified replacement soil identities and last-operation Argo provenance blockers remain. Supplemental diagnosis does not grant Gate R/P authority."
+      "remaining": "Original unchanged climate spread and six replacement soil identities remain failed. Later full-sync provenance is resolved; no fresh passing readiness packet or Gate R/P authority."
     },
     {
       "number": 981,
@@ -50,31 +52,49 @@
     },
     {
       "number": 587,
-      "packet_status": "pending_root_composition",
+      "packet_status": "finite_before_preseal_complete_behavior_pending",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+      "remaining": "Actual-role permitted behavioral cases, after reseal and exact authorized delta/sequence correlation; preserve intentional active-prefix denial and uncovered acceptance. Named alert route proof pending; physical proof remains #641.",
+      "evidence": [
+        "639-587-custody-progress.md",
+        "639-587-custody-progress.json",
+        "clone-capture-incident.md"
+      ]
     },
     {
       "number": 639,
-      "packet_status": "pending_root_composition",
+      "packet_status": "finite_before_preseal_complete_behavior_pending",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+      "remaining": "Actual-role permitted behavioral cases, after reseal and exact authorized delta/sequence correlation; preserve intentional active-prefix denial and uncovered acceptance. Named alert route proof pending; physical proof remains #641.",
+      "evidence": [
+        "639-587-custody-progress.md",
+        "639-587-custody-progress.json",
+        "clone-capture-incident.md"
+      ]
     },
     {
       "number": 802,
-      "packet_status": "pending_root_composition",
+      "packet_status": "source_ready_owner_pr_pending",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+      "remaining": "Exact-head enforced owner CI/delivery, seven-object spec-preserving adoption, tracking and natural successful enforce Job.",
+      "evidence": [
+        "https://github.com/jvallery/agents/pull/5033"
+      ]
     },
     {
       "number": 980,
-      "packet_status": "pending_root_composition",
-      "issue_status": "open",
-      "accepted": false,
-      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+      "packet_status": "accepted",
+      "issue_status": "closed",
+      "accepted": true,
+      "remaining": "None within the scoped issue; restore/offsite and historic storage cause are not claimed.",
+      "evidence": [
+        "980-exporter-acceptance.md",
+        "980-exporter-acceptance.json",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/980#issuecomment-6245139260"
+      ]
     }
   ]
 }

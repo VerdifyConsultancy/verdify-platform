@@ -1,6 +1,6 @@
 # Verdify planning source
 
-[The S3 execution review](reviews/2026-10-17-s3-execution/README.md) is the current execution record. Verified #977 acceptance leaves 49 open issues and 27 active completion edges, including Home Assistant #878 → #981, plus 25 retained closed predecessor records. Remaining delivery outcomes and the complete final native graph readback await ROOT composition; the draft does not claim sprint completion.
+[The S3 execution review](reviews/2026-10-17-s3-execution/README.md) is the current incremental execution record. Accepted #977 and #980 leave 48 open issues and 27 active completion edges, including Home Assistant #878 → #981, plus 25 retained closed predecessor records. A complete native graph readback matches source. Six open S3 allocations retain original estimates of 25–50 hours; these are not spent or remaining-time measurements. Actual-role behavior and owner adoption remain in progress; sprint completion is not claimed.
 
 Start with [current outcomes and next actions](reviews/2026-10-17-s3-execution/README.md) and the [current graph](reviews/2026-10-17-s3-execution/DEPENDENCIES.md). The [October 17 triage](reviews/2026-10-17-replan/README.md), its original October 19–30 sprint allocation, [all issue dispositions](reviews/2026-10-17-replan/ISSUE-TRIAGE.md) and [scope transfers](reviews/2026-10-17-replan/SCOPE-TRANSFERS.md) remain frozen historical evidence.
 

@@ -1,8 +1,8 @@
 # S3 execution dependency graph
 
-49 open Verdify issues; 27 active completion edges (26 within Verdify and one actual Home Assistant dependency), plus 25 retained closed predecessor records. The frozen October 17 graph is the baseline. ROOT independently verified the #977 closure and the new native Home Assistant edge; a complete final graph refresh remains pending before publication. [Machine-readable evidence](graph.json).
+Full native readback at 2026-10-18T03:24:33Z: **48 open Verdify issues**, **27 active completion edges** (26 local and one actual Home Assistant dependency), plus **25 retained closed predecessor records**. Every issue and dependency connection was untruncated. All local active edges equal planning source. [Native receipt](native-graph-readback.json); [normalized graph](graph.json).
 
-An arrow means predecessor acceptance gates dependent acceptance, not all preparation. External `jvallery/homeassistant#878` is a real native predecessor of #981 and is not a fabricated campaign work item. Closed #977 is accepted in [its receipt](977-three-replicas-20261017.md).
+An arrow gates dependent acceptance, not all preparation. Home Assistant #878 is an external native predecessor, not a fabricated campaign node. #977 and #980 are accepted closed deliveries; the sprint remains in progress.
 
 ```mermaid
 flowchart TD
@@ -51,36 +51,35 @@ flowchart TD
   i785["#785 Reveal once, reproduce the frozen analysis and decide the pr"]
   i786["#786 Decide whether a deterministic forecast comparator merits a "]
   i787["#787 Decide and scope a measured heating/overnight/resource study"]
-  i802["#802 Adopt the existing descheduler under GitOps"]
+  i802["#802 Adopt the enforcing descheduler under manual Argo ownership"]
   i963["#963 Bound moisture-exchange state and preserve structured consum"]
-  i980["#980 Resolve backup-exporter readiness timeouts without obscuring"]
   i981["#981 Restore truthful energy source freshness and trace stale met"]
   ha878["jvallery/homeassistant#878: qualify per-channel source clock"]
-  i398 --> i45
   i45 --> i297
+  i298 --> i398
+  i299 --> i434
+  i367 --> i370
   i390 --> i299
   i390 --> i367
   i390 --> i369
-  i367 --> i370
-  i785 --> i378
-  i786 --> i379
-  i298 --> i398
-  i299 --> i434
-  i641 --> i588
-  i782 --> i588
-  i783 --> i588
-  i642 --> i640
+  i398 --> i45
+  i410 --> i787
   i587 --> i641
-  i639 --> i641
-  i749 --> i641
-  i588 --> i642
   i587 --> i783
+  i588 --> i642
+  i639 --> i641
   i639 --> i783
   i640 --> i784
+  i641 --> i588
+  i642 --> i640
+  i749 --> i641
+  i782 --> i588
+  i783 --> i588
   i784 --> i785
+  i785 --> i378
   i785 --> i786
-  i410 --> i787
   i785 --> i787
+  i786 --> i379
   i981 --> i787
   ha878 --> i981
 ```
@@ -90,56 +89,56 @@ flowchart TD
 | Predecessor | State | Dependent |
 |---|---|---|
 | [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) | open | #45 |
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | closed | #245 |
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) | closed | #245 |
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) | closed | #245 |
 | [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) | open | #297 |
 | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | open | #299 |
 | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | open | #367 |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) | closed | #368 |
-| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | open | #369 |
 | [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) | closed | #369 |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | open | #369 |
 | [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) | open | #370 |
-| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #378 |
 | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | open | #378 |
-| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #379 |
-| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | closed | #379 |
+| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #378 |
 | [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) | open | #379 |
+| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | closed | #379 |
+| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #379 |
 | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | closed | #386 |
-| [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | closed | #390 |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | closed | #390 |
+| [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | closed | #390 |
 | [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) | open | #398 |
-| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #410 |
-| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | closed | #410 |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) | closed | #410 |
+| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | closed | #410 |
+| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #410 |
 | [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) | closed | #428 |
 | [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) | open | #434 |
-| [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | open | #588 |
-| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | open | #588 |
 | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) | open | #588 |
+| [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | open | #588 |
+| [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | open | #588 |
 | [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) | open | #640 |
-| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | open | #641 |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | open | #641 |
-| [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747) | closed | #641 |
 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | open | #641 |
+| [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747) | closed | #641 |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | open | #641 |
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | open | #641 |
 | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588) | open | #642 |
-| [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) | closed | #749 |
-| [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778) | closed | #749 |
 | [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | closed | #749 |
-| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #782 |
-| [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779) | closed | #782 |
-| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) | closed | #782 |
+| [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778) | closed | #749 |
+| [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) | closed | #749 |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | closed | #782 |
-| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | open | #783 |
+| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) | closed | #782 |
+| [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779) | closed | #782 |
+| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | closed | #782 |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | open | #783 |
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | open | #783 |
 | [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640) | open | #784 |
 | [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784) | open | #785 |
-| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) | closed | #786 |
 | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | open | #786 |
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | open | #787 |
-| [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | closed | #787 |
-| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | open | #787 |
+| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) | closed | #786 |
 | [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) | open | #787 |
+| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) | open | #787 |
+| [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) | closed | #787 |
+| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) | open | #787 |
 | [jvallery/agents#4459](https://github.com/jvallery/agents/issues/4459) | closed | #802 |
 | [jvallery/homeassistant#878](https://github.com/jvallery/homeassistant/issues/878) | open | #981 |
 
-#782 remains independent of #981 for its selected nine-state endpoint; #787 retains its energy dependency. #783 generic integration remains independent of #782, with final design binding at #588. Physical proof remains in #641; contained executor/lifecycle acceptance does not replace it.
+#782 stays independent of #981 for its selected nine-state endpoint; #787 retains its energy dependency. #783 generic integration follows contained #639/#587 independently of final #782 inputs, with exact design binding at #588. #641 retains successful attended physical proof and safe handoff.

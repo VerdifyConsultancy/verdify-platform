@@ -1,0 +1,49 @@
+{
+  "schema": "verdify-s3-contained-qualification-progress/v1",
+  "reviewed_at": "2026-10-18T03:24:33Z",
+  "issues": [
+    639,
+    587
+  ],
+  "accepted": false,
+  "state": "finite_before_preseal_complete_behavior_pending",
+  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+  "source_functions": 84,
+  "finite_write_relations": 29,
+  "custody_scope": "complete possible-write rowsets plus source/roles/ACL/catalog/ledger/all sequences; not full-database restore parity",
+  "original_capture": "confirmed_cgroup_oom_before_credential_fixture_or_behavior",
+  "input_provenance": "failed original input reconstructed; replacement inputs presealed before execution",
+  "pilot_receipt_rows": 25,
+  "first_full_finite_data_relations": 29,
+  "first_full_finite_result": "exit78_catalog_compression_guard; incomplete_seal",
+  "active_prefix": "intentional_current_source_denial_historical27of48_order_grid_and_study_mismatch",
+  "forbidden_shortcuts": [
+    "borrow genuine study approvals",
+    "override physical_execution_qualified",
+    "fabricate operator proof",
+    "rewind sequences below retained committed values"
+  ],
+  "remaining": [
+    "actual-role permitted behavioral subset",
+    "after reseal and exact authorized delta/sequence correlation",
+    "uncovered contained prefix/exclusivity/recovery acceptance",
+    "named alert fire/deliver/clear through owner route"
+  ],
+  "physical_proof_owner": 641,
+  "full_database_restore_parity_claimed": false,
+  "complete_before_capture": {
+    "completed_at": "2026-10-18T03:19:48.384398+00:00",
+    "returncode": 0,
+    "relations": 29,
+    "genuine_rows": 7950,
+    "synthetic_rows": 0,
+    "sequences": 77,
+    "stdout_bytes": 10940819,
+    "stdout_sha256": "b317046989ca9f9da30311c482c1ea97f574159b69cd675d8b412586d9115f96",
+    "native_primary_stable": true,
+    "all_data_hashes_match_prior_partial_capture": true,
+    "source_body_and_property_parity_functions": 84,
+    "full_database_fingerprint": false,
+    "restore_parity_claimed": false
+  }
+}

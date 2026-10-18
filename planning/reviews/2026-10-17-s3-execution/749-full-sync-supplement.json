@@ -1,0 +1,27 @@
+{
+  "issue": 749,
+  "accepted": false,
+  "issue_status": "open",
+  "original_packet_verdict": "FAIL",
+  "original_spread_threshold_f": 4,
+  "observed_spreads_f": [
+    4.8600006103515625,
+    5.040000915527344
+  ],
+  "unclassified_replacement_soil_identities": 6,
+  "reviewed_at": "2026-10-18T03:22:57Z",
+  "current_full_sync_provenance": "resolved_by_later_980_delivery",
+  "deployed_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "resource_results": 129,
+  "selector": null,
+  "prune": false,
+  "fresh_hooks_succeeded": true,
+  "original_packet_changed": false,
+  "new_readiness_packet_claimed": false,
+  "physical_authority_granted": false,
+  "evidence": [
+    "749-sealed-diagnosis.md",
+    "749-sealed-diagnosis.json",
+    "980-exporter-acceptance.json"
+  ]
+}

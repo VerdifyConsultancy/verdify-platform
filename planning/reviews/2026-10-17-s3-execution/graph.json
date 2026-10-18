@@ -1,5 +1,6 @@
 {
-  "reviewed_at": "2026-10-18T02:34:19Z",
+  "reviewed_at": "2026-10-18T03:24:33Z",
+  "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
   "open_nodes": [
     14,
     16,
@@ -48,7 +49,6 @@
     787,
     802,
     963,
-    980,
     981
   ],
   "relationships": [
@@ -95,16 +95,16 @@
       "number": 245,
       "blocked_by": [
         {
-          "number": 382,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382"
-        },
-        {
           "number": 396,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396"
+        },
+        {
+          "number": 382,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382"
         }
       ]
     },
@@ -168,16 +168,16 @@
       "number": 369,
       "blocked_by": [
         {
-          "number": 390,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390"
-        },
-        {
           "number": 433,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433"
+        },
+        {
+          "number": 390,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "open",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390"
         }
       ]
     },
@@ -196,16 +196,16 @@
       "number": 378,
       "blocked_by": [
         {
-          "number": 371,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
-        },
-        {
           "number": 785,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
+        },
+        {
+          "number": 371,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
         }
       ]
     },
@@ -213,10 +213,10 @@
       "number": 379,
       "blocked_by": [
         {
-          "number": 371,
+          "number": 786,
           "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+          "state": "open",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786"
         },
         {
           "number": 419,
@@ -225,10 +225,10 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419"
         },
         {
-          "number": 786,
+          "number": 371,
           "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786"
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
         }
       ]
     },
@@ -247,16 +247,16 @@
       "number": 390,
       "blocked_by": [
         {
-          "number": 303,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303"
-        },
-        {
           "number": 419,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419"
+        },
+        {
+          "number": 303,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303"
         }
       ]
     },
@@ -275,10 +275,10 @@
       "number": 410,
       "blocked_by": [
         {
-          "number": 371,
+          "number": 424,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
         },
         {
           "number": 419,
@@ -287,10 +287,10 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419"
         },
         {
-          "number": 424,
+          "number": 371,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
         }
       ]
     },
@@ -336,10 +336,10 @@
       "number": 588,
       "blocked_by": [
         {
-          "number": 641,
+          "number": 783,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783"
         },
         {
           "number": 782,
@@ -348,10 +348,10 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782"
         },
         {
-          "number": 783,
+          "number": 641,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
         }
       ]
     },
@@ -374,16 +374,10 @@
       "number": 641,
       "blocked_by": [
         {
-          "number": 587,
+          "number": 749,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
-        },
-        {
-          "number": 639,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749"
         },
         {
           "number": 747,
@@ -392,10 +386,16 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
         },
         {
-          "number": 749,
+          "number": 639,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+        },
+        {
+          "number": 587,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "open",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
         }
       ]
     },
@@ -414,10 +414,10 @@
       "number": 749,
       "blocked_by": [
         {
-          "number": 424,
+          "number": 949,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949"
         },
         {
           "number": 778,
@@ -426,10 +426,10 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778"
         },
         {
-          "number": 949,
+          "number": 424,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
         }
       ]
     },
@@ -449,16 +449,10 @@
       "number": 782,
       "blocked_by": [
         {
-          "number": 371,
+          "number": 781,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
-        },
-        {
-          "number": 779,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781"
         },
         {
           "number": 780,
@@ -467,10 +461,16 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780"
         },
         {
-          "number": 781,
+          "number": 779,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779"
+        },
+        {
+          "number": 371,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
         }
       ]
     },
@@ -478,16 +478,16 @@
       "number": 783,
       "blocked_by": [
         {
-          "number": 587,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
-        },
-        {
           "number": 639,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+        },
+        {
+          "number": 587,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "open",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
         }
       ]
     },
@@ -517,16 +517,16 @@
       "number": 786,
       "blocked_by": [
         {
-          "number": 780,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "closed",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780"
-        },
-        {
           "number": 785,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
+        },
+        {
+          "number": 780,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "closed",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780"
         }
       ]
     },
@@ -534,10 +534,16 @@
       "number": 787,
       "blocked_by": [
         {
-          "number": 410,
+          "number": 981,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981"
+        },
+        {
+          "number": 785,
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "state": "open",
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
         },
         {
           "number": 781,
@@ -546,16 +552,10 @@
           "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781"
         },
         {
-          "number": 785,
+          "number": 410,
           "repository": "VerdifyConsultancy/verdify-platform",
           "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
-        },
-        {
-          "number": 981,
-          "repository": "VerdifyConsultancy/verdify-platform",
-          "state": "open",
-          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981"
+          "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410"
         }
       ]
     },
@@ -575,10 +575,6 @@
       "blocked_by": []
     },
     {
-      "number": 980,
-      "blocked_by": []
-    },
-    {
       "number": 981,
       "blocked_by": [
         {
@@ -590,15 +586,6 @@
       ]
     }
   ],
-  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
-  "evidence_basis": {
-    "baseline": "../2026-10-17-replan/native-graph-readback.json",
-    "known_verified_changes": [
-      "ROOT independently closed #977 as completed; acceptance comment 6244758504.",
-      "ROOT posted and read back native blocked-by jvallery/homeassistant#878 for Verdify #981."
-    ],
-    "full_refresh": "Pending ROOT final native graph readback; all other relationships are retained from the frozen replan."
-  },
   "external_open_nodes": [
     {
       "number": 878,
@@ -608,8 +595,19 @@
     }
   ],
   "counts": {
-    "local_open_issues": 49,
+    "local_open_issues": 48,
     "active_completion_edges": 27,
     "closed_predecessor_records": 25
+  },
+  "evidence_basis": {
+    "baseline": "../2026-10-17-replan/native-graph-readback.json",
+    "full_refresh": "One complete GitHub GraphQL readback after ROOT closed #980; issue and each blockedBy connection untruncated. All26 local active edges equal current source; external Home Assistant #878→#981 independently present.",
+    "raw_response_sha256": "6f77371bcbe287e2145c64b6c02b841072bad26f8e29d922ed27256abe447f33",
+    "query_sha256": "303cfa59ccc1a741bc7d59a4ff714721356d2e500f90afe95165886b778ea3cf",
+    "known_verified_changes": [
+      "#977 closed COMPLETED, acceptance comment6244758504.",
+      "#980 closed COMPLETED, acceptance comment6245139260.",
+      "Actual external Home Assistant #878 remains the native open predecessor of #981."
+    ]
   }
 }

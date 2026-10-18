@@ -62,7 +62,7 @@ flowchart TD
     i965["#965 (closed) Separate API grow-light command intent from observed equip"]
     i963["#963 (open) Bound moisture-exchange state and preserve structured cons"]
     i976["#976 (closed) Qualify safe recovery of Lab publication receipt metadata"]
-    i980["#980 (open) Resolve backup-exporter readiness timeouts without obscuri"]
+    i980["#980 (closed) Resolve backup-exporter readiness timeouts without obscuri"]
     i981["#981 (open) Restore truthful energy source freshness and trace stale m"]
     i802["#802 (open) Adopt the enforcing descheduler under manual Argo ownershi"]
   end

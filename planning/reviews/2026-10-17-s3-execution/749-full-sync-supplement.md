@@ -1,0 +1,5 @@
+# #749 — current full-sync provenance supplement
+
+The later #980 delivery resolves the current full-sync provenance condition: revision `55285aafc96855419ba5e50ab11475cb71a60a0f` completed a selector-free, nonpruning full Argo sync with 129 resource results and fresh successful migration/bootstrap hooks. Delayed application health, unchanged database/ingestor identity, singleton writer and independent backup/exporter checks passed. See [the accepted delivery receipt](980-exporter-acceptance.json).
+
+The [original sealed diagnosis](749-sealed-diagnosis.md) remains unchanged and **FAIL**. Its 4.86/5.04 F climate spreads exceed the unchanged 4 F guard, and six replacement soil identities remain outside the exact reviewed catalog. The historical selective-operation provenance failure remains true for that old packet. No new readiness packet, changed threshold, expanded exception, reset deadline, Gate R/P or physical authority is inferred from the later sync. [Supplement metadata](749-full-sync-supplement.json).

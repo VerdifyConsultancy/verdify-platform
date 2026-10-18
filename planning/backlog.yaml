@@ -1,7 +1,7 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+  "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
   "snapshot_date": "2026-10-17",
   "original_open_issues": [
     14,
@@ -154,7 +154,7 @@
       "why": "Starting a randomized day does not establish climate or resource benefit. The prior launch-first roadmap left semantic defects, low power, season mismatch and post-trial decisions unowned.",
       "how": [
         "Maintain one current issue contract, one status-aware source and a matching native dependency graph.",
-        "Execute S3 October 19–30 within 80 shared hours. The original eight packets were estimated at 29–58 hours with 22 hours contingency; accepted #977 leaves seven open allocations with unchanged original estimates of 27–54 hours. Do not treat these as a time ledger; alternate work replaces blocked work.",
+        "Execute S3 October 19–30 within 80 shared hours. The original eight packets were estimated at 29–58 hours with 22 hours contingency. Accepted #977 and #980 leave six open allocations with unchanged original estimates of 25–50 hours. These estimates are not a spent-time or remaining-effort ledger; alternate work replaces blocked work.",
         "Keep future experiments, physical commissioning and conditional architecture decisions outside the near-term completion claim."
       ],
       "acceptance": [
@@ -170,7 +170,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "October 17 triage inventoried 369 issue records and reviewed all 50 then-open issues. That snapshot remains frozen in planning/reviews/2026-10-17-replan. Current S3 execution has one additional accepted closure: #977, independently verified and closed by ROOT. There are 49 open issues and 27 active completion edges, including the real upstream jvallery/homeassistant#878 → #981 dependency. #749 remains failed, #981 awaits source-clock qualification, and #782 has a completed input-decision packet but missing empirical acceptance. Remaining delivery outcomes and the final full native graph readback await ROOT composition. See planning/reviews/2026-10-17-s3-execution.",
+      "baseline": "The frozen October 17 triage inventoried 369 issue records and reviewed all 50 then-open issues. Current S3 execution records accepted closures #977 and #980; six S3 issues remain open. A complete native readback after #980 closure verifies 48 open issues, 27 active edges and 25 retained closed predecessor records, with all local active edges equal source. #749 retains its original FAIL while later full-sync provenance is resolved. #981 awaits its named source-clock owner; #782 input decision is complete without empirical acceptance. #639/#587 finite custody and actual-role qualification are in progress, and #802 owner adoption remains pending. This is incremental progress, not final sprint or campaign completion. See planning/reviews/2026-10-17-s3-execution.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -514,7 +514,7 @@
       "what": "Produce the fresh source-bound readiness packet used immediately before recovery, proof and each baseline/aggressive/baseline boundary.",
       "why": "Generic 4/4 OK diagnostics can hide a missing south probe. A tolerated outage is not permission to ignore a real control contradiction, localized heat stress or an unexplained wetting refusal.",
       "how": [
-        "Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.",
+        "Preserve the original sealed FAIL; investigate the unchanged 4 F climate spread and six replacement soil identities before a separately scoped later qualification. Current full-sync provenance is resolved by #980 delivery. Do not relax the guard, silently expand exceptions or collect repeatedly for a passing result.",
         "Bind 48/48 grid, source/firmware/registry, writer lease/generation, backup, authentication, provider preflight and current Argo state. Incorporate #incident disposition and #424 semantic mapping.",
         "Exercise stale/cache/skew/generation/false-green fixtures; recovery mode grants only orphan recovery, while proof mode additionally requires #747 and exact Synced + Healthy. Preserve the locked spread thresholds."
       ],
@@ -529,7 +529,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "S3 obtained a sealed original-clause recovery-slice packet after correcting the UUID observer serializer; the original failure remains retained. All 40 sealed files match their manifest and deployed collector/guard source. Verdict remains FAIL: two climate spreads of 4.8600006103515625 F and 5.040000915527344 F exceed the unchanged 4 F guard. Six south_1 soil alerts are new/replacement exact identities absent from the reviewed recovery-only catalog; native integer IDs and typed projection are preserved, so a SQL identity projection correction is not justified. Eight retained soil identities still match. Argo application metadata was Synced/Healthy at 39dbedd6 with no active operation, but its last completed exporter-only selective operation at f6c47e95 fails separate full-sync provenance criteria. Zero open exposure and draft/shadow closure grant no Gate R/P or physical authority.\n\nNext action: Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md and .json. Original fixed-deadline and failed packets remain historical evidence; no deadline was reset by this supplemental diagnosis.",
+      "baseline": "The original sealed packet remains FAIL: climate spreads 4.8600006103515625 F and 5.040000915527344 F exceed the unchanged 4 F threshold. Six replacement south_1 soil alerts are absent from the reviewed exact recovery-only catalog; typed integer identities were preserved, so a SQL identity projection fix is not justified. Eight retained soil identities still match. Original zero exposure and draft/shadow closure grant no physical authority.\n\nLater supplement: #980 delivery completed a fresh selector-free, nonpruning full Argo sync at 55285aafc96855419ba5e50ab11475cb71a60a0f with 129 resource results and fresh successful migration/bootstrap hooks. Delayed Synced/Healthy, unchanged DB/ingestor identity, exact singleton writer and backup/exporter checks passed. This resolves current full-sync provenance; it does not rewrite the historical selective-operation failure or establish a fresh passing readiness packet.\n\nNext action: Preserve the original sealed FAIL; investigate the unchanged 4 F climate spread and six replacement soil identities before a separately scoped later qualification. Current full-sync provenance is resolved by #980 delivery. Do not relax the guard, silently expand exceptions or collect repeatedly for a passing result.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md and .json (unchanged original), plus 749-full-sync-supplement.md and 980-exporter-acceptance.json. No original deadline was reset.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -590,7 +590,7 @@
       "what": "Qualify the component executor, exclusivity and recovery behavior in containment",
       "why": "The implementation is substantial, but mocks can hide setter schema, SQL resolver, prefix and epoch seams. Requiring day-1 closure here while launch depends on it creates a dependency cycle.",
       "how": [
-        "Run one bounded current-source device-denied executor/recovery matrix with #587 on the existing admitted target.",
+        "Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.",
         "Use actual operational role calls and generated setter grid; retain failures, inverses and sequence/catalog reseal.",
         "Close contained behavior scope when passed; #641 owns real device epochs, rescue and final baseline handoff, and must reuse this source receipt."
       ],
@@ -607,7 +607,7 @@
         "tests",
         "research/planner-efficacy"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Current source has binary32/grid/order repair, baseline interposition and full-48 recovery. Historical physical run failed safely on generation change. Synthetic connected fixture covered failures/recovery, but not genuine physical epochs. Current body records a 21-function LOGIN seam and unproven 27/48 treatment coverage.\n\nNext action: Run one bounded current-source device-denied executor/recovery matrix with #587 on the existing admitted target.\n\nS3, October 19–30: 8–16 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: Existing admitted restored target and sole current writer; exact source/UID binding and rollback custody. Do not use old connected-clock fixture against genuine SOURCE/A/B or create a second target.\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-5448499782 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/docs/research/c5-connected-randomized-clock-qualification-2026-09-30.md · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/ingestor/tasks/component_experiment.py · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/docs/runbooks/ordinary-runtime-qualification.md",
+      "baseline": "S3 execution is in progress on the retained CNPG clone. The source packet covers 84 current functions and the exact 29-relation possible-write closure, with actual operational LOGIN and private before/after custody required. The first broad custody capture caused a confirmed 6 GiB pod-cgroup OOM before credential installation, fixture or behavior execution. CNPG failed over to primary2 and recovered three Ready instances; production DB/ingestor identities stayed unchanged. The failed input is reconstructed from current bytes and attestation, not retrospectively presealed.\n\nReplacement inputs are sealed before each attempt; bounded per-relation hashes stay inside the existing primary pod, with parallelism disabled and fixed time/temp/serialization limits. A compressed-receipt pilot passed. The first full finite attempt hashed all 29 genuine rowsets, then failed closed on a legitimate compressed catalog ACL guard; that attempt is incomplete. After the bounded catalog-array correction, the complete finite before-capture passed at 03:19:48 UTC: 29 rowsets, 7,950 genuine rows, zero synthetic rows and all 77 sequences; all 29 data hashes match the earlier partial capture. Native 84-function body, argument-signature and execution-property checks pass. Exact primary2 identity, zero restarts and three Ready remained stable. Credential/fixture installation, actual-role behavioral execution and the after-reseal are still pending at this checkpoint.\n\nCurrent source intentionally denies the active prefix: its historical 27/48 order is bound to a different grid and genuine study. Do not copy genuine approvals, override qualification or fabricate proof. Authentic shadow/full-48 and lifecycle/denial work can advance only after source-bound custody; this does not establish active-prefix or physical proof.\n\nNext action: Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Named alert fire/deliver/clear remains pending the owning route; #641 retains real device epochs, rescue and final baseline handoff.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -627,7 +627,7 @@
       "what": "Qualify lifecycle authority and blinded monitoring in containment",
       "why": "Ready pods and green dashboards do not prove correct phase authority or safe rollback; comparative outcome leakage would corrupt the blinded study.",
       "how": [
-        "Run existing finite current-source lifecycle/HTTP/fault cases alongside #639 on the same admitted device-denied target.",
+        "Use the completed shared finite preseal; finish existing central credential custody and actual-role attestation, then run lifecycle, feature-off and blinded denial cases alongside #639. Deliver and verify the named alert interface through its owning monitoring route; source work alone is not alert delivery acceptance.",
         "Exercise actual operational LOGIN and preserve source/UID/sequence/catalog custody.",
         "Coordinate named alert interfaces; transfer actual device baseline/handoff to #641 with explicit scope ledger."
       ],
@@ -643,7 +643,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Flags, lifecycle API, safe defaults and blinded visibility exist. Current triage records actual lifecycle LOGIN/25-function read-only attestation, which does not prove mutation transitions, rollback or alert delivery.\n\nNext action: Run existing finite current-source lifecycle/HTTP/fault cases alongside #639 on the same admitted device-denied target.\n\nS3, October 19–30: 4–8 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: Same admitted target and single writer as #639. jvallery/monitoring-stack#804 and #807 specific producer/delivery interfaces; refresh owner state, not blanket project closure.\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-5298248302 · https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-5440364806 · https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6109897393 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/docs/runbooks/ordinary-runtime-qualification.md",
+      "baseline": "S3 execution is in progress on the retained CNPG clone. The source packet covers 84 current functions and the exact 29-relation possible-write closure, with actual operational LOGIN and private before/after custody required. The first broad custody capture caused a confirmed 6 GiB pod-cgroup OOM before credential installation, fixture or behavior execution. CNPG failed over to primary2 and recovered three Ready instances; production DB/ingestor identities stayed unchanged. The failed input is reconstructed from current bytes and attestation, not retrospectively presealed.\n\nReplacement inputs are sealed before each attempt; bounded per-relation hashes stay inside the existing primary pod, with parallelism disabled and fixed time/temp/serialization limits. A compressed-receipt pilot passed. The first full finite attempt hashed all 29 genuine rowsets, then failed closed on a legitimate compressed catalog ACL guard; that attempt is incomplete. After the bounded catalog-array correction, the complete finite before-capture passed at 03:19:48 UTC: 29 rowsets, 7,950 genuine rows, zero synthetic rows and all 77 sequences; all 29 data hashes match the earlier partial capture. Native 84-function body, argument-signature and execution-property checks pass. Exact primary2 identity, zero restarts and three Ready remained stable. Credential/fixture installation, actual-role behavioral execution and the after-reseal are still pending at this checkpoint.\n\nCurrent source intentionally denies the active prefix: its historical 27/48 order is bound to a different grid and genuine study. Do not copy genuine approvals, override qualification or fabricate proof. Authentic shadow/full-48 and lifecycle/denial work can advance only after source-bound custody; this does not establish active-prefix or physical proof.\n\nNext action: Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/639-587-custody-progress.md and clone-capture-incident.md. Named alert fire/deliver/clear remains pending the owning route; #641 retains real device epochs, rescue and final baseline handoff.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1211,7 +1211,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Delivery source c386 / ingestor 4b499 / release fc057 is qualified. Current root metadata reports Argo Synced/Healthy at f6c47 after exporter restoration PR984; the body's Degraded and exporter-pause assertions are stale. Original #749 readiness remains unaccepted. Missing soil inputs remain visible; no sensor recovery is inferred.\n\nNext action: Update the health matrix and child list to own #980 and #981, retain accepted historical children, and consume #749 final disposition. Keep shared alert implementation in monitoring-stack.\n\nROLLUP: not committed to the next sprint. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: \n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/75 · https://github.com/VerdifyConsultancy/verdify-platform/pull/984 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/deploy/k8s/components/db-backup/backup-freshness-exporter.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/ingestor/shelly_energy.py",
+      "baseline": "Current product delivery at 55285aafc96855419ba5e50ab11475cb71a60a0f is Synced/Healthy after selector-free full sync. #980 is accepted: deployed HTTP/cache behavior, independent local backup evidence, Prometheus and delayed singleton-writer/runtime checks pass. #981 remains open on installed-source clock qualification under Home Assistant #878. #749 original climate/soil readiness FAIL remains unaccepted. Missing soil inputs remain visible and no sensor recovery is inferred.\n\nNext action: Maintain the health matrix using the #980 accepted receipt; consume the explicit #981/#749 next actions and retain #963 structured-consumer scope. Shared alerts remain in their owning monitoring lane.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -3428,9 +3428,9 @@
       "what": "Diagnose and resolve the observed backup-exporter timeout and BrokenPipe failure.",
       "why": "A successful database dump does not prove its exporter is consistently observable.",
       "how": [
-        "Replace obsolete pause text with exact PR984 restoration state. Use existing logs/metadata and one bounded timing diagnosis to distinguish client budget, filesystem latency and overlapping requests. If evidenced, implement the smallest response/cache/concurrency fix while keeping backup age/error explicit, then independently verify backup generation.",
-        "Make the smallest evidenced owner change and preserve independent backup-age/failure signals.",
-        "Verify deployed identity and normal scrape/readiness behavior without masking negative cases."
+        "Serve HTTP from a cache populated by one serial background scanner; preserve the original backup timestamp and explicit startup/error/stale signals.",
+        "Retain the observed timeout and blocked-scan negative regression; use native CI and exact selector-free production delivery.",
+        "Verify independent local backup generation, current HTTP/Prometheus truth, unchanged singleton device writer and delayed runtime stability."
       ],
       "acceptance": [
         "Observed latency/failure cause is evidenced and deployed response fits the actual scrape/readiness budget.",
@@ -3441,11 +3441,12 @@
         "deploy/k8s/components/db-backup",
         "scripts"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. PR #984 reverted the temporary #983 pause. At 01:55 UTC October 18 (October 17 Denver), Argo is Synced/Healthy at f6c47e95 and the exporter is 1/1 ready. The indefinite pause is obsolete. Source still performs synchronous filesystem discovery per HTTP request; concurrent requests and the one-second readiness budget are plausible contributors, not an established root cause. The timeout/BrokenPipe defect and independent backup freshness acceptance remain open.\n\nNext action: Replace obsolete pause text with exact PR984 restoration state. Use existing logs/metadata and one bounded timing diagnosis to distinguish client budget, filesystem latency and overlapping requests. If evidenced, implement the smallest response/cache/concurrency fix while keeping backup age/error explicit, then independently verify backup generation.\n\nS3, October 19–30: 2–4 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: Honor actual current storage-owner limits; the previous blanket exporter pause no longer applies\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/980 · https://github.com/VerdifyConsultancy/verdify-platform/pull/983 · https://github.com/VerdifyConsultancy/verdify-platform/pull/984 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/deploy/k8s/components/db-backup/backup-freshness-exporter.yaml",
+      "baseline": "Accepted October 17 Denver / October 18 UTC. The synchronous filesystem work in the HTTP handler reproduced the timeout mechanism; a serial background scanner and bounded cache now serve requests within the unchanged one-second readiness budget. Native CI passed, then selector-free full Argo sync at exact revision 55285aafc96855419ba5e50ab11475cb71a60a0f succeeded with 129 resource results and fresh successful hooks. Eleven HTTP samples passed (maximum 0.111 s); the delayed readback more than 30 minutes later passed HTTP and Prometheus, Ready/zero-restart exporter, unchanged production DB/ingestor identities, no new errors and exactly one actual ESP32 writer. Independent scheduled backup Job, artifact pair/checksum metadata, original mtime and PGDMP header verify local generation. Underlying historic storage latency cause remains unproven; no restore/offsite inference.\n\nNext action: None for this scoped issue; retain normal monitoring and the original failed/inconclusive evidence.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.md and .json.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "Normal scoped diagnosis/delivery; no database cutover, device action or credential change.",
-      "status": "open"
+      "status": "closed",
+      "accepted": true
     },
     {
       "key": "981",
@@ -3495,7 +3496,7 @@
       "what": "Bring the existing descheduler into Git and manual Argo ownership without changing its enforcement behavior.",
       "why": "Current Git dry-run declarations differ from the enforcing live controller; blindly applying them disables enforcement.",
       "how": [
-        "Finish the smallest spec-preserving source change excluding Namespace, retain exact seven object identities and maintenance suspend state, then coordinate the existing Agents owner's manual AppProject/catalog tracking adoption and noncascading inverse. Verify a natural enforce Job after adoption.",
+        "Complete owning Agents PR #5033 exact-head enforced checks/delivery, then adopt the exact seven resources without spec or Namespace changes and verify tracking plus one natural successful enforce Job.",
         "Prepare the product declaration and owning Agents AppProject/catalog entries; exclude Namespace management and preserve resource scope.",
         "Adopt the exact seven resources in the owner window, verify tracking and unchanged specification, then inspect one natural successful enforcement run."
       ],
@@ -3508,7 +3509,7 @@
         "deploy/k8s/descheduler",
         "deploy/k8s/overlays/prod"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Current cronjob.yaml is hourly (15 * * * *), enforce=true (three args, no --dry-run arg), digest-pinned with evict=true. Kustomization still includes externally labeled Namespace and obsolete staged files remain. Prepared minimal adoption was not committed/adopted. Whole-estate Agents4451 is not a legitimate completion gate.\n\nNext action: Finish the smallest spec-preserving source change excluding Namespace, retain exact seven object identities and maintenance suspend state, then coordinate the existing Agents owner's manual AppProject/catalog tracking adoption and noncascading inverse. Verify a natural enforce Job after adoption.\n\nS3, October 19–30: 4–8 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: jvallery/agents#4459.\n\nConcrete conditions: Existing jvallery/agents owner: exact descheduler AppProject/catalog/estate ownership declaration and coordinated adoption; successor ownership tracking #4830 where needed\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/802 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/deploy/k8s/descheduler/cronjob.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/deploy/k8s/descheduler/kustomization.yaml · https://github.com/VerdifyConsultancy/verdify-platform/issues/802#issuecomment-6154782261",
+      "baseline": "Product declaration now excludes Namespace and retains the exact seven existing descheduler objects, enforcing behavior and maintenance suspend state. Owning Agents PR #5033 is prepared for AppProject/catalog/estate ownership; exact-head enforced CI, delivery and live adoption remain pending. Whole-estate Agents #4451 closure is not a prerequisite.\n\nNext action: Complete the exact-head owning Agents PR checks and delivery, then perform spec-preserving manual adoption of the exact seven identities and verify tracking, Namespace preservation and one natural successful enforce Job.\n\nEvidence: https://github.com/jvallery/agents/pull/5033 and deploy/k8s/descheduler/kustomization.yaml. #802 remains open; source preparation is not live ownership acceptance.",
       "delivery": "Coordinate product source with the owning Agents catalog; verify live tracking, unchanged resource specifications and a natural job outcome.",
       "rollback": "Retain stripped resource exports. Undo only adoption metadata or withdraw the child without cascade; never reapply the old dry-run specification.",
       "decision": "External parent is jvallery/agents#4493. Current specific owner/project/catalog proof is required; whole-estate issue closure is not a prerequisite.",
@@ -3516,8 +3517,8 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T02:34:19Z",
-    "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+    "reviewed_at": "2026-10-18T03:24:33Z",
+    "source_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-17-s3-execution/README.md",
     "open_issues": [
@@ -3568,7 +3569,6 @@
       787,
       802,
       963,
-      980,
       981
     ],
     "sprints": [
@@ -3577,8 +3577,8 @@
         "title": "S3 — Runtime truth and contained qualification (October 19–30, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Complete the eight original bounded packets within 80 shared hours. #977 is accepted; seven open allocations retain original estimates totaling 27–54 hours. These are not measured remaining hours or time spent. Preserve the original 22-hour contingency and one product, one independent owner and one source/science lane.",
-        "exit": "Record each scoped packet outcome and remaining acceptance. Replica-policy decision and three-replica verification are accepted; readiness is failed, energy clock qualification has a named upstream owner, and the scientific input decision is complete without scientific acceptance. Other packet outcomes await final composition."
+        "goal": "Complete the eight original bounded packets within 80 shared hours. #977 and #980 are accepted; six open allocations retain original estimates totaling 25–50 hours. These are not measured remaining hours or time spent. Preserve the original 22-hour contingency and one product, one independent owner and one source/science lane.",
+        "exit": "Record every scoped packet outcome and remaining acceptance. #977 storage and #980 exporter delivery are accepted. #749 original readiness remains failed; #981 has a named upstream owner; #782 input decision is complete without scientific acceptance. #639/#587 actual-role qualification and #802 owner adoption remain in progress. The sprint is not complete."
       },
       {
         "id": "ALTERNATE",
@@ -3707,7 +3707,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Update the health matrix and child list to own #980 and #981, retain accepted historical children, and consume #749 final disposition. Keep shared alert implementation in monitoring-stack.",
+        "next_action": "Maintain the accepted #980 health receipt and explicit #981/#749/#963 next actions; keep shared alert implementation in monitoring-stack.",
         "owner_role": "Platform lead"
       },
       {
@@ -3891,7 +3891,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Run existing finite current-source lifecycle/HTTP/fault cases alongside #639 on the same admitted device-denied target.",
+        "next_action": "Use the completed shared finite preseal; finish existing central credential custody and actual-role attestation, then run lifecycle, feature-off and blinded denial cases alongside #639. Deliver and verify the named alert interface through its owning monitoring route; source work alone is not alert delivery acceptance.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3907,7 +3907,7 @@
         "sprint": "S3",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Run one bounded current-source device-denied executor/recovery matrix with #587 on the existing admitted target.",
+        "next_action": "Use the complete primary2-bound finite preseal and passing 84-function source/property checks; complete existing central credential custody and actual-role attestation, then execute only the admitted current-source device-denied subset and reseal genuine rows, catalog and all sequences. Preserve intentional active-prefix denial, uncovered contained cases and #641 physical proof.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3939,7 +3939,7 @@
         "sprint": "S3",
         "hours_min": 2,
         "hours_max": 4,
-        "next_action": "Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.",
+        "next_action": "Preserve the original sealed FAIL; investigate the unchanged 4 F climate spread and six replacement soil identities before a separately scoped later qualification. Current full-sync provenance is resolved by #980 delivery. Do not relax the guard, silently expand exceptions or collect repeatedly for a passing result.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -4019,7 +4019,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Finish the smallest spec-preserving source change excluding Namespace, retain exact seven object identities and maintenance suspend state, then coordinate the existing Agents owner's manual AppProject/catalog tracking adoption and noncascading inverse. Verify a natural enforce Job after adoption.",
+        "next_action": "Complete owning Agents PR #5033 exact-head enforced checks/delivery, then adopt the exact seven resources without spec or Namespace changes and verify tracking plus one natural successful enforce Job.",
         "owner_role": "Platform lead with Agents owner"
       },
       {
@@ -4029,14 +4029,6 @@
         "hours_max": null,
         "next_action": "Keep the qualified source and consumer work. Prepare a single exact binary/source/rollback/HA observation packet, share it with #390, and select it only when a concrete OTA window is chosen. Do not rebuild or flash merely to close triage.",
         "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 980,
-        "sprint": "S3",
-        "hours_min": 2,
-        "hours_max": 4,
-        "next_action": "Replace obsolete pause text with exact PR984 restoration state. Use existing logs/metadata and one bounded timing diagnosis to distinguish client budget, filesystem latency and overlapping requests. If evidenced, implement the smallest response/cache/concurrency fix while keeping backup age/error explicit, then independently verify backup generation.",
-        "owner_role": "Platform/observability lead"
       },
       {
         "issue_number": 981,

@@ -1,0 +1,220 @@
+{
+  "issue": 980,
+  "acceptance": "ACCEPTED",
+  "reviewed_at": "2026-10-18T03:17:47.325161+00:00",
+  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+  "deployed_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "production_render_sha256": "32e84bd8ca706af15b9700e55eb06835d1144a2d5ace60f60f10fd3679fd4741",
+  "diagnosis": {
+    "observed": "One HTTP GET to current exporter loopback /metrics timed out at configured2seconds; exporter emitted BrokenPipe for the local client at2026-10-18T02:04:58UTC. The source performs all glob/getmtime/stat work before headers.",
+    "mechanism_proven": "Executing old deployed handler with a deliberately blocked filesystem scan fails the response-budget regression; corrected handler responds without invoking scan.",
+    "underlying_storage_cause": "UNPROVEN. One35second passive proc-only observation found the process idle between normal work; denied syscall/stack access was not bypassed. No claim about historic NAS root cause."
+  },
+  "implementation": {
+    "scanner": "One serial daemon;30seconds between completed scans; HTTP handlers perform no filesystem work.",
+    "cache": "90second monotonic freshness bound; startup/error/expiry returns timestamp0,size0,count0,up0. Empty directory returns timestamp0/up1. Successful result retains original dump mtime.",
+    "readiness": "One-second timeout unchanged; readiness means HTTP availability, not backup success.",
+    "runtime_scope": "Only the exporter pod template changed live. Native CI automatically built candidate images; none was promoted. No storage-policy, database-schema or device change."
+  },
+  "native_validation": {
+    "workflow": "agent-fleet-ci/verdify-platform-ci-z9qjv",
+    "uid": "2f4476e5-6087-452f-9c3c-3bafd8f77703",
+    "started_at": "2026-10-18T02:22:48Z",
+    "finished_at": "2026-10-18T02:42:20Z",
+    "phase": "Succeeded",
+    "full_validation": "PASS",
+    "automatically_selected_builds": [
+      "ingestor",
+      "lab-publisher-k3s"
+    ],
+    "release_pins_changed": false
+  },
+  "sync": {
+    "started_at": "2026-10-18T02:44:50Z",
+    "finished_at": "2026-10-18T02:47:03Z",
+    "phase": "Succeeded",
+    "synced": true,
+    "healthy": true,
+    "resource_results": 129,
+    "selector": null,
+    "prune": false,
+    "existing_spec_change": "exporter inline command only after API-default normalization",
+    "fresh_hooks": [
+      {
+        "name": "verdify-experiment-v2-credential-bootstrap",
+        "uid": "6a2b7c6e-8e41-4839-9134-49f8961796cd",
+        "start_time": "2026-10-18T02:45:25Z",
+        "completion_time": "2026-10-18T02:45:37Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-maintenance-runtime-role-bootstrap",
+        "uid": "e41af228-8c4c-4294-85a0-f578ff5570fd",
+        "start_time": "2026-10-18T02:45:55Z",
+        "completion_time": "2026-10-18T02:46:06Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-mcp-runtime-role-bootstrap",
+        "uid": "0bfb1ed0-db0a-4a88-a15d-0593a9e502eb",
+        "start_time": "2026-10-18T02:45:25Z",
+        "completion_time": "2026-10-18T02:45:32Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-migrate",
+        "uid": "067a307d-a3a1-4b47-ace3-3c72f284c385",
+        "start_time": "2026-10-18T02:45:01Z",
+        "completion_time": "2026-10-18T02:45:13Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-runtime-role-bootstrap",
+        "uid": "cb44bc7f-a19c-46ac-92b4-a47c486ec2c3",
+        "start_time": "2026-10-18T02:45:16Z",
+        "completion_time": "2026-10-18T02:45:25Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-six-runtime-role-bootstrap",
+        "uid": "9897b3db-7744-4104-babd-e886f6ce4d6f",
+        "start_time": "2026-10-18T02:45:38Z",
+        "completion_time": "2026-10-18T02:45:54Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-winter-archive-init",
+        "uid": "feb36207-e053-469d-b840-a38ff527070e",
+        "start_time": "2026-10-18T02:46:12Z",
+        "completion_time": "2026-10-18T02:46:29Z",
+        "succeeded": 1
+      }
+    ],
+    "hook_pods_all_exit_zero": true,
+    "migrate_image_digest": "sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962",
+    "hook_log_limitation": "Fresh Job/Pod identities, timestamps, pinned image and zero exits were retained before TTL deletion; later migrate log read was NotFound and supplies no extra evidence."
+  },
+  "live_response": {
+    "running_script_sha256": "4f4963100b089f74e1582803d5e071bbacb8790e03a3e445a48f7374956b2939",
+    "http_samples": 11,
+    "all_http_200": true,
+    "all_exporter_up": true,
+    "max_response_seconds": 0.11079440009780228,
+    "readiness_budget_seconds": 1,
+    "scan_interval_seconds": 30,
+    "cache_max_age_seconds": 90
+  },
+  "prometheus_received": [
+    {
+      "name": "scrape_duration_seconds",
+      "observed_epoch": 1792292125.451,
+      "value": "0.003194112"
+    },
+    {
+      "name": "up",
+      "observed_epoch": 1792292125.451,
+      "value": "1"
+    },
+    {
+      "name": "verdify_db_backup_dump_count",
+      "observed_epoch": 1792292125.451,
+      "value": "15"
+    },
+    {
+      "name": "verdify_db_backup_dump_size_bytes",
+      "observed_epoch": 1792292125.451,
+      "value": "470996511"
+    },
+    {
+      "name": "verdify_db_backup_exporter_up",
+      "observed_epoch": 1792292125.451,
+      "value": "1"
+    },
+    {
+      "name": "verdify_db_backup_last_success_timestamp_seconds",
+      "observed_epoch": 1792292125.451,
+      "value": "1792225121.8947577"
+    }
+  ],
+  "independent_backup": {
+    "job": "verdify-db-backup-29870417",
+    "completed_at": "2026-10-17T08:18:51Z",
+    "pair_stem": "verdify-20261017T081701Z",
+    "dump_bytes": 470996511,
+    "dump_mtime_epoch": 1792225121.8947577,
+    "dump_header": "PGDMP",
+    "producer_dump_sha256": "61edf7d3058ca957866bbaabd4216fac6223250934ee518114f03b9ce04b628d",
+    "roles_bytes": 11744,
+    "producer_roles_sha256": "65011d39604c9f51d1ef46b59f0f38e0d29510813710739e5a56d037c7bebdd9",
+    "checksum_manifest_sha256": "e6a93d0bb2151d0ab7302908830f71cbed8ea0588861a5cfeb7bd55324801df2",
+    "verification": "Retained successful scheduled Job/log plus exact pair and checksum-manifest metadata and five-byte dump header. No new backup or full-payload hash scan.",
+    "restore_or_offsite_proven": false
+  },
+  "safety": {
+    "smoke": "9/9 PASS",
+    "writer": "Exactly one ESP32 writer on bounded post-race scan; original UNKNOWN scan retained",
+    "ingestor_pod_uid": "44386520-a799-468c-ae13-fe93ec9e1f1c",
+    "ingestor_restarts": 0,
+    "ingestor_rollout": false,
+    "new_exporter_BrokenPipe_or_Traceback": 0,
+    "new_ingestor_schema_validation_errors": 0,
+    "production_schema_change": false
+  },
+  "delayed_readback": {
+    "observed_at": "2026-10-18T03:17:11.492047+00:00",
+    "seconds_since_sync_complete": 1808.492047,
+    "application": "Synced/Healthy exact55285aaf full selector-free succeeded",
+    "exporter_uid": "de49c954-0ba4-42c8-8e73-146b52db7772",
+    "exporter_ready": true,
+    "exporter_restarts": 0,
+    "http": [
+      {
+        "event": "running_source",
+        "script_sha256": "4f4963100b089f74e1582803d5e071bbacb8790e03a3e445a48f7374956b2939"
+      },
+      {
+        "sample": 0,
+        "observed_at": "2026-10-18T03:17:15.199230+00:00",
+        "status": 200,
+        "response_seconds": 0.04368980089202523,
+        "metrics": {
+          "verdify_db_backup_last_success_timestamp_seconds": 1792225121.8947577,
+          "verdify_db_backup_dump_size_bytes": 470996511.0,
+          "verdify_db_backup_dump_count": 15.0,
+          "verdify_db_backup_exporter_up": 1.0
+        }
+      }
+    ],
+    "new_log_error_counts": {
+      "exporter": {
+        "BrokenPipe": 0,
+        "Traceback": 0
+      },
+      "ingestor": {
+        "ValidationError": 0,
+        "row failed schema validation": 0
+      }
+    },
+    "exporter_warning_events": [],
+    "production_database_and_ingestor_uid_unchanged": true,
+    "single_writer_delayed": "PASS: exactly one actual ESP32 writer, zero failed checks"
+  },
+  "delayed_prometheus_received": {
+    "scrape_duration_seconds": 0.004273773,
+    "up": 1.0,
+    "verdify_db_backup_dump_count": 15.0,
+    "verdify_db_backup_dump_size_bytes": 470996511.0,
+    "verdify_db_backup_exporter_up": 1.0,
+    "verdify_db_backup_last_success_timestamp_seconds": 1792225121.8947577
+  },
+  "private_custody_sha256": "ae33d3f055a4781d214eeb5be6acee7a18ee3feadbaa5fa4a003aee8e0bbaceb",
+  "scope_limits": [
+    "Backup artifact producer checksum and metadata are retained; no new full payload scan, restore or offsite qualification.",
+    "Underlying historic storage latency cause remains unproven; synchronous request-path filesystem blocking is reproduced and corrected.",
+    "Original unknown socket scan and all failed attempts remain private custody; later exact singleton-writer checks pass."
+  ],
+  "acceptance_comment": "https://github.com/VerdifyConsultancy/verdify-platform/issues/980#issuecomment-6245139260",
+  "github_closed_at": "2026-10-18T03:21:38Z",
+  "github_state_reason": "COMPLETED",
+  "published_body_sha256": "6fda15d77f66a0c4f277f7c66b1c3a7cf5110c5fed323bebed80793d03eca104"
+}

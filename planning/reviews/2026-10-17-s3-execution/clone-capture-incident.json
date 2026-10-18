@@ -1,0 +1,193 @@
+{
+  "schema": "verdify-s3-clone-initial-kill-diagnosis/v1",
+  "diagnosis": "confirmed_pod_cgroup_oom_group_kill",
+  "scope": "Read-only metadata, bounded existing logs and node kernel journal; no DB query, capture retry, mutation, Job, credential or resource/security change.",
+  "identity": {
+    "namespace": "verdify-db-rehearsal",
+    "cluster": "verdify-cnpg-s2-integration",
+    "cluster_uid": "b087a146-58c5-4d98-8054-09094d22ecfe",
+    "old_primary": "verdify-cnpg-s2-integration-1",
+    "old_primary_pod_uid": "45cbb6ef-a246-4448-9111-8d1a2ba4afad",
+    "worker": "vm-k3s-node5",
+    "killed_container_id": "626652c44145765027a2aefdaef986b090cefae634d7e28106c6670da6d64abb",
+    "new_primary": "verdify-cnpg-s2-integration-2",
+    "new_primary_pod_uid": "81790e3e-7f0a-4655-9595-83bf2c95f635"
+  },
+  "memory": {
+    "constraint": "CONSTRAINT_MEMCG",
+    "usage_kib": 6291456,
+    "limit_kib": 6291456,
+    "limit_gib": 6,
+    "anon_bytes": 6119337984,
+    "file_bytes": 295006208,
+    "shmem_bytes": 294748160,
+    "memory_oom_group_kill": true,
+    "largest_killed_postgres_anon_rss_kib": {
+      "147653": 2289196,
+      "147655": 2245048,
+      "61260": 1400172
+    },
+    "limitation": "Kernel process names and host PIDs do not identify query text, query plan nodes or whether these were parallel workers. Exact capture SQL/plan attribution is not established by this record."
+  },
+  "timeline": [
+    {
+      "at_utc": "2026-10-18T02:36:26.455657Z",
+      "event": "Kernel invokes OOM killer for the exact old-primary pod cgroup."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.457084Z",
+      "event": "Cgroup reports usage equal to 6 GiB limit."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.458990Z",
+      "event": "Kernel selects CONSTRAINT_MEMCG victim postgres PID147653 in exact original container."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.459112Z",
+      "event": "Kernel explicitly group-kills container due to memory.oom.group, including manager and psql; explains observed exec exit137."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:27Z",
+      "event": "Kubelet starts replacement container in the same pod."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:29.364846872Z",
+      "event": "CNPG operator observes unhealthy/restarting primary and initiates failover."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:29.630179313Z",
+      "event": "Restarted former primary explicitly begins fast shutdown for demotion."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:30.717211Z",
+      "event": "Cluster status records primary2 as current primary."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:33Z",
+      "event": "Demotion shutdown exits Completed/0; this later lastState overwrites the original kill evidence."
+    },
+    {
+      "at_utc": "2026-10-18T02:36:46Z",
+      "event": "Same pod starts again and rejoins as replica after pg_rewind."
+    },
+    {
+      "at_utc": "2026-10-18T02:37:02.906616719Z",
+      "event": "Operator reports cluster healthy; retained Cluster has all three Ready."
+    }
+  ],
+  "probe_and_operator_interpretation": "Retained startup/readiness failures are subsequent recovery symptoms. The authoritative kernel OOM predates CNPG failover and demotion, so neither the recorded probe failures nor the later clean controller shutdown is the initial kill cause. This is a cgroup-limit event, not evidence of node-wide/global OOM.",
+  "query_result": "No complete pre-execution custody baseline was produced; healthy failover is not data-equality or qualification acceptance. Preserve failed capture and original submitted SQL bytes.",
+  "source_correction_boundary": [
+    "Redesign capture for bounded memory at every aggregation/serialization/materialization step; work_mem alone is not a process/cgroup memory cap.",
+    "Review all nested aggregates and execution parallelism before a separately admitted bounded pilot; no plan execution or pilot was performed here.",
+    "A fixed block size for hash strings does not itself prove every intermediate representation or final catalog/data aggregation bounded.",
+    "Do not raise pod limits, weaken readiness or change security/credentials merely to accommodate the capture. Any later execution remains ROOT-owned and requires current target identity/admission."
+  ],
+  "evidence": [
+    {
+      "at_utc": "2026-10-18T02:36:26.455657+00:00",
+      "message": "manager invoked oom-killer: gfp_mask=0x100cca(GFP_HIGHUSER_MOVABLE), order=0, oom_score_adj=981"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.457084+00:00",
+      "message": "memory: usage 6291456kB, limit 6291456kB, failcnt 151720"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.457183+00:00",
+      "message": "anon 6119337984"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.457209+00:00",
+      "message": "file 295006208"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.458990+00:00",
+      "message": "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=cri-containerd-626652c44145765027a2aefdaef986b090cefae634d7e28106c6670da6d64abb.scope,mems_allowed=0-3,oom_memcg=/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod45cbb6ef_a246_4448_9111_8d1a2ba4afad.slice,task_memcg=/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod45cbb6ef_a246_4448_9111_8d1a2ba4afad.slice/cri-containerd-626652c44145765027a2aefdaef986b090cefae634d7e28106c6670da6d64abb.scope,task=postgres,pid=147653,uid=26"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.459081+00:00",
+      "message": "Memory cgroup out of memory: Killed process 147653 (postgres) total-vm:2814488kB, anon-rss:2289196kB, file-rss:10880kB, shmem-rss:42624kB, UID:26 pgtables:5184kB oom_score_adj:981"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.459112+00:00",
+      "message": "Tasks in /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod45cbb6ef_a246_4448_9111_8d1a2ba4afad.slice/cri-containerd-626652c44145765027a2aefdaef986b090cefae634d7e28106c6670da6d64abb.scope are going to be killed due to memory.oom.group set"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.459169+00:00",
+      "message": "Memory cgroup out of memory: Killed process 2770920 (manager) total-vm:1394744kB, anon-rss:24832kB, file-rss:1152kB, shmem-rss:0kB, UID:26 pgtables:300kB oom_score_adj:981"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.517355+00:00",
+      "message": "Memory cgroup out of memory: Killed process 61210 (psql) total-vm:19308kB, anon-rss:1152kB, file-rss:6144kB, shmem-rss:0kB, UID:26 pgtables:80kB oom_score_adj:981"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.533192+00:00",
+      "message": "Memory cgroup out of memory: Killed process 61260 (postgres) total-vm:1926232kB, anon-rss:1400172kB, file-rss:9668kB, shmem-rss:265344kB, UID:26 pgtables:3644kB oom_score_adj:981"
+    },
+    {
+      "at_utc": "2026-10-18T02:36:26.534452+00:00",
+      "message": "Memory cgroup out of memory: Killed process 147655 (postgres) total-vm:2781704kB, anon-rss:2245048kB, file-rss:11264kB, shmem-rss:48000kB, UID:26 pgtables:5116kB oom_score_adj:981"
+    }
+  ],
+  "custody_manifest": [
+    {
+      "path": "/private/tmp/verdify-s3-clone-incident/node5-kernel-window.private.jsonl",
+      "bytes": 255819,
+      "sha256": "a279085fd49721d5c5429b83032c0eecfbdbb0b64d2cec46a3db6c1540225a32"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-clone-incident/loki-incident-range.private.json",
+      "bytes": 19825,
+      "sha256": "b82ed1dc5374d12f1b2f95f4ce27404cae74850489b16655e95cf7c22283e449"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-cnpg-operator-cfrb6.private.log",
+      "bytes": 17077,
+      "sha256": "dc489b5161bc2bdc12ad43a8cce4991c03e16347b728d9a88dde961ee104ac06"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-clone-after137-pods.json",
+      "bytes": 174771,
+      "sha256": "93577352045771f590d568169f062ba0bb9970eef37396685670ba3ec882f54e"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-clone-after137-cluster.json",
+      "bytes": 15755,
+      "sha256": "106b0a081df8d26ca86bfa571db2bac98bb20477c40a397900877ae456514e8a"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-clone-after137-events.json",
+      "bytes": 10887,
+      "sha256": "0ab1cdb9f9d2402e33ee0e5d6602e9f777c6fc9d224b34aba1dcc2ac4d1984a4"
+    },
+    {
+      "path": "/private/tmp/verdify-s3-owner-capture.sql",
+      "bytes": 6151,
+      "sha256": "9925345eb5dee067fe6cbfb19ebb05d1feec3643db19c8509765d3fc518d0f15"
+    }
+  ],
+  "retrieval_limits": [
+    "Direct Prometheus, HA-query and replica service proxy attempts returned HTTP502; no historical metric values obtained or inferred.",
+    "Loki existing pod logs confirm recovery/demotion but did not expose initial OOM; kernel journal provides authoritative cause.",
+    "Node journal read was limited to 02:33:30\u201302:38:00 UTC and no host state was changed."
+  ],
+  "capture_input_provenance": {
+    "classification": "reconstructed_current_input_not_presealed_submission",
+    "original_path": "/private/tmp/verdify-s3-owner-capture.sql",
+    "preserved_copy": "/private/tmp/verdify-s3-clone-incident/capture-input.reconstructed.private.sql",
+    "bytes": 6151,
+    "sha256": "9925345eb5dee067fe6cbfb19ebb05d1feec3643db19c8509765d3fc518d0f15",
+    "source_mtime_ns": 1792290725233475677,
+    "source_mtime_utc": "2026-10-18T02:32:05.233476+00:00",
+    "root_attestation": "ROOT reports the driver read all file bytes at startup and sent stdin to kubectl exec. Full receipt was written only on success, so no presealed submitted SQL copy/hash exists for the failed attempt. Current file is expected unchanged since the first temp-DDL fix; this is consistent with the control-lane attestation.",
+    "control_attestation": "Control lane confirms no edits since the temp-DDL fix before the successful metadata/temp pilot. Earlier line_number ordering and unpopulated-materialized-view marker changes preceded that fix. Since full capture began, source reads only; any replacement will use a separate filename. Current bytes are consistent with the input handed to ROOT, without an independent pre-execution seal.",
+    "future_source_requirement": "Seal every input and an attempt-start receipt before execution; retain failure and terminal status. No retry performed."
+  },
+  "root_execution_boundary": {
+    "execution_stopped": true,
+    "credential_or_fixture_or_behavior_job_before_incident": false,
+    "production_database_rollout_or_restart": false,
+    "old_primary_binding_valid": false,
+    "subsequent_metadata_probes": "Bounded read-only metadata probes passed; no complete data or behavior admission implied."
+  }
+}

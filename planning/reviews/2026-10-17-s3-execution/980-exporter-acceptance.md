@@ -1,0 +1,13 @@
+# #980 — backup exporter acceptance
+
+Accepted on October 18 at 03:17 UTC (October 17 in Denver), following the original observation, response-path regression, native CI, exact production delivery and a delayed readback more than 30 minutes after sync. [Sanitized receipt](980-exporter-acceptance.json).
+
+The old handler performed filesystem discovery before sending HTTP headers. A deliberately blocked scan reproduced its missed response budget; the corrected handler serves a cache without filesystem work. One serial scanner waits 30 seconds between completed scans. Startup, scan error or cache expiry after 90 monotonic seconds reports zero timestamp/size/count and exporter-up zero. A successful empty directory reports zero timestamp and exporter-up one. Dump timestamps retain the original artifact mtime. Readiness still has its one-second timeout and represents HTTP availability.
+
+Native workflow `verdify-platform-ci-z9qjv` passed full validation. Product source `b523a9b1ffecf0f82f8952763a1c0de207e540b5` was delivered at revision `55285aafc96855419ba5e50ab11475cb71a60a0f`, render SHA-256 `32e84bd8ca706af15b9700e55eb06835d1144a2d5ace60f60f10fd3679fd4741`. The selector-free, nonpruning full Argo sync succeeded at 02:47:03 UTC with 129 resource results and fresh successful migration/bootstrap hooks. Only the exporter command changed an existing workload specification. No candidate image was promoted.
+
+Eleven HTTP samples returned 200 and exporter-up one, with maximum latency 0.111 seconds. At 03:17:11 UTC, 1,808 seconds after sync, the exporter remained Ready with zero restarts, no warning events or new BrokenPipe/Traceback; HTTP latency was 0.044 seconds and Prometheus received healthy scrape/exporter metrics. Production database and ingestor identities remained unchanged, with zero ingestor restarts, no schema-validation errors and exactly one actual ESP32 writer in the bounded delayed check. The first socket scan was inconclusive during cohort turnover and remains retained.
+
+Independent local-backup evidence is the completed scheduled Job `verdify-db-backup-29870417`, its retained producer checksum manifest, matching nonempty dump/roles pair, original mtime and five-byte PGDMP header. Prometheus reports 15 dumps and the exact latest dump size/mtime. No new backup, NAS payload scan, restore or offsite claim is made. The underlying historic storage latency cause remains unproven; this acceptance covers the demonstrated request-path defect and independent local-backup/exporter health.
+
+All three issue acceptance clauses are met. Original failures and private evidence remain preserved. This result also supplies current full-sync provenance for #749, while its original climate/soil FAIL remains unaccepted.
