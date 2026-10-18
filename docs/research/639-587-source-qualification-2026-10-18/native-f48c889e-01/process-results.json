@@ -1,0 +1,90 @@
+[
+  {
+    "phase": "compile",
+    "exit_code": 0,
+    "command": [
+      "/usr/bin/g++",
+      "-std=c++17",
+      "-O2",
+      "-I",
+      "/workspace/repo/firmware/lib",
+      "-o",
+      "/tmp/prefix-source-pilot-ja28u00w/replay_invariants",
+      "/workspace/repo/firmware/test/replay_invariants.cpp"
+    ],
+    "streams": {
+      "stdout": {
+        "path": "01-compile.stdout.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "path": "01-compile.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  {
+    "phase": "template",
+    "exit_code": 0,
+    "command": [
+      "/tmp/prefix-source-pilot-ja28u00w/replay_invariants",
+      "--print-policy-template"
+    ],
+    "streams": {
+      "stdout": {
+        "path": "02-template.stdout.txt",
+        "bytes": 4591,
+        "sha256": "7a3f298118dcf177fdc8d874113b5488f9fbd207be9579d7119cfa06c52050c2"
+      },
+      "stderr": {
+        "path": "02-template.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  {
+    "phase": "baseline",
+    "exit_code": 0,
+    "command": [
+      "/tmp/prefix-source-pilot-ja28u00w/replay_invariants",
+      "/tmp/prefix-source-pilot-ja28u00w/replay-corpus.tsv",
+      "--policy-state=/tmp/prefix-source-pilot-ja28u00w/policy-state-d0d5cec418a592e0.txt"
+    ],
+    "streams": {
+      "stdout": {
+        "path": "03-baseline.stdout.txt",
+        "bytes": 6215,
+        "sha256": "44e3a55bc575d8bad8362a33f4d99a0e71812b519fbe79226505af2463104149"
+      },
+      "stderr": {
+        "path": "03-baseline.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  {
+    "phase": "missing-field",
+    "exit_code": 64,
+    "command": [
+      "/tmp/prefix-source-pilot-ja28u00w/replay_invariants",
+      "/tmp/prefix-source-pilot-ja28u00w/replay-corpus.tsv",
+      "--policy-state=/tmp/prefix-source-pilot-ja28u00w/incomplete-policy.txt"
+    ],
+    "streams": {
+      "stdout": {
+        "path": "04-missing-field.stdout.txt",
+        "bytes": 6235,
+        "sha256": "672bbe3c0bf5cb160a36a4e887f1d47a1ba7e74ae146836150830f2022a4a0c5"
+      },
+      "stderr": {
+        "path": "04-missing-field.stderr.txt",
+        "bytes": 124,
+        "sha256": "683484e5345815c8bc7205a750ab1d84fc4f68feb9ee310bd5436c7ea825ccf5"
+      }
+    }
+  }
+]
