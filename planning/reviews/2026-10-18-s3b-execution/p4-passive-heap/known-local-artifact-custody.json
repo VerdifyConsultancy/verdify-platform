@@ -1,0 +1,115 @@
+{
+  "at": "2026-10-18T15:21:48.150079+00:00",
+  "bounded_known_local_patterns": [
+    "/Volumes/Work/Codex/verdify-*/firmware/artifacts/last-good.ota.bin",
+    "/Volumes/Work/Codex/verdify-*/source/firmware/artifacts/last-good.ota.bin",
+    "/Users/jason/.codex/worktrees/verdify-*/verdify-platform/firmware/artifacts/last-good.ota.bin",
+    "/Users/jason/repos/verdify-platform*/firmware/artifacts/last-good.ota.bin"
+  ],
+  "new_worktree_has_ignored_artifacts": false,
+  "known_copies": [
+    {
+      "path": "/Volumes/Work/Codex/verdify-386-operational-source-20261001/firmware/artifacts/last-good.ota.bin",
+      "bytes": 1105552,
+      "sha256": "d0e793abf5355b1bffff890a1d1f7aac349d88bdb7476ae225258cf37d8bfca6",
+      "mtime": "2026-10-01T22:14:17.475683+00:00",
+      "symlink": false,
+      "last-good.version": {
+        "path": "/Volumes/Work/Codex/verdify-386-operational-source-20261001/firmware/artifacts/last-good.version",
+        "bytes": 35,
+        "sha256": "9984db006425d2da69ee230d2cbc4201617daa0e469b425b7af7c595d2baa8a0",
+        "version": "2026.10.1.1315.e31889bd-wifi-bound"
+      },
+      "last-good.metadata.env": {
+        "path": "/Volumes/Work/Codex/verdify-386-operational-source-20261001/firmware/artifacts/last-good.metadata.env",
+        "bytes": 1109,
+        "sha256": "bff623131828f932300dd8066efb629ea730724aea1ed4777cb01501c35c1883",
+        "metadata": {
+          "firmware_version": "2026.10.1.1315.e31889bd-wifi-bound",
+          "archived_at": "2026-10-01T13:16:00-0600",
+          "source_ref": "HEAD",
+          "source_sha": "e31889bd3c28e036acb9c3fb8aebe5386f5a612b",
+          "source_dirty": "0"
+        }
+      }
+    },
+    {
+      "path": "/Volumes/Work/Codex/verdify-c1-periodic-operational-source-20261002/firmware/artifacts/last-good.ota.bin",
+      "bytes": 1105552,
+      "sha256": "d0e793abf5355b1bffff890a1d1f7aac349d88bdb7476ae225258cf37d8bfca6",
+      "mtime": "2026-10-01T22:14:17.475683+00:00",
+      "symlink": false,
+      "last-good.version": {
+        "path": "/Volumes/Work/Codex/verdify-c1-periodic-operational-source-20261002/firmware/artifacts/last-good.version",
+        "bytes": 35,
+        "sha256": "9984db006425d2da69ee230d2cbc4201617daa0e469b425b7af7c595d2baa8a0",
+        "version": "2026.10.1.1315.e31889bd-wifi-bound"
+      },
+      "last-good.metadata.env": {
+        "path": "/Volumes/Work/Codex/verdify-c1-periodic-operational-source-20261002/firmware/artifacts/last-good.metadata.env",
+        "bytes": 1109,
+        "sha256": "bff623131828f932300dd8066efb629ea730724aea1ed4777cb01501c35c1883",
+        "metadata": {
+          "firmware_version": "2026.10.1.1315.e31889bd-wifi-bound",
+          "archived_at": "2026-10-01T13:16:00-0600",
+          "source_ref": "HEAD",
+          "source_sha": "e31889bd3c28e036acb9c3fb8aebe5386f5a612b",
+          "source_dirty": "0"
+        }
+      }
+    },
+    {
+      "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.ota.bin",
+      "bytes": 1106304,
+      "sha256": "0f84ea9a06a8c96928d3675361515aa8fa1ab39528d256353babb59717bd9176",
+      "mtime": "2026-10-02T14:07:39+00:00",
+      "symlink": false,
+      "last-good.version": {
+        "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.version",
+        "bytes": 35,
+        "sha256": "55961e4716aeb5a34f7efcdb6579202567a2faff8b9a8c9a42ca347f1fe93871",
+        "version": "2026.10.2.0637.620a218a-wifi-bound"
+      },
+      "last-good.metadata.env": {
+        "path": "/Volumes/Work/Codex/verdify-c1-final-periodic-operational-source-20261002/firmware/artifacts/last-good.metadata.env",
+        "bytes": 1195,
+        "sha256": "0e6d39b6445523bc7b90db34bfc5f127de00bf124ba8644161e3a0ea5b7c906a",
+        "metadata": {
+          "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+          "archived_at": "2026-10-02T06:54:55-0600",
+          "source_ref": "codex/c1-consumed-evidence-cadence-20261002",
+          "source_sha": "620a218a93cf24ca1e1b49dfed617cc97de7d258",
+          "source_dirty": "0",
+          "deployed_at": "2026-10-02T14:07:39+0000"
+        }
+      }
+    },
+    {
+      "path": "/Volumes/Work/Codex/verdify-heap-owner-corrected-build-20261001/firmware/artifacts/last-good.ota.bin",
+      "bytes": 1105552,
+      "sha256": "d0e793abf5355b1bffff890a1d1f7aac349d88bdb7476ae225258cf37d8bfca6",
+      "mtime": "2026-10-01T22:14:17.475683+00:00",
+      "symlink": false,
+      "last-good.version": {
+        "path": "/Volumes/Work/Codex/verdify-heap-owner-corrected-build-20261001/firmware/artifacts/last-good.version",
+        "bytes": 35,
+        "sha256": "9984db006425d2da69ee230d2cbc4201617daa0e469b425b7af7c595d2baa8a0",
+        "version": "2026.10.1.1315.e31889bd-wifi-bound"
+      },
+      "last-good.metadata.env": {
+        "path": "/Volumes/Work/Codex/verdify-heap-owner-corrected-build-20261001/firmware/artifacts/last-good.metadata.env",
+        "bytes": 1109,
+        "sha256": "bff623131828f932300dd8066efb629ea730724aea1ed4777cb01501c35c1883",
+        "metadata": {
+          "firmware_version": "2026.10.1.1315.e31889bd-wifi-bound",
+          "archived_at": "2026-10-01T13:16:00-0600",
+          "source_ref": "HEAD",
+          "source_sha": "e31889bd3c28e036acb9c3fb8aebe5386f5a612b",
+          "source_dirty": "0"
+        }
+      }
+    }
+  ],
+  "binary_bytes_copied_or_published": false,
+  "bake_or_last_good_acceptance_inferred_from_name_or_mtime": false
+}

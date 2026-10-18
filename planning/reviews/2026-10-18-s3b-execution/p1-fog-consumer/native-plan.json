@@ -1,0 +1,60 @@
+{
+  "format": "verdify-s3b-p1-native-plan-v1",
+  "status": "PREPARED_NOT_EXECUTED",
+  "source_base": "541c11ad0786e00e50e45f52ca4828173ddc58c2",
+  "expected_source": "ROOT materializes exact composed full Git SHA; driver refuses mismatch or tracked modifications",
+  "existing_path": {
+    "context": "vallery",
+    "namespace": "agent-fleet-ci",
+    "workflow_template_historical_reference": "repo-validate-568985cdbf6b4e3f",
+    "require_fresh_supported_template_binding": true,
+    "new_shared_resources": false
+  },
+  "check": {
+    "name": "s3b-p1-fog-vent-actual-consumer",
+    "command": "bash -lc 'set -euo pipefail\nexport VERDIFY_NATIVE_QUALIFICATION=1 VERDIFY_DEVICE_WRITE_ENABLED=0 KUBECONFIG=/dev/null\nunset PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD DATABASE_URL GITHUB_TOKEN GH_TOKEN\ntimeout 660s python3 scripts/qualify_fog_vent_consumer.py --expected-source __ROOT_ADMITTED_FULL_COMMIT__ --output-dir /tmp/verdify-s3b-p1-fog-native-01\n' "
+  },
+  "bounds": {
+    "parallelism": 1,
+    "cpu_request": "500m",
+    "memory_request": "1Gi",
+    "cpu_limit": "2",
+    "memory_limit": "4Gi",
+    "driver_seconds": 600,
+    "outer_command_seconds": 660,
+    "minimum_workflow_seconds": 720,
+    "text_custody_max_bytes": 16777216,
+    "compiles": 3,
+    "scenario_processes": 64,
+    "metadata_processes": 7
+  },
+  "expected": {
+    "compiles_exit_zero": 3,
+    "original_exit_zero": 56,
+    "causal_negatives_exit_one_with_exact_behavior_marker_and_completion": 8,
+    "qualification_receipt_status": "PASSED",
+    "artifact_integrity": "all emitted complete bytes match manifest; retain entire native stdout",
+    "outer_custody": "actual Workflow/Pod UID/imageID/source/node/resources/terminal main+wait exit/restarts and full log hash"
+  },
+  "source_inputs_sha256": {
+    "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81",
+    "scripts/qualify_fog_vent_consumer.py": "a93d69d4c5984da3ffd314f6cf626dda22e4eaab3c8bc7b478ee31443cfd3600",
+    "tests/fixtures/fog_vent_consumer.cpp.in": "4b340f2bc2bb8664297f5192604a128218b96c4e94ac0df8a3544b27d85be653",
+    "tests/test_fog_vent_consumer.py": "55cafaafd3ba2581d47261c02aa7168cd4198f125f7b9dad6cd3f5aefea43d16",
+    "planning/reviews/2026-10-18-s3b-execution/p1-fog-consumer/source-extraction.json": "dba56ecaeca944d3e02433ffd8901c32161409a6232b8ff333391853d45423e5"
+  },
+  "local_validation": {
+    "pure_tests": 35,
+    "result": "PASSED",
+    "cxx_or_replay_executed": false,
+    "ruff": "PASSED"
+  },
+  "limits": [
+    "No production firmware edits",
+    "No row-wise prefix credit;27/48 UNPROVEN",
+    "No hardware/physical acceptance",
+    "No policy-engine admission proof",
+    "No new template, credentials, RBAC, device, DB, Slack, OTA or grid/order changes",
+    "ROOT serializes native admission and submission; no automatic retry"
+  ]
+}

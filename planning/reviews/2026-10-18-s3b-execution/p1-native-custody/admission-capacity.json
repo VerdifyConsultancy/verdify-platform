@@ -1,0 +1,133 @@
+{
+  "applicable_quotas": [
+    "agent-fleet-ci-budget"
+  ],
+  "ephemeral_actual_free_bytes_not_proven": true,
+  "limits_overcommit_not_treated_as_scheduler_requests": true,
+  "matching_actual_pod_uids": [
+    "fcdef260-e867-4e79-b713-dbf18bc7a5ae",
+    "a268ad58-0e10-41d7-9159-26d0f30a1fa4",
+    "86516b16-1bd6-430b-9a56-a55af8253025",
+    "e1fc1036-213c-43ae-a5bc-ae20f574aa42"
+  ],
+  "pod_limits": {
+    "cpu": "2.500",
+    "ephemeral-storage": "12884901888",
+    "memory": "4831838208"
+  },
+  "pod_requests": {
+    "cpu": "0.600",
+    "ephemeral-storage": "4294967296",
+    "memory": "1207959552"
+  },
+  "quota_envelope": {
+    "limits.cpu": "5.500",
+    "limits.ephemeral-storage": "12884901888",
+    "limits.memory": "8053063680",
+    "pods": "4",
+    "requests.cpu": "1.200",
+    "requests.ephemeral-storage": "4294967296",
+    "requests.memory": "2013265920"
+  },
+  "workers": [
+    {
+      "active_pods": 124,
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "7",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "331690937812",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "96599099229",
+        "nvidia.com/gpu": "2",
+        "pods": "180"
+      },
+      "limits_report_only": {
+        "cpu": "92.450",
+        "ephemeral-storage": "183207198720",
+        "memory": "181800009728"
+      },
+      "metric_timestamp": "2026-10-18T15:41:59Z",
+      "node": "vm-k3s-node5",
+      "requests": {
+        "cpu": "28.085",
+        "ephemeral-storage": "103431536640",
+        "memory": "62844305408"
+      },
+      "uid": "faa0d5b4-1699-4563-823a-f60e6ce9fc6d",
+      "usage": {
+        "cpu": "12807773409n",
+        "memory": "34084660Ki"
+      }
+    },
+    {
+      "active_pods": 103,
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "9",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "271780866411",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "96598774826",
+        "nvidia.com/gpu": "1",
+        "pods": "180"
+      },
+      "limits_report_only": {
+        "cpu": "66.100",
+        "ephemeral-storage": "169382772736",
+        "memory": "188156477440"
+      },
+      "metric_timestamp": "2026-10-18T15:41:59Z",
+      "node": "vm-k3s-node6",
+      "requests": {
+        "cpu": "24.225",
+        "ephemeral-storage": "41003515904",
+        "memory": "69710381056"
+      },
+      "uid": "e89285f7-9fd4-473c-91d2-db4b70f1a976",
+      "usage": {
+        "cpu": "15782338772n",
+        "memory": "41544412Ki"
+      }
+    },
+    {
+      "active_pods": 136,
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "2",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "294246551058",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "94424484500",
+        "nvidia.com/gpu": "2",
+        "pods": "180"
+      },
+      "limits_report_only": {
+        "cpu": "65.550",
+        "ephemeral-storage": "117306294272",
+        "memory": "139915689984"
+      },
+      "metric_timestamp": "2026-10-18T15:41:57Z",
+      "node": "vm-k3s-node7",
+      "requests": {
+        "cpu": "19.970",
+        "ephemeral-storage": "87979720704",
+        "memory": "53068431360"
+      },
+      "uid": "b3679ea9-f176-4c16-a80b-cc4bb79a763d",
+      "usage": {
+        "cpu": "8152075265n",
+        "memory": "44619488Ki"
+      }
+    }
+  ]
+}

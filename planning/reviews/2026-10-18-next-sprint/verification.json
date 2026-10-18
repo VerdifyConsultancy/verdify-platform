@@ -1,0 +1,30 @@
+{
+  "schema": "verdify-next-sprint-plan-verification-v1",
+  "at": "2026-10-18T15:07:27.246433+00:00",
+  "reviewed_source": "261092b079044e363ca7a6929116b4a6344429da",
+  "branch": "codex/sprint-plan-20261018",
+  "open_issues_reviewed": 47,
+  "all47_current_GitHub_bodies_titles_match_unchanged_contracts": true,
+  "campaign_issue_contracts_preserved": 93,
+  "open_acceptance_clauses_preserved": 143,
+  "issue_manifest_byte_unchanged": true,
+  "native_active_edges_preserved": 27,
+  "closed_predecessor_records": 24,
+  "planning_tests_passed": 43,
+  "schema_DAG_coverage_and_7_generated_views_valid": true,
+  "selected_issue_allocations": [
+    639,
+    410,
+    428
+  ],
+  "committed_hours_range": [
+    22,
+    34
+  ],
+  "capacity_hours": 40,
+  "reserve_hours_at_maximum": 6,
+  "planning_only": true,
+  "CI_builds_jobs_controller_catalog_or_production_changes_submitted": false,
+  "shared_window": "Existing Agents #5048\u2192#5044\u2192#5045 retained; native execution requires returned custody and fresh admission. Non-main branch push without PR is outside current Verdify sensor filters.",
+  "no_issue_closures_acceptance_or_dependency_mutations": true
+}

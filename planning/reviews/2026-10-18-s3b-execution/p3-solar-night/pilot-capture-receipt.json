@@ -1,0 +1,22 @@
+{
+  "schema": "verdify-s3b-bounded-readonly-capture-v1",
+  "name": "p3-pilot-20261016-01",
+  "started_at": "2026-10-18T15:27:13.828735+00:00",
+  "finished_at": "2026-10-18T15:27:16.094900+00:00",
+  "context": "vallery",
+  "namespace": "verdify-prod",
+  "database": "verdify",
+  "database_role": "verdify",
+  "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+  "node": "vm-k3s-node7",
+  "pod_identity_and_container_state_unchanged": true,
+  "sql_sha256": "1227aa8f2eee0b929687580d991bd7a5a62a616882a4b553bb3b8dd36a4e1401",
+  "exit_code": 3,
+  "stdout_bytes": 331,
+  "stdout_sha256": "10a0f3b24a37e71e31d12fe0fb5c8d9c4d51f973f01e3321f3a3b377cb10a2e8",
+  "stderr_bytes": 89,
+  "stderr_sha256": "3b30088622f6392862527fe3f76e55a864025ab93e6ac93d4dc80b7996c07756",
+  "output_lines": 1,
+  "no_retries": true,
+  "read_only_rollback_transaction": true
+}

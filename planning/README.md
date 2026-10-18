@@ -1,3 +1,5 @@
+[The S3B execution checkpoint](reviews/2026-10-18-s3b-execution/README.md) records completed P2 input-admission and P4 passive-custody packets, P3's retained bounded timeout and tested MCP correction, and pending P1 native/source integration. The [original one-week plan](reviews/2026-10-18-next-sprint/README.md) retains 22–34 selected hours plus at least 6 hours reserve in a 40-hour budget; these are estimates, not measured remaining work. All open states, acceptance clauses and native completion edges remain unchanged.
+
 [The next-ready execution review](reviews/2026-10-18-execution/README.md) records the three parallel #639/#587, #368/#367 and #749/#782/#783 source/native lanes. It advances fourteen issue and roll-up contracts while preserving all47 open states, original acceptance and27 active dependency edges. No credential or message approval is pending.
 
 # Verdify planning source

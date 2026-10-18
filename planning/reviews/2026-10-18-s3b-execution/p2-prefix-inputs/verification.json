@@ -1,0 +1,94 @@
+{
+  "base_revision": "541c11ad0786e00e50e45f52ca4828173ddc58c2",
+  "commands": [
+    {
+      "command": [
+        "/Users/jason/repos/verdify-platform/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "-q",
+        "tests/test_component_prefix_inputs.py",
+        "tests/test_component_prefix_replay.py",
+        "tests/test_prepare_component_prefix_replay.py"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-10-18T15:28:58.877659+00:00",
+      "name": "focused-tests",
+      "started_at": "2026-10-18T15:28:55.001958+00:00",
+      "stderr_bytes": 0,
+      "stderr_file": "focused-tests.stderr.txt",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 180,
+      "stdout_file": "focused-tests.stdout.txt",
+      "stdout_sha256": "a15426df4a80befa20aec942809c10ef53909086cc2b0460031f0a2c2bc668fa"
+    },
+    {
+      "command": [
+        "/Users/jason/repos/verdify-platform/.venv/bin/ruff",
+        "check",
+        "scripts/component_prefix_replay.py",
+        "scripts/prepare_component_prefix_replay.py",
+        "tests/test_component_prefix_inputs.py"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-10-18T15:28:58.925452+00:00",
+      "name": "source-lint",
+      "started_at": "2026-10-18T15:28:58.877705+00:00",
+      "stderr_bytes": 0,
+      "stderr_file": "source-lint.stderr.txt",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 19,
+      "stdout_file": "source-lint.stdout.txt",
+      "stdout_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "command": [
+        "/Users/jason/repos/verdify-platform/.venv/bin/python",
+        "scripts/component_prefix_replay.py",
+        "coverage-source"
+      ],
+      "exit_code": 0,
+      "finished_at": "2026-10-18T15:28:59.291181+00:00",
+      "name": "source-coverage",
+      "started_at": "2026-10-18T15:28:58.925483+00:00",
+      "stderr_bytes": 0,
+      "stderr_file": "source-coverage.stderr.txt",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 62986,
+      "stdout_file": "source-coverage.json",
+      "stdout_sha256": "26cc20ecc9e3193a86dd0567683b102ff345c2bc9f06690bdbc4d5271f93e44d"
+    }
+  ],
+  "compiled_or_replayed": false,
+  "composed_source_report_byte_equal": true,
+  "corpus_inspection": {
+    "causal_input_mapping_admitted": false,
+    "eq_fog_present": true,
+    "eq_vent_present": true,
+    "header_sha256": "ccfe53d34cfe7d7dd43e77a3093bee3b0fb73e398401525f02b2176710337aaf",
+    "path": "firmware/test/data/replay_overrides.csv.gz",
+    "scope": "one gzip header line only; no data rows"
+  },
+  "declared_assignment_count": 27,
+  "field_count": 48,
+  "historical_prefix_admitted": false,
+  "issue_acceptance": false,
+  "native_execution": false,
+  "order_revision": null,
+  "other_consumer_requirements_count": 20,
+  "p1_composed_parent": "08efb3dfccfc134142465f0ebd4d7488a81e40af",
+  "p1_prerequisite_commit": "b3f4cf98428c181b959faafa01069c7b74daf1eb",
+  "p1_source_ownership": "parallel P1 commit; read-only temporary local symlink for composed-source tests; not committed by P2",
+  "physical_acceptance": false,
+  "schema": "verdify-s3b-p2-source-verification-v1",
+  "source_sha256": {
+    "scripts/component_prefix_replay.py": "cf5eb800927ab7051abaedc2c8a0530b362e045e9e9f8c5ba5d62f49a9873278",
+    "scripts/fog_vent_consumer.py": "f251494df91df86329ebe349a33fda8be1fdfc3e7525a4ce6862320fff9c7f81",
+    "scripts/prepare_component_prefix_replay.py": "b3ed3b1bdc5be467dc9dffad70ff89b4615fd54ba18a11e7c36d285a1b468677",
+    "tests/test_component_prefix_inputs.py": "afca8c3bed591bf4fd1542a4e732f888644c861e79621363bcfce57dc76fabed"
+  },
+  "status": "source_input_report_verified_native_p1_separate",
+  "unimposed_count": 21
+}
