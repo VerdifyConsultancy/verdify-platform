@@ -135,6 +135,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_contract.py \
   tests/test_component_experiment_executor.py \
   tests/test_component_experiment_observability.py \
+  tests/test_component_alert_scope.py \
   tests/test_264_facility_safe_closure_delivery.py \
   tests/test_component_experiment_source.py \
   tests/test_native_transport_liveness.py \
