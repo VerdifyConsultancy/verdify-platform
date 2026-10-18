@@ -74,10 +74,12 @@ SURFACES = {
 
 # These hashes bind the reviewed absence of soil from the four causal surfaces.
 # They constrain only the exact soil incidents below, not legacy classifications.
+# Executor re-reviewed after 1d3da515: six composite SQL calls moved to FROM;
+# causal inputs and the absence of soil dependencies are unchanged.
 REVIEWED_SOIL_SURFACE_HASHES = {
     "component_proof": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
     "selector": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431",
-    "executor_control": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+    "executor_control": "0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67",
     "locked_outcome": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
 }
 REVIEWED_SOIL_INPUTS = frozenset(

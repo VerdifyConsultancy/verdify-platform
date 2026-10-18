@@ -235,7 +235,7 @@
       {
         "name": "executor_control",
         "path": "ingestor/tasks/component_experiment.py",
-        "source_sha256": "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+        "source_sha256": "0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67",
         "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
         "causal_dependencies": ["component_grid", "device_cfg_readback", "experiment_authority", "registry_revision", "writer_connection_generation", "writer_lease"],
         "hydro_references": []

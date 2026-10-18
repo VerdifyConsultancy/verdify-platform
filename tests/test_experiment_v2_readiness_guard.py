@@ -606,6 +606,23 @@ def test_dependency_trace_is_hash_bound_and_contains_no_hydro_source_dependency(
         assert not guard.re.search(rb"(?i)\b(hydro|hydroponic|yinmik)\b", source)
 
 
+@pytest.mark.parametrize(
+    "source_hash",
+    [
+        "0b66df25c58307d08b17936b61e77e34d604c0c6028ed05990df1054c95ebc50",
+        "0" * 64,
+    ],
+    ids=["previous-executor-source", "wrong-executor-source"],
+)
+def test_executor_dependency_trace_rejects_previous_or_wrong_source_hash(source_hash: str) -> None:
+    packet = copy.deepcopy(BASE)
+    executor = next(row for row in packet["dependencies"]["surfaces"] if row["name"] == "executor_control")
+    executor["source_sha256"] = source_hash
+    result = _evaluate(packet, {"operations": []})
+    assert "dependency_surface_hash_mismatch:executor_control" in result["blockers"]
+    assert result["authorized_gate"] is None
+
+
 def test_postsync_running_argo_operation_is_honest_exact_pin_evidence() -> None:
     packet = copy.deepcopy(BASE)
     packet["argo"]["operation_phase"] = "Running"
