@@ -1,0 +1,17 @@
+{
+  "status": "P4_RETAINED_READBACK_INDEPENDENTLY_MATCHED",
+  "diagnostic_rows": 80,
+  "complete_floor_pairs": 78,
+  "unknown_pairs": 2,
+  "sampled_uptime_decreases": 0,
+  "profile_rows": 0,
+  "reset_log_rows": 0,
+  "known_binary_hashes_independently_verified": 4,
+  "artifact_metadata_files_hashed": 8,
+  "source_bindings_verified": 5,
+  "public_diagnosis_sha256": "1a71b417b4699719a7739cafe1bde00bee65b24eb204746b3668e8678e2bf7c4",
+  "raw_capture_sha256": "28793081fbe09cbf2aa3815f291017a2fd7b8f956cfe94891a668cfc8509be39",
+  "full_428_acceptance": false,
+  "native_calls_performed": false,
+  "notes": "Reported runtime, source units, uncertainty and artifact limitations agree with retained data. No live flash hash or independent bake/load/restore claim."
+}

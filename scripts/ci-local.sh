@@ -106,6 +106,8 @@ $PY -m pytest -q -rs \
   tests/test_c1_native_capture.py \
   tests/test_control_band_wire.py \
   tests/test_component_prefix_replay.py \
+  tests/test_component_prefix_inputs.py \
+  tests/test_fog_vent_consumer.py \
   tests/test_cnpg_rehearsal.py \
   tests/test_cnpg_runtime_client_qualification.py \
   tests/test_cnpg_restore_qualification.py \
@@ -211,6 +213,8 @@ $PY -m pytest -q -rs \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_transport_runtime.py \
+  tests/test_outcome_kpi_dryout_projection.py \
+  tests/test_solar_night_packet.py \
   tests/test_mcp_semantic_dependency_lifecycle.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
