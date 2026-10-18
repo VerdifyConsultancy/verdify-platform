@@ -4,9 +4,9 @@ Capacity is **40 shared engineering and planning hours per week, 80 per fortnigh
 
 ## Current S2 — October 13–26
 
-The original outcomes **#396, #419, #643 and #644 are complete**. **#749 remains the sole completion focus**, retaining its existing 8–16 hour allocation. Its snapshot-hold fix is deployed as source `67f08ccf`, image `249c7647`, release `f91602f6`; the actual snapshot mismatch now waits temporarily and resumes naturally.
+The original outcomes **#396/#419/#643/#644 are complete**. **#749 remains the sole S2 completion focus**, retaining its8–16h planning allocation. Its corrected producer-coherence source `c386f834`, ingestor `4b4994bc`, release `fc057fb8` is deployed by a successful full129-resource nonpruning, selector-free sync.
 
-Four ordinary snapshot waits prevented the required 30 quiet minutes. The finite observation stopped at 23:31 UTC, and the final SQL/readiness packet was never attempted. The existing writer session has completed the bounded producer-coherence correction and is carrying it through normal delivery. It must preserve the strict collector, full 48-field checks, authority, deadlines and history. There is no new physical policy run, approval replay or timer-reset loop.
+The new writer's ONE fixed40-minute verification window ends01:53:46UTC. Exact runtime source, smoke9/9 and five-minute schema checks pass. Aggregate health is Degraded from the unchanged Lab publisher's scheduled object-store failure; original read-only readiness remains pending. Preserve the failed prior window and strict30quiet/full48/current-source criteria; no new physical run, approval replay or timer reset. The approved exporter pause remains in force, so backup proof may remain unknown.
 
 ## S3 — October 27–November 9; execution released October 17
 
@@ -18,13 +18,15 @@ Jason authorized implementation and delivery on October17. Ready packets start n
 | #980 | Review intentional NAS-window exporter pause and resume handoff; qualify exporter/backup separately after owner release, no NFS load during the hold. | 2–4 |
 | #639 | One contained device-denied executor/recovery qualification; preserve unproved physical portions. | 8–16 |
 | #587 | Incremental lifecycle/kill-switch/visibility cases in SAME639 run; count shared execution only once; physical portions stay separately scoped. | 4–8 |
-| #801 | Small owner-exclusion route fix and exact owner-delivery proof; no blanket parent-adoption prerequisite. | 1–2 |
+| #801 — completed | Deployed exclusions; outside-owner routes, five parser checks and eight endpoint statuses verified. | 1–2 historical estimate |
 | #802 | Spec-preserving manual Argo descheduler adoption with exact owner/project/catalog record; preserve enforce mode. | 4–8 |
 | #977 | Record replica-policy decision beforeNovember12; optional remount/reclaim stays separate and unapproved. | 2–4 |
 | #782 | Authentic seasonal/panel/target input and a concrete scientific decision packet; full design/power/approval acceptance remains when inputs allow. | 4–8 |
 | **Base** | **Eight packets; shared #639/#587 execution counted once** | **28–56** |
 | **Reserve** | **Any #749 carryover, up to 16 hours of this reserve, plus unexpected work** | **24 maximum** |
 | **Ceiling** | **56 + 24** | **80** |
+
+Seven active packets now retain27–54h estimates; the original eight-packet commitment and reserve remain the accounting baseline. #801 completion does not establish hours worked or capacity freed.
 
 The #782 allocation buys authentic inputs and a concrete decision packet; it does not promise its full scientific/power contract in 4–8 hours. Physical or scientific clauses remain open when a bounded packet does not satisfy them.
 
@@ -41,17 +43,4 @@ S4 carries the remaining #783/#641 work and any physical #639/#587 clauses after
 [Prepared execution queue](EXECUTION-QUEUE.md) · [All issue dispositions](ISSUE-TRIAGE.md) · [Full triage rationale](FULL-TRIAGE.md) · [Dependency graph](DEPENDENCIES.md)
 
 
-Execution update: the corrected #749 producer-coherence source packet is accepted after60 focused passes and independent verification of the exact original confirmation SQL, frozen transaction and post-commit acknowledgement. The initial pre-publication SQL-selection defect is corrected and retained as review history. The existing product session is released for genuine canonical composition and normal delivery after the actual shared-owner window; no new images or runtime acceptance are claimed.
-
-
-October17 delivery handoff: #749 corrected source (60 focused passes) and #801 route source (two focused passes) are accepted and composed together. Root verified all36 destination payloads, including the complete27-file planning snapshot. The existing Agents owner returned shared CI/controller custody after its actual producer completed; Retry now owns the finite product delivery window. #802 source preparation and #981 source diagnosis remain independent. Deployment and final live acceptance are still pending.
-
-
-Source delivery started: [daaa05f3](https://github.com/VerdifyConsultancy/verdify-platform/commit/daaa05f366017e38206f6b59e7c7bfa79ed9db94) is now on main, with the corrected #749 producer change, #801 exclusions and all27 canonical planning files. Root independently verified all36 provider payload identities and sole parent183b. The automatically triggered native qualification is running. Existing Retry retains the finite delivery window; images, promotion, full sync and final live acceptance remain pending.
-
-
-Current delivery status: the original native event failed before images on an obsolete layout assertion. Its faithful test correction is accepted. The existing infrastructure owner has now installed and verified the narrowly bound CI lineage recovery and returned the shared window to Retry for one genuine successor push. Native images, deployment and live acceptance remain pending. The five-path infrastructure source counterpart is [Agents PR5031](https://github.com/jvallery/agents/pull/5031), pending normal qualification; the operational repair is not claimed as merged Git/Argo convergence. #802 source preparation is complete independently.
-
-Actual successor publication: [c386f834](https://github.com/VerdifyConsultancy/verdify-platform/commit/c386f834de7a1acbd1ad74300218ab7922cf6d4b) is on main, sole parentdaaa. Root verified all37 provider payload identities (1,642,967bytes). The one normal native workflow is running with owned custody; images and deployment remain pending.
-
-Latest delivery: normal source qualification and both selected image builds succeeded. The candidate update and ingestor-only promotion `fc057fb8` are published; full diff matches the five approved resources. Promotion validation and the full sync/live checks remain. CI recovery counterpart [Agents5031](https://github.com/jvallery/agents/pull/5031) is merged and its five reviewed files are provider-exact.
+Current delivery: #801 is closed with [live acceptance](../../execution/2026-10-17/tier1-route-801/README.md). #749's new correction is deployed and in its fixed verification window. Shared CI was returned to the existing infrastructure owner after actual promotion terminal/log custody. Next ready work is the bounded #981 source/ingest comparison and prepared #802 tracking adoption; no whole-estate prerequisite or duplicate session.

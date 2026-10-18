@@ -1,24 +1,13 @@
-# Execution handoff — October 17, 2026
+# Execution handoff — October17,2026
 
-Finish #749 first using the existing writer session `01a12b3b-f57c-7ab0-bdcc-3cdba80e82c3`. Source `67f08ccf`, image `249c7647`, release `f91602f6` are deployed and the corrected wait/resumption behavior is verified. Four ordinary snapshot waits defeated the finite 30-minute quiet candidate. Final SQL/readiness was never attempted; do not restart that observation repeatedly.
+Continue #749 with existing Retry `01a12b3b-f57c-7ab0-bdcc-3cdba80e82c3`; no new worker or collector. Corrected sourcec386/image4b499/releasefc057 is deployed by one full129-resource nonpruning selector-free sync. The new writer's fixed40-minute verification ends01:53:46UTC; exact runtime source/smoke/schema checks pass, but Argo is Degraded from the unchanged Lab publisher's scheduled object-store failure and original final read-only criteria remain. Keep the prior failed observation and immutable histories; no timer reset, physical-policy replay or borrowed approval.
 
-The bounded offline producer-coherence work uses the existing publisher task and pool: one frozen batch for snapshot/confirmation, fanout and acknowledgement after commit, content/generation coalescing and a bounded request before eligible writer admission. The common reader stays read-only and samples current state after SQL. Preserve strict freshness, equality, generation, full-48, deadlines, authority and history. Exact diff, meaningful focused tests and resource/inverse review precede any genuine delivery; no extra physical-policy run or borrowed approval.
+#801 is CLOSED/COMPLETED with exact deployed route, unchanged outside-owner identities/specs, five serving parser checks and eight public endpoint statuses. [Acceptance](../../execution/2026-10-17/tier1-route-801/README.md). Pull the next ready #981/#802 work after the current finite product outcome; a genuine external hold should not stop independent progress.
 
-The canonical checkout is `/Users/jason/.codex/worktrees/verdify-live-replan-20261017/verdify-platform`, branch `codex/verdify-live-replan-20261017`. Preserve the original dirty checkout. Never merge the whole planning branch or trigger a planning-only product push. A future genuine source delivery needs a fresh complete canonical manifest.
+The canonical checkout is `/Users/jason/.codex/worktrees/verdify-live-replan-20261017/verdify-platform`, branch `codex/verdify-live-replan-20261017`. Preserve the original dirty checkout. Never merge this whole branch or make a planning-only product push. Current product already contains the accepted complete27-file planning snapshot plus source; later ledger changes wait for a genuine future delivery.
 
-The full review covered 58 issues and 624 comments: seven are retired as not planned (#296/#317/#324/#361/#586/#606/#638), 51 remain open, all bodies are readback exact, and the native graph has 31 active plus 25 accepted historical edges without cycles. S2's actual open member is #749; S3 has eight bounded members.
+Existing Agents owner `01a135dc-ccc3-7473-be5e-5b643a40a3fd` now holds the explicitly returned shared CI/controller window. Product observation does not retain it. Obtain an actual next handback before new product CI. Preserve held #982 and the approved exporter pause adopted from #983; no new backup reader, unpause or NFS scan to obtain readiness.
 
-Existing Agents owner `01a135dc-ccc3-7473-be5e-5b643a40a3fd` holds shared CI/controller custody. Obtain an actual handoff before new product CI; observation does not retain that window. Preserve PR #982 and the intentional NAS-window exporter pause merged in #983 as183b. Do not create a reader, change credentials, unpause or scan NFS to obtain a readiness pass.
+Full triage covered58 issues/624comments: sevenNOT_PLANNED retirements plus one subsequent801engineering completion leave50 open. Active graph31 plus25 accepted historical edges remains acyclic; canonical92nodes/9stages/78historicaledges is distinct. S2 soleopen749; S3 has seven active and onecompleted member. Original eight-packet28–56h plus24hreserve including749 stays within80 sharedhours at40/week; estimates/waits/wakeups are not hoursworked or capacityfreed.
 
-Capacity is 40 shared hours/week, 80/fortnight. S3 base is 28–56 hours plus 24 hours reserve, including #749. Estimates and runtime do not measure hours worked. Keep GitHub and the plan current, and interrupt only for a concrete decision, real blocker or meaningful completion.
-
-[Status](STATUS.md) · [Triage](FULL-TRIAGE.md) · [Dispositions](ISSUE-TRIAGE.md) · [Graph](DEPENDENCIES.md) · [Execution queue](EXECUTION-QUEUE.md) · [Sprint](NEXT-SPRINT.md)
-
-
-Current desired-state update: At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.
-
-
-October17 execution release: Jason instructed starting implementation and delivery. Pull #749 first, #801 next in the same product lane; the existing Agents owner has acknowledged #802 preparation after its current qualification. Root has begun #981 source diagnosis. Use the active execution queue for actual status; no new sessions, duplicated CI or re-triage. The eight S3 packets and28–56h plus24h reserve remain within80h.
-
-
-Execution update: the corrected #749 producer-coherence source packet is accepted after60 focused passes and independent verification of the exact original confirmation SQL, frozen transaction and post-commit acknowledgement. The initial pre-publication SQL-selection defect is corrected and retained as review history. The existing product session is released for genuine canonical composition and normal delivery after the actual shared-owner window; no new images or runtime acceptance are claimed.
+[Current status](STATUS.md) · [Sprint](NEXT-SPRINT.md) · [Queue](EXECUTION-QUEUE.md) · [Graph](DEPENDENCIES.md)

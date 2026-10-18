@@ -1,10 +1,10 @@
 # Current active dependency graph — October17,2026
 
-**51open issues;31active native blocking edges;25accepted closed predecessor edges;acyclic.** All parents/blockers were read back from GitHub. Canonical92nodes/9stages/78edges retain full historical scope, including retired alternatives; they are not31current blockers. Parentage meansownership. RetiredNOT_PLANNEDrecords earn no engineering or physical acceptance.
+**50open issues;31active native blocking edges;25accepted closed predecessor edges;acyclic.** All parents/blockers were read back from GitHub. Canonical92nodes/9stages/78edges retain full historical scope, including retired alternatives; they are not31current blockers. Parentage meansownership. RetiredNOT_PLANNEDrecords earn no engineering or physical acceptance.
 
 ```mermaid
 flowchart TD
-  coherence["749 deployed fix; bounded producer coherence correction"] --> ready["749 current original-clause acceptance"]
+  coherence["749 coherence correction deployed; finite live qualification"] --> ready["749 current original-clause acceptance"]
   e981["981 authentic energy source"] --> science["782 scientific contract"]
   e639["639 contained executor / remaining physical clauses"] --> integration["783 restored-data vertical qualification"]
   e587["587 lifecycle / visibility"] --> integration
@@ -72,7 +72,6 @@ Removed801→Agents4461and802→Agents4451aswhole-program gates; exact manual-Ar
 | #785 | #581 | #784 | None |
 | #786 | #775 | #785 | #780 |
 | #787 | #775 | #981, #785, #410 | #781 |
-| #801 | jvallery/agents#4493 | None | None |
 | #802 | jvallery/agents#4493 | None | jvallery/agents#4459 |
 | #963 | #75 | None | None |
 | #977 | #218 | None | None |
@@ -80,3 +79,5 @@ Removed801→Agents4461and802→Agents4451aswhole-program gates; exact manual-Ar
 | #981 | #75 | None | None |
 
 The retrospective intake was58open/41active/27accepted historical edges. Removing retired records and the two false whole-issue gates changes the *open-issue graph*; it does not erase historical edges or qualify their retired scope. No parent-child loop or new technical prerequisite was introduced.
+
+#801 completed after this graph was replanned; it had no active blocking edge. Its ownership relationship remains historical. The active31-edge count is unchanged.

@@ -1,25 +1,25 @@
-# Verdify live and execution status — October 17, 2026
+# Verdify live and execution status — October17,2026
 
-**All 58 open issues were reviewed, including 624 comments. Seven are closed as not planned; 51 remain open.** All 58 updated bodies were read back exactly. Original acceptance, history, labels and assignees were preserved. Retirements are separate from engineering completions.
+The full review covered58 issues and624 comments. Seven were retired as not planned. **#801 is now completed on live deployment evidence, leaving50 open issues.** Historical source, failure and acceptance limits remain preserved.
 
 ## Completed
 
-The original S2 outcomes #396/#419/#643/#644 and accepted #303/#304/#382/#949/#965/#976 remain closed within their evidence limits.
+The original S2 outcomes #396/#419/#643/#644 and accepted #303/#304/#382/#949/#965/#976 remain closed. [#801 route acceptance](../../execution/2026-10-17/tier1-route-801/README.md) now verifies both host exclusions, unchanged outside-owner route identities/specifications, five serving parser checks and all eight public statuses.
 
-The snapshot-hold fix is deployed at source `67f08ccf`, ingestor image `249c7647`, release `f91602f6`. Normal source and promotion qualification passed. One full, nonpruning, selector-free sync covered 129 resources, including all nine fresh hook resources and eight hook containers. Five running source files match; all 16 controllers and 21 requested replicas were Ready. Smoke passed 9/9 with one device connection, one writer, zero restarts and five minutes without schema-validation errors. The actual mismatch now takes a temporary wait and resumes naturally. Other release pins, applied migration 276, state and approval history were preserved.
+Corrected source `c386f834` passed full native qualification and built ingestor `4b4994bc` and Lab `54db9834`; only ingestor was promoted. The normal candidate and promotion commits are provider verified. The full nonpruning, selector-free `fc057fb8` sync succeeded01:13:16UTC across129resources. The new writer is Ready. Root verified all seven runtime source files and eight hook-container logs; smoke passed9/9, one writer/socket and zero restarts, and five minutes contained no schema-validation errors.
 
-## In flight and the real blocker
+## In flight and remaining limits
 
-**#749 remains open.** Four ordinary snapshot waits prevented the strict 30-minute quiet interval. The finite observation ended at 23:31 UTC; the final SQL/readiness packet was never attempted. All 212 private custody files (6,563,822 bytes) are hash verified. The passive follower's intentional exit 1 is retained honestly.
+**#749 remains open.** Its one fixed40-minute current-process qualification ends01:53:46UTC. The prior249/f916 observation failed to earn30 quiet minutes and remains retained; the old final SQL packet was never attempted. No timer reset, approval replay or new operator physical-policy run is authorized.
 
-The existing writer session has a bounded offline producer-coherence implementation scope. No further source push, CI window, rollout or observation loop is released from that diagnosis alone. The failure-time value direction and hardware cause remain unknown; current backup and exposure evidence were not queried. The collector, physical authority and history remain unchanged.
+Argo compares the intended revision but is Degraded because the unchanged Lab publisher's natural01:05 run failed object-store source-list access and state mirroring. Validated public pages remain served. Storage708 explicitly declared a research-S3 cutover outage from00:32:30; that overlap does not yet prove this Job's exact dependency or current restoration. Existing owner coordination is using retained evidence, without a new probe or retry. The approved #983 exporter pause has been adopted; current backup evidence remains unknown and must respect the Storage799 owner release. No new reader, unpause or NFS load to obtain a pass.
 
-PR #982 is a held canonical-S3 rehearsal endpoint change. PR #983 merged as `183b6f2b` during this review. The 23:44 metadata read shows exporter 1/1 and Argo Healthy/OutOfSync against that new desired revision; the intended pause is not yet adopted. Honor its actual owner handoff before unpausing or adding NFS load. PR #855 remains a parked draft. Shared CI/controller custody has already returned to the existing Agents owner.
+Shared CI/controller custody returned to the existing Agents owner after promotion terminal/log custody. Product observation does not retain that window. Existing sessions remain the only owners.
 
-## Remaining and next sprint
+## Next ready work
 
-The current graph has **31 active edges and 25 accepted historical predecessor edges, with no cycles**. Two unnecessary whole-program gates were removed; exact delivery and ownership safeguards remain.
+#802 has a reviewed seven-object, spec-preserving source packet; manual Argo adoption is not yet performed. #981 has a bounded intended-source/ingest comparison prepared, unexecuted. Pull these after the current finite product outcome; a genuine external hold must not prevent independent progress.
 
-S3 contains eight bounded packets (#981/#980/#639/#587/#801/#802/#977/#782), **28–56 hours plus a 24-hour reserve**, including any #749 carryover, within 80 shared hours. Physical proof, scientific inputs, firmware/HA authority and eventual pilot completion remain separate work.
+The graph retains31 active edges and25 accepted historical predecessor edges, with no cycles. S3 originally committed eight packets28–56h plus24h reserve within80 shared hours. After #801, seven active packets retain27–54h estimates. The completed1–2h estimate is not measured work or newly freed capacity.
 
-[Full triage](FULL-TRIAGE.md) · [All dispositions](ISSUE-TRIAGE.md) · [Next sprint](NEXT-SPRINT.md) · [Prepared queue](EXECUTION-QUEUE.md) · [Current graph](DEPENDENCIES.md)
+[Full triage](FULL-TRIAGE.md) · [Dispositions](ISSUE-TRIAGE.md) · [Sprint](NEXT-SPRINT.md) · [Queue](EXECUTION-QUEUE.md) · [Graph](DEPENDENCIES.md)

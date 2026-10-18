@@ -3442,7 +3442,6 @@
       785,
       786,
       787,
-      801,
       802,
       963,
       977,
@@ -3455,7 +3454,7 @@
         "title": "S2 \u2014 Completion and current readiness (October 13\u201326, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Original396/419/643/644 are complete. 749is the sole completion focus, retaining8\u201316h planning allocation; software snapshot-hold fix is deployed, actual strict readiness is blocked by recurring snapshot publication/coherence waits.",
+        "goal": "Original396/419/643/644 are complete. 749 remains the sole completion focus with8\u201316h original allocation; the bounded producer-coherence correction is deployed and its fixed live qualification is in progress. Strict readiness remains unaccepted until actual evidence passes.",
         "exit": "Finish one bounded producer-coherence correction and genuine current original-clause readiness acceptance without pass-hunting, collector weakening, used-approval replay or a new physical policy run. Source/runtime success isdistinctfromreadiness. Any carryover usesS3reserve, notextra capacity; prior estimates and CI/runtime/wakes are not hoursworked."
       },
       {
@@ -3463,7 +3462,7 @@
         "title": "S3 \u2014 Runtime truth and bounded qualification (October 27\u2013November 9, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Execution released October17 by Jason; begin ready work now as early pulls from this existing sprint, keeping October27\u2013November9 membership and the same shared80h envelope. Eight bounded packets981/980/639/587/801/802/977/782 at28\u201356shared engineering hours. Reserve24h includes749carryover and unexpected work; upper envelope56+24=80 at40h/week. Finish one product delivery at a time; combine639/587in one contained execution and count shared work once.",
+        "goal": "Execution released October17 within the original October27\u2013November9 milestone and shared80h envelope. Of eight committed bounded packets at28\u201356h,801 is now completed on deployed route evidence; seven active packets981/980/639/587/802/977/782 retain27\u201354h estimates. The completed1\u20132h estimate is historical, not hoursworked or freedcapacity. Original24h reserve includes749carryover and unexpectedwork; do not expand scope from completion or waiting. Combine639/587 into one contained execution and count sharedwork once.",
         "exit": "Deliver each explicitly bounded packet and preserve full original acceptance; incomplete physical/scientific clauses stayopen. 782spend4\u20138h is input/decision preparation, not full12\u201320h design completion. 977policy precedesNovember12. Respect actual NAS pause/handoff; if980held, advance other ready packets. 963is a replacement only after exact qualified release/operator inputs, never additive."
       },
       {
@@ -3817,7 +3816,7 @@
         "sprint": "S2",
         "hours_min": 8,
         "hours_max": 16,
-        "next_action": "Normal successor c386 passed full native qualification and produced the exact ingestor/Lab outputs. Root verified all32 started-container logs and source/tree binding; source closure is explicitly not-applicable, not full OCI proof. The normal candidate b037 and ingestor-only promotion fc057 are published and provider verified, preserving all other release/hand pins. Promotion native validation is running. Continue the already reviewed five-resource full nonpruning sync, verify actual source/runtime and one fixed40-minute original live/read-only qualification. CI recovery is operationally accepted and its exact five-file counterpart is merged as Agents5031/41670. No new policy run, approval replay, pass-hunting or extra infrastructure gate.",
+        "next_action": "Source c386, ingestor4b499 and releasefc057 are deployed by one successful full129-resource nonpruning selector-free sync. Root verified allseven running source files, eight complete hook logs, smoke9/9, one writer/socket and five minutes without schema errors. The ONE fixed40-minute current-writer qualification ends01:53:46UTC; strict collector and original read-only readiness remain. Actual aggregate ArgoDegraded comes from the unchanged Lab publisher natural Job failing object-store source-list/state-mirror access; backup proof also respects the approved exporter/NAS pause. Existing owner coordination is read-only; declared research-S3 cutover overlaps the failure, but exact dependency/causality and restoration are not yet established. #801 is independently completed. Shared CI returned after actual terminal/log custody. No new physical run, approval replay, timer reset, forced Job or NFS workaround.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3891,14 +3890,6 @@
         "hours_max": null,
         "next_action": "Keep post-readout economics deferred. Diagnose immediate energy-source health under a bounded #75 child; do not hide that repair in this future economics issue or credit stale channel0 as real consumption.",
         "owner_role": "Research/platform lead"
-      },
-      {
-        "issue_number": 801,
-        "sprint": "S3",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "The two-clause route fix is included in published source c386; native source qualification and images passed. The reviewed complete live diff contains only the three ingestor image references, these two route exclusions and the approved exporter pause. Ingestor-only promotion fc057 is published; promotion validation and the normal full sync remain. Close this issue independently on actual route/parser and affected owner/product endpoint verification, even if #749 has another genuine readiness blocker.",
-        "owner_role": "Platform lead"
       },
       {
         "issue_number": 802,

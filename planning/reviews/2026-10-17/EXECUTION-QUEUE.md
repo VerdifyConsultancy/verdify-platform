@@ -1,13 +1,13 @@
 # Active execution queue — October 17, 2026
 
-Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Retry again holds the finite shared CI/controller delivery window after actual infrastructure recovery and explicit handback. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
+Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Shared CI/controller custody has returned to the existing Agents owner after actual promotion terminal/log custody; Retry retains product observation only. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
 
 ## Work pulled now
 
 | Packet | Actual execution state | Owner / next handoff |
 |---|---|---|
-| #749 | Producer source is accepted, but native qualification failed on a stale layout assertion before images. Faithful test-only correction is accepted; the normal one-event source-recovery route is installed and readback verified. | Retry: fresh complete canonical composition, normal owner window/source/image qualification, then minimal rollout and finite live verification under existing software authority. |
-| #801 | Two-file source patch accepted: two focused checks pass; full129-object render changes only the two host exclusions. Runtime acceptance remains pending. | Retry: combine with #749 in the same normal delivery; verify routes after scoped full sync. |
+| #749 | Corrected c386/4b499/fc057 deployed; fixed40-minute current-writer verification ends01:53:46UTC. Final original readiness remains pending. | Retry: source/smoke/schema, health disposition and original one-shot packet; no timer reset or new physical run. |
+| #801 | CLOSED/COMPLETED: exact deployed rule, owner-route preservation, five parser observations and eight public checks passed. | Root verified closure; retain historical1–2h estimate, no freed-capacity claim. |
 | #802 | Seven-object spec-preserving source packet is complete and root-reviewed. Namespace exclusion and manual ownership proposal are prepared; no adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
 | #981 | Source diagnosis started; six provider source files checked at current183b. No current meter/DB sample or source recovery claimed. | Root source trace now; existing product lane performs the bounded source/ingest comparison after #749/#801. |
 | #980 | Intentional NAS pause and owner handoff still constrain live work. | Source review can advance; no NFS probe or unpause to obtain a pass. |
@@ -22,23 +22,15 @@ Current183b source uses two fixed Home Assistant power entities. The existing co
 
 | Packet / owner | First concrete action | Exit / stop / inverse |
 |---|---|---|
-| 749 / Retry | Deliver the accepted corrected coherence source and compatible route patch through the normal affected-image path | Exact source is accepted; verify current admission/fit, minimal rollout/inverse249 and one finite original qualification. No pass-hunting or used approval. |
+| 749 / Retry | Finish current fixed verification at01:53:46UTC and evaluate the original read-only criteria | Retain full failures/unknowns. No pass-hunting, NFS workaround, used approval or extra physical run. |
 | 981 / data-platform | Trace the actual channel/source timestamp versus ingestion through the existing authorized reader after the credential window is free | Actual intended-source advancement and stale/missing negatives; otherwise name upstream constraint. Never synthesize fresh values. |
 | 980 / observability + storage owner | Inspect actual#983 pause / owner queue state without NFS access; review existing timeout source/evidence while held | Resume only in named owner window; exporter response and real backup freshness separate. Preserve deliberatepause; inverse scoped replica/config restoration, no broad NAS scan. |
 | 639+587 / runtime lead | Bind current source and the existing supported contained device-denied target/identities; run one shared executor/lifecycle failure matrix | Full48/generation/exclusivity/close-first and kill-switch/blinded visibility proof; retain reseal/custody. No new credentials/physical source substitution. Shared execution countedonce. |
-| 801 / platform lead | Deliver the accepted two-clause change with #749 and verify actual routes | Exact current diff/owner-delivery and affected public-route checks; inverse only those rule clauses. No parent-adoption project gate or writer pin change. |
 | 802 / platform + Agents owner | Export exact enforce-mode resources and current ownership; prepare minimal manual project/catalog declaration | No spec drift/namespace rewrite/security expansion; actual natural enforcement and tracking proof. Inverse must preserve enforce, never restore stale dry-run. |
 | 977 / storage + product owner | Assemble two-versus-three replica policy, actual placement/backup/exception evidence beforeNovember12 | Record concrete owner decision; optional remount/trim separate. No DB restart or survivability claim from planning. |
 | 782 / science + operator | List authentic missing crop/panel/target/season inputs and produce one concrete decision packet | No guessed observations/calendar/power; final energy eligibility waits981. No draw, random activation or new physical authority. |
 
-PR #982 remains with its existing owner. PR #983 was merged by its owner as183b; the last metadata fence still showed its desired pause awaiting adoption. PR982rehearsalendpointwaitsStorage708W7anditsownexactObjectStore/authreadback; neverwhole-rehearsalsync. PR983is atemporaryexporterpausescope withnamedresumeowner; do not borrow that approval for other productionchanges. #855 stays parked.
+PR #982 remains with its existing owner. PR #983 was merged by its owner as183b; the approved pause is now included in the successfulfc057 full sync. PR982rehearsalendpointwaitsStorage708W7anditsownexactObjectStore/authreadback; neverwhole-rehearsalsync. PR983is atemporaryexporterpausescope withnamedresumeowner; do not borrow that approval for other productionchanges. #855 stays parked.
 
 
-Source delivery started: [daaa05f3](https://github.com/VerdifyConsultancy/verdify-platform/commit/daaa05f366017e38206f6b59e7c7bfa79ed9db94) is now on main, with the corrected #749 producer change, #801 exclusions and all27 canonical planning files. Root independently verified all36 provider payload identities and sole parent183b. The automatically triggered native qualification is running. Existing Retry retains the finite delivery window; images, promotion, full sync and final live acceptance remain pending.
-
-
-Current delivery: the bounded source-lineage recovery is installed and verified; shared CI is returned to the existing product writer for one genuine successor push and actual native/image/promotion/full-sync qualification. No fake production change, forced profiles, raw retry or synthetic redelivery. The original failed event is preserved; production remains the accepted249/f916 cohort until actual delivery. #801 can close on its own deployed criteria; #749 retains the fixed observation and original readiness conditions.
-
-Actual successor publication: [c386f834](https://github.com/VerdifyConsultancy/verdify-platform/commit/c386f834de7a1acbd1ad74300218ab7922cf6d4b) is on main, sole parentdaaa. Root verified all37 provider payload identities (1,642,967bytes). The one normal native workflow is running with owned custody; images and deployment remain pending.
-
-Latest delivery: normal source qualification and both selected image builds succeeded. The candidate update and ingestor-only promotion `fc057fb8` are published; full diff matches the five approved resources. Promotion validation and the full sync/live checks remain. CI recovery counterpart [Agents5031](https://github.com/jvallery/agents/pull/5031) is merged and its five reviewed files are provider-exact.
+Current source/image/deployment evidence and #801 closure are in [STATUS](STATUS.md). Current live verification stays with the sole existing product session. Pull the next ready bounded packet after this finite outcome; do not restart an observation to hunt a pass.

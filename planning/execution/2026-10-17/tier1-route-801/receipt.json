@@ -1,0 +1,44 @@
+{
+  "schema": "verdify-tier1-route-801-acceptance/v1",
+  "issue": 801,
+  "result": "completed",
+  "closed_at_utc": "2026-10-18T01:15:38Z",
+  "source_revision": "c386f834de7a1acbd1ad74300218ab7922cf6d4b",
+  "release_revision": "fc057fb8dcebe8e39c652bbed9dd057a961d9121",
+  "sync": {
+    "phase": "Succeeded",
+    "started_at_utc": "2026-10-18T01:11:25Z",
+    "finished_at_utc": "2026-10-18T01:13:16Z",
+    "resources": 129,
+    "prune": false,
+    "resource_selector_present": false
+  },
+  "route": {
+    "added_exclusions": [
+      "www-dev.verdify.ai",
+      "proposals-hello.verdify.ai"
+    ],
+    "complete_live_spec_equals_reviewed_render": true,
+    "other_exclusions_priority_entrypoints_tls_service_preserved": true,
+    "outside_owner_route_identities_and_specs_unchanged": true,
+    "serving_parser_observations": 5,
+    "matching_route_errors": 0
+  },
+  "public_http": {
+    "www-dev": 200,
+    "proposals-hello": 200,
+    "api": 200,
+    "lab": 200,
+    "labs": 200,
+    "graphs": 200,
+    "mcp_root": 404,
+    "unknown_host": 404
+  },
+  "private_acceptance_receipt_sha256": "0f7c2b0467b5d0c743d2117ad6ffc6595b5f6751291182bf0761a57f328f8b23",
+  "limits": [
+    "This accepts the route scope; #749 current readiness remains separate.",
+    "The combined delivery also changed the ingestor for #749 and adopted the approved exporter pause; the ingestor was not unchanged.",
+    "Full supported sync superseded the old selective-only recipe.",
+    "No physical-policy, experiment, OTA, credential or database-cutover authority is implied."
+  ]
+}

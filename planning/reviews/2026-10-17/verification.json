@@ -7,7 +7,7 @@
     980,
     981
   ],
-  "planned_open_issues": 51,
+  "planned_open_issues": 50,
   "recent_closed_issues": [
     303,
     304,
@@ -18,7 +18,8 @@
     644,
     949,
     965,
-    976
+    976,
+    801
   ],
   "canonical_issue_count": 92,
   "expected_active_native_edges": 31,
@@ -1379,5 +1380,22 @@
       "scope": "normal source delivery after fresh actual head, complete canonical copy and owner handback; no physical policy replay",
       "new_runtime_acceptance": false
     }
-  }
+  },
+  "open_after_full_triage": 51,
+  "subsequent_completion": {
+    "issue": 801,
+    "closed_at": "2026-10-18T01:15:38Z",
+    "state_reason": "completed",
+    "release_revision": "fc057fb8dcebe8e39c652bbed9dd057a961d9121",
+    "private_receipt_sha256": "0f7c2b0467b5d0c743d2117ad6ffc6595b5f6751291182bf0761a57f328f8b23"
+  },
+  "sprint3_active_hours": [
+    27,
+    54
+  ],
+  "sprint3_completed_original_estimate_hours": [
+    1,
+    2
+  ],
+  "estimates_are_not_worked_or_freed_hours": true
 }

@@ -16,13 +16,13 @@ These are explicit consolidation/no-build decisions, not claims of implementatio
 | #638 | #775 deferred architecture register alongside #586 | Generalized vector transport is off and unselected; its cross-language schema project belongs to the same retired future architecture option. It is not a current missing prerequisite for the existing sequential component transport. Current legacy contracts remain unchanged. Future vector adoption must reopen exact cross-language identity/service/outbox/commit/stage/activate/expiry/abort conformance; none is claimed complete. |
 | #606 | #14 (read-only twin qualification) | The unregistered twin profile is a real remaining subtask of the twin, not a separate current execution commitment. Consolidate owning-registry registration, build provenance and read-only runtime acceptance into #14. The profile is still absent and no twin image/runtime/oracle acceptance is claimed. Registration must use the owning Agents registry, generated mirror and supported admission when the twin is actually selected. |
 
-## Remaining work and the current blocker
+## Remaining work after the first delivery
 
-Deployed67f/249/f916, live snapshot-wait correction verified. Four normal waits through23:30:46 defeat finite quiet candidate; finalSQL unexecuted; current readiness remainsOPEN/BLOCKED. Existing Retry seals evidence and prepares one bounded source-only producer-coherence proposal; no clock relaxation or new loop.
+The full triage initially left51 open issues. Subsequent [#801 live acceptance](../../execution/2026-10-17/tier1-route-801/README.md) closed one engineering outcome, leaving50. Its route fix and the new #749 producer-coherence correction are deployed atc386/4b499/fc057 after normal source/image/promotion qualification and a full129-resource sync.
 
-The existing writer is Synced/Healthy atf916 with verified source67f/image249c, singleton/socket/smoke/source/hooks/schema checks passing. Software deployment success does not establish the final readiness boundary. Keep original643/396/419/644 and all accepted predecessor closures; do not repeat them. No old approval, altered clock or cleanup turns the failed window into a pass.
+#749 retains its fixed verification and original read-only criteria. The prior failed quiet window, original source failure and bounded CI recovery remain in the append-only ledger. No old approval, altered clock or cleanup turns prior failures into a pass. Aggregate ArgoDegraded is now traced to the unchanged Lab publisher scheduled object-store failure; backup evidence remains separately unknown under the intentional NAS pause. Core source/smoke/five-minute schema checks pass.
 
-Two PRs change the operational plan: #982 remains a held canonical-S3 rehearsal endpoint change; #983 merged as `183b6f2b`, with the intended exporter pause still awaiting adoption at the 23:44 metadata check. Preserve both owners and exact scopes. No source-only proposal proves adoption. Do not reverse an approved NAS pause or create load merely to finish readiness; a missing authorized reader is an explicit evidence limitation. #855 remains a parked draft.
+#982 remains held by its existing owner. The approved #983 exporter pause is now adopted in the full sync; do not reverse it or create NAS load to complete readiness. #855 remains a parked draft. Current details are in [STATUS](STATUS.md), avoiding reliance on intake-time state.
 
 ## Graph changes and execution rules
 
