@@ -1,0 +1,218 @@
+{
+  "schema": "verdify-s3-ordinary-role-progress/v1",
+  "reviewed_at": "2026-10-18T06:36:21.317049+00:00",
+  "issues": [
+    587,
+    639
+  ],
+  "full_issue_acceptance": false,
+  "initial_installation": {
+    "at": "2026-10-18T06:27:23.968405+00:00",
+    "passed": true,
+    "explicit_human_approval": true,
+    "role": "verdify_ingestor_runtime_login",
+    "role_oid": 16418,
+    "has_password": true,
+    "initial_only": true,
+    "password_free_role_metadata_unchanged": true,
+    "password_free_metadata_sha256": "2544df3a5c06abdf7312637796c8d1ca9e28a8f4af3535813079ef9cc783ec38",
+    "grants_hba_roles_production_changed": false,
+    "credential_values_or_verifiers_recorded": false,
+    "actual_authentication_claimed_by_installer": false,
+    "receipt_path": "clone-ordinary-initial-install-01/receipt.json",
+    "receipt_sha256": "22011c96f409c3eef1d0f107d9edd87c0cb537b1224e9dbd1a0e23402a1656a3"
+  },
+  "actual_ordinary_login_preview": {
+    "status": "ACTUAL_ORDINARY_READONLY_PREVIEW_VERIFIED",
+    "at": "2026-10-18T06:33:42.039185+00:00",
+    "passed": true,
+    "old_28P01_failure_preserved": true,
+    "receipt_path": "clone-alert-preview-c5-v3-terminal-01/verified-receipt.json",
+    "receipt_sha256": "86775ebd57a5adda35d25edfdfcaad0755bf5c596bfdca697fa779ee7c849bc7",
+    "collector_sha256": "ae54476a9094afa5a831b75b7201552afd421439dbbea688a28646f4808680c0",
+    "actual_candidate_source": "c5a2b1935d09e559c34a6207c9871bd3ef71ecda",
+    "actual_candidate_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e4a9b8b3bdbc0e39a447805ea53c85dd6fbd4301f32defa9a691c355469cf86b",
+    "six_alert_module_hashes_equal_f16": true,
+    "migration_sources_equal_f16": true,
+    "candidate_labels_not_relabelled_f16": true,
+    "job_name": "verdify-s3-alert-preview-c5-v2-20261018",
+    "job_uid": "9a6b0c07-aae9-4bb6-bc46-a90178ade08e",
+    "pod_uid": "9a6aee52-fb0b-4422-bfd7-1869f711df1f",
+    "actual_current_and_session_user": "verdify_ingestor_runtime_login",
+    "readonly": true,
+    "native_condition_present": true,
+    "native_alert_reason": "expired_work_not_terminal",
+    "native_alert_severity": "critical",
+    "fixture_lifecycle": "draft",
+    "fixture_execution_phase": "shadow",
+    "fixture_admission_state": "closed",
+    "fixture_open_exposure_count": 0,
+    "exact_preview_payloads": 2,
+    "fire_request_sha256": "8a7ea02dcb8c3866621e98f5fd0c53872f4e825ce2bafd2b64641bfc9d8a62fc",
+    "resolved_text_sha256": "a25659536e6b260dbfd5398ef8ddf4361b619ffdd4aa1f5ae9a375e4d1126733",
+    "both_containers_exit_zero": true,
+    "container_restarts": 0,
+    "post_target_identity_three_ready_secret_metadata_passed": true,
+    "full_logs": {
+      "candidate-preview": {
+        "path": "clone-alert-preview-c5-v3-terminal-01/candidate-preview.terminal.private.log",
+        "bytes": 2767,
+        "complete": true,
+        "returncode": 0,
+        "sha256": "0e0a181cdff7e960ed75e439ab291aa8ad8955dd48033294613f524e96251e33"
+      },
+      "transport-readiness": {
+        "path": "clone-alert-preview-c5-v3-terminal-01/transport-readiness.terminal.private.log",
+        "bytes": 3512,
+        "complete": true,
+        "returncode": 0,
+        "sha256": "5528fbef59fe497ee17df7f8b368bb9f4cf7e5b29d9f3126c6beff44020983c9"
+      }
+    },
+    "database_writes": false,
+    "slack_messages_sent": 0,
+    "actual_alert_delivery_verified": false,
+    "ordinary_writer_handoff_verified": false
+  },
+  "separate_synthetic_messages": {
+    "authorization_state": "not_granted",
+    "explicit_permission_granted": false,
+    "messages_sent": 0
+  },
+  "custody_contract": {
+    "finite_capture_password_presence_roles": [
+      "verdify_experiment_v2_lifecycle_login",
+      "verdify_experiment_v2_component_executor_login"
+    ],
+    "ordinary_password_presence_covered_by_finite_capture": false,
+    "all_role_catalog_comparison_excludes_rolpassword": true,
+    "password_free_role_catalog_acl_hba_ledger_comparison_unchanged": true,
+    "ordinary_installation_requires_separate_receipt": true,
+    "alert_checker_scope": "public.alert_log complete typed multiset/catalog and exact independently accounted sequence advance only",
+    "expected_change_normalization_added": false,
+    "frozen_checker_or_capture_source_changed": false,
+    "reviewed_source_sha256": {
+      "native-metadata.sql": "b493af12583eb0cd4c8f263ebb3e398f5603d5dee4a9ea95da2b6d64ac2cdf87",
+      "verdify-s3-check-finite-custody-sqlnull-v2.py": "f017d776f15a347a34550f164ecf836069f2398cf14ed618859956bd88dc4af8",
+      "verdify-s3-check-alert-custody-sqlnull-v2.py": "c6c6a54fa7c900a2568bf4f23a42599708695a6a5bb03d0d7cc4793ce97851b1"
+    }
+  },
+  "no_device_or_production_authority_added": true,
+  "current_application_image_promoted": false,
+  "fresh_before_seals": {
+    "finite": {
+      "completed_at": "2026-10-18T06:29:08.933132+00:00",
+      "capture_path": "clone-finite-sqlnull-v2-before-03/stdout.private.jsonl",
+      "sha256": "b69128b49a1eacc10ad4f7338ddc6d041f7c7901e47412737efb252369ae3266",
+      "compared_to": "clone-finite-sqlnull-v2-after-04/stdout.private.jsonl",
+      "compared_to_sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b",
+      "complete_genuine_and_synthetic_rowsets_equal": 29,
+      "genuine_rows": 7950,
+      "retained_synthetic_rows": 6,
+      "all_sequences_equal": 77,
+      "source_properties_catalog_password_free_roles_acl_hba_ledger_equal": true,
+      "ordinary_password_presence_covered": false
+    },
+    "alert": {
+      "completed_at": "2026-10-18T06:29:25.087405+00:00",
+      "capture_path": "clone-alert-sqlnull-v2-before-02/stdout.private.jsonl",
+      "sha256": "7d55cea5bcb9f4ad86a4f6faa4b7a7ebfe9300adb8c8859dea2ddf05b1f99b14",
+      "compared_to": "clone-alert-sqlnull-v2-before-01/stdout.private.jsonl",
+      "compared_to_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
+      "complete_typed_rows_equal": 12425,
+      "catalog_equal": true,
+      "sequence_advance": 0
+    },
+    "post_preview_database_seal_claimed": false,
+    "future_message_after_custody_claimed": false
+  },
+  "preview_disposable_cleanup": {
+    "passed": true,
+    "at": "2026-10-18T06:36:21.317049+00:00",
+    "removed_disposable_objects": 3,
+    "unique_jobs": 1,
+    "summary": {
+      "path": "ordinary-preview-disposable-cleanup-01/verified-summary.json",
+      "sha256": "6311184f46d5892d887a30dc71bcfbde48ac2313ae752be8b2c91546f1fd3bf3"
+    },
+    "plan_sha256": "59cdde469454c90bab6dae78f89a2c21ead674f9fa5973c799388a61986233e5",
+    "verifier_sha256": "7b38b1863fe88f17ed3591a25ffd3b5f9a86dcf499f0fb42b53d344d41105470",
+    "sender_sha256": "b3abbce96ce8ae67059f06b2c9ddf711553a893071c69175ead7a1831db36566",
+    "objects": [
+      {
+        "kind": "Job",
+        "name": "verdify-s3-alert-preview-c5-v2-20261018",
+        "uid": "9a6b0c07-aae9-4bb6-bc46-a90178ade08e",
+        "resource_version_precondition": "281598752",
+        "confirmed_absent_at": "2026-10-18T06:36:19.334933+00:00",
+        "delete_invocations": 1,
+        "propagation_policy": "Orphan",
+        "sender_receipt": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-job/sender-receipt.json",
+          "sha256": "63aa2e53d81bb6458f8c3559eb9b65215c79e581858be177802c4f1aa354b1bd"
+        },
+        "delete_options": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-job/delete-options.json",
+          "sha256": "b1c437f7d0afbb4864556128b72bb944478e5b92fd5190dfab7cce46719ad27e"
+        }
+      },
+      {
+        "kind": "Pod",
+        "name": "verdify-s3-alert-preview-c5-v2-20261018-tcfx9",
+        "uid": "9a6aee52-fb0b-4422-bfd7-1869f711df1f",
+        "resource_version_precondition": "281613854",
+        "confirmed_absent_at": "2026-10-18T06:36:20.379632+00:00",
+        "delete_invocations": 1,
+        "propagation_policy": "Orphan",
+        "sender_receipt": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-pod/sender-receipt.json",
+          "sha256": "49c757681af6b648193f8514724ed94084e90d9f0a02274a25c8d50c251313e5"
+        },
+        "delete_options": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-pod/delete-options.json",
+          "sha256": "a1873b34c876ccbefec023fc407dbfb2a921735112d95fbccbf2da4126182e15"
+        }
+      },
+      {
+        "kind": "ConfigMap",
+        "name": "verdify-s3-alert-preview-c5-v2-20261018",
+        "uid": "534aca71-5edd-4221-a73c-4a55a8b5a6d0",
+        "resource_version_precondition": "281596383",
+        "confirmed_absent_at": "2026-10-18T06:36:21.300500+00:00",
+        "delete_invocations": 1,
+        "propagation_policy": "Orphan",
+        "sender_receipt": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-configmap/sender-receipt.json",
+          "sha256": "d51186516fbf066a7b5caa348af91e8e228cf19d69bac9c97a4f614578842b0a"
+        },
+        "delete_options": {
+          "path": "ordinary-preview-disposable-cleanup-01/preview-v3-configmap/delete-options.json",
+          "sha256": "745156aa944b65178ab3b68ad6e860ef35eb6aa8c52342e56bed53882d97fe5c"
+        }
+      }
+    ],
+    "retained_evidence_files_rehashed_after_cleanup": 142,
+    "automatic_retries": 0,
+    "uncertain_results": 0,
+    "database_rows_secrets_cnpg_pvc_production_changed": false,
+    "earlier_cleanup_receipts_unchanged": true,
+    "earlier_removed_objects": 24,
+    "earlier_unique_jobs": 8,
+    "cumulative_removed_objects": 27,
+    "cumulative_unique_jobs": 9,
+    "future_alert_cleanup_claimed": false
+  },
+  "native_graph_readback": {
+    "at": "2026-10-18T06:35:11.201573+00:00",
+    "open_issues": 47,
+    "active_edges": 27,
+    "closed_predecessor_records": 24,
+    "repository_projection_identical_to_0512": true,
+    "raw_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
+    "receipt": {
+      "path": "github-progress/ordinary-role-native-graph-20261018/verified.json",
+      "sha256": "3cb07d795a393798dfa4d64cb7af8edeca2c1eb0bc0e11e9e3e82c9b949546e9"
+    },
+    "prior_graph_receipts_unchanged": true
+  }
+}

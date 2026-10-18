@@ -52,17 +52,19 @@
     },
     {
       "number": 587,
-      "packet_status": "named_lifecycle_authority_and_begin_bundle_points_passed_full_issue_open",
+      "packet_status": "named_lifecycle_and_ordinary_readonly_preview_passed_alert_delivery_open",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Reuse the accepted lifecycle database-authority cases. After the pending one-role initial-password approval, verify actual ordinary LOGIN and the read-only alert preview. Separately request permission for the two synthetic messages before named-alert fire/deliver/clear, with bounded rollback and after-seals. No message permission has yet been requested. Keep uncovered contained clauses and #641 physical proof open.",
+      "remaining": "Reuse the accepted lifecycle database-authority and actual ordinary read-only LOGIN/preview evidence. Obtain separate explicit permission for the exact two synthetic messages before named-alert fire/deliver/clear, with bounded rollback and both after-seals. Separate permission for the exact two synthetic messages has not been granted; no messages have been sent. Keep uncovered contained clauses, ordinary-writer handoff and #641 physical proof open.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",
         "clone-capture-incident.md",
         "587-lifecycle-authority-proof.md",
         "587-lifecycle-authority-proof.json",
-        "587-lifecycle-failure-history.json"
+        "587-lifecycle-failure-history.json",
+        "587-ordinary-role-progress.md",
+        "587-ordinary-role-progress.json"
       ]
     },
     {
@@ -79,7 +81,9 @@
         "639-composite-writer-point-proof.json",
         "587-lifecycle-authority-proof.md",
         "587-lifecycle-authority-proof.json",
-        "587-lifecycle-failure-history.json"
+        "587-lifecycle-failure-history.json",
+        "587-ordinary-role-progress.md",
+        "587-ordinary-role-progress.json"
       ]
     },
     {

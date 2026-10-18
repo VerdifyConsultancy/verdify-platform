@@ -1,6 +1,6 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T05:10:11.716980Z",
+  "reviewed_at": "2026-10-18T06:33:42.039185+00:00",
   "issues": [
     639,
     587
@@ -26,7 +26,6 @@
   "remaining": [
     "remaining feasible contained cases; other five corrected writer native paths remain unaccepted",
     "uncovered contained prefix/exposure/exclusivity/recovery and locked/armed no-reopen acceptance",
-    "explicit one-role ordinary initial-password installation permission and actual ordinary LOGIN proof",
     "separate explicit two-message permission and named alert fire/deliver/clear through owner route"
   ],
   "physical_proof_owner": 641,
@@ -125,13 +124,21 @@
     "full_issue_acceptance": false
   },
   "alert_progress": {
-    "read_only_preview": "FAILED 28P01 before SQL; original retained",
-    "ordinary_role_initial_install": "human exception requested, pending; not performed",
-    "two_synthetic_slack_messages": "permission not yet requested or granted; none sent",
+    "read_only_preview": "ACTUAL_ORDINARY_READONLY_PREVIEW_VERIFIED at 2026-10-18T06:33:42.039185+00:00; old 28P01 before-SQL failure retained",
+    "ordinary_role_initial_install": "explicit human approval received; initial installation passed 2026-10-18T06:27:23.968405+00:00; actual authentication not claimed by installer",
+    "two_synthetic_slack_messages": "Separate permission for the exact two synthetic messages has not been granted; no messages have been sent.",
     "typed_alert_log_before_rows": 12425,
     "typed_alert_log_before_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
     "experiment29_scope_expanded": false,
-    "full_issue_acceptance": false
+    "full_issue_acceptance": false,
+    "ordinary_role_receipt": "587-ordinary-role-progress.json",
+    "actual_ordinary_login_passed": true,
+    "actual_candidate_source": "c5a2b1935d09e559c34a6207c9871bd3ef71ecda",
+    "actual_candidate_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e4a9b8b3bdbc0e39a447805ea53c85dd6fbd4301f32defa9a691c355469cf86b",
+    "native_alert_reason": "expired_work_not_terminal",
+    "native_alert_severity": "critical",
+    "previewed_payloads": 2,
+    "actual_delivery_verified": false
   },
   "disposable_cleanup": {
     "finished_at": "2026-10-18T04:38:32.990040+00:00",
