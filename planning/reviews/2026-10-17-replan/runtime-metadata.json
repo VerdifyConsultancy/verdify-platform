@@ -1,0 +1,75 @@
+{
+  "observed_at": "2026-10-18T01:55:27.502425+00:00",
+  "context": "vallery",
+  "application": {
+    "name": "verdify-prod-dark",
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "verdify-prod",
+          "server": "https://kubernetes.default.svc"
+        },
+        "ignoreDifferences": [
+          {
+            "group": "apps",
+            "jsonPointers": [
+              "/spec/volumeClaimTemplates/0/spec/volumeMode",
+              "/spec/volumeClaimTemplates/0/status"
+            ],
+            "kind": "StatefulSet",
+            "name": "verdify-db",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-lab-site-cache",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-hermes-iris-data-portable-20260801",
+            "namespace": "verdify-prod"
+          }
+        ],
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "f6c47e954b9ed3ccc6a6fea1302912a6515aec8c",
+      "status": "Synced"
+    },
+    "health": {
+      "lastTransitionTime": "2026-10-18T01:47:45Z",
+      "status": "Healthy"
+    },
+    "operation_phase": "Succeeded"
+  },
+  "deployments": [
+    {
+      "name": "verdify-ingestor",
+      "replicas": 1,
+      "ready": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000"
+      ]
+    },
+    {
+      "name": "verdify-db-backup-exporter",
+      "replicas": 1,
+      "ready": 1,
+      "images": [
+        "python:3.12-alpine"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,485 @@
+[
+  {
+    "number": 14,
+    "blocked_by": []
+  },
+  {
+    "number": 16,
+    "blocked_by": []
+  },
+  {
+    "number": 31,
+    "blocked_by": []
+  },
+  {
+    "number": 45,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 398,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 51,
+    "blocked_by": []
+  },
+  {
+    "number": 52,
+    "blocked_by": []
+  },
+  {
+    "number": 75,
+    "blocked_by": []
+  },
+  {
+    "number": 218,
+    "blocked_by": []
+  },
+  {
+    "number": 245,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 382,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 396,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 297,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 45,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 298,
+    "blocked_by": []
+  },
+  {
+    "number": 299,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 390,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 350,
+    "blocked_by": []
+  },
+  {
+    "number": 359,
+    "blocked_by": []
+  },
+  {
+    "number": 367,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 390,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 368,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 424,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 369,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 390,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 433,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 370,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 367,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 378,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 371,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 785,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 379,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 371,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 419,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 786,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 386,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 303,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 390,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 303,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 419,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 398,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 298,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 410,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 371,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 419,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 424,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 412,
+    "blocked_by": []
+  },
+  {
+    "number": 428,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 433,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 430,
+    "blocked_by": []
+  },
+  {
+    "number": 434,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 299,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 581,
+    "blocked_by": []
+  },
+  {
+    "number": 587,
+    "blocked_by": []
+  },
+  {
+    "number": 588,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 641,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 782,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 783,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 639,
+    "blocked_by": []
+  },
+  {
+    "number": 640,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 642,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 641,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 587,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 639,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 747,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 749,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 642,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 588,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 749,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 424,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 778,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 949,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 750,
+    "blocked_by": []
+  },
+  {
+    "number": 751,
+    "blocked_by": []
+  },
+  {
+    "number": 775,
+    "blocked_by": []
+  },
+  {
+    "number": 782,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 371,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 779,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 780,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 781,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 783,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 587,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 639,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 784,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 640,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 785,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 784,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 786,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 780,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 785,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 787,
+    "blocked_by": [
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 410,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 781,
+        "state": "closed"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 785,
+        "state": "open"
+      },
+      {
+        "repository": "VerdifyConsultancy/verdify-platform",
+        "number": 981,
+        "state": "open"
+      }
+    ]
+  },
+  {
+    "number": 802,
+    "blocked_by": [
+      {
+        "repository": "jvallery/agents",
+        "number": 4459,
+        "state": "closed"
+      }
+    ]
+  },
+  {
+    "number": 963,
+    "blocked_by": []
+  },
+  {
+    "number": 977,
+    "blocked_by": []
+  },
+  {
+    "number": 980,
+    "blocked_by": []
+  },
+  {
+    "number": 981,
+    "blocked_by": []
+  }
+]

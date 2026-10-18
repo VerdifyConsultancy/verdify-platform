@@ -17,7 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def resolve(text: str, plan: Backlog) -> str:
     items = {i.key: i for i in plan.issues}
     return re.sub(
-        r"#([a-z_]+)\b", lambda m: f"#{items[m[1]].issue_number}" if items[m[1]].issue_number else f"#{m[1]}", text
+        r"(?<![\w/])#([a-z_]+)\b",
+        lambda m: f"#{items[m[1]].issue_number}" if items[m[1]].issue_number else f"#{m[1]}",
+        text,
     )
 
 
@@ -35,19 +37,23 @@ def issue_body(item: WorkItem, plan: Backlog) -> str:
     stage = next(s for s in plan.stages if s.id == item.stage)
     parts = [
         f"# {item.title}",
-        f"Campaign: #775 · Stage: **{item.stage} — {stage.title}** · Priority: {item.priority} · Effort: {item.effort} · Accountable role: {item.owner_role}.\n\nRoles are execution responsibilities, not a reassignment of existing GitHub assignees. This September 5 contract supersedes conflicting historical issue-body sequencing; prior comments and receipts remain evidence, not current-state assertions.",
+        f"Campaign: #775 · Stage: **{item.stage} — {stage.title}** · Priority: {item.priority} · Effort: {item.effort} · Accountable role: {item.owner_role}.\n\nRoles name execution responsibilities and preserve existing assignees. This contract supersedes conflicting historical sequencing; prior comments and receipts remain evidence.",
+        f"## Current state and next action\n\n{item.baseline}",
         f"## What\n\n{item.what}",
         f"## Why\n\n{item.why}",
-        f"## Baseline and remaining work\n\n{item.baseline}",
         "## How / implementation strategy\n\n" + "\n".join(f"{n}. {line}" for n, line in enumerate(item.how, 1)),
         "## Source touchpoints\n\n" + "\n".join(f"- `{path}`" for path in item.paths),
         "## Dependencies and scope\n\n"
-        + (f"Parent: #{items[item.parent].issue_number or item.parent}. " if item.parent else "Campaign root. ")
+        + (
+            f"Parent: #{items[item.parent].issue_number or item.parent}. "
+            if item.parent
+            else "No in-repository parent; any external ownership is recorded in this contract. "
+        )
         + "Parentage is a roll-up, not a blocking dependency.\n\n"
         + (
-            "Blocked by: "
-            + ", ".join(f"#{items[key].issue_number or key}" for key in item.depends_on)
-            + ". These are full bounded predecessor deliverables; preparation/read-only work may proceed earlier."
+            "Predecessor records: "
+            + ", ".join(f"#{items[key].issue_number or key} ({items[key].status})" for key in item.depends_on)
+            + ". Open records gate the stated bounded deliverable; closed records retain their original disposition and are not active blockers. Preparation may proceed earlier."
             if item.depends_on
             else "No issue-level predecessor. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied."
         ),
@@ -59,10 +65,13 @@ def issue_body(item: WorkItem, plan: Backlog) -> str:
     if children:
         parts.append(
             "## Child deliverables\n\n"
-            + "\n".join(f"- [ ] #{child.issue_number or child.key} — {child.title}" for child in children)
+            + "\n".join(
+                f"- [{'x' if child.status == 'closed' else ' '}] #{child.issue_number or child.key} — {child.title} ({child.status}; see recorded disposition)"
+                for child in children
+            )
         )
     parts.append(
-        f"## Campaign references\n\n[Implementation strategy]({REPO}/blob/main/planning/CAMPAIGN.md) · [Full dependency graph]({REPO}/blob/main/planning/DEPENDENCIES.md) · [Validated source]({REPO}/blob/main/planning/backlog.yaml) · [September 5 evidence basis]({REPO}/blob/main/planning/EVIDENCE.md).\n\nOriginal issue bodies and metadata are retained in [the pre-rewrite snapshot]({REPO}/blob/main/planning/archive/2026-09-05/issues.json). Closed issues and existing comments are not rewritten. No production deployment, device change, random draw or experiment launch is performed by this planning sprint."
+        f"## Campaign references\n\n[Current plan]({REPO}/blob/main/planning/README.md) · [Dependency graph]({REPO}/blob/main/planning/DEPENDENCIES.md) · [Validated source]({REPO}/blob/main/planning/backlog.yaml).\n\nOriginal issue bodies and metadata are retained in [the October 17 before-images]({REPO}/blob/main/planning/reviews/2026-10-17-replan/before-open-issues.json) and [the original campaign snapshot]({REPO}/blob/main/planning/archive/2026-09-05/issues.json). Closed issue history and comments remain intact. Planning does not perform a deployment, device change, random draw or experiment launch."
     )
     return resolve("\n\n".join(parts) + "\n", plan)
 
@@ -187,10 +196,13 @@ def outputs(plan: Backlog) -> dict[str, str]:
         + "\nOne accountable role per issue; preserve existing assignees and choose an execution owner when pulling work. Serialize migrations and writer/release mutations even when analysis and device-denied tests run concurrently.\n\n"
     )
     for s in plan.stages:
-        lanes += f"## {s.id} — {s.owner}\n\n| Issue | Outcome | Blocking predecessors | Effort |\n|---|---|---|---|\n"
+        lanes += f"## {s.id} — {s.owner}\n\n| Issue / state | Outcome | Predecessor records / state | Effort |\n|---|---|---|---|\n"
         for i in (i for i in plan.issues if i.stage == s.id):
-            deps = ", ".join(ref(items[d]) for d in i.depends_on) or "None; see concrete issue conditions"
-            lanes += f"| {ref(i)} | {i.title} | {deps} | {i.effort} |\n"
+            deps = (
+                ", ".join(f"{ref(items[d])} ({items[d].status})" for d in i.depends_on)
+                or "None; see concrete issue conditions"
+            )
+            lanes += f"| {ref(i)} ({i.status}) | {i.title} | {deps} | {i.effort} |\n"
         lanes += "\n"
     epics = (
         "# Campaign hierarchy\n\n"
@@ -200,15 +212,15 @@ def outputs(plan: Backlog) -> dict[str, str]:
 
     def tree(key: str, level: int = 0) -> str:
         item = items[key]
-        line = "  " * level + f"- {ref(item)} {item.title} ({item.stage})\n"
+        line = "  " * level + f"- {ref(item)} {item.title} ({item.stage}; {item.status})\n"
         return line + "".join(tree(i.key, level + 1) for i in plan.issues if i.parent == key)
 
-    epics += tree("775")
+    epics += "".join(tree(i.key) for i in plan.issues if i.parent is None)
     graph = "# Complete blocking dependency graph\n\nGenerated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.\n\n```mermaid\nflowchart TD\n"
     for s in plan.stages:
         graph += f'  subgraph {s.id}["{s.id}: {s.title}"]\n'
         for i in (i for i in plan.issues if i.stage == s.id):
-            graph += f'    i{i.issue_number or i.key}["#{i.issue_number or i.key} {i.title[:58].replace(chr(34), chr(39))}"]\n'
+            graph += f'    i{i.issue_number or i.key}["#{i.issue_number or i.key} ({i.status}) {i.title[:58].replace(chr(34), chr(39))}"]\n'
         graph += "  end\n"
     for i in plan.issues:
         for d in i.depends_on:
@@ -216,7 +228,7 @@ def outputs(plan: Backlog) -> dict[str, str]:
     graph += "```\n\n## Exact edge list\n\n| Predecessor | Dependent |\n|---|---|\n"
     for i in plan.issues:
         for d in i.depends_on:
-            graph += f"| {ref(items[d])} | {ref(i)} |\n"
+            graph += f"| {ref(items[d])} ({items[d].status}) | {ref(i)} ({i.status}) |\n"
     graph += "\nClosed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.\n"
     manifest = dict(
         campaign=plan.campaign,
@@ -226,6 +238,7 @@ def outputs(plan: Backlog) -> dict[str, str]:
                 number=i.issue_number,
                 title=issue_title(i),
                 stage=i.stage,
+                status=i.status,
                 parent=items[i.parent].issue_number if i.parent else None,
                 blocked_by=[items[d].issue_number for d in i.depends_on],
                 body_sha256=hashlib.sha256(issue_body(i, plan).encode()).hexdigest(),

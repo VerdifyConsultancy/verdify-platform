@@ -106,6 +106,27 @@ def test_generated_files_are_current():
         assert (ROOT / path).read_text() == expected, f"regenerate {path}"
 
 
+def test_issue_comment_links_are_not_symbolic_issue_references():
+    from planning.render import resolve
+
+    plan = load(ROOT / "planning/backlog.yaml")
+    link = "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5855420357"
+    assert resolve(link, plan) == link
+    assert resolve("Follow #integration", plan) == "Follow #783"
+
+
+def test_closed_children_keep_their_disposition_visible(data):
+    from planning.render import issue_body
+
+    child = next(item for item in data["issues"] if item["key"] == "638")
+    child["status"] = "closed"
+    plan = Backlog.model_validate(data)
+    parent = next(item for item in plan.issues if item.key == child["parent"])
+    body = issue_body(parent, plan)
+    assert "- [x] #638" in body
+    assert "closed; see recorded disposition" in body
+
+
 def test_archived_source_is_byte_exact():
     archive = ROOT / "planning/archive/2026-09-05"
     manifest = json.loads((archive / "source-manifest.json").read_text())

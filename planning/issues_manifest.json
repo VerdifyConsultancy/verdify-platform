@@ -6,947 +6,1044 @@
       "number": 775,
       "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
       "stage": "C0",
+      "status": "open",
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "75f616e8d5985b9add711479477907dd68742df51470fae33e1e065debd388d1"
+      "body_sha256": "104a0a8920400c7655ec44e875c0b4463fa91dec89dc94f22317e0da2aabff15"
     },
     {
       "key": "incident",
       "number": 778,
       "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
       "stage": "C0",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "e24d5ae1328f09c129e97d95af1aa013b85a40d620c6c499b248f41b0e377df9"
+      "body_sha256": "9bbc317865ea4d77dba6da54417444b26519dd96dda70cb62d67f6f05670782a"
     },
     {
       "key": "371",
       "number": 371,
       "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
       "stage": "C0",
+      "status": "closed",
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "eaef4b05b3d893369f695581136ee72720f2ec7dd8d2874e20a28dd139098b8e"
+      "body_sha256": "e3977e517d8f546d60ede686131720816030e79b676cf8ea939bf09225a17e92"
     },
     {
       "key": "424",
       "number": 424,
       "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
       "stage": "C0",
+      "status": "closed",
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "04e940c438c1f29ddc5a406d18c66b7d39def2962c97d2fb0984eb6e0299f78a"
+      "body_sha256": "4b6429ab2e073c14d3ff96c9ad760d1e61f20075b2e3f7213d9795f77b439aed"
     },
     {
       "key": "sensor_reanalysis",
       "number": 779,
       "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
       "stage": "C0",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [
         371
       ],
-      "body_sha256": "c142d9e5b57d8344b89917454beee3562113e849455e04fbc299c198f11d25eb"
+      "body_sha256": "35fa37e9f4609583be4c2f19c6cf047b17861dbf2d73a3f87cec0a42535e5040"
     },
     {
       "key": "forecast_truth",
       "number": 780,
       "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
       "stage": "C0",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "eca10b374ae2b43fb04b6c05675d49db4708180853f21b61b83b363459675f88"
+      "body_sha256": "fa6eb7935ef4dc0ff7024a9e4cc0c1a22a4e249c2bda23141d6e22f4ace2efaa"
     },
     {
       "key": "resource_contract",
       "number": 781,
       "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
       "stage": "C0",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "73d1d8281e6573e9be18178c6e8f08fffe277d68ddc45b0a4891c2d79620d061"
+      "body_sha256": "da5a2a0b4c7091254cfffe0fa1c910278c2f9ff6952d47d881304c0de37dd279"
     },
     {
       "key": "581",
       "number": 581,
-      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
       "stage": "C2",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "eefe31c8d1f36fecb2b1738665333754818ea39ecff7cbb7326c7230a55bfc92"
+      "body_sha256": "c81b154757bee91199e9f2e0932405fca8ad6a3e7615d026494eab5899fb52d5"
     },
     {
       "key": "750",
       "number": 750,
       "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
       "stage": "C1",
+      "status": "open",
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "06e70a1c2b409ea328fc01c614686dc7c2915184e5213b728295af7400f923a6"
+      "body_sha256": "9cce621784295d1d7834ad43f3cbfaac3daaabbe89a15325772bac4044d53e6d"
     },
     {
       "key": "747",
       "number": 747,
       "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
       "stage": "C1",
+      "status": "closed",
       "parent": 750,
       "blocked_by": [],
-      "body_sha256": "16891f911fa34ce7d3250f8fe4ece1202d3ff59b32343e6565681dfd53fcd7f4"
+      "body_sha256": "4310146542f299c7bd185eab2e2ae41805971dc8c2eb43118325441aa037277b"
     },
     {
       "key": "749",
       "number": 749,
       "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
       "stage": "C1",
+      "status": "open",
       "parent": 750,
       "blocked_by": [
         424,
         778,
         949
       ],
-      "body_sha256": "56fef4ae53e4766edd6b3108b85563bbf5bcf5d215f640d7cc7d32889ec8d3d1"
+      "body_sha256": "6d692e2f7bf127330d059c8fedadde9087483e1c8db756fb73f21007d3a236e1"
     },
     {
       "key": "641",
       "number": 641,
-      "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+      "title": "[C1][P1] Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
       "stage": "C1",
+      "status": "open",
       "parent": 750,
       "blocked_by": [
-        747,
         749,
         639,
-        587
+        587,
+        747
       ],
-      "body_sha256": "9b1e68c6931beea42808edd2659a333f3c0dd1a3ba210fa12875e1f1ad48e5d3"
+      "body_sha256": "c26a2f5f20c729bf126873d704f56f6853334e6bf6ab3d293ef5c120f5d07d29"
     },
     {
       "key": "639",
       "number": 639,
-      "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+      "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
       "stage": "C1",
+      "status": "open",
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "e4825dc8a11b9242efd4ce42ec869a737ed997753a05a5f9c80f811fa21e6508"
+      "body_sha256": "e25565e3ba0859bef065b829f7033b650579af1d1d192b4a2b89024de7556cb4"
     },
     {
       "key": "587",
       "number": 587,
-      "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+      "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
       "stage": "C1",
+      "status": "open",
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "62223b2e0302ea0fc58fb3822f2c82f0693dea32e9960141761dee027f8dd0f3"
+      "body_sha256": "077c2c0c343683d8273de5331e139ae74d33b9a1e9e856983e06866f946baab9"
     },
     {
       "key": "study_design",
       "number": 782,
-      "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+      "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
       "stage": "C0",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         371,
         779,
         780,
-        781,
-        981
+        781
       ],
-      "body_sha256": "c1e8c1e0dc11554560d38a87bf8eb5cb5eedeea3b88a2ca7a293c5b95080b9d0"
+      "body_sha256": "5ab90f98d004047350f6efe451bdd3f4638187a4320d202f52a1a37c272e53ce"
     },
     {
       "key": "integration",
       "number": 783,
-      "title": "[C1][P0] Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
+      "title": "[C1][P1] Qualify the complete current-login selector-to-frozen-analysis path",
       "stage": "C1",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         639,
-        587,
-        782
+        587
       ],
-      "body_sha256": "5e7c03e4134726424c6df70bf3568ed1396c1dcb683f9aca10a56bf4e8475adb"
+      "body_sha256": "728fc22ce315eb7f0e6e642be1c7549d8d457379b6641d50858c1f96236928d4"
     },
     {
       "key": "588",
       "number": 588,
-      "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+      "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
       "stage": "C2",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         641,
         782,
         783
       ],
-      "body_sha256": "56a5f80ce2ebb6d98f5bfd70dade02e0eb395ee72320c440bfeba4ea65a7c8ee"
+      "body_sha256": "a13d9c1b821f50c1fe24e3e63e1cd325dec9222bd49a23804185a5c5bde16c5c"
     },
     {
       "key": "642",
       "number": 642,
-      "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+      "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
       "stage": "C2",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         588
       ],
-      "body_sha256": "b87a8b93396701f0da6a104da9968b7ec557f52421858399426e7418252f50db"
+      "body_sha256": "02e25667834d3077a5efdfc8f1fb586c791c905e478bb8eef29dcd661fd76b57"
     },
     {
       "key": "640",
       "number": 640,
-      "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+      "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
       "stage": "C3",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         642
       ],
-      "body_sha256": "2c79ca3c0c3c60f8b5abd79d6bbfaab15cc81f59a5412eaf7d2c4713bdd967ee"
+      "body_sha256": "b8a089af819d28cb102866a226edfa60f9da8502ded970eff048fd5124dd5273"
     },
     {
       "key": "pilot_run",
       "number": 784,
-      "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+      "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
       "stage": "C3",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         640
       ],
-      "body_sha256": "344a7b44ecd7db2a8308b6d7c9bddb3265b49c721a22bc02ea3ca5502f22639d"
+      "body_sha256": "e1dc2f8b0e711267e96b114acf50e60aeba8327a3580c4b043b6b4952550d2dc"
     },
     {
       "key": "readout",
       "number": 785,
-      "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+      "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
       "stage": "C3",
+      "status": "open",
       "parent": 581,
       "blocked_by": [
         784
       ],
-      "body_sha256": "5432037d28811c3a50dc21f7e597b041194bfeec9d8b248630e91eaba59df148"
+      "body_sha256": "ec8508912d998984416601feed53f764c312ca0dc7dd8a6f6b466b43153707d0"
     },
     {
       "key": "644",
       "number": 644,
       "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
       "stage": "C4",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [
         964
       ],
-      "body_sha256": "76c0d903568227dea66f567493308ec6a296442a41bdad17e658bd7d44c1788b"
+      "body_sha256": "2d21d1b5a5daa10778adba79bc64c1251f325f2eb050e52e7abadac313bb78c6"
     },
     {
       "key": "322",
       "number": 322,
       "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
       "stage": "C4",
+      "status": "closed",
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "71f8e088e1cc6ba90b30fb813880aed1f574961a10d96cfc58586403843e2977"
+      "body_sha256": "42b023de8689524de912a25d9f80b17ab4581753d389f84b36d304959b088958"
     },
     {
       "key": "304",
       "number": 304,
       "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
       "stage": "C4",
+      "status": "closed",
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "c3ae89db62f136bab4f14790f058badb725eff60b08d25694cd9b3812056535f"
+      "body_sha256": "886721bb24f30edd8840163f00a26b710c3c754f3122c3f393221ac5e8b6f067"
     },
     {
       "key": "303",
       "number": 303,
       "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
       "stage": "C4",
+      "status": "closed",
       "parent": 644,
       "blocked_by": [
         304,
         322
       ],
-      "body_sha256": "1ac91b657cfe4ed3217ec28804665bda61f36a3a15eef20196933995929aaaf3"
+      "body_sha256": "f420ddacd318648a1f1a9240d099e25e882c72759401016dc3e258e2398292d9"
     },
     {
       "key": "390",
       "number": 390,
       "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
       "stage": "C4",
+      "status": "open",
       "parent": 644,
       "blocked_by": [
         303,
         419
       ],
-      "body_sha256": "99523584014c457bfafd98f327b63131c843125f48768147600af6bed2002ec8"
+      "body_sha256": "228469ac150f248ef9df8ecd86f3860a13525f67ac0dad0c50b7399ef2e9b585"
     },
     {
       "key": "433",
       "number": 433,
       "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
       "stage": "C4",
+      "status": "closed",
       "parent": 430,
       "blocked_by": [],
-      "body_sha256": "738bfebae2f6ec96bdf1c2a011fcf036c68b385b50e9ad3674ece14d2f7c2a77"
+      "body_sha256": "5f02b925b5ff9154de930e3717adfdb4280aa75716f9f40888977a3eda89a269"
     },
     {
       "key": "427",
       "number": 427,
       "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
       "stage": "C4",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [
         433
       ],
-      "body_sha256": "9a6812ca2a534b40695c5675725865fa687d8c5dd83cec34819ba6c2f663f31a"
+      "body_sha256": "c6ef85d8a4a00764aa51e1697cef24928736c9e6a3bcc884c44b19e43ab23b8e"
     },
     {
       "key": "75",
       "number": 75,
       "title": "[C4][P1] Observability program: prove actionable health from source through device",
       "stage": "C4",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "c8383b7aeb6251aaf5c0d23d967f85f769365bd2a50765f53399435d124f1ad4"
+      "body_sha256": "04bff8b19899e89d255805f23b44fc9139211d6d66b8d7f08e4ca6362822f98d"
     },
     {
       "key": "563",
       "number": 563,
       "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "dee0bef8b8b41af557e4381269ee493e39379fb13d0bb38e1afdd0a2bc0aed96"
+      "body_sha256": "5193485b0200300e64d5926dec5594841e870f5e9587d46cfdca232a69c81a52"
     },
     {
       "key": "394",
       "number": 394,
       "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [
         563
       ],
-      "body_sha256": "f9281c9d6782acc540311b2be6b491e25d5f2faa222522968305bf81c6db1ad6"
+      "body_sha256": "633046e248fff0bb012a3655601225f83bf3f5d5d20605467d6002348e767c09"
     },
     {
       "key": "89",
       "number": 89,
       "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [
         563
       ],
-      "body_sha256": "314b308396038d60b43107d1b3355c94632329ca816da29fb80c8f3c0319dc1a"
+      "body_sha256": "2a0311c2888d0c0a7497fb3b4d0b51b6b169e66b4b79e5d8340f10f11a2e2fd0"
     },
     {
       "key": "671",
       "number": 671,
       "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "c4f0fb38695e9159f1d607a2146c6fd071934bf974ce59270f35efeb0f91dd2d"
+      "body_sha256": "40f93a18cafebd9cfedef5a07b187ee53d548711581d895e1f08290978796cc9"
     },
     {
       "key": "399",
       "number": 399,
       "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
       "stage": "C4",
+      "status": "closed",
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "54514d1ab44cc062166f5e3c844e86e6163ab5e0157d9809530c3e4417985c52"
+      "body_sha256": "ed1ad53b81dd1ddc50ff1aae2544aa5bdf4ce11e336c0a3d033965247f693da3"
     },
     {
       "key": "419",
       "number": 419,
       "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
       "stage": "C4",
+      "status": "closed",
       "parent": 390,
       "blocked_by": [],
-      "body_sha256": "98dee21edfa490e0d61e01dfcb38bae139b3847ac1fba063297a300c693cf2df"
+      "body_sha256": "36e17c15c1165d2390d311f3e939e02da5bca0e543973187ad6f00dc968f4005"
     },
     {
       "key": "386",
       "number": 386,
       "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
       "stage": "C4",
+      "status": "open",
       "parent": 359,
       "blocked_by": [
         303
       ],
-      "body_sha256": "98e7293fe730a480dba02a9b973f059828f57e708ce9d6964fd2742d13de1932"
+      "body_sha256": "a79ae4273abd73a88247b29b24a05a2aaba46be2f34b9adf1e3b6a6c689b03ea"
     },
     {
       "key": "218",
       "number": 218,
       "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
       "stage": "C5",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "f07bae6ffd54b5adaf1fd4dc8d9fc55fe08d32ac00d5559758f7beea8e279a6e"
+      "body_sha256": "0eb41a80c9b2107937a141fd244d0fc31380635051cce5c397e0037177a3c21f"
     },
     {
       "key": "670",
       "number": 670,
       "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
       "stage": "C5",
+      "status": "closed",
       "parent": 218,
       "blocked_by": [],
-      "body_sha256": "71841ea40aaaf774368f72d28a4d794eb1f73653ba852bf8797e8918c07bac59"
+      "body_sha256": "cf059dd541104d4d85e14bd57d615ae40b723602cbd9dd6bafc9f2aea1377f1c"
     },
     {
       "key": "672",
       "number": 672,
       "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
       "stage": "C5",
+      "status": "closed",
       "parent": 218,
       "blocked_by": [
         670
       ],
-      "body_sha256": "83df9dc316fa24c2acae2a010872ae67c5d4e1e03a27bfdb28e30cd9f41a4696"
+      "body_sha256": "71af1447420504ba0e05e6a484339f7dc718646b4a44c3dd4d4295216e810bbc"
     },
     {
       "key": "382",
       "number": 382,
       "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
       "stage": "C5",
+      "status": "closed",
       "parent": 218,
       "blocked_by": [],
-      "body_sha256": "8f369047dbfa68b6797e93ec4fa0d5fdfb9871872387c6f6d76301f92d0bc07f"
+      "body_sha256": "ec23c5c02c1317c480fe1a8548bde9a3813f5c15315cb850a14ba5db61bc48ee"
     },
     {
       "key": "396",
       "number": 396,
       "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
       "stage": "C5",
+      "status": "closed",
       "parent": 218,
       "blocked_by": [
         670,
         672
       ],
-      "body_sha256": "998e140d6aa25406c4dbdb8a6b1647345871070314d8d71f582a385101a26f93"
+      "body_sha256": "6c00af8cab7e0926977bf2d22b05786cb9e6e6da014f0048c9ffc80e59ce8cf9"
     },
     {
       "key": "245",
       "number": 245,
-      "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+      "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
       "stage": "C5",
+      "status": "open",
       "parent": 218,
       "blocked_by": [
-        396,
-        382
+        382,
+        396
       ],
-      "body_sha256": "af5034fb9cb36cb479a7e17a9c63e16752c53eac1049b870cc939b24355aed4f"
+      "body_sha256": "d2428b8e25d09e8393178295b94e1391bbdde1373506413efee7a8cb352a558a"
     },
     {
       "key": "643",
       "number": 643,
       "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
       "stage": "C5",
+      "status": "closed",
       "parent": 218,
       "blocked_by": [
         670
       ],
-      "body_sha256": "b04f2b15e5d10e30ac9316283c6542071df0c71fddda139ea9de80f16cdb459c"
+      "body_sha256": "49e130c3de6942e6e179834b1f57b5ecb7e06dcf540ca2957e46a01e0e706bc4"
     },
     {
       "key": "49",
       "number": 49,
       "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
       "stage": "C5",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "5d27b202f86701125f9e25f4664da15117a258c84af8cebf6cb671e1b8c466d1"
+      "body_sha256": "1c5a6f5d1eb02bcb451bb2965b0650f2e544faeef41c4776f33fadab003c8ad7"
     },
     {
       "key": "359",
       "number": 359,
       "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
       "stage": "C6",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "f56394fdac54782beaf1ce04d97c8a3dc09b4f4fc24ef9dc488b86a27b676520"
+      "body_sha256": "28328d85085183af2ee1d4604acc89fd5c220dfaa19289d9a9fb69112b43674a"
     },
     {
       "key": "430",
       "number": 430,
-      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "title": "[C6][P2] Simplify firmware only while preserving autonomous control and observable truth",
       "stage": "C6",
+      "status": "open",
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "724ec51273e0891aa4c36bf244d4e2eb472995e92138a103854ae60d68eb6480"
+      "body_sha256": "bcc6ee70ab07056c5c932efe4a007df99b407030c479152b3b1f1a722a0a4e8b"
     },
     {
       "key": "428",
       "number": 428,
       "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
       "stage": "C6",
+      "status": "open",
       "parent": 430,
       "blocked_by": [
         433
       ],
-      "body_sha256": "d6650f7f471704103640ee1779f2b11851d620109c6363573ed67815c6d63a71"
+      "body_sha256": "166dbd425dc395e9ba3ab209aec878a9cbc0b5ea76071650717f4dcb1862a2c1"
     },
     {
       "key": "368",
       "number": 368,
       "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
       "stage": "C6",
+      "status": "open",
       "parent": 359,
       "blocked_by": [
         424
       ],
-      "body_sha256": "6e1622c8df0877582333f149a401e49677b8c3e8c3530c75d13f756765b734d7"
+      "body_sha256": "7160e7f155247d2a2df7de4cde6f635077aeab038ccfb398fd07bd603e8c07a5"
     },
     {
       "key": "367",
       "number": 367,
       "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
       "stage": "C6",
+      "status": "open",
       "parent": 430,
       "blocked_by": [
         390
       ],
-      "body_sha256": "d908208258e37635e86a18d60e7d566b9dcaa77ed35b4d98ae44e37f410a9d96"
+      "body_sha256": "d50dcc45b4e4d6fb39ca77f7a21f067686b565ee143a6287633d5dd5f5583847"
     },
     {
       "key": "370",
       "number": 370,
-      "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+      "title": "[C6][P2] Consolidate equipment conflict resolution into one pure arbitration function",
       "stage": "C6",
+      "status": "open",
       "parent": 430,
       "blocked_by": [
-        390,
         367
       ],
-      "body_sha256": "9d7a3943b0fe295069f499cf91bfb038684c457ceae84657aa68aebce0355c65"
+      "body_sha256": "66288b0aee03939c4c50fdd4167f579f4b59112c123b8a9ce2500f10d859368d"
     },
     {
       "key": "369",
       "number": 369,
-      "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+      "title": "[C6][P2] Remove dead tunables and code from a verified consumer inventory",
       "stage": "C6",
+      "status": "open",
       "parent": 430,
       "blocked_by": [
-        433,
-        390
+        390,
+        433
       ],
-      "body_sha256": "3a8427728039d288cc8d10bdc5046800c6e57ec7ad881bfc9e7f165445ad0abc"
+      "body_sha256": "6d2e5b922390d9bc5113158cb2ae55119041e1681247771be7955290ae3734d6"
     },
     {
       "key": "324",
       "number": 324,
       "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
       "stage": "C6",
+      "status": "closed",
       "parent": 359,
       "blocked_by": [
         424,
         371
       ],
-      "body_sha256": "0238d4983767ac4283f7108d0b4c7c0b645cb27208bfcdb9f4b356bb669f7763"
+      "body_sha256": "56ed43e97cbf5e7a9e0be316b7c970fc8555e5a09854ea2e93d64eeedd987d3c"
     },
     {
       "key": "410",
       "number": 410,
       "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
       "stage": "C6",
+      "status": "open",
       "parent": 359,
       "blocked_by": [
-        424,
         371,
-        419
+        419,
+        424
       ],
-      "body_sha256": "3000264081a0cc10e962b8d5adfae8fd2ed7a8aaa5215d2deacf636de602109e"
+      "body_sha256": "c83e781b5e1639a2d7d3da8f502dd137cb776370743a7db89f8d894eb478f3b6"
     },
     {
       "key": "378",
       "number": 378,
-      "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+      "title": "[C6][P2] Decide corridor widths from fixed-target crop and resource evidence",
       "stage": "C6",
+      "status": "open",
       "parent": 359,
       "blocked_by": [
-        371,
-        785
+        785,
+        371
       ],
-      "body_sha256": "da830bf17dfb9b2fab51a6645cc58f03a3eb3d0dc7a975af7b26602e4fcc4977"
+      "body_sha256": "07bdb470b3e645ad7d2500e4e75de4b32201cdd69d6b86f8366f54cade38a399"
     },
     {
       "key": "361",
       "number": 361,
       "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
       "stage": "C6",
+      "status": "closed",
       "parent": 359,
       "blocked_by": [
         378,
         410
       ],
-      "body_sha256": "e818d51b5524a2f981edaf8b49f99248d6b0b2f006e11e995d976878c2f828ae"
+      "body_sha256": "4f3e176dc2c6a72f226e12364ac6bc411bca7edf0e18a6aa77957df563e8ba07"
     },
     {
       "key": "214",
       "number": 214,
       "title": "[C6][P1] Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
       "stage": "C6",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [
         427,
         780
       ],
-      "body_sha256": "c2dc9310c54a79b43ea9e163f89dfed2e5fd8fd2fb4705844f9b63a28759567d"
+      "body_sha256": "b0a0f2e0e7edb09c59aa02d3165ccd0af4f87b8b95261b175366618638c2fef7"
     },
     {
       "key": "350",
       "number": 350,
       "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
       "stage": "C6",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "36680d9ce8c3ebf31cac5c332a9eda051ee9323b7fbad94d10615be38f384bbd"
+      "body_sha256": "a8e8d4d749da424036f02abbdaa2b550f3ad356ac27c141bc2f1feee27ee7bf1"
     },
     {
       "key": "434",
       "number": 434,
       "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
       "stage": "C6",
+      "status": "open",
       "parent": 350,
       "blocked_by": [
-        390,
         299
       ],
-      "body_sha256": "6c863a2f3cb6a1421105b01ae743886a403ce4fbd5b31bb13d018798b16d1c8a"
+      "body_sha256": "5533ff9cdd7883516c1b1de94c79a8705be1586e6311424265836346bccf1624"
     },
     {
       "key": "299",
       "number": 299,
       "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
       "stage": "C6",
+      "status": "open",
       "parent": 350,
       "blocked_by": [
         390
       ],
-      "body_sha256": "139f55860cac7eebc3be68225f55e054a7f40b9eafe8e361bb3f26f61874fa10"
+      "body_sha256": "f680c7a69ce84de23d50d00804ef1990cf03a43b09281540d4674768d7e69f35"
     },
     {
       "key": "297",
       "number": 297,
       "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
       "stage": "C6",
+      "status": "open",
       "parent": 350,
       "blocked_by": [
-        398,
         45
       ],
-      "body_sha256": "5c1630e9d8b011f7febf0d1f1464d456e427c6eb64df33b05d511b66d83f3658"
+      "body_sha256": "06fa3264993aed9ab1304acc5633b6347db08790c816b008b3ddf730e0708ce7"
     },
     {
       "key": "296",
       "number": 296,
       "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
       "stage": "C6",
+      "status": "closed",
       "parent": 350,
       "blocked_by": [
         297,
         434,
         45
       ],
-      "body_sha256": "e98b913b267e85053744290e47477d3cf921b0a914cd4608883f5d6a2285db5f"
+      "body_sha256": "55e1ef7fee77b91caebf665c990f74708c026fb0b8dc2191d805467f955cee5c"
     },
     {
       "key": "16",
       "number": 16,
       "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
       "stage": "C7",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "7b8580750336c25101995c68ac56b84dfffaad32f0eaaec4ddc29894b71d761d"
+      "body_sha256": "0e2c9728def99aacccdc87ee9b0cdf6859b6da87d429e662271e306a86d7b95a"
     },
     {
       "key": "751",
       "number": 751,
       "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "73bc834fbb4f216027c9dbe7192d189a1820ca3f2d402ab42f6c40b0b285eda8"
+      "body_sha256": "2e1e7ec79123aff94aeffae18291236ba98793fef925dd090a7aaff49126d75d"
     },
     {
       "key": "298",
       "number": 298,
       "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "86ad07f43414f4c0e176e1560685e60e36e1e14e890be6152f448af1ffe84dd1"
+      "body_sha256": "616dd5ab1fb73fa908f7651e30adc4e2298d7ec99e115e909f9ff336de6b7a9c"
     },
     {
       "key": "398",
       "number": 398,
       "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [
         298
       ],
-      "body_sha256": "2cfacc319d250575084b582be515fa3fc664e91e330b3b7d120b299c6ae47c56"
+      "body_sha256": "a35d7760ab4654cff30897fec9f7507cf29d0d0977f1c16100d24f2f4b71f980"
     },
     {
       "key": "45",
       "number": 45,
       "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [
         398
       ],
-      "body_sha256": "bed0e6bce896de2484ecffd10412a0c80262bca40545b6c642eb7e2da5ca8410"
+      "body_sha256": "6f1b20402a9a0f3c71fb336854956515c0a7af1c088ea3f3fdf1d7c3bfea28db"
     },
     {
       "key": "51",
       "number": 51,
       "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "799ed3171e385e2f5797a59ed067fb2bce4cb43da4d5991173c87f768674a864"
+      "body_sha256": "cdef5cb386aa581b330c030d42be56478f808b9b28773a153b5ceacf28bb73c1"
     },
     {
       "key": "52",
       "number": 52,
       "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "516f4c4436c271751f8596ce8be9bd9f65b6ad094a7e817573a5e1e7ad406f66"
+      "body_sha256": "fc3a528336414f27ae00c6c44c0a369b52878e94ecd6969e5bcbbd042197fed8"
     },
     {
       "key": "412",
       "number": 412,
       "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
       "stage": "C7",
+      "status": "open",
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "209ea80959577a554517f167923403bab43a5467182d06123bd194b8c5b39755"
+      "body_sha256": "8103ee55d3a9f0e8f1ea3a5bab09c5cc99d598784d2a330d0275b74ec3a76883"
     },
     {
       "key": "174",
       "number": 174,
       "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
       "stage": "C8",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "6420d6dcf1d83b09cb1fb5f38a0e930e17230e7d5529dd98e3c43357c07bc1e6"
+      "body_sha256": "b8955ee0cc533fc2ff3b4295ece8a443871f1e106d0584f96db3cd87460efbad"
     },
     {
       "key": "14",
       "number": 14,
       "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
       "stage": "C8",
+      "status": "open",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "fbb1b2c98a35e0cbcb5ba4f5bcc8336493edae4e27aca5401df1cdb74e8ec8c1"
+      "body_sha256": "87345abf7447b72ddc2d225b525b2573fc5a4efbdba426f4964f37b1e866a68e"
     },
     {
       "key": "31",
       "number": 31,
       "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
       "stage": "C8",
+      "status": "open",
       "parent": 14,
       "blocked_by": [],
-      "body_sha256": "29458586ffc96c3776839bcba6b765c00176ebe0a1bddd02b2cac353b8e5735c"
+      "body_sha256": "6c8cc201eff44219453993b13d375ce6cf643f32644a6f5a16f08035c80aefdb"
     },
     {
       "key": "606",
       "number": 606,
       "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
       "stage": "C8",
+      "status": "closed",
       "parent": 14,
       "blocked_by": [],
-      "body_sha256": "50d359b0047933f3856457734c731b04f1611616ff05e418c17232707fc84b20"
+      "body_sha256": "5fbcc28a81fef1dc99d26a7a5f46bde2af302aaf01d9b6aef752ba17958f8920"
     },
     {
       "key": "638",
       "number": 638,
       "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
       "stage": "C8",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "592967bf8d3cc70ef1e9a50f526bedb3d1ef02b0ad792eeeffaee88755a560c8"
+      "body_sha256": "5894b72497e197b4edd2eab90ebcacf12be0c29c6f203f134544e563dadc152f"
     },
     {
       "key": "586",
       "number": 586,
       "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
       "stage": "C8",
+      "status": "closed",
       "parent": 775,
       "blocked_by": [
         638,
         390,
         785
       ],
-      "body_sha256": "9eb557e28253fd5e99aa5bd1aa6e5c8b69a808898b4dd1632a84ccbdc8ae6680"
+      "body_sha256": "0c753ba8884108f541a8830e05f10eda6145bb8fefbc96e7c9d7b72b22c52d27"
     },
     {
       "key": "comparator",
       "number": 786,
-      "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+      "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
       "stage": "C8",
+      "status": "open",
       "parent": 775,
       "blocked_by": [
         785,
         780
       ],
-      "body_sha256": "911f7ea662b4162943134a4ee9e427dbfa7b0448e8dd06ee9363a7743bca56a9"
+      "body_sha256": "8854817d7f3ebdeda379e955ad3e6872ec9a41ea4b3a3c0ca2ffc3cd75c75e71"
     },
     {
       "key": "379",
       "number": 379,
       "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
       "stage": "C8",
+      "status": "open",
       "parent": 359,
       "blocked_by": [
         786,
-        419,
-        371
+        371,
+        419
       ],
-      "body_sha256": "7eb515fbeb1f1a5713e5da7bc88ea242b91ca17623d76ed25cd974cf865c4238"
+      "body_sha256": "c38f4995480111283e4300070700bc172d41bb29c2e9741e7b85ba734ab421a1"
     },
     {
       "key": "economics",
       "number": 787,
-      "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+      "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
       "stage": "C8",
+      "status": "open",
       "parent": 775,
       "blocked_by": [
         785,
-        781,
         410,
-        981
+        981,
+        781
       ],
-      "body_sha256": "321fbb5dce46177fc639477a39c0f1920faa40db3aa14a359912d698b9d0963d"
+      "body_sha256": "7390d90e8950a298f7685e0181af8b0723791cf95358124280f9404a220b0989"
     },
     {
       "key": "949",
       "number": 949,
       "title": "[C4][P0] Bound planner-policy drift holds and prove autonomous safe convergence",
       "stage": "C4",
+      "status": "closed",
       "parent": 430,
       "blocked_by": [],
-      "body_sha256": "3da725c4c5969be041d9fee5a11d47641b5694138393f1fdf03320af73cce920"
+      "body_sha256": "ef9575c9d4427bafa57c127a402e0e3f0cacdf2f4d4ef1216b2756b56c3fa29a"
     },
     {
       "key": "950",
       "number": 950,
       "title": "[C4][P1] Restore the ingestor Slack credential-file contract and operator delivery",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "4ba4680e3303f5b97dd7f9659cefaf416a88b433ed324e8b4c2b0b0adc54087b"
+      "body_sha256": "3bde6180fdc8bfd4d464a043fa681e894ca5bcfd3ebbc0331eff5eafbded64e8"
     },
     {
       "key": "951",
       "number": 951,
       "title": "[C4][P1] Restore authenticated greenhouse camera snapshots after connection refusals",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "763d107c9df1d01077f1f827aa2f28c351b8ec6c6cc3053b9ad73c553c586261"
+      "body_sha256": "818be4184e466501e78293c62e704d625e5968ae22e1f1316978e021114fb4b7"
     },
     {
       "key": "952",
       "number": 952,
       "title": "[C4][P1] Preserve Verdify Grafana monitoring identity across pod replacement",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "69be295b0d186538ad6e8b7048de9a1e2291b84dde9f9ff4c3a688acc6d5a58e"
+      "body_sha256": "07b7834c8b6796aa3a113427b116db1f7e442ba1ed742a71c2fb28ec2c4ff584"
     },
     {
       "key": "953",
       "number": 953,
       "title": "[C4][P2] Reconcile Iris planning skill lookup and required reference inventory",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "e6f27804f255574b1f411d220eb1ecc5109539f96e3603985de1d75024a61858"
+      "body_sha256": "e5fca895fae3480328d2a93bbc649a359958b1778b64c70b6a94ff61f1bfb06e"
     },
     {
       "key": "835",
       "number": 835,
       "title": "[C4][P1] Fix reconnect equipment snapshot provenance and stale relay alerts",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "ba824c0b1e1d311a9998c61e071638816815530a83fe740e0dece4a44ab01fa2"
+      "body_sha256": "33533688f06797802f0c4a39ca56dad6e56efadcddf735bbf95174f62cdda539"
     },
     {
       "key": "862",
       "number": 862,
       "title": "[C4][P1] Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "b76c6182c563fc4ba3bce70953954a201ae980f996256d8627bd2aae0a4392ef"
+      "body_sha256": "4d94a8f89d8e90e4587f44dd979b742f0015ea5f555c65aaf98fc9f91360d0ea"
     },
     {
       "key": "964",
       "number": 964,
       "title": "[C4][P0] Recover failed production promotion and schedulable Lab/band refresh",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "9437370aab1ff16d82febec1c945655909836d836f7657deaf3055859fb83375"
+      "body_sha256": "931c2e14ff527cecd74401562e31f0eb57ed1c923ccf401bf2750d5a5c571f15"
     },
     {
       "key": "965",
       "number": 965,
       "title": "[C4][P1] Separate API grow-light command intent from observed equipment history",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "54c8b0ccd9438a6d65f6d5dea4bbf749096091ecd36e78c80692aabbd2f89c5f"
+      "body_sha256": "eccb47707b622a5241a7d03c56c3cdd99e8ee8d4c7bf89501381ee8e83e81c60"
     },
     {
       "key": "963",
       "number": 963,
       "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
       "stage": "C4",
+      "status": "open",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "ae2eb9ca7f4c21d5c32fa622b4e3836f5a9496806f8e36aae8d9fd292f053dd8"
+      "body_sha256": "6cea060e415a937d8c2b490f11cdb559d9c4dbd3fb123fbd679c6e24e47ffaa9"
     },
     {
       "key": "976",
       "number": 976,
       "title": "[C4][P1] Qualify safe recovery of Lab publication receipt metadata",
       "stage": "C4",
+      "status": "closed",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "65ca30be1e3495da3034ad0037423c150c992f9dbf43d54248917f2afd7134e0"
+      "body_sha256": "a346c9e8e2f8ecce6ffd6257d563f895ece554dd68ff154ccd17e5b30d6ca354"
     },
     {
       "key": "977",
       "number": 977,
       "title": "[C5][P1] Decide the database replica policy before November 12; keep optional reclaim separate",
       "stage": "C5",
+      "status": "open",
       "parent": 218,
       "blocked_by": [],
-      "body_sha256": "75ab126148d6f8550d4a44e125726f7568492a3c0490c74ab636ce63c331dc23"
+      "body_sha256": "8d15c3b0c4c884185dc384732e80cc208b5de1b0937c8001387e778f870374f5"
     },
     {
       "key": "980",
       "number": 980,
       "title": "[C4][P2] Resolve backup-exporter readiness timeouts without obscuring backup health",
       "stage": "C4",
+      "status": "open",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "b7ca268d2219314a07e78c8ab8f6ecd778354be72dc1c77b1854ba4e7d6f34c9"
+      "body_sha256": "3b336e50e36b2b24b11c039ef363e1ecd61571c015bc7df6b500693097ff746e"
     },
     {
       "key": "981",
       "number": 981,
       "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
       "stage": "C4",
+      "status": "open",
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "526d3d8281f60e055f0dfd154f5c3b9f884168ac6af7b999c78190e1da7edc9e"
+      "body_sha256": "7478f34a2026f0d93126bfe49d2638322c57c719fb4033a4a53a47756341e914"
+    },
+    {
+      "key": "802",
+      "number": 802,
+      "title": "[C4][P2] Adopt the enforcing descheduler under manual Argo ownership",
+      "stage": "C4",
+      "status": "open",
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "7e0f586ae1b6dfcd20fe45aac167461728885936a0c2a035402942bce5eb5f1e"
     }
   ]
 }

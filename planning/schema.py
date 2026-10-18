@@ -87,6 +87,7 @@ class ExecutionPlan(StrictModel):
 class WorkItem(StrictModel):
     key: str
     issue_number: int | None
+    status: Literal["open", "closed"] = "open"
     title: str
     stage: str
     kind: Literal["task", "epic"]

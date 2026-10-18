@@ -1,0 +1,2954 @@
+[
+  {
+    "number": 5,
+    "title": "Controller: separate climate wet assist from crop direct-wet windows",
+    "state": "CLOSED",
+    "updated_at": "2026-05-25T05:05:23Z",
+    "closed_at": "2026-05-25T05:05:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/5"
+  },
+  {
+    "number": 6,
+    "title": "Planner: emit compliance-first ClimateIntent from target and authority context",
+    "state": "CLOSED",
+    "updated_at": "2026-05-25T05:05:30Z",
+    "closed_at": "2026-05-25T05:05:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/6"
+  },
+  {
+    "number": 7,
+    "title": "Schema/data: log climate actions and measure actuator effectiveness",
+    "state": "CLOSED",
+    "updated_at": "2026-05-25T05:05:38Z",
+    "closed_at": "2026-05-25T05:05:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/7"
+  },
+  {
+    "number": 8,
+    "title": "Close out ClimateIntent single-path controller rollout",
+    "state": "CLOSED",
+    "updated_at": "2026-05-25T22:24:53Z",
+    "closed_at": "2026-05-25T22:24:53Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/8"
+  },
+  {
+    "number": 13,
+    "title": "EPIC: Band + Compliance Rearchitecture — finish migration 147 reward swap",
+    "state": "CLOSED",
+    "updated_at": "2026-06-23T02:04:43Z",
+    "closed_at": "2026-06-17T16:23:58Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/13"
+  },
+  {
+    "number": 14,
+    "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:32Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14"
+  },
+  {
+    "number": 15,
+    "title": "EPIC: k3s + ArgoCD migration & CI/CD (GitOps for the Python layer)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:11:13Z",
+    "closed_at": "2026-06-01T15:11:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/15"
+  },
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:33Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16"
+  },
+  {
+    "number": 17,
+    "title": "Superseded: migration 147 anchor-stability gate replaced by ADR-0004 outcome scoring",
+    "state": "CLOSED",
+    "updated_at": "2026-06-23T02:04:39Z",
+    "closed_at": "2026-06-23T02:04:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/17"
+  },
+  {
+    "number": 18,
+    "title": "Schema-first: add compliance_v2 / attributable / per-zone fields to verdify_schemas + ScorecardResponse (G8)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:41Z",
+    "closed_at": "2026-06-07T21:31:41Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/18"
+  },
+  {
+    "number": 19,
+    "title": "G9: rewrite planner prompt copy + public labels to graded / per-zone / controller-attributable semantics",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:44Z",
+    "closed_at": "2026-06-07T21:31:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/19"
+  },
+  {
+    "number": 20,
+    "title": "Superseded: do not apply migration 147 as-is; replace with ADR-0004 outcome score",
+    "state": "CLOSED",
+    "updated_at": "2026-06-23T02:04:42Z",
+    "closed_at": "2026-06-23T02:04:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/20"
+  },
+  {
+    "number": 21,
+    "title": "Validate G5 compliance dual-write populates daily_zone_compliance cleanly across daily-summary runs",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:48Z",
+    "closed_at": "2026-06-07T21:31:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/21"
+  },
+  {
+    "number": 22,
+    "title": "Wire GitHub Actions CI to actually run on PRs and pushes (8 gate jobs defined, zero PR runs)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:18Z",
+    "closed_at": "2026-05-31T21:13:18Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/22"
+  },
+  {
+    "number": 23,
+    "title": "Codify migration-safety guard: forbid self-committing migrations under an outer BEGIN..ROLLBACK",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T22:12:36Z",
+    "closed_at": "2026-06-01T22:12:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/23"
+  },
+  {
+    "number": 24,
+    "title": "K3S-1 (P0): abstract docker-exec psql call sites behind scripts/lib/psql-verdify.sh (A1 freeze-critical)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:06Z",
+    "closed_at": "2026-06-01T17:18:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/24"
+  },
+  {
+    "number": 25,
+    "title": "K3S-2 (P0): add ingestor SHADOW_MODE + ingestor-healthz.py for safe parallel-run",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:34:49Z",
+    "closed_at": "2026-06-01T19:34:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/25"
+  },
+  {
+    "number": 26,
+    "title": "Wire GitHub Actions CD: release.yml build/push/tag-write to close the Python deploy gap",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:51Z",
+    "closed_at": "2026-06-07T21:30:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/26"
+  },
+  {
+    "number": 27,
+    "title": "k3s sub-area: cluster namespace + networking hard gate (ESP32 192.168.10.111:6053 reachability) + storage",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:42Z",
+    "closed_at": "2026-06-07T21:30:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/27"
+  },
+  {
+    "number": 28,
+    "title": "k3s sub-area: TimescaleDB cutover (pg_basebackup physical replica -> promote, compute-first/data-last)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T16:38:15Z",
+    "closed_at": "2026-06-07T16:38:15Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/28"
+  },
+  {
+    "number": 29,
+    "title": "k3s sub-area: containerize the Python services (one multi-stage verdify-py image)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:21Z",
+    "closed_at": "2026-05-31T21:13:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/29"
+  },
+  {
+    "number": 30,
+    "title": "Secrets-out-of-.env migration, re-scoped to k3s in-cluster secrets store",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:07Z",
+    "closed_at": "2026-06-07T21:31:07Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/30"
+  },
+  {
+    "number": 31,
+    "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:35Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31"
+  },
+  {
+    "number": 32,
+    "title": "TWIN-1/TWIN-2 (Phase 0): gated --stream mode + climate_action column on replay_emit.cpp",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:10Z",
+    "closed_at": "2026-06-09T23:02:10Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/32"
+  },
+  {
+    "number": 33,
+    "title": "TWIN-6: migration for twin_decisions + firmware_twin_divergence hypertables + twin_ro role",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:11Z",
+    "closed_at": "2026-06-09T23:02:11Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/33"
+  },
+  {
+    "number": 34,
+    "title": "Digital twin MVP (Phase 1): prod twin shadowing last-good + prod-vs-reality divergence dashboard",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:13Z",
+    "closed_at": "2026-06-09T23:02:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/34"
+  },
+  {
+    "number": 35,
+    "title": "Promote last-good OTA to 2026.5.30.1418.aa6518c after its 48h behavioral bake",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:51:03Z",
+    "closed_at": "2026-06-20T14:51:03Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/35"
+  },
+  {
+    "number": 36,
+    "title": "Confirm software-only June-heat mitigation (P3a pre-cool + SAF-4 duty cap) survives the 94-105F Jun 4-9 cluster",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:29:31Z",
+    "closed_at": "2026-05-31T21:29:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/36"
+  },
+  {
+    "number": 37,
+    "title": "F1: change firmware default irrig_center_start_hour 10 -> 6 (shared-territory value change)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-09T21:23:09Z",
+    "closed_at": "2026-07-09T21:23:09Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/37"
+  },
+  {
+    "number": 38,
+    "title": "Prune active planner_lessons 57 -> <=25 (fixes the failing lessons-count test)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:14Z",
+    "closed_at": "2026-06-09T23:02:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/38"
+  },
+  {
+    "number": 39,
+    "title": "Human plant verification: physically inspect/photograph the Vanda orchids, log observer='human' observations",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:29:33Z",
+    "closed_at": "2026-05-31T21:29:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/39"
+  },
+  {
+    "number": 40,
+    "title": "Soil-dryout critical alert: page when a live root-zone probe reads below wilt for >2h",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:32:07Z",
+    "closed_at": "2026-06-07T21:32:07Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/40"
+  },
+  {
+    "number": 41,
+    "title": "Stop v_daily_kpi.kwh preferring the broken Shelly meter (COALESCE kwh_total first)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:32:04Z",
+    "closed_at": "2026-06-07T21:32:04Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/41"
+  },
+  {
+    "number": 42,
+    "title": "Extend v_data_pipeline_health (+ alert_monitor) to cover weather_station; annotate intentionally-dark sources",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:32:01Z",
+    "closed_at": "2026-06-07T21:32:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/42"
+  },
+  {
+    "number": 43,
+    "title": "Schedule periodic refresh of the site_content RAG table (7 days stale, no refresh job)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T14:20:51Z",
+    "closed_at": "2026-08-02T14:20:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/43"
+  },
+  {
+    "number": 44,
+    "title": "G8 lessons state machine: LessonState literal + lessons_manage transition guards",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:32:14Z",
+    "closed_at": "2026-06-07T21:32:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/44"
+  },
+  {
+    "number": 45,
+    "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:37Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45"
+  },
+  {
+    "number": 46,
+    "title": "Refactor ingestor/tasks.py into an ingestor/tasks/ package (pure refactor)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:32:10Z",
+    "closed_at": "2026-06-07T21:32:10Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/46"
+  },
+  {
+    "number": 47,
+    "title": "Consolidate v_daily_oscillation + v_daily_oscillation_summary (one wraps the other)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:35Z",
+    "closed_at": "2026-06-07T21:31:35Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/47"
+  },
+  {
+    "number": 48,
+    "title": "Retire _parse_float in ingestor; migrate callers to HAEntityState.as_float()",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:08Z",
+    "closed_at": "2026-06-01T16:27:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/48"
+  },
+  {
+    "number": 49,
+    "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:52:06Z",
+    "closed_at": "2026-10-11T14:02:25Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/49"
+  },
+  {
+    "number": 50,
+    "title": "Confirm-and-close NB7: overnight <=5s clean/dew-gated micro-pulse path is live + NB5 auto-disable hooked",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T22:37:27Z",
+    "closed_at": "2026-06-01T22:37:27Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/50"
+  },
+  {
+    "number": 51,
+    "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:39Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51"
+  },
+  {
+    "number": 52,
+    "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:41Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52"
+  },
+  {
+    "number": 53,
+    "title": "Reclassify SaaS Sprint 10/11 GCP cloud backlog as product-later / superseded-by-k3s",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T17:55:43Z",
+    "closed_at": "2026-05-31T17:55:43Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/53"
+  },
+  {
+    "number": 54,
+    "title": "LABEL SETUP: create priority / owner / epic / theme labels (only 9 GitHub defaults exist)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:15Z",
+    "closed_at": "2026-05-31T21:13:15Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/54"
+  },
+  {
+    "number": 56,
+    "title": "container-publish.yml: vendor reusable-container-build.yml / rewrite cross-owner uses: so images publish to GHCR",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:11:05Z",
+    "closed_at": "2026-06-01T15:11:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/56"
+  },
+  {
+    "number": 57,
+    "title": "G1: bump deploy/k8s TimescaleDB + migrate image 2.17.2-pg16 -> >=2.25.2-pg16 (version skew vs live before any restore)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:24Z",
+    "closed_at": "2026-05-31T21:13:24Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/57"
+  },
+  {
+    "number": 58,
+    "title": "api: add /health/detailed endpoint with baked VERDIFY_GIT_SHA (image==source verifiable, DoD #1)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:44Z",
+    "closed_at": "2026-05-31T21:13:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/58"
+  },
+  {
+    "number": 59,
+    "title": "Reset + root-cause failed host units verdify-forecast-page + verdify-plan-publish (publish-site-content.sh HTTPS timeout)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:58Z",
+    "closed_at": "2026-06-07T21:31:57Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/59"
+  },
+  {
+    "number": 60,
+    "title": "Grafana render-cache-warm timer dead since 2026-05-25 (HTTP 500s) — re-enable or retire",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:54Z",
+    "closed_at": "2026-06-07T21:31:54Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/60"
+  },
+  {
+    "number": 61,
+    "title": "Decommission redundant host verdify-api.service (:8300, unrouted) after confirming no consumers",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:38Z",
+    "closed_at": "2026-06-07T21:31:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/61"
+  },
+  {
+    "number": 62,
+    "title": "Prune planner code + Quartz site/ tree from the monorepo (verdify-planner / verdify-www now split out)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:29:34Z",
+    "closed_at": "2026-05-31T21:29:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/62"
+  },
+  {
+    "number": 63,
+    "title": "Web tier k8s manifests missing (verdify-site/grafana/umami/goaccess) — decide move-order so api-only cutover doesn't split the web stack",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T23:36:33Z",
+    "closed_at": "2026-05-31T23:36:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/63"
+  },
+  {
+    "number": 64,
+    "title": "Provision verdify-agent kubectl access: scoped SA+RBAC + SOPS-sealed kubeconfig (/mnt/agents/verdify/secrets, vm-k3s-node1:6443)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T17:56:02Z",
+    "closed_at": "2026-05-31T17:56:02Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/64"
+  },
+  {
+    "number": 65,
+    "title": "Re-point ArgoCD verdify-local-staging to verdify-platform/deploy/k8s/overlays/local-staging (manual sync, prune:false)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:21:49Z",
+    "closed_at": "2026-05-31T21:21:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/65"
+  },
+  {
+    "number": 66,
+    "title": "Define SOPS secret structure + seal staging secrets + named prod-secret inventory",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:27Z",
+    "closed_at": "2026-05-31T21:13:27Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/66"
+  },
+  {
+    "number": 67,
+    "title": "nexus edge: split-horizon DNS (*.verdify.ai -> .7.10) + durable cross-VLAN allowlist",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:11:07Z",
+    "closed_at": "2026-06-01T15:11:07Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/67"
+  },
+  {
+    "number": 69,
+    "title": "EPIC: CI/CD Green Path",
+    "state": "CLOSED",
+    "updated_at": "2026-06-02T14:42:49Z",
+    "closed_at": "2026-06-02T14:42:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/69"
+  },
+  {
+    "number": 70,
+    "title": "EPIC: Staging parity & ArgoCD repoint (overlays + green-in-k3s)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:10:46Z",
+    "closed_at": "2026-06-01T15:10:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/70"
+  },
+  {
+    "number": 71,
+    "title": "EPIC: Device Safety (3-way single-writer interlock)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T18:30:59Z",
+    "closed_at": "2026-06-07T18:30:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/71"
+  },
+  {
+    "number": 72,
+    "title": "EPIC: Data & State Durability (DB migration + vault/state preservation + restore)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T18:31:00Z",
+    "closed_at": "2026-06-07T18:31:00Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/72"
+  },
+  {
+    "number": 73,
+    "title": "EPIC: Prod cutover (atomic single-writer handoff + local/WAN edge)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T18:30:58Z",
+    "closed_at": "2026-06-07T18:30:58Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/73"
+  },
+  {
+    "number": 74,
+    "title": "EPIC: Decommission iris VM + repo consolidation (irreversible)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:11:11Z",
+    "closed_at": "2026-06-01T15:11:11Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/74"
+  },
+  {
+    "number": 75,
+    "title": "[C4][P1] Observability program: prove actionable health from source through device",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:36:56Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75"
+  },
+  {
+    "number": 76,
+    "title": "Restructure deploy/k8s into base + overlays/{staging,prod} (replace overlays/local-staging)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:30Z",
+    "closed_at": "2026-05-31T21:13:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/76"
+  },
+  {
+    "number": 77,
+    "title": "Switch all 6 manifest image refs ghcr.io/jvallery/* -> ghcr.io/verdifyconsultancy/*",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:33Z",
+    "closed_at": "2026-05-31T21:13:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/77"
+  },
+  {
+    "number": 78,
+    "title": "Implement k8s-manifests.yml digest-bump-back (in-repo write to overlays/staging)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T22:37:26Z",
+    "closed_at": "2026-06-01T22:37:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/78"
+  },
+  {
+    "number": 79,
+    "title": "Device-safety: VERDIFY_DEVICE_WRITE_ENABLED env gate in esp32_push.py + staging=0/prod=1 + CI test",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:36Z",
+    "closed_at": "2026-05-31T21:13:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/79"
+  },
+  {
+    "number": 80,
+    "title": "Device-safety: add deny-esp32-egress / default-deny-egress NetworkPolicy + codify 5 base NetPols",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:39Z",
+    "closed_at": "2026-05-31T21:13:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/80"
+  },
+  {
+    "number": 81,
+    "title": "First real docker build of all 4 images + reconcile mcp port/DSN mismatch",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:42Z",
+    "closed_at": "2026-05-31T21:13:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/81"
+  },
+  {
+    "number": 82,
+    "title": "Add CODEOWNERS + promote-diff-guard workflow (prod-promote gating)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T23:36:31Z",
+    "closed_at": "2026-05-31T23:36:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/82"
+  },
+  {
+    "number": 83,
+    "title": "Build the real migrate image (alembic runner + 0001_baseline + alembic_version)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:47Z",
+    "closed_at": "2026-05-31T21:13:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/83"
+  },
+  {
+    "number": 84,
+    "title": "Recreate verdify-db StatefulSet on synology-iscsi (Retain) ≥2.25.2",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T18:31:02Z",
+    "closed_at": "2026-06-07T18:31:02Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/84"
+  },
+  {
+    "number": 85,
+    "title": "Execute DB load + validation runbook (G-DB-3 + G-DB-4)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:13:50Z",
+    "closed_at": "2026-05-31T21:13:50Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/85"
+  },
+  {
+    "number": 86,
+    "title": "Bootstrap verdify-prod ArgoCD app(s) on overlays/prod (manual-sync control tier)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:28Z",
+    "closed_at": "2026-06-07T21:31:28Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/86"
+  },
+  {
+    "number": 87,
+    "title": "Phase-0 local plane: split-horizon DNS + local *.verdify.ai TLS + IngressRoutes on .7.10 + durable :6053 allow",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:39Z",
+    "closed_at": "2026-06-07T21:30:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/87"
+  },
+  {
+    "number": 88,
+    "title": "Web/content/observability tier into k3s (Phase 4) — every *.verdify.ai serves locally",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:51Z",
+    "closed_at": "2026-06-07T21:31:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/88"
+  },
+  {
+    "number": 89,
+    "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:52:49Z",
+    "closed_at": "2026-09-27T00:37:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/89"
+  },
+  {
+    "number": 90,
+    "title": "Phase 5: external Cloudflare WAN view of the split-horizon (James+Jason)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T15:11:09Z",
+    "closed_at": "2026-06-01T15:11:09Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/90"
+  },
+  {
+    "number": 91,
+    "title": "Phase 6: mask + decommission iris VM (irreversible, Jason-gated)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:52:19Z",
+    "closed_at": "2026-06-20T14:52:19Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/91"
+  },
+  {
+    "number": 92,
+    "title": "End-to-end green smoke: full push-to-deploy dry run (staging) before prod promote",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T21:21:47Z",
+    "closed_at": "2026-05-31T21:21:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/92"
+  },
+  {
+    "number": 99,
+    "title": "Delete orphaned verdify-migrate GHCR package so CI publishes it repo-linked (digest-bump automation)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-02T01:24:56Z",
+    "closed_at": "2026-06-02T01:24:56Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/99"
+  },
+  {
+    "number": 102,
+    "title": "Fold verdify-planner planner_graph package into the monorepo (only-in-split — data-loss risk before VM decommission)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:10Z",
+    "closed_at": "2026-06-01T17:18:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/102"
+  },
+  {
+    "number": 103,
+    "title": "Decide + migrate verdify-www (Astro apex verdify.ai site) — serve from k3s or keep redirect-to-lab",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T23:36:34Z",
+    "closed_at": "2026-05-31T23:36:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/103"
+  },
+  {
+    "number": 104,
+    "title": "Commit the live verdify-vault working tree before VM decommission (64 uncommitted generated pages)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:52:20Z",
+    "closed_at": "2026-06-20T14:52:20Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/104"
+  },
+  {
+    "number": 105,
+    "title": "Reconcile canonical ESP32_API_KEY before sealing (live .env sha 127f85d0 vs esphome api_encryption_key sha df2784f9) — must not trigger re-flash",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T18:31:01Z",
+    "closed_at": "2026-06-07T18:31:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/105"
+  },
+  {
+    "number": 111,
+    "title": "EPIC: Three-Env Platform (dev/stage/prod)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T21:57:21Z",
+    "closed_at": "2026-06-13T21:55:58Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/111"
+  },
+  {
+    "number": 112,
+    "title": "EPIC: MQTT telemetry fan-out bus (prod publishes all sources; dev/stage subscribe)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T21:57:22Z",
+    "closed_at": "2026-06-13T21:55:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/112"
+  },
+  {
+    "number": 113,
+    "title": "MQTT broker in k3s + prod publish-all-telemetry ingestor mode",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:03Z",
+    "closed_at": "2026-06-07T21:31:03Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/113"
+  },
+  {
+    "number": 114,
+    "title": "dev/stage ingestor: subscribe-from-prod-MQTT read-only ingest mode",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:49Z",
+    "closed_at": "2026-08-29T22:54:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/114"
+  },
+  {
+    "number": 115,
+    "title": "Author deploy/k8s/overlays/dev (verdify-dev ns: own DB, SHADOW ingestor, device-write=0, deny-esp32-egress)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:00Z",
+    "closed_at": "2026-06-07T21:31:00Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/115"
+  },
+  {
+    "number": 116,
+    "title": "verdify-www -> k3s: GHCR image + overlay + IngressRoute (off Cloud Run)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:57Z",
+    "closed_at": "2026-06-07T21:30:57Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/116"
+  },
+  {
+    "number": 117,
+    "title": "verdify-planner -> k3s per-env service (off Cloud Run) + fold planner_graph into monorepo (#102)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:54Z",
+    "closed_at": "2026-06-07T21:30:54Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/117"
+  },
+  {
+    "number": 118,
+    "title": "Model verdify-setpoint-server (2nd device writer, grow-lights via HA) for k3s",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T14:20:16Z",
+    "closed_at": "2026-08-02T14:20:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/118"
+  },
+  {
+    "number": 119,
+    "title": "hermes-iris planner gateway -> k3s (copy /var/lib/verdify/hermes/iris state)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:26Z",
+    "closed_at": "2026-06-07T21:31:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/119"
+  },
+  {
+    "number": 120,
+    "title": "GCP full exit for Verdify: decommission www+planner Cloud Run + SaaS-mirror after migration (needs gcloud re-auth/IAM)",
+    "state": "CLOSED",
+    "updated_at": "2026-05-31T23:36:35Z",
+    "closed_at": "2026-05-31T23:36:35Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/120"
+  },
+  {
+    "number": 124,
+    "title": "lab.verdify.ai -> k3s: author the lab-site (Quartz) component + IngressRoute",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:22Z",
+    "closed_at": "2026-06-07T21:31:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/124"
+  },
+  {
+    "number": 126,
+    "title": "Repair k8s-manifests.yml: workflow-file rejection (zero jobs, completed-failure on every live/platform-main push)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:03Z",
+    "closed_at": "2026-06-01T16:27:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/126"
+  },
+  {
+    "number": 127,
+    "title": "Publish verdify-planner image: add build job to container-publish.yml, repo-link, pin by digest",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:48Z",
+    "closed_at": "2026-06-07T21:30:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/127"
+  },
+  {
+    "number": 128,
+    "title": "Publish verdify-setpoint-server image: add build job to container-publish.yml, repo-link, pin by digest",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:45Z",
+    "closed_at": "2026-06-07T21:30:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/128"
+  },
+  {
+    "number": 129,
+    "title": "Canonical DB parity spec + scripts/db-parity.sh + applied-migrations ledger (none exists today)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:34:45Z",
+    "closed_at": "2026-06-01T19:34:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/129"
+  },
+  {
+    "number": 130,
+    "title": "State landing zone: inventory /var/local/verdify/state + define k3s PVC + Root backup destination",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:31:31Z",
+    "closed_at": "2026-06-07T21:31:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/130"
+  },
+  {
+    "number": 131,
+    "title": "Wire device-write-gate test into CI (make VERDIFY_DEVICE_WRITE_ENABLED gate genuinely PR-blocking)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:05Z",
+    "closed_at": "2026-06-01T16:27:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/131"
+  },
+  {
+    "number": 132,
+    "title": "DRAFT single-writer cutover runbook (paper-only ordering + exactly-one-ESTAB proof + rollback)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:30:36Z",
+    "closed_at": "2026-06-07T21:30:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/132"
+  },
+  {
+    "number": 133,
+    "title": "IRIS-011: publish the Verdify DNS/TLS/firewall matrix (Iris->Nexus contract)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-01T19:28:12Z",
+    "closed_at": "2026-06-01T16:27:37Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/133"
+  },
+  {
+    "number": 134,
+    "title": "EPIC: Verdify Product Plane (compliance, twins, observability, www/lab, agronomy)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:18Z",
+    "closed_at": "2026-06-09T23:02:18Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/134"
+  },
+  {
+    "number": 135,
+    "title": "📋 Iris Charter & Board Map (2026-06-01 replan)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:20Z",
+    "closed_at": "2026-06-09T23:02:20Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/135"
+  },
+  {
+    "number": 174,
+    "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:53:00Z",
+    "closed_at": "2026-10-01T02:57:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/174"
+  },
+  {
+    "number": 175,
+    "title": "botauth.verdify.ai backend dead (.152:8788) — recover or retire (pre-existing)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T01:44:38Z",
+    "closed_at": "2026-08-02T01:44:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/175"
+  },
+  {
+    "number": 177,
+    "title": "DEFERRED: internet-friendly device channel for fleet scale-out (MQTT / edge-gateway / WebSocket)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T01:46:08Z",
+    "closed_at": "2026-08-02T01:46:08Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/177"
+  },
+  {
+    "number": 193,
+    "title": "[ROOT→IRIS] Author device-dark prod App-CR + M3.3 manifests (dumps PVC + nightly backup CronJob)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-06T08:13:05Z",
+    "closed_at": "2026-06-04T20:27:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/193"
+  },
+  {
+    "number": 200,
+    "title": "[AUDIT-2026-06][APP] Verdify drift, direct VIP, secret placeholders, and workload hygiene",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:22Z",
+    "closed_at": "2026-06-09T23:02:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/200"
+  },
+  {
+    "number": 207,
+    "title": "[SOTU][Verdify] Close platform drift across DNS, auth, observability, and k3s rollout",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:49Z",
+    "closed_at": "2026-08-29T22:54:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/207"
+  },
+  {
+    "number": 210,
+    "title": "Ingestor in-pod MCP venv missing in k3s -> forecast_actions task dead + weather_station/Tempest sync dark (cutover regression)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T14:20:36Z",
+    "closed_at": "2026-08-02T14:20:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/210"
+  },
+  {
+    "number": 211,
+    "title": "[P0][bug] Planner delivery broken in k3s: gather_context() shells to VM-era paths",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:06:29Z",
+    "closed_at": "2026-06-08T02:06:29Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/211"
+  },
+  {
+    "number": 212,
+    "title": "[P0][bug] Ingestor HERMES_URL not set → defaults to 127.0.0.1:8642",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:06:31Z",
+    "closed_at": "2026-06-08T02:06:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/212"
+  },
+  {
+    "number": 213,
+    "title": "[P0][bug] hermes-iris LLM 401 (OPENROUTER_API_KEY missing/invalid)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:06:32Z",
+    "closed_at": "2026-06-08T02:06:32Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/213"
+  },
+  {
+    "number": 214,
+    "title": "[C6][P1] Prove crop-deviation trigger → valid plan on the sole operational planner path",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:53:11Z",
+    "closed_at": "2026-10-02T10:58:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/214"
+  },
+  {
+    "number": 215,
+    "title": "[P2][bug] Ingestor stale dead-host polls (.150:9100, immich .108 GPU)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T01:44:40Z",
+    "closed_at": "2026-08-02T01:44:40Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/215"
+  },
+  {
+    "number": 216,
+    "title": "[record] Single-writer cutover EXECUTED 2026-06-07 ~17:16Z",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:35:35Z",
+    "closed_at": "2026-06-07T21:35:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/216"
+  },
+  {
+    "number": 217,
+    "title": "[record] .150 Iris VM decommissioned (powered off) + host units retired",
+    "state": "CLOSED",
+    "updated_at": "2026-06-07T21:35:38Z",
+    "closed_at": "2026-06-07T21:35:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/217"
+  },
+  {
+    "number": 218,
+    "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:44Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218"
+  },
+  {
+    "number": 219,
+    "title": "[P1] Website/lab content pipeline (CI rebuild on vault change)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-14T22:54:12Z",
+    "closed_at": "2026-06-14T22:54:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/219"
+  },
+  {
+    "number": 220,
+    "title": "[P1] Prod-promotion automation (dev→stage→prod GitOps promotion)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:49Z",
+    "closed_at": "2026-08-29T22:54:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/220"
+  },
+  {
+    "number": 221,
+    "title": "[P1] Verdify firmware/dev agent + safe iteration loop (SHADOW)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:26Z",
+    "closed_at": "2026-06-09T23:02:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/221"
+  },
+  {
+    "number": 222,
+    "title": "[EPIC] Post-cutover state + organized board roll-up (2026-06-07)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:27Z",
+    "closed_at": "2026-06-09T23:02:27Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/222"
+  },
+  {
+    "number": 225,
+    "title": "[EPIC] HA — first-principles resilience",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:31Z",
+    "closed_at": "2026-08-30T23:54:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/225"
+  },
+  {
+    "number": 226,
+    "title": "HA-1.1 — CPU limits on top cluster load generators (prometheus/loki/exporters) [P0 stop-the-bleeding]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:47:26Z",
+    "closed_at": "2026-06-08T01:47:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/226"
+  },
+  {
+    "number": 227,
+    "title": "HA-1.2 — Resource requests + CPU limits on all verdify-prod containers",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:47:27Z",
+    "closed_at": "2026-06-08T01:47:27Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/227"
+  },
+  {
+    "number": 228,
+    "title": "HA-1.3 — LimitRange + ResourceQuota per namespace (oversubscription floor)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:47:29Z",
+    "closed_at": "2026-06-08T01:47:29Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/228"
+  },
+  {
+    "number": 229,
+    "title": "HA-1.4 — 4-tier PriorityClasses + assignment (correct eviction/preemption order)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:47:43Z",
+    "closed_at": "2026-06-08T01:47:43Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/229"
+  },
+  {
+    "number": 230,
+    "title": "HA-1.5 — Stateless surfaces: replicas 1→2 + hard hostname spread + PDB (www/lab/api/mcp/planner/tier-2 traefik)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:46:37Z",
+    "closed_at": "2026-06-08T02:46:37Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/230"
+  },
+  {
+    "number": 231,
+    "title": "HA-1.6 — Decouple api liveness from the DB (/health/live) + preStop graceful drain",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:46:48Z",
+    "closed_at": "2026-06-08T02:46:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/231"
+  },
+  {
+    "number": 232,
+    "title": "HA-1.7 — Rebalance node7 (spread + soft anti-affinity + CSI DaemonSet resources); resize gated",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:14:45Z",
+    "closed_at": "2026-06-20T15:14:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/232"
+  },
+  {
+    "number": 233,
+    "title": "HA-1.8 — Fix the never-succeeded nightly pg_dump CronJob (RPO unbounded today) [urgent]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T03:30:46Z",
+    "closed_at": "2026-06-08T03:30:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/233"
+  },
+  {
+    "number": 234,
+    "title": "HA-1.9 — Descheduler CronJob for ongoing rebalance (excludes singletons; ship last)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-28T21:35:09Z",
+    "closed_at": "2026-06-08T05:09:03Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/234"
+  },
+  {
+    "number": 235,
+    "title": "HA-2.1 — pihole DNS SPOF: priorityClass+requests (A) → records-as-code + 2-replica (B) [highest edge priority]",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:49Z",
+    "closed_at": "2026-08-29T22:54:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/235"
+  },
+  {
+    "number": 236,
+    "title": "HA-2.2 — cloudflared 2→3 + hard spread + PDB minAvailable:2 (WAN tunnel)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:30:21Z",
+    "closed_at": "2026-06-08T01:30:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/236"
+  },
+  {
+    "number": 237,
+    "title": "HA-2.3 — .7.10/.7.53 BGP-only (drop dual L2 advert) + UDM timer tune → nexus [GATED]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:14:46Z",
+    "closed_at": "2026-06-20T15:14:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/237"
+  },
+  {
+    "number": 238,
+    "title": "HA-2.4 — traefik-apps PDB/resources/priority + metallb-controller 1→2 (reject DaemonSet)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:50Z",
+    "closed_at": "2026-08-29T22:54:50Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/238"
+  },
+  {
+    "number": 239,
+    "title": "HA-3.1 — Ingestor fast unpinned failover: short tolerations + verdify-device-critical + cpu request + PDB",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T16:09:10Z",
+    "closed_at": "2026-06-20T16:09:10Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/239"
+  },
+  {
+    "number": 240,
+    "title": "HA-3.2 — Ingestor exactly-one FENCE: coordination.k8s.io Lease + renew-or-die self-fence + SIGTERM release",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:53:00Z",
+    "closed_at": "2026-06-20T15:53:00Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/240"
+  },
+  {
+    "number": 241,
+    "title": "HA-3.3 — Split-brain alarm: PrometheusRule sum(esp32_writer_estab)>=2 (independent backstop)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T01:47:44Z",
+    "closed_at": "2026-06-08T01:47:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/241"
+  },
+  {
+    "number": 242,
+    "title": "HA-3.4 — Singleton-writer chaos acceptance run (hard-kill + partition + drain + pressure) [GATED]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T16:15:15Z",
+    "closed_at": "2026-06-20T16:15:15Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/242"
+  },
+  {
+    "number": 243,
+    "title": "HA-4.1 — Build/validate TimescaleDB-on-CNPG 2.25.2-pg16 image in verdify-dev (Gate G0) [GATED]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:29Z",
+    "closed_at": "2026-06-09T23:02:29Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/243"
+  },
+  {
+    "number": 244,
+    "title": "HA-4.2 — Prod CNPG cluster (1+2 sync) + Barman WAL/PITR→MinIO + restore-test, deployed alongside live [GATED]",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T03:30:32Z",
+    "closed_at": "2026-06-08T03:30:32Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/244"
+  },
+  {
+    "number": 245,
+    "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:46Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/245"
+  },
+  {
+    "number": 249,
+    "title": "[EPIC] Firmware optimization — orchid-TOD removal, VPD/temp band alignment, band-adjustment viz",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:31Z",
+    "closed_at": "2026-06-09T23:02:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/249"
+  },
+  {
+    "number": 250,
+    "title": "FW-OPT-1: Re-author / rip out the orchid time-of-day band curve (crop_target_profiles)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:32Z",
+    "closed_at": "2026-06-09T23:02:32Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/250"
+  },
+  {
+    "number": 251,
+    "title": "FW-OPT-2: VPD + temperature band-alignment refactor (coherent shoulders, feasible widths)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:33Z",
+    "closed_at": "2026-06-09T23:02:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/251"
+  },
+  {
+    "number": 252,
+    "title": "FW-OPT-3: Band-adjustment visualization dashboard (deploy + verify)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:12:42Z",
+    "closed_at": "2026-06-08T03:31:10Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/252"
+  },
+  {
+    "number": 253,
+    "title": "FW-OPT-4: fn_band_setpoints serves the LIVE season (not hardcoded season='spring')",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T03:31:25Z",
+    "closed_at": "2026-06-08T03:31:25Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/253"
+  },
+  {
+    "number": 254,
+    "title": "FW-OPT-5: Re-home VM-era firmware preflight DB handle + esphome secrets to k3s (pre-live-deploy gate)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:16:39Z",
+    "closed_at": "2026-06-08T04:16:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/254"
+  },
+  {
+    "number": 255,
+    "title": "FW-OPT-6: Deploy the digital twin (#34) as the pre-flash behavioral bake",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:16:33Z",
+    "closed_at": "2026-06-08T04:16:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/255"
+  },
+  {
+    "number": 256,
+    "title": "FW-OPT-7: Refresh the stale firmware rollback floor (promote last-good to aa6518c)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:16:56Z",
+    "closed_at": "2026-06-08T04:16:56Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/256"
+  },
+  {
+    "number": 262,
+    "title": "[chore] Rebase PR #248 (ha-1 resource governance GitOps capture) — currently CONFLICTING",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:22:51Z",
+    "closed_at": "2026-06-08T02:22:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/262"
+  },
+  {
+    "number": 263,
+    "title": "[infra][P1] lab-site repo↔live image digest divergence (real bf71018 vs synthetic 92ab470) — ArgoCD reconcile hazard",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:46:49Z",
+    "closed_at": "2026-06-08T02:22:40Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/263"
+  },
+  {
+    "number": 264,
+    "title": "[data-durability][P0-RED] prod nightly verdify-db pg_dump has NEVER succeeded → RPO unbounded today",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T02:47:23Z",
+    "closed_at": "2026-06-08T02:47:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/264"
+  },
+  {
+    "number": 267,
+    "title": "[P1][CI] main HEAD is RED — Site Generated Route Guards (ai-tunables.md missing) + Pydantic drift block PRs #258/#259/#260",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:39:16Z",
+    "closed_at": "2026-06-08T04:39:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/267"
+  },
+  {
+    "number": 273,
+    "title": "HA-1.10 — verdify-STAGING nightly backup Failed (VerdifyDBBackupStale firing, age ~54.5h)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-08T04:12:23Z",
+    "closed_at": "2026-06-08T04:12:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/273"
+  },
+  {
+    "number": 277,
+    "title": "[TRACE-3][DATA] Dataset characterization for control-optimization — collection gaps to fix",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:35Z",
+    "closed_at": "2026-06-09T23:02:35Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/277"
+  },
+  {
+    "number": 278,
+    "title": "[LENS-ML][DESIGN] ML/control-model opportunity map — what the greenhouse data supports today",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:37Z",
+    "closed_at": "2026-06-09T23:02:37Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/278"
+  },
+  {
+    "number": 279,
+    "title": "[LENS-Solar] Forecast-driven, solar-aligned climate+lighting control (req B/C/E)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:38Z",
+    "closed_at": "2026-06-09T23:02:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/279"
+  },
+  {
+    "number": 280,
+    "title": "[LENS-mechanical] Actuator wear: misters bypass dwell table, fogger/mister short-cycling, no per-relay wear budget/PdM",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:40Z",
+    "closed_at": "2026-06-09T23:02:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/280"
+  },
+  {
+    "number": 281,
+    "title": "FW-OPT-3 [W0]: FANS-button bug + absolute-priority button-override state machine (req A)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:41Z",
+    "closed_at": "2026-06-09T23:02:41Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/281"
+  },
+  {
+    "number": 282,
+    "title": "FW-OPT-4 [W0]: Remove the firmware dusk dry-cutoff; smooth 24h VPD band governs overnight (req B)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:42Z",
+    "closed_at": "2026-06-09T23:02:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/282"
+  },
+  {
+    "number": 283,
+    "title": "FW-OPT-5 [W1]: Two-zone lighting policy split — MAIN=orchid / GROW=hydroponic, solar-phased (req C)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:44Z",
+    "closed_at": "2026-06-09T23:02:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/283"
+  },
+  {
+    "number": 284,
+    "title": "FW-OPT-6 [W1]: Forecast feed-forward + Equation-of-Time on the served band (req B/E)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:45Z",
+    "closed_at": "2026-06-09T23:02:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/284"
+  },
+  {
+    "number": 285,
+    "title": "FW-OPT-7 [W2]: Soil-moisture/EC -> irrigation/fertigation feedback loop (req D)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-09T23:02:47Z",
+    "closed_at": "2026-06-09T23:02:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/285"
+  },
+  {
+    "number": 286,
+    "title": "EPIC: Iris / Verdify Unified Backlog (2026-06-09 full replan)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T21:57:21Z",
+    "closed_at": "2026-06-13T21:55:56Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/286"
+  },
+  {
+    "number": 287,
+    "title": "EPIC: Greenhouse Control Optimization (req A-E, 2026-06-09 voice memo)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:33Z",
+    "closed_at": "2026-08-30T23:54:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/287"
+  },
+  {
+    "number": 288,
+    "title": "EPIC: Deploy Enablement — agent k3s/DB access + firmware CI/OTA + secret sealing",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T19:08:08Z",
+    "closed_at": "2026-08-30T19:08:08Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/288"
+  },
+  {
+    "number": 289,
+    "title": "[req:A][W0] FANS/HUMID button bug + absolute-priority button-override state machine",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T07:41:53Z",
+    "closed_at": "2026-06-17T07:36:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/289"
+  },
+  {
+    "number": 290,
+    "title": "[req:A/R3] Vent-bypass winter mode: fans ON + vent CLOSED (house-air pull) — design + FSM carve-out",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T07:41:55Z",
+    "closed_at": "2026-06-17T07:41:55Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/290"
+  },
+  {
+    "number": 291,
+    "title": "[req:B][W0] Dispatcher solar re-anchor push: dusk/night/fog-window + dawn anchor (no OTA)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:51Z",
+    "closed_at": "2026-08-29T22:54:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/291"
+  },
+  {
+    "number": 292,
+    "title": "[req:B][W0] Remove the firmware dusk dry-cutoff; smooth 24h VPD band governs overnight",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:51:05Z",
+    "closed_at": "2026-06-20T14:51:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/292"
+  },
+  {
+    "number": 293,
+    "title": "[P1][L5/L6] DB solar phase parity before forecast feed-forward",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:46Z",
+    "closed_at": "2026-08-29T22:54:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/293"
+  },
+  {
+    "number": 294,
+    "title": "[req:C][W1] Per-circuit lighting crop-policy: MAIN=orchid photoperiod / GROW=hydroponic (schema/DB)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:31:12Z",
+    "closed_at": "2026-06-20T15:31:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/294"
+  },
+  {
+    "number": 295,
+    "title": "[req:C][W1] Two-zone lighting firmware: solar-phasing + lux_on_threshold realism + west grow-light dead-fixture detection",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T16:29:42Z",
+    "closed_at": "2026-06-20T16:29:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/295"
+  },
+  {
+    "number": 296,
+    "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:17Z",
+    "closed_at": "2026-10-17T23:36:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/296"
+  },
+  {
+    "number": 297,
+    "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:48Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297"
+  },
+  {
+    "number": 298,
+    "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:50Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298"
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:52Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299"
+  },
+  {
+    "number": 300,
+    "title": "Firmware registry/doc-drift cleanup: burst tunables, dusk/night rows + cfg readbacks, vent-bypass clamp, OVERRIDE_EVENT_TYPES, stale comments",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:34Z",
+    "closed_at": "2026-08-30T23:54:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/300"
+  },
+  {
+    "number": 301,
+    "title": "[deploy-enablement] Seal ESP32 OTA password into k3s (SealedSecret) + re-home firmware-deploy preflight",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:05:52Z",
+    "closed_at": "2026-06-20T15:05:52Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/301"
+  },
+  {
+    "number": 302,
+    "title": "[deploy-enablement] Live-DB read access for the agent pod (DSN secret + NetworkPolicy, OR RBAC exec)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-21T14:59:19Z",
+    "closed_at": "2026-06-20T15:01:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/302"
+  },
+  {
+    "number": 303,
+    "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T17:05:33Z",
+    "closed_at": "2026-10-13T17:05:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303"
+  },
+  {
+    "number": 304,
+    "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T17:05:28Z",
+    "closed_at": "2026-10-13T17:05:28Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/304"
+  },
+  {
+    "number": 305,
+    "title": "[deploy-enablement] Admin-token least-privilege review for agent/CI access",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:07:22Z",
+    "closed_at": "2026-06-20T15:07:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/305"
+  },
+  {
+    "number": 306,
+    "title": "[deploy-enablement] Safe SHADOW iteration loop: verdify-dev ns, device-write=0, deny-esp32-egress",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:41:13Z",
+    "closed_at": "2026-06-20T14:41:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/306"
+  },
+  {
+    "number": 307,
+    "title": "[deploy-enablement] PR-only branch protection on live/platform-main so firmware CI gates run",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T14:41:12Z",
+    "closed_at": "2026-06-20T14:41:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/307"
+  },
+  {
+    "number": 308,
+    "title": "[web] Review public lab.verdify.ai crop/zone exposure for the new cannabis planting",
+    "state": "CLOSED",
+    "updated_at": "2026-06-20T15:22:31Z",
+    "closed_at": "2026-06-20T15:22:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/308"
+  },
+  {
+    "number": 312,
+    "title": "[deploy] verdify-setpoint-server can't reach DB: allow-db-from-app netpol omits setpoint-server (prod Degraded, wait-for-db stuck)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-10T22:54:47Z",
+    "closed_at": "2026-06-10T22:54:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/312"
+  },
+  {
+    "number": 315,
+    "title": "P1: planner pipeline dark since ~2026-06-04 — hermes Longhorn volume EIO (remediated 2026-06-10, verify tonight's SUNSET cycle)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T15:44:22Z",
+    "closed_at": "2026-06-17T15:44:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/315"
+  },
+  {
+    "number": 316,
+    "title": "verdify-twin-prod CrashLoopBackOff in verdify-dev (43+ restarts since 2026-06-09)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-23T05:49:14Z",
+    "closed_at": "2026-06-23T05:49:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/316"
+  },
+  {
+    "number": 317,
+    "title": "ArgoCD: unscoped sync operations on verdify-prod-dark get rewritten to a stale 2-resource selective scope",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:20Z",
+    "closed_at": "2026-10-17T23:36:19Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/317"
+  },
+  {
+    "number": 318,
+    "title": "ArgoCD ignores per-resource ServerSideApply=true sync-option (grafana dashboards CMs)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:47Z",
+    "closed_at": "2026-08-29T22:54:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/318"
+  },
+  {
+    "number": 319,
+    "title": "prod-promote: migrate rebuild-on-every-publish races the dev-equality guard",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:51Z",
+    "closed_at": "2026-08-29T22:54:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/319"
+  },
+  {
+    "number": 320,
+    "title": "[gate:jason] Org setting blocks Actions from creating PRs — prod-promote's gh pr create fails",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T00:34:31Z",
+    "closed_at": "2026-08-02T00:34:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/320"
+  },
+  {
+    "number": 321,
+    "title": "Cleanup: remove the retired staging overlay + finish live/platform-main retirement + prod app rename",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T19:06:59Z",
+    "closed_at": "2026-08-30T19:04:24Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/321"
+  },
+  {
+    "number": 322,
+    "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:55:01Z",
+    "closed_at": "2026-10-02T05:20:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/322"
+  },
+  {
+    "number": 323,
+    "title": "[firmware-v2] Settable zone-priority ranking + mister-router arbiter (Vanda>Cannabis>Lime>Pepper)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-09T21:23:11Z",
+    "closed_at": "2026-07-09T21:23:11Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/323"
+  },
+  {
+    "number": 324,
+    "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:21Z",
+    "closed_at": "2026-10-17T23:36:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/324"
+  },
+  {
+    "number": 326,
+    "title": "[firmware-v2 follow-up] Fully retire the 5 consolidated stress-wet params from registry + planner policy",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:36Z",
+    "closed_at": "2026-08-30T23:54:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/326"
+  },
+  {
+    "number": 327,
+    "title": "[P1][L5/L6] Persist moisture-estimator telemetry for VPD/dehum decisions",
+    "state": "CLOSED",
+    "updated_at": "2026-07-04T13:34:22Z",
+    "closed_at": "2026-07-04T13:34:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/327"
+  },
+  {
+    "number": 330,
+    "title": "Review archived branches from 2026-06-12 repo cleanup",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T00:34:32Z",
+    "closed_at": "2026-08-02T00:34:32Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/330"
+  },
+  {
+    "number": 331,
+    "title": "[lane] API/service map for verdify-platform",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T00:39:33Z",
+    "closed_at": "2026-06-13T00:38:43Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/331"
+  },
+  {
+    "number": 332,
+    "title": "[lane] Clarify Fable workstream ownership in verdify-platform",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T01:46:06Z",
+    "closed_at": "2026-08-02T01:46:06Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/332"
+  },
+  {
+    "number": 333,
+    "title": "[lane] Historical completed milestones roll-up for verdify-platform",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T00:16:55Z",
+    "closed_at": "2026-06-13T00:16:55Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/333"
+  },
+  {
+    "number": 334,
+    "title": "EPIC: Lane Board Normalization",
+    "state": "CLOSED",
+    "updated_at": "2026-06-13T01:05:18Z",
+    "closed_at": "2026-06-13T01:05:18Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/334"
+  },
+  {
+    "number": 335,
+    "title": "EPIC: CI/CD and Promotion Hardening",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:39Z",
+    "closed_at": "2026-08-30T23:54:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/335"
+  },
+  {
+    "number": 336,
+    "title": "EPIC: ArgoCD Deployment and GitOps Cleanup",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T19:08:05Z",
+    "closed_at": "2026-08-30T19:08:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/336"
+  },
+  {
+    "number": 337,
+    "title": "EPIC: Decommission, Auth, and Residual Product Plane",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:41Z",
+    "closed_at": "2026-08-30T23:54:41Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/337"
+  },
+  {
+    "number": 338,
+    "title": "[ci] Prepare GitHub Actions for Node 24 runtime default",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T00:34:28Z",
+    "closed_at": "2026-08-02T00:34:28Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/338"
+  },
+  {
+    "number": 339,
+    "title": "Clean up retired VM assumptions in local validation and prod ArgoCD drift",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T16:48:13Z",
+    "closed_at": "2026-08-02T16:48:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/339"
+  },
+  {
+    "number": 343,
+    "title": "EPIC: L1 Architecture Audit, Drift Check, and CI/CD",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T05:29:23Z",
+    "closed_at": "2026-06-17T05:29:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/343"
+  },
+  {
+    "number": 344,
+    "title": "EPIC: L2 Firmware Core",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T06:22:48Z",
+    "closed_at": "2026-06-17T06:22:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/344"
+  },
+  {
+    "number": 345,
+    "title": "EPIC: L3 Climate Control",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T06:23:05Z",
+    "closed_at": "2026-06-17T06:23:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/345"
+  },
+  {
+    "number": 346,
+    "title": "EPIC: L4 AI Planner and Tunables",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:14:44Z",
+    "closed_at": "2026-06-17T15:08:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/346"
+  },
+  {
+    "number": 347,
+    "title": "EPIC: L5 Data, Schema, and Source of Truth",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:42Z",
+    "closed_at": "2026-08-30T23:54:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/347"
+  },
+  {
+    "number": 348,
+    "title": "EPIC: L6 Observability, Dashboards, and KPIs",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:44Z",
+    "closed_at": "2026-08-30T23:54:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/348"
+  },
+  {
+    "number": 349,
+    "title": "EPIC: L7 Lighting and Occupancy",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:45Z",
+    "closed_at": "2026-08-30T23:54:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/349"
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:53Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350"
+  },
+  {
+    "number": 351,
+    "title": "EPIC: L9 Lab Notebook, Website, and Publishing",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:09Z",
+    "closed_at": "2026-08-30T18:37:09Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/351"
+  },
+  {
+    "number": 352,
+    "title": "EPIC: L10 Testing and Research",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:47Z",
+    "closed_at": "2026-08-30T23:54:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/352"
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:55Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359"
+  },
+  {
+    "number": 360,
+    "title": "[BC-1][P0] Band single-source-of-truth → zero device/DB divergence, enforced",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:36Z",
+    "closed_at": "2026-06-18T16:45:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/360"
+  },
+  {
+    "number": 361,
+    "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:24Z",
+    "closed_at": "2026-10-17T23:36:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/361"
+  },
+  {
+    "number": 362,
+    "title": "[BC-3][P0] Float-envelope → target-centered tracking",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:33Z",
+    "closed_at": "2026-06-18T16:45:33Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/362"
+  },
+  {
+    "number": 363,
+    "title": "[BC-4][P0] Dehum parity — remove the cost-brakes (delete suppression + demote resource_cost)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:38Z",
+    "closed_at": "2026-06-18T16:45:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/363"
+  },
+  {
+    "number": 364,
+    "title": "[BC-5][P1] Bounded heat-assisted dehumidification state",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:40Z",
+    "closed_at": "2026-06-18T16:45:40Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/364"
+  },
+  {
+    "number": 365,
+    "title": "[BC-6] Planner objective = OUTCOMES within the corridor (time-in-band + DLI + DIF + efficiency), not target-compliance",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:59Z",
+    "closed_at": "2026-08-23T17:13:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/365"
+  },
+  {
+    "number": 366,
+    "title": "[BC-7][P0] Night dew-margin correctness (resolve dead night_stress_min_dew_margin_f)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-23T01:59:17Z",
+    "closed_at": "2026-06-23T01:59:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/366"
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:57Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367"
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:36:58Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368"
+  },
+  {
+    "number": 369,
+    "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:00Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369"
+  },
+  {
+    "number": 370,
+    "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:02Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370"
+  },
+  {
+    "number": 371,
+    "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:56:39Z",
+    "closed_at": "2026-10-06T01:15:56Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+  },
+  {
+    "number": 372,
+    "title": "[BC-13] Deterministic outdoor-aware bidirectional dehum selector (heat vs vent vs co-run)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-17T22:46:42Z",
+    "closed_at": "2026-06-17T22:46:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/372"
+  },
+  {
+    "number": 373,
+    "title": "fan1->fan2 escalation is a bare threshold with NO de-escalation hysteresis — add a fan2 latch + exit-hysteresis tunable + anti-chatter invariant (heat2 has this, fan2 doesn't)",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:42Z",
+    "closed_at": "2026-06-18T16:45:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/373"
+  },
+  {
+    "number": 374,
+    "title": "[BC-14] Invert wetting ladder: fog-first (low GPM) → misters escalate; keep mister zone-targeting",
+    "state": "CLOSED",
+    "updated_at": "2026-06-18T16:45:45Z",
+    "closed_at": "2026-06-18T16:45:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/374"
+  },
+  {
+    "number": 377,
+    "title": "Retire stale band_track_fraction=0.25 intent after consumer repair",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:46Z",
+    "closed_at": "2026-08-29T22:54:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/377"
+  },
+  {
+    "number": 378,
+    "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:04Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378"
+  },
+  {
+    "number": 379,
+    "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:06Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/379"
+  },
+  {
+    "number": 381,
+    "title": "[handoff] k3s-agent autonomy: blockers to fully retire laptop-based dev",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T19:07:16Z",
+    "closed_at": "2026-08-30T19:07:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/381"
+  },
+  {
+    "number": 382,
+    "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T01:43:16Z",
+    "closed_at": "2026-10-13T01:43:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382"
+  },
+  {
+    "number": 383,
+    "title": "Preserve solar-night dehumidification safety and gate future tuning on realized evidence",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T23:54:48Z",
+    "closed_at": "2026-08-30T23:54:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/383"
+  },
+  {
+    "number": 384,
+    "title": "[deploy-gate] ADR-0004 solar/KPI/moisture source bundle",
+    "state": "CLOSED",
+    "updated_at": "2026-06-29T17:37:51Z",
+    "closed_at": "2026-06-29T17:37:51Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/384"
+  },
+  {
+    "number": 386,
+    "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:08Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386"
+  },
+  {
+    "number": 387,
+    "title": "outcome_kpi() performance hardening: parallelize the 7 sequential awaits and de-duplicate the pinched_row/phas",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T15:20:23Z",
+    "closed_at": "2026-07-13T15:20:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/387"
+  },
+  {
+    "number": 388,
+    "title": "Schema-only: add the ADR-0004 composite-outcome-score property to ScorecardResponse + planner-io contract with",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T18:49:50Z",
+    "closed_at": "2026-07-13T18:49:50Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/388"
+  },
+  {
+    "number": 389,
+    "title": "Reconcile outcome_kpi cycle counts against raw equipment_state on-edges; exclude partial/future-dated days",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T16:45:42Z",
+    "closed_at": "2026-07-13T16:45:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/389"
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:10Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390"
+  },
+  {
+    "number": 391,
+    "title": "Fix service-restart-drift-guard false-pass (greps bare word 'service')",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T13:30:45Z",
+    "closed_at": "2026-07-13T13:30:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/391"
+  },
+  {
+    "number": 392,
+    "title": "Generated-CM == dashboard-source CI gate",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T13:49:44Z",
+    "closed_at": "2026-07-13T13:49:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/392"
+  },
+  {
+    "number": 393,
+    "title": "Single-source-of-truth + drift guard for solar site constants",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T14:13:30Z",
+    "closed_at": "2026-07-13T14:13:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/393"
+  },
+  {
+    "number": 394,
+    "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:57:34Z",
+    "closed_at": "2026-10-01T00:11:25Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/394"
+  },
+  {
+    "number": 395,
+    "title": "Prove the nightly pg_dump backup actually runs green + add a backup-freshness alert (HA-1.8 #233 verification ",
+    "state": "CLOSED",
+    "updated_at": "2026-08-02T14:20:01Z",
+    "closed_at": "2026-08-02T14:20:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/395"
+  },
+  {
+    "number": 396,
+    "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T20:11:21Z",
+    "closed_at": "2026-10-13T20:11:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396"
+  },
+  {
+    "number": 397,
+    "title": "Day-mask trim runbook + cfg_irrig_*_days_mask readback audit (immediate non-code overwatering mitigation)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-09T21:23:12Z",
+    "closed_at": "2026-07-09T21:23:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/397"
+  },
+  {
+    "number": 398,
+    "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:12Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398"
+  },
+  {
+    "number": 399,
+    "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:57:55Z",
+    "closed_at": "2026-09-28T13:47:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/399"
+  },
+  {
+    "number": 400,
+    "title": "RAG corpus source-of-truth fix backing #43 (repoint + alert)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T16:03:13Z",
+    "closed_at": "2026-07-13T16:03:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/400"
+  },
+  {
+    "number": 410,
+    "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:14Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410"
+  },
+  {
+    "number": 411,
+    "title": "[gate:jason] Center-zone Vanda overnight priority: deep-DIF cool night (#409) vs dry-roots warm-hold (#410) — mutually exclusive",
+    "state": "CLOSED",
+    "updated_at": "2026-07-04T13:34:21Z",
+    "closed_at": "2026-07-04T13:34:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/411"
+  },
+  {
+    "number": 412,
+    "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:15Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412"
+  },
+  {
+    "number": 413,
+    "title": "Doc/runbook drift: band_track_fraction OTA-reset + re-pin step, stale FSM defaults, open-envelope notes, bake-report config record",
+    "state": "CLOSED",
+    "updated_at": "2026-07-03T20:39:30Z",
+    "closed_at": "2026-07-03T20:39:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/413"
+  },
+  {
+    "number": 416,
+    "title": "Doc drift (small): stale live-firmware version strings in handoff/laptop-operator OTA sections",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T19:09:03Z",
+    "closed_at": "2026-07-13T19:09:03Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/416"
+  },
+  {
+    "number": 419,
+    "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T22:36:16Z",
+    "closed_at": "2026-10-13T22:36:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419"
+  },
+  {
+    "number": 420,
+    "title": "cfg_* switch readbacks outside the tunable registry never persist to setpoint_snapshot (TunableParameter rejects them)",
+    "state": "CLOSED",
+    "updated_at": "2026-07-04T14:35:49Z",
+    "closed_at": "2026-07-04T14:35:48Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/420"
+  },
+  {
+    "number": 424,
+    "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:58:39Z",
+    "closed_at": "2026-10-06T00:30:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
+  },
+  {
+    "number": 427,
+    "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:58:50Z",
+    "closed_at": "2026-09-30T17:49:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/427"
+  },
+  {
+    "number": 428,
+    "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:17Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/428"
+  },
+  {
+    "number": 430,
+    "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:19Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430"
+  },
+  {
+    "number": 433,
+    "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:59:23Z",
+    "closed_at": "2026-09-28T11:07:16Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433"
+  },
+  {
+    "number": 434,
+    "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:21Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434"
+  },
+  {
+    "number": 435,
+    "title": "Make interior crop DLI explicitly unavailable while the sensor is invalid",
+    "state": "CLOSED",
+    "updated_at": "2026-07-10T14:10:02Z",
+    "closed_at": "2026-07-10T14:10:02Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/435"
+  },
+  {
+    "number": 436,
+    "title": "Vision CronJob is out-of-band and failing private GHCR image pull",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T18:11:44Z",
+    "closed_at": "2026-07-13T18:11:44Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/436"
+  },
+  {
+    "number": 437,
+    "title": "[P1] Converge equipment registry and expose provenance-bearing water/energy attribution",
+    "state": "CLOSED",
+    "updated_at": "2026-07-10T04:55:29Z",
+    "closed_at": "2026-07-10T04:55:29Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/437"
+  },
+  {
+    "number": 438,
+    "title": "[P0][security] Remove committed DB credential fallbacks and rotate the exposed production app credential",
+    "state": "CLOSED",
+    "updated_at": "2026-07-10T13:11:58Z",
+    "closed_at": "2026-07-10T13:11:58Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/438"
+  },
+  {
+    "number": 447,
+    "title": "Setpoint-server /setpoints uses Docker psql backend inside k3s",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T17:52:40Z",
+    "closed_at": "2026-07-13T17:52:40Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/447"
+  },
+  {
+    "number": 454,
+    "title": "Lab publisher internal retries still drive unsafe production DB pressure",
+    "state": "CLOSED",
+    "updated_at": "2026-07-11T12:07:37Z",
+    "closed_at": "2026-07-11T12:07:37Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/454"
+  },
+  {
+    "number": 474,
+    "title": "Lab Astro — Shared marketing design contract",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T07:52:45Z",
+    "closed_at": "2026-07-13T07:52:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/474"
+  },
+  {
+    "number": 475,
+    "title": "Lab Astro — Finish search, CSP, camera, and contact surface",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:12Z",
+    "closed_at": "2026-08-30T18:37:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/475"
+  },
+  {
+    "number": 476,
+    "title": "Lab Astro — Secure graph and camera occurrence fallbacks",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:14Z",
+    "closed_at": "2026-08-30T18:37:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/476"
+  },
+  {
+    "number": 477,
+    "title": "Lab Astro — Responsive media and keyboard-complete lightbox",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T07:52:47Z",
+    "closed_at": "2026-07-13T07:52:47Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/477"
+  },
+  {
+    "number": 478,
+    "title": "Lab Astro — Planner, archive, forecast, and evidence templates",
+    "state": "CLOSED",
+    "updated_at": "2026-07-13T07:52:49Z",
+    "closed_at": "2026-07-13T07:52:49Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/478"
+  },
+  {
+    "number": 479,
+    "title": "Lab Astro — Reach exact same-snapshot semantic parity",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:15Z",
+    "closed_at": "2026-08-30T18:37:15Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/479"
+  },
+  {
+    "number": 480,
+    "title": "Lab Astro — Immutable S3 publishing and release runtime",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:17Z",
+    "closed_at": "2026-08-30T18:37:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/480"
+  },
+  {
+    "number": 481,
+    "title": "Lab Astro — CI quality gates and durable stage acceptance",
+    "state": "CLOSED",
+    "updated_at": "2026-07-14T10:08:59Z",
+    "closed_at": "2026-07-13T07:52:50Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/481"
+  },
+  {
+    "number": 482,
+    "title": "Lab Astro — Jason-gated production Astro cutover and Quartz retirement",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:20Z",
+    "closed_at": "2026-08-30T18:37:20Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/482"
+  },
+  {
+    "number": 485,
+    "title": "CI: classify digest-only Lab stage pin commits as non-build-affecting",
+    "state": "CLOSED",
+    "updated_at": "2026-07-14T09:58:41Z",
+    "closed_at": "2026-07-13T23:30:43Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/485"
+  },
+  {
+    "number": 498,
+    "title": "v_climate_action_daily_scorecard needs view-level date pushdown — outcome_kpi() floor is ~6min CPU regardless of caller concurrency",
+    "state": "CLOSED",
+    "updated_at": "2026-09-28T20:54:09Z",
+    "closed_at": "2026-07-13T20:29:40Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/498"
+  },
+  {
+    "number": 533,
+    "title": "Lab Astro — Provision dedicated stage occurrence store and scoped credentials",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:22Z",
+    "closed_at": "2026-08-30T18:37:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/533"
+  },
+  {
+    "number": 534,
+    "title": "Lab Astro — Provision isolated reporting tier and read-only feed",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:24Z",
+    "closed_at": "2026-08-30T18:37:24Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/534"
+  },
+  {
+    "number": 535,
+    "title": "Lab Astro — Executable 143+2 producer and dormant reporting GitOps",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:26Z",
+    "closed_at": "2026-08-30T18:37:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/535"
+  },
+  {
+    "number": 536,
+    "title": "Lab Astro — Close public-output and media-contract follow-ups",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:27Z",
+    "closed_at": "2026-08-30T18:37:27Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/536"
+  },
+  {
+    "number": 537,
+    "title": "Lab Astro — Deterministic packed releases and approved-budget proof",
+    "state": "CLOSED",
+    "updated_at": "2026-08-04T00:02:01Z",
+    "closed_at": "2026-08-04T00:02:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/537"
+  },
+  {
+    "number": 540,
+    "title": "Lab Astro — Distributed S3 lease, fenced GC, and accounting",
+    "state": "CLOSED",
+    "updated_at": "2026-08-04T00:10:37Z",
+    "closed_at": "2026-08-04T00:10:37Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/540"
+  },
+  {
+    "number": 541,
+    "title": "Lab Astro — Two-pass stage activation, 143+2 convergence, and freshness soak",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:29Z",
+    "closed_at": "2026-08-30T18:37:29Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/541"
+  },
+  {
+    "number": 542,
+    "title": "Lab Astro — Executable packed publisher and dormant two-pod runtime",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:32Z",
+    "closed_at": "2026-08-30T18:37:32Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/542"
+  },
+  {
+    "number": 551,
+    "title": "P0: restore lab.verdify.ai after cache PVC recreation exposed Quartz starter",
+    "state": "CLOSED",
+    "updated_at": "2026-07-28T19:09:09Z",
+    "closed_at": "2026-07-28T19:09:09Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/551"
+  },
+  {
+    "number": 557,
+    "title": "[P0][GATED] Make Verdify Lab cache portable and replace node6 pins with co-location",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T19:07:14Z",
+    "closed_at": "2026-08-30T19:07:14Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/557"
+  },
+  {
+    "number": 561,
+    "title": "[CI][P0] Agent Fleet checkout App missing; required Argo CI fails before checkout",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:59Z",
+    "closed_at": "2026-08-23T17:13:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/561"
+  },
+  {
+    "number": 563,
+    "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T16:59:45Z",
+    "closed_at": "2026-09-26T21:58:57Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563"
+  },
+  {
+    "number": 566,
+    "title": "Restore managed agent-fleet CI profile alignment on main",
+    "state": "CLOSED",
+    "updated_at": "2026-08-03T22:37:01Z",
+    "closed_at": "2026-08-03T22:37:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/566"
+  },
+  {
+    "number": 568,
+    "title": "CI: hydrate immutable Lab snapshot before standard image builds",
+    "state": "CLOSED",
+    "updated_at": "2026-08-03T23:15:04Z",
+    "closed_at": "2026-08-03T23:15:04Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/568"
+  },
+  {
+    "number": 570,
+    "title": "Lab: implement an approval-eligible immutable production snapshot release",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T18:37:34Z",
+    "closed_at": "2026-08-30T18:37:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/570"
+  },
+  {
+    "number": 575,
+    "title": "[P0] Recover verdify-prod ingestor, Hermes Iris readiness, and HA backfill cadence",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:58Z",
+    "closed_at": "2026-08-23T17:13:58Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/575"
+  },
+  {
+    "number": 581,
+    "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:23Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581"
+  },
+  {
+    "number": 582,
+    "title": "Lane A: canonical policy wire schema + cross-language codecs",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:16:29Z",
+    "closed_at": "2026-08-23T17:13:21Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/582"
+  },
+  {
+    "number": 583,
+    "title": "[P0][experiment-fast][L3] V2 lifecycle, component provenance and minimum integrity roles",
+    "state": "CLOSED",
+    "updated_at": "2026-08-27T14:10:36Z",
+    "closed_at": "2026-08-27T14:10:36Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/583"
+  },
+  {
+    "number": 584,
+    "title": "[SUPERSEDED] Generalized vector assignment/arbiter/delivery lane",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:58:17Z",
+    "closed_at": "2026-08-23T17:58:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/584"
+  },
+  {
+    "number": 585,
+    "title": "Lane D: planner treatment firewall (Iris/Hermes/MCP authorization)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:23Z",
+    "closed_at": "2026-08-23T17:13:23Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/585"
+  },
+  {
+    "number": 586,
+    "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:26Z",
+    "closed_at": "2026-10-17T23:36:26Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/586"
+  },
+  {
+    "number": 587,
+    "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:25Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
+  },
+  {
+    "number": 588,
+    "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:27Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588"
+  },
+  {
+    "number": 599,
+    "title": "[CI][P0] verdify-platform-ci (main-push) workflows all Error: 'WorkflowSpec may not change during execution' — no image builds/digest pins since at least 2026-08-14",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:59Z",
+    "closed_at": "2026-08-23T17:13:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/599"
+  },
+  {
+    "number": 605,
+    "title": "[P0] Deploy broker cannot complete the verdify-prod-dark sync: PreSync hook runs, main wave never applies (2× reproduced)",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T17:13:59Z",
+    "closed_at": "2026-08-23T17:13:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/605"
+  },
+  {
+    "number": 606,
+    "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:28Z",
+    "closed_at": "2026-10-17T23:36:28Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/606"
+  },
+  {
+    "number": 608,
+    "title": "[REL-3] Attended 79-object verdify-prod-dark convergence in qualified waves",
+    "state": "CLOSED",
+    "updated_at": "2026-08-22T09:37:54Z",
+    "closed_at": "2026-08-22T09:37:54Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/608"
+  },
+  {
+    "number": 609,
+    "title": "[COMP-1] Constrain verdify-traefik to general workers",
+    "state": "CLOSED",
+    "updated_at": "2026-08-23T14:33:12Z",
+    "closed_at": "2026-08-23T14:33:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/609"
+  },
+  {
+    "number": 611,
+    "title": "[STOR-3][DECISION] Retain or retire the pre-portable Hermes rollback PVC",
+    "state": "CLOSED",
+    "updated_at": "2026-08-29T22:54:46Z",
+    "closed_at": "2026-08-29T22:54:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/611"
+  },
+  {
+    "number": 638,
+    "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+    "state": "CLOSED",
+    "updated_at": "2026-10-17T23:36:30Z",
+    "closed_at": "2026-10-17T23:36:30Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/638"
+  },
+  {
+    "number": 639,
+    "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:29Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+  },
+  {
+    "number": 640,
+    "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:31Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640"
+  },
+  {
+    "number": 641,
+    "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:33Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+  },
+  {
+    "number": 642,
+    "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:34Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642"
+  },
+  {
+    "number": 643,
+    "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
+    "state": "CLOSED",
+    "updated_at": "2026-10-14T22:14:07Z",
+    "closed_at": "2026-10-14T22:14:07Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/643"
+  },
+  {
+    "number": 644,
+    "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T22:36:22Z",
+    "closed_at": "2026-10-13T22:36:22Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644"
+  },
+  {
+    "number": 670,
+    "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:01:48Z",
+    "closed_at": "2026-09-27T15:26:42Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670"
+  },
+  {
+    "number": 671,
+    "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:01:58Z",
+    "closed_at": "2026-09-27T17:42:06Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/671"
+  },
+  {
+    "number": 672,
+    "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:02:10Z",
+    "closed_at": "2026-09-28T02:20:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/672"
+  },
+  {
+    "number": 676,
+    "title": "[P0][experiment-fast] Complete Hermes OpenAI rollback and restore planner cycles",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T01:42:46Z",
+    "closed_at": "2026-08-30T01:42:46Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/676"
+  },
+  {
+    "number": 686,
+    "title": "Launch gate: public MCP accepts unauthenticated admin tool calls",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T05:15:52Z",
+    "closed_at": "2026-08-30T02:26:01Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/686"
+  },
+  {
+    "number": 747,
+    "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:02:21Z",
+    "closed_at": "2026-09-27T10:51:05Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
+  },
+  {
+    "number": 748,
+    "title": "[P0][S0.2-W1] Prove 3-of-4 climate quorum and isolate hydro outage",
+    "state": "CLOSED",
+    "updated_at": "2026-08-30T11:05:12Z",
+    "closed_at": "2026-08-30T11:05:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/748"
+  },
+  {
+    "number": 749,
+    "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:23:50Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749"
+  },
+  {
+    "number": 750,
+    "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:36:58Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750"
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:40Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+  },
+  {
+    "number": 775,
+    "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes → qualified pilot → evidence-backed control",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:36:59Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775"
+  },
+  {
+    "number": 778,
+    "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:03:16Z",
+    "closed_at": "2026-10-05T20:00:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778"
+  },
+  {
+    "number": 779,
+    "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:03:28Z",
+    "closed_at": "2026-09-29T17:29:53Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779"
+  },
+  {
+    "number": 780,
+    "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:03:39Z",
+    "closed_at": "2026-09-27T15:28:34Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780"
+  },
+  {
+    "number": 781,
+    "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:03:49Z",
+    "closed_at": "2026-09-27T15:01:17Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781"
+  },
+  {
+    "number": 782,
+    "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:44Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782"
+  },
+  {
+    "number": 783,
+    "title": "[C1][P0] Prove restore → selector → setter schema → receipt → frozen outcome end to end",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:46Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783"
+  },
+  {
+    "number": 784,
+    "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:48Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784"
+  },
+  {
+    "number": 785,
+    "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:49Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
+  },
+  {
+    "number": 786,
+    "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:51Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786"
+  },
+  {
+    "number": 787,
+    "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:53Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/787"
+  },
+  {
+    "number": 801,
+    "title": "[VP-02] Exclude www-dev and proposals-hello from the verdify-tier1-forward HostRegexp",
+    "state": "CLOSED",
+    "updated_at": "2026-10-18T01:23:52Z",
+    "closed_at": "2026-10-18T01:15:38Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/801"
+  },
+  {
+    "number": 802,
+    "title": "[VP-01] Put verdify-descheduler under Argo (manual) with Git equal to live enforce mode",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T00:27:03Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/802"
+  },
+  {
+    "number": 808,
+    "title": "Decide the prod image-pin model: follow every build, or equal live (LEFT-45)",
+    "state": "CLOSED",
+    "updated_at": "2026-09-26T23:14:47Z",
+    "closed_at": "2026-09-26T22:41:28Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/808"
+  },
+  {
+    "number": 835,
+    "title": "Fix reconnect equipment snapshot provenance and stale relay alerts",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:05:28Z",
+    "closed_at": "2026-10-05T19:09:13Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/835"
+  },
+  {
+    "number": 862,
+    "title": "Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:05:50Z",
+    "closed_at": "2026-10-06T00:48:59Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/862"
+  },
+  {
+    "number": 949,
+    "title": "[C4][P0] Bound planner-policy drift holds and prove autonomous safe convergence",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T01:47:41Z",
+    "closed_at": "2026-10-13T01:47:39Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949"
+  },
+  {
+    "number": 950,
+    "title": "[C4][P1] Restore the ingestor Slack credential-file contract and operator delivery",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:06:01Z",
+    "closed_at": "2026-10-06T00:13:08Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/950"
+  },
+  {
+    "number": 951,
+    "title": "[C4][P1] Restore authenticated greenhouse camera snapshots after connection refusals",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:06:12Z",
+    "closed_at": "2026-10-06T00:13:09Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/951"
+  },
+  {
+    "number": 952,
+    "title": "[C4][P1] Preserve Verdify Grafana monitoring identity across pod replacement",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:06:23Z",
+    "closed_at": "2026-10-05T22:18:25Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/952"
+  },
+  {
+    "number": 953,
+    "title": "[C4][P2] Reconcile Iris planning skill lookup and required reference inventory",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:06:34Z",
+    "closed_at": "2026-10-11T14:35:20Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/953"
+  },
+  {
+    "number": 963,
+    "title": "Greenhouse ESPHome text sensor moisture_exchange publishes >255-char JSON as state (HA drops it to unknown, logs ERROR every update)",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:37:59Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963"
+  },
+  {
+    "number": 964,
+    "title": "[C4][P0] Recover failed production promotion and schedulable Lab/band refresh",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T17:06:56Z",
+    "closed_at": "2026-10-11T15:19:31Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/964"
+  },
+  {
+    "number": 965,
+    "title": "[C4][P1] Separate API grow-light command intent from observed equipment history",
+    "state": "CLOSED",
+    "updated_at": "2026-10-12T21:09:12Z",
+    "closed_at": "2026-10-12T21:09:12Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/965"
+  },
+  {
+    "number": 976,
+    "title": "[C4][P1] Qualify safe recovery of Lab publication receipt metadata",
+    "state": "CLOSED",
+    "updated_at": "2026-10-13T16:48:45Z",
+    "closed_at": "2026-10-13T16:48:45Z",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/976"
+  },
+  {
+    "number": 977,
+    "title": "verdify-db-0 runs at two Longhorn replicas; owner decision and an optional remount by 2026-11-12 (storage-infra#703)",
+    "state": "OPEN",
+    "updated_at": "2026-10-17T23:38:02Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/977"
+  },
+  {
+    "number": 980,
+    "title": "[C4][P2] Resolve backup-exporter readiness timeouts without obscuring backup health",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:37:01Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/980"
+  },
+  {
+    "number": 981,
+    "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+    "state": "OPEN",
+    "updated_at": "2026-10-18T01:37:03Z",
+    "closed_at": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981"
+  }
+]

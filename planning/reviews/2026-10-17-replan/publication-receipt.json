@@ -1,0 +1,571 @@
+{
+  "started_at": "2026-10-18T01:57:35.812139+00:00",
+  "source_base": "f6c47e954b9ed3ccc6a6fea1302912a6515aec8c",
+  "issues": [
+    {
+      "number": 14,
+      "before_body_sha256": "ac3b14530ecb1a4ecf0af6fe33480ff237143e468d7420a92e493e898937fb01",
+      "body_sha256": "87345abf7447b72ddc2d225b525b2573fc5a4efbdba426f4964f37b1e866a68e",
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "priority": "P2",
+      "milestone": 31,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:37Z"
+    },
+    {
+      "number": 16,
+      "before_body_sha256": "0feafd9297ce04886dd74d388301a0c487418f47906aa500392515c4d9c9fbf4",
+      "body_sha256": "0e2c9728def99aacccdc87ee9b0cdf6859b6da87d429e662271e306a86d7b95a",
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:38Z"
+    },
+    {
+      "number": 31,
+      "before_body_sha256": "93b39a1065aa037202a27f594b827daad0eeee7e6d25393ae88ff9105fe0b613",
+      "body_sha256": "6c8cc201eff44219453993b13d375ce6cf643f32644a6f5a16f08035c80aefdb",
+      "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "priority": "P2",
+      "milestone": 31,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:39Z"
+    },
+    {
+      "number": 45,
+      "before_body_sha256": "0337b79b1bca507112ecdb7500c92b4d5bd5454852fa5b9016f644ac919b1196",
+      "body_sha256": "6f1b20402a9a0f3c71fb336854956515c0a7af1c088ea3f3fdf1d7c3bfea28db",
+      "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:41Z"
+    },
+    {
+      "number": 51,
+      "before_body_sha256": "6c67b81a8c5db05e89ffcb72e7ab8107777f8376280860e97f2f796041dc6d4e",
+      "body_sha256": "cdef5cb386aa581b330c030d42be56478f808b9b28773a153b5ceacf28bb73c1",
+      "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:42Z"
+    },
+    {
+      "number": 52,
+      "before_body_sha256": "433818f4b24b622dcd9d20e1ea0f96c95c6bafd37162259837f08c1ee11870ba",
+      "body_sha256": "fc3a528336414f27ae00c6c44c0a369b52878e94ecd6969e5bcbbd042197fed8",
+      "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:44Z"
+    },
+    {
+      "number": 75,
+      "before_body_sha256": "7ef03024f80cf4daf5b4d95cc32966b8133b4ec3faaf42a03a005e0b10c4502b",
+      "body_sha256": "04bff8b19899e89d255805f23b44fc9139211d6d66b8d7f08e4ca6362822f98d",
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "priority": "P1",
+      "milestone": 27,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:45Z"
+    },
+    {
+      "number": 218,
+      "before_body_sha256": "efaf69ae17db267ea9e0aad10fa6d3e1e5d3ecb90c7d6a2f821b9cd32876f8d7",
+      "body_sha256": "0eb41a80c9b2107937a141fd244d0fc31380635051cce5c397e0037177a3c21f",
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "priority": "P1",
+      "milestone": 28,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:47Z"
+    },
+    {
+      "number": 245,
+      "before_body_sha256": "c22d880b1249282911a63b9f8590b54512689b32cdf9ff1ece73491391cf2548",
+      "body_sha256": "d2428b8e25d09e8393178295b94e1391bbdde1373506413efee7a8cb352a558a",
+      "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
+      "priority": "P2",
+      "milestone": 28,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:48Z"
+    },
+    {
+      "number": 297,
+      "before_body_sha256": "a00bf75444c53c76174d983fe394b9d8752e596a8f9d4d47aefafe4281b1fc79",
+      "body_sha256": "06fa3264993aed9ab1304acc5633b6347db08790c816b008b3ddf730e0708ce7",
+      "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:50Z"
+    },
+    {
+      "number": 298,
+      "before_body_sha256": "f92b0dd51e666e32294f8d17e0e469d7147d4d22a865c9ecd6fa42b8d7860386",
+      "body_sha256": "616dd5ab1fb73fa908f7651e30adc4e2298d7ec99e115e909f9ff336de6b7a9c",
+      "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:51Z"
+    },
+    {
+      "number": 299,
+      "before_body_sha256": "b0e7855ae5de9b0b25026a1367f15b29c649f3c744eea458833764df222f2d2b",
+      "body_sha256": "f680c7a69ce84de23d50d00804ef1990cf03a43b09281540d4674768d7e69f35",
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:53Z"
+    },
+    {
+      "number": 350,
+      "before_body_sha256": "7da3bd3909a6073393a9ccd17cec71d673a33cd774328276617fd396444493d8",
+      "body_sha256": "a8e8d4d749da424036f02abbdaa2b550f3ad356ac27c141bc2f1feee27ee7bf1",
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:54Z"
+    },
+    {
+      "number": 359,
+      "before_body_sha256": "93fd5461358edaabb909776bde3f1c3225ec66606cce1e6205675f1fe5202a86",
+      "body_sha256": "28328d85085183af2ee1d4604acc89fd5c220dfaa19289d9a9fb69112b43674a",
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:55Z"
+    },
+    {
+      "number": 367,
+      "before_body_sha256": "232b4622c41dab8d349120c2bb0d0b75ccd25815b141c65dcf9e05f0d06a9828",
+      "body_sha256": "d50dcc45b4e4d6fb39ca77f7a21f067686b565ee143a6287633d5dd5f5583847",
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:57Z"
+    },
+    {
+      "number": 368,
+      "before_body_sha256": "2142ff719504697c2fe0f4d570f64f30ce1cf6b5aee35d4f75beb3fbe874991b",
+      "body_sha256": "7160e7f155247d2a2df7de4cde6f635077aeab038ccfb398fd07bd603e8c07a5",
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:57:58Z"
+    },
+    {
+      "number": 369,
+      "before_body_sha256": "7a48ce9471cf8ae05b226e140ca4629286cce9e1bbcc9e3c09a426c26453f9bb",
+      "body_sha256": "6d2e5b922390d9bc5113158cb2ae55119041e1681247771be7955290ae3734d6",
+      "title": "[C6][P2] Remove dead tunables and code from a verified consumer inventory",
+      "priority": "P2",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:00Z"
+    },
+    {
+      "number": 370,
+      "before_body_sha256": "40bd0d7e1f98fb767e32e918360bb7593f1a3ba3d24613ce66fa06420b969e54",
+      "body_sha256": "66288b0aee03939c4c50fdd4167f579f4b59112c123b8a9ce2500f10d859368d",
+      "title": "[C6][P2] Consolidate equipment conflict resolution into one pure arbitration function",
+      "priority": "P2",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:01Z"
+    },
+    {
+      "number": 378,
+      "before_body_sha256": "ea4412683df03b59c2485e31869f0553ce6488708ba2685c69193a50e1024817",
+      "body_sha256": "07bdb470b3e645ad7d2500e4e75de4b32201cdd69d6b86f8366f54cade38a399",
+      "title": "[C6][P2] Decide corridor widths from fixed-target crop and resource evidence",
+      "priority": "P2",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:03Z"
+    },
+    {
+      "number": 379,
+      "before_body_sha256": "7020592c381865e5066b6aff37c0711ae354ca6baec81695a7366773dc51055c",
+      "body_sha256": "c38f4995480111283e4300070700bc172d41bb29c2e9741e7b85ba734ab421a1",
+      "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+      "priority": "P2",
+      "milestone": 31,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:04Z"
+    },
+    {
+      "number": 386,
+      "before_body_sha256": "56bdea4e2a4c59966570ee8674e51c3b28e6bb17ad5d7e8e73ee89524a3b94f6",
+      "body_sha256": "a79ae4273abd73a88247b29b24a05a2aaba46be2f34b9adf1e3b6a6c689b03ea",
+      "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "priority": "P1",
+      "milestone": 37,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:06Z"
+    },
+    {
+      "number": 390,
+      "before_body_sha256": "b43b5d403f070691df584c4dacb940183c490ce099b251880346ecd7b2d8fc47",
+      "body_sha256": "228469ac150f248ef9df8ecd86f3860a13525f67ac0dad0c50b7399ef2e9b585",
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "priority": "P1",
+      "milestone": 37,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:07Z"
+    },
+    {
+      "number": 398,
+      "before_body_sha256": "aaf00c6de2438e95cb4a68c233ad405b46a8307847f8f2f2810550cc40ee8c28",
+      "body_sha256": "a35d7760ab4654cff30897fec9f7507cf29d0d0977f1c16100d24f2f4b71f980",
+      "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:08Z"
+    },
+    {
+      "number": 410,
+      "before_body_sha256": "31d454cef1e011ed5a423c9854bff01be8322d0ce468c7f031b53ced1fcf005f",
+      "body_sha256": "c83e781b5e1639a2d7d3da8f502dd137cb776370743a7db89f8d894eb478f3b6",
+      "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:10Z"
+    },
+    {
+      "number": 412,
+      "before_body_sha256": "319a294c4fcd909291969e252d34382862469931f05c649f27180a6832a7eace",
+      "body_sha256": "8103ee55d3a9f0e8f1ea3a5bab09c5cc99d598784d2a330d0275b74ec3a76883",
+      "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:11Z"
+    },
+    {
+      "number": 428,
+      "before_body_sha256": "13b237645478e73534dd93b8763191e9030a7716bddd671147090fdda3e2c779",
+      "body_sha256": "166dbd425dc395e9ba3ab209aec878a9cbc0b5ea76071650717f4dcb1862a2c1",
+      "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:12Z"
+    },
+    {
+      "number": 430,
+      "before_body_sha256": "d916c9f4d5e41acce92d980346b2433a04655d2ea25de4c9c62d8d38e8d7029a",
+      "body_sha256": "bcc6ee70ab07056c5c932efe4a007df99b407030c479152b3b1f1a722a0a4e8b",
+      "title": "[C6][P2] Simplify firmware only while preserving autonomous control and observable truth",
+      "priority": "P2",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:14Z"
+    },
+    {
+      "number": 434,
+      "before_body_sha256": "f9f7e1f616f2ed5604ed03f6bca27de41c7670442ae8a3777cbac11fc6d24d47",
+      "body_sha256": "5533ff9cdd7883516c1b1de94c79a8705be1586e6311424265836346bccf1624",
+      "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "priority": "P1",
+      "milestone": 29,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:15Z"
+    },
+    {
+      "number": 581,
+      "before_body_sha256": "6fc21b006e41cb6a458101622920d98c4c845b162c7cd33a66b93ba037135f72",
+      "body_sha256": "c81b154757bee91199e9f2e0932405fca8ad6a3e7615d026494eab5899fb52d5",
+      "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
+      "priority": "P1",
+      "milestone": 25,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:17Z"
+    },
+    {
+      "number": 587,
+      "before_body_sha256": "9b14e27723f9bd782592f7b9fd208e2348b195c6c4681a1397f3b00fe91029ca",
+      "body_sha256": "077c2c0c343683d8273de5331e139ae74d33b9a1e9e856983e06866f946baab9",
+      "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
+      "priority": "P1",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:19Z"
+    },
+    {
+      "number": 588,
+      "before_body_sha256": "eb8587f60f8332128643cb7c02206518fa8a83292abc38b602ce037c931da732",
+      "body_sha256": "a13d9c1b821f50c1fe24e3e63e1cd325dec9222bd49a23804185a5c5bde16c5c",
+      "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+      "priority": "P2",
+      "milestone": 36,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:20Z"
+    },
+    {
+      "number": 639,
+      "before_body_sha256": "7dd5f61e1552491eda0057bbef0862c9847c46bf5338e4280c3599ef96e14060",
+      "body_sha256": "e25565e3ba0859bef065b829f7033b650579af1d1d192b4a2b89024de7556cb4",
+      "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
+      "priority": "P1",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:22Z"
+    },
+    {
+      "number": 640,
+      "before_body_sha256": "c37f614ed6e950d647d9cb45ad63cdb7ddcc61e4df1a2e1727b2331c3cdcbbef",
+      "body_sha256": "b8a089af819d28cb102866a226edfa60f9da8502ded970eff048fd5124dd5273",
+      "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+      "priority": "P2",
+      "milestone": 36,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:24Z"
+    },
+    {
+      "number": 641,
+      "before_body_sha256": "3c88c88a0279d388e2a9de35200c21fe86b33e2593c0799fb3e03a8705908b92",
+      "body_sha256": "c26a2f5f20c729bf126873d704f56f6853334e6bf6ab3d293ef5c120f5d07d29",
+      "title": "[C1][P1] Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+      "priority": "P1",
+      "milestone": 35,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:26Z"
+    },
+    {
+      "number": 642,
+      "before_body_sha256": "4f4d6a5131c5767b5168846e488200f50b62886a47964377750ba6f9f801232e",
+      "body_sha256": "02e25667834d3077a5efdfc8f1fb586c791c905e478bb8eef29dcd661fd76b57",
+      "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+      "priority": "P2",
+      "milestone": 36,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:27Z"
+    },
+    {
+      "number": 749,
+      "before_body_sha256": "5a66e53efb50fba12d3269d165e844605524ee3f5e90ffc599e2b57241d125d4",
+      "body_sha256": "6d692e2f7bf127330d059c8fedadde9087483e1c8db756fb73f21007d3a236e1",
+      "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+      "priority": "P0",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:29Z"
+    },
+    {
+      "number": 750,
+      "before_body_sha256": "55e31c4a1528245058dd0a89b3b89d086ca3d2958499ad320fd16006ae8e7f98",
+      "body_sha256": "9cce621784295d1d7834ad43f3cbfaac3daaabbe89a15325772bac4044d53e6d",
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "priority": "P0",
+      "milestone": 24,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:31Z"
+    },
+    {
+      "number": 751,
+      "before_body_sha256": "307ed665fde7e7133eb999d427be988d7ea47e6701644e467805bfde439d9817",
+      "body_sha256": "2e1e7ec79123aff94aeffae18291236ba98793fef925dd090a7aaff49126d75d",
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "priority": "P2",
+      "milestone": 30,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:32Z"
+    },
+    {
+      "number": 775,
+      "before_body_sha256": "619628524ab4f2892d615ef36e675f1454e00defc1bc1d0c403ec28b48c230a2",
+      "body_sha256": "104a0a8920400c7655ec44e875c0b4463fa91dec89dc94f22317e0da2aabff15",
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "priority": "P0",
+      "milestone": 23,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:34Z"
+    },
+    {
+      "number": 782,
+      "before_body_sha256": "b87d761fcb285085443048943241889968afa75829a59921c44a60677967dfe8",
+      "body_sha256": "5ab90f98d004047350f6efe451bdd3f4638187a4320d202f52a1a37c272e53ce",
+      "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
+      "priority": "P1",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:35Z"
+    },
+    {
+      "number": 783,
+      "before_body_sha256": "4a0b2a2cb22f85ff362ff6c88c4195b5959ba91ab66a2848d4a2f7059c4916a4",
+      "body_sha256": "728fc22ce315eb7f0e6e642be1c7549d8d457379b6641d50858c1f96236928d4",
+      "title": "[C1][P1] Qualify the complete current-login selector-to-frozen-analysis path",
+      "priority": "P1",
+      "milestone": 35,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:37Z"
+    },
+    {
+      "number": 784,
+      "before_body_sha256": "05b5eb9ff7e286cc8e681649fbc5c0dbb29a5c346414395dcc26848fcbb192c9",
+      "body_sha256": "e1dc2f8b0e711267e96b114acf50e60aeba8327a3580c4b043b6b4952550d2dc",
+      "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
+      "priority": "P2",
+      "milestone": 26,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:39Z"
+    },
+    {
+      "number": 785,
+      "before_body_sha256": "359a904a9c49bd6d7dce6a0ccd27d2af27b84769ce770af752fb22de17d962a0",
+      "body_sha256": "ec8508912d998984416601feed53f764c312ca0dc7dd8a6f6b466b43153707d0",
+      "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
+      "priority": "P2",
+      "milestone": 26,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:41Z"
+    },
+    {
+      "number": 786,
+      "before_body_sha256": "5b703856c00a07b9a02b3ee7f5d1d317b70d61274ea6746990032f4711aeb612",
+      "body_sha256": "8854817d7f3ebdeda379e955ad3e6872ec9a41ea4b3a3c0ca2ffc3cd75c75e71",
+      "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
+      "priority": "P2",
+      "milestone": 31,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:43Z"
+    },
+    {
+      "number": 787,
+      "before_body_sha256": "48b804fb4c2e725c34d2d03fefe5fca3cf686095c12534182f6ce86f0520890b",
+      "body_sha256": "7390d90e8950a298f7685e0181af8b0723791cf95358124280f9404a220b0989",
+      "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
+      "priority": "P2",
+      "milestone": 31,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:44Z"
+    },
+    {
+      "number": 802,
+      "before_body_sha256": "5e488e4678d99c86a6f4307538ff5f7f4d2746326107edfda21b6d9eb7e1cb2b",
+      "body_sha256": "7e0f586ae1b6dfcd20fe45aac167461728885936a0c2a035402942bce5eb5f1e",
+      "title": "[C4][P2] Adopt the enforcing descheduler under manual Argo ownership",
+      "priority": "P2",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:46Z"
+    },
+    {
+      "number": 963,
+      "before_body_sha256": "f8f45cfb9c77b83d76026381b97418706deac47a1719cbe0a1803f17a99304b1",
+      "body_sha256": "6cea060e415a937d8c2b490f11cdb559d9c4dbd3fb123fbd679c6e24e47ffaa9",
+      "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+      "priority": "P2",
+      "milestone": 37,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:48Z"
+    },
+    {
+      "number": 977,
+      "before_body_sha256": "298697229f149f64dfe7113bb7a48c5b9102b552bf6f34ac98fe99a781b113f4",
+      "body_sha256": "8d15c3b0c4c884185dc384732e80cc208b5de1b0937c8001387e778f870374f5",
+      "title": "[C5][P1] Decide the database replica policy before November 12; keep optional reclaim separate",
+      "priority": "P1",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:49Z"
+    },
+    {
+      "number": 980,
+      "before_body_sha256": "14a721c405cdb624c7f445eb3b4edea979dcc4ae73528a54ab8cbf80bdb2d821",
+      "body_sha256": "3b336e50e36b2b24b11c039ef363e1ecd61571c015bc7df6b500693097ff746e",
+      "title": "[C4][P2] Resolve backup-exporter readiness timeouts without obscuring backup health",
+      "priority": "P2",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:51Z"
+    },
+    {
+      "number": 981,
+      "before_body_sha256": "051baad31d8a8d40c67d8a288eedc7d1b40b732a1d0c9c8f28d2425ea6c46c29",
+      "body_sha256": "7478f34a2026f0d93126bfe49d2638322c57c719fb4033a4a53a47756341e914",
+      "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+      "priority": "P1",
+      "milestone": 34,
+      "state": "open",
+      "updated_at": "2026-10-18T01:58:52Z"
+    }
+  ],
+  "removed_edges": [
+    {
+      "issue": 297,
+      "predecessor": 398,
+      "predecessor_id": 4722991745
+    },
+    {
+      "issue": 370,
+      "predecessor": 390,
+      "predecessor_id": 4722990486
+    },
+    {
+      "issue": 434,
+      "predecessor": 390,
+      "predecessor_id": 4722990486
+    },
+    {
+      "issue": 782,
+      "predecessor": 981,
+      "predecessor_id": 5900186415
+    },
+    {
+      "issue": 783,
+      "predecessor": 782,
+      "predecessor_id": 5359340361
+    }
+  ],
+  "milestones": [
+    {
+      "number": 34,
+      "title": "S3 \u2014 Runtime truth and contained qualification (October 19\u201330, 2026)",
+      "state": "open",
+      "due_on": "2026-10-31T00:00:00Z"
+    },
+    {
+      "number": 33,
+      "title": "S2 \u2014 Completion and current readiness (October 13\u201326, 2026)",
+      "state": "closed"
+    }
+  ],
+  "new_closures": [],
+  "published_at": "2026-10-18T01:58:57.172252+00:00",
+  "verified_at": "2026-10-18T01:59:09.086535+00:00",
+  "inventory_total": 369,
+  "open_issues": 50,
+  "all_bodies_exact": true,
+  "all_priorities_and_milestones_exact": true,
+  "assignees_preserved": true,
+  "native_graph_exact": true,
+  "active_edges": 26,
+  "historical_edges": 25,
+  "acyclic": true,
+  "s3_actual_members": [
+    587,
+    639,
+    749,
+    782,
+    802,
+    977,
+    980,
+    981
+  ],
+  "prior_seven_retirements_and_801_still_closed": true,
+  "planning_tests": 37,
+  "no_runtime_mutation": true
+}

@@ -1,12 +1,10 @@
-# Validated campaign source
+# Verdify planning source
 
-Start with [CAMPAIGN.md](CAMPAIGN.md) for implementation strategy and [the roadmap](../PROJECT_BOARD.md) for the complete issue index. [EVIDENCE.md](EVIDENCE.md) explains the review findings and their limits.
+[The October 17 replan](reviews/2026-10-17-replan/README.md) is the current execution plan. It covers all 50 open issues, retains the seven earlier consolidation/no-build closures and completed #801, and replaces the prior sprint calendar with **October 19–30**. The current graph has 26 active completion edges plus 25 retained closed predecessor records.
 
-The [October17 live review and current/next sprint](reviews/2026-10-17/NEXT-SPRINT.md) is authoritative for current execution:58 open issues, ten recent accepted closures, and the verified release3c9/running source6f. The specifically approved rollout and ordinary-policy run are complete; #749 remains open for reviewed follow-up source delivery and current read-only readiness acceptance. [Live status](reviews/2026-10-17/STATUS.md), [all-issue triage](reviews/2026-10-17/ISSUE-TRIAGE.md), [active native graph](reviews/2026-10-17/DEPENDENCIES.md) and [handoff](reviews/2026-10-17/GOAL.md) distinguish completed work, staged source and unproven runtime/physical acceptance.
+Start with [the next sprint](reviews/2026-10-17-replan/NEXT-SPRINT.md), [execution handoff](reviews/2026-10-17-replan/EXECUTION.md), [all issue dispositions](reviews/2026-10-17-replan/ISSUE-TRIAGE.md) and [scope transfers](reviews/2026-10-17-replan/SCOPE-TRANSFERS.md). Earlier reviews and append-only operational ledgers are historical evidence, not competing current queues.
 
-The October5–16 reviews and coordinator ledger remain historical evidence. In particular,949 and643 are closed; old failed-rollout/reopened-current assertions are superseded. The three legacy issues317/801/802 remain included in execution coverage and the native cross-repository graph even though the original campaign stage model predates them. The canonical stage model now also includes977/980/981.
-
-`backlog.yaml` is the v2 source of truth (JSON-compatible YAML): nine stages and every campaign issue's owner role, priority, effort, what, why, how, acceptance, actual source paths, blocking dependencies, parent, delivery, rollback and decision boundary. The old lane/story schema and issue bodies are preserved in [the archive](archive/2026-09-05/README.md); they are not a second active backlog.
+`backlog.yaml` is the JSON-compatible YAML source for campaign contracts, issue status, active sprint membership, priorities, ownership and dependencies. It preserves original campaign coverage, including closed history. Native blocked-by edges retain closed predecessor records; only open predecessors block current acceptance. Parentage is ownership, never a completion gate.
 
 ```sh
 python -m planning.render
@@ -14,8 +12,6 @@ make planning-validate
 python planning/schema.py planning/backlog.yaml --published
 ```
 
-The renderer updates the five root planning views, [DEPENDENCIES.md](DEPENDENCIES.md) and `issues_manifest.json`. `python -m planning.render --body-dir /path/to/scratch/bodies` emits exact GitHub issue bodies; it performs no network writes. Tests reject lost original issues, duplicate IDs, missing what/why/how/acceptance, unknown references, cycles, parent deadlocks, missing source paths and stale generated views.
+The renderer generates the root planning views, dependency view and `issues_manifest.json`. `python -m planning.render --body-dir /path/to/bodies` emits exact issue bodies without writing to GitHub. Before publication compare current bodies and metadata with the before-image; preserve concurrent edits and existing assignees. Publish only reviewed differences, then verify body hashes, priorities, milestones and native relationships by readback.
 
-For later GitHub synchronization, read the current issue metadata first, compare against the last receipt and preserve concurrent changes. Publish body/title/milestone/priority plus native blocked-by edges and native parentage, then read everything back against the manifest hashes. Keep closed history and unrelated assignments. Parentage is not a blocking gate; hard dependencies name bounded tasks, not an epic that contains the dependent.
-
-The September 5 delivery adds ten gap issues to the 68 originally open issues. No inaccessible ProjectV2 board is claimed updated: the old project #5 did not resolve and the accessible organization project list was empty. GitHub issues, nine campaign milestones and native dependencies/sub-issues are the delivered tracker.
+The complete inventory, original open bodies, reviewed assessments, graph and metadata-only runtime snapshot are retained in the current review directory. No ProjectV2 board, production deployment or physical/scientific acceptance is implied by a planning update.
