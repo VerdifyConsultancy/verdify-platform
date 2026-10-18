@@ -55,5 +55,4 @@ The782 sprint spend is a bounded input/decision packet, not a promise to finish 
 
 [Current status](STATUS.md) · [Issue dispositions](ISSUE-TRIAGE.md) · [Active dependency graph](DEPENDENCIES.md) · [Execution queue](EXECUTION-QUEUE.md) · [Current/next sprint](NEXT-SPRINT.md). Detailed operator/state/approval/native/credential material stays private.
 
-
-Current desired-state update: At23:44:32UTC, PR983 is merged as183b6f2b, changing only the exporter desired replica count to0. Live exporter remains desired1/Ready1; Argo is Healthy/OutOfSync against183b, last successful operationf916, with no operation pending. Ingestor remains one Ready replica at image249c and generation139. This is intentional pending owner adoption, not a failed writer rollout; do not silently apply or reverse it for readiness. Current backup proof remainsUNKNOWN.
+Subsequent deployment supersedes the intake-time pending-adoption state: the approved exporter0 pause and #801 exclusions are now adopted in releasefc057. #801 is complete; current749 readiness remains pending under its fixed observation and actual Lab/backup limitations. The earlier23:44 state is retained in the append-only execution ledger.

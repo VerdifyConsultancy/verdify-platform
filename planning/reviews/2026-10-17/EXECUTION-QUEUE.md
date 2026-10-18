@@ -9,7 +9,7 @@ Jason released implementation and delivery on October17. This finite work queue 
 | #749 | Corrected c386/4b499/fc057 deployed; fixed40-minute current-writer verification ends01:53:46UTC. Final original readiness remains pending. | Retry: source/smoke/schema, health disposition and original one-shot packet; no timer reset or new physical run. |
 | #801 | CLOSED/COMPLETED: exact deployed rule, owner-route preservation, five parser observations and eight public checks passed. | Root verified closure; retain historical1–2h estimate, no freed-capacity claim. |
 | #802 | Seven-object spec-preserving source packet is complete and root-reviewed. Namespace exclusion and manual ownership proposal are prepared; no adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
-| #981 | Source diagnosis started; six provider source files checked at current183b. No current meter/DB sample or source recovery claimed. | Root source trace now; existing product lane performs the bounded source/ingest comparison after #749/#801. |
+| #981 | Currentc386 source and the bounded two-entity/latest4row read consumer are reviewed. It remains unexecuted; no current source advancement or recovery claimed. | Existing product lane performs the bounded source/ingest comparison after the fixed #749 disposition; #801 is complete. |
 | #980 | Intentional NAS pause and owner handoff still constrain live work. | Source review can advance; no NFS probe or unpause to obtain a pass. |
 | #639 + #587 | Ready shared contained packet, queued after the product lane's current fixes. | One device-denied execution, count shared work once; physical clauses stay separately scoped. |
 | #977 + #782 | Queued bounded decision preparation. | Authentic placement/policy and scientific inputs; surface only a concrete decision. |
@@ -18,7 +18,7 @@ Queue order is a work-in-progress limit, not a new blocking edge between indepen
 
 ## Energy-source trace already completed
 
-Current183b source uses two fixed Home Assistant power entities. The existing conversion retains gateway `last_updated` separately from ingestion time, marks age>=300seconds stale, and withholds the aggregate when either channel is non-ok. Re-fetching cannot refresh the source clock. The actual `shelly_sync` function is identical to the reviewed version despite unrelated changes elsewhere in its file. This narrows the next read to intended-source versus ingestion timestamps; it does not establish a meter, network or physical cause. Existing stale/missing/future/identity/unit cases are present; no redundant suite or live query was run for this trace.
+The initial183b trace and currentc386 source use the same two fixed Home Assistant power entities. The existing conversion retains gateway `last_updated` separately from ingestion time, marks age>=300seconds stale, and withholds the aggregate when either channel is non-ok. Re-fetching cannot refresh the source clock. The actual `shelly_sync` function is identical to the reviewed version despite unrelated changes elsewhere in its file. This narrows the next read to intended-source versus ingestion timestamps; it does not establish a meter, network or physical cause. Existing stale/missing/future/identity/unit cases are present; no redundant suite or live query was run for this trace.
 
 | Packet / owner | First concrete action | Exit / stop / inverse |
 |---|---|---|
