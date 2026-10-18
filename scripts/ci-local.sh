@@ -164,6 +164,7 @@ $PY -m pytest -q -rs \
   tests/test_experiment_v2_reconcile.py \
   tests/test_experiment_v2_reconcile_archive.py \
   tests/test_experiment_v2_capture_inputs.py \
+  tests/test_freeze_route_day_target.py \
   tests/test_experiment_v2_restore_rehearsal.py \
   tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
@@ -177,6 +178,8 @@ $PY -m pytest -q -rs \
   tests/test_experiment_v2_gate_r_activation.py \
   tests/test_experiment_v2_gate_r_readiness_activation.py \
   tests/test_experiment_v2_proof_packet.py \
+  tests/test_experiment_v2_wetting_disposition.py \
+  tests/test_783_current_role_admission.py \
   tests/test_experiment_v2_readiness_guard.py \
   tests/test_experiment_v2_emergency_recovery_retry.py \
   tests/test_experiment_v2_recovery_generation_guard.py \
@@ -186,6 +189,8 @@ $PY -m pytest -q -rs \
   tests/test_api_deferred_batch_patch.py \
   tests/test_api_overflow_patch.py tests/test_api_heap_owner_counters.py tests/test_api_iterator_backpressure.py \
   tests/test_sensor_health_modbus_native.py \
+  tests/test_probe_diagnostics_native.py \
+  tests/test_policy_relay_dwell_refresh.py \
   tests/test_firmware_builder_image.py \
   tests/test_firmware_provisional_rollback.py \
   tests/test_firmware_crop_agnostic_guard.py \
