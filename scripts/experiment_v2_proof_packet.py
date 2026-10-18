@@ -1760,14 +1760,19 @@ def assemble(
     preflights: Mapping[str, Any],
 ) -> dict[str, Any]:
     packet = copy.deepcopy(template)
-    disposition = wetting.collect(repo_root, application_source=application_source, experiment_id=experiment_id)
-    wetting_complete = not wetting.blockers(
-        disposition,
-        root=repo_root,
-        application_source=application_source,
-        experiment_id=experiment_id,
-        now=datetime.now(UTC),
-    )
+    # Physical incident evidence belongs to Gate P. A missing or malformed
+    # incident file must not add a new prerequisite to zero-exposure Gate R.
+    disposition = None
+    wetting_complete = False
+    if mode == "proof":
+        disposition = wetting.collect(repo_root, application_source=application_source, experiment_id=experiment_id)
+        wetting_complete = not wetting.blockers(
+            disposition,
+            root=repo_root,
+            application_source=application_source,
+            experiment_id=experiment_id,
+            now=datetime.now(UTC),
+        )
     now = zulu(datetime.now(UTC))
     status = db["status"]
     runtime = db["runtime"]
@@ -1905,7 +1910,11 @@ def assemble(
                         {
                             "name": name,
                             "complete": complete,
-                            **({"disposition": disposition} if name == "wetting_incident_778_disposition" else {}),
+                            **(
+                                {"disposition": disposition}
+                                if name == "wetting_incident_778_disposition" and disposition is not None
+                                else {}
+                            ),
                         }
                         for name, complete in (
                             ("boundary_observation_contract", True),
