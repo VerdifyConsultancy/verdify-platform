@@ -1,14 +1,14 @@
 # Active execution queue — October 17, 2026
 
-Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Retry now holds the finite product delivery window after the Agents owner explicitly returned shared CI/controller custody. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
+Jason released implementation and delivery on October17. This finite work queue uses the existing shared80h envelope; specific physical-operation boundaries remain. Current #749 work is already assigned to the existing Retry session; root owns GitHub/planning. Existing Agents owner holds the finite shared CI/controller window after the failed product qualification; Retry retains sole product source/runtime custody. No new chats/workers/collectors. Source, native checks, image, deployment, behavior and recovery remain separate evidence.
 
 ## Work pulled now
 
 | Packet | Actual execution state | Owner / next handoff |
 |---|---|---|
-| #749 | Corrected producer-coherence source is accepted:60 focused passes with old-code ordering and rejected-SQL negative regressions. Previous deployment and finite failed quiet qualification remain recorded. | Retry: fresh complete canonical composition, normal owner window/source/image qualification, then minimal rollout and finite live verification under existing software authority. |
+| #749 | Producer source is accepted, but native qualification failed on a stale layout assertion before images. Faithful test-only correction is accepted; the normal one-event source-recovery route is being repaired. | Retry: fresh complete canonical composition, normal owner window/source/image qualification, then minimal rollout and finite live verification under existing software authority. |
 | #801 | Two-file source patch accepted: two focused checks pass; full129-object render changes only the two host exclusions. Runtime acceptance remains pending. | Retry: combine with #749 in the same normal delivery; verify routes after scoped full sync. |
-| #802 | Existing infrastructure owner acknowledged the packet; queued behind current owner qualification. No adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
+| #802 | Seven-object spec-preserving source packet is complete and root-reviewed. Namespace exclusion and manual ownership proposal are prepared; no adoption started. | Existing Agents owner: exact enforce-mode metadata and minimal manual Argo declaration/inverse, then coordinated delivery. |
 | #981 | Source diagnosis started; six provider source files checked at current183b. No current meter/DB sample or source recovery claimed. | Root source trace now; existing product lane performs the bounded source/ingest comparison after #749/#801. |
 | #980 | Intentional NAS pause and owner handoff still constrain live work. | Source review can advance; no NFS probe or unpause to obtain a pass. |
 | #639 + #587 | Ready shared contained packet, queued after the product lane's current fixes. | One device-denied execution, count shared work once; physical clauses stay separately scoped. |
@@ -35,3 +35,6 @@ PR #982 remains with its existing owner. PR #983 was merged by its owner as183b;
 
 
 Source delivery started: [daaa05f3](https://github.com/VerdifyConsultancy/verdify-platform/commit/daaa05f366017e38206f6b59e7c7bfa79ed9db94) is now on main, with the corrected #749 producer change, #801 exclusions and all27 canonical planning files. Root independently verified all36 provider payload identities and sole parent183b. The automatically triggered native qualification is running. Existing Retry retains the finite delivery window; images, promotion, full sync and final live acceptance remain pending.
+
+
+Current delivery blocker: the failed source event built no images, while its genuine test-only successor would normally validate without images. The existing infrastructure owner is preparing a closed one-event lineage recovery; no fake production change, forced profiles, raw retry or new pipeline. Product source remains daaa and production remains the accepted249/f916 cohort until actual qualification and delivery. The corrected test preserves the native callback/publisher boundary and passes four unsafe-mutation negatives.
