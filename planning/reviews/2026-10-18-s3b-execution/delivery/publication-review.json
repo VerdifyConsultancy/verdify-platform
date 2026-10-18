@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-18T16:45:19.306739+00:00",
+  "destination": "https://github.com/VerdifyConsultancy/verdify-platform",
+  "visibility": "public",
+  "viewerPermission": "ADMIN",
+  "remote_matches_exact_requested_repository": true,
+  "authorization": "Jason explicitly requested this Verdify sprint end to end, keeping GitHub current and pushing all work and evidence. This is the same repository and source PR986 already merged this sprint.",
+  "archive_sha256": "13b4a0c759b7383d0ed6330053539e886e1a90f65dca4cfe2d666f3a8da6edf8",
+  "archive_bytes": 3305064,
+  "archive_members": 278,
+  "scan": {
+    "tool": "gitleaks dir --redact=100 --ignore-gitleaks-allow",
+    "bytes": 19395043,
+    "seconds": 2.45,
+    "findings": 1,
+    "adjudication": "Only finding is metadata field secret_uid holding the existing Kubernetes Secret object UUID, not an authentication credential. No actual credential finding. Raw JSON object/literal-sensitive-env/private-key guards also passed."
+  },
+  "custody": "Original bytes remain unchanged; registry credential and full image config environment were never retained. Public payload contains CI source/build metadata, logs and issue/graph evidence."
+}
