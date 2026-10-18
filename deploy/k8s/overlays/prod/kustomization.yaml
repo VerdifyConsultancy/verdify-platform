@@ -267,7 +267,7 @@ images:
     digest: sha256:cf26b0dff29ea37cfb90889c7abdf4890a6cf7696b467363ec877fc45dcd306c
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:eb0ac7d48ee4c44817e1405766fd4d8615b97163fef80b32d6a6d18cbb904bbe
+    digest: sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
     digest: sha256:211b40e95031a337c8f557c3b19875fdf1ad34f87af4b332fd6013fdaab6e962
@@ -276,7 +276,7 @@ images:
   # explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-    digest: sha256:cd1475d2f9f79378abe1c019a014ed8a87ad1b2614abbfcfc3e5563bd45f075d
+    digest: sha256:2b13ee7a58ada4abd74d0732579da04876dab83a36af43441d99e7193478d2b0
   # Hand-pinned planner: merged source 96a1d6bd includes the #822 liveness fix;
   # built by agent-fleet-ci/verdify-platform-build-planner-96a1d6bd-vdbkv.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
