@@ -5,5 +5,12 @@
   "closed": 322,
   "all_pages": 10,
   "github_total_count_matched": true,
-  "inventory_sha256": "ed926e3910789d6357ec2f7852d2fb856394a2ea60c594a41873ee6cc2c98430"
+  "inventory_sha256": "ed926e3910789d6357ec2f7852d2fb856394a2ea60c594a41873ee6cc2c98430",
+  "publication_refresh": {
+    "at": "2026-10-18T07:22:40.996748+00:00",
+    "total": 369,
+    "open": 47,
+    "closed": 322,
+    "after_sha256": "d8f4abf49277e4e58ab27661acba5fa75e0cb6ff5929b5ccbcff47c6d6b9ca51"
+  }
 }

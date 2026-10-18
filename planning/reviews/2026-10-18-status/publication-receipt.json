@@ -1,0 +1,65 @@
+{
+  "schema": "verdify-full-issue-status-publication/v1",
+  "verified_at": "2026-10-18T07:22:40.996748+00:00",
+  "contract_source_revision": "d2b0728e5211ba092461c7520d19ab44b6279037",
+  "inventory": {
+    "total": 369,
+    "open": 47,
+    "closed": 322,
+    "completed_disposition": 241,
+    "not_planned_disposition": 81,
+    "all_pages": 10,
+    "raw_after_sha256": "d8f4abf49277e4e58ab27661acba5fa75e0cb6ff5929b5ccbcff47c6d6b9ca51"
+  },
+  "open_contracts": {
+    "all47_titles_bodies_exact": true,
+    "updated": 47,
+    "existing141_acceptance_clauses_preserved": true,
+    "no_additional_closures_justified": true
+  },
+  "metadata": {
+    "all369_states_reasons_closed_at_assignees_milestones_preserved": true,
+    "all322_closed_bodies_titles_preserved": true,
+    "only_label_change": {
+      "245": {
+        "removed": [
+          "gate:jason"
+        ]
+      }
+    }
+  },
+  "native_graph": {
+    "active_edges": 27,
+    "local_active_edges": 26,
+    "external_active_edges": 1,
+    "closed_predecessor_records_on_open_issues": 24,
+    "untruncated": true,
+    "exact_source_projection_match": true,
+    "raw_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
+    "edge_mutations": 0,
+    "reason": "All completion edges remain justified; parallel bounded preparation improves cadence without weakening acceptance."
+  },
+  "validation": {
+    "planning_schema_DAG_render": "PASS",
+    "focused_planning_tests": 43,
+    "precommit_hooks": "PASS",
+    "initial_failure_corrected": "Execution allocation was first added in the renderer; the separation invariant failed. Next actions now live directly in canonical issue baselines, and all43 checks pass.",
+    "workload": "Small bounded planning checks on Mac; no broad tests or builds."
+  },
+  "production": {
+    "read_only_smoke_at": "2026-10-18T07:07:50.653594Z",
+    "smoke": "9/9 PASS",
+    "device_monitor": "Exactly one ESP32 connection PASS",
+    "latest_application_readback": {
+      "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+      "sync": "Synced",
+      "health": "Healthy",
+      "comparison_revision": "d2b0728e5211ba092461c7520d19ab44b6279037",
+      "last_operation_phase": "Succeeded",
+      "last_operation_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+      "last_operation_finished_at": "2026-10-18T02:47:03Z"
+    },
+    "no_sync_promotion_OTA_draw_or_physical_attempt": true
+  },
+  "custody": "Private full API before/after responses and raw native readback retained in approved maintenance custody. Sanitized all-issue index, per-issue audits, exact before-contracts, graph and execution report are versioned."
+}
