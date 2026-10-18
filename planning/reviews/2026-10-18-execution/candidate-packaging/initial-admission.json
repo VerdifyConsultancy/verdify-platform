@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-18T08:40:20.728883+00:00",
+  "context": "vallery",
+  "namespace": "agent-fleet-ci",
+  "source": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:8636ac4e3346ff9c7752d7f1f3bcef976b8797a03d45762a7361734f32c9ecad",
+  "published_stage_finished_at": "2026-10-18T08:38:08Z",
+  "main_pipeline_phase_at_admission": "Running",
+  "specific_published_artifact_verified": true,
+  "template": "repo-validate-568985cdbf6b4e3f",
+  "template_uid": "09f8d5e5-68bf-484e-b5a3-1181d1a1ee50",
+  "template_spec_sha256": "568985cdbf6b4e3fdec9724f096b9816e18ace2a0b001bc52dfe9fb6e417246e",
+  "command_sha256": "50ab84434b52016feffe6ec71792fd08289419ad530ea265af7a48bf3154393d",
+  "resources": {
+    "limits": {
+      "cpu": "2",
+      "ephemeral-storage": "12Gi",
+      "memory": "4Gi"
+    },
+    "requests": {
+      "cpu": "500m",
+      "ephemeral-storage": "4Gi",
+      "memory": "1Gi"
+    }
+  },
+  "workers_ready_without_pressure": [
+    "vm-k3s-node4",
+    "vm-k3s-node5",
+    "vm-k3s-node6",
+    "vm-k3s-node7"
+  ],
+  "quota_headroom_passed": true,
+  "outer_deadline_seconds": 900,
+  "inner_deadline_seconds": 20,
+  "actual_check_count": 1,
+  "identity": "Existing supported nonroot1001; no default10001 or actualLOGIN claim",
+  "credential_scope": "Check container receives no secret mount or SA token. Trusted existing CI fetch init uses only its normal repository-read App identity; no new credential/security setting."
+}

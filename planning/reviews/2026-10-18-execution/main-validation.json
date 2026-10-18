@@ -1,0 +1,18 @@
+{
+  "schema": "verdify-ready-main-validation-v1",
+  "source": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "workflow": "verdify-platform-ci-nm8ph",
+  "workflow_uid": "3fb0872f-7a30-4092-8a81-c8921846d4fb",
+  "validation_pod_node": "verdify-platform-ci-nm8ph-2276330153",
+  "validation_phase": "Succeeded",
+  "validation_exit_code": 0,
+  "validation_attempts": 1,
+  "finished_at": "2026-10-18T08:29:15Z",
+  "main_log": {
+    "bytes": 39806,
+    "sha256": "1a5364f1f8dc793e895d545905a3c06d3b44149f33226c7908649d4f41ef211f",
+    "stream_captured_through_terminal": true
+  },
+  "main_pipeline_build_and_pin_phase": "in_progress",
+  "no_generic_pr_log_reconstruction": true
+}

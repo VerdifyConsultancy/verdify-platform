@@ -1,0 +1,91 @@
+{
+  "schema": "verdify.orchestrator-image-packaging-independent-verification/v1",
+  "status": "IMAGE_PACKAGING_VERIFIED",
+  "verified_at": "2026-10-18T08:44:27.148054+00:00",
+  "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:8636ac4e3346ff9c7752d7f1f3bcef976b8797a03d45762a7361734f32c9ecad",
+  "workflow": {
+    "name": "verdify-ready-orchestrator-package-db896-01",
+    "uid": "2f234349-1f7e-4735-8c18-996b1b801f1d",
+    "phase": "Succeeded",
+    "started_at": "2026-10-18T08:40:20Z",
+    "finished_at": "2026-10-18T08:41:51Z"
+  },
+  "check_pod": {
+    "name": "verdify-ready-orchestrator-package-db896-01-run-check-2882773752",
+    "uid": "7500686b-e813-46aa-b1fb-5fb1c188c5b3",
+    "node": "vm-k3s-node6",
+    "phase": "Succeeded",
+    "main_exit_code": 0,
+    "main_restarts": 0,
+    "main_finished_at": "2026-10-18T08:41:19Z",
+    "actual_check_pod_count": 1,
+    "runtime_uid": 1001,
+    "runtime_gid": 1001
+  },
+  "command_sha256": "50ab84434b52016feffe6ec71792fd08289419ad530ea265af7a48bf3154393d",
+  "source_manifest_sha256": "06b7820befd40d1bfb829e2829c91f037f91f40a713dc8ebe55f83de01a12326",
+  "independently_rehashed_exact_git_blob_count": 29,
+  "module_origins": {
+    "experiment_orchestrator.contracts": "/app/experiment_orchestrator/contracts.py",
+    "experiment_orchestrator.database": "/app/experiment_orchestrator/database.py",
+    "scripts.experiment_v2_proof_packet": "/app/scripts/experiment_v2_proof_packet.py",
+    "scripts.experiment_v2_readiness_guard": "/app/scripts/experiment_v2_readiness_guard.py",
+    "scripts.experiment_v2_wetting_disposition": "/app/scripts/experiment_v2_wetting_disposition.py"
+  },
+  "empty_working_directory": "/tmp/verdify-image-only-75q9uj86",
+  "freezer_functions": [
+    "public.fn_experiment_v2_outcome_source_cycle(uuid)",
+    "public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)",
+    "public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)",
+    "public.fn_experiment_v2_freeze_export(uuid,text,text)",
+    "public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)",
+    "public.fn_freeze_fixed_panel_native_previous_day()"
+  ],
+  "synthetic_image_only_experiment_id": "ead8190c-df63-45a7-9570-8e23df0cdb26",
+  "wetting_manifest_sha256": "001fea6e0584299d30f2b41b89c64c6ba4e2d57652e14ee0c244886a898c9233",
+  "wetting_blockers": [
+    "wetting_incident_778_disposition:missing:counter_scope_and_reset_boundaries",
+    "wetting_incident_778_disposition:missing:firmware_binary_lineage",
+    "wetting_incident_778_disposition:missing:physical_equipment_qualification",
+    "wetting_incident_778_disposition:missing:safe_fog_admission_and_rails"
+  ],
+  "source_analysis_markdown_in_actual_image": {
+    "bytes": 5616,
+    "image_path": "/app/readiness-source/research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+    "sha256": "496d4fa3a2f4bade1a60066617dc049430bcb58934917b220bbec29ff59873f4",
+    "source_path": "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md"
+  },
+  "full_main_log": {
+    "bytes": 9270,
+    "sha256": "769daf1cbedaa9d030b1328b57e68a36631ff990d44891b0f854490fe205e5c6"
+  },
+  "actual_mount_correction": {
+    "existing_service_account": "argo-ci-workflow",
+    "projected_CI_service_account_token_mounted": true,
+    "application_secret_volume_or_environment_reference": false,
+    "initial_no_service_account_token_assertion": "Incorrect; original admission and prepared source are retained unchanged. Actual Pod readback is authoritative.",
+    "no_new_identity_RBAC_or_security_setting_claim_basis": "ROOT reports unchanged supported WorkflowTemplate; actual Pod binds existing service account and runAs1001.",
+    "token_value_access_scope": "This verification read Pod metadata and retained output only, never token values. Reviewed command does not read the projected token or use the CI API; no syscall trace is claimed."
+  },
+  "custody_directory": "/Users/jason/maintenance/verdify-next-ready-20261018/orchestrator-package-01",
+  "custody_sha256": {
+    "prepared-command.json": "6906bada285491389b4383ed9924af1a5c1a24feeef5b0c4467375e0b631102b",
+    "admission.json": "6114f311464eeea560b9815a3e4c4c83bb32540a42b73cc22fb49c539bcb5ecd",
+    "actual-admission-readback.json": "c95f04afa6b2eecf5761c2fd59da11ffbf803461d272ce52469b7279e893e729",
+    "submitted.json": "762629474336f9298470678a39b4e75093575557918bdd6a2ecfb0962916aea3",
+    "workflow.json": "d5e42c41500054185bf2df3c5c1f16a730440cc30cf1154b8bb964fded371999",
+    "workflow-latest.private.json": "7dcf5341755319de8c5f224cf89d24c05ba1bc280de60b2aee990bdb17928e58",
+    "pods-latest.private.json": "4e0ba6d99b248750f08778ae4c41a726222ce8f892b9952a35b1161b4e2a6daa",
+    "capture-latest.json": "0424984866325644aea0a8b9f38025d83c94af87247c285e62a79239b7a898a3",
+    "terminal-capture-output.private.json": "0424984866325644aea0a8b9f38025d83c94af87247c285e62a79239b7a898a3",
+    "verdify-ready-orchestrator-package-db896-01-run-check-2882773752.main.log": "769daf1cbedaa9d030b1328b57e68a36631ff990d44891b0f854490fe205e5c6"
+  },
+  "limits": [
+    "Packaging/readability and pure source contracts under existing supported CI UID1001 only; application default UID10001 was not exercised.",
+    "No actual database-role LOGIN, readiness qualification, device-worker startup, HTTP/DB/device/Slack operation, deployment or image promotion is proved.",
+    "Exactly four physical wetting criteria remain missing; synthetic image-only UUID is not an actual experiment identity.",
+    "This checks the orchestrator image only; ingestor packaging was not executed.",
+    "Specific immutable build artifact was admitted while the parent main pipeline was still Running; this receipt does not claim that whole pipeline completed."
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "schema": "verdify.candidate-image-packaging-command/v1",
+  "check": "orchestrator",
+  "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "image_digest": null,
+  "image_binding": "ROOT must bind exact immutable digest from successful main workflow verdify-platform-ci-nm8ph before admission; no tag or checkout substitution.",
+  "supported_check_uid": 1001,
+  "image_default_uid": 10001,
+  "identity_limit": "This is packaging readability under supported check UID1001, not application runtime identity or actual LOGIN. Ingestor0600/UID1000 permission refusal is not by itself an application defect.",
+  "source_manifest_sha256": "06b7820befd40d1bfb829e2829c91f037f91f40a713dc8ebe55f83de01a12326",
+  "expected_files": [
+    {
+      "source_path": "experiment_orchestrator/__init__.py",
+      "image_path": "/app/experiment_orchestrator/__init__.py",
+      "sha256": "2adc55839a5ca1129ab41d5308f20fd02ee7ca7af974dcc8f4669f5210fc1fea"
+    },
+    {
+      "source_path": "experiment_orchestrator/__main__.py",
+      "image_path": "/app/experiment_orchestrator/__main__.py",
+      "sha256": "804540d2b4e85d10869607d6e0ffda66000b82232df1472565dc7ea34d996574"
+    },
+    {
+      "source_path": "research/planner-efficacy/switchback/v2_outcomes.py",
+      "image_path": "/app/experiment_orchestrator/_frozen_v2_outcomes.py",
+      "sha256": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40"
+    },
+    {
+      "source_path": "experiment_orchestrator/contracts.py",
+      "image_path": "/app/experiment_orchestrator/contracts.py",
+      "sha256": "bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b"
+    },
+    {
+      "source_path": "experiment_orchestrator/database.py",
+      "image_path": "/app/experiment_orchestrator/database.py",
+      "sha256": "2bac80773f1976f28c50de4a64c1b9c3a6dd0f9d727927add203fec3cea12f9b"
+    },
+    {
+      "source_path": "experiment_orchestrator/launch_artifacts.py",
+      "image_path": "/app/experiment_orchestrator/launch_artifacts.py",
+      "sha256": "77569b1381cf8440257d7de73ce7a8ea71663057487470e623979baeb3683d2b"
+    },
+    {
+      "source_path": "experiment_orchestrator/launch_control.py",
+      "image_path": "/app/experiment_orchestrator/launch_control.py",
+      "sha256": "46ccbcbba371165f860b47563efc9f67e30374df72b0d5e62b0083d7a1f3fa09"
+    },
+    {
+      "source_path": "experiment_orchestrator/outcome.py",
+      "image_path": "/app/experiment_orchestrator/outcome.py",
+      "sha256": "da264c907e70b5a1a017bbb0c4c0c3024dc37d3a0a8f09e5bb0a978121fde36c"
+    },
+    {
+      "source_path": "experiment_orchestrator/preflight.py",
+      "image_path": "/app/experiment_orchestrator/preflight.py",
+      "sha256": "fd89d868df185ad7ca202e2b8dba4ecc6ab323d83c816f4bdb5043dbfbe16cf1"
+    },
+    {
+      "source_path": "experiment_orchestrator/provider.py",
+      "image_path": "/app/experiment_orchestrator/provider.py",
+      "sha256": "3eabdd7a5707d8bbe91b27b3b84472f4b8ab8f6a72227c501ead69d5590fb8d0"
+    },
+    {
+      "source_path": "experiment_orchestrator/readiness.py",
+      "image_path": "/app/experiment_orchestrator/readiness.py",
+      "sha256": "d2a60ab2ba7a6010209feceb66dbb0df769f8e656a306e1d0b32f97778421a15"
+    },
+    {
+      "source_path": "experiment_orchestrator/runtime.py",
+      "image_path": "/app/experiment_orchestrator/runtime.py",
+      "sha256": "c4c46cf7adeec0e02fd1e71bc29b84e035ea732cfaa5ff9619eb049898fe0932"
+    },
+    {
+      "source_path": "experiment_orchestrator/safe_logging.py",
+      "image_path": "/app/experiment_orchestrator/safe_logging.py",
+      "sha256": "64d20c90cf318c5286551043a587bfc35fb6ee43ddae190c20751efb59518131"
+    },
+    {
+      "source_path": "experiment_orchestrator/service.py",
+      "image_path": "/app/experiment_orchestrator/service.py",
+      "sha256": "1c15a7c3f3a616725787ecf550ecddcef0342d3f6a14cfc2bd83c067ea55673d"
+    },
+    {
+      "source_path": "experiment_orchestrator/settings.py",
+      "image_path": "/app/experiment_orchestrator/settings.py",
+      "sha256": "de9c1f9783d97ff97e9adac0b0706b9b7371db9d228d632ec2d5d7d6006191ec"
+    },
+    {
+      "source_path": "experiment_orchestrator/stores.py",
+      "image_path": "/app/experiment_orchestrator/stores.py",
+      "sha256": "5facd584c6fe769477b78fd0238c46edcd7fd94409f5e1da7fef6ed3d81eb320"
+    },
+    {
+      "source_path": "deploy/k8s/components/hermes-iris/hermes-config.yaml",
+      "image_path": "/app/readiness-source/deploy/k8s/components/hermes-iris/hermes-config.yaml",
+      "sha256": "a9b59b1c46bb1b7daa2eade392b4de99679b9630607558035d1625fd2b69321b"
+    },
+    {
+      "source_path": "ingestor/tasks/component_experiment.py",
+      "image_path": "/app/readiness-source/ingestor/tasks/component_experiment.py",
+      "sha256": "0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67"
+    },
+    {
+      "source_path": "research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
+      "image_path": "/app/readiness-source/research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
+      "sha256": "7edd2f506e94c3aed11bf1ece5ba8ed1a2e5451c001c5f18d616682f69444fd1"
+    },
+    {
+      "source_path": "research/planner-efficacy/switchback/v2_outcomes.py",
+      "image_path": "/app/readiness-source/research/planner-efficacy/switchback/v2_outcomes.py",
+      "sha256": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40"
+    },
+    {
+      "source_path": "research/planner-efficacy/switchback/v2_selector.py",
+      "image_path": "/app/readiness-source/research/planner-efficacy/switchback/v2_selector.py",
+      "sha256": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431"
+    },
+    {
+      "source_path": "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+      "image_path": "/app/readiness-source/research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+      "sha256": "496d4fa3a2f4bade1a60066617dc049430bcb58934917b220bbec29ff59873f4"
+    },
+    {
+      "source_path": "research/planner-efficacy/wetting-incident-778-readiness.json",
+      "image_path": "/app/readiness-source/research/planner-efficacy/wetting-incident-778-readiness.json",
+      "sha256": "001fea6e0584299d30f2b41b89c64c6ba4e2d57652e14ee0c244886a898c9233"
+    },
+    {
+      "source_path": "scripts/verify_component_proof_packet.py",
+      "image_path": "/app/readiness-source/scripts/verify_component_proof_packet.py",
+      "sha256": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1"
+    },
+    {
+      "source_path": "tests/fixtures/experiment-v2-readiness/base-proof.json",
+      "image_path": "/app/readiness-source/tests/fixtures/experiment-v2-readiness/base-proof.json",
+      "sha256": "a58c96085794fcd7b3d89575a81ac708719c25a7b0ee8cf90cb5737228d7590f"
+    },
+    {
+      "source_path": "scripts/experiment_v2_proof_packet.py",
+      "image_path": "/app/scripts/experiment_v2_proof_packet.py",
+      "sha256": "f5603aaee91b4aed9cc0a1fcc4556ecaa6aacd1c38bbd9674ea29c57e650bc80"
+    },
+    {
+      "source_path": "scripts/experiment_v2_readiness_guard.py",
+      "image_path": "/app/scripts/experiment_v2_readiness_guard.py",
+      "sha256": "ab76d2e562b1e755ab12cfda14ff9fd4ab76347962b02ea4a990d3180592e3c9"
+    },
+    {
+      "source_path": "scripts/experiment_v2_wetting_disposition.py",
+      "image_path": "/app/scripts/experiment_v2_wetting_disposition.py",
+      "sha256": "8da5783457fe68f1f5040b76009fd8c2be7c1f53b7f87829ebd2f119ce4aa516"
+    },
+    {
+      "source_path": "scripts/mcp-security-acceptance.py",
+      "image_path": "/app/scripts/mcp-security-acceptance.py",
+      "sha256": "333f9ba148e81fd26a2f7184b0add5dfdf59f83ffab643b9b5c37ee3b7ee5f78"
+    }
+  ],
+  "command_sha256": "50ab84434b52016feffe6ec71792fd08289419ad530ea265af7a48bf3154393d",
+  "python_sha256": "ee26810343b6ad2ffb80f589ed7ebf68f01832add13015348c5dc08a22e4f337",
+  "command": "set -eu\ncd /tmp\nexec env -i PATH=/usr/local/bin:/usr/bin:/bin PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 VERDIFY_GIT_SHA=\"${VERDIFY_GIT_SHA:?image build revision is required}\" /usr/local/bin/python -P - <<'VERDIFY_IMAGE_ONLY_PY'\nSOURCE = 'db896d0fb2856d5caccb269185597d197e0f459d'\nCHECK = 'orchestrator'\nDEFAULT_UID = 10001\nFILES = [{'source_path': 'experiment_orchestrator/__init__.py', 'image_path': '/app/experiment_orchestrator/__init__.py', 'sha256': '2adc55839a5ca1129ab41d5308f20fd02ee7ca7af974dcc8f4669f5210fc1fea'}, {'source_path': 'experiment_orchestrator/__main__.py', 'image_path': '/app/experiment_orchestrator/__main__.py', 'sha256': '804540d2b4e85d10869607d6e0ffda66000b82232df1472565dc7ea34d996574'}, {'source_path': 'research/planner-efficacy/switchback/v2_outcomes.py', 'image_path': '/app/experiment_orchestrator/_frozen_v2_outcomes.py', 'sha256': 'c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40'}, {'source_path': 'experiment_orchestrator/contracts.py', 'image_path': '/app/experiment_orchestrator/contracts.py', 'sha256': 'bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b'}, {'source_path': 'experiment_orchestrator/database.py', 'image_path': '/app/experiment_orchestrator/database.py', 'sha256': '2bac80773f1976f28c50de4a64c1b9c3a6dd0f9d727927add203fec3cea12f9b'}, {'source_path': 'experiment_orchestrator/launch_artifacts.py', 'image_path': '/app/experiment_orchestrator/launch_artifacts.py', 'sha256': '77569b1381cf8440257d7de73ce7a8ea71663057487470e623979baeb3683d2b'}, {'source_path': 'experiment_orchestrator/launch_control.py', 'image_path': '/app/experiment_orchestrator/launch_control.py', 'sha256': '46ccbcbba371165f860b47563efc9f67e30374df72b0d5e62b0083d7a1f3fa09'}, {'source_path': 'experiment_orchestrator/outcome.py', 'image_path': '/app/experiment_orchestrator/outcome.py', 'sha256': 'da264c907e70b5a1a017bbb0c4c0c3024dc37d3a0a8f09e5bb0a978121fde36c'}, {'source_path': 'experiment_orchestrator/preflight.py', 'image_path': '/app/experiment_orchestrator/preflight.py', 'sha256': 'fd89d868df185ad7ca202e2b8dba4ecc6ab323d83c816f4bdb5043dbfbe16cf1'}, {'source_path': 'experiment_orchestrator/provider.py', 'image_path': '/app/experiment_orchestrator/provider.py', 'sha256': '3eabdd7a5707d8bbe91b27b3b84472f4b8ab8f6a72227c501ead69d5590fb8d0'}, {'source_path': 'experiment_orchestrator/readiness.py', 'image_path': '/app/experiment_orchestrator/readiness.py', 'sha256': 'd2a60ab2ba7a6010209feceb66dbb0df769f8e656a306e1d0b32f97778421a15'}, {'source_path': 'experiment_orchestrator/runtime.py', 'image_path': '/app/experiment_orchestrator/runtime.py', 'sha256': 'c4c46cf7adeec0e02fd1e71bc29b84e035ea732cfaa5ff9619eb049898fe0932'}, {'source_path': 'experiment_orchestrator/safe_logging.py', 'image_path': '/app/experiment_orchestrator/safe_logging.py', 'sha256': '64d20c90cf318c5286551043a587bfc35fb6ee43ddae190c20751efb59518131'}, {'source_path': 'experiment_orchestrator/service.py', 'image_path': '/app/experiment_orchestrator/service.py', 'sha256': '1c15a7c3f3a616725787ecf550ecddcef0342d3f6a14cfc2bd83c067ea55673d'}, {'source_path': 'experiment_orchestrator/settings.py', 'image_path': '/app/experiment_orchestrator/settings.py', 'sha256': 'de9c1f9783d97ff97e9adac0b0706b9b7371db9d228d632ec2d5d7d6006191ec'}, {'source_path': 'experiment_orchestrator/stores.py', 'image_path': '/app/experiment_orchestrator/stores.py', 'sha256': '5facd584c6fe769477b78fd0238c46edcd7fd94409f5e1da7fef6ed3d81eb320'}, {'source_path': 'deploy/k8s/components/hermes-iris/hermes-config.yaml', 'image_path': '/app/readiness-source/deploy/k8s/components/hermes-iris/hermes-config.yaml', 'sha256': 'a9b59b1c46bb1b7daa2eade392b4de99679b9630607558035d1625fd2b69321b'}, {'source_path': 'ingestor/tasks/component_experiment.py', 'image_path': '/app/readiness-source/ingestor/tasks/component_experiment.py', 'sha256': '0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67'}, {'source_path': 'research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json', 'image_path': '/app/readiness-source/research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json', 'sha256': '7edd2f506e94c3aed11bf1ece5ba8ed1a2e5451c001c5f18d616682f69444fd1'}, {'source_path': 'research/planner-efficacy/switchback/v2_outcomes.py', 'image_path': '/app/readiness-source/research/planner-efficacy/switchback/v2_outcomes.py', 'sha256': 'c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40'}, {'source_path': 'research/planner-efficacy/switchback/v2_selector.py', 'image_path': '/app/readiness-source/research/planner-efficacy/switchback/v2_selector.py', 'sha256': 'e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431'}, {'source_path': 'research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md', 'image_path': '/app/readiness-source/research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md', 'sha256': '496d4fa3a2f4bade1a60066617dc049430bcb58934917b220bbec29ff59873f4'}, {'source_path': 'research/planner-efficacy/wetting-incident-778-readiness.json', 'image_path': '/app/readiness-source/research/planner-efficacy/wetting-incident-778-readiness.json', 'sha256': '001fea6e0584299d30f2b41b89c64c6ba4e2d57652e14ee0c244886a898c9233'}, {'source_path': 'scripts/verify_component_proof_packet.py', 'image_path': '/app/readiness-source/scripts/verify_component_proof_packet.py', 'sha256': 'a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1'}, {'source_path': 'tests/fixtures/experiment-v2-readiness/base-proof.json', 'image_path': '/app/readiness-source/tests/fixtures/experiment-v2-readiness/base-proof.json', 'sha256': 'a58c96085794fcd7b3d89575a81ac708719c25a7b0ee8cf90cb5737228d7590f'}, {'source_path': 'scripts/experiment_v2_proof_packet.py', 'image_path': '/app/scripts/experiment_v2_proof_packet.py', 'sha256': 'f5603aaee91b4aed9cc0a1fcc4556ecaa6aacd1c38bbd9674ea29c57e650bc80'}, {'source_path': 'scripts/experiment_v2_readiness_guard.py', 'image_path': '/app/scripts/experiment_v2_readiness_guard.py', 'sha256': 'ab76d2e562b1e755ab12cfda14ff9fd4ab76347962b02ea4a990d3180592e3c9'}, {'source_path': 'scripts/experiment_v2_wetting_disposition.py', 'image_path': '/app/scripts/experiment_v2_wetting_disposition.py', 'sha256': '8da5783457fe68f1f5040b76009fd8c2be7c1f53b7f87829ebd2f119ce4aa516'}, {'source_path': 'scripts/mcp-security-acceptance.py', 'image_path': '/app/scripts/mcp-security-acceptance.py', 'sha256': '333f9ba148e81fd26a2f7184b0add5dfdf59f83ffab643b9b5c37ee3b7ee5f78'}]\nMANIFEST_SHA = '06b7820befd40d1bfb829e2829c91f037f91f40a713dc8ebe55f83de01a12326'\nEXPECTED_FREEZER = ('public.fn_experiment_v2_outcome_source_cycle(uuid)', 'public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)', 'public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)', 'public.fn_experiment_v2_freeze_export(uuid,text,text)', 'public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)', 'public.fn_freeze_fixed_panel_native_previous_day()')\nimport sys, os, json, hashlib, importlib, tempfile, signal\nfrom pathlib import Path\nfrom datetime import UTC, datetime\n\ndef require(condition, code):\n    if not condition:\n        raise CheckFailure(code)\n\nclass CheckFailure(Exception):\n    pass\n\nloader_metadata_calls = []\ndef deny_external(event, args):\n    if event == \"subprocess.Popen\":\n        # CPython ctypes.util.find_library reads the Linux linker cache.\n        # Permit only that bounded metadata command, never a service/worker.\n        executable, argv, cwd, environment = args\n        if CHECK == \"ingestor\" and executable == \"/sbin/ldconfig\" and argv == [\"/sbin/ldconfig\", \"-p\"] and cwd is None and not loader_metadata_calls:\n            loader_metadata_calls.append(\"/sbin/ldconfig -p\")\n            return\n        raise CheckFailure(\"external_operation_attempted:\" + event)\n    if event in {\"socket.connect\", \"socket.connect_ex\", \"socket.bind\", \"socket.getaddrinfo\", \"socket.sendto\", \"os.system\", \"os.posix_spawn\", \"os.posix_spawnp\"} or event.startswith(\"os.exec\"):\n        raise CheckFailure(\"external_operation_attempted:\" + event)\n\nsys.addaudithook(deny_external)\ndef deadline(signum, frame):\n    raise CheckFailure(\"internal_20_second_deadline\")\nsignal.signal(signal.SIGALRM, deadline)\nsignal.alarm(20)\nreport = {\"schema\": \"verdify.candidate-image-packaging-check/v1\", \"status\": \"FAILED\", \"check\": CHECK, \"expected_source_revision\": SOURCE, \"runtime_uid\": os.getuid(), \"runtime_gid\": os.getgid(), \"image_default_uid\": DEFAULT_UID, \"scope\": \"secretless_image_packaging_only\", \"started_at\": datetime.now(UTC).isoformat(), \"physical_qualification\": False, \"actual_role_login_qualification\": False, \"deployment_qualification\": False}\nstage = \"empty_cwd_and_image_source\"\ntry:\n    require(os.environ.get(\"VERDIFY_GIT_SHA\") == SOURCE, \"image_git_sha_mismatch\")\n    require(os.environ.get(\"PYTHONPATH\") == \"/app\", \"unexpected_pythonpath\")\n    require(not any(p == \"\" or (p and not (p == \"/app\" or p.startswith(\"/usr/local/lib/\"))) for p in sys.path), \"unexpected_import_search_path\")\n    with tempfile.TemporaryDirectory(prefix=\"verdify-image-only-\", dir=\"/tmp\") as isolated:\n        os.chdir(isolated)\n        require(not list(Path.cwd().iterdir()), \"working_directory_not_empty\")\n        report[\"empty_working_directory\"] = isolated\n        actual = []\n        for entry in FILES:\n            path = Path(entry[\"image_path\"])\n            require(path.resolve() == path and path.is_file(), \"image_path_missing_or_symlink:\" + entry[\"image_path\"])\n            data = path.read_bytes()\n            digest = hashlib.sha256(data).hexdigest()\n            require(digest == entry[\"sha256\"], \"image_file_hash_mismatch:\" + entry[\"image_path\"])\n            actual.append({**entry, \"bytes\": len(data)})\n        report[\"verified_file_count\"] = len(actual)\n        report[\"verified_files\"] = actual\n        report[\"expected_manifest_sha256\"] = MANIFEST_SHA\n        origins = {}\n        def checked_import(name, expected):\n            module = importlib.import_module(name)\n            path = Path(module.__file__).resolve()\n            require(str(path) == expected, \"unexpected_module_origin:\" + name)\n            origins[name] = str(path)\n            return module\n        stage = \"orchestrator_imports_and_freezer_contract\"\n        db = checked_import(\"experiment_orchestrator.database\", \"/app/experiment_orchestrator/database.py\")\n        contracts = checked_import(\"experiment_orchestrator.contracts\", \"/app/experiment_orchestrator/contracts.py\")\n        actual_freezer = db.ROLE_FUNCTIONS[contracts.OrchestratorMode.FREEZER]\n        require(actual_freezer == EXPECTED_FREEZER, \"freezer_six_function_contract_mismatch\")\n        report[\"freezer_function_count\"] = len(actual_freezer)\n        report[\"freezer_functions\"] = list(actual_freezer)\n        stage = \"readiness_imports_and_typed_hold\"\n        collector = checked_import(\"scripts.experiment_v2_proof_packet\", \"/app/scripts/experiment_v2_proof_packet.py\")\n        guard = checked_import(\"scripts.experiment_v2_readiness_guard\", \"/app/scripts/experiment_v2_readiness_guard.py\")\n        wetting = checked_import(\"scripts.experiment_v2_wetting_disposition\", \"/app/scripts/experiment_v2_wetting_disposition.py\")\n        require(collector.wetting is wetting and guard.wetting is wetting, \"collector_guard_wetting_binding_mismatch\")\n        synthetic_id = \"ead8190c-df63-45a7-9570-8e23df0cdb26\"\n        root = Path(\"/app/readiness-source\")\n        collected = wetting.collect(root, application_source=SOURCE, experiment_id=synthetic_id)\n        missing = wetting.blockers(collected, root=root, application_source=SOURCE, experiment_id=synthetic_id, now=datetime.now(UTC))\n        expected_missing = {\"wetting_incident_778_disposition:missing:\" + criterion for criterion in (\"firmware_binary_lineage\", \"safe_fog_admission_and_rails\", \"physical_equipment_qualification\", \"counter_scope_and_reset_boundaries\")}\n        require(len(missing) == 4 and set(missing) == expected_missing, \"wetting_exact_four_missing_contract_mismatch\")\n        require(all(value is None for value in collected[\"criterion_evidence\"].values()), \"unexpected_physical_evidence\")\n        require(collected[\"application_source_revision\"] == SOURCE and collected[\"experiment_id\"] == synthetic_id, \"wetting_image_only_identity_mismatch\")\n        report[\"synthetic_image_only_experiment_id\"] = synthetic_id\n        report[\"wetting_manifest_sha256\"] = collected[\"manifest_sha256\"]\n        report[\"wetting_blockers\"] = sorted(missing)\n        report[\"physical_credit\"] = False\n        # Every imported product package/submodule must resolve inside the image.\n        for name, module in list(sys.modules.items()):\n            if name.split(\".\")[0] in {\"verdify_schemas\", \"experiment_orchestrator\", \"scripts\"}:\n                origin = getattr(module, \"__file__\", None)\n                if origin:\n                    require(Path(origin).resolve().is_relative_to(Path(\"/app\")), \"checkout_shadow_module:\" + name)\n                else:\n                    for item in getattr(module, \"__path__\", []):\n                        require(Path(item).resolve().is_relative_to(Path(\"/app\")), \"checkout_shadow_namespace:\" + name)\n        require(not any(name == \"ingestor\" or name.startswith(\"ingestor.\") or name == \"tasks\" or name.startswith(\"tasks.\") for name in sys.modules), \"ingestor_worker_runtime_imported\")\n        report[\"module_origins\"] = origins\n        report[\"loader_metadata_calls\"] = loader_metadata_calls\n        report[\"observed_source_revision\"] = os.environ[\"VERDIFY_GIT_SHA\"]\n        report[\"status\"] = \"IMAGE_PACKAGING_CONTRACT_PASSED\"\n        report[\"readiness_qualification\"] = False\n        os.chdir(\"/tmp\")\nexcept Exception as error:\n    report[\"failed_stage\"] = stage\n    report[\"error_type\"] = type(error).__name__\n    # Do not expose arbitrary exception messages or environment values.\n    if isinstance(error, CheckFailure):\n        report[\"reason_code\"] = str(error)\n    else:\n        report[\"reason_code\"] = \"image_read_or_import_failed\"\nfinally:\n    signal.alarm(0)\n    report[\"finished_at\"] = datetime.now(UTC).isoformat()\n    print(json.dumps(report, sort_keys=True, separators=(\",\", \":\")))\nsys.exit(0 if report[\"status\"] == \"IMAGE_PACKAGING_CONTRACT_PASSED\" else 1)\nVERDIFY_IMAGE_ONLY_PY\n",
+  "bounds": {
+    "python_internal_deadline_seconds": 20,
+    "one_attempt": true,
+    "max_expected_stdout_bytes": 32768,
+    "DB_HTTP_device_Slack_calls": false,
+    "allowed_subprocess": null,
+    "credentials_or_secret_mounts": false,
+    "full_readiness_or_runtime_qualification": false
+  },
+  "outer_receipt_requirements": [
+    "Exact immutable image digest plus Pod observed imageID; do not infer identity from printed source.",
+    "Actual Workflow/Pod UID, supported template and source command SHA; one terminal main exit0 and no restarts.",
+    "Full untruncated main log and hashes, successful exact JSON status, observed runtimeUID1001, verified /app origins and source manifest.",
+    "No Secret env/volume or service-account credentials required; ROOT admits supported path, capacity and finite deadlines.",
+    "No accepted readiness, physical, full-role integration, device-worker startup, runtime deployment or promotion claim."
+  ]
+}

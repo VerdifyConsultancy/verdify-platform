@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-18T08:52:21.294310+00:00",
+  "comparison": {
+    "comparedTo": {
+      "destination": {
+        "namespace": "verdify-prod",
+        "server": "https://kubernetes.default.svc"
+      },
+      "ignoreDifferences": [
+        {
+          "group": "apps",
+          "jsonPointers": [
+            "/spec/volumeClaimTemplates/0/spec/volumeMode",
+            "/spec/volumeClaimTemplates/0/status"
+          ],
+          "kind": "StatefulSet",
+          "name": "verdify-db",
+          "namespace": "verdify-prod"
+        },
+        {
+          "jsonPointers": [
+            "/spec/volumeMode",
+            "/spec/volumeName"
+          ],
+          "kind": "PersistentVolumeClaim",
+          "name": "verdify-lab-site-cache",
+          "namespace": "verdify-prod"
+        },
+        {
+          "jsonPointers": [
+            "/spec/volumeMode",
+            "/spec/volumeName"
+          ],
+          "kind": "PersistentVolumeClaim",
+          "name": "verdify-hermes-iris-data-portable-20260801",
+          "namespace": "verdify-prod"
+        }
+      ],
+      "source": {
+        "path": "deploy/k8s/overlays/prod",
+        "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "targetRevision": "main"
+      }
+    },
+    "revision": "93b101b20ed70bcc9a84d14ff7c2364628e291b2",
+    "status": "Synced"
+  },
+  "health": {
+    "lastTransitionTime": "2026-10-18T07:45:12Z",
+    "status": "Healthy"
+  },
+  "last_operation_revision": "55285aafc96855419ba5e50ab11475cb71a60a0f",
+  "last_operation_finished_at": "2026-10-18T02:47:03Z",
+  "ingestor_replicas": 1,
+  "ingestor_ready_replicas": 1,
+  "ingestor_strategy": "Recreate",
+  "production_sync_this_execution": false
+}

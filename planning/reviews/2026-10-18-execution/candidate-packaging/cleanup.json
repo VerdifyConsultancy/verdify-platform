@@ -1,0 +1,12 @@
+{
+  "schema": "verdify-candidate-packaging-cleanup-v1",
+  "at": "2026-10-18T08:46:56.692977+00:00",
+  "workflow": "verdify-ready-orchestrator-package-db896-01",
+  "workflow_uid": "2f234349-1f7e-4735-8c18-996b1b801f1d",
+  "workflow_count": 1,
+  "terminal_pods": 4,
+  "UID_fenced_delete": true,
+  "full_outputs_verified_and_retained_before_cleanup": true,
+  "all_absent_after": true,
+  "shared_CI_and_database_credentials_PVCs_unchanged": true
+}

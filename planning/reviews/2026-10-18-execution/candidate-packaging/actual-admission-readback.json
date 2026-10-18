@@ -1,0 +1,13 @@
+{
+  "schema": "verdify-image-admission-actual-mount-readback-v1",
+  "at": "2026-10-18T08:41:29.143155+00:00",
+  "pod": "verdify-ready-orchestrator-package-db896-01-run-check-2882773752",
+  "uid": "7500686b-e813-46aa-b1fb-5fb1c188c5b3",
+  "service_account": "argo-ci-workflow",
+  "actual_check_uid": 1001,
+  "projected_CI_service_account_token_mounted": true,
+  "application_secret_volumes_mounted": false,
+  "token_data_read_by_operator": false,
+  "initial_admission_statement_corrected": "The initial assumption of no service-account-token mount was incorrect: Kubernetes projects the existing CI identity by default. No identity, RBAC or security setting was created or changed; this uses the unchanged supported template. The reviewed command clears inherited env, uses no CI API and denies external operations. This is image packaging, not actual application-role authentication.",
+  "application_DB_HTTP_device_Slack_operations": false
+}

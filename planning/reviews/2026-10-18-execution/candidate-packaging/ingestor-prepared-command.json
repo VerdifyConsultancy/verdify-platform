@@ -1,0 +1,247 @@
+{
+  "schema": "verdify.candidate-image-packaging-command/v1",
+  "check": "ingestor",
+  "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "image_digest": null,
+  "image_binding": "ROOT must bind exact immutable digest from successful main workflow verdify-platform-ci-nm8ph before admission; no tag or checkout substitution.",
+  "supported_check_uid": 1001,
+  "image_default_uid": 1000,
+  "identity_limit": "This is packaging readability under supported check UID1001, not application runtime identity or actual LOGIN. Ingestor0600/UID1000 permission refusal is not by itself an application defect.",
+  "source_manifest_sha256": "eae40f9ce0ceb2ea95e93533db4fb9f653027a4c4e9199b78660694eff65265c",
+  "expected_files": [
+    {
+      "source_path": "firmware/greenhouse/controls.yaml",
+      "image_path": "/app/firmware/greenhouse/controls.yaml",
+      "sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e"
+    },
+    {
+      "source_path": "firmware/lib/greenhouse_solar.h",
+      "image_path": "/app/firmware/lib/greenhouse_solar.h",
+      "sha256": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e"
+    },
+    {
+      "source_path": "ingestor/tasks/c1_capture.py",
+      "image_path": "/app/ingestor/tasks/c1_capture.py",
+      "sha256": "ef3e35ab12329c1ed998e735f608ac3254fbd4c12ded42d1ae3836b9030564d6"
+    },
+    {
+      "source_path": "ingestor/tasks/component_experiment.py",
+      "image_path": "/app/ingestor/tasks/component_experiment.py",
+      "sha256": "0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67"
+    },
+    {
+      "source_path": "verdify_schemas/__init__.py",
+      "image_path": "/app/verdify_schemas/__init__.py",
+      "sha256": "e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa"
+    },
+    {
+      "source_path": "verdify_schemas/alerts.py",
+      "image_path": "/app/verdify_schemas/alerts.py",
+      "sha256": "cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985"
+    },
+    {
+      "source_path": "verdify_schemas/api.py",
+      "image_path": "/app/verdify_schemas/api.py",
+      "sha256": "f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557"
+    },
+    {
+      "source_path": "verdify_schemas/c1_grid_projection.py",
+      "image_path": "/app/verdify_schemas/c1_grid_projection.py",
+      "sha256": "5fb349473f5bc10cc4be0401eaa328feea3d53156ad662a56d7b064d1d538a17"
+    },
+    {
+      "source_path": "verdify_schemas/catalog.py",
+      "image_path": "/app/verdify_schemas/catalog.py",
+      "sha256": "39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803"
+    },
+    {
+      "source_path": "verdify_schemas/climate_intent.py",
+      "image_path": "/app/verdify_schemas/climate_intent.py",
+      "sha256": "ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7"
+    },
+    {
+      "source_path": "verdify_schemas/component_executor.py",
+      "image_path": "/app/verdify_schemas/component_executor.py",
+      "sha256": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575"
+    },
+    {
+      "source_path": "verdify_schemas/component_qualification.py",
+      "image_path": "/app/verdify_schemas/component_qualification.py",
+      "sha256": "31edae4180028353e2a23b64acd30e6e5c97a13179c27aecf0a81e2b1ea9e15a"
+    },
+    {
+      "source_path": "verdify_schemas/control_band_wire.py",
+      "image_path": "/app/verdify_schemas/control_band_wire.py",
+      "sha256": "15d5c015f74de6688eb769dbed1163dc09b8a13b8883c22aa2324d837dbfda00"
+    },
+    {
+      "source_path": "verdify_schemas/crop_profiles.py",
+      "image_path": "/app/verdify_schemas/crop_profiles.py",
+      "sha256": "f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce"
+    },
+    {
+      "source_path": "verdify_schemas/crops.py",
+      "image_path": "/app/verdify_schemas/crops.py",
+      "sha256": "6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099"
+    },
+    {
+      "source_path": "verdify_schemas/daily.py",
+      "image_path": "/app/verdify_schemas/daily.py",
+      "sha256": "1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3"
+    },
+    {
+      "source_path": "verdify_schemas/experiment_config.py",
+      "image_path": "/app/verdify_schemas/experiment_config.py",
+      "sha256": "92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7"
+    },
+    {
+      "source_path": "verdify_schemas/experiment_regimes.py",
+      "image_path": "/app/verdify_schemas/experiment_regimes.py",
+      "sha256": "fd147e838dc0f1f593eb94035ed62362accbf0adbbf6a073d13502b22060e038"
+    },
+    {
+      "source_path": "verdify_schemas/external.py",
+      "image_path": "/app/verdify_schemas/external.py",
+      "sha256": "dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c"
+    },
+    {
+      "source_path": "verdify_schemas/fixed_panel_native.py",
+      "image_path": "/app/verdify_schemas/fixed_panel_native.py",
+      "sha256": "c3f8d2ac4509b377ca064e80dfaa62d4fe18ce43f60c4cd7c89e7fb1da18fe14"
+    },
+    {
+      "source_path": "verdify_schemas/fixed_panel_native_route.py",
+      "image_path": "/app/verdify_schemas/fixed_panel_native_route.py",
+      "sha256": "6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed"
+    },
+    {
+      "source_path": "verdify_schemas/forecast.py",
+      "image_path": "/app/verdify_schemas/forecast.py",
+      "sha256": "bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d"
+    },
+    {
+      "source_path": "verdify_schemas/forecast_ops.py",
+      "image_path": "/app/verdify_schemas/forecast_ops.py",
+      "sha256": "232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2"
+    },
+    {
+      "source_path": "verdify_schemas/lessons.py",
+      "image_path": "/app/verdify_schemas/lessons.py",
+      "sha256": "0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e"
+    },
+    {
+      "source_path": "verdify_schemas/mcp_responses.py",
+      "image_path": "/app/verdify_schemas/mcp_responses.py",
+      "sha256": "97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1"
+    },
+    {
+      "source_path": "verdify_schemas/media.py",
+      "image_path": "/app/verdify_schemas/media.py",
+      "sha256": "be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b"
+    },
+    {
+      "source_path": "verdify_schemas/observed_minute_reader.py",
+      "image_path": "/app/verdify_schemas/observed_minute_reader.py",
+      "sha256": "6f644f968455feec2082cbd5246ef72be97b8c15a96966d70fbf4617f82125e8"
+    },
+    {
+      "source_path": "verdify_schemas/observed_minutes.py",
+      "image_path": "/app/verdify_schemas/observed_minutes.py",
+      "sha256": "a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8"
+    },
+    {
+      "source_path": "verdify_schemas/operations.py",
+      "image_path": "/app/verdify_schemas/operations.py",
+      "sha256": "002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327"
+    },
+    {
+      "source_path": "verdify_schemas/physical_crop_band.py",
+      "image_path": "/app/verdify_schemas/physical_crop_band.py",
+      "sha256": "e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2"
+    },
+    {
+      "source_path": "verdify_schemas/plan.py",
+      "image_path": "/app/verdify_schemas/plan.py",
+      "sha256": "bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1"
+    },
+    {
+      "source_path": "verdify_schemas/policy_transport.py",
+      "image_path": "/app/verdify_schemas/policy_transport.py",
+      "sha256": "85eefea689d20db483ae3741fa098056080b722b007219e6371b35757c83d454"
+    },
+    {
+      "source_path": "verdify_schemas/policy_vector.py",
+      "image_path": "/app/verdify_schemas/policy_vector.py",
+      "sha256": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c"
+    },
+    {
+      "source_path": "verdify_schemas/route_only_crop_band_reader.py",
+      "image_path": "/app/verdify_schemas/route_only_crop_band_reader.py",
+      "sha256": "eca3a9a27fe5014d1493fa4eb1d543d8ba864949bafa5c8b53c9d779d44f30e3"
+    },
+    {
+      "source_path": "verdify_schemas/setpoint.py",
+      "image_path": "/app/verdify_schemas/setpoint.py",
+      "sha256": "9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0"
+    },
+    {
+      "source_path": "verdify_schemas/slack_ops.py",
+      "image_path": "/app/verdify_schemas/slack_ops.py",
+      "sha256": "39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a"
+    },
+    {
+      "source_path": "verdify_schemas/system_infra.py",
+      "image_path": "/app/verdify_schemas/system_infra.py",
+      "sha256": "4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778"
+    },
+    {
+      "source_path": "verdify_schemas/telemetry.py",
+      "image_path": "/app/verdify_schemas/telemetry.py",
+      "sha256": "107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816"
+    },
+    {
+      "source_path": "verdify_schemas/topology.py",
+      "image_path": "/app/verdify_schemas/topology.py",
+      "sha256": "3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1"
+    },
+    {
+      "source_path": "verdify_schemas/tunable_registry.py",
+      "image_path": "/app/verdify_schemas/tunable_registry.py",
+      "sha256": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+    },
+    {
+      "source_path": "verdify_schemas/tunables.py",
+      "image_path": "/app/verdify_schemas/tunables.py",
+      "sha256": "ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3"
+    },
+    {
+      "source_path": "verdify_schemas/vault.py",
+      "image_path": "/app/verdify_schemas/vault.py",
+      "sha256": "d0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9"
+    },
+    {
+      "source_path": "verdify_schemas/views.py",
+      "image_path": "/app/verdify_schemas/views.py",
+      "sha256": "d7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753"
+    }
+  ],
+  "command_sha256": "506a78d3247bf7037e0ff9a60e736fa75b9770335b07b22b783e25c74f40f6fc",
+  "python_sha256": "b14b6eda5159a6d5e002c1fb5af419fdf5c70a350979dd2d129c605459c0fc52",
+  "command": "set -eu\ncd /tmp\nexec env -i PATH=/usr/local/bin:/usr/bin:/bin PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 VERDIFY_GIT_SHA=\"${VERDIFY_GIT_SHA:?image build revision is required}\" /usr/local/bin/python -P - <<'VERDIFY_IMAGE_ONLY_PY'\nSOURCE = 'db896d0fb2856d5caccb269185597d197e0f459d'\nCHECK = 'ingestor'\nDEFAULT_UID = 1000\nFILES = [{'source_path': 'firmware/greenhouse/controls.yaml', 'image_path': '/app/firmware/greenhouse/controls.yaml', 'sha256': '7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e'}, {'source_path': 'firmware/lib/greenhouse_solar.h', 'image_path': '/app/firmware/lib/greenhouse_solar.h', 'sha256': 'dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e'}, {'source_path': 'ingestor/tasks/c1_capture.py', 'image_path': '/app/ingestor/tasks/c1_capture.py', 'sha256': 'ef3e35ab12329c1ed998e735f608ac3254fbd4c12ded42d1ae3836b9030564d6'}, {'source_path': 'ingestor/tasks/component_experiment.py', 'image_path': '/app/ingestor/tasks/component_experiment.py', 'sha256': '0ba85c44f0341093f8fa0adc32588eb18bf1bed91189accd49aba9134398fa67'}, {'source_path': 'verdify_schemas/__init__.py', 'image_path': '/app/verdify_schemas/__init__.py', 'sha256': 'e6efd10e52f9fbf0cc5add9efc3554697592f7243cfa773bb07e2b7c2bca1baa'}, {'source_path': 'verdify_schemas/alerts.py', 'image_path': '/app/verdify_schemas/alerts.py', 'sha256': 'cf734dc46df78e137b60d454f2b148ce9204a7bf029b70192bc309fe3cc1f985'}, {'source_path': 'verdify_schemas/api.py', 'image_path': '/app/verdify_schemas/api.py', 'sha256': 'f91adaac48d5fae398b9d8fae506d012c01673c72c4c1c632846f0c8194bb557'}, {'source_path': 'verdify_schemas/c1_grid_projection.py', 'image_path': '/app/verdify_schemas/c1_grid_projection.py', 'sha256': '5fb349473f5bc10cc4be0401eaa328feea3d53156ad662a56d7b064d1d538a17'}, {'source_path': 'verdify_schemas/catalog.py', 'image_path': '/app/verdify_schemas/catalog.py', 'sha256': '39899e9d47b8cffde00bc0785a5cfafab0fe2039bb8802ae3d933cf3507f3803'}, {'source_path': 'verdify_schemas/climate_intent.py', 'image_path': '/app/verdify_schemas/climate_intent.py', 'sha256': 'ca2ea99bba43e3b2666e4a3a30432e3a833c9f83caab77a78d1ddb20534942f7'}, {'source_path': 'verdify_schemas/component_executor.py', 'image_path': '/app/verdify_schemas/component_executor.py', 'sha256': 'f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575'}, {'source_path': 'verdify_schemas/component_qualification.py', 'image_path': '/app/verdify_schemas/component_qualification.py', 'sha256': '31edae4180028353e2a23b64acd30e6e5c97a13179c27aecf0a81e2b1ea9e15a'}, {'source_path': 'verdify_schemas/control_band_wire.py', 'image_path': '/app/verdify_schemas/control_band_wire.py', 'sha256': '15d5c015f74de6688eb769dbed1163dc09b8a13b8883c22aa2324d837dbfda00'}, {'source_path': 'verdify_schemas/crop_profiles.py', 'image_path': '/app/verdify_schemas/crop_profiles.py', 'sha256': 'f8c007b8f4f88a8f04a08ea6f684db3cc68720b21bb858d7ccd18ec0170837ce'}, {'source_path': 'verdify_schemas/crops.py', 'image_path': '/app/verdify_schemas/crops.py', 'sha256': '6ac38e46e41cc5b826ab5402a81aba0e5bf8054ae3d9c815a6ed50b5f7b64099'}, {'source_path': 'verdify_schemas/daily.py', 'image_path': '/app/verdify_schemas/daily.py', 'sha256': '1fe1071db33ea9fd7e05ea3a3968be6f0951920e3a3b469ebaa252216a4cdcb3'}, {'source_path': 'verdify_schemas/experiment_config.py', 'image_path': '/app/verdify_schemas/experiment_config.py', 'sha256': '92d1b002f3b895d8b0fc88600ce05f611b3c759ad99e5e97828b35dc48ae24c7'}, {'source_path': 'verdify_schemas/experiment_regimes.py', 'image_path': '/app/verdify_schemas/experiment_regimes.py', 'sha256': 'fd147e838dc0f1f593eb94035ed62362accbf0adbbf6a073d13502b22060e038'}, {'source_path': 'verdify_schemas/external.py', 'image_path': '/app/verdify_schemas/external.py', 'sha256': 'dbff4b0d92a8d25cbdb261462e08c5044729d510c8942612e24ca43b5ccb798c'}, {'source_path': 'verdify_schemas/fixed_panel_native.py', 'image_path': '/app/verdify_schemas/fixed_panel_native.py', 'sha256': 'c3f8d2ac4509b377ca064e80dfaa62d4fe18ce43f60c4cd7c89e7fb1da18fe14'}, {'source_path': 'verdify_schemas/fixed_panel_native_route.py', 'image_path': '/app/verdify_schemas/fixed_panel_native_route.py', 'sha256': '6dda4c01f62f057713cabda0fcf05cd371ba452dbe7eb03086dfd39bd3eb20ed'}, {'source_path': 'verdify_schemas/forecast.py', 'image_path': '/app/verdify_schemas/forecast.py', 'sha256': 'bbbf749c38403f677bcaa6e7b42b3e59a4e8bb2f4dc9e79964aad867b4f7e82d'}, {'source_path': 'verdify_schemas/forecast_ops.py', 'image_path': '/app/verdify_schemas/forecast_ops.py', 'sha256': '232e10738e02c822cdeed465999d9e5f791424bfb130963f19b15c4b55968db2'}, {'source_path': 'verdify_schemas/lessons.py', 'image_path': '/app/verdify_schemas/lessons.py', 'sha256': '0793b831d0a89c31d027910230c1a5b10c8292275e0393352d5a3c07db2b499e'}, {'source_path': 'verdify_schemas/mcp_responses.py', 'image_path': '/app/verdify_schemas/mcp_responses.py', 'sha256': '97c689404adeaabecd12dbd8a7b9ae7b4d7f53192ce4f596622e7dd8f755ddf1'}, {'source_path': 'verdify_schemas/media.py', 'image_path': '/app/verdify_schemas/media.py', 'sha256': 'be424921ea90d7631b7c357b4aec17f8cdbcbd7c375c3091d33443d03cbd5c1b'}, {'source_path': 'verdify_schemas/observed_minute_reader.py', 'image_path': '/app/verdify_schemas/observed_minute_reader.py', 'sha256': '6f644f968455feec2082cbd5246ef72be97b8c15a96966d70fbf4617f82125e8'}, {'source_path': 'verdify_schemas/observed_minutes.py', 'image_path': '/app/verdify_schemas/observed_minutes.py', 'sha256': 'a6f19d47d6855dbae9a0956c41d43f64c85b3c6094b48f34aef055795b6507b8'}, {'source_path': 'verdify_schemas/operations.py', 'image_path': '/app/verdify_schemas/operations.py', 'sha256': '002e912ccfb40f68e19cf3fc7e130adba40c54efc813fd5ab2f1dc373f7f3327'}, {'source_path': 'verdify_schemas/physical_crop_band.py', 'image_path': '/app/verdify_schemas/physical_crop_band.py', 'sha256': 'e5a98d7f7e610f70b5b069de89cd5c9c9f79b9547607da474697e6890510c9f2'}, {'source_path': 'verdify_schemas/plan.py', 'image_path': '/app/verdify_schemas/plan.py', 'sha256': 'bba1ce136c919935fdf3d7a53d1123203416d9cb898fb46ce66fe42d1ee91ea1'}, {'source_path': 'verdify_schemas/policy_transport.py', 'image_path': '/app/verdify_schemas/policy_transport.py', 'sha256': '85eefea689d20db483ae3741fa098056080b722b007219e6371b35757c83d454'}, {'source_path': 'verdify_schemas/policy_vector.py', 'image_path': '/app/verdify_schemas/policy_vector.py', 'sha256': '2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c'}, {'source_path': 'verdify_schemas/route_only_crop_band_reader.py', 'image_path': '/app/verdify_schemas/route_only_crop_band_reader.py', 'sha256': 'eca3a9a27fe5014d1493fa4eb1d543d8ba864949bafa5c8b53c9d779d44f30e3'}, {'source_path': 'verdify_schemas/setpoint.py', 'image_path': '/app/verdify_schemas/setpoint.py', 'sha256': '9eafb59bc1918065973acc43c479a01d495b72bdb3da1e22e5fdea90c0ab1af0'}, {'source_path': 'verdify_schemas/slack_ops.py', 'image_path': '/app/verdify_schemas/slack_ops.py', 'sha256': '39e29146baa44358ad86d27b8f64d6581dc549d9d6f6c3953778b1d1e904427a'}, {'source_path': 'verdify_schemas/system_infra.py', 'image_path': '/app/verdify_schemas/system_infra.py', 'sha256': '4a5b34f52246275cbd77743394fdc25d0bb771663a332016ab8c2dee7ea26778'}, {'source_path': 'verdify_schemas/telemetry.py', 'image_path': '/app/verdify_schemas/telemetry.py', 'sha256': '107ad071f482d09c5884879ce2701e68d7d17924d574c8c86664435441ee3816'}, {'source_path': 'verdify_schemas/topology.py', 'image_path': '/app/verdify_schemas/topology.py', 'sha256': '3ef3415a1a57b458aac35a7ca189e17f88faac224341ef4f13d41ae0a83d4df1'}, {'source_path': 'verdify_schemas/tunable_registry.py', 'image_path': '/app/verdify_schemas/tunable_registry.py', 'sha256': '0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf'}, {'source_path': 'verdify_schemas/tunables.py', 'image_path': '/app/verdify_schemas/tunables.py', 'sha256': 'ff88281a80449d678759fce96744b7a25f3f9ed5af4bfa569e64f8d029c67ad3'}, {'source_path': 'verdify_schemas/vault.py', 'image_path': '/app/verdify_schemas/vault.py', 'sha256': 'd0639d47ea9aa043ef810b7b4a559bc4480801f244486c90bfc5431214d2a4d9'}, {'source_path': 'verdify_schemas/views.py', 'image_path': '/app/verdify_schemas/views.py', 'sha256': 'd7a813e319cff059cc6650fcaa7e24c9cfd4fa09940bebe20da23e53a2c86753'}]\nMANIFEST_SHA = 'eae40f9ce0ceb2ea95e93533db4fb9f653027a4c4e9199b78660694eff65265c'\nimport sys, os, json, hashlib, importlib, tempfile, signal\nfrom pathlib import Path\nfrom datetime import UTC, datetime\n\ndef require(condition, code):\n    if not condition:\n        raise CheckFailure(code)\n\nclass CheckFailure(Exception):\n    pass\n\nloader_metadata_calls = []\ndef deny_external(event, args):\n    if event == \"subprocess.Popen\":\n        # CPython ctypes.util.find_library reads the Linux linker cache.\n        # Permit only that bounded metadata command, never a service/worker.\n        executable, argv, cwd, environment = args\n        if CHECK == \"ingestor\" and executable == \"/sbin/ldconfig\" and argv == [\"/sbin/ldconfig\", \"-p\"] and cwd is None and not loader_metadata_calls:\n            loader_metadata_calls.append(\"/sbin/ldconfig -p\")\n            return\n        raise CheckFailure(\"external_operation_attempted:\" + event)\n    if event in {\"socket.connect\", \"socket.connect_ex\", \"socket.bind\", \"socket.getaddrinfo\", \"socket.sendto\", \"os.system\", \"os.posix_spawn\", \"os.posix_spawnp\"} or event.startswith(\"os.exec\"):\n        raise CheckFailure(\"external_operation_attempted:\" + event)\n\nsys.addaudithook(deny_external)\ndef deadline(signum, frame):\n    raise CheckFailure(\"internal_20_second_deadline\")\nsignal.signal(signal.SIGALRM, deadline)\nsignal.alarm(20)\nreport = {\"schema\": \"verdify.candidate-image-packaging-check/v1\", \"status\": \"FAILED\", \"check\": CHECK, \"expected_source_revision\": SOURCE, \"runtime_uid\": os.getuid(), \"runtime_gid\": os.getgid(), \"image_default_uid\": DEFAULT_UID, \"scope\": \"secretless_image_packaging_only\", \"started_at\": datetime.now(UTC).isoformat(), \"physical_qualification\": False, \"actual_role_login_qualification\": False, \"deployment_qualification\": False}\nstage = \"empty_cwd_and_image_source\"\ntry:\n    require(os.environ.get(\"VERDIFY_GIT_SHA\") == SOURCE, \"image_git_sha_mismatch\")\n    require(os.environ.get(\"PYTHONPATH\") == \"/app\", \"unexpected_pythonpath\")\n    require(not any(p == \"\" or (p and not (p == \"/app\" or p.startswith(\"/usr/local/lib/\"))) for p in sys.path), \"unexpected_import_search_path\")\n    with tempfile.TemporaryDirectory(prefix=\"verdify-image-only-\", dir=\"/tmp\") as isolated:\n        os.chdir(isolated)\n        require(not list(Path.cwd().iterdir()), \"working_directory_not_empty\")\n        report[\"empty_working_directory\"] = isolated\n        actual = []\n        for entry in FILES:\n            path = Path(entry[\"image_path\"])\n            require(path.resolve() == path and path.is_file(), \"image_path_missing_or_symlink:\" + entry[\"image_path\"])\n            data = path.read_bytes()\n            digest = hashlib.sha256(data).hexdigest()\n            require(digest == entry[\"sha256\"], \"image_file_hash_mismatch:\" + entry[\"image_path\"])\n            actual.append({**entry, \"bytes\": len(data)})\n        report[\"verified_file_count\"] = len(actual)\n        report[\"verified_files\"] = actual\n        report[\"expected_manifest_sha256\"] = MANIFEST_SHA\n        origins = {}\n        def checked_import(name, expected):\n            module = importlib.import_module(name)\n            path = Path(module.__file__).resolve()\n            require(str(path) == expected, \"unexpected_module_origin:\" + name)\n            origins[name] = str(path)\n            return module\n        stage = \"served_wire_import_and_algorithm_revision\"\n        wire = checked_import(\"verdify_schemas.control_band_wire\", \"/app/verdify_schemas/control_band_wire.py\")\n        revision = wire.algorithm_revision()\n        require(revision == \"served-band-wire-v1:sha256:568ed4c2c1c1a5f65f738f09bce473cce74ed17e3eb01e6f838102679e2db36a\", \"served_wire_revision_mismatch\")\n        report[\"algorithm_revision\"] = revision\n        # Every imported product package/submodule must resolve inside the image.\n        for name, module in list(sys.modules.items()):\n            if name.split(\".\")[0] in {\"verdify_schemas\", \"experiment_orchestrator\", \"scripts\"}:\n                origin = getattr(module, \"__file__\", None)\n                if origin:\n                    require(Path(origin).resolve().is_relative_to(Path(\"/app\")), \"checkout_shadow_module:\" + name)\n                else:\n                    for item in getattr(module, \"__path__\", []):\n                        require(Path(item).resolve().is_relative_to(Path(\"/app\")), \"checkout_shadow_namespace:\" + name)\n        require(not any(name == \"ingestor\" or name.startswith(\"ingestor.\") or name == \"tasks\" or name.startswith(\"tasks.\") for name in sys.modules), \"ingestor_worker_runtime_imported\")\n        report[\"module_origins\"] = origins\n        report[\"loader_metadata_calls\"] = loader_metadata_calls\n        report[\"observed_source_revision\"] = os.environ[\"VERDIFY_GIT_SHA\"]\n        report[\"status\"] = \"IMAGE_PACKAGING_CONTRACT_PASSED\"\n        report[\"readiness_qualification\"] = False\n        os.chdir(\"/tmp\")\nexcept Exception as error:\n    report[\"failed_stage\"] = stage\n    report[\"error_type\"] = type(error).__name__\n    # Do not expose arbitrary exception messages or environment values.\n    if isinstance(error, CheckFailure):\n        report[\"reason_code\"] = str(error)\n    else:\n        report[\"reason_code\"] = \"image_read_or_import_failed\"\nfinally:\n    signal.alarm(0)\n    report[\"finished_at\"] = datetime.now(UTC).isoformat()\n    print(json.dumps(report, sort_keys=True, separators=(\",\", \":\")))\nsys.exit(0 if report[\"status\"] == \"IMAGE_PACKAGING_CONTRACT_PASSED\" else 1)\nVERDIFY_IMAGE_ONLY_PY\n",
+  "bounds": {
+    "python_internal_deadline_seconds": 20,
+    "one_attempt": true,
+    "max_expected_stdout_bytes": 32768,
+    "DB_HTTP_device_Slack_calls": false,
+    "allowed_subprocess": "/sbin/ldconfig -p once for standard ctypes library lookup only",
+    "credentials_or_secret_mounts": false,
+    "full_readiness_or_runtime_qualification": false
+  },
+  "outer_receipt_requirements": [
+    "Exact immutable image digest plus Pod observed imageID; do not infer identity from printed source.",
+    "Actual Workflow/Pod UID, supported template and source command SHA; one terminal main exit0 and no restarts.",
+    "Full untruncated main log and hashes, successful exact JSON status, observed runtimeUID1001, verified /app origins and source manifest.",
+    "No Secret env/volume or service-account credentials required; ROOT admits supported path, capacity and finite deadlines.",
+    "No accepted readiness, physical, full-role integration, device-worker startup, runtime deployment or promotion claim."
+  ]
+}

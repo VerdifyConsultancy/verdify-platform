@@ -1,0 +1,15 @@
+{
+  "schema": "verdify-ready-independent-custody-review-v1",
+  "at": "2026-10-18T08:27:57.441347+00:00",
+  "reviewed_commit": "f79ee387",
+  "manifest_sha256": "a9406139d7149ce5fec598315f4679d0e81d5b2314092f6487d4b0c0e1cc6d33",
+  "reviewer_lane": "triage_control",
+  "all7_public_capsule_records_match": true,
+  "all31_original_files_match_private_custody": true,
+  "gzip_and_tar_reconstruction_byte_exact": true,
+  "both_complete_native_logs_match_private_originals": true,
+  "all4_submissions_byte_exact": true,
+  "no_compiled_artifacts": true,
+  "historical_receipts_unchanged": true,
+  "corrected_pr_ci_limitation_honest": true
+}

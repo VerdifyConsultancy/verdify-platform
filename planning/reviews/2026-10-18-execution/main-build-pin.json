@@ -1,0 +1,75 @@
+{
+  "schema": "verdify-ready-main-build-pin-verification-v1",
+  "at": "2026-10-18T08:46:37.657062+00:00",
+  "source": "db896d0fb2856d5caccb269185597d197e0f459d",
+  "workflow": "verdify-platform-ci-nm8ph",
+  "workflow_uid": "3fb0872f-7a30-4092-8a81-c8921846d4fb",
+  "phase": "Succeeded",
+  "finished_at": "2026-10-18T08:43:37Z",
+  "selected_build_count": 6,
+  "all_selected_build_and_publish_steps_exit0": true,
+  "images": [
+    {
+      "step": "build-api",
+      "finished_at": "2026-10-18T08:31:09Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:289734f24b99507d890bf427dfe432a33769c577bd8ef82f4bfafb042e8d5189",
+      "digest": "sha256:289734f24b99507d890bf427dfe432a33769c577bd8ef82f4bfafb042e8d5189",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9"
+    },
+    {
+      "step": "build-mcp",
+      "finished_at": "2026-10-18T08:33:13Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:833826351f55cf48e1186ad859e0400c3e55e2892c7cc6becf8bc3bb8101fbe3",
+      "digest": "sha256:833826351f55cf48e1186ad859e0400c3e55e2892c7cc6becf8bc3bb8101fbe3",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:0fab57634ac98002857152bfb937eba86c0178e09658f8c5a03b12a71b1e2f2f"
+    },
+    {
+      "step": "build-ingestor",
+      "finished_at": "2026-10-18T08:35:29Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:531fcf0d7b7981ae9c7fe4b54a2749b1d9169d10a78be53bd1a219a13368a5c7",
+      "digest": "sha256:531fcf0d7b7981ae9c7fe4b54a2749b1d9169d10a78be53bd1a219a13368a5c7",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4"
+    },
+    {
+      "step": "build-orchestrator",
+      "finished_at": "2026-10-18T08:38:08Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:8636ac4e3346ff9c7752d7f1f3bcef976b8797a03d45762a7361734f32c9ecad",
+      "digest": "sha256:8636ac4e3346ff9c7752d7f1f3bcef976b8797a03d45762a7361734f32c9ecad",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:30a9d4b38b3969e09d13308da1901bae32ac6a8b6f6f60ae5d8eee7b249bcd0c"
+    },
+    {
+      "step": "build-setpoint-server",
+      "finished_at": "2026-10-18T08:39:49Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:f095446e796a3994c6adfaddb036f3e7b2492264ec5331905cb5edee2d847c11",
+      "digest": "sha256:f095446e796a3994c6adfaddb036f3e7b2492264ec5331905cb5edee2d847c11",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:ba81303f6aee14e874e231f13d6eae4988dc54ec08696faa340a9aca979a166b"
+    },
+    {
+      "step": "build-lab-publisher",
+      "finished_at": "2026-10-18T08:42:53Z",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:9cb20c4bd0878491cc8f33b725633d61c818e1c603565f7b5aba5fa5519aabd8",
+      "digest": "sha256:9cb20c4bd0878491cc8f33b725633d61c818e1c603565f7b5aba5fa5519aabd8",
+      "source_revision": "db896d0fb2856d5caccb269185597d197e0f459d",
+      "tree": "8beef98613821ea610061048385f3f46b6c2178f",
+      "dockerfile_sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670"
+    }
+  ],
+  "candidate_pin_commit": "93b101b20ed70bcc9a84d14ff7c2364628e291b2",
+  "only_pin_commit_path": "deploy/k8s/overlays/prod/kustomization.yaml",
+  "candidate_pin_count": 4,
+  "candidate_pins_match_actual_published_workflow_outputs": true,
+  "release_pins_unchanged": true,
+  "planner_and_migrate_not_selected_for_rebuild": true,
+  "production_promotion_or_sync": false,
+  "collector_note": "Initial bare image-name lookup stopped before acceptance; corrected reader preserves and verifies canonical fully qualified name/newName/digest entries without edits."
+}
