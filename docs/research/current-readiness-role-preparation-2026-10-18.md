@@ -64,9 +64,26 @@ contributors and continuity cannot be reconstructed from an old target draft.
 
 The freezer runtime omitted the already-granted migration-262
 `fn_freeze_fixed_panel_native_previous_day()` function from its exact-duty
-allowlist. Its own startup attestation therefore classified that legitimate
+allowlist. Its own startup attestation would classify that legitimate
 sixth SECURITY DEFINER grant as unexpected. The runtime now matches the existing
 bootstrap six-function contract. No grant or function invocation was added.
+
+ROOT's [07:45 UTC owner catalog diagnosis](evidence/783-role-route-diagnosis-2026-10-18/diagnosis.json)
+confirms the grant exists on the current clone: freezer LOGIN OID 16409 directly
+belongs to duty 16403 and has callback EXECUTE; the other four queried duty
+LOGINs do not. All five logins exist with `can_login=true`, direct non-admin
+membership and no elevated role attributes. The blinded-analyst role is group
+16399 with `can_login=false`; this does not identify an analyst LOGIN.
+
+The one-shot read-only query returned seven rows/1,908 bytes through the existing
+`postgres` owner session. Clone UID, primary Pod UID, three Ready instances and
+zero restarts were unchanged. It did not authenticate as any duty, inspect
+password presence, prove complete ACLs, invoke the callback or run stateful
+stages. No startup failure was observed; the startup consequence follows from
+the source attestation and this catalog fact. Existing lifecycle/executor clone
+LOGIN routes have separate earlier authentication evidence. Scheduler,
+randomizer, freezer and analyst routes still need their own actual identity and
+credential-route evidence; owner `SET ROLE` cannot supply it.
 
 Compose the source-bound admission packet with:
 
