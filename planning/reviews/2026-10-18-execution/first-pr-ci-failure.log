@@ -1,0 +1,365 @@
+time=2026-10-18T07:49:45.198Z level=INFO msg="waiting for signals" argo=true signalPath=/var/run/argo/ctr/main/signal
+
+[notice] A new release of pip is available: 26.1.2 -> 26.2.1
+[notice] To update, run: /workspace/repo/.venv/bin/python -m pip install --upgrade pip
+
+== ruff lint ==
+All checks passed!
+
+== ruff format ==
+596 files already formatted
+
+== schema suites (incl. drift guards + producer payload round-trips) ==
+........................................................................ [  9%]
+........................................................................ [ 18%]
+........................................................................ [ 28%]
+...........s...........sssssssssssssssssssssssssssssssssssssssssssssssss [ 37%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 47%]
+sssssssssssssssssss........................................s............ [ 56%]
+........................................................................ [ 66%]
+..................................sssssssssss........................... [ 75%]
+........................................................................ [ 85%]
+........................................................................ [ 94%]
+......ssss..................sssssssssss                                  [100%]
+
+== ClimateIntent controller contract audit ==
+climate_intent_fields=15
+climate_actions=11
+materialized_tier1=39
+runtime_shadow_surfaces=0
+single_path_policy_files=8
+OK
+
+== confirmed-component v2 selector/randomization/design contracts ==
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+.........................................                                [100%]
+/workspace/repo/research/planner-efficacy/baseline/planner-switchback-v2-profiles.json
+/workspace/repo/research/planner-efficacy/protocols/planner-switchback-v2-power.json
+/workspace/repo/research/planner-efficacy/protocols/blinded-schedule-v2.golden.json
+/workspace/repo/research/planner-efficacy/protocols/analyzer-interface-v2.golden.json
+
+== device write gate ==
+..........................................ss...                          [100%]
+
+== pure-logic / contract tests ==
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [ 10%]
+s....................................................................... [ 12%]
+..................sss............................................s...... [ 14%]
+.......ss......................sssss.................................... [ 15%]
+........................................................................ [ 17%]
+..............................................................FFFFFFFFFF [ 19%]
+FFFFF................................................................... [ 21%]
+.........................F.FFF.......................................... [ 23%]
+........................................................................ [ 24%]
+............................................s....ssssssssssssssssss..... [ 26%]
+..........s.................................s........................... [ 28%]
+........s...............................................ssssssssssss.... [ 30%]
+.s......ssssss.sssss.....sssss.sss..........ssssssssssssssss..s......... [ 31%]
+.............sssssssssssss........................sssssssssssssssssss... [ 33%]
+...sssssssssssss..........................sss....................sssssss [ 35%]
+s.....ssssssssssssssssssss....ssss...................................... [ 37%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+sss..................................................................... [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+...........................s............................................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+..................................                                       [100%]
+=================================== FAILURES ===================================
+___ test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth ____
+tests/test_component_grid_capture.py:1079: in test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth
+    result = run(wire_artifact())
+                 ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[missing_anchor] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[stale_anchor] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[wrong_route] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[wrong_metadata] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[delivered_ulp] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[forged_expected] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[changed_policy] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[changed_firmware] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[missing_sql] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[caller_algorithm] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[stale_sample] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[arbitrary_sql] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[changed_48] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy[extended_authority] _
+tests/test_component_grid_capture.py:1111: in test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy
+    document = wire_artifact()
+               ^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_complete_source_v3_emission_keeps_ideal_sql_separate_and_is_tool_a_valid _
+tests/test_c1_native_capture.py:519: in test_complete_source_v3_emission_keeps_ideal_sql_separate_and_is_tool_a_valid
+    document = fixture["wire_artifact"]()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_component_grid_capture.py:1036: in wire_artifact
+    "algorithm_revision": algorithm_revision(),
+                          ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+______________ test_source_revision_bound_to_actual_owning_files _______________
+tests/test_control_band_wire.py:49: in test_source_revision_bound_to_actual_owning_files
+    assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
+           ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_source_revision_rejects_changed_owning_file[firmware/lib/greenhouse_solar.h] _
+tests/test_control_band_wire.py:63: in test_source_revision_rejects_changed_owning_file
+    assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
+           ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+_ test_source_revision_rejects_changed_owning_file[firmware/greenhouse/controls.yaml] _
+tests/test_control_band_wire.py:63: in test_source_revision_rejects_changed_owning_file
+    assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
+           ^^^^^^^^^^^^^^^^^^^^
+verdify_schemas/control_band_wire.py:99: in algorithm_revision
+    raise ValueError("served wire firmware source contract changed: " + name)
+E   ValueError: served wire firmware source contract changed: firmware/greenhouse/controls.yaml
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_14_shadow_mode.py:326: SHADOW_MODE_TEST_DSN is required for the real PostgreSQL backstop proof
+SKIPPED [3] tests/test_17_planner_health_surface.py:1572: PLANNER_FENCE_TEST_DSN is required for real two-connection fencing proof
+SKIPPED [1] tests/test_cnpg_s2_failover_client.py:134: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_current275_transition.py:121: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_current275_transition.py:167: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [5] tests/test_cnpg_solar_dryout_time_projection.py:15: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_restore_qualification.py:302: set CNPG_TEST_PG_BIN for disposable PostgreSQL identity proof
+SKIPPED [1] tests/test_cnpg_portable_witness_v3.py:78: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_portable_witness_v3.py:104: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_portable_witness_v3.py:129: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [7] tests/test_cnpg_portable_witness_v3.py:149: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [3] tests/test_cnpg_portable_witness_v3.py:181: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [4] tests/test_cnpg_portable_witness_v3.py:199: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_portable_witness_v3.py:221: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_boundary_default_acl.py:91: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_historical_chunk_source.py:226: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_source_grantor_continuation.py:95: set CNPG_TEST_PG_BIN for isolated native PG16 grantor proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:187: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:420: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [9] tests/test_cnpg_target_runtime_transition.py:434: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:487: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:572: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:705: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:719: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_target_runtime_transition.py:762: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_target_runtime_transition.py:811: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target_runtime_transition.py:830: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_target_runtime_transition.py:868: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_target_runtime_transition.py:925: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_retained_session_admission.py:77: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [3] tests/test_cnpg_retained_session_admission.py:141: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_retained_session_admission.py:173: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_retained_session_admission.py:213: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_retained_session_admission.py:246: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_retained_session_admission.py:265: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:87: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [7] tests/test_cnpg_target270_successor.py:114: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:147: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [7] tests/test_cnpg_target270_successor.py:201: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:264: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:405: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:434: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [11] tests/test_cnpg_target270_successor.py:454: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_target270_successor.py:635: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [13] tests/test_cnpg_physical_runtime_transition.py:76: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_physical_runtime_transition.py:178: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_physical_runtime_transition.py:203: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_physical_runtime_transition.py:228: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_physical_runtime_transition.py:250: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_physical_runtime_transition.py:314: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [4] tests/test_cnpg_physical_runtime_transition.py:330: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_physical_runtime_transition.py:357: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [6] tests/test_cnpg_physical_runtime_transition.py:381: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_physical_runtime_transition.py:690: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_physical_runtime_transition.py:754: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [4] tests/test_cnpg_public_count_time_clock.py:31: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [4] tests/test_cnpg_public_count_time_clock.py:63: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_cnpg_public_count_time_clock.py:123: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [6] tests/test_cnpg_public_count_time_clock.py:133: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [8] tests/test_cnpg_policy_twin_count_time.py:45: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [5] tests/test_cnpg_policy_twin_count_time.py:85: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_policy_twin_count_time.py:171: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [2] tests/test_cnpg_policy_twin_endpoints.py:15: set CNPG_TEST_PG_BIN for private socket native attester proof
+SKIPPED [1] tests/test_g5_dualwrite_validation.py:251: docker unavailable — disposable-DB G5 check test skipped
+SKIPPED [1] tests/test_g5_dualwrite_validation.py:257: docker unavailable — disposable-DB G5 check test skipped
+SKIPPED [1] tests/test_g5_dualwrite_validation.py:300: docker unavailable — disposable-DB G5 check test skipped
+SKIPPED [1] tests/test_public_output_guard.py:1314: could not import 'PIL.Image': No module named 'PIL'
+time=2026-10-18T08:00:57.583Z level=INFO msg="file signal handler exiting due to context cancellation" argo=true
+time=2026-10-18T08:00:57.583Z level=INFO msg="sub-process exited" argo=true error="exit status 1"
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/mode
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" src=/impact/receipt.json argo=true
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/api
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/mcp
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" src=/impact/ingestor argo=true
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" src=/impact/planner argo=true
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" src=/impact/migrate argo=true
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/orchestrator
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/setpoint-server
+time=2026-10-18T08:00:57.586Z level=INFO msg="no need to save parameter - on overlapping volume" argo=true src=/impact/lab-publisher
+Error: exit status 1
