@@ -87,7 +87,7 @@ def render(image: str) -> list[dict]:
             {
                 "configuration": {
                     "destinationPath": "s3://verdify-cnpg-rehearsal/postgresql",
-                    "endpointURL": "https://s3-hdd.vallery.net",
+                    "endpointURL": "https://s3.vallery.net",
                     "s3Credentials": {
                         "accessKeyId": {"name": SECRET, "key": "AWS_ACCESS_KEY_ID"},
                         "secretAccessKey": {"name": SECRET, "key": "AWS_SECRET_ACCESS_KEY"},

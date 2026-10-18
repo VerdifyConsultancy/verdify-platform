@@ -17,7 +17,7 @@ import boto3,os,json,hashlib,logging,sys
 logging.disable(logging.CRITICAL)
 try:
  expected=json.loads(os.environ['EXPECTED_ARCHIVE'])
- s=boto3.client('s3',endpoint_url='https://s3-hdd.vallery.net')
+ s=boto3.client('s3',endpoint_url='https://s3.vallery.net')
  bucket='verdify-cnpg-rehearsal';prefix='postgresql/verdify-cnpg-s2/'
  objects=[]
  for page in s.get_paginator('list_objects_v2').paginate(Bucket=bucket,Prefix=prefix):

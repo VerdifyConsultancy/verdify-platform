@@ -127,7 +127,8 @@ its own exact official-OpenAI endpoint/model/identity gate.
 same bucket under `lab-dev/*` so the auto-syncing dev publisher cannot overwrite
 the public prod tree. For the current S3-compatible endpoint, set
 `LAB_S3_BUCKET=verdify-platform`, `AWS_DEFAULT_REGION=garage`, and
-`LAB_S3_ENDPOINT_URL=https://s3-hdd.vallery.net` with the Verdify-scoped key.
+`LAB_S3_ENDPOINT_URL=https://s3.vallery.net` (the canonical Garage name under
+ADR-012; `s3-hdd` is its retiring alias) with the Verdify-scoped key.
 
 `verdify-grafana-secrets` is a prod-only, out-of-band prerequisite for the
 Grafana Deployment. Root must seal and deliver the two named keys before an
