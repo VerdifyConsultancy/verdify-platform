@@ -155,7 +155,7 @@
       "how": [
         "Maintain one current status-aware contract per issue with matching native dependencies and no parent-as-blocker loops.",
         "Preserve original S3 estimates as historical planning and the S3B 40-hour budget / 22\u201334h selected estimates plus at least 6h reserve. Record completed bounded packets separately from full issue acceptance and measured effort.",
-        "Reconcile P2/P4 completion, P3 timeout/MCP source correction and pending P1 native/PR integration. Reuse prior receipts; select further work only for demonstrated remaining source, runtime or authentic input gaps."
+        "Reuse completed P1 native/P2 admission/P4 custody packets and the retained P3 timeout/source correction. Finish existing PR/candidate delivery and select further work only for demonstrated remaining source, runtime or authentic input gaps."
       ],
       "acceptance": [
         "Each current open issue has a disposition, accountable role, next action and actual remaining acceptance.",
@@ -590,7 +590,7 @@
       "what": "Qualify the component executor, exclusivity and recovery behavior in containment",
       "why": "A valid actual LOGIN and source regression do not establish the active executor. The current grid/order contract intentionally blocks active prefixes; a real source-qualified route must precede remaining exposure, exclusivity and recovery acceptance.",
       "how": [
-        "Reuse completed P2 fragment-bound input/state refusal and remaining-consumer report. Run the prepared P1 actual fog/vent scenario through the admitted native path and retain all positive/causal-negative outputs;35 pure checks are source evidence only.",
+        "Reuse the accepted actual fog/vent native matrix:3 compiles,56 positives and8 completed causal negatives with full output/source custody. Reuse completed P2 fragment-bound input/state refusal and remaining-consumer report; do not repeat accepted synthetic proof as historical qualification.",
         "Extend real row-wise consumer coverage only with authentic upstream/persistent-state inputs and complete recovery/negative cases; then bind any legitimately qualified order/grid. Preserve historical accepted-risk bytes and 27/48 UNPROVEN until that proof exists.",
         "Reuse accepted role/bundle/lifecycle/alert evidence. Qualify remaining native writer and failure cases only where authentic preconditions exist; keep source, contained and physical scopes distinct."
       ],
