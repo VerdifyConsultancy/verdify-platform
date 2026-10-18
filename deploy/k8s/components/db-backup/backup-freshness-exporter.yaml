@@ -5,7 +5,11 @@
 # `kube_cronjob_status_last_successful_time` to alert on. This tiny always-on exporter
 # closes that gap by measuring the REAL recovery-point: the mtime of the newest
 # verdify-*.dump on the dumps PVC. It mounts the PVC READ-ONLY and never touches the
-# DB, the device, or the ingestor — it only stat()s files.
+# DB, the device, or the ingestor — it only stat()s files. One serial background
+# scan supplies all HTTP requests; slow NFS metadata must not block the one-second
+# readiness response or multiply scans. After 90 seconds without a completed scan,
+# cached metrics fail closed (up=0, timestamp=0). Readiness is HTTP availability,
+# not proof of a successful or fresh backup.
 #
 # It exposes, on :8080/metrics:
 #   verdify_db_backup_last_success_timestamp_seconds  -> unix mtime of newest .dump
@@ -57,9 +61,14 @@ spec:
             - python3
             - -c
             - |
-              import os, glob, http.server, socketserver
+              import os, glob, http.server, socketserver, threading, time
               BACKUP_DIR = os.environ.get("BACKUP_DIR", "/backups")
               PORT = int(os.environ.get("LISTEN_PORT", "8080"))
+              SCAN_INTERVAL_SECONDS = 30
+              MAX_SCAN_AGE_SECONDS = 90
+              cache_lock = threading.Lock()
+              latest = (0.0, 0, 0, 0)
+              last_scan_finished = None
               def scan():
                   try:
                       dumps = glob.glob(os.path.join(BACKUP_DIR, "verdify-*.dump"))
@@ -70,11 +79,28 @@ spec:
                       return (st.st_mtime, st.st_size, len(dumps), 1)
                   except Exception:
                       return (0.0, 0, 0, 0)
+              def refresh():
+                  global latest, last_scan_finished
+                  values = scan()  # Never hold the cache lock across filesystem I/O.
+                  with cache_lock:
+                      latest = values
+                      last_scan_finished = time.monotonic()
+              def snapshot():
+                  with cache_lock:
+                      values, finished = latest, last_scan_finished
+                  if finished is None or time.monotonic() - finished >= MAX_SCAN_AGE_SECONDS:
+                      return (0.0, 0, 0, 0)
+                  return values
+              def scan_loop(stop):
+                  # One scanner only: blocked NFS work cannot spawn more scans.
+                  while not stop.is_set():
+                      refresh()
+                      stop.wait(SCAN_INTERVAL_SECONDS)
               class H(http.server.BaseHTTPRequestHandler):
                   def log_message(self, *a):
                       pass
                   def do_GET(self):
-                      ts, size, count, up = scan()
+                      ts, size, count, up = snapshot()
                       body = (
                           "# HELP verdify_db_backup_last_success_timestamp_seconds Unix mtime of the newest verdify DB dump on the dumps PVC.\n"
                           "# TYPE verdify_db_backup_last_success_timestamp_seconds gauge\n"
@@ -85,7 +111,7 @@ spec:
                           "# HELP verdify_db_backup_dump_count Number of retained verdify DB dumps.\n"
                           "# TYPE verdify_db_backup_dump_count gauge\n"
                           f"verdify_db_backup_dump_count {count}\n"
-                          "# HELP verdify_db_backup_exporter_up 1 if the last dump-dir scan succeeded.\n"
+                          "# HELP verdify_db_backup_exporter_up 1 if the latest dump-dir scan succeeded and completed within 90 seconds.\n"
                           "# TYPE verdify_db_backup_exporter_up gauge\n"
                           f"verdify_db_backup_exporter_up {up}\n"
                       ).encode()
@@ -97,8 +123,11 @@ spec:
               class S(socketserver.ThreadingMixIn, http.server.HTTPServer):
                   daemon_threads = True
                   allow_reuse_address = True
-              with S(("0.0.0.0", PORT), H) as httpd:
-                  httpd.serve_forever()
+              if __name__ == "__main__":
+                  stop = threading.Event()
+                  threading.Thread(target=scan_loop, args=(stop,), daemon=True).start()
+                  with S(("0.0.0.0", PORT), H) as httpd:
+                      httpd.serve_forever()
           env:
             - name: BACKUP_DIR
               value: /backups

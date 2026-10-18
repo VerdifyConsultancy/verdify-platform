@@ -123,6 +123,7 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_db_backup_retry_classifier.py \
+  tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \
   tests/test_moisture_state_boundary.py \
   tests/test_anchor_service_sync.py \
