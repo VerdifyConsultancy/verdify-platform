@@ -1,0 +1,291 @@
+{
+  "schema": "verdify-587-alert-delivery-proof/v1",
+  "state": "contained_named_alert_verified_same_attempt_reconciliation",
+  "issue": 587,
+  "full_issue_acceptance": false,
+  "scoped_alert_delivery_acceptance": true,
+  "human_authorization": {
+    "approved": true,
+    "at": "2026-10-18T06:49:55.266727+00:00",
+    "maximum_messages": 2,
+    "automatic_retry_authorized": false,
+    "receipt": {
+      "path": "alert-delivery-v3-release-inputs-01/human-message-authorization.json",
+      "sha256": "da45d32b00bbaea449f9e2da641629994fa8259eb240d5e51b6784493ed4988f"
+    }
+  },
+  "original_failed_receipts": {
+    "release": {
+      "path": "alert-delivery-v3-execution-01/submission-terminal.json",
+      "sha256": "8a0a98c094de9d0a57df298edbe565ec6c8b3d7ab9d956c3da8bc9385de6271a",
+      "release_confirmed": true,
+      "bridge_returncode": 1,
+      "failure_guard": "bridge_failed_or_uncertain_no_retry"
+    },
+    "bridge": {
+      "path": "alert-delivery-v3-execution-01/bridge/failure-result.json",
+      "sha256": "83e31deea44866e9bcfc79d7fac58c399669fe6c36a9f785448a30eb28cb6fac",
+      "passed": false,
+      "error_class": "TimeoutExpired",
+      "confirmed_ordinals": [
+        1,
+        2
+      ],
+      "dispatched_ordinals": [
+        1,
+        2
+      ]
+    },
+    "collector": {
+      "path": "alert-delivery-v3-terminal-01/terminal-collection-receipt.json",
+      "sha256": "caf037f409aa6851dc976e5551c76bf227f8729fb1a5e61c9f48bb5a3affd086",
+      "status": "ALERT_TERMINAL_FAILED_OR_UNCERTAIN",
+      "delivery": null,
+      "postcustody_acceptance": false
+    },
+    "original_files_rewritten": false,
+    "no_resend_or_retry": true
+  },
+  "native_observations": {
+    "job": "verdify-s3-alert-delivery-f16-v2-20261018",
+    "job_uid": "f868eb78-42ad-41d9-9837-602b8c8cf9e1",
+    "pod_uid": "2fadf633-14aa-4e7b-b7d0-da56966731a4",
+    "job_completed_at": "2026-10-18T06:51:39Z",
+    "application_source": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492",
+    "both_containers_exit_zero": true,
+    "container_restarts": 0,
+    "main_terminal": "complete",
+    "native_confirmed_delivery_count": 2,
+    "same_thread_resolution": true,
+    "deduplication_passed": true,
+    "alert_row_rolled_back": true,
+    "retained_synthetic_cancelled_work_event_id": 327,
+    "post_target_identity_passed": true,
+    "main_log": {
+      "path": "alert-delivery-v3-terminal-01/candidate-alert-lifecycle.terminal.private.log",
+      "sha256": "67ead04c16286149d2322c2e3c869c7fc5029f6d3c3248e083cbcef85e285750"
+    },
+    "transport_log": {
+      "path": "alert-delivery-v3-terminal-01/transport-readiness.terminal.private.log",
+      "sha256": "98d887e355bec07d77713262e730d7a4ffeb54c790796f36d1064e86af63ad24"
+    },
+    "confirmed_sender_replies": [
+      {
+        "path": "alert-delivery-v3-execution-01/bridge/confirmed-reply-1.json",
+        "sha256": "a11d1e80b81b4c877b2411e34d804232effcb0767ec4009ef693fab95fced37b"
+      },
+      {
+        "path": "alert-delivery-v3-execution-01/bridge/confirmed-reply-2.json",
+        "sha256": "f5f0a75395db4ef50e735da970e6484c1506bdefd06ecf7746f07b5865abc577"
+      }
+    ],
+    "phase_evidence_is_not_original_wrapper_success": true
+  },
+  "same_attempt_reconciliation": {
+    "status": "CONTAINED_NAMED_ALERT_DELIVERY_VERIFIED_SAME_ATTEMPT_RECONCILIATION",
+    "passed": true,
+    "postcustody_acceptance": true,
+    "receipt": {
+      "path": "alert-delivery-v3-keyed-event-01/final-same-attempt-custody.json",
+      "sha256": "f46ffe6dcafe9f26b246eed5af1e5abb17afceed18c20a5c16e94f2943433d7b"
+    },
+    "terminal_reconciliation": {
+      "path": "alert-delivery-v3-keyed-event-01/terminal-reconciliation.json",
+      "sha256": "df2579e47ff72d5ad0a0a7ffcca627ad20b87365ca0972603c74b478369c7af5"
+    },
+    "reviewed_reconciler_sha256": "707be3c1d9feee266dcb63ed962a09090079abab1a8c38759ec2dc3613002de2",
+    "original_failures_preserved": true,
+    "candidate_consumed_second_native_confirmation": true,
+    "retry_or_resend_performed": false
+  },
+  "finite_and_alert_postcustody": {
+    "finite": {
+      "status": "TYPED_FINITE_CUSTODY_EQUAL_ACCOUNTED",
+      "phase": "alert-only",
+      "before_sha256": "b69128b49a1eacc10ad4f7338ddc6d041f7c7901e47412737efb252369ae3266",
+      "after_sha256": "025f8cdf02fed522f44a2eb83223fba79e621ee8f5fb0c3e3985cc69a29f3a8b",
+      "complete_genuine_rowsets": 29,
+      "genuine_rows": 7950,
+      "genuine_data_unchanged": true,
+      "native_catalog_source_acl_role_ledger_unchanged": true,
+      "qualification_password_presence_unchanged_true": true,
+      "retained_synthetic_rows": {
+        "public.control_experiments": 1,
+        "public.experiment_events": 1,
+        "public.experiment_v2_candidate_revisions": 1,
+        "public.experiment_v2_state_artifacts": 1,
+        "public.experiment_v2_work": 1,
+        "public.experiment_v2_work_events": 1,
+        "public.greenhouses": 1
+      },
+      "sequence_count": 77,
+      "exact_sequence_deltas": {
+        "public.alert_log_id_seq": 1,
+        "public.experiment_v2_work_events_work_event_id_seq": 1
+      },
+      "sequence_rewind_performed": false,
+      "full_database_fingerprint": false,
+      "restore_parity_claimed": false,
+      "behavior_or_external_delivery_acceptance_claimed": false,
+      "limitation": "Exact expected deltas must be independently derived from retained behavior receipts. This comparator does not infer behavioral acceptance or physical qualification."
+    },
+    "alert": {
+      "status": "TYPED_ALERT_MULTISET_EQUAL_SEQUENCE_ADVANCE_ACCOUNTED",
+      "relation": "public.alert_log",
+      "complete_row_count": 12425,
+      "genuine_data_sha256": "94d5f04e8863c4d35260d4de5b570433350cd81fb52e00a5f76fe21b9dc3d383",
+      "catalog_sha256": "08db2a4ea6c2a008e58540f57b98583a55fef2d00f90e267bd49525bbbfb693d",
+      "sequence_before": 12548,
+      "sequence_after": 12549,
+      "sequence_advance": 1,
+      "maximum_committed_id": 12548,
+      "synthetic_exclusions": 0,
+      "synthetic_key_absent_before_and_after": true,
+      "before_stdout_sha256": "7d55cea5bcb9f4ad86a4f6faa4b7a7ebfe9300adb8c8859dea2ddf05b1f99b14",
+      "after_stdout_sha256": "326014c658d1d5ec02e0a698e37d2757847587454d714699d9d8045a5875bb58",
+      "full_database_fingerprint": false,
+      "experiment29_seal_expanded": false,
+      "behavior_or_external_delivery_acceptance_claimed": false,
+      "limitation": "Expected sequence advance must come from the independent behavior receipt. Final experiment29/all77-sequence accounting after alert remains independently required."
+    },
+    "cumulative": {
+      "status": "TYPED_FINITE_CUSTODY_EQUAL_ACCOUNTED",
+      "phase": "final-alert",
+      "before_sha256": "764c6841e3d3726433f3c7b9feef171cc2c809ab5b1a0d26bbfcc9fc6db3c7b0",
+      "after_sha256": "025f8cdf02fed522f44a2eb83223fba79e621ee8f5fb0c3e3985cc69a29f3a8b",
+      "complete_genuine_rowsets": 29,
+      "genuine_rows": 7950,
+      "genuine_data_unchanged": true,
+      "native_catalog_source_acl_role_ledger_unchanged": true,
+      "qualification_password_presence_unchanged_true": true,
+      "retained_synthetic_rows": {
+        "public.control_experiments": 1,
+        "public.experiment_events": 1,
+        "public.experiment_v2_candidate_revisions": 1,
+        "public.experiment_v2_state_artifacts": 1,
+        "public.experiment_v2_work": 1,
+        "public.experiment_v2_work_events": 1,
+        "public.greenhouses": 1
+      },
+      "sequence_count": 77,
+      "exact_sequence_deltas": {
+        "public.alert_log_id_seq": 1,
+        "public.experiment_events_event_id_seq": 4,
+        "public.experiment_v2_bundle_attempts_attempt_id_seq": 16,
+        "public.experiment_v2_runtime_generations_generation_event_id_seq": 3,
+        "public.experiment_v2_work_events_work_event_id_seq": 4
+      },
+      "sequence_rewind_performed": false,
+      "full_database_fingerprint": false,
+      "restore_parity_claimed": false,
+      "behavior_or_external_delivery_acceptance_claimed": false,
+      "limitation": "Exact expected deltas must be independently derived from retained behavior receipts. This comparator does not infer behavioral acceptance or physical qualification."
+    },
+    "unrelated_synthetic_rowsets_unchanged": 28,
+    "exact_new_work_event_typed_digest_verified": true,
+    "keyed_event_receipt": {
+      "path": "alert-delivery-v3-keyed-event-01/work-event-after.json",
+      "sha256": "b150357eaf809c386eb2e53d7e555759d26762ac58eb9373829699e3d47fb50f"
+    },
+    "ordinary_password_presence_scope": "Finite capture checks lifecycle/executor presence only; ordinary initial install and actual LOGIN remain separately evidenced."
+  },
+  "physical_acceptance": false,
+  "ordinary_writer_handoff_acceptance": false,
+  "production_promotion": false,
+  "disposable_cleanup_claimed": true,
+  "scoped_alert": "component_experiment_integrity: expired_work_not_terminal",
+  "disposable_cleanup": {
+    "receipt": {
+      "path": "alert-delivery-disposable-cleanup-01/verified-summary.json",
+      "sha256": "0dd124f415774eb60c43974d09a13f6e74ebaab4147e956ef5ec8f8c9d201512"
+    },
+    "at": "2026-10-18T07:01:39.578948+00:00",
+    "objects_confirmed_absent": 3,
+    "unique_jobs": 1,
+    "stages": [
+      {
+        "stage": "job",
+        "name": "verdify-s3-alert-delivery-f16-v2-20261018",
+        "uid": "f868eb78-42ad-41d9-9837-602b8c8cf9e1",
+        "resource_version": "281660833",
+        "propagation_policy": "Orphan",
+        "status": "DELETE_CONFIRMED_ABSENT",
+        "receipt": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-job/sender-receipt.json",
+          "sha256": "f745cf2093f814f9a989e973d23dc9d28a75b2b06ef2a4cc544cca23c330b279"
+        },
+        "delete_options": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-job/delete-options.json",
+          "sha256": "3bda3545741b498538ac119bc361d4dc7bb1088c7f4b419af102e6d981ed1359"
+        }
+      },
+      {
+        "stage": "pod",
+        "name": "verdify-s3-alert-delivery-f16-v2-20261018-w5g42",
+        "uid": "2fadf633-14aa-4e7b-b7d0-da56966731a4",
+        "resource_version": "281690127",
+        "propagation_policy": "Orphan",
+        "status": "DELETE_CONFIRMED_ABSENT",
+        "receipt": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-pod/sender-receipt.json",
+          "sha256": "7d05ace48615f191807e64d5880d0b01f875f3aa615d0d490e2817da9eeb769d"
+        },
+        "delete_options": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-pod/delete-options.json",
+          "sha256": "3e6e34df8c8f4730fdce62beb96ea0a9602c88256f87d3cf7327e00968e6d39f"
+        }
+      },
+      {
+        "stage": "configmap",
+        "name": "verdify-s3-alert-delivery-f16-v2-20261018",
+        "uid": "60d70834-de16-4fc9-9824-e32a7e1b3899",
+        "resource_version": "281656703",
+        "propagation_policy": "Orphan",
+        "status": "DELETE_CONFIRMED_ABSENT",
+        "receipt": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-configmap/sender-receipt.json",
+          "sha256": "78f02011523c3d5c1432d8cf9381ec14719368c43b27adecba635f5aaecc9ce6"
+        },
+        "delete_options": {
+          "path": "alert-delivery-disposable-cleanup-01/alert-delivery-configmap/delete-options.json",
+          "sha256": "8819f6ffb3ce274fc3cabca5808a9d49f05a419403ccd5f45a0c68fbac0de4f7"
+        }
+      }
+    ],
+    "retained_evidence_files": 252,
+    "all_retained_hashes_verified": true,
+    "uncertain_outcomes": 0,
+    "automatic_retries": 0,
+    "no_database_secret_pvc_cnpg_or_production_changes": true,
+    "cumulative_objects": 30,
+    "cumulative_unique_jobs": 10,
+    "prior_cleanup_receipts": [
+      "639-587-disposable-cleanup.json",
+      "proof-cleanup-final.json",
+      "587-ordinary-role-progress.json"
+    ],
+    "plan_sha256": "813fd00c33c18d1497fcbb3b2c53e1a3ae584438901deada3e6d9188cb8c9791",
+    "verifier_sha256": "12cffbcfa9fc1f3e2bbb4fa9557d3e3f8d45fcd50944b9105e3fd469bbba79b3",
+    "sender_sha256": "6696d8f3fcf0fc3ccfd7fb80e30a3b92ee68a1e07478b1e355421dec9438409a"
+  },
+  "native_graph": {
+    "at": "2026-10-18T06:59:54.602731+00:00",
+    "open_issues": 47,
+    "active_edges": 27,
+    "closed_predecessor_records": 24,
+    "repository_projection_identical_to_0512": true,
+    "accepted_977_980_802_closure_metadata_preserved": true,
+    "raw_sha256": "c26c55c83b6c8fc8cd558a9fed2c86a03d6c24e007d8d8fba59d26788d9cab02",
+    "receipt": {
+      "path": "github-progress/alert-final-native-graph-20261018/verified.json",
+      "sha256": "552d0fdb72a1f30a3b3ac54723f9a8d9c662b2ab043927b96782fd4c18a2853f"
+    }
+  },
+  "remaining": [
+    "feature-off and remaining illegal readiness/phase/emergency-hold nonactuation clauses",
+    "remaining mapping/comparative-result leakage and other named-alert conditions",
+    "uncovered component prefix/exposure/exclusivity/recovery and locked/armed no-reopen clauses",
+    "ordinary-writer handoff and physical proof owned by #641"
+  ]
+}

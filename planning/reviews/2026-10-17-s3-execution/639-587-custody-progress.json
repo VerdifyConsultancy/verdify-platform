@@ -1,12 +1,12 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T06:33:42.039185+00:00",
+  "reviewed_at": "2026-10-18T06:59:54.602731+00:00",
   "issues": [
     639,
     587
   ],
   "accepted": false,
-  "state": "actual_role_subset_begin_bundle_and_named_lifecycle_authority_passed_alert_pending",
+  "state": "actual_role_subset_begin_bundle_lifecycle_and_scoped_named_alert_passed_full_issues_open",
   "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
   "source_functions": 84,
   "finite_write_relations": 29,
@@ -26,7 +26,7 @@
   "remaining": [
     "remaining feasible contained cases; other five corrected writer native paths remain unaccepted",
     "uncovered contained prefix/exposure/exclusivity/recovery and locked/armed no-reopen acceptance",
-    "separate explicit two-message permission and named alert fire/deliver/clear through owner route"
+    "remaining feature-off/illegal-transition/emergency-hold nonactuation, blinded mapping/comparative-result boundaries and other named-alert conditions"
   ],
   "physical_proof_owner": 641,
   "full_database_restore_parity_claimed": false,
@@ -126,7 +126,7 @@
   "alert_progress": {
     "read_only_preview": "ACTUAL_ORDINARY_READONLY_PREVIEW_VERIFIED at 2026-10-18T06:33:42.039185+00:00; old 28P01 before-SQL failure retained",
     "ordinary_role_initial_install": "explicit human approval received; initial installation passed 2026-10-18T06:27:23.968405+00:00; actual authentication not claimed by installer",
-    "two_synthetic_slack_messages": "Separate permission for the exact two synthetic messages has not been granted; no messages have been sent.",
+    "two_synthetic_slack_messages": "Explicitly authorized pair delivered and independently reconciled on the same attempt; original bridge/release/collector failed labels retained; no resend.",
     "typed_alert_log_before_rows": 12425,
     "typed_alert_log_before_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
     "experiment29_scope_expanded": false,
@@ -138,7 +138,11 @@
     "native_alert_reason": "expired_work_not_terminal",
     "native_alert_severity": "critical",
     "previewed_payloads": 2,
-    "actual_delivery_verified": false
+    "actual_delivery_verified": true,
+    "delivery_source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+    "delivery_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:53111f351fcb6b4506dd6a7e03107e9fc53e6e4012d9584453e8cbba7c904492",
+    "delivery_receipt": "587-alert-delivery-proof.json",
+    "complete_postcustody_passed": true
   },
   "disposable_cleanup": {
     "finished_at": "2026-10-18T04:38:32.990040+00:00",
@@ -190,5 +194,34 @@
     "after_sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b",
     "failed_harness_zero_effect_retained": true,
     "full_issue_acceptance": false
+  },
+  "current_finite_custody": {
+    "receipt": "587-alert-delivery-proof.json",
+    "after_sha256": "025f8cdf02fed522f44a2eb83223fba79e621ee8f5fb0c3e3985cc69a29f3a8b",
+    "genuine_relations": 29,
+    "genuine_rows": 7950,
+    "retained_synthetic_rows": 7,
+    "sequences": 77,
+    "exact_alert_attempt_delta": {
+      "public.alert_log_id_seq": 1,
+      "public.experiment_v2_work_events_work_event_id_seq": 1
+    },
+    "cumulative_delta": {
+      "public.alert_log_id_seq": 1,
+      "public.experiment_events_event_id_seq": 4,
+      "public.experiment_v2_bundle_attempts_attempt_id_seq": 16,
+      "public.experiment_v2_runtime_generations_generation_event_id_seq": 3,
+      "public.experiment_v2_work_events_work_event_id_seq": 4
+    },
+    "full_issue_acceptance": false
+  },
+  "latest_disposable_cleanup": {
+    "receipt": "587-alert-delivery-proof.json",
+    "summary_sha256": "0dd124f415774eb60c43974d09a13f6e74ebaab4147e956ef5ec8f8c9d201512",
+    "objects": 3,
+    "retained_file_count": 252,
+    "cumulative_objects": 30,
+    "cumulative_unique_jobs": 10,
+    "database_rows_removed": 0
   }
 }

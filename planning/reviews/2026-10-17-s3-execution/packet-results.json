@@ -52,10 +52,10 @@
     },
     {
       "number": 587,
-      "packet_status": "named_lifecycle_and_ordinary_readonly_preview_passed_alert_delivery_open",
+      "packet_status": "named_lifecycle_and_scoped_expired_work_alert_passed_full_issue_open",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "Reuse the accepted lifecycle database-authority and actual ordinary read-only LOGIN/preview evidence. Obtain separate explicit permission for the exact two synthetic messages before named-alert fire/deliver/clear, with bounded rollback and both after-seals. Separate permission for the exact two synthetic messages has not been granted; no messages have been sent. Keep uncovered contained clauses, ordinary-writer handoff and #641 physical proof open.",
+      "remaining": "Reuse the accepted lifecycle database-authority, actual ordinary LOGIN and scoped expired-work alert fire/deliver/clear receipts; no additional message pair is needed for that proven path. Qualify remaining feature-off/illegal-transition/emergency-hold nonactuation, blinded mapping/comparative-result boundaries and other named-alert conditions using authentic current authority. Keep uncovered contained clauses, ordinary-writer handoff and #641 physical proof open.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",
@@ -64,7 +64,9 @@
         "587-lifecycle-authority-proof.json",
         "587-lifecycle-failure-history.json",
         "587-ordinary-role-progress.md",
-        "587-ordinary-role-progress.json"
+        "587-ordinary-role-progress.json",
+        "587-alert-delivery-proof.md",
+        "587-alert-delivery-proof.json"
       ]
     },
     {
@@ -83,7 +85,9 @@
         "587-lifecycle-authority-proof.json",
         "587-lifecycle-failure-history.json",
         "587-ordinary-role-progress.md",
-        "587-ordinary-role-progress.json"
+        "587-ordinary-role-progress.json",
+        "587-alert-delivery-proof.md",
+        "587-alert-delivery-proof.json"
       ]
     },
     {
