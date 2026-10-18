@@ -2440,7 +2440,13 @@ async def outcome_kpi(target_date: str = "") -> str:
             "safety_gate_status": (
                 "pending"
                 if not dryout
-                else ("fail" if any(row["safety_gate_status"] == "fail" for row in dryout) else "pass")
+                else (
+                    "fail"
+                    if any(row["safety_gate_status"] == "fail" for row in dryout)
+                    else "pass"
+                    if all(row["safety_gate_status"] == "pass" for row in dryout)
+                    else "incomplete"
+                )
             ),
         }
         pending_metrics = []

@@ -1,0 +1,19 @@
+{
+  "scope": "Pure synthetic row regression against extracted actual outcome_kpi assignment; no DB/MCP runtime call",
+  "source_revision": "541c11ad0786e00e50e45f52ca4828173ddc58c2",
+  "tests": 15,
+  "failures": 5,
+  "failing_cases": [
+    "test_quality_is_not_promoted_to_pass[statuses3-incomplete]",
+    "test_quality_is_not_promoted_to_pass[statuses4-incomplete]",
+    "test_quality_is_not_promoted_to_pass[statuses8-incomplete]",
+    "test_quality_is_not_promoted_to_pass[statuses9-incomplete]",
+    "test_quality_is_not_promoted_to_pass[statuses10-incomplete]"
+  ],
+  "raw_output": "projection-old-source-output.json",
+  "raw_output_sha256": "e3ae790bdd25c9545be8de8db32d9761cc022f0542e04bdcbaa65700f94ec8d1",
+  "failure": "Incomplete or unknown safety status was promoted to pass by the aggregate.",
+  "deployed_acceptance": false,
+  "raw_output_encoding": "JSON stdout string; raw_output_sha256 hashes its decoded UTF-8 bytes",
+  "encoded_file_sha256": "cb3904ee1d2ff63ef327a55eb2e300896d7f41d4dca0401972366ec22ee9b9e1"
+}

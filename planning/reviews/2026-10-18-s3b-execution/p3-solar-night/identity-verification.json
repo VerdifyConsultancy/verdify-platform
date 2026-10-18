@@ -1,0 +1,32 @@
+{
+  "status": "INSTALLED_SOURCE_AND_LEDGER_MATCH",
+  "identity_sha256": "970852793d4ab0648c6b5cf8b52a5139df9f83bb7c3fa20594253fef83296388",
+  "context": {
+    "kind": "context",
+    "captured_at": "2026-10-18T15:23:33.067778+00:00",
+    "database": "verdify",
+    "current_user": "verdify",
+    "session_user": "verdify",
+    "server_version_num": "160011",
+    "read_only": "on",
+    "postmaster_started_at": "2026-09-29T00:40:56.280382+00:00",
+    "server_addr": null,
+    "server_port": null,
+    "denver_date": "2026-10-18",
+    "latest_complete_adjacent_day_night": "2026-10-16"
+  },
+  "function_count": 13,
+  "migration_count": 8,
+  "migration_stamp_methods": [
+    "baseline"
+  ],
+  "preselected_pilot_night": "2026-10-16",
+  "optional_prior_nights": [
+    "2026-10-15",
+    "2026-10-14"
+  ],
+  "optional_expansion_authorized_by_this_receipt": false,
+  "episode_data_read": false,
+  "whole_issue_acceptance": false,
+  "source_contract_sha256": "e9880aa5265f55c07fae170214006fcf98ca6cfb480a7ed8cc3337daf76e33c6"
+}

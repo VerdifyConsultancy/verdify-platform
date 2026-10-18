@@ -1,0 +1,20 @@
+{
+  "schema": "verdify-p3-pure-regression-v1",
+  "scope": "Synthetic projection and retained metadata validation only; no native/DB/service invocation",
+  "tests": 27,
+  "failures": 0,
+  "errors": 0,
+  "pytest_junit_sha256": "dca068656e21593944ff287c2eb00752b64d89523dc15d5630befbe264bbf366",
+  "old_source_evidence": "projection-old-source.json",
+  "mcp_source_sha256": "db8cb106eb397219750548c9ab9e0ecc2a740f741d6cf58720d040fc0437ed91",
+  "tested_files": {
+    "tests/test_outcome_kpi_dryout_projection.py": "984276741485cf3135dcf5b5b1af8274b474cdf12c28e449fd22796d5e1b27c6",
+    "tests/test_solar_night_packet.py": "19a29c7ceefedaf77fec24d6c4bb2091fde6ca6a98d75dc838b74fe239579530",
+    "planning/reviews/2026-10-18-s3b-execution/p3-solar-night/verify_identity.py": "e283fe9e130c8b64ad5d7a36e83d2b03e0f04a35ce0499ba2de54eda7d2ea573",
+    "planning/reviews/2026-10-18-s3b-execution/p3-solar-night/summarize_pilot.py": "c534bd74410f370fa324a2f13fa3b6123aa58e3471c7b0d2db84c57bbd477923"
+  },
+  "ruff": "focused check passed",
+  "native_pr_ci": "pending ROOT admission",
+  "production_restart": "not performed",
+  "whole_issue_acceptance": false
+}

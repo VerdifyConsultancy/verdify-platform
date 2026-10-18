@@ -1,0 +1,1 @@
+{"kind" : "pilot_identity_guard", "passed" : 1, "identity_receipt_sha256" : "970852793d4ab0648c6b5cf8b52a5139df9f83bb7c3fa20594253fef83296388", "night_date" : "2026-10-16", "database" : "verdify", "postmaster_started_at" : "2026-09-29T00:40:56.280382+00:00", "captured_at" : "2026-10-18T15:27:13.999408+00:00", "read_only" : "on"}
