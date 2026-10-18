@@ -126,5 +126,17 @@
     "typed_alert_log_before_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
     "experiment29_scope_expanded": false,
     "full_issue_acceptance": false
+  },
+  "disposable_cleanup": {
+    "finished_at": "2026-10-18T04:38:32.990040+00:00",
+    "objects_confirmed_absent": 15,
+    "entries_complete": 5,
+    "retained_file_count": 57,
+    "summary_sha256": "7f5811831fcb1b4c5d003b2424ebb3d7f42c43226cbefdc656571081d9476f7f",
+    "public_receipt": "639-587-disposable-cleanup.json",
+    "automatic_mutation_retries": 0,
+    "uncertain_outcomes": 0,
+    "future_point_or_alert_cleanup_claimed": false,
+    "behavior_or_alert_acceptance_claimed": false
   }
 }

@@ -1,0 +1,466 @@
+{
+  "schema": "verdify-s3-disposable-cleanup-receipt/v1",
+  "finished_at": "2026-10-18T04:38:32.990040+00:00",
+  "scope": "Five completed qualification attempts only: auth-v1, network, auth-v2, behavior-v2 and preview-c5.",
+  "context": "vallery",
+  "namespace": "verdify-db-rehearsal",
+  "objects_confirmed_absent": 15,
+  "entries_complete": 5,
+  "summary_path": "disposable-cleanup-01/verified-summary.json",
+  "summary_sha256": "7f5811831fcb1b4c5d003b2424ebb3d7f42c43226cbefdc656571081d9476f7f",
+  "plan_sha256": "b2f3db4a0d4fc39f24c00b540e6f16c6bbc8f9c4770b6f4604142b0e59154144",
+  "sender_sha256": "7677113431239df18fd527dad1cc7a01ab8b6a0a15a2a42828b9589dac2afc9d",
+  "verifier_sha256": "3cda849121e902ebf5ff5e05dc97816bde4e36cdd6f79c23e6a0834c7500a402",
+  "ordering": "Each entry completed Job with Orphan propagation, then exact terminal Pod, then immutable ConfigMap; named absence and retained log/source verification were repeated at every required stage.",
+  "automatic_mutation_retries": 0,
+  "uncertain_outcomes": 0,
+  "resources": [
+    {
+      "entry": "auth-v1",
+      "kind": "Job",
+      "name": "verdify-s3-role-auth-primary2-20261018",
+      "uid": "5641c980-bfe0-4169-becd-346f4b9a27bf",
+      "resource_version_precondition": "281173924",
+      "confirmed_absent_at": "2026-10-18T04:38:23.373513+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v1-job/sender-receipt.json",
+      "sender_receipt_sha256": "167267ae9701738de9950032b0f2899ca89b30da61e346da4feeca7b185f6bc4"
+    },
+    {
+      "entry": "auth-v1",
+      "kind": "Pod",
+      "name": "verdify-s3-role-auth-primary2-20261018-rtb2f",
+      "uid": "1604649f-01d5-412c-b132-fd9ad41acacf",
+      "resource_version_precondition": "281312394",
+      "confirmed_absent_at": "2026-10-18T04:38:24.371308+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v1-pod/sender-receipt.json",
+      "sender_receipt_sha256": "7a3a19777361525560ad868941b784f032b0cc03ad6cc6375ef788189c255056"
+    },
+    {
+      "entry": "auth-v1",
+      "kind": "ConfigMap",
+      "name": "verdify-s3-role-auth-primary2-20261018",
+      "uid": "e6076c16-20f5-47c2-a1d4-2c7a7d3c7297",
+      "resource_version_precondition": "281173623",
+      "confirmed_absent_at": "2026-10-18T04:38:24.709221+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v1-configmap/sender-receipt.json",
+      "sender_receipt_sha256": "ce71e4c4e5080583719816351683be2c35127928ceba9e00c770e7fec7a58da3"
+    },
+    {
+      "entry": "network",
+      "kind": "Job",
+      "name": "verdify-s3-role-network-primary2-20261018",
+      "uid": "8d9791e9-dd38-4434-aac5-8eb97850e37c",
+      "resource_version_precondition": "281189706",
+      "confirmed_absent_at": "2026-10-18T04:38:25.690329+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/network-job/sender-receipt.json",
+      "sender_receipt_sha256": "50cb25192a88070921b8b791923901f8a7c4d8e1c2b36444d1d9894fa8827a27"
+    },
+    {
+      "entry": "network",
+      "kind": "Pod",
+      "name": "verdify-s3-role-network-primary2-20261018-vmf8b",
+      "uid": "29b8941a-cdd7-4368-9ebf-14cb7fc28697",
+      "resource_version_precondition": "281312469",
+      "confirmed_absent_at": "2026-10-18T04:38:26.677695+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/network-pod/sender-receipt.json",
+      "sender_receipt_sha256": "f5eb1afdc708e90b57215b58b24e28f7023af4434ab46da4b96c7573246fed46"
+    },
+    {
+      "entry": "network",
+      "kind": "ConfigMap",
+      "name": "verdify-s3-role-network-primary2-20261018",
+      "uid": "847cc3f3-bd60-4f27-8e1c-212a8d38bd87",
+      "resource_version_precondition": "281189352",
+      "confirmed_absent_at": "2026-10-18T04:38:27.010557+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/network-configmap/sender-receipt.json",
+      "sender_receipt_sha256": "76b0f2781d1b38065960de2975983dc9531178ac471c7f3b45e419df50ca4dc0"
+    },
+    {
+      "entry": "auth-v2",
+      "kind": "Job",
+      "name": "verdify-s3-role-auth-primary2-v2-20261018",
+      "uid": "e5795810-f84d-48c0-beba-1f10863df6bd",
+      "resource_version_precondition": "281213005",
+      "confirmed_absent_at": "2026-10-18T04:38:28.013318+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v2-job/sender-receipt.json",
+      "sender_receipt_sha256": "0ab05f3799b39add31693d5894bba1e92f0c04f851fb285f9c7cec66ec852d4e"
+    },
+    {
+      "entry": "auth-v2",
+      "kind": "Pod",
+      "name": "verdify-s3-role-auth-primary2-v2-20261018-5zbnr",
+      "uid": "7f54ca5e-5138-4e3d-b097-1cd606168ef6",
+      "resource_version_precondition": "281312598",
+      "confirmed_absent_at": "2026-10-18T04:38:28.563547+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v2-pod/sender-receipt.json",
+      "sender_receipt_sha256": "cf1ad9478f30e369d77506cb40e7c7dd9bc010a40b1f1f14cac63a33115b7a70"
+    },
+    {
+      "entry": "auth-v2",
+      "kind": "ConfigMap",
+      "name": "verdify-s3-role-auth-primary2-v2-20261018",
+      "uid": "ad509ad8-6328-4a48-8921-4d9ff5c77c04",
+      "resource_version_precondition": "281212347",
+      "confirmed_absent_at": "2026-10-18T04:38:28.910189+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/auth-v2-configmap/sender-receipt.json",
+      "sender_receipt_sha256": "98c961fdce5b8b0467d9dc2b1acab71ec246aad32eb1065bf752d9a26418d41b"
+    },
+    {
+      "entry": "behavior-v2",
+      "kind": "Job",
+      "name": "s3-experiment-roles-v2-20261018",
+      "uid": "ac09632d-86f3-4d39-a109-a2300685b7db",
+      "resource_version_precondition": "281241735",
+      "confirmed_absent_at": "2026-10-18T04:38:29.896445+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/behavior-v2-job/sender-receipt.json",
+      "sender_receipt_sha256": "ec5e93ecba460a7f8572da8cf8076b8c00ed675713bc769f6a69f7931cfbc22d"
+    },
+    {
+      "entry": "behavior-v2",
+      "kind": "Pod",
+      "name": "s3-experiment-roles-v2-20261018-tp4dw",
+      "uid": "d82e2c50-e191-4eec-ae74-5bf325a24983",
+      "resource_version_precondition": "281312680",
+      "confirmed_absent_at": "2026-10-18T04:38:30.899646+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/behavior-v2-pod/sender-receipt.json",
+      "sender_receipt_sha256": "6e4893683e0c838a7da0d0fe4e58aa375ec08042ed784319a5426b64fe9b9e30"
+    },
+    {
+      "entry": "behavior-v2",
+      "kind": "ConfigMap",
+      "name": "s3-experiment-roles-v2-20261018",
+      "uid": "1eaa3231-2dff-4129-a325-5c57e95dde88",
+      "resource_version_precondition": "281240502",
+      "confirmed_absent_at": "2026-10-18T04:38:31.206320+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/behavior-v2-configmap/sender-receipt.json",
+      "sender_receipt_sha256": "109c0ce9d6173e129b04cec2e5c43b5d980a34f00d94407b96b9365670f87035"
+    },
+    {
+      "entry": "preview-c5",
+      "kind": "Job",
+      "name": "verdify-s3-alert-preview-c5-20261018",
+      "uid": "5c49e094-5c32-4f4e-8eca-4bd577a7dc41",
+      "resource_version_precondition": "281245383",
+      "confirmed_absent_at": "2026-10-18T04:38:32.239209+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/preview-c5-job/sender-receipt.json",
+      "sender_receipt_sha256": "aeb6b854e716beba3c0f971dba920bc625816d6921793ea32d0d2d1bb8fe680a"
+    },
+    {
+      "entry": "preview-c5",
+      "kind": "Pod",
+      "name": "verdify-s3-alert-preview-c5-20261018-64xn5",
+      "uid": "e3a3fa41-a6f9-443e-8a82-026be1d71f00",
+      "resource_version_precondition": "281312774",
+      "confirmed_absent_at": "2026-10-18T04:38:32.652809+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/preview-c5-pod/sender-receipt.json",
+      "sender_receipt_sha256": "fb7719c31e81f6a9a11204302187827821a2e71b08a308bac2f544f9775f042a"
+    },
+    {
+      "entry": "preview-c5",
+      "kind": "ConfigMap",
+      "name": "verdify-s3-alert-preview-c5-20261018",
+      "uid": "78369017-729b-4747-ba4c-3bd106074ece",
+      "resource_version_precondition": "281244001",
+      "confirmed_absent_at": "2026-10-18T04:38:32.983878+00:00",
+      "delete_invocations": 1,
+      "automatic_retry": false,
+      "propagation_policy": "Orphan",
+      "sender_receipt": "disposable-cleanup-01/preview-c5-configmap/sender-receipt.json",
+      "sender_receipt_sha256": "b1b8c2307b182492db3e7dc3fa7a8ca95cc193cbe2995a3033cd70e8f3af5334"
+    }
+  ],
+  "retained_file_count": 57,
+  "retained_files": [
+    {
+      "path": "clone-actual-auth/attempt-start.json",
+      "sha256": "2759f54b69beaff5d4b5292c0888ace05448d5d6f3a3573f5baef6c75fb0ad0c"
+    },
+    {
+      "path": "clone-actual-auth/submitted-manifest.json",
+      "sha256": "feab64adb7c62ff27105ef459dae09f192d699fe5e897ab5dacf968060c49683"
+    },
+    {
+      "path": "clone-actual-auth/suspended-job.private.json",
+      "sha256": "742f2592d8b20f19076c540654973cc040d40070f3438d41e328fa3926d775ee"
+    },
+    {
+      "path": "clone-actual-auth/released-job.private.json",
+      "sha256": "959f087293ddbe65f0128833dfd7210b90467aef042462333e9884b9ff619547"
+    },
+    {
+      "path": "clone-actual-auth/configmap-identity.json",
+      "sha256": "8d3726bda03414bca29b8afd176469b13e46a71a848039202bb2abffa8cad378"
+    },
+    {
+      "path": "clone-actual-auth/create-result.json",
+      "sha256": "71bae7585c07d47c775496c7d2ea188424c4d86f5ee0b440f748d585c3c66ba7"
+    },
+    {
+      "path": "clone-actual-auth/release-result.json",
+      "sha256": "786afd7df703482761bc9b6a4fb19fefd53a810b47965e7c8a68787a30c973a9"
+    },
+    {
+      "path": "clone-actual-auth/job-progress.private.json",
+      "sha256": "ced15db816ca34fdfcb5acf34c509ce9ae074628c6f732b01a0528fbf9b3726c"
+    },
+    {
+      "path": "clone-actual-auth/pods-progress.private.json",
+      "sha256": "ad68780b385422917310f0df81b0ad12d3ff7172b4c962aa88688debd8aaf736"
+    },
+    {
+      "path": "clone-actual-auth/failed-terminal-receipt.json",
+      "sha256": "1ee2502e68d19d333b589cac4a02b82877b671b2d29a2334a457f692db785655"
+    },
+    {
+      "path": "clone-actual-auth/failed-logs.private.log",
+      "sha256": "4d45c2589ab7d17c5d35d56bf4d544cfe5284c5a65a61e36efff27849d46de4e",
+      "bytes": 215
+    },
+    {
+      "path": "clone-network-diagnostic/attempt-start.json",
+      "sha256": "a0a4bca191f8ec77805724b3df049c45de4d38f81a5190496a8ac4aa6ca03b95"
+    },
+    {
+      "path": "clone-network-diagnostic/submitted-manifest.json",
+      "sha256": "6eb015a4504614e5313e7136df479210665aced57bd100de262c97c96f6b824e"
+    },
+    {
+      "path": "clone-network-diagnostic/suspended-job.private.json",
+      "sha256": "148be48ac6fbce7ce3a6ddd914adb1748559ba82e4e0a971fcb0113d725bb169"
+    },
+    {
+      "path": "clone-network-diagnostic/released-job.private.json",
+      "sha256": "f0aa39607c07b0573e126dca1d1ad5de2eefeba0e18e93c4df691205310e21e8"
+    },
+    {
+      "path": "clone-network-diagnostic/configmap-identity.json",
+      "sha256": "3c310b9c4968f879c098957f83a6feb21e826bb19eaf5f08fb4dd2a0c0b760b7"
+    },
+    {
+      "path": "clone-network-diagnostic/create-result.json",
+      "sha256": "99b28ec98a8f1a5fc71781ff7685cbf523b3afb7812e54eef4e6ae78ab99a3e0"
+    },
+    {
+      "path": "clone-network-diagnostic/release-result.json",
+      "sha256": "ded8b4279d7e203a701c76ae09d06bf7d93cee09a5f16b32afacfa85b626847f"
+    },
+    {
+      "path": "clone-network-diagnostic/job-terminal.private.json",
+      "sha256": "64b23720a4c509578c54491a088620223ffb20ca9112b720d8c5ec89daf1012f"
+    },
+    {
+      "path": "clone-network-diagnostic/pod-terminal.private.json",
+      "sha256": "23557d56d2d4c838e8a0ff9c31e2c8a4653188c9b7c2a60d489d0bcdcfd2f1ee"
+    },
+    {
+      "path": "clone-network-diagnostic/network-receipt.json",
+      "sha256": "6f0d1a2750e54870982b15eae5c305e6e9cf8b1ef9b93f3c1da91f96986c5ead"
+    },
+    {
+      "path": "clone-network-diagnostic/logs.private.jsonl",
+      "sha256": "51345d76b2703fe6b865ceda1595b5b08ab3577518b20dee765ce5c944d64ad1",
+      "bytes": 2564
+    },
+    {
+      "path": "clone-actual-auth-v2/attempt-start.json",
+      "sha256": "f80eec18c276464315813bb5c4d9136bf5b9f17393803b2a1431af928a3c8dff"
+    },
+    {
+      "path": "clone-actual-auth-v2/submitted-manifest.json",
+      "sha256": "b7b66eec713892c4f52f498f9df8c945caad683be34e17b441e30d4b6a69b176"
+    },
+    {
+      "path": "clone-actual-auth-v2/suspended-job.private.json",
+      "sha256": "0cb6801d9d0bdeaabba470996892dd0704cdf38a17c4861d90f66b189a00b4e4"
+    },
+    {
+      "path": "clone-actual-auth-v2/released-job.private.json",
+      "sha256": "4b5131041fc4f5d727974c8062c8ad280ec4cbb39f70df1a6d045134d453a572"
+    },
+    {
+      "path": "clone-actual-auth-v2/configmap-identity.json",
+      "sha256": "6c20b159112ee48ddb0242fee1a90aeaaf5fa5d3385f38e661913dccf6fd6f23"
+    },
+    {
+      "path": "clone-actual-auth-v2/create-result.json",
+      "sha256": "b173e5af59709defb0f70a658b042e86d76f3b82bb24a25c7505a69ade38f046"
+    },
+    {
+      "path": "clone-actual-auth-v2/release-result.json",
+      "sha256": "2a5aca93486100e38f2518dbbb593c780a1b4b8c4cf0a16710d3a56fba48f761"
+    },
+    {
+      "path": "clone-actual-auth-v2/terminal-job.private.json",
+      "sha256": "35efd7b9be4e8546fe81ad74db9fe7befd72e829dd43ae5f27f507f772d59395"
+    },
+    {
+      "path": "clone-actual-auth-v2/terminal-pods.private.json",
+      "sha256": "bd31d33f5df35c0c30b5f4289c58dabb613bb79eaffff78901f8ba872021b5f1"
+    },
+    {
+      "path": "clone-actual-auth-v2/verified-receipt.json",
+      "sha256": "667f6cf922e33cc3dd31bbb03c11fe0b0cf4017c61d271c92de488a1232d2d51"
+    },
+    {
+      "path": "clone-actual-auth-v2/read-only-role-preflight.private.log",
+      "sha256": "6c543d037b3b0d1cea5de30cbec282ff587391d9f39fbebfdff8159d31930476",
+      "bytes": 1639
+    },
+    {
+      "path": "clone-actual-auth-v2/transport-readiness.private.log",
+      "sha256": "0eb964175e74ae1294692600650d0801bc05b374eaefff4f2b1a852f83e74b19",
+      "bytes": 3509
+    },
+    {
+      "path": "clone-actual-behavior-v2/attempt-start.json",
+      "sha256": "a5b7b4890f987130dee744ac1dc3b70c84ff5455923b4e3d9c594ba0bd8dab42"
+    },
+    {
+      "path": "clone-actual-behavior-v2/submitted-manifest.json",
+      "sha256": "e969ebf74605b977be62ea93dfd1ba465bc4b89e0e9979ebfc69b0b39a6125b7"
+    },
+    {
+      "path": "clone-actual-behavior-v2/suspended-job.private.json",
+      "sha256": "51229d58a0da0ea0ef8643a2b15c0a800ef3b27c7b14d7c0ef584c30584f00a1"
+    },
+    {
+      "path": "clone-actual-behavior-v2/released-job.private.json",
+      "sha256": "309ea3627dbaa15b86cb2520faa1dcb59097218cc36101bbf1e571df75db8b65"
+    },
+    {
+      "path": "clone-actual-behavior-v2/configmap-identity.json",
+      "sha256": "c5113f55eeb73b477eeac3455686873ee9a477bc60b7b044bf1cb62e7b546a85"
+    },
+    {
+      "path": "clone-actual-behavior-v2/create-result.json",
+      "sha256": "d31bad5fea645933d626b2f54d20b95e0f6e252a3f8df21cff88c544b22484e4"
+    },
+    {
+      "path": "clone-actual-behavior-v2/release-result.json",
+      "sha256": "31a8e5b0cce3f962f9e7500ab81c59dc25ef32d5433090da43e0801bb05ae27e"
+    },
+    {
+      "path": "clone-actual-behavior-v2/terminal-job.private.json",
+      "sha256": "3e23250e2ef477895d3f632de868322dac7647398e2bfc415ea96042e55c61f3"
+    },
+    {
+      "path": "clone-actual-behavior-v2/terminal-pods.private.json",
+      "sha256": "225448db134cd62a793129e41d9fabbdf480736cb40f350d741b904b278ccd0d"
+    },
+    {
+      "path": "clone-actual-behavior-v2/terminal-receipt.json",
+      "sha256": "ea5a17bda5c4dba049158b96380489db75ea11faf8baaba80c831dd30946d747"
+    },
+    {
+      "path": "clone-actual-behavior-v2/qualification.terminal.private.log",
+      "sha256": "350ad0420fe3bb1ac2447cb2386303a0c42334c2fdb4e998b438c92a7aa071bb",
+      "bytes": 11302
+    },
+    {
+      "path": "clone-actual-behavior-v2/transport-readiness.terminal.private.log",
+      "sha256": "7a6a180a905de9631e95d5a19e85110ba4f47b19e7bebbe0de75306f83b02280",
+      "bytes": 3508
+    },
+    {
+      "path": "clone-alert-preview-c5/attempt-start.json",
+      "sha256": "04119752f4788e53d1914af010249059a78ab119789cc8d8ef8240cb46b0eabf"
+    },
+    {
+      "path": "clone-alert-preview-c5/submitted-manifest.json",
+      "sha256": "bef8aed4328a9ef422c6009e4c93b8c99700fdcdf940befbfe874f8b511a7e05"
+    },
+    {
+      "path": "clone-alert-preview-c5/suspended-job.private.json",
+      "sha256": "b306bcb78acba7f830b109fcf1b9324dc4a14b636e7233961c1cf4e2028c24aa"
+    },
+    {
+      "path": "clone-alert-preview-c5/released-job.private.json",
+      "sha256": "c4c37447dc7e36a417c1168574db13aea9bcdca2d515a5126e4d44b340e01fc5"
+    },
+    {
+      "path": "clone-alert-preview-c5/configmap-identity.json",
+      "sha256": "e58bb794740cd838e8340539b5b13495a844e0ee53deabeddea705e9b528d975"
+    },
+    {
+      "path": "clone-alert-preview-c5/create-result.json",
+      "sha256": "431a3f6b9e6a04d9cfd14237f7262781ec319df88c89bde4492b11d2551064b7"
+    },
+    {
+      "path": "clone-alert-preview-c5/release-result.json",
+      "sha256": "30a1575ffb6e8af2baf715ed1ecfd98de0614190a141e364fc1c60bdd51727c6"
+    },
+    {
+      "path": "clone-alert-preview-c5/failed-job.private.json",
+      "sha256": "607994d6e0bbd7c07895c3ae7c58b7a0a433b8492d719840aab0cdac4e3848ba"
+    },
+    {
+      "path": "clone-alert-preview-c5/failed-pods.private.json",
+      "sha256": "361241d3eb73a0dd3d4edbf37cc181f9ebeaf4d8711cd00b1dc2b445f16e2800"
+    },
+    {
+      "path": "clone-alert-preview-c5/candidate-preview.failed.private.log",
+      "sha256": "2fe2171ab0751a3f5f5b6373e9b733f35e20059bb657bb27de909f36b3a53096",
+      "bytes": 155
+    },
+    {
+      "path": "clone-alert-preview-c5/transport-readiness.failed.private.log",
+      "sha256": "e35c0300116ca5ac1e56c12146954aa34d93d17411cc5268443f191cc141c33d",
+      "bytes": 3509
+    }
+  ],
+  "private_custody_root": "/Users/jason/maintenance/verdify-s3-execution-20261017",
+  "cleanup_scope_exclusions": [
+    "genuine and retained synthetic database rows",
+    "all Secrets and credentials",
+    "CNPG Cluster, database Pods, Services and replicas",
+    "PVCs/PVs and retained data",
+    "future or unreleased point-proof and alert packets/Jobs"
+  ],
+  "cleanup_database_or_secret_changes_reported": false,
+  "cleanup_targets_include_pvc_pv": false,
+  "future_point_or_alert_cleanup_claimed": false,
+  "issue639_or587_acceptance_claimed": false,
+  "public_content": "Sanitized metadata and digests only; no Secret values, raw logs, or genuine row data."
+}
