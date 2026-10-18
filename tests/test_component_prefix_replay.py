@@ -439,7 +439,7 @@ def test_native_evidence_replays_across_workdirs_without_losing_input_or_breach_
     """A random policy filename must not change otherwise identical evidence."""
     raw_outputs = []
     breaches = 0
-    covered = frozenset(CANONICAL_FIELD_ORDER[:27])
+    covered = frozenset(row["name"] for row in tool.source_coverage_report()["fields"] if row["assignment_declared"])
 
     def native_run(command, **_kwargs):
         policy_path = Path(command[2].split("=", 1)[1])
@@ -506,6 +506,196 @@ def test_coverage_record_parser_requires_one_machine_record() -> None:
         tool.parse_coverage_payload("no declaration")
     with pytest.raises(tool.PrefixReplayError):
         tool.parse_coverage_payload(f"{marker} {{}}\n{marker} {{}}\n")
+
+
+def test_source_coverage_reports_real_consumers_and_local_include_closure() -> None:
+    report = tool.source_coverage_report()
+    assert report["field_count"] == 48
+    assert report["declared_assignment_count"] == 27
+    assert len(report["unimposed_fields"]) == 21
+    assert report["compiled_safety_qualification_supported"] is False
+    assert len(report["missing_path_evidence"]) == 4
+    for row in report["fields"]:
+        assert row["control_read_sites"]
+        assert row["native_path_qualification"] == "not_established_by_source_scan"
+        for site in row["control_read_sites"]:
+            assert site["migrated_to_snapshot"]
+            assert f"kPF_{row['name']}" in (ROOT / site["file"]).read_text().splitlines()[site["line"] - 1]
+    for relative in (
+        "firmware/test/policy_injection.h",
+        "firmware/test/invariants.h",
+        "firmware/lib/greenhouse_types.h",
+        "firmware/lib/greenhouse_solar.h",
+        "firmware/lib/policy_vector_generated.h",
+        "firmware/lib/policy_sha256.h",
+    ):
+        assert report["source_files"][relative] == hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
+    expected_hash = tool._sha256_bytes(
+        tool.canonical_json({k: v for k, v in report.items() if k != "report_sha256"}).encode()
+    )
+    assert report["report_sha256"] == expected_hash
+
+
+def test_fabricated_full48_template_cannot_override_actual_source(tmp_path) -> None:
+    with pytest.raises(tool.PrefixReplayError, match="differs from actual injection source"):
+        tool.CompiledInvariantInterlock(
+            binary=tmp_path / "never-executed",
+            corpus_path=tmp_path / "never-read",
+            row_count=128,
+            coverage=CANONICAL_FIELD_ORDER,
+            workdir=tmp_path,
+            binary_sha256="a" * 64,
+            source_sha256="b" * 64,
+            corpus_sha256="c" * 64,
+        )
+
+
+@pytest.mark.parametrize("bad_field", ["rows", "imposed", "unimposed", "invariant_violations"])
+def test_unexercised_or_incomplete_native_records_remain_unproven(tmp_path, monkeypatch, profiles, bad_field) -> None:
+    report = tool.source_coverage_report()
+    covered = {row["name"] for row in report["fields"] if row["assignment_declared"]}
+    probe = tool.CompiledInvariantInterlock(
+        binary=tmp_path / "stub",
+        corpus_path=tmp_path / "stub.tsv",
+        row_count=128,
+        coverage=covered,
+        workdir=tmp_path,
+        binary_sha256="a" * 64,
+        source_sha256="b" * 64,
+        corpus_sha256="c" * 64,
+    )
+
+    def run(command, **kwargs):
+        path = Path(command[2].split("=", 1)[1])
+        payload = {
+            "schema": "verdify-replay-invariants-coverage-v1",
+            "field_count": 48,
+            "injectable_count": 27,
+            "imposed_count": 27,
+            "full_coverage": False,
+            "full_injectable_coverage": True,
+            "rows": 128,
+            "status": "ok",
+            "policy_state_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "invariant_violations": 0,
+            "imposed": {name: {"source": "policy_state", "rows": 128} for name in covered},
+            "unimposed": {name: "outside compiled control" for name in set(CANONICAL_FIELD_ORDER) - covered},
+        }
+        if bad_field == "rows":
+            payload["rows"] = 0
+        elif bad_field == "imposed":
+            payload["imposed"][next(iter(covered))]["rows"] = 0
+        elif bad_field == "unimposed":
+            payload["unimposed"] = {}
+        else:
+            payload.pop("invariant_violations")
+        return tool.subprocess.CompletedProcess(
+            command, 0, stdout=tool._COVERAGE_MARKER + " " + json.dumps(payload), stderr=""
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", run)
+    result = probe.verdict(tool.PrefixCase("witness", "activation", 0, profiles["baseline"], (), ()))
+    assert result.verdict == tool.UNPROVEN
+    assert "mismatch" in result.detail or "effective" in result.detail or "exactly zero" in result.detail
+
+
+def test_full_field_assignments_without_real_path_evidence_still_cannot_certify(
+    tmp_path, monkeypatch, profiles
+) -> None:
+    # A prospective source change assigning all fields is not itself coverage
+    # of the downstream relay/mister/solar paths or recovery/negative cases.
+    report = tool.source_coverage_report()
+    for row in report["fields"]:
+        row["assignment_declared"] = True
+    monkeypatch.setattr(tool, "source_coverage_report", lambda: report)
+    probe = tool.CompiledInvariantInterlock(
+        binary=tmp_path / "stub",
+        corpus_path=tmp_path / "stub.tsv",
+        row_count=128,
+        coverage=CANONICAL_FIELD_ORDER,
+        workdir=tmp_path,
+        binary_sha256="a" * 64,
+        source_sha256="b" * 64,
+        corpus_sha256="c" * 64,
+    )
+
+    def run(command, **kwargs):
+        path = Path(command[2].split("=", 1)[1])
+        payload = {
+            "schema": "verdify-replay-invariants-coverage-v1",
+            "field_count": 48,
+            "injectable_count": 48,
+            "imposed_count": 48,
+            "full_coverage": True,
+            "full_injectable_coverage": True,
+            "rows": 128,
+            "status": "ok",
+            "policy_state_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "invariant_violations": 0,
+            "imposed": {name: {"source": "policy_state", "rows": 128} for name in CANONICAL_FIELD_ORDER},
+            "unimposed": {},
+        }
+        return tool.subprocess.CompletedProcess(
+            command, 0, stdout=tool._COVERAGE_MARKER + " " + json.dumps(payload), stderr=""
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", run)
+    result = probe.verdict(tool.PrefixCase("witness", "activation", 0, profiles["baseline"], (), ()))
+    assert result.verdict == tool.UNPROVEN
+    assert "recovery/negative-scenario" in result.detail
+
+
+def test_bounded_pilot_does_not_read_past_requested_corpus_rows(tmp_path, monkeypatch) -> None:
+    report = tool.source_coverage_report()
+    covered = {row["name"] for row in report["fields"] if row["assignment_declared"]}
+    template = "\n".join(name + (" 1" if name in covered else " 1 NOT-IMPOSABLE") for name in CANONICAL_FIELD_ORDER)
+    corpus = tmp_path / "large.tsv.gz"
+    corpus.touch()
+
+    class BoundedReader:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            self.consumed += 1
+            assert self.consumed <= 3, "pilot read beyond header plus two admitted rows"
+            return "timestamp\ttemp\n" if self.consumed == 1 else "2026-10-18\t70\n"
+
+        consumed = 0
+
+    reader = BoundedReader()
+    monkeypatch.setattr(tool.gzip, "open", lambda *args, **kwargs: reader)
+    monkeypatch.setattr(tool.shutil, "which", lambda value: "/fake/compiler")
+
+    def compile_or_template(command, **kwargs):
+        if "-o" in command:
+            Path(command[command.index("-o") + 1]).write_bytes(b"not a real executable")
+        return tool.subprocess.CompletedProcess(command, 0, stdout=template, stderr="")
+
+    monkeypatch.setattr(tool.subprocess, "run", compile_or_template)
+    probe = tool.build_compiled_interlock(corpus=corpus, workdir=tmp_path, compiler="fake", max_rows=2)
+    assert probe.row_count == 2
+    assert reader.consumed == 3
+    assert probe.describe()["compiled_safety_qualification_supported"] is False
+
+
+def test_negative_pilot_bound_cannot_silently_select_whole_corpus(tmp_path, monkeypatch) -> None:
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid bound must be refused before compiler or corpus access")
+
+    monkeypatch.setattr(tool.subprocess, "run", forbidden)
+    monkeypatch.setattr(tool.gzip, "open", forbidden)
+    probe = tool.build_compiled_interlock(
+        corpus=tmp_path / "never-read.gz", workdir=tmp_path, compiler="g++", max_rows=-1
+    )
+    assert probe.name == "unproven"
+    assert "nonnegative integer" in probe.describe()["reason"]
 
 
 def test_invariant_failures_cannot_collide_with_the_ci_legacy_corpus_exit() -> None:

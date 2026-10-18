@@ -1,0 +1,1030 @@
+{
+  "compiled_safety_qualification_supported": false,
+  "declared_assignment_count": 27,
+  "field_count": 48,
+  "fields": [
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 646,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::band_track_fraction",
+      "name": "band_track_fraction",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 608,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cold_vent_guard_delta_f",
+      "firmware_symbol": "Setpoints::cold_vent_guard_delta_f",
+      "name": "cold_vent_guard_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 607,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_exit_hysteresis_f",
+      "firmware_symbol": "Setpoints::cool_exit_hysteresis_f",
+      "name": "cool_exit_hysteresis_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 606,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::cool_stage2_exit_hysteresis_f",
+      "name": "cool_stage2_exit_hysteresis_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 605,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_stage2_over_high_f",
+      "firmware_symbol": "Setpoints::cool_stage2_over_high_f",
+      "name": "cool_stage2_over_high_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 615,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1155,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_min_dew_margin_f",
+      "firmware_symbol": "Setpoints::direct_wet_stress_min_dew_margin_f",
+      "name": "direct_wet_stress_min_dew_margin_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 614,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1153,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_vpd_margin_kpa",
+      "firmware_symbol": "Setpoints::direct_wet_stress_vpd_margin_kpa",
+      "name": "direct_wet_stress_vpd_margin_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 600,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_dwell_gate_ms",
+      "firmware_symbol": "Setpoints::dwell_gate_ms",
+      "name": "dwell_gate_ms",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 365,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 367,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::econ_block",
+      "name": "enthalpy_close",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kEconClose",
+      "source_note": "modelled from controls.yaml:352-370 economiser deadband (dH >= close blocks)"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 364,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 369,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::econ_block",
+      "name": "enthalpy_open",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kEconOpen",
+      "source_note": "modelled from controls.yaml:352-370 economiser deadband (dH <= open unblocks)"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 583,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_fog_escalation_kpa",
+      "firmware_symbol": "Setpoints::fog_escalation_kpa",
+      "name": "fog_escalation_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 573,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_heat_hysteresis",
+      "firmware_symbol": "Setpoints::heat_hysteresis",
+      "name": "heat_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 80,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fan_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:80 MIN_FAN_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 79,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fan_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:79 MIN_FAN_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 84,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fog_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:84 MIN_FOG_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 83,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_fog_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:83 MIN_FOG_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 78,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_heat_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:78 MIN_HEAT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 77,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_heat_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:77 MIN_HEAT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 82,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_vent_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:82 MIN_VENT_OFF_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 81,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "min_vent_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:81 MIN_VENT_ON_MS relay-dwell wrapper; not a determine_mode/resolve_equipment input"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 616,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_mist_backoff_s",
+      "firmware_symbol": "Setpoints::mist_backoff_ms",
+      "name": "mist_backoff_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 577,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sealed_max_s",
+      "firmware_symbol": "Setpoints::sealed_max_ms",
+      "name": "mist_max_closed_vent_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 578,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_relief_duration_s",
+      "firmware_symbol": "Setpoints::relief_duration_ms",
+      "name": "mist_thermal_relief_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 581,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 973,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_mist_s2_delay_s",
+      "firmware_symbol": "Setpoints::mist_s2_delay_ms",
+      "name": "mister_all_delay_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1473,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1502,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_all_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1480/1509 zone-mister arbiter; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1302,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_center_penalty",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1304 zone-mister weighting; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 971,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_engage_delay_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:973 MISTER_ENGAGE_DELAY_MS; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1126,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1260,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1514,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_engage_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1128/1521 zone-mister engage threshold; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1245,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1339,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_min_off_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1247 zone-mister dwell floor; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1230,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_pulse_gap_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1232 zone-mister cadence; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1228,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_pulse_on_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1230 zone-mister cadence; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1486,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1487,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1576,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_vpd_weight",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1493 zone-mister pulse weighting; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 863,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1184,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "mister_water_budget_gal",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:865 daily water ceiling; runs downstream of resolve_equipment"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 488,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "night_vpd_bias_kpa",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:483-496 biases the ON-CHIP solar VPD band before it becomes Setpoints::vpd_low/high; the corpus sp_vpd_low/sp_vpd_high columns are already post-bias captures, so re-applying it here would double-count the bias"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 596,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 2108,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_outdoor_staleness_max_s",
+      "firmware_symbol": "Setpoints::outdoor_staleness_max_s",
+      "name": "outdoor_staleness_max_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 610,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_cool_all_fans_at_high_enabled",
+      "firmware_symbol": "Setpoints::cool_all_fans_at_high_enabled",
+      "name": "sw_cool_all_fans_at_high_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1162,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_direct_wet_gate_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:1164 wet-gate branch; evaluated in the ESPHome lambda, not in greenhouse_logic.h"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 613,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_direct_wet_stress_override_enabled",
+      "firmware_symbol": "Setpoints::direct_wet_stress_override_enabled",
+      "name": "sw_direct_wet_stress_override_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 599,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sw_dwell_gate_enabled",
+      "firmware_symbol": "Setpoints::sw_dwell_gate_enabled",
+      "name": "sw_dwell_gate_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 919,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 1926,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_fog_closes_vent",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:921 post-resolve_equipment relay interlock; not a compiled-logic input"
+    },
+    {
+      "assignment_declared": false,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 990,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": null,
+      "name": "sw_mister_closes_vent",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kNone",
+      "source_note": "controls.yaml:992 post-resolve_equipment relay interlock; not a compiled-logic input"
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 593,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_sw_summer_vent_enabled",
+      "firmware_symbol": "Setpoints::sw_summer_vent_enabled",
+      "name": "sw_summer_vent_enabled",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kBool",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 321,
+          "migrated_to_snapshot": true
+        },
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 572,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_temp_hysteresis",
+      "firmware_symbol": "Setpoints::temp_hysteresis",
+      "name": "temp_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 653,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": null,
+      "firmware_symbol": "Setpoints::vent_exchange_fraction",
+      "name": "vent_exchange_fraction",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 595,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vent_prefer_dp_delta_f",
+      "firmware_symbol": "Setpoints::vent_prefer_dp_delta_f",
+      "name": "vent_prefer_dp_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 594,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vent_prefer_temp_delta_f",
+      "firmware_symbol": "Setpoints::vent_prefer_temp_delta_f",
+      "name": "vent_prefer_temp_delta_f",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 326,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_vpd_hysteresis",
+      "firmware_symbol": "Setpoints::vpd_hysteresis",
+      "name": "vpd_hysteresis",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kFloat",
+      "source_note": null
+    },
+    {
+      "assignment_declared": true,
+      "control_read_sites": [
+        {
+          "access": "read",
+          "category": "control",
+          "file": "firmware/greenhouse/controls.yaml",
+          "line": 579,
+          "migrated_to_snapshot": true
+        }
+      ],
+      "corpus_column": "sp_watch_dwell_s",
+      "firmware_symbol": "Setpoints::vpd_watch_dwell_ms",
+      "name": "vpd_watch_dwell_s",
+      "native_path_qualification": "not_established_by_source_scan",
+      "sink": "kU32FromSeconds",
+      "source_note": null
+    }
+  ],
+  "missing_path_evidence": [
+    "actual ESPHome relay dwell and post-resolve vent consumers",
+    "actual zone mister cadence, arbiter, wet gate and water budget consumers",
+    "pre-bias solar band inputs (post-bias corpus columns cannot be biased twice)",
+    "recovery and negative scenarios exercising those consumers at every required prefix"
+  ],
+  "report_sha256": "414ed62a244047e00d076a0a0bfc884081d41fc7fa4fe814f4dff5e27c248232",
+  "schema": "verdify-component-prefix-source-coverage-v1",
+  "source_files": {
+    "firmware/greenhouse.yaml": "dbd8c50c889d712a80d71182aa34a0a87b272387993b09080d9f01ba172440ce",
+    "firmware/greenhouse/controls.yaml": "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
+    "firmware/greenhouse/external_sensors.yaml": "c88cd1868380b7c501440a5192a36044e8b321c3c6826e846ecb6376094f62e5",
+    "firmware/greenhouse/hardware.yaml": "ccfc661da28cb59e73302b531d888b20bbb5ff6cfe464cace8c03a09ecaa196b",
+    "firmware/greenhouse/policy_engine.yaml": "2f16fb69cd50d4c4f656ee3ba958e01e6a7079bc6e5d4464ab9c53e1896bfdb3",
+    "firmware/greenhouse/sensors.yaml": "56f6e75095fd15f4e80e296ecac221090953c6255fd005bd5d3b028f2e1a0abd",
+    "firmware/greenhouse/tunables.yaml": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
+    "firmware/lib/greenhouse_logic.h": "1bec80ba9181f66ca7573d16a4f40dd7fc4376f913c7c05a659a39e692ae4823",
+    "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
+    "firmware/lib/greenhouse_types.h": "52eb4b782d6c8d1828875b792710acb929d4897ad75dee6032fdeb8da1b5d4d9",
+    "firmware/lib/policy_rom_baseline_generated.h": "e452e63e50e8497f9bf33b401bd1844f70ca12a455fef73a8647a4b58f7e8763",
+    "firmware/lib/policy_sha256.h": "21cfa69be90231489d83004bf76a7bc592aa0eed3f07223d785cc92a10b96adf",
+    "firmware/lib/policy_vector_generated.h": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0",
+    "firmware/test/invariants.h": "e31ce32554ce4074bb185b376b34fcc6bd93fc5219919bf55e394e8093e659f1",
+    "firmware/test/policy_injection.h": "0ecb44ee34beed1637c0b853d1bd3b08479b71f007ca14c7bb2a75bd83041ab9",
+    "firmware/test/replay_invariants.cpp": "e56a9f41615e8f2b01735cc168a30b17b4a704aefc03b152c231a1d1d06a2005",
+    "scripts/component_prefix_replay.py": "bf18ad4c5893eb94b5f50fc07af55917092747ab59b7b13ff2360861c185ce93",
+    "scripts/gen-policy-consumer-manifest.py": "3e14de58429575e154e7a47c60f77074c1744ef72cfdc85a6914c9100c89756f",
+    "verdify_schemas/component_executor.py": "f4d42b5dfe517bb0232a608bb7bd2ce0fda04b02b47e05163ff03be57fabb575",
+    "verdify_schemas/policy_vector.py": "2ee4b8e766fe96da5345274b496b166b6a927888324b7454ad7e97ba9d75b74c",
+    "verdify_schemas/tunable_registry.py": "0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf"
+  },
+  "unimposed_fields": [
+    "min_fan_off_s",
+    "min_fan_on_s",
+    "min_fog_off_s",
+    "min_fog_on_s",
+    "min_heat_off_s",
+    "min_heat_on_s",
+    "min_vent_off_s",
+    "min_vent_on_s",
+    "mister_all_kpa",
+    "mister_center_penalty",
+    "mister_engage_delay_s",
+    "mister_engage_kpa",
+    "mister_min_off_s",
+    "mister_pulse_gap_s",
+    "mister_pulse_on_s",
+    "mister_vpd_weight",
+    "mister_water_budget_gal",
+    "night_vpd_bias_kpa",
+    "sw_direct_wet_gate_enabled",
+    "sw_fog_closes_vent",
+    "sw_mister_closes_vent"
+  ]
+}
