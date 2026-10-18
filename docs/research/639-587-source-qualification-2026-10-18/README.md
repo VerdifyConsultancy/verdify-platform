@@ -26,7 +26,7 @@ After ROOT verifies the authorized `vallery` context, existing supported runner/
 python docs/research/639-587-source-qualification-2026-10-18/native-prefix-pilot.py
 ```
 
-Seal source inputs and attempt metadata before execution; retain stdout/stderr and failures. Verify exact source/binary/consumer hashes, terminal exit, 128 rows, 27/48 assignments, the `unproven` baseline verdict with zero declared invariant breaches, missing-field exit 64, and `order_revision: null`. Any compiler, corpus, invariant, identity or resource failure stops the pilot; do not treat a generic `unproven` result as a passed pilot or expand the workload. This pilot checks the source repair's native contract only. It deliberately provides no all-prefix or recovery/negative-path qualification.
+Seal source inputs and attempt metadata before execution; retain stdout/stderr and failures. The pilot emits each compiler/template/baseline/refusal result, including raw stdout/stderr, before later assertions can fail. There are two behavior invocations, three total harness processes (including the policy template), and one compiler process. The compiled binary itself has digest-only custody and is removed with private scratch. Verify exact source/binary/consumer hashes, terminal exit, 128 rows, 27/48 assignments, the `unproven` baseline verdict with zero declared invariant breaches, missing-field exit 64, and `order_revision: null`. Any compiler, corpus, invariant, identity or resource failure stops the pilot; do not treat a generic `unproven` result as a passed pilot or expand the workload. This pilot checks the source repair's native contract only. It deliberately provides no all-prefix or recovery/negative-path qualification.
 
 ## Remaining runtime authority
 

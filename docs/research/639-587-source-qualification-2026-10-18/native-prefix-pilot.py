@@ -21,6 +21,36 @@ sys.modules[SPEC.name] = tool
 SPEC.loader.exec_module(tool)
 
 
+def retained_run(command, **kwargs):
+    """Emit each native result before any later assertion can fail.
+
+    These subprocesses consume committed source/corpus only, never private DB
+    values or credentials. ROOT must retain the complete native stdout stream.
+    """
+    try:
+        result = _SUBPROCESS_RUN(command, **kwargs)
+    except subprocess.TimeoutExpired as exc:
+        record = {"command": command, "exit_code": None, "failure": "TimeoutExpired"}
+        for name in ("stdout", "stderr"):
+            value = getattr(exc, name) or ""
+            record[name] = value.decode(errors="replace") if isinstance(value, bytes) else value
+        print("PREFIX_PILOT_PROCESS_RESULT=" + json.dumps(record, sort_keys=True), flush=True)
+        raise
+    record = {
+        "command": command,
+        "exit_code": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "stdout_sha256": tool._sha256_bytes(result.stdout.encode()),
+        "stderr_sha256": tool._sha256_bytes(result.stderr.encode()),
+    }
+    print("PREFIX_PILOT_PROCESS_RESULT=" + json.dumps(record, sort_keys=True), flush=True)
+    return result
+
+
+_SUBPROCESS_RUN = subprocess.run
+
+
 def main() -> None:
     source = tool.source_coverage_report()
     assert source["declared_assignment_count"] == 27 and len(source["unimposed_fields"]) == 21
@@ -60,7 +90,11 @@ def main() -> None:
                 "stdout_sha256": tool._sha256_bytes(negative.stdout.encode()),
                 "stderr_sha256": tool._sha256_bytes(negative.stderr.encode()),
             },
-            "native_harness_invocations": 2,
+            "native_harness_behavior_invocations": 2,
+            "native_harness_process_invocations": 3,
+            "compiler_process_invocations": 1,
+            "process_output_custody": "complete PREFIX_PILOT_PROCESS_RESULT lines in retained native stdout",
+            "binary_custody": "digest only; private temporary compiled binary removed after run",
             "corpus_rows": 128,
             "full_prefix_qualification": False,
             "physical_qualification": False,
@@ -70,4 +104,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    subprocess.run = retained_run
+    try:
+        main()
+    finally:
+        subprocess.run = _SUBPROCESS_RUN
