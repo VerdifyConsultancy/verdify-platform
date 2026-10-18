@@ -214,5 +214,6 @@
       "sha256": "3cb07d795a393798dfa4d64cb7af8edeca2c1eb0bc0e11e9e3e82c9b949546e9"
     },
     "prior_graph_receipts_unchanged": true
-  }
+  },
+  "later_delivery_preflight_history": "587-alert-delivery-preflight-history.json"
 }

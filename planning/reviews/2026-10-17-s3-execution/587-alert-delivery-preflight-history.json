@@ -1,0 +1,121 @@
+{
+  "schema": "verdify-s3-alert-delivery-preflight-history/v1",
+  "reviewed_at": "2026-10-18T06:46Z",
+  "issue": 587,
+  "full_issue_acceptance": false,
+  "v2_original_attempt": {
+    "started_at": "2026-10-18T06:42:56.264784+00:00",
+    "actual_disposition": "failed_preflight_before_any_create_or_send",
+    "mode": "preflight",
+    "source_seal_sha256": "79058316bca43c17984af2e86c8f08d248070cb1f567ef060a4554eb7efabbc5",
+    "release_source_sha256": "3116666531889be210ff83f9f3036ad6ad0d07fe29b3e977eafad9a05d98a001",
+    "attempt_start": {
+      "path": "alert-delivery-v2-preflight-01/attempt-start.json",
+      "sha256": "2e77383f0ada369883182bde92fd605d949f7dbe9dd7209a06862cb73cb1d98c"
+    },
+    "original_terminal": {
+      "path": "alert-delivery-v2-preflight-01/submission-terminal.json",
+      "sha256": "0e98c64d8fb41aa856bbbdcfe3623da454b371243ff6c19bb6229db0f26d0308"
+    },
+    "original_failure_field": null,
+    "original_failure_null_is_not_success": true,
+    "original_submitted_or_uncertain": false,
+    "original_release_confirmed": false,
+    "preflight_success_receipt_exists": false,
+    "create_dispatch_exists": false,
+    "bridge_custody_exists": false,
+    "job_or_configmap_created": false,
+    "messages_sent": 0,
+    "database_writes": false,
+    "retained_source_seal_and_all14_source_hashes_verified": true,
+    "failure": "The original sender source probe failed its combined return-code/stdout-size/empty-stderr guard. Its return code and streams were not retained. A separate identical read-only diagnosis reproduced a successful probe with a kubectl default-container notice, supporting an implicit-container compatibility explanation without proving the original exact stderr. The exception-handler typo type(e).__name__in then raised AttributeError before failure assignment; finally wrote a misleading failure:null receipt.",
+    "original_files_modified": false,
+    "automatic_retry": false,
+    "operator_observed_failure_supplement": {
+      "path": "alert-delivery-v2-preflight-01/root-observed-failure.json",
+      "sha256": "d3b701b0ba7b06d2414401d005c07cbd5c92e6ecb6b1452c9d9cdd2edf520109",
+      "provenance": "ROOT tool-observed failure supplement; exact raw outer stderr was not retained",
+      "observed_exit_code": 1,
+      "observed_guard_error": "sender_source_probe_failed",
+      "observed_masking_exception": "AttributeError: type object ValueError has no attribute __name__in",
+      "exact_raw_outer_stderr_retained": false,
+      "original_source_and_receipts_rewritten": false
+    },
+    "original_probe_returncode_retained": false,
+    "original_probe_stdout_or_stderr_retained": false
+  },
+  "read_only_diagnosis": {
+    "at": "2026-10-18T06:43:37.154938+00:00",
+    "receipt": {
+      "path": "alert-v2-sender-probe-diagnosis-01/diagnosis.json",
+      "sha256": "c7b8c01a90d9c8bef3c8efd9acdbb383d4b70693f4e2c2ca4177d10f3d666e0a"
+    },
+    "pod_uid": "44386520-a799-468c-ae13-fe93ec9e1f1c",
+    "container": "ingestor",
+    "probe_returncode": 0,
+    "stdout_bytes": 302,
+    "stderr_bytes": 89,
+    "stderr_class": "kubectl_default_container_notice_only",
+    "stdout": {
+      "path": "alert-v2-sender-probe-diagnosis-01/probe.stdout.private.json",
+      "sha256": "e71c0c2955c38874e4f224d562871e43e8b808cef73223c1083aadb9e47c8d79"
+    },
+    "stderr": {
+      "path": "alert-v2-sender-probe-diagnosis-01/probe.stderr.private.log",
+      "sha256": "8c053f61310d9207efd282611b5cf7ea14e08ed643933e4345f36ddfb0fd1cca"
+    },
+    "source_metadata_only": true,
+    "token_read": false,
+    "messages_sent": 0,
+    "diagnostic_probe_is_separate_from_original_attempt": true,
+    "supports_compatibility_explanation_without_proving_original_exact_streams": true
+  },
+  "successor_preflight": {
+    "status": "passed_read_only_preflight_only",
+    "started_at": "2026-10-18T06:45:38.576039+00:00",
+    "receipt": {
+      "path": "alert-delivery-v3-preflight-01/preflight-receipt.json",
+      "sha256": "85ae1ea186583fb7ebec3bb7b0330b54b8cdf1b70e9ead60be6172bb9c120e5b"
+    },
+    "source_seal_sha256": "19a1fff24778a28ad8ac6385a1da989bccd6910f493262c0c3934bb677df7431",
+    "release_source_sha256": "3cf6357c2b754dfd9a0bc284e03560771001cb9a719dad44735df4e432f7e766",
+    "all15_retained_source_hashes_verified": true,
+    "correction": "Explicit ingestor container selection and safe exception classification in separately versioned v3 source; original v2 retained.",
+    "prepared_owner_admission": {
+      "path": "alert-delivery-v3-preflight-01/prepared-owner-admission.json",
+      "sha256": "7aeaf9f49d53b4823e8cc1b738d01aec6c953f01afceb7c416505f7d635bc22e"
+    },
+    "owner_released": false,
+    "human_message_authorization_present": false,
+    "native_sender_binding": {
+      "path": "alert-delivery-v3-preflight-01/native-sender-binding.json",
+      "sha256": "6cd756f2fece054df6aa36483456ca7b10c546794d9415d6f0c4f752e3d28cff"
+    },
+    "sender_uid": "44386520-a799-468c-ae13-fe93ec9e1f1c",
+    "sender_baked_source": "c386f834de7a1acbd1ad74300218ab7922cf6d4b",
+    "sender_source_probe_no_token_read": true,
+    "current_clone_capacity_and_expired_fixture_checked": true,
+    "prestate_equality": {
+      "path": "alert-delivery-v3-preflight-01/prestate-equality.json",
+      "sha256": "8da15799dcb4613365d036b4a6c69d0c9bedac711c8dbdb926f269da21960a07"
+    },
+    "capacity_admission": {
+      "path": "alert-delivery-v3-preflight-01/capacity-admission.json",
+      "sha256": "ad3e99b7923c0c6711238adb08fab369e54ef1281f703365fffc2cff0c75cc79"
+    },
+    "job_or_configmap_created": false,
+    "database_writes": false,
+    "messages_sent": 0,
+    "message_delivery_or_after_custody_acceptance_claimed": false,
+    "pass_basis": "Dedicated preflight-receipt.json and its bound prepared admission; generic submission-terminal failure:null alone is never passing evidence."
+  },
+  "separate_message_permission": {
+    "request_state": "explicitly_requested_pending_answer",
+    "requested_at_minute_utc": "2026-10-18T06:46Z",
+    "request_provenance": "ROOT reports the explicit two-message request in the current task",
+    "granted": false,
+    "messages_sent": 0
+  },
+  "existing_ordinary_login_preview_acceptance_unchanged": true,
+  "production_service_failure_claimed": false
+}
