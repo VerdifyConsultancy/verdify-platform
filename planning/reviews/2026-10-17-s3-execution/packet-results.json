@@ -1,0 +1,80 @@
+{
+  "schema": "verdify-s3-execution-packets/v1",
+  "reviewed_at": "2026-10-18T02:34:19Z",
+  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
+  "composition_status": "Partial execution closeout; remaining deliveries and complete native graph refresh belong to ROOT before publication.",
+  "packets": [
+    {
+      "number": 977,
+      "packet_status": "accepted",
+      "issue_status": "closed",
+      "accepted": true,
+      "evidence": [
+        "977-three-replicas-20261017.md",
+        "977-three-replicas-20261017.json",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/977#issuecomment-6244758504"
+      ]
+    },
+    {
+      "number": 749,
+      "packet_status": "sealed_fail",
+      "issue_status": "open",
+      "accepted": false,
+      "evidence": [
+        "749-sealed-diagnosis.md",
+        "749-sealed-diagnosis.json"
+      ],
+      "remaining": "Unchanged climate spread, six unclassified replacement soil identities and last-operation Argo provenance blockers remain. Supplemental diagnosis does not grant Gate R/P authority."
+    },
+    {
+      "number": 981,
+      "packet_status": "comparison_complete_owner_qualification_pending",
+      "issue_status": "open",
+      "accepted": false,
+      "evidence": [
+        "981-source-clock-packet.json",
+        "https://github.com/jvallery/homeassistant/issues/878"
+      ],
+      "remaining": "Authentic per-channel source clock qualification and downstream natural source advancement/stale-negative evidence."
+    },
+    {
+      "number": 782,
+      "packet_status": "input_decision_complete",
+      "issue_status": "open",
+      "accepted": false,
+      "evidence": [
+        "../../../docs/research/782-input-decision-2026-10-17.md",
+        "../../../docs/research/evidence/782-inputs-2026-10-17/availability.json"
+      ],
+      "remaining": "Authentic target/contributor, pre-boundary selector and complete joint 18-hour nine-state evidence; empirical analysis only through admitted k3s after those inputs exist."
+    },
+    {
+      "number": 587,
+      "packet_status": "pending_root_composition",
+      "issue_status": "open",
+      "accepted": false,
+      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+    },
+    {
+      "number": 639,
+      "packet_status": "pending_root_composition",
+      "issue_status": "open",
+      "accepted": false,
+      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+    },
+    {
+      "number": 802,
+      "packet_status": "pending_root_composition",
+      "issue_status": "open",
+      "accepted": false,
+      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+    },
+    {
+      "number": 980,
+      "packet_status": "pending_root_composition",
+      "issue_status": "open",
+      "accepted": false,
+      "remaining": "Delivery outcome not incorporated in this draft; preserve current issue acceptance until ROOT composes and independently verifies the receipt."
+    }
+  ]
+}

@@ -58,7 +58,7 @@ Hierarchy means ownership/roll-up only. Native blocked-by edges separately encod
     - [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) Design and rehearse CNPG alongside the live database on current storage (C5; closed)
     - [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) Execute a separately bounded database cutover only after parity and rollback proof (C5; open)
     - [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) Extend least-privilege database roles beyond the already-required experiment boundary (C5; closed)
-    - [#977](https://github.com/VerdifyConsultancy/verdify-platform/issues/977) Decide the database replica policy before November 12; keep optional reclaim separate (C5; open)
+    - [#977](https://github.com/VerdifyConsultancy/verdify-platform/issues/977) Decide the database replica policy before November 12; keep optional reclaim separate (C5; closed)
   - [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359) Control program: truthful crop corridors before evidence-led tuning (C6; open)
     - [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) Repair climate score semantics and publish physical outcomes separately from credit (C0; closed)
     - [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) Resolve served, consumed and raw-readback band lineage without fabricated device truth (C0; closed)

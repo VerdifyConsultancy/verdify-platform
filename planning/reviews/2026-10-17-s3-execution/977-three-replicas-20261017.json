@@ -1,0 +1,219 @@
+{
+  "schema": "verdify977-three-replica-acceptance/v1",
+  "recorded_at_utc": "2026-10-18T02:29:34.727673+00:00",
+  "status": "verified_healthy_three_distinct_worker_replicas_and_exact_policy",
+  "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/977",
+  "authorization": "Jason selected restore three replicas in the parent Verdify sprint session, 2026-10-17 MDT; direct execution scope excludes restart/remount/reclaim.",
+  "source": {
+    "repository": "jvallery/storage-infra",
+    "base": "68fe9d4",
+    "commit": "55973ba5c17cfe325bb344dc3448a29a9e7648d1",
+    "commit_url": "https://github.com/jvallery/storage-infra/commit/55973ba5c17cfe325bb344dc3448a29a9e7648d1",
+    "paths": [
+      "deploy/longhorn-policy/protected-tier.yaml",
+      "docs/operations/RATIFIED-DECISIONS.md"
+    ],
+    "decision": "A6",
+    "delivery": "Fast-forward main; branch protection/rulesets required no PR or status check, and linear history was preserved.",
+    "validation": [
+      "longhorn_survivability_gate.py PASS",
+      "longhorn_chart_version_gate.py PASS under existing 1.8.2 exception",
+      "longhorn_trim_gate.py PASS",
+      "test_longhorn_survivability_gate.py 39 tests PASS (1.841 seconds)",
+      "git diff --check PASS",
+      "policy twin parse/equality and exact preservation of all other gaps, members/settings PASS"
+    ],
+    "automatic_ci": "storage-infra-gates check reported completed/cancelled; no enforced check was bypassed or re-run. No full CI success claimed."
+  },
+  "change": {
+    "operation_id": "verdify977-r3-20261018",
+    "before_replicas": 2,
+    "after_replicas": 3,
+    "volume_uid_test": true,
+    "generation_test": 72,
+    "precondition_tests": [
+      "current spec.numberOfReplicas = 2",
+      "status.attached",
+      "status.healthy",
+      "currentNodeID = vm-k3s-node7"
+    ],
+    "server_dry_run_passed": true,
+    "attempts": 1,
+    "inverse": "rollback-count-only.NOT-EXECUTED.json retained; not executed; fresh safety review required"
+  },
+  "volume": {
+    "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+    "uid": "ce8bee30-faf5-41a6-a086-d9237fc78615",
+    "generation": 73,
+    "resource_version": "281002420",
+    "state": "attached",
+    "robustness": "healthy",
+    "replicas": 3,
+    "logical_bytes": 53687091200,
+    "actual_bytes": 41104879616,
+    "node_anti_affinity": "disabled",
+    "node_selector": [
+      "plane-longhorn"
+    ],
+    "disk_selector": [
+      "plane-longhorn"
+    ],
+    "rebuild_status": {}
+  },
+  "replicas": [
+    {
+      "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-a0948cb2",
+      "uid": "672ad232-aa51-4261-bd71-b28372b456d7",
+      "node": "vm-k3s-node5",
+      "disk": "nvme-s4p4ng0m103293d",
+      "disk_uuid": "ab0bfba3-8644-41a8-a8fc-3ff98bfe2968",
+      "mode": "RW",
+      "state": "running",
+      "active": true,
+      "failed_at": "",
+      "healthy_at": "2026-10-16T23:48:26Z",
+      "disk_free_bytes": 687656140800,
+      "disk_free_percent": 69.93
+    },
+    {
+      "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-c5470818",
+      "uid": "afa40551-d43c-4387-9ff5-f5ab7d226be3",
+      "node": "vm-k3s-node8",
+      "disk": "nvme-s7u5nj0xa01268w",
+      "disk_uuid": "b471ed6a-77c2-4973-8319-c72d4c1230bf",
+      "mode": "RW",
+      "state": "running",
+      "active": true,
+      "failed_at": "",
+      "healthy_at": "2026-10-18T02:27:26Z",
+      "disk_free_bytes": 865494630400,
+      "disk_free_percent": 88.01
+    },
+    {
+      "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-eb4a73da",
+      "uid": "39d0aa79-8a8f-4120-9539-a5b39da99fc1",
+      "node": "vm-k3s-node7",
+      "disk": "nvme-s59ans0na05876v",
+      "disk_uuid": "9ec9f18e-e333-40f2-8859-632cb3c1c4c9",
+      "mode": "RW",
+      "state": "running",
+      "active": true,
+      "failed_at": "",
+      "healthy_at": "2026-09-29T00:44:04Z",
+      "disk_free_bytes": 663224320000,
+      "disk_free_percent": 67.45
+    }
+  ],
+  "original_two_replica_uids_preserved": true,
+  "db": {
+    "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "same_as_before": true,
+    "phase": "Running",
+    "containers": [
+      {
+        "name": "postgres",
+        "ready": true,
+        "restart_count": 0
+      }
+    ],
+    "pg_isready": "/var/run/postgresql:5432 - accepting connections"
+  },
+  "policy": {
+    "configmap_uid": "41e650b3-d852-404f-88f3-64222ec107f8",
+    "resource_version": "280997992",
+    "data_matches_committed_source": true,
+    "verdify_protected_member_retained": true,
+    "only_exact_verdify_distinct_nodes_waiver_removed": true,
+    "unrelated_live_policy_unchanged": true,
+    "json_sha256": "97b7311917d7b9b5c0f42ee539517ece33f9bbcda6559c5c2ba4cc8b150cea93",
+    "yaml_sha256": "da65859896ab3760d0b69db3ab00747c6515a302b161e9280f1002a679207f4f",
+    "argocd_tracking_id": "longhorn:/ConfigMap:longhorn-system/longhorn-protected-tier",
+    "source_path": "deploy/longhorn-policy/protected-tier.yaml",
+    "source_repository": "jvallery/storage-infra"
+  },
+  "argo": {
+    "application_uid": "c023e78e-de72-4057-ae2e-1045d1f521e6",
+    "sync_operation_phase": "Succeeded",
+    "operation_revisions": [
+      "55973ba5c17cfe325bb344dc3448a29a9e7648d1",
+      "55973ba5c17cfe325bb344dc3448a29a9e7648d1",
+      "55973ba5c17cfe325bb344dc3448a29a9e7648d1"
+    ],
+    "operation_resources": [
+      {
+        "group": "",
+        "hookPhase": "Running",
+        "kind": "ConfigMap",
+        "message": "configmap/longhorn-protected-tier serverside-applied",
+        "name": "longhorn-protected-tier",
+        "namespace": "longhorn-system",
+        "status": "Synced",
+        "syncPhase": "Sync",
+        "version": "v1"
+      }
+    ],
+    "exact_resource_only": true,
+    "prune": false,
+    "whole_app_sync": false,
+    "application_health": "Healthy",
+    "application_sync": "OutOfSync",
+    "unrelated_preserved_drift": "longhorn-default-setting was OutOfSync before and remains untouched; no whole-application Synced claim"
+  },
+  "backup": {
+    "name": "backup-95cccd4a675e430e",
+    "uid": "19e97208-7271-47a3-94f7-eb3537df720b",
+    "state": "Completed",
+    "progress": 100,
+    "created_at": "2026-10-17T12:53:57Z",
+    "target": "b2",
+    "target_available": true,
+    "target_last_synced_at": "2026-10-18T02:14:27Z",
+    "limitation": "Existing successful backup metadata verified after change; no new backup job, restore, fault/failover rehearsal or broader RTO/RPO proof."
+  },
+  "admission": {
+    "metadata_artifact": "apply-admission.json",
+    "no_concurrent_rebuild_before_apply": true,
+    "maintenance_leases_empty": true,
+    "no_worker_pressure_before_or_after": true,
+    "worker_requests_and_working_sets_reviewed": true,
+    "node8_free_floor_percent": 35,
+    "node8_target_post_free_percent": 88.01,
+    "no_control_plane_placement": true,
+    "one_existing_controller_rebuild_only": true
+  },
+  "scope_preserved": [
+    "No database restart, remount, trim, reclaim or backup route change",
+    "No NAS data scan or I/O operation",
+    "No new Job, credentials, RBAC or selector change",
+    "No replica deletion or unrelated volume/policy mutation"
+  ],
+  "engine": {
+    "name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-e-0",
+    "uid": "053e900d-f092-4861-a9d8-9e5b66907eb6",
+    "resource_version": "281002414",
+    "state": "running",
+    "replica_modes": {
+      "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-a0948cb2": "RW",
+      "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-c5470818": "RW",
+      "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411-r-eb4a73da": "RW"
+    },
+    "rebuild_status": {}
+  },
+  "acceptance": {
+    "owner_decision_and_source_policy": true,
+    "post_decision_exact_placement_health_backup_metadata": true,
+    "optional_reclaim_separate_no_restart_or_failover_proof_implied": true
+  },
+  "private_custody": {
+    "directory": "/private/tmp/verdify-977-r3-execution",
+    "manifest_sha256": "af5c697e5bf03fe354ed0074588db91a3212ae808f1b31cd874b17cada5969e0",
+    "result_sha256": "50bef735e82745bd08bd705566e379afb12126ea1f7a138725a82e368844924d",
+    "public_evidence_contains": "Operational object identities and metadata only; no credentials, raw logs, SQL rows or scientific alert identities."
+  },
+  "root_acceptance": {
+    "independent_readback": "Confirmed by ROOT after storage-lane delivery: exact volume healthy 3 RW on node5/7/8, empty rebuild status, unchanged database pod UID with zero restarts, exact source/live policy match, existing backup Completed.",
+    "issue_state": "closed",
+    "state_reason": "completed",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/977#issuecomment-6244758504"
+  }
+}

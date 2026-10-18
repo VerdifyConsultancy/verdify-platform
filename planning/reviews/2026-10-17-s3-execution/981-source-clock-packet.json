@@ -1,0 +1,35 @@
+{
+  "schema": "verdify981-source-clock-packet/v1",
+  "status": "comparison_complete_upstream_qualification_open",
+  "issue_accepted": false,
+  "owner_dependency": {
+    "repository": "jvallery/homeassistant",
+    "number": 878,
+    "url": "https://github.com/jvallery/homeassistant/issues/878",
+    "state": "open",
+    "native_blocked_by": "ROOT posted and independently read back the native dependency during this execution"
+  },
+  "observations": [
+    {
+      "at_utc": "2026-10-18T02:05:57Z",
+      "scope": "Ordinary-login bounded read-only DB and two intended HA source states; connection closed, zero mutations",
+      "channel_0": "Zero watts; HA last_updated and last_reported remained 2026-10-17T23:53:51Z. Ingestion correctly retained stale quality after 300 seconds and denied the aggregate with null watts_total.",
+      "channel_1": "Source clock advanced and quality was OK; negative roughly 1433 W remains the known reversed-CT/partial-circuit reading, without reinterpretation."
+    },
+    {
+      "at_utc": "2026-10-18T02:11:21Z",
+      "scope": "Four bounded read-only Shelly RPCs against the same verified intended device",
+      "finding": "Device system clock current; channel 0 zero and channel 1 roughly -1433 W. Available zero plus a system clock does not prove an advancing per-channel source sample clock."
+    }
+  ],
+  "next_action": "Home Assistant owner qualifies actual installed Shelly/HA per-channel reporting for stable zero, unavailable/disconnected and stale cases. Then capture one later natural intended source/DB comparison and retain stale/missing denial. No source defect or recoverable clock authority is yet established.",
+  "boundaries": [
+    "Keep the intended two identities and independent source/ingest clocks.",
+    "No fetch-time-as-source-time substitution, synthetic freshness, forced load, hardware reset or credential change.",
+    "#981 remains open; selected nine-state #782 preparation is independent, while #787 energy acceptance still requires #981."
+  ],
+  "evidence_hashes": {
+    "981-source-ingest-first.stdout.private.json": "5101b179b687b6aed8d817cb8b7360d5be03577f455efcd26a413b0df0e6c068",
+    "981-shelly-readonly-snapshot.private.json": "cdd972965e11e1b9a0dcc02333cd453538215c0fa76076dc9534068e3e6e80b5"
+  }
+}

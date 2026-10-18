@@ -88,6 +88,7 @@ class WorkItem(StrictModel):
     key: str
     issue_number: int | None
     status: Literal["open", "closed"] = "open"
+    accepted: bool = False
     title: str
     stage: str
     kind: Literal["task", "epic"]
@@ -105,6 +106,12 @@ class WorkItem(StrictModel):
     delivery: str
     rollback: str
     decision: str
+
+    @model_validator(mode="after")
+    def accepted_only_when_closed(self) -> WorkItem:
+        if self.accepted and self.status != "closed":
+            raise ValueError("accepted work must be closed")
+        return self
 
     @field_validator("title", "what", "why", "baseline", "delivery", "rollback", "decision", "owner_role")
     @classmethod

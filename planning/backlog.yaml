@@ -1,7 +1,7 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "f6c47e954b9ed3ccc6a6fea1302912a6515aec8c",
+  "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
   "snapshot_date": "2026-10-17",
   "original_open_issues": [
     14,
@@ -154,7 +154,7 @@
       "why": "Starting a randomized day does not establish climate or resource benefit. The prior launch-first roadmap left semantic defects, low power, season mismatch and post-trial decisions unowned.",
       "how": [
         "Maintain one current issue contract, one status-aware source and a matching native dependency graph.",
-        "Execute S3 October 19–30 within 80 shared hours: 29–58 hours planned and 22 hours contingency; alternate source work replaces blocked work rather than multiplying work in progress.",
+        "Execute S3 October 19–30 within 80 shared hours. The original eight packets were estimated at 29–58 hours with 22 hours contingency; accepted #977 leaves seven open allocations with unchanged original estimates of 27–54 hours. Do not treat these as a time ledger; alternate work replaces blocked work.",
         "Keep future experiments, physical commissioning and conditional architecture decisions outside the near-term completion claim."
       ],
       "acceptance": [
@@ -170,7 +170,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "October 17 replan: all 369 issue records inventoried, all 50 open issues reviewed individually. The seven superseded/unselected issues #296/#317/#324/#361/#586/#606/#638 were already closed; #801 is also closed with route delivery evidence. No further closure was justified. Current implementation still needs explicit runtime, contained, physical or scientific acceptance. See planning/reviews/2026-10-17-replan for the complete 50-node current graph and execution packet.",
+      "baseline": "October 17 triage inventoried 369 issue records and reviewed all 50 then-open issues. That snapshot remains frozen in planning/reviews/2026-10-17-replan. Current S3 execution has one additional accepted closure: #977, independently verified and closed by ROOT. There are 49 open issues and 27 active completion edges, including the real upstream jvallery/homeassistant#878 → #981 dependency. #749 remains failed, #981 awaits source-clock qualification, and #782 has a completed input-decision packet but missing empirical acceptance. Remaining delivery outcomes and the final full native graph readback await ROOT composition. See planning/reviews/2026-10-17-s3-execution.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -514,7 +514,7 @@
       "what": "Produce the fresh source-bound readiness packet used immediately before recovery, proof and each baseline/aggressive/baseline boundary.",
       "why": "Generic 4/4 OK diagnostics can hide a missing south probe. A tolerated outage is not permission to ignore a real control contradiction, localized heat stress or an unexplained wetting refusal.",
       "how": [
-        "Get the existing writer owner's actual finite observation disposition and close log custody. If the final packet was not attempted, record NOT ATTEMPTED and reconcile the current exporter-owner release/revision binding before any separately scoped one-shot read-only qualification. Do not reset timers, replay used policy authority or hold independent #981/#802 work behind this issue.",
+        "Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.",
         "Bind 48/48 grid, source/firmware/registry, writer lease/generation, backup, authentication, provider preflight and current Argo state. Incorporate #incident disposition and #424 semantic mapping.",
         "Exercise stale/cache/skew/generation/false-green fixtures; recovery mode grants only orphan recovery, while proof mode additionally requires #747 and exact Synced + Healthy. Preserve the locked spread thresholds."
       ],
@@ -529,7 +529,7 @@
         "db/migrations/240-experiment-v2-readiness-reader-grants.sql",
         "tests"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. The c386f834 source and 4b4994bc ingestor were delivered by the fc057fb8 release with verified source, hooks, smoke and schema checks. At 01:55 UTC October 18 (October 17 Denver), Argo is Synced/Healthy at f6c47e95, with one ready ingestor and one ready exporter. The original fixed observation deadline was 01:53:46 UTC; no terminal original-clause packet was found in the inspected owner custody. Its preserved wrapper binds the prior release and paused exporter, so current metadata cannot substitute for that missing result.\n\nNext action: Get the existing writer owner's actual finite observation disposition and close log custody. If the final packet was not attempted, record NOT ATTEMPTED and reconcile the current exporter-owner release/revision binding before any separately scoped one-shot read-only qualification. Do not reset timers, replay used policy authority or hold independent #981/#802 work behind this issue.\n\nS3, October 19–30: 2–4 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: #424, #778, #949.\n\nConcrete conditions: Existing writer owner's terminal observation and custody handoff Current exact storage/exporter release and source/revision binding for final read-only packet\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/749 · https://github.com/VerdifyConsultancy/verdify-platform/commit/c386f834de7a1acbd1ad74300218ab7922cf6d4b · https://github.com/VerdifyConsultancy/verdify-platform/commit/fc057fb8dcebe8e39c652bbed9dd057a961d9121 · https://github.com/VerdifyConsultancy/verdify-platform/pull/984",
+      "baseline": "S3 obtained a sealed original-clause recovery-slice packet after correcting the UUID observer serializer; the original failure remains retained. All 40 sealed files match their manifest and deployed collector/guard source. Verdict remains FAIL: two climate spreads of 4.8600006103515625 F and 5.040000915527344 F exceed the unchanged 4 F guard. Six south_1 soil alerts are new/replacement exact identities absent from the reviewed recovery-only catalog; native integer IDs and typed projection are preserved, so a SQL identity projection correction is not justified. Eight retained soil identities still match. Argo application metadata was Synced/Healthy at 39dbedd6 with no active operation, but its last completed exporter-only selective operation at f6c47e95 fails separate full-sync provenance criteria. Zero open exposure and draft/shadow closure grant no Gate R/P or physical authority.\n\nNext action: Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/749-sealed-diagnosis.md and .json. Original fixed-deadline and failed packets remain historical evidence; no deadline was reset by this supplemental diagnosis.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -668,9 +668,9 @@
       "what": "Finish the empirical inputs and frozen exploratory scientific contract",
       "why": "The current v2 candidate is June 1–July 30, 2027 with 30 pairs and 18-hour daily observation. The old November 2 calendar and 22-hour proposal are historical. Provisional model-only power of 0.13776 and historical climate eligibility do not establish authentic selector, target, equipment or endpoint completeness.",
       "how": [
-        "Inventory authentic pre-boundary contexts, target/contributor lineage and nine-state continuity; write an include/exclude/missing-input decision.",
+        "The S3 authentic-input inventory and include/exclude/prospective decision are complete; use docs/research/782-input-decision-2026-10-17.md to resolve the actual remaining inputs without treating the decision as scientific acceptance.",
         "Reuse delivered calendar and retention sensitivity; choose honest prospective collection where retrospective evidence is absent.",
-        "Remove blanket #981 gate: selected primary benefit is nine_control_state_minutes, while electricity is unselected secondary. Energy repair gates energy eligibility only.",
+        "Keep #981 conditional: selected primary benefit is nine_control_state_minutes, while electricity is unselected secondary. Energy repair gates energy eligibility only.",
         "Run intensive replay/power only through admitted supported k3s path; preserve winter passive study as separate."
       ],
       "acceptance": [
@@ -685,9 +685,10 @@
         "research/planner-efficacy/switchback/v2_power.py",
         "research/planner-efficacy/switchback/v2_analysis.py",
         "research/planner-efficacy/switchback/v2_selector.py",
-        "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
+        "research/planner-efficacy/protocols/direct-launch-basis-v2.json",
+        "docs/research/782-input-decision-2026-10-17.md"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Candidate is June 1–July 30, 2027: 30 pairs/60 days/[06:00,24:00). Historical 60/60 climate eligibility is not target/selector/equipment proof. 0.13776 is provisional model-only power. Authentic Oct2 capture had 79 hashed rows but zero target/contributor rows and no original provider choice; it cannot become preregistered replay.\n\nNext action: Inventory authentic pre-boundary contexts, target/contributor lineage and nine-state continuity; write an include/exclude/missing-input decision.\n\nS3, October 19–30: 4–8 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: #371, #779, #780, #781.\n\nConcrete conditions: Actual crop/target/contributor declarations and source-continuity evidence. #981 conditional only if electricity is explicitly selected into final claim/covariates; not a blanket dependency.\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/research/planner-efficacy/protocols/direct-launch-basis-v2.json · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/research/planner-efficacy/protocols/planner-switchback-v2.template.yaml · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/docs/research/c2-pre-draw-sensitivity-2026-09-28.md · https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-5956255448",
+      "baseline": "The S3 input-decision packet is complete, with bounded read-only metadata at 2026-10-18T02:06:09Z and original retained hashes. #782 remains open. No pilot selector contexts/choices exist; the nine contributor declarations are route_only, and current/future winter target rows do not establish a warm 2027 target/contributor cohort or an uninterrupted joint 18-hour endpoint. The authentic October 2 capture has zero target/contributor rows and no original selector choice. Reuse the June 1–July 30, 2027 candidate and provisional model-only sensitivity (power 0.13776); no retrospective clock or endpoint fabrication is allowed. Existing winter and native passive collectors are active, so no duplicate collector or runtime/DB change was needed. Their latest no-due/not-declared results do not prove full archived bytes or a completed study day.\n\nNext action: Use the completed input decision to obtain authentic target/contributor declarations, pre-boundary selector context/choice evidence and an eligible joint 18-hour nine-state interval. Continue the existing separate winter observer; verify its first naturally due packet. No new collector, draw, fabricated clock or heavy replay until the empirical contract and admitted k3s path are ready.\n\nEvidence: docs/research/782-input-decision-2026-10-17.md and docs/research/evidence/782-inputs-2026-10-17/availability.json. Energy #981 is conditional only if explicitly selected; it does not block the current nine-state primary endpoint preparation.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -3390,10 +3391,10 @@
       "parent": "218",
       "depends_on": [],
       "what": "Resolve the storage-owner two-replica exception before its November 12 expiration.",
-      "why": "The current healthy two-replica volume is not a permanent owner policy or a new HADR proof.",
+      "why": "The temporary two-replica exception required a recorded owner policy before expiry. Three healthy replicas satisfy this decision without establishing broader HADR acceptance.",
       "how": [
-        "Decide retain two versus restore three replicas before November12, update actual storage policy through storage-infra, and verify placement/health/backup status. Keep optional remount/reclaim out of the decision's blocking path; if selected coordinate after Storage708/799 and outside05:30–07:00UTC.",
-        "Publish the resulting protected-tier policy and independently verify the actual topology with the storage owner.",
+        "Jason selected restore three replicas before the November 12 waiver expiry. The storage owner delivered the exact policy change and guarded two-to-three controller update, then independently verified placement, health and backup metadata.",
+        "The committed protected-tier policy matches both live ConfigMap keys. ROOT independently verified the exact three-RW topology before acceptance.",
         "Treat any optional remount/trim as a separate specifically scheduled operation with backup and inverse evidence."
       ],
       "acceptance": [
@@ -3403,13 +3404,15 @@
       ],
       "paths": [
         "deploy/k8s/base/db-statefulset.yaml",
-        "docs/runbooks"
+        "docs/runbooks",
+        "planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.json"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Storage policy source retains verdify-prod/db-data-verdify-db-0 distinct-nodes exception through2026-11-12, renewable only with Verdify owner decision. October17 22:25 owner receipt reports bounded trim/purge and zero DB restarts; remaining reclaim needs a separately selected restart.\n\nNext action: Decide retain two versus restore three replicas before November12, update actual storage policy through storage-infra, and verify placement/health/backup status. Keep optional remount/reclaim out of the decision's blocking path; if selected coordinate after Storage708/799 and outside05:30–07:00UTC.\n\nS3, October 19–30: 2–4 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: Verdify owner replica-count decision jvallery/storage-infra policy implementation and exact placement/backup verification\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/977 · https://github.com/VerdifyConsultancy/verdify-platform/issues/977#issuecomment-6242234575 · https://github.com/jvallery/storage-infra/blob/main/deploy/longhorn-policy/protected-tier.yaml · https://github.com/jvallery/storage-infra/issues/703",
-      "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
+      "baseline": "Accepted S3 delivery: Jason selected restore three replicas. Storage owner commit 55973ba5c17cfe325bb344dc3448a29a9e7648d1 removed only the exact two-node distinct-nodes waiver and recorded the decision. Exact volume pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411 is healthy/attached with three RW copies on eligible node5/node7/node8 and empty rebuild status. The original two replica UIDs and database pod UID were preserved; the database remained Ready with zero restarts. Both live protected-tier policy keys match source; existing backup metadata is Completed and target Available. ROOT independently repeated these checks and closed this issue as completed. No further S3 allocation is required.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md and .json; https://github.com/VerdifyConsultancy/verdify-platform/issues/977#issuecomment-6244758504.",
+      "delivery": "Completed in storage-infra at 55973ba5c17cfe325bb344dc3448a29a9e7648d1 with exact-resource policy reconciliation and independently verified live three-RW placement. Focused policy gates and 39 survivability tests passed; no enforced branch status was bypassed. Automatic full owner CI was cancelled, so no full CI success is claimed. Retained receipts establish the scoped end state, not failover or restore acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
-      "decision": "Jason must choose whether to retain two replicas or restore three. An optional database remount requires its own concrete attended decision; no restart or trim is authorized by this replan.",
-      "status": "open"
+      "decision": "Fulfilled: Jason chose restore three replicas, and the exact source/live policy and volume topology now reflect that decision. Optional remount/reclaim remains a separate decision and was not performed; no restart, trim, backup-route change, fault rehearsal or broader survivability proof is implied.",
+      "status": "closed",
+      "accepted": true
     },
     {
       "key": "980",
@@ -3458,8 +3461,8 @@
       "what": "Trace and recover the stale energy source while preserving honest channel quality.",
       "why": "Recent database rows can carry old underlying source values, invalidating scientific/resource claims.",
       "how": [
-        "Execute that prepared one-shot source-versus-ingestion comparison through existing ordinary read grants and timeouts. Route the evidenced defect to its actual HA/device/ingestion owner; preserve intended channel identity and timestamps. If necessary, use one later natural sample to prove advancement without a polling loop.",
-        "Repair the evidenced owner defect; an unresolved upstream constraint keeps this issue open with a named handoff.",
+        "Complete jvallery/homeassistant#878 qualification of the actual installed per-channel source clock, then verify one later natural intended source/DB comparison and stale/missing denial. Keep source and ingest clocks separate; do not treat stable zero or device system time as a fresh channel sample.",
+        "If source-clock qualification demonstrates a defect, repair it in its actual owning lane; an unresolved upstream constraint keeps this issue open with the named handoff.",
         "Verify independent source advancement and stale/missing negative cases through consumers; never synthesize a replacement input."
       ],
       "acceptance": [
@@ -3472,7 +3475,7 @@
         "api",
         "grafana"
       ],
-      "baseline": "Reviewed October 17, 2026 against f6c47e95. Current shelly_energy.py retains the two intended entity identities, HA gateway last_updated, separate row timestamp, 300-second stale bound and non-ok aggregate denial. October17 historical sample showed channel0 source older than18hours; no current recovery should be inferred. Existing owner prepared a bounded two-entity and latest-four-rows comparison without executing it.\n\nNext action: Execute that prepared one-shot source-versus-ingestion comparison through existing ordinary read grants and timeouts. Route the evidenced defect to its actual HA/device/ingestion owner; preserve intended channel identity and timestamps. If necessary, use one later natural sample to prove advancement without a polling loop.\n\nS3, October 19–30: 3–6 shared engineering hours for the bounded next action. Active completion prerequisites: None. Closed predecessor records retained as scoped history: None.\n\nConcrete conditions: Existing intended-source reader authority and actual HA/device owner if upstream failure is confirmed\n\nEvidence: https://github.com/VerdifyConsultancy/verdify-platform/issues/981 · https://github.com/VerdifyConsultancy/verdify-platform/blob/f6c47e954b9ed3ccc6a6fea1302912a6515aec8c/ingestor/shelly_energy.py",
+      "baseline": "The bounded ordinary-login source/ingestion comparison and four read-only Shelly RPCs are complete, with zero mutations. The intended channel 0 reads zero watts, but HA last_updated and last_reported remain 2026-10-17T23:53:51Z; current ingestion correctly marks it stale after 300 seconds and denies the aggregate with null watts_total. Channel 1 source time advances; its negative reversed-CT/partial-circuit value is preserved. Device system time and an available zero reading do not establish an authentic advancing per-channel sample clock or prove a Home Assistant defect. Upstream qualification remains open at https://github.com/jvallery/homeassistant/issues/878, posted and read back as a native blocker by ROOT.\n\nNext action: Complete jvallery/homeassistant#878 qualification of the actual installed per-channel source clock, then verify one later natural intended source/DB comparison and stale/missing denial. Keep source and ingest clocks separate; do not treat stable zero or device system time as a fresh channel sample.\n\nEvidence: planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json. Source/ingest identity and stale denial remain truthful; this packet does not close #981 or grant energy eligibility.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation.",
@@ -3513,10 +3516,10 @@
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T01:55:27Z",
-    "source_revision": "f6c47e954b9ed3ccc6a6fea1302912a6515aec8c",
+    "reviewed_at": "2026-10-18T02:34:19Z",
+    "source_revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-10-17-replan/README.md",
+    "review_path": "planning/reviews/2026-10-17-s3-execution/README.md",
     "open_issues": [
       14,
       16,
@@ -3565,7 +3568,6 @@
       787,
       802,
       963,
-      977,
       980,
       981
     ],
@@ -3575,8 +3577,8 @@
         "title": "S3 — Runtime truth and contained qualification (October 19–30, 2026)",
         "kind": "sprint",
         "capacity_hours": 80,
-        "goal": "Finish eight bounded packets with 29–58 shared engineering hours; reserve 22 hours for actual rework and owner handoffs. One product delivery lane, one independent owner lane, one source/science preparation lane.",
-        "exit": "Verify remaining readiness outcome; recover truthful source/exporter behavior; qualify contained executor and lifecycle together; prepare exact descheduler adoption, replica-policy decision and scientific input decision. Each issue closes only on its stated scoped acceptance."
+        "goal": "Complete the eight original bounded packets within 80 shared hours. #977 is accepted; seven open allocations retain original estimates totaling 27–54 hours. These are not measured remaining hours or time spent. Preserve the original 22-hour contingency and one product, one independent owner and one source/science lane.",
+        "exit": "Record each scoped packet outcome and remaining acceptance. Replica-policy decision and three-replica verification are accepted; readiness is failed, energy clock qualification has a named upstream owner, and the scientific input decision is complete without scientific acceptance. Other packet outcomes await final composition."
       },
       {
         "id": "ALTERNATE",
@@ -3937,7 +3939,7 @@
         "sprint": "S3",
         "hours_min": 2,
         "hours_max": 4,
-        "next_action": "Get the existing writer owner's actual finite observation disposition and close log custody. If the final packet was not attempted, record NOT ATTEMPTED and reconcile the current exporter-owner release/revision binding before any separately scoped one-shot read-only qualification. Do not reset timers, replay used policy authority or hold independent #981/#802 work behind this issue.",
+        "next_action": "Preserve the sealed FAIL and investigate the real unchanged 4 F spread and six newly recurring soil identities before any separately scoped later qualification. Report current Argo health separately from historical full-sync provenance. Do not relax guards, silently expand the recovery-only catalog or repeat collection merely to obtain green.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -3969,7 +3971,7 @@
         "sprint": "S3",
         "hours_min": 4,
         "hours_max": 8,
-        "next_action": "Inventory authentic pre-boundary contexts, target/contributor lineage and nine-state continuity; write an include/exclude/missing-input decision.",
+        "next_action": "Use the completed input decision to obtain authentic target/contributor declarations, pre-boundary selector context/choice evidence and an eligible joint 18-hour nine-state interval. Continue the existing separate winter observer; verify its first naturally due packet. No new collector, draw, fabricated clock or heavy replay until the empirical contract and admitted k3s path are ready.",
         "owner_role": "Evidence/data lead"
       },
       {
@@ -4029,14 +4031,6 @@
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 977,
-        "sprint": "S3",
-        "hours_min": 2,
-        "hours_max": 4,
-        "next_action": "Decide retain two versus restore three replicas before November12, update actual storage policy through storage-infra, and verify placement/health/backup status. Keep optional remount/reclaim out of the decision's blocking path; if selected coordinate after Storage708/799 and outside05:30–07:00UTC.",
-        "owner_role": "Platform lead + storage owner"
-      },
-      {
         "issue_number": 980,
         "sprint": "S3",
         "hours_min": 2,
@@ -4049,7 +4043,7 @@
         "sprint": "S3",
         "hours_min": 3,
         "hours_max": 6,
-        "next_action": "Execute that prepared one-shot source-versus-ingestion comparison through existing ordinary read grants and timeouts. Route the evidenced defect to its actual HA/device/ingestion owner; preserve intended channel identity and timestamps. If necessary, use one later natural sample to prove advancement without a polling loop.",
+        "next_action": "Complete jvallery/homeassistant#878 qualification of the actual installed per-channel source clock, then verify one later natural intended source/DB comparison and stale/missing denial. Keep source and ingest clocks separate; do not treat stable zero or device system time as a fresh channel sample.",
         "owner_role": "Data/platform lead"
       }
     ]

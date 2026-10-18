@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-17-replan/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 93-issue/73-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-17-s3-execution/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 93-issue/73-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -75,7 +75,7 @@ flowchart TD
     i245["#245 (open) Execute a separately bounded database cutover only after p"]
     i643["#643 (closed) Extend least-privilege database roles beyond the already-r"]
     i49["#49 (closed) Audit and close historical suppressed sensor alerts withou"]
-    i977["#977 (open) Decide the database replica policy before November 12; kee"]
+    i977["#977 (closed) Decide the database replica policy before November 12; kee"]
   end
   subgraph C6["C6: Evidence-led control and irrigation"]
     i359["#359 (open) Control program: truthful crop corridors before evidence-l"]

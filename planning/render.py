@@ -57,7 +57,8 @@ def issue_body(item: WorkItem, plan: Backlog) -> str:
             if item.depends_on
             else "No issue-level predecessor. Pull according to stage priority and the concrete safety/physical conditions below; no blanket human gate is implied."
         ),
-        "## Acceptance and validation\n\n" + "\n".join(f"- [ ] {line}" for line in item.acceptance),
+        "## Acceptance and validation\n\n"
+        + "\n".join(f"- [{'x' if item.accepted else ' '}] {line}" for line in item.acceptance),
         f"## Delivery and real end-state verification\n\n{item.delivery}",
         f"## Rollback and evidence preservation\n\n{item.rollback}",
         f"## Decisions / physical boundary\n\n{item.decision}",
@@ -66,7 +67,7 @@ def issue_body(item: WorkItem, plan: Backlog) -> str:
         parts.append(
             "## Child deliverables\n\n"
             + "\n".join(
-                f"- [{'x' if child.status == 'closed' else ' '}] #{child.issue_number or child.key} — {child.title} ({child.status}; see recorded disposition)"
+                f"- [{'x' if child.accepted else ' '}] #{child.issue_number or child.key} — {child.title} ({child.status}; see recorded disposition)"
                 for child in children
             )
         )
@@ -239,6 +240,7 @@ def outputs(plan: Backlog) -> dict[str, str]:
                 title=issue_title(i),
                 stage=i.stage,
                 status=i.status,
+                accepted=i.accepted,
                 parent=items[i.parent].issue_number if i.parent else None,
                 blocked_by=[items[d].issue_number for d in i.depends_on],
                 body_sha256=hashlib.sha256(issue_body(i, plan).encode()).hexdigest(),

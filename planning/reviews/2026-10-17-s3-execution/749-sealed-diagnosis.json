@@ -1,0 +1,75 @@
+{
+  "schema": "verdify749-sealed-evidence-diagnosis/v1",
+  "live_requests": 0,
+  "source_edits": 0,
+  "sealed_file_count_verified": 40,
+  "manifest_sha256": "5bbbf2c0099505c436bcd6b37303e1218166a00e5011482b7c911a9527ebd621",
+  "deployed_source_revision": "c386f834de7a1acbd1ad74300218ab7922cf6d4b",
+  "release_revision": "39dbedd609f38a5e6f3db2a6c823373da293f423",
+  "source_check": [
+    {
+      "path": "scripts/experiment_v2_proof_packet.py",
+      "sha256": "31b3854c0692830f1f05342edc143e097f30168da64184dfd4d3175b9b8b68dd",
+      "equals_pinned_source": true,
+      "equals_main39db": true
+    },
+    {
+      "path": "scripts/experiment_v2_readiness_guard.py",
+      "sha256": "f81d28c621d4d9c6cc0b1a50365d30e625302c2d780f1ad8bdb336ce7fb52704",
+      "equals_pinned_source": true,
+      "equals_main39db": true
+    }
+  ],
+  "soil_dependencies_bound": true,
+  "soil_finding": "Eight retained identities match. All six south_1 alerts are replacement/new identities absent by raw integer-ID SHA256 as well as full identity hash; current acknowledged disposition also differs from reviewed open entries. They opened Oct17 22:19:07\u201322:44:08Z. Typed SQL projection and native integer serialization preserved the identity fields; this is not a projection/formatting defect. No cause of producer recurrence or prior-resolution history is inferred from this bounded corpus.",
+  "soil_change_recommendation": "No collector/guard/catalog patch justified. Preserve unknown recurrence as blocked. Do not generalize by sensor/family or silently add current hashes. Any proposal for an exact new recovery-only exception needs explicit scoped review and preserved physical Gate P blocking; no such authority is created here.",
+  "climate": {
+    "spread_limit_f": "4.0",
+    "observed_spreads_f": [
+      4.8600006103515625,
+      5.040000915527344
+    ],
+    "original_guard_blockers": [
+      "implausible_cross_zone_spread:0:temp_f",
+      "implausible_cross_zone_spread:1:temp_f"
+    ],
+    "interpretation": "Actual unchanged 4 F guard failure; no threshold relaxation, backward-selection, null filling, replacement sample or new observation."
+  },
+  "argo": {
+    "projection": {
+      "revision": "39dbedd609f38a5e6f3db2a6c823373da293f423",
+      "source_path": "deploy/k8s/overlays/prod",
+      "sync_status": "Synced",
+      "health_status": "Healthy",
+      "operation_phase": "Succeeded",
+      "operation_revision": "f6c47e954b9ed3ccc6a6fea1302912a6515aec8c",
+      "prune": false,
+      "resource_selector": [
+        {
+          "group": "apps",
+          "kind": "Deployment",
+          "name": "verdify-db-backup-exporter",
+          "namespace": "verdify-prod"
+        }
+      ],
+      "observed_at": "2026-10-18T02:09:56.774053Z"
+    },
+    "active_operation_present": false,
+    "unchanged_source_guard_blockers": [
+      "argo_operation_revision_mismatch",
+      "argo_resource_selector_present"
+    ],
+    "finding": "Current application runtime metadata reports Synced+Healthy at39dbedd6 with no active operation. Last completed operation is Succeeded exporter-only selective sync atf6c47e95. It is a historical operation provenance failure under the source full/nonselective/exact revision rule, not evidence the application is unhealthy.",
+    "observer_correction": "The custom observer line124 collapses selector failure into current_Argo_binding_or_health_not_accepted and omits explicit comparison of operation_revision. Report application health/revision and last-operation provenance separately, and invoke unchanged _validate_argo with exact collected fields to emit argo_operation_revision_mismatch and argo_resource_selector_present. Preserve verdict FAIL. Do not clear selector history, relabel this as full sync, or launch a full sync only to repair an observer record."
+  },
+  "smallest_justified_change": "Observer diagnostic naming/criterion delegation only; no scientific/alert readiness guard change. Keep sealed original immutable and attach this supplemental interpretation.",
+  "acceptance": "Original packet remains FAIL and is only recovery slices, not full Gate R/P or physical proof. Exposure-zero/draft-shadow-closed facts do not waive spread, alert, or Argo provenance requirements.",
+  "soil_identity_summary": {
+    "reviewed_exact_matches": 8,
+    "new_or_replacement_identities": 6,
+    "native_id_type_preserved": "int",
+    "typed_detail_fields_preserved": true,
+    "raw_identities_published": false
+  },
+  "original_packet_receipt_sha256": "cb56adb026794b517132bd531a21d87c89b4d0d157cf09fed7"
+}

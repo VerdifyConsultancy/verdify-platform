@@ -115,16 +115,48 @@ def test_issue_comment_links_are_not_symbolic_issue_references():
     assert resolve("Follow #integration", plan) == "Follow #783"
 
 
-def test_closed_children_keep_their_disposition_visible(data):
+@pytest.mark.parametrize("accepted", [False, True])
+def test_closed_children_keep_acceptance_separate_from_disposition(data, accepted):
     from planning.render import issue_body
 
     child = next(item for item in data["issues"] if item["key"] == "638")
     child["status"] = "closed"
+    child["accepted"] = accepted
     plan = Backlog.model_validate(data)
     parent = next(item for item in plan.issues if item.key == child["parent"])
     body = issue_body(parent, plan)
-    assert "- [x] #638" in body
+    assert f"- [{'x' if accepted else ' '}] #638" in body
     assert "closed; see recorded disposition" in body
+
+
+@pytest.mark.parametrize("status,accepted", [("open", False), ("closed", False), ("closed", True)])
+def test_issue_acceptance_checkboxes_and_manifest_match_explicit_evidence(data, status, accepted):
+    from planning.render import issue_body, outputs
+
+    record = next(item for item in data["issues"] if item["key"] == "638")
+    record.update(status=status, accepted=accepted)
+    plan = Backlog.model_validate(data)
+    item = next(item for item in plan.issues if item.key == "638")
+    body = issue_body(item, plan)
+    for clause in item.acceptance:
+        assert f"- [{'x' if accepted else ' '}] {clause}" in body
+    manifest = json.loads(outputs(plan)["planning/issues_manifest.json"])
+    entry = next(item for item in manifest["issues"] if item["key"] == "638")
+    assert entry["accepted"] is accepted
+
+
+def test_closed_status_does_not_default_to_accepted(data):
+    record = next(item for item in data["issues"] if item["key"] == "638")
+    record["status"] = "closed"
+    record.pop("accepted", None)
+    plan = Backlog.model_validate(data)
+    assert not next(item for item in plan.issues if item.key == "638").accepted
+
+
+def test_accepted_open_issue_rejected(data):
+    data["issues"][0].update(status="open", accepted=True)
+    with pytest.raises(ValidationError, match="accepted work must be closed"):
+        Backlog.model_validate(data)
 
 
 def test_archived_source_is_byte_exact():
