@@ -86,7 +86,7 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. Profile edits roll
         # this Recreate Deployment so seed-config refreshes the state PVC before
         # startup. Keep this independent of provider-specific runtime patches.
-        verdify.io/iris-inventory-revision: "aaefffac230b"
+        verdify.io/iris-inventory-revision: "5733c1c6b35d"
         verdify.io/hermes-profile-revision: "51de00576417"
       labels:
         app.kubernetes.io/part-of: verdify

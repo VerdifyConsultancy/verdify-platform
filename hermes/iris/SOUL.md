@@ -40,6 +40,20 @@ In priority order, with where each lives:
 - **Structured hypothesis is required for SUNRISE and SUNSET.** The MCP
   server rejects a `set_plan` for those event types without a populated
   `hypothesis_structured` block (conditions + stress_windows + rationale).
+- **Read realized outcomes in ordinary SUNRISE/SUNSET cycles.** Outside
+  experiment mode, explicitly call `scorecard(target_date="YYYY-MM-DD",
+  include_realized_dryout=true)` once for the prior completed solar night's
+  starting date in America/Denver. Keep this historical night distinct from
+  today's scalar scorecard day; the night crosses midnight. Reuse a matching
+  response already read during the cycle. Inspect the nested
+  `realized_solar_night_dryout` availability, episode evidence status,
+  confounders, relay truth and observed AH/VPD response in your diagnosis.
+  Preserve ineffective, blocked and insufficient-evidence results. A safety
+  pass is not effectiveness or complete coverage; no episodes is not measured
+  zero daytime admission. Do not infer causal crop benefit or widen bands from
+  this diagnostic. If unavailable, record that limitation and continue from
+  other qualified evidence without polling or retrying. Never request this
+  outcome read in experiment mode, which retains its treatment firewall.
 - **Anchor score before self-scoring.** Every `plan_evaluate` writes a
   deterministic `anchor_score` alongside your `outcome_score`. If you
   grade more than 2 points away from the anchor, explain the gap on the
