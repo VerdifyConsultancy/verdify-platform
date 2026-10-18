@@ -32,3 +32,6 @@ Current183b source uses two fixed Home Assistant power entities. The existing co
 | 782 / science + operator | List authentic missing crop/panel/target/season inputs and produce one concrete decision packet | No guessed observations/calendar/power; final energy eligibility waits981. No draw, random activation or new physical authority. |
 
 PR #982 remains with its existing owner. PR #983 was merged by its owner as183b; the last metadata fence still showed its desired pause awaiting adoption. PR982rehearsalendpointwaitsStorage708W7anditsownexactObjectStore/authreadback; neverwhole-rehearsalsync. PR983is atemporaryexporterpausescope withnamedresumeowner; do not borrow that approval for other productionchanges. #855 stays parked.
+
+
+Source delivery started: [daaa05f3](https://github.com/VerdifyConsultancy/verdify-platform/commit/daaa05f366017e38206f6b59e7c7bfa79ed9db94) is now on main, with the corrected #749 producer change, #801 exclusions and all27 canonical planning files. Root independently verified all36 provider payload identities and sole parent183b. The automatically triggered native qualification is running. Existing Retry retains the finite delivery window; images, promotion, full sync and final live acceptance remain pending.
