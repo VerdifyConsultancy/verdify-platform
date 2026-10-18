@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -15,6 +16,7 @@ if _INGESTOR_PATH not in sys.path:
     sys.path.insert(0, _INGESTOR_PATH)
 
 import shared  # noqa: E402
+import tasks.component_experiment as component_experiment  # noqa: E402
 from esp32_push import ComponentCommandOutcome  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
     MAX_EPOCH_SKEW,
@@ -39,6 +41,24 @@ WORK_ID = "22222222-2222-4222-8222-222222222222"
 BUNDLE_ID = "33333333-3333-4333-8333-333333333333"
 DEVICE_ID = "esp32-vallery"
 REVISIONS = RevisionSet("c" * 64, "firmware", "config", "registry", "grid")
+
+
+@pytest.mark.parametrize(
+    "query_name",
+    (
+        "_BEGIN_BUNDLE_SQL",
+        "_FINISH_BUNDLE_SQL",
+        "_RECORD_EPOCH_SQL",
+        "_CLOSE_EXPOSURE_SQL",
+        "_RECORD_PREEXPOSURE_MISMATCH_SQL",
+        "_REPORT_RUNTIME_FAULT_SQL",
+    ),
+)
+def test_composite_writes_invoke_function_once_in_from(query_name: str) -> None:
+    # PostgreSQL expands SELECT (volatile_fn()).* into one call per returned
+    # column. The asyncpg fake cannot expose its duplicate ledger writes.
+    query = getattr(component_experiment, query_name)
+    assert re.fullmatch(r"SELECT \* FROM public\.fn_experiment_v2_[a-z_]+\([^;]+\)", query)
 
 
 def test_post_delivery_settle_covers_one_complete_source_epoch() -> None:
@@ -649,7 +669,7 @@ async def test_runtime_fault_and_startup_attestation_use_exact_bounded_functions
 
     fault_query = next(query for query in connection.queries if "report_runtime_fault" in query)
     startup_query = next(query for query in connection.queries if "safe_startup_attestation" in query)
-    assert fault_query.startswith("SELECT (public.fn_experiment_v2_report_runtime_fault")
+    assert fault_query.startswith("SELECT * FROM public.fn_experiment_v2_report_runtime_fault")
     assert startup_query.startswith("SELECT * FROM public.fn_experiment_v2_safe_startup_attestation")
     assert all(" FROM public.experiment_v2_" not in query for query in (fault_query, startup_query))
 

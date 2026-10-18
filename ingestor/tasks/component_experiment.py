@@ -911,11 +911,13 @@ class Esp32ComponentTransport:
 _RUNTIME_SQL = f"SELECT * FROM public.{L3_EXECUTOR_RUNTIME}($1::uuid, $2::text)"
 _CLAIM_SQL = f"SELECT * FROM public.{L3_CLAIM_COMPONENT_WORK}($1::uuid, $2::text, $3::bigint, $4::text)"
 _READ_BUNDLE_SQL = f"SELECT * FROM public.{L3_READ_DELIVERY_BUNDLE}($1::uuid, $2::uuid, $3::text, $4::text, $5::bigint)"
+# Composite writes belong in FROM: SELECT (volatile_fn()).* invokes the
+# function once per result column and can duplicate durable ledger effects.
 _BEGIN_BUNDLE_SQL = (
-    f"SELECT (public.{L3_BEGIN_DELIVERY_BUNDLE}($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text, $6::text)).*"
+    f"SELECT * FROM public.{L3_BEGIN_DELIVERY_BUNDLE}($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text, $6::text)"
 )
 _FINISH_BUNDLE_SQL = (
-    f"SELECT (public.{L3_RECORD_DELIVERY_BUNDLE}($1::uuid, $2::uuid, $3::uuid, $4::timestamptz, $5::text)).*"
+    f"SELECT * FROM public.{L3_RECORD_DELIVERY_BUNDLE}($1::uuid, $2::uuid, $3::uuid, $4::timestamptz, $5::text)"
 )
 _RECORD_OUTCOME_SQL = (
     f"SELECT public.{L3_RECORD_COMPONENT_OUTCOME}"
@@ -926,16 +928,16 @@ _RECORD_GENERATION_SQL = (
     f"SELECT * FROM public.{L3_RECORD_RUNTIME_GENERATION}($1::uuid, $2::text, $3::uuid, $4::bigint, $5::text)"
 )
 _RECORD_EPOCH_SQL = (
-    f"SELECT (public.{L3_RECORD_OBSERVATION_EPOCH}"
+    f"SELECT * FROM public.{L3_RECORD_OBSERVATION_EPOCH}"
     "($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::bytea, $6::jsonb, "
-    "$7::text, $8::text, $9::text, $10::text, $11::bigint, $12::bigint, $13::text)).*"
+    "$7::text, $8::text, $9::text, $10::text, $11::bigint, $12::bigint, $13::text)"
 )
 _READ_OBSERVATIONS_SQL = (
     f"SELECT * FROM public.{L3_READ_OBSERVATION_EPOCHS}($1::uuid, $2::uuid, $3::uuid, $4::text, $5::bigint)"
 )
 _RECORD_EVENT_SQL = f"SELECT public.{L3_RECORD_WORK_EVENT}($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::text)"
 _OPEN_EXPOSURE_SQL = f"SELECT public.{L3_OPEN_EXPOSURE}($1::uuid, $2::uuid, $3::text, $4::text)"
-_CLOSE_EXPOSURE_SQL = f"SELECT (public.{L3_CLOSE_EXPOSURE}($1::uuid, $2::text, $3::text)).*"
+_CLOSE_EXPOSURE_SQL = f"SELECT * FROM public.{L3_CLOSE_EXPOSURE}($1::uuid, $2::text, $3::text)"
 _REQUEST_RECOVERY_SQL = (
     f"SELECT public.{L3_REQUEST_RECOVERY}"
     "($1::uuid, $2::uuid, tstzrange($3::timestamptz, $4::timestamptz, '[)'), "
@@ -947,16 +949,16 @@ _RECORD_RUNTIME_SNAPSHOT_SQL = (
     "$8::text, $9::text, $10::uuid, $11::bigint, $12::bigint, $13::boolean, $14::text)"
 )
 _RECORD_PREEXPOSURE_MISMATCH_SQL = (
-    f"SELECT (public.{L3_RECORD_PREEXPOSURE_MISMATCH}"
+    f"SELECT * FROM public.{L3_RECORD_PREEXPOSURE_MISMATCH}"
     "($1::uuid, $2::uuid, $3::uuid, $4::text, $5::uuid, $6::bytea, $7::jsonb, "
     "$8::text, $9::text, $10::text, $11::text, $12::uuid, $13::bigint, "
-    "$14::bigint, $15::bigint, $16::text)).*"
+    "$14::bigint, $15::bigint, $16::text)"
 )
 _MONITOR_OPEN_EXPOSURE_SQL = f"SELECT * FROM public.{L3_MONITOR_OPEN_EXPOSURE}($1::uuid, $2::text, $3::bigint)"
 _REPORT_RUNTIME_FAULT_SQL = (
-    f"SELECT (public.{L3_REPORT_RUNTIME_FAULT}"
+    f"SELECT * FROM public.{L3_REPORT_RUNTIME_FAULT}"
     "($1::uuid, $2::text, $3::uuid, $4::bigint, $5::uuid, $6::bigint, "
-    "$7::bigint, $8::text, $9::text, $10::text)).*"
+    "$7::bigint, $8::text, $9::text, $10::text)"
 )
 _SAFE_STARTUP_ATTESTATION_SQL = f"SELECT * FROM public.{L3_SAFE_STARTUP_ATTESTATION}($1::text, $2::uuid)"
 
