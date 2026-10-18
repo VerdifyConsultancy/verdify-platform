@@ -1,0 +1,419 @@
+{
+  "schema": "verdify-s3-proof-cleanup-final/v1",
+  "finished_at": "2026-10-18T05:13:12.443536+00:00",
+  "context": "vallery",
+  "namespace": "verdify-db-rehearsal",
+  "scope": "Exact disposable Job, terminal Pod and immutable ConfigMap for point proof, failed lifecycle attempt 01 and successful lifecycle v2 attempt 02.",
+  "objects_confirmed_absent": 9,
+  "entries_complete": 3,
+  "summary": {
+    "path": "proof-disposable-cleanup-02/verified-summary.json",
+    "sha256": "a8d72c90b93df4cff0e1e1bacb8d9b882d19565d6b0d963e2931fd5865c05170"
+  },
+  "plan_sha256": "a14da07cd94b9fce876f8899cf29eea587ed7fc17c42d34c75707ba548de9f15",
+  "verifier_sha256": "8a35765c4de411b708cb3d57e1dc6bf4726cc2ba57b98bb8f85fdf51380bfa6f",
+  "sender_sha256": "6c6181837b593ebdb2c6ac321a270d9b8a151e91cff518026c328e07704b8857",
+  "ordering": "Each entry: Job with Orphan propagation, then terminal Pod, then immutable ConfigMap; fresh UID/resourceVersion and named absence guards between stages.",
+  "automatic_mutation_retries": 0,
+  "uncertain_outcomes": 0,
+  "resources": [
+    {
+      "entry": "point",
+      "kind": "Job",
+      "name": "s3-component-single-call-20261018-01",
+      "uid": "79ce94f3-9cb0-4429-b4b0-2e0e51164e90",
+      "resource_version_precondition": "281345137",
+      "confirmed_absent_at": "2026-10-18T05:13:06.795913+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/point-job/sender-receipt.json",
+        "sha256": "0a473dc7e4f3198cae5b05ebab419b45dd1e8ad464d1d0de5755be81c4806de5"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/point-job/delete-options.json",
+        "sha256": "b2ecadc3926f016b993e388699a9060eb5f91dd01c1b92c08cda192575aaf350"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/point-job/delete-intent.json",
+        "sha256": "39b4d66c5d9655131c35fae2031f2e5939f0dcf0f34ca79f79edb23e379294c8"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/point-job/delete.result.json",
+        "sha256": "c7d4c76a26e4a30b916d97852736590cdf2c6d291032dc24835b5969675a0de8"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/point-job/readback-2.result.json",
+        "sha256": "3b13cd520f8c1f6f30c07d89ce24498caa961c0912e32638493aed2d1cb968d2"
+      }
+    },
+    {
+      "entry": "point",
+      "kind": "Pod",
+      "name": "s3-component-single-call-20261018-01-nqs8l",
+      "uid": "ff426931-1fbc-4c72-a51c-839eb708e10b",
+      "resource_version_precondition": "281399390",
+      "confirmed_absent_at": "2026-10-18T05:13:07.246446+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/point-pod/sender-receipt.json",
+        "sha256": "9930eee355c7f7b1d1fe8887ba02635b5e942bddfa9e8e9ec4ba96dcab677dfa"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/point-pod/delete-options.json",
+        "sha256": "5796b9eba10efba8cf1169f49882a93e936a1fa12a3e55765f90c2a25a7a4de1"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/point-pod/delete-intent.json",
+        "sha256": "fcc0a78dadb992790d304e4063956b189736e9468ef75bc2d48f84f049fac004"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/point-pod/delete.result.json",
+        "sha256": "8b9069bf2f495aae364194c4a6eebee2ec0cb72db63fcc07ea3b955cbc538c06"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/point-pod/readback-1.result.json",
+        "sha256": "3eb2fe3269e50579eb7f3f30df194b14cbdb23b3e5f22a3c6f699defee565cef"
+      }
+    },
+    {
+      "entry": "point",
+      "kind": "ConfigMap",
+      "name": "s3-component-single-call-20261018-01",
+      "uid": "3f6e2006-4925-4d9b-8cd6-ab9692a52a17",
+      "resource_version_precondition": "281343301",
+      "confirmed_absent_at": "2026-10-18T05:13:07.565080+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/point-configmap/sender-receipt.json",
+        "sha256": "43ef7929af5c29de8dd011ae90b301c8b6de4fde3a135ad9e278680c8a7720c6"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/point-configmap/delete-options.json",
+        "sha256": "553f96d98b7c45ed1c6f75d174b9e428989d3046adcb676537fea786bd581564"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/point-configmap/delete-intent.json",
+        "sha256": "d48d86ee17aa1815e24ceb83136ff2e6cb63e37a1f1f02bdb644034a54a5b591"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/point-configmap/delete.result.json",
+        "sha256": "caef9af840203f35564619fa946ddf6379cfb66cbdd1b00f142e189dd9dd8116"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/point-configmap/readback-1.result.json",
+        "sha256": "4aeeb41ec05d7e52d16dadc9d208cba1330ebfeee22777947475b04172f2f7ac"
+      }
+    },
+    {
+      "entry": "lifecycle-failed-01",
+      "kind": "Job",
+      "name": "s3-lifecycle-authority-20261018-01",
+      "uid": "93a8fbda-90fb-422e-b804-9b3aea8f679f",
+      "resource_version_precondition": "281364021",
+      "confirmed_absent_at": "2026-10-18T05:13:08.576130+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-job/sender-receipt.json",
+        "sha256": "9a07be6294aaf8f5143822b23fbe998bfe7844f757f06c905bf30e94bc43c7ac"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-job/delete-options.json",
+        "sha256": "bcafc681f5a55aa1fcefe77ef22d90f541ca2306516cd85df50761e0ba696be7"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-job/delete-intent.json",
+        "sha256": "e338d6e7ec2d6ed7a5893ac8866c793b86664cb8c2966a633bec7039c100ffe9"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-job/delete.result.json",
+        "sha256": "c6daa4f137882da57f409117a968a8e411e6b22170a5c8f09959b7fa3d6c9f11"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-job/readback-2.result.json",
+        "sha256": "00ba01f0c6541ca118a8fe15bddfac53302c98077857c9caf31486e3482a549d"
+      }
+    },
+    {
+      "entry": "lifecycle-failed-01",
+      "kind": "Pod",
+      "name": "s3-lifecycle-authority-20261018-01-cwsll",
+      "uid": "1dd4804c-dcbc-47d3-8b6e-102a206c2fa5",
+      "resource_version_precondition": "281399449",
+      "confirmed_absent_at": "2026-10-18T05:13:09.599323+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-pod/sender-receipt.json",
+        "sha256": "e03eb5c62e2704505ca72354da3b2d548d543a29b4b524b33277f976bbdf221c"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-pod/delete-options.json",
+        "sha256": "dc8057896ff7642c37aeb274bbee2b2748d90f6ec0e609a4a75c397dcd3a2b02"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-pod/delete-intent.json",
+        "sha256": "8972111e4e3864e1b87c42306fc2a0d4a04a192ef5460bb7e3322e1f04a10795"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-pod/delete.result.json",
+        "sha256": "75aaa61b6a14217f081aab457a8831b6f47374e68c79458fd9bdc64b08a323b0"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-pod/readback-2.result.json",
+        "sha256": "3004ae741e8fc0e475c96f9e76e0584d561c177b834a8f352a2d01999864c9a4"
+      }
+    },
+    {
+      "entry": "lifecycle-failed-01",
+      "kind": "ConfigMap",
+      "name": "s3-lifecycle-authority-20261018-01",
+      "uid": "87cefa53-af85-42c7-9390-1c4c7f51fd78",
+      "resource_version_precondition": "281349012",
+      "confirmed_absent_at": "2026-10-18T05:13:09.985535+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-configmap/sender-receipt.json",
+        "sha256": "148b9978b677d95c143d68ff27711bcc51958b2f7e1a8083b699ebd2f073285e"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-configmap/delete-options.json",
+        "sha256": "74fd5882152887947e5585fbe7dc86dead54e2d2de2b505001bbfb49bcea9d1e"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-configmap/delete-intent.json",
+        "sha256": "8b41c039cbd17dde1d7c3fd95bbe51dcba3bc633b8c68cbbb188e4de084edeb0"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-configmap/delete.result.json",
+        "sha256": "c90cc2f583ec93073e9b51a2e6521e5d98e63830e1e274605e735fd6a1e7e856"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-failed-01-configmap/readback-1.result.json",
+        "sha256": "1bd0ec84189d47a24c657eb94b1c72c1fabcd80772c10d4180c35591d6bdb56e"
+      }
+    },
+    {
+      "entry": "lifecycle-v2",
+      "kind": "Job",
+      "name": "s3-lifecycle-authority-20261018-02",
+      "uid": "aa7b2a2c-b5d8-4ced-b765-6e025bf11a25",
+      "resource_version_precondition": "281391179",
+      "confirmed_absent_at": "2026-10-18T05:13:11.040827+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-job/sender-receipt.json",
+        "sha256": "90507d41826dfffdd3af13c3f5b9b86aeabd475ecfb94e30ee131cad6c2f0a30"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-job/delete-options.json",
+        "sha256": "ffef1002da5e03d81d624be8a84f6aa9d7b2a9ea41b7b1f316b831b13ccdd947"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-job/delete-intent.json",
+        "sha256": "17bc4bb1f71507d9202c134a454f9e6dcceaf0e5ca798104141faf6d6fc28eee"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-job/delete.result.json",
+        "sha256": "0aa7e9242094bfbe9555bc5bfc76946e076acd9760720f13b28f43bc37d2ed53"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-job/readback-2.result.json",
+        "sha256": "9fdb4c81509d59c4165ce25c454abe7994657fb1a5971bc2af694ce2ff735139"
+      }
+    },
+    {
+      "entry": "lifecycle-v2",
+      "kind": "Pod",
+      "name": "s3-lifecycle-authority-20261018-02-fc89r",
+      "uid": "6401ce46-80bd-426c-98dd-696291abebd3",
+      "resource_version_precondition": "281399570",
+      "confirmed_absent_at": "2026-10-18T05:13:11.489443+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-pod/sender-receipt.json",
+        "sha256": "c1665269fb6f5db6d0a44d2ac7cfbec4da3da04d4c664fdf32fe85e80c4580bc"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-pod/delete-options.json",
+        "sha256": "e01cbd28f31d45ce1e07e901c1fe4ffca1eb5b4a747fb7e103bdc4eb17b2c7ee"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-pod/delete-intent.json",
+        "sha256": "aaf660a7afd1c3fc9581ef9c1ea8e856da0957366042b08748d5c72e46ca201d"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-pod/delete.result.json",
+        "sha256": "21007e5a911d1938f7f093a1a990a047e231aeb7729deb79b57df3f143b073e9"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-pod/readback-1.result.json",
+        "sha256": "f4b2986bd3410c22266737ae187271d256f91caff3b993d63122840ce505de3e"
+      }
+    },
+    {
+      "entry": "lifecycle-v2",
+      "kind": "ConfigMap",
+      "name": "s3-lifecycle-authority-20261018-02",
+      "uid": "465f2016-4de7-4118-921c-4e761f6e1d62",
+      "resource_version_precondition": "281390657",
+      "confirmed_absent_at": "2026-10-18T05:13:12.436530+00:00",
+      "delete_invocations": 1,
+      "propagation_policy": "Orphan",
+      "request_expiry_seconds": 30,
+      "sender_receipt": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-configmap/sender-receipt.json",
+        "sha256": "5e93a56c9ccbb721e7070c04c0c63f60aa765966bc02f1295b88ec4235b70409"
+      },
+      "delete_options": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-configmap/delete-options.json",
+        "sha256": "b88b738191fbd1a920a074a2ad089b5de11e2fa180b3375e5ac7285074cae0ce"
+      },
+      "delete_intent": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-configmap/delete-intent.json",
+        "sha256": "adda3f21297562f7de954d2d8a7f8b789bfed530cdf7526b54af4cf3d6b34b81"
+      },
+      "delete_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-configmap/delete.result.json",
+        "sha256": "ce61cc4911b5d1e0848497f49eb1889541366d98573912869d56d03004c0e890"
+      },
+      "absence_readback_result": {
+        "path": "proof-disposable-cleanup-02/lifecycle-v2-configmap/readback-2.result.json",
+        "sha256": "7ceb7fe25393b2746a4f3136eb29a05c12d6c4c158112a6fc51aa68b3e188ab6"
+      }
+    }
+  ],
+  "retention": {
+    "unique_evidence_files": 535,
+    "all_hashes_rechecked_after_cleanup": true,
+    "checked_at": "2026-10-18T05:17:10.370594+00:00",
+    "inventory_sha256": "2457b65d78815d631c66515d2be24df1c47d2d4fccde212ce64dca5aa03bcf9e",
+    "inventory_hash_encoding": "UTF-8 JSON, sort_keys=True, separators=(comma,colon), no newline; array of {path,sha256} sorted by exact private absolute path from the pinned plan.",
+    "plan_binds_all_individual_paths_and_hashes": true,
+    "raw_logs_or_secret_values_published": false
+  },
+  "preserved_histories": [
+    {
+      "entry": "point",
+      "job_terminal_condition": "Complete",
+      "terminal_receipt": {
+        "path": "component-single-call-terminal-01/terminal-collection-receipt.json",
+        "sha256": "a0e440c69072103674a9dac075032292bf44c23fdf4b6f1ab635eb4cf98f7684"
+      },
+      "comparison_receipt": {
+        "path": "component-single-call-execution-01/verified-full-row-supplement.json",
+        "sha256": "bdcca40b6665d5f3b919ce946ba93a0966e73d730f2cbf8d4f401a251f586cb2"
+      },
+      "full_container_logs": [
+        {
+          "path": "component-single-call-terminal-01/qualification.terminal.private.log",
+          "sha256": "3e33be6b59edf8acabfc83a3edb2b14762211ebf3df5c866b3a14de77c7ca85c",
+          "container": "qualification",
+          "bytes": 2648
+        },
+        {
+          "path": "component-single-call-terminal-01/transport-readiness.terminal.private.log",
+          "sha256": "627993a5b81a71b09160a1f693ef2a484b0d86838290e57a048d19a95d9c46dd",
+          "container": "transport-readiness",
+          "bytes": 4490
+        }
+      ],
+      "scope": "Actual point terminal plus complete genuine/synthetic typed row comparison and exact attempts sequence +2 are retained; no broader issue acceptance."
+    },
+    {
+      "entry": "lifecycle-failed-01",
+      "job_terminal_condition": "Failed",
+      "terminal_receipt": {
+        "path": "lifecycle-authority-terminal-01/terminal-collection-receipt.json",
+        "sha256": "fd4aa5897e9390956f532710a41bbdff357724fe09280df241a65934b671c499"
+      },
+      "comparison_receipt": {
+        "path": "lifecycle-authority-release-successor-01/failed-harness-zero-effect-comparison.json",
+        "sha256": "2d41b194d036b3ac3b117d9e2cbbc932afe2bb3c10d051ab97af8cdfa142237c"
+      },
+      "full_container_logs": [
+        {
+          "path": "lifecycle-authority-terminal-01/qualification.terminal.private.log",
+          "sha256": "9f2fa5d7266c620bf00a4449e987c5f5726e2e505b365b13d365ab48be9f1655",
+          "container": "qualification",
+          "bytes": 1634
+        },
+        {
+          "path": "lifecycle-authority-terminal-01/transport-readiness.terminal.private.log",
+          "sha256": "cbd0782b5ca186a20b1d668d1ea2dad81aa4ca40cee1c694eea0c14517544c06",
+          "container": "transport-readiness",
+          "bytes": 4490
+        }
+      ],
+      "scope": "Actual same-Job release successor ran and FAILED with a harness TypeError before any denial or state-transition case; rollback confirmed. Complete typed 29 genuine/synthetic rowsets, 84 source properties/catalog and all77 sequence states remain equal. Original stale-RV release rejection and failed terminal retained; neither relabelled successful."
+    },
+    {
+      "entry": "lifecycle-v2",
+      "job_terminal_condition": "Complete",
+      "terminal_receipt": {
+        "path": "lifecycle-authority-v2-terminal-01/terminal-collection-receipt.json",
+        "sha256": "64e55db36aa65da4b3f9cbad231402cb81902b2fe1bf69ef8f3219117790a73b"
+      },
+      "comparison_receipt": {
+        "path": "lifecycle-authority-v2-execution-01/verified-lifecycle-comparison.json",
+        "sha256": "b056a6522bace1fe1fc73d1bf1bcad19bf6d66e920a673a7bf8d06f9d9922a2e"
+      },
+      "full_container_logs": [
+        {
+          "path": "lifecycle-authority-v2-terminal-01/qualification.terminal.private.log",
+          "sha256": "164728c47bf8b689c52eb03ab213758257c4c9d5ad8aa75f6fa321212cae7d06",
+          "container": "qualification",
+          "bytes": 3915
+        },
+        {
+          "path": "lifecycle-authority-v2-terminal-01/transport-readiness.terminal.private.log",
+          "sha256": "ed2a2fa6144954734873341de38ab7ef423fa887104bd854a56c2211f001af3d",
+          "container": "transport-readiness",
+          "bytes": 3509
+        }
+      ],
+      "scope": "Actual new lifecycle v2 Job with the reviewed Record.keys harness fix, successful database guard/rollback terminal and complete typed 29 genuine/synthetic rowsets plus event sequence +2 retained. Original release rejection and failed first harness remain in their separate custody and cleanup entry; no broader issue acceptance."
+    }
+  ],
+  "retained_state": {
+    "synthetic_rows": 6,
+    "latest_typed_capture": {
+      "path": "clone-finite-sqlnull-v2-after-04/stdout.private.jsonl",
+      "sha256": "d8214d8b6e8df76640679a37e77715bd0f0103de3f2ad54f431c0792e594853b"
+    },
+    "database_row_changes_by_cleanup": false,
+    "secret_changes_by_cleanup": false,
+    "pvc_changes_by_cleanup": false,
+    "cnpg_changes_by_cleanup": false,
+    "sequence_rewind_performed": false,
+    "production_promotion_performed": false
+  },
+  "earlier_cleanup": {
+    "public_receipt": "639-587-disposable-cleanup.json",
+    "summary": {
+      "path": "disposable-cleanup-01/verified-summary.json",
+      "sha256": "7f5811831fcb1b4c5d003b2424ebb3d7f42c43226cbefdc656571081d9476f7f"
+    },
+    "objects_confirmed_absent": 15,
+    "unique_jobs": 5
+  },
+  "combined_cleanup_totals": {
+    "objects_confirmed_absent": 24,
+    "unique_jobs": 8
+  },
+  "full_issue_acceptance": false
+}
