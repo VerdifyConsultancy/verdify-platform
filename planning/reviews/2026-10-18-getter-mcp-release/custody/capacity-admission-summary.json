@@ -1,0 +1,140 @@
+{
+  "at": "2026-10-18T17:07:23.237067+00:00",
+  "context": "vallery",
+  "namespace": "verdify-prod",
+  "expected_surge": {
+    "requests": {
+      "cpu": "250m",
+      "memory": "256Mi"
+    },
+    "limits": {
+      "cpu": "2",
+      "memory": "1Gi"
+    },
+    "maxSurge": 1,
+    "maxUnavailable": 0
+  },
+  "nodes": [
+    {
+      "node": "vm-k3s-node5",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "7",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "331690937812",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "96599099229",
+        "nvidia.com/gpu": "2",
+        "pods": "180"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "node": "vm-k3s-node6",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "9",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "271780866411",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "96598774826",
+        "nvidia.com/gpu": "1",
+        "pods": "180"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "node": "vm-k3s-node7",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "2",
+        "cpu": "47",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "294246551058",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "94424484500",
+        "nvidia.com/gpu": "2",
+        "pods": "180"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    }
+  ],
+  "scope": "Derived capacity/pressure only; raw Node annotations and unrelated workload/CI identities remain in private operator custody."
+}

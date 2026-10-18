@@ -1,0 +1,2011 @@
+{
+  "at": "2026-10-18T17:25:35.566813+00:00",
+  "canonical_source": "be7a91406226016e4c68629fe2e2c86bfe99571c",
+  "updated_issue_bodies": [
+    410,
+    775
+  ],
+  "all47_open_issue_titles_bodies_match": true,
+  "open_acceptance_clauses": 143,
+  "local_active_edges": 26,
+  "external_active_edges": [
+    {
+      "repository": "jvallery/homeassistant",
+      "predecessor": 878,
+      "blocked_issue": 981
+    }
+  ],
+  "open_parent_and_subissue_links_match": true,
+  "all_connections_untruncated": true,
+  "no_acceptance_state_estimate_assignee_label_milestone_or_dependency_change": true,
+  "issue_closures": 0,
+  "contracts": [
+    {
+      "number": 14,
+      "body_sha256": "96011cadd914d9570f0986b5e7113a88f563e6e5a3b55b7048d3861232f873de"
+    },
+    {
+      "number": 16,
+      "body_sha256": "323aeb5c4deab0e3b95684b0f3e6ff86521970905efc05dab2e5a2f888fbddc3"
+    },
+    {
+      "number": 31,
+      "body_sha256": "72979a7498b84f02cae26bd687bcd979392088b40c991a5d4e31776547025e45"
+    },
+    {
+      "number": 45,
+      "body_sha256": "cb38a883a47d032aaa9b16dff4f1924d81c98fa0ee0e256603458d83d82d9537"
+    },
+    {
+      "number": 51,
+      "body_sha256": "60bb5e1e1622133bafe802816853895f36579332c2cb204158997dae28b34392"
+    },
+    {
+      "number": 52,
+      "body_sha256": "e1594ef1e0d119b293aeb6231f99cd2d9888063e073fdd7aea1b3aa12c06c4a7"
+    },
+    {
+      "number": 75,
+      "body_sha256": "c38a1e04f28267a7a0e7012306777da9d899b7fa5d720a7b62fc6a306a80c1d8"
+    },
+    {
+      "number": 218,
+      "body_sha256": "ee0ea773e22b2ee3f041da6424b0dc03eb8f24018b5328cdb74db6f1e266ebd8"
+    },
+    {
+      "number": 245,
+      "body_sha256": "85af6886697e4ff7c7cb3e00dfeecf28dfa03373c8fd4c2bac15cfec10197f6d"
+    },
+    {
+      "number": 297,
+      "body_sha256": "1aefbda322a889b7c1d18e28c4380fd27c497348b5116bc62388e8d91cb6bad4"
+    },
+    {
+      "number": 298,
+      "body_sha256": "b907afe8094983044ff1ed49243c9f552f14b3fd41c7407e2d8d20eeb8042a2b"
+    },
+    {
+      "number": 299,
+      "body_sha256": "230cedbd5ed5fbbe1f0a6b78a877e8451ff0d838c4d7f46720f454008a4f0eba"
+    },
+    {
+      "number": 350,
+      "body_sha256": "0cf201dcd574795777d0dcc3a445393798ed58958cb02158e33e23ab414a724a"
+    },
+    {
+      "number": 359,
+      "body_sha256": "e72da470e5cce6471a9cc31799a95acbba24c540696409dadd54ee669e206bf5"
+    },
+    {
+      "number": 367,
+      "body_sha256": "b23d2a9c14fff7b56ffb8ae8772a5971a280384cf83ff08583818d0ef520a13e"
+    },
+    {
+      "number": 368,
+      "body_sha256": "0fd15c244c755a8283e18e795a089d6e6da7a99edfb879dac462c3563666934f"
+    },
+    {
+      "number": 369,
+      "body_sha256": "69a131db81fc0294006b8270688a700a4261bf339b70854067003200226bd08e"
+    },
+    {
+      "number": 370,
+      "body_sha256": "25a5f2543f429cb2ac9d7a8e454ac1f2afdb45d4661464f67a7f34f1f794a4e9"
+    },
+    {
+      "number": 378,
+      "body_sha256": "2576a8830a626841505c1716114b5135bd9be894695f160a441cf18be20fd4d7"
+    },
+    {
+      "number": 379,
+      "body_sha256": "86da6141ffeca5d54cd8aeaaeed4ed6865fb93bebb01a7e0d6240c3495a658ff"
+    },
+    {
+      "number": 386,
+      "body_sha256": "1faead1d510a5509924cedfded0711a595ded356b3eab869b8d29c7c6c57407d"
+    },
+    {
+      "number": 390,
+      "body_sha256": "b4705a0e21e70a5bde0533558055b0e2ad2a79825c677eedc7c73c0eaa7b6575"
+    },
+    {
+      "number": 398,
+      "body_sha256": "8d030e79347eab17981d059cd54823e698fd973e1eccced10066f1a284e8fd4f"
+    },
+    {
+      "number": 410,
+      "body_sha256": "b8230f118d2aac7cf0bfeb6f698ac8bc18b06f4cefca1315f60703fe936adde5"
+    },
+    {
+      "number": 412,
+      "body_sha256": "5f918bacffb19ad2b9ebfa16dc61b2b9d3774804dd406f21ab12ee8310056257"
+    },
+    {
+      "number": 428,
+      "body_sha256": "863713a5f88800f74b08c62ad7799aae35d9c9ce382215114ac53407b1e0fc5e"
+    },
+    {
+      "number": 430,
+      "body_sha256": "8736867d506245ed6ec98802f42fc16c3179735992b44e43a76726fcd4fe11e4"
+    },
+    {
+      "number": 434,
+      "body_sha256": "cc64845a17acb795f3f06454aada8ac49d06d2256ec120221a2f029a5999db35"
+    },
+    {
+      "number": 581,
+      "body_sha256": "8a17083b568eec174c2353ac4e3f04af30599c8629f50f5227b8189d495fe10d"
+    },
+    {
+      "number": 587,
+      "body_sha256": "7bbabe0dd486c314a697e4f716957e320f29f884c24c7fb55b1ba94095206dae"
+    },
+    {
+      "number": 588,
+      "body_sha256": "fcccbac1f0b48fd4476eab6da658b687d8f5d90650b7bb38b757750e3fe9cb3b"
+    },
+    {
+      "number": 639,
+      "body_sha256": "e4ee4c59f2436254ababe20d75f9898430ef898386cd6619155f861e88a08770"
+    },
+    {
+      "number": 640,
+      "body_sha256": "965dce8d9c7f206da3f1b028c54556dd3a0485924cab419cce85e375a9fa8733"
+    },
+    {
+      "number": 641,
+      "body_sha256": "0f5834533d06aeea492c06234ded8324e17e4621c32616d6d351ae3da2291348"
+    },
+    {
+      "number": 642,
+      "body_sha256": "0e4f14fb8ac280bb3f7c5300aba637a69d49cf68eba1f995ce9d2e6062cf02e2"
+    },
+    {
+      "number": 749,
+      "body_sha256": "ba545c6ced077e118bc54d2f7bad3801f3c93627a7c2ad4063e47a96ca2d6085"
+    },
+    {
+      "number": 750,
+      "body_sha256": "d65bac8e8d89a13be99e386f27884afb1b46e084ee496437d4272d750c881387"
+    },
+    {
+      "number": 751,
+      "body_sha256": "d42a0e6a47ff1a28ecc1e2f6f9cd2e9a9d158afc448ffed14fea1a66905d7ee8"
+    },
+    {
+      "number": 775,
+      "body_sha256": "09018d8b6c309e96a65f8001095f8f5ece4e2e834df7e08bb3e5e83e27d4d0ed"
+    },
+    {
+      "number": 782,
+      "body_sha256": "db6f398bb4de700dcef0c3280ee0eb9f15b1b4bf15753a8130758ea2066a398b"
+    },
+    {
+      "number": 783,
+      "body_sha256": "750360091b211b3af03460c888d105565596b031fc5d031ac500675c103a4017"
+    },
+    {
+      "number": 784,
+      "body_sha256": "8c03d8d0def3885f1086808de7691109e69fad065ec5d0bf5e338784f7ab6225"
+    },
+    {
+      "number": 785,
+      "body_sha256": "b264aa3fc7837930fbd83f6c1b5487a9351c09dae2b164e65557f658262ff5e9"
+    },
+    {
+      "number": 786,
+      "body_sha256": "0e74f75d808fd9fffe67a8234b148740f4ade48a9470a4971c62389409aa3092"
+    },
+    {
+      "number": 787,
+      "body_sha256": "a1f9e98147b74291b9567c99d7aac7f5bf8f19c123bef5e1eb13a62cddc692b2"
+    },
+    {
+      "number": 963,
+      "body_sha256": "fd2757a16993cb6be9d357a466b4a8a6ce29b2021bddea63692ca3784d253cea"
+    },
+    {
+      "number": 981,
+      "body_sha256": "b11230eeb9b3a8dca90e075cc10e917abbe1df3f6b094883fe846f6f5a418925"
+    }
+  ],
+  "native": {
+    "data": {
+      "repository": {
+        "issues": {
+          "totalCount": 47,
+          "pageInfo": {
+            "hasNextPage": false
+          },
+          "nodes": [
+            {
+              "number": 14,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 31,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 606,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 16,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 7,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 751,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 298,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 398,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 45,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 51,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 52,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 412,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 31,
+              "state": "OPEN",
+              "parent": {
+                "number": 14
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 45,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 398,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 51,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 52,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 75,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 18,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 563,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 394,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 89,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 671,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 49,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 950,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 951,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 952,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 953,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 835,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 862,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 963,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 964,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 965,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 976,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 980,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 981,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 317,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 218,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 7,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 670,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 672,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 382,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 396,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 245,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 643,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 977,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 245,
+              "state": "OPEN",
+              "parent": {
+                "number": 218
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 396,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 382,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 297,
+              "state": "OPEN",
+              "parent": {
+                "number": 350
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 45,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 298,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 299,
+              "state": "OPEN",
+              "parent": {
+                "number": 350
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 350,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 4,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 434,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 299,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 297,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 296,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 359,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 10,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 371,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 424,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 386,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 430,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 368,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 324,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 410,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 378,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 361,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 379,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 367,
+              "state": "OPEN",
+              "parent": {
+                "number": 430
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 368,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 424,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 369,
+              "state": "OPEN",
+              "parent": {
+                "number": 430
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 433,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 370,
+              "state": "OPEN",
+              "parent": {
+                "number": 430
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 367,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 378,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 785,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 371,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 379,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 3,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 786,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 419,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 371,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 386,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 303,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 390,
+              "state": "OPEN",
+              "parent": {
+                "number": 644
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 419,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 303,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 419,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 398,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 298,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 410,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 3,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 424,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 419,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 371,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 412,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 428,
+              "state": "OPEN",
+              "parent": {
+                "number": 430
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 433,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 430,
+              "state": "OPEN",
+              "parent": {
+                "number": 359
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 6,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 433,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 428,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 367,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 370,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 369,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 949,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 434,
+              "state": "OPEN",
+              "parent": {
+                "number": 350
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 299,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 581,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 10,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 642,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 750,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 639,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 782,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 783,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 588,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 640,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 784,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 785,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 587,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 588,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 3,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 783,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 782,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 641,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 639,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 640,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 642,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 641,
+              "state": "OPEN",
+              "parent": {
+                "number": 750
+              },
+              "blockedBy": {
+                "totalCount": 4,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 749,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 747,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 639,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 642,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 588,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 676,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 749,
+              "state": "OPEN",
+              "parent": {
+                "number": 750
+              },
+              "blockedBy": {
+                "totalCount": 3,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 949,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 778,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 424,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 750,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 3,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 747,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 749,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 641,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 751,
+              "state": "OPEN",
+              "parent": {
+                "number": 16
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 775,
+              "state": "OPEN",
+              "parent": null,
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 19,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 778,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 779,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 780,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 781,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 581,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 644,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 427,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 75,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 218,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 359,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 214,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 350,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 16,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 174,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 14,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 638,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 586,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 786,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 787,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 782,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 4,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 781,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 780,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 779,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 371,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 783,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 639,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 784,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 640,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 785,
+              "state": "OPEN",
+              "parent": {
+                "number": 581
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 784,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 786,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 2,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 785,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 780,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 787,
+              "state": "OPEN",
+              "parent": {
+                "number": 775
+              },
+              "blockedBy": {
+                "totalCount": 4,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 981,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 785,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 781,
+                    "state": "CLOSED",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 410,
+                    "state": "OPEN",
+                    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 963,
+              "state": "OPEN",
+              "parent": {
+                "number": 75
+              },
+              "blockedBy": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            },
+            {
+              "number": 981,
+              "state": "OPEN",
+              "parent": {
+                "number": 75
+              },
+              "blockedBy": {
+                "totalCount": 1,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "number": 878,
+                    "state": "OPEN",
+                    "url": "https://github.com/jvallery/homeassistant/issues/878",
+                    "repository": {
+                      "nameWithOwner": "jvallery/homeassistant"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "totalCount": 0,
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

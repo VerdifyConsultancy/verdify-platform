@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-18T17:38:48.600636+00:00",
+  "destination": "https://github.com/VerdifyConsultancy/verdify-platform",
+  "visibility": "public",
+  "scope": "This getter/MCP sprint report, production Pod/workflow identifiers, image/source hashes, readonly SQL plans/timings, rollout/authentication/smoke receipts, raw diagnostic/CI logs and final CI receipts",
+  "user_explicit_authorization": "Authorize public publication of this sprint\u2019s report and full evidence",
+  "archive_sha256": "e2d80633a7dc7bdef5b2bbbfc9f37d67f62baf96e85e46a17055f8d73c2c7cfe",
+  "archive_members": 901,
+  "no_raw_Secret_objects_literal_credential_env_or_private_key_PEM_admitted": true,
+  "credential_values_exported_by_runtime_auth_probes": false,
+  "completed_CI": [
+    "release PR987",
+    "release-main7b48a210",
+    "planning-mainbe7a9140"
+  ],
+  "scope_limits": [
+    "No genuine episode result, positive admin outcome transport or planner consumption",
+    "Installed getter unchanged; candidate and resolved-stage timeouts retained",
+    "All47 issues remain open;143 clauses and27 active edges unchanged"
+  ]
+}

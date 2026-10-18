@@ -1,0 +1,19 @@
+{
+  "status": "DIRECT_TERMINAL_MAIN_VALIDATION_PASSED",
+  "source": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+  "workflow": "verdify-platform-ci-4mghk",
+  "uid": "c0a93a66-4615-44d3-a430-3cdfcf7229d3",
+  "finishedAt": "2026-10-18T17:19:55Z",
+  "type_Pod_node_id": "verdify-platform-ci-4mghk-3010589487",
+  "pod": "verdify-platform-ci-4mghk-validate-3010589487",
+  "pod_uid": "2ecb1d6c-42b2-4b8d-b26b-7d20cea6d633",
+  "terminal_snapshot": "/Users/jason/maintenance/verdify-getter-mcp-20261018/release-main-ci/20261018T172001405680Z-pods.private.json",
+  "all_declared_containers_exit_zero_restarts_zero": true,
+  "full_main_log": "/Users/jason/maintenance/verdify-getter-mcp-20261018/release-main-ci/verdify-platform-ci-4mghk-validate-3010589487-c9272c2bddcfaea108fa2ddeb0be26431f829c87126c20ba81157199864fa224.main.log",
+  "full_main_log_bytes": 38231,
+  "full_main_log_sha256": "c9272c2bddcfaea108fa2ddeb0be26431f829c87126c20ba81157199864fa224",
+  "ALL_GATES_GREEN": true,
+  "mode": "validate",
+  "all_eight_build_flags_false": true,
+  "no_image_build_nodes": true
+}

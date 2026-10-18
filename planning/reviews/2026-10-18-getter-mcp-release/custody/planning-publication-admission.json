@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-18T17:23:22.748539+00:00",
+  "source": "be7a91406226016e4c68629fe2e2c86bfe99571c",
+  "expected_main_parent": "7b48a210e8c44620320b929df6ad2ed8cf0d43c1",
+  "rules": [],
+  "legacy_protection": {
+    "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection",
+    "required_signatures": {
+      "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection/required_signatures",
+      "enabled": false
+    },
+    "enforce_admins": {
+      "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/branches/main/protection/enforce_admins",
+      "enabled": false
+    },
+    "required_linear_history": {
+      "enabled": true
+    },
+    "allow_force_pushes": {
+      "enabled": false
+    },
+    "allow_deletions": {
+      "enabled": false
+    },
+    "block_creations": {
+      "enabled": false
+    },
+    "required_conversation_resolution": {
+      "enabled": false
+    },
+    "lock_branch": {
+      "enabled": false
+    },
+    "allow_fork_syncing": {
+      "enabled": false
+    }
+  },
+  "validation": "43 planning checks/coverage/DAG/generated views passed; clean tracked tree",
+  "production_render_byte_unchanged": true,
+  "delivery": "normal non-force fast-forward; no PR/status requirement is enforced",
+  "public_publication_authorization": "Jason: Authorize public publication of this sprint\u2019s report and full evidence"
+}
