@@ -1,7 +1,7 @@
 {
   "schema": "verdify-s3-execution-packets/v1",
-  "reviewed_at": "2026-10-18T04:21:36.565992Z",
-  "source_revision": "1d3da5150920b1e49b5371a027ea171136a778ea",
+  "reviewed_at": "2026-10-18T04:35:53.822452Z",
+  "source_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
   "composition_status": "Incremental current execution progress; five S3 issues remain open. No final sprint completion asserted.",
   "packets": [
     {
@@ -55,7 +55,7 @@
       "packet_status": "actual_role_subset_passed_typed_custody_verified",
       "issue_status": "open",
       "accepted": false,
-      "remaining": "After the explicitly requested one-role initial-password and two-message permissions arrive, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
+      "remaining": "After explicit one-role initial-password approval and separate two-message permission, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open.",
       "evidence": [
         "639-587-custody-progress.md",
         "639-587-custody-progress.json",

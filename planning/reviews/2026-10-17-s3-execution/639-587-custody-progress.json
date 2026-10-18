@@ -1,6 +1,6 @@
 {
   "schema": "verdify-s3-contained-qualification-progress/v1",
-  "reviewed_at": "2026-10-18T04:21:36.565992Z",
+  "reviewed_at": "2026-10-18T04:35:53.822452Z",
   "issues": [
     639,
     587
@@ -112,12 +112,16 @@
     "native_image_and_behavior_proof": "pending",
     "old_source_bundle_attempts_explanation": "Two competing preview calls, each composite target-list expansion evaluated across seven returned columns; six coupled SQL writers changed to a single FROM invocation.",
     "corrected_source_plus_two_claimed": false,
-    "issue_owner": 639
+    "issue_owner": 639,
+    "initial_native_ci": "FAILED at 1d3da515 on current dependency-hash trace guard; original failure retained",
+    "trace_correction_revision": "566b9be7fd1639d159dd109dbccf5b8b8a05c33f",
+    "published_composed_revision": "f16a86046068fb2b05e4d1c8c49475a046cf5b02",
+    "full_native_gate": "pending"
   },
   "alert_progress": {
     "read_only_preview": "FAILED 28P01 before SQL; original retained",
     "ordinary_role_initial_install": "human exception requested, pending; not performed",
-    "two_synthetic_slack_messages": "separate human authorization absent; none sent",
+    "two_synthetic_slack_messages": "permission not yet requested or granted; none sent",
     "typed_alert_log_before_rows": 12425,
     "typed_alert_log_before_sha256": "631bd9e35f6427dfe2ae51481857074f5b239dc91fe719a5c2ab1a9c1f2f69b7",
     "experiment29_scope_expanded": false,

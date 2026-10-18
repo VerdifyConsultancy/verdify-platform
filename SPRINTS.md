@@ -2,7 +2,7 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T04:21:36.565992Z** against source `1d3da5150920b1e49b5371a027ea171136a778ea`. [planning/reviews/2026-10-17-s3-execution/README.md](planning/reviews/2026-10-17-s3-execution/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-18T04:35:53.822452Z** against source `f16a86046068fb2b05e4d1c8c49475a046cf5b02`. [planning/reviews/2026-10-17-s3-execution/README.md](planning/reviews/2026-10-17-s3-execution/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ Exit: Record every scoped packet outcome and remaining acceptance. #977 storage,
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 4–8 | After the explicitly requested one-role initial-password and two-message permissions arrive, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open. |
+| [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Runtime/release lead | 4–8 | After explicit one-role initial-password approval and separate two-message permission, verify actual ordinary LOGIN and the exact synthetic named-alert fire/deliver/clear path with retained failures, bounded rollback and after-seals. Remaining contained lifecycle clauses and #641 physical proof stay open. |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Runtime/release lead | 8–16 | Qualify the accepted composite-writer source correction through the supported native image and bounded device-denied proof, retaining exact sequence accounting and before/after custody. Preserve uncovered active-prefix/exclusivity/recovery clauses and #641 physical scope. |
 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Runtime/release lead | 2–4 | Preserve the original sealed FAIL; investigate the unchanged 4 F climate spread and six replacement soil identities before a separately scoped later qualification. Current full-sync provenance is resolved by #980 delivery. Do not relax the guard, silently expand exceptions or collect repeatedly for a passing result. |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) | Evidence/data lead | 4–8 | Use the completed input decision to obtain authentic target/contributor declarations, pre-boundary selector context/choice evidence and an eligible joint 18-hour nine-state interval. Continue the existing separate winter observer; verify its first naturally due packet. No new collector, draw, fabricated clock or heavy replay until the empirical contract and admitted k3s path are ready. |
