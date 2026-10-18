@@ -1,0 +1,116 @@
+{
+  "schema": "verdify-639-587-residual-clause-map-v1",
+  "source_base_revision": "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+  "scope": "source preparation; no new native execution or issue acceptance",
+  "acceptance_unchanged": true,
+  "clauses": [
+    {
+      "issue": 639,
+      "acceptance_index": 1,
+      "acceptance_verbatim": "No partial-prefix exposure; generation, freshness and full-48 confirmation enforced by actual executor/state path.",
+      "state": "partial",
+      "accepted_bounded_scope": "Actual LOGIN21, generation/freshness denials, shadow zero-device subset and begin-bundle A/A/B/C rollback point passed. Six writer SQL forms are single-call FROM; other five have source regression only.",
+      "remaining": "Active full48 prefix, confirmation and exposure-open paths remain unqualified. Grid f2ce differs from historical risk grid c10f; current ORDER_REVISION therefore denies active work.",
+      "source": [
+        "verdify_schemas/component_executor.py:physical_execution_qualified",
+        "ingestor/tasks/component_experiment.py:_validate_work",
+        "firmware/test/policy_injection.h",
+        "scripts/component_prefix_replay.py"
+      ],
+      "owner": "Firmware owner + runtime/release lead",
+      "next_action": "Integrate actual relay/mister/solar consumers and recovery/negative cases, then admit full-prefix qualification. Source scan and pilot do not mint an order revision.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    },
+    {
+      "issue": 639,
+      "acceptance_index": 2,
+      "acceptance_verbatim": "No interleaving with ordinary/MCP/forecast/retry writers; shadow zero calls and nonrandom work no assignment lineage.",
+      "state": "partial",
+      "accepted_bounded_scope": "Actual shadow work made zero device calls and nonrandom work retained no assignment lineage; actual role/capability boundaries passed.",
+      "remaining": "Active ordinary/MCP/forecast/retry writer noninterleaving remains unaccepted. Fake transport and empty exposure preview do not prove active cross-writer exclusion.",
+      "source": [
+        "ingestor/tasks/component_experiment.py:component_experiment_worker",
+        "tests/test_component_experiment_executor.py",
+        "tests/test_writer_lease_fence.py"
+      ],
+      "owner": "Runtime/release lead",
+      "next_action": "After current prefix qualification, admit isolated contention/fence cases with exact source, writers and generations; do not acquire production writer authority for containment.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    },
+    {
+      "issue": 639,
+      "acceptance_index": 3,
+      "acceptance_verbatim": "Contained lease loss/reconnect/failure/recovery closes exposure first and restores intended state; physical checks transferred explicitly to #641.",
+      "state": "partial",
+      "accepted_bounded_scope": "Source tests cover lease/reconnect/fault cases. Actual baseline_recovery/emergency_hold transitions rolled back with no open exposure.",
+      "remaining": "Actual current contained runtime has not proved exposure-first closure and restoration across lease loss/reconnect/failure/recovery. Physical epochs/rescue/handoff remain #641.",
+      "source": [
+        "ingestor/tasks/component_experiment.py:ConfirmedComponentExecutor",
+        "tests/test_component_experiment_executor.py:test_reboot_reconnect_reset_and_foreign_writer_close_and_forbid_reentry",
+        "db/migrations/214-confirmed-component-experiment-v2.sql",
+        "db/migrations/227-experiment-v2-emergency-recovery-retry.sql"
+      ],
+      "owner": "Runtime/release lead; facility owner for physical effects",
+      "next_action": "Prepare exact exposure/write-closure and sequence accounting after route qualification. Preserve failures and no-rewind custody; do not repeat an empty-exposure preview.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    },
+    {
+      "issue": 587,
+      "acceptance_index": 1,
+      "acceptance_verbatim": "Feature-off emits no experiment call; illegal readiness/phase transitions and emergency hold cannot actuate.",
+      "state": "partial",
+      "accepted_bounded_scope": "Actual six lifecycle denials and closed\u2192baseline_recovery\u2192emergency_hold transitions passed rollback with events+2. Shadow subset made zero device calls.",
+      "remaining": "Full feature-off invocation boundary, illegal readiness/phase and active emergency-hold nonactuation criteria remain unaccepted. Denying a state change alone is not device nonactuation proof.",
+      "source": [
+        "ingestor/tasks/component_experiment.py:component_experiment_worker",
+        "experiment_orchestrator/settings.py:load_settings",
+        "experiment_orchestrator/runtime.py:run_worker",
+        "db/migrations/214-confirmed-component-experiment-v2.sql:fn_experiment_v2_transition"
+      ],
+      "owner": "Runtime/release lead",
+      "next_action": "Reuse completed cases and pure tests. A new active nonactuation case needs legitimately admitted current role/phase and isolated device denial; no duplicate weak native denial packet.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    },
+    {
+      "issue": 587,
+      "acceptance_index": 2,
+      "acceptance_verbatim": "Actual-login lifecycle transitions and rollback pass; no mapping/comparative-result leakage.",
+      "state": "partial",
+      "accepted_bounded_scope": "Actual lifecycle25/executor21 LOGIN boundaries, source84 properties and role/ACL custody passed. Named transitions rolled back exactly; empty-lineage synthetic status excluded forbidden columns.",
+      "remaining": "Locked/armed no-reopen, authentic active transitions and populated mapping/comparative-result nonleakage across analyst/freezer boundaries remain unaccepted. Empty status is not populated blinding proof.",
+      "source": [
+        "db/migrations/214-confirmed-component-experiment-v2.sql:fn_experiment_v2_transition",
+        "db/migrations/214-confirmed-component-experiment-v2.sql:fn_experiment_v2_api_status",
+        "api/main.py:require_experiment_access",
+        "api/main.py:get_component_experiment_status",
+        "tests/test_experiment_api.py:test_status_is_blinded_even_when_rows_carry_forbidden_lineage",
+        "tests/test_experiment_api.py:test_export_is_blinded_and_holds_back_resolution_until_unblind"
+      ],
+      "owner": "Runtime/release lead + science/design owner",
+      "next_action": "Compose #783 current-role analyst/freezer boundary against authentic source-locked populated data or separately admitted disposable fixture. Genuine lock/finalization/approval remains #588/#642; never copy approvals or alter clocks/guards.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    },
+    {
+      "issue": 587,
+      "acceptance_index": 3,
+      "acceptance_verbatim": "Named alerts fire, deliver and clear through owning monitoring route; physical full-48 handoff is explicitly owned by #641.",
+      "state": "partial",
+      "accepted_bounded_scope": "Separately approved component_experiment_integrity/expired_work_not_terminal fired/delivered/deduplicated/resolved in one thread; alert writes rolled back and cancellation327 committed. Final f46ffe6d proof reconciles actual native completion and full finite/alert custody; timeout failures remain failed.",
+      "remaining": "Other named monitor conditions and delivery/clear routes remain uncovered; the completed pair grants no additional message permission. #641 owns physical full48 handoff.",
+      "source": [
+        "ingestor/tasks/component_alert_qualification.py",
+        "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.md",
+        "planning/reviews/2026-10-17-s3-execution/587-alert-delivery-proof.json"
+      ],
+      "owner": "Runtime/release lead + monitoring owner",
+      "next_action": "Select an uncovered authentic condition after its real preconditions exist, prepare exact payload/route/custody, then seek any needed new message authority. Do not resend the accepted pair.",
+      "actionability": "Source/interface work now; current active path requires authentic qualified route and phase/authority. No useful duplicate unchanged-source native subset."
+    }
+  ],
+  "authority_limits": [
+    "No GRID_REVISION/ORDER_REVISION or qualification override",
+    "No applied migration/public function, role or clock change",
+    "No new credential, DB fixture, Slack message or production operation",
+    "No historical accepted-risk or expired physical authority reuse"
+  ]
+}

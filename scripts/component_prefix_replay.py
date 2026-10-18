@@ -68,15 +68,17 @@ compiled binary's policy template, verifies the record says every credited
 field was held on every evaluated row, and adjudicates on that arithmetic:
 
   * a breach  → ``interlock_safe = "unsafe"``  (definitive failure);
-  * no breach AND coverage == all 48 fields → ``interlock_safe = "safe"``;
+  * all 48 assignments without exercised paths → ``interlock_safe = "unproven"``;
   * no breach AND partial coverage → ``interlock_safe = "unproven"``.
 
 A partial-coverage run can FALSIFY a prefix state but cannot certify one, so
-"unproven" blocks ``order_revision`` exactly like a failure.  When the harness
-grows the missing ``sp_*`` columns (or an external full-coverage / HIL runner
-is supplied with ``--interlock external --interlock-harness PATH``) the
-verdicts flip to real "safe" values with no change to this tool.  There is no
-flag that turns an unproven interlock into a pass.
+"unproven" blocks ``order_revision`` exactly like a failure. Adding field
+assignments alone is also insufficient: the compiled harness does not yet
+exercise the ESPHome relay wrappers, mister arbiter and pre-bias solar inputs.
+Its coverage declarations are checked against the source, but it cannot issue
+"safe" until those paths and their recovery/negative scenarios are integrated.
+The external full-coverage / HIL protocol remains a separate runner contract.
+There is no flag that turns an unproven compiled interlock into a pass.
 
 CLI shape mirrors scripts/experiment-verify.py and scripts/experiment-aa-gates.py:
 one PASS/FAIL/WARN line per check, ``--json`` for the machine-readable payload,
@@ -100,6 +102,7 @@ import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import islice
 from pathlib import Path
 from typing import Any
 
@@ -424,7 +427,7 @@ def parse_coverage_payload(output: str) -> dict[str, Any]:
 
 
 def policy_template_injection_coverage(template: str) -> frozenset[str]:
-    """Read the compiled binary's 27-field injection ceiling from its template."""
+    """Read field assignments, not exercised-path qualification, from a template."""
     canonical = frozenset(CANONICAL_FIELD_ORDER)
     rows: dict[str, bool] = {}
     for line in template.splitlines():
@@ -442,13 +445,128 @@ def policy_template_injection_coverage(template: str) -> frozenset[str]:
     return frozenset(name for name, injectable in rows.items() if injectable)
 
 
+def source_coverage_report() -> dict[str, Any]:
+    """Join actual injection declarations to a fresh firmware consumer scan.
+
+    No compilation, corpus read or device access. This is a source gap report,
+    never a safety verdict. Fail closed if the C++ declaration shape changes.
+    """
+    root = REPO_ROOT
+    injection = root / "firmware/test/policy_injection.h"
+    text = injection.read_text(encoding="utf-8")
+    opening = "inline constexpr FieldSpec kFields[kFieldCount] = {"
+    if text.count(opening) != 1:
+        raise PrefixReplayError("injection source declaration shape changed")
+    table = text.split(opening, 1)[1].split("\n};", 1)[0]
+    literal = r'"(?:[^"\\]|\\.)*"'
+    value = rf"(?:nullptr|(?:{literal}\s*)+)"
+    entries = re.findall(
+        rf"\{{\s*(?P<name>{literal})\s*,\s*(?P<column>{value})\s*,\s*"
+        rf"(?P<symbol>{value})\s*,\s*(?P<note>{value})\s*,\s*Sink::(?P<sink>k\w+)\s*,[^{{}}]*\}}",
+        table,
+    )
+
+    def string(raw: str) -> str | None:
+        return None if raw == "nullptr" else "".join(json.loads(part) for part in re.findall(literal, raw))
+
+    declarations = {
+        json.loads(name): {
+            "corpus_column": string(column),
+            "firmware_symbol": string(symbol),
+            "source_note": string(note),
+            "sink": sink,
+        }
+        for name, column, symbol, note, sink in entries
+    }
+    known_sinks = {"kNone", "kFloat", "kBool", "kU32", "kU32FromSeconds", "kEconOpen", "kEconClose"}
+    if len(entries) != 48 or list(declarations) != list(CANONICAL_FIELD_ORDER):
+        raise PrefixReplayError("injection source must declare each canonical field exactly once in source order")
+    if any(row["sink"] not in known_sinks for row in declarations.values()):
+        raise PrefixReplayError("injection source contains an unsupported sink")
+
+    generator = root / "scripts/gen-policy-consumer-manifest.py"
+    spec = importlib.util.spec_from_file_location("prefix_consumer_scan", generator)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest, violations = module.build_manifest()
+    if violations or manifest["summary"]["fields_clean"] != 48:
+        raise PrefixReplayError("fresh firmware consumer scan is not clean")
+    consumers = {row["name"]: row for row in manifest["fields"]}
+    if set(consumers) != set(declarations):
+        raise PrefixReplayError("firmware consumer scan differs from the full policy field set")
+
+    # Quoted includes are the actual compiler input closure, not just the top
+    # replay .cpp. System headers/toolchain identity remain bound by the binary.
+    inputs = set()
+    pending = [root / "firmware/test/replay_invariants.cpp"]
+    while pending:
+        path = pending.pop().resolve()
+        if path in inputs:
+            continue
+        if not path.is_relative_to(root.resolve()) or not path.is_file():
+            raise PrefixReplayError(f"unresolved local harness source: {path}")
+        inputs.add(path)
+        for name in re.findall(r'^\s*#include\s+"([^"]+)"', path.read_text(), re.MULTILINE):
+            candidates = (path.parent / name, root / "firmware/lib" / name)
+            included = next((candidate for candidate in candidates if candidate.is_file()), None)
+            if included is None:
+                raise PrefixReplayError(f"unresolved quoted include {name} in {path.name}")
+            pending.append(included)
+    inputs.update(root / name for name in module.SCAN_FILES)
+    inputs.update(
+        (
+            generator,
+            Path(__file__).resolve(),
+            root / "verdify_schemas/component_executor.py",
+            root / "verdify_schemas/policy_vector.py",
+            root / "verdify_schemas/tunable_registry.py",
+        )
+    )
+    source_files = {str(path.relative_to(root)): _sha256_bytes(path.read_bytes()) for path in sorted(inputs)}
+    fields = []
+    for name, declaration in declarations.items():
+        sites = [
+            site for site in consumers[name]["sites"] if site["category"] == "control" and site["access"] == "read"
+        ]
+        if not sites:
+            raise PrefixReplayError(f"no actual control consumer found for {name}")
+        fields.append(
+            {
+                "name": name,
+                **declaration,
+                "control_read_sites": sites,
+                "assignment_declared": declaration["sink"] != "kNone",
+                "native_path_qualification": "not_established_by_source_scan",
+            }
+        )
+    report = {
+        "schema": "verdify-component-prefix-source-coverage-v1",
+        "field_count": len(fields),
+        "declared_assignment_count": sum(row["assignment_declared"] for row in fields),
+        "unimposed_fields": [row["name"] for row in fields if not row["assignment_declared"]],
+        "compiled_safety_qualification_supported": False,
+        "missing_path_evidence": [
+            "actual ESPHome relay dwell and post-resolve vent consumers",
+            "actual zone mister cadence, arbiter, wet gate and water budget consumers",
+            "pre-bias solar band inputs (post-bias corpus columns cannot be biased twice)",
+            "recovery and negative scenarios exercising those consumers at every required prefix",
+        ],
+        "fields": fields,
+        "source_files": source_files,
+    }
+    report["report_sha256"] = _sha256_bytes(canonical_json(report).encode())
+    return report
+
+
 class CompiledInvariantInterlock(InterlockProbe):
     """Drives the compiled `replay_invariants` harness over a disturbance corpus.
 
     For each distinct injectable-value tuple a complete 48-field policy-state
     file is supplied through the harness's out-of-band surface.  The harness
-    self-declares which fields it held on every row; that machine record, rather
-    than source scanning or exit-code inference, is the coverage authority.
+    self-declares which fields it held on every row. Its template must match the
+    actual source declarations; neither source scanning nor exit-code inference
+    substitutes for that per-row record or the missing real-path qualification.
     """
 
     name = "compiled-replay-invariants"
@@ -473,6 +591,10 @@ class CompiledInvariantInterlock(InterlockProbe):
         self.binary_sha256 = binary_sha256
         self.source_sha256 = source_sha256
         self.corpus_sha256 = corpus_sha256
+        self.source_coverage = source_coverage_report()
+        declared = {row["name"] for row in self.source_coverage["fields"] if row["assignment_declared"]}
+        if self.covered_fields != declared or type(row_count) is not int or row_count <= 0:
+            raise PrefixReplayError("compiled template differs from actual injection source or corpus has no rows")
         self._cache: dict[tuple[tuple[str, str], ...], InterlockOutcome] = {}
         self.runs = 0
 
@@ -485,6 +607,10 @@ class CompiledInvariantInterlock(InterlockProbe):
             "corpus_sha256": self.corpus_sha256,
             "harness_runs": self.runs,
             "harness_source_sha256": self.source_sha256,
+            "source_coverage_report_sha256": self.source_coverage["report_sha256"],
+            "source_files": self.source_coverage["source_files"],
+            "compiled_safety_qualification_supported": False,
+            "missing_path_evidence": self.source_coverage["missing_path_evidence"],
             "injection_columns": {name: "policy_state" for name in sorted(self.covered_fields)},
             "uncovered_field_count": len(CANONICAL_FIELD_ORDER) - len(self.covered_fields),
             "uncovered_fields": sorted(set(CANONICAL_FIELD_ORDER) - self.covered_fields),
@@ -513,12 +639,13 @@ class CompiledInvariantInterlock(InterlockProbe):
         unimposed = payload.get("unimposed")
         checks = {
             "schema": payload.get("schema") == "verdify-replay-invariants-coverage-v1",
-            "field_count": payload.get("field_count") == 48,
-            "injectable_count": payload.get("injectable_count") == len(expected) == 27,
-            "imposed_count": payload.get("imposed_count") == len(expected),
-            "full_coverage": payload.get("full_coverage") is False,
+            "field_count": type(payload.get("field_count")) is int and payload["field_count"] == 48,
+            "injectable_count": type(payload.get("injectable_count")) is int
+            and payload["injectable_count"] == len(expected),
+            "imposed_count": type(payload.get("imposed_count")) is int and payload["imposed_count"] == len(expected),
+            "full_coverage": payload.get("full_coverage") is (expected == set(CANONICAL_FIELD_ORDER)),
             "full_injectable_coverage": payload.get("full_injectable_coverage") is True,
-            "rows": payload.get("rows") == self.row_count,
+            "rows": type(payload.get("rows")) is int and payload["rows"] == self.row_count,
             "status": payload.get("status") == "ok",
             "policy_state_sha256": payload.get("policy_state_sha256") == policy_state_sha256,
             "imposed_shape": isinstance(imposed, dict) and set(imposed) == expected,
@@ -531,7 +658,10 @@ class CompiledInvariantInterlock(InterlockProbe):
         partial = [
             name
             for name, row in imposed.items()
-            if not isinstance(row, dict) or row.get("source") != "policy_state" or row.get("rows") != self.row_count
+            if not isinstance(row, dict)
+            or row.get("source") != "policy_state"
+            or type(row.get("rows")) is not int
+            or row["rows"] != self.row_count
         ]
         if partial:
             return f"coverage was not effective on every row: {','.join(sorted(partial))}"
@@ -574,6 +704,7 @@ class CompiledInvariantInterlock(InterlockProbe):
                     "schema": "verdify-component-prefix-native-evidence-v1",
                     "binary_sha256": self.binary_sha256,
                     "harness_source_sha256": self.source_sha256,
+                    "source_coverage_report_sha256": self.source_coverage["report_sha256"],
                     "corpus_sha256": self.corpus_sha256,
                     "policy_state_sha256": policy_state_sha256,
                     "exit_code": proc.returncode,
@@ -606,12 +737,17 @@ class CompiledInvariantInterlock(InterlockProbe):
                 f"compiled harness failed without a declared invariant breach (exit={proc.returncode})",
                 evidence,
             )
+        if type(violations) is not int or violations != 0:
+            return InterlockOutcome(
+                UNPROVEN, "compiled harness did not declare exactly zero invariant violations", evidence
+            )
         missing = len(CANONICAL_FIELD_ORDER) - len(self.covered_fields)
         return InterlockOutcome(
             UNPROVEN,
             (
                 f"no invariant breach over {self.row_count} corpus rows, but compiled policy-state coverage is "
-                f"exactly {len(self.covered_fields)}/48; the remaining {missing} fields are explicitly unqualified"
+                f"exactly {len(self.covered_fields)}/48; {missing} fields remain unimposed. "
+                "Assignments do not establish missing ESPHome path and recovery/negative-scenario coverage"
             ),
             evidence,
         )
@@ -722,6 +858,10 @@ def build_compiled_interlock(
     max_rows: int = 0,
 ) -> InterlockProbe:
     """Compile and prime the `replay_invariants` harness, or explain why not."""
+    if type(max_rows) is not int or max_rows < 0:
+        return UnprovenInterlock(
+            "corpus row limit must be a nonnegative integer; zero explicitly selects the whole corpus"
+        )
     if not INVARIANTS_SOURCE.is_file():
         return UnprovenInterlock(f"harness source missing: {INVARIANTS_SOURCE}")
     if not corpus.is_file():
@@ -752,20 +892,18 @@ def build_compiled_interlock(
         coverage = policy_template_injection_coverage(template.stdout)
     except PrefixReplayError as exc:
         return UnprovenInterlock(str(exc))
-    if len(coverage) != 27:
-        return UnprovenInterlock(
-            f"compiled harness injection ceiling changed: expected honest 27/48, observed {len(coverage)}/48"
-        )
+    source_coverage = source_coverage_report()
+    declared = frozenset(row["name"] for row in source_coverage["fields"] if row["assignment_declared"])
+    if coverage != declared:
+        return UnprovenInterlock("compiled harness template differs from source injection declarations")
 
     opener = gzip.open if corpus.suffix == ".gz" else open
     with opener(corpus, "rt", encoding="utf-8", newline="") as handle:  # type: ignore[operator]
-        lines = handle.read().splitlines()
-    if not lines:
-        return UnprovenInterlock(f"disturbance corpus is empty: {corpus}")
-    header = lines[0].split("\t")
-    rows = lines[1:]
-    if max_rows > 0:
-        rows = rows[:max_rows]
+        header_line = next(handle, None)
+        if header_line is None:
+            return UnprovenInterlock(f"disturbance corpus is empty: {corpus}")
+        header = header_line.rstrip("\r\n").split("\t")
+        rows = [line.rstrip("\r\n") for line in (islice(handle, max_rows) if max_rows > 0 else handle)]
     if not rows:
         return UnprovenInterlock(f"disturbance corpus has no data rows: {corpus}")
 
@@ -1011,6 +1149,7 @@ _REVISION_INTERLOCK_KEYS = (
     "full_coverage",
     "binary_sha256",
     "harness_source_sha256",
+    "source_coverage_report_sha256",
     "harness_sha256",
     "corpus_sha256",
     "corpus_rows",
@@ -1423,11 +1562,16 @@ def _run_probe(args: argparse.Namespace) -> int:
             f"{len(covered)}/48 components injectable; treatment fields not injectable: "
             f"{', '.join(sorted(set(TREATMENT_FIELD_ORDER) - covered)) or 'none'}",
         ),
+        Check(
+            "harness/exercised-path-qualification",
+            "FAIL",
+            "compiled field assignments do not establish missing ESPHome paths and recovery/negative scenarios",
+        ),
     ]
     for check in checks:
         print(f"{check.status} — {check.name}: {check.detail}")
     print(json.dumps(description, indent=2, sort_keys=True))
-    return 0 if full else 1
+    return 1  # A field-assignment report is never a compiled safety qualification.
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1471,11 +1615,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     probe = sub.add_parser("probe-harness", help="report the compiled harness's injection coverage")
     _common(probe)
+    sub.add_parser(
+        "coverage-source", help="report actual source consumers and missing paths without compiling or replaying"
+    )
 
     args = parser.parse_args(argv)
     try:
         if args.command == "replay":
             return _run_replay(args)
+        if args.command == "coverage-source":
+            print(json.dumps(source_coverage_report(), indent=2, sort_keys=True))
+            return 0
         return _run_probe(args)
     except PrefixReplayError as exc:
         parser.exit(2, f"prefix replay refused: {exc}\n")

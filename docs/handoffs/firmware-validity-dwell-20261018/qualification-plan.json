@@ -1,0 +1,72 @@
+{
+  "schema": "verdify.firmware-validity-dwell-qualification/v1",
+  "status": "SOURCE_PREPARED_AWAITING_ROOT_NATIVE_ADMISSION",
+  "execution_owner": "ROOT",
+  "context": "vallery",
+  "submission_path": "Existing verdify-platform-ci PR validation plus existing repo-validate WorkflowTemplate checks_json; no new pipeline/toolchain/RBAC",
+  "source": "Commit containing source-reconciliation.json; ROOT must bind exact composed SHA before submission.",
+  "placement": {
+    "eligible_workers": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "exclude": "control-plane and dedicated frigate node8",
+    "per_check_requests": {
+      "cpu": "500m",
+      "memory": "1Gi"
+    },
+    "per_check_limits": {
+      "cpu": "2",
+      "memory": "4Gi"
+    },
+    "parallelism": 1,
+    "workflow_deadline_seconds": 7200,
+    "causal_test_deadline_seconds": 600,
+    "notes": "These are upper requested bounds for the existing supported path, not a capacity admission. ROOT refreshes quotas, live requests/working sets, pressure and shared reservations before one submission. No raises on failure."
+  },
+  "checks": [
+    {
+      "path": "Existing PR validate scripts/ci-local.sh",
+      "commands": [
+        "python -m pytest -q tests/test_probe_diagnostics_native.py tests/test_policy_relay_dwell_refresh.py"
+      ],
+      "integration": "ROOT registers these focused names in the existing source CI path. Existing CI contract checks and CI_BASE_REF committed replay are reused.",
+      "expected": "70 actual-YAML diagnostic +84 actual-YAML dwell cases pass; no skips or fixture compiler failures."
+    },
+    {
+      "path": "Existing repo-validate native run-check shell, ROOT admitted",
+      "commands": [
+        "make test-firmware firmware-invariants"
+      ],
+      "expected": "Strict zero exits for policy vector/engine/recovery/injection, greenhouse native/replay and invariant targets. Any invariant rc2 is unusable-corpus/UNPROVEN. Do not use the declared firmware-logic legacy waiver as acceptance.",
+      "relationship_to_declared_check": "Same repository native tools as declared firmware-logic, with the missing policy suites and strict invariant result. No new infra/toolchain pipeline."
+    },
+    {
+      "path": "repo-validate declared firmware-secretless-compile",
+      "command_source": ".agent-fleet/ci.yaml checks.steps[name=firmware-secretless-compile]",
+      "expected": "Both maintained targets compile with public nondeployable fixture values on pinned ESPHome2026.6.5 image; expected generated-service negative fails. Retain package/compiler/generated source/binary provenance."
+    },
+    {
+      "path": "Existing native check shell, ROOT admitted",
+      "commands": [
+        "timeout 600s env QUALIFICATION_DIR=/tmp/firmware-368-367-causal-<stable-run-id> bash docs/handoffs/firmware-validity-dwell-20261018/causal-regressions.sh",
+        "THRESHOLD_PCT=0 BUILD_DIR=/tmp/firmware-368-367-worktree-<stable-run-id> make firmware-replay-worktree OLD=2999abe5f4348ff17b8fd11931247f2c3c5fd107"
+      ],
+      "expected": "Old true source: diagnostic49fail/21pass, dwell72fail/12pass, zero errors/skips; current source all154pass. Worktree replay zero decision/diagnostic divergence. Actual chronological evidence must remain explicit; do not relabel a postcommit run as precommit."
+    }
+  ],
+  "custody": [
+    "Workflow/Pod UID and exact source/command/image/resources/admission",
+    "Complete stdout/stderr and terminal exit status for every actual step before GC",
+    "Causal JUnit/raw logs/generated C++/fragment hashes and original failing outputs",
+    "Replay corpus hash/row count and exact source pair",
+    "Compiler package manifests/generated C++/binary hashes; binaries NONDEPLOYABLE, never last-good"
+  ],
+  "limits": [
+    "No service, database, device or Slack calls",
+    "No production sync, OTA, new credentials, grants or shared-PVC changes",
+    "Source/CI evidence does not qualify physical firmware safety or full48 historical treatment coverage"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schema": "verdify-prefix-native-independent-verification-v1",
+  "passed": true,
+  "source_revision": "f48c889ecb5124949dcbcba29af7cf525f8ba7b5",
+  "pilot_source_sha256": "6353baa95ec161b30b88ce9b06c4904999564f91690801e32e1f131f3b2a7717",
+  "source_files_verified": 21,
+  "source_report_sha256": "aefc41fecae527de958606883bd9174bfd26b09f1743d7ad66c8387e90d32417",
+  "full_log": {
+    "bytes": 30199,
+    "sha256": "246ebc1c38aef5a41224472dc30b6e44dea8e0cfbb1e96042ca2a293503de833"
+  },
+  "private_input_hashes": {
+    "workflow-latest.private.json": "7ffdf357371ec31180b07ed1685fa9db59523c0cdab30d3e1cee0644f6acf162",
+    "pods-latest.private.json": "bf2e92675e5d6ae785f9370b2ded7ef9a4e04f7b51c5ca093ec30ded0620ff15",
+    "capture-latest.json": "d1b7f232b437725bdcb93cd044a2ccfc74d4990dcf500b1f2f52f820343c8f5c"
+  },
+  "workflow": {
+    "name": "verdify-ready-prefix-f48c889e-01",
+    "uid": "8b11a3b7-b2cf-44da-aba3-a5c98873bd04",
+    "namespace": "agent-fleet-ci",
+    "template": "repo-validate-568985cdbf6b4e3f",
+    "phase": "Succeeded",
+    "started_at": "2026-10-18T07:51:05Z",
+    "finished_at": "2026-10-18T07:52:55Z"
+  },
+  "check_pod": {
+    "name": "verdify-ready-prefix-f48c889e-01-run-check-2241985753",
+    "uid": "8fde1d9a-a963-4da7-96d8-c373edeab59f",
+    "node": "vm-k3s-node6",
+    "phase": "Succeeded",
+    "image_id": "registry.vallery.net/jvallery/agents-ci-tools@sha256:7d61fca39280efb3b26419a111609f4713f3a1cc54b736a7af624fdf03c8f0e6",
+    "all_container_exits_zero": true,
+    "all_container_restarts_zero": true,
+    "main_resources": {
+      "limits": {
+        "cpu": "2",
+        "ephemeral-storage": "12Gi",
+        "memory": "4Gi"
+      },
+      "requests": {
+        "cpu": "500m",
+        "ephemeral-storage": "4Gi",
+        "memory": "1Gi"
+      }
+    }
+  },
+  "checks": {
+    "four_process_records_and_stream_hashes": true,
+    "all_source_hashes_match_exact_git_commit": true,
+    "regenerated_source_report_matches_native": true,
+    "policy_bytes_reconstructed": true,
+    "first_128_corpus_rows_reconstructed": true,
+    "normalized_native_evidence_hash_reconstructed": true,
+    "zero_breach_27_of_48_every_row": true,
+    "missing_field_rejected_before_rows": true,
+    "unproven_and_no_order_revision": true
+  },
+  "acceptance": {
+    "source_assignment_contract_pilot": true,
+    "complete_prefix_qualification": false,
+    "current_grid_active_executor": false,
+    "physical_qualification": false,
+    "issue_639_complete": false,
+    "issue_587_complete": false
+  },
+  "runner_bounds_note": "ROOT admitted unchanged existing registered runner limits2CPU/4GiB instead of proposed1CPU/1GiB; no shared infrastructure mutation",
+  "custody_note": "Raw subprocess streams are exact and included; full wrapper/setup log and native objects remain private with hashes. Compiled binary retained by digest only."
+}

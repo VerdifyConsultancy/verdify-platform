@@ -25,7 +25,7 @@ COPY research/planner-efficacy/switchback/v2_outcomes.py /app/experiment_orchest
 # The attended direct-proof Job reuses this non-device runtime.  Carry only its
 # source-stamped, read-only collector/guard surfaces and the exact source files
 # whose hashes the readiness packet binds; none imports a device client.
-COPY scripts/experiment_v2_proof_packet.py scripts/experiment_v2_readiness_guard.py scripts/mcp-security-acceptance.py /app/scripts/
+COPY scripts/experiment_v2_proof_packet.py scripts/experiment_v2_readiness_guard.py scripts/experiment_v2_wetting_disposition.py scripts/mcp-security-acceptance.py /app/scripts/
 COPY scripts/verify_component_proof_packet.py /app/readiness-source/scripts/verify_component_proof_packet.py
 COPY research/planner-efficacy/switchback/v2_selector.py /app/readiness-source/research/planner-efficacy/switchback/v2_selector.py
 COPY research/planner-efficacy/switchback/v2_outcomes.py /app/readiness-source/research/planner-efficacy/switchback/v2_outcomes.py
@@ -33,6 +33,7 @@ COPY research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json /ap
 COPY ingestor/tasks/component_experiment.py /app/readiness-source/ingestor/tasks/component_experiment.py
 COPY deploy/k8s/components/hermes-iris/hermes-config.yaml /app/readiness-source/deploy/k8s/components/hermes-iris/hermes-config.yaml
 COPY tests/fixtures/experiment-v2-readiness/base-proof.json /app/readiness-source/tests/fixtures/experiment-v2-readiness/base-proof.json
+COPY research/planner-efficacy/wetting-incident-778-readiness.json research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md /app/readiness-source/research/planner-efficacy/
 # The managed build clone uses umask 077. Docker/kaniko preserve those source
 # modes on bare COPY, so normalize every runtime module before dropping root;
 # otherwise uid 10001 cannot import a freshly built image.

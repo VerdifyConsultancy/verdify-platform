@@ -690,10 +690,10 @@ sensor:
       if(ok(id(last_east_ms))  && !isnan(id(vpd_east).state)) { s += id(vpd_east).state;  n++; }
       return n ? s/n : NAN;
 
-  # FW-10 (Sprint 17): active probe count — how many zone probes currently
-  # contribute to the aggregates. Emits 0-4 as an int. Planner reads this
-  # to know when to distrust averages (e.g., if only 1 probe is live, the
-  # "greenhouse average" is really just that one zone).
+  # Complete wall probes eligible to contribute all three climate fields.
+  # Each existing aggregate still independently filters its own field; a probe
+  # with one invalid field must not inflate this complete-probe diagnostic.
+  # This is not the separate Gate P quorum or a stuck/jump plausibility test.
   - platform: template
     id: active_probe_count
     name: "Active Probe Count"
@@ -703,12 +703,15 @@ sensor:
     lambda: |-
       const uint32_t now = millis();
       const uint32_t STALE = 300000;
-      auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
+      auto ok = [&](uint32_t ts, float temperature, float humidity, float vpd) {
+        return probe_sample_fresh(now, ts, STALE) &&
+               probe_triple_finite(temperature, humidity, vpd);
+      };
       int n = 0;
-      if(ok(id(last_north_ms))) n++;
-      if(ok(id(last_west_ms)))  n++;
-      if(ok(id(last_south_ms))) n++;
-      if(ok(id(last_east_ms)))  n++;
+      if(ok(id(last_north_ms), id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state)) n++;
+      if(ok(id(last_west_ms), id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state)) n++;
+      if(ok(id(last_south_ms), id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state)) n++;
+      if(ok(id(last_east_ms), id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state)) n++;
       return (float)n;
 
   # OBS-3 (Sprint 18): firmware control-state exposure for planner feedback.
@@ -4190,7 +4193,9 @@ text_sensor:
     name: "Last State Transition"
     entity_category: diagnostic
 
-  # A2: Per-probe health monitoring
+  # A2: Per-probe health monitoring. Preserve the earlier 120s warning
+  # (aggregate eligibility is 300s); recent NaN/Inf values report INVALID.
+  # Case has only temperature/RH; wall probes also require their VPD field.
   - platform: template
     id: probe_health
     name: "Probe Health"
@@ -4202,12 +4207,12 @@ text_sensor:
       char result[96];
       size_t n = 0;
       result[0] = '\0';
-      struct { const char* name; uint32_t last; } probes[] = {
-        {"Case", id(last_case_ms)},
-        {"North", id(last_north_ms)},
-        {"West", id(last_west_ms)},
-        {"South", id(last_south_ms)},
-        {"East", id(last_east_ms)}
+      struct { const char* name; uint32_t last; bool values_finite; } probes[] = {
+        {"Case", id(last_case_ms), probe_pair_finite(id(case_temperature).state, id(case_humidity).state)},
+        {"North", id(last_north_ms), probe_triple_finite(id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state)},
+        {"West", id(last_west_ms), probe_triple_finite(id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state)},
+        {"South", id(last_south_ms), probe_triple_finite(id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state)},
+        {"East", id(last_east_ms), probe_triple_finite(id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state)}
       };
       bool all_ok = true;
       auto append = [&](const char* s) {
@@ -4217,10 +4222,11 @@ text_sensor:
         result[n] = '\0';
       };
       for(auto &p : probes){
-        if(p.last == 0 || (now - p.last) > STALE_MS){
+        const bool fresh = probe_sample_fresh(now, p.last, STALE_MS);
+        if(!fresh || !p.values_finite){
           if(!all_ok) append(", ");
           append(p.name);
-          append(" STALE");
+          append(fresh ? " INVALID" : " STALE");
           all_ok = false;
         }
       }

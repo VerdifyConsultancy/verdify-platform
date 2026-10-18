@@ -1,0 +1,18 @@
+{
+  "schema": "verdify-wetting-readiness-disposition-v1",
+  "incident_issue": 778,
+  "device_id": "vallery/greenhouse-controller",
+  "incident_started_at": "2026-09-04T20:30:00Z",
+  "incident_ended_at": "2026-09-05T00:45:00Z",
+  "source_correction_commit": "5e22ca6436d512b82aa9dc6269eb7f221661215a",
+  "source_analysis": {
+    "path": "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md",
+    "sha256": "496d4fa3a2f4bade1a60066617dc049430bcb58934917b220bbec29ff59873f4"
+  },
+  "criteria": {
+    "firmware_binary_lineage": null,
+    "safe_fog_admission_and_rails": null,
+    "physical_equipment_qualification": null,
+    "counter_scope_and_reset_boundaries": null
+  }
+}

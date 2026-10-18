@@ -28,6 +28,11 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+try:
+    from scripts import experiment_v2_wetting_disposition as wetting
+except ModuleNotFoundError:  # direct /app/scripts entrypoint
+    import experiment_v2_wetting_disposition as wetting
+
 INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v2"
 RESULT_SCHEMA = "verdify-experiment-v2-readiness-result-v1"
 STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
@@ -1291,7 +1296,9 @@ def _validate_evidence(
     return proof_preflight_receipts
 
 
-def _validate_issue_state(raw: object, *, mode: Mode, blockers: list[str]) -> None:
+def _validate_issue_state(
+    raw: object, *, mode: Mode, blockers: list[str], expected: ExpectedPins, now: datetime, repo_root: Path | None
+) -> None:
     value = _exact_keys(raw, {"decision_748", "maintenance_751", "recovery_747", "gate_p_641"}, "issue_state")
     decision = _exact_keys(value["decision_748"], {"accepted", "issue_url"}, "issue_state.decision_748")
     if not _boolean(decision["accepted"], "issue_state.decision_748.accepted") or decision["issue_url"] != (
@@ -1324,9 +1331,28 @@ def _validate_issue_state(raw: object, *, mode: Mode, blockers: list[str]) -> No
     prerequisites = _array(gate["prerequisites"], "issue_state.gate_p_641.prerequisites")
     observed: set[str] = set()
     for index, raw_row in enumerate(prerequisites):
-        row = _exact_keys(raw_row, {"name", "complete"}, f"issue_state.gate_p_641.prerequisites[{index}]")
+        keys = {"name", "complete"}
+        if (
+            isinstance(raw_row, dict)
+            and raw_row.get("name") == "wetting_incident_778_disposition"
+            and "disposition" in raw_row
+        ):
+            keys.add("disposition")
+        row = _exact_keys(raw_row, keys, f"issue_state.gate_p_641.prerequisites[{index}]")
         name = _text(row["name"], f"issue_state.gate_p_641.prerequisites[{index}].name")
+        if name in observed:
+            raise PacketError("duplicate issue_641 prerequisite: " + name)
         observed.add(name)
+        if mode == "proof" and name == "wetting_incident_778_disposition":
+            blockers.extend(
+                wetting.blockers(
+                    row.get("disposition"),
+                    root=repo_root,
+                    application_source=expected.application_source,
+                    experiment_id=expected.experiment_id,
+                    now=now,
+                )
+            )
         complete = _boolean(row["complete"], f"issue_state.gate_p_641.{name}.complete")
         if mode == "proof" and not complete:
             blockers.append(f"issue_641_prerequisite_incomplete:{name}")
@@ -1540,7 +1566,9 @@ def evaluate_packet(
         receipts=proof_preflight_receipts,
         blockers=blockers,
     )
-    _validate_issue_state(top["issue_state"], mode=mode, blockers=blockers)
+    _validate_issue_state(
+        top["issue_state"], mode=mode, blockers=blockers, expected=expected, now=now, repo_root=repo_root
+    )
 
     blockers = sorted(set(blockers))
     warnings = sorted(set(warnings))

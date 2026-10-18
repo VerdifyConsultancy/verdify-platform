@@ -1099,6 +1099,7 @@ def test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth():
         "changed_firmware",
         "missing_sql",
         "caller_algorithm",
+        "previous_source_algorithm",
         "stale_sample",
         "arbitrary_sql",
         "changed_48",
@@ -1135,6 +1136,11 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
         context["sql_functions"].clear()
     elif mutation == "caller_algorithm":
         context["algorithm_revision"] = "caller-supplied"
+    elif mutation == "previous_source_algorithm":
+        # Retained source revision before the #367 dwell refresh stays historical.
+        context["algorithm_revision"] = (
+            "served-band-wire-v1:sha256:61f0a9fc80b6f4711af9c94d0dc557604620880185eccb521675ca01f78f0044"
+        )
     elif mutation == "stale_sample":
         context["sample_epoch_callback"]["value"] = str(int(OBSERVED_AT.timestamp()) - 31)
     elif mutation == "arbitrary_sql":

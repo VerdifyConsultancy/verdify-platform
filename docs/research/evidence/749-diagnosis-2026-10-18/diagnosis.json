@@ -1,0 +1,196 @@
+{
+  "schema": "verdify-749-bounded-diagnosis-v1",
+  "source_revision": "2999abe5f4348ff17b8fd11931247f2c3c5fd107",
+  "captured_at": "2026-10-18T07:32:53.784146+00:00",
+  "scope": "one read-only diagnosis; no readiness qualification or pass selection",
+  "query_sha256": "5d796f279491bb90421e77249b425917b3f0b910532124fb2be9442d96f4a43e",
+  "stdout_sha256": "317266ec180e0c49c4bf41b4fc9ba6d6e04596d6c8502d4a20e011647011e3e7",
+  "operator_receipt_sha256": "e5eba2d0b1fd3f9d2b68a15ffdd7452403dfc3af4dcfe210deba72900f2809b3",
+  "bounds": {
+    "rows": 24,
+    "bytes": 9690,
+    "statement_timeout_seconds": 2,
+    "wall_timeout_seconds": 20,
+    "output_limit_bytes": 65536,
+    "attempts": 1
+  },
+  "target_identity_stable": true,
+  "db_restarts": 0,
+  "climate": {
+    "unchanged_limit_f": 4.0,
+    "newest_timestamps": [
+      "2026-10-18T07:32:45.365624+00:00",
+      "2026-10-18T07:31:43.074664+00:00",
+      "2026-10-18T07:30:40.762988+00:00"
+    ],
+    "temperature_spreads_f": [
+      2.1599998474121094,
+      2.1599998474121094,
+      2.1599998474121094
+    ],
+    "finite_contributors": [
+      "north",
+      "east",
+      "west"
+    ],
+    "south_triple_null": true,
+    "south1_soil_fields_null": true,
+    "reported_probe_count": 4,
+    "reported_probe_health": "OK",
+    "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+    "original_sealed_failure_unchanged": true
+  },
+  "soil": {
+    "current_exact_identities": [
+      {
+        "alert_id_sha256": "e5e3eb7ac44055c2426d1be8c4387d8b7e6f33bb6a975cba00e35043fa5da81b",
+        "sensor_id": "climate.soil_temp_south_1",
+        "alert_type": "sensor_offline",
+        "disposition": "acknowledged",
+        "opened_at": "2026-10-17T22:19:07.195767+00:00",
+        "updated_at": "2026-10-18T07:29:44.104987+00:00"
+      },
+      {
+        "alert_id_sha256": "a7eab74aae16607c89c2c5a01e0b8a9cb085cc31920d537c116c2f161a715da6",
+        "sensor_id": "climate.soil_moisture_south_1",
+        "alert_type": "sensor_offline",
+        "disposition": "acknowledged",
+        "opened_at": "2026-10-17T22:19:07.201638+00:00",
+        "updated_at": "2026-10-18T07:29:44.109275+00:00"
+      },
+      {
+        "alert_id_sha256": "77da9ad569e231a5011d10e7500a5b17210f30b948dc180484e8b0dfaec36fcc",
+        "sensor_id": "climate.soil_ec_south_1",
+        "alert_type": "sensor_offline",
+        "disposition": "acknowledged",
+        "opened_at": "2026-10-17T22:19:07.220147+00:00",
+        "updated_at": "2026-10-18T07:29:44.124246+00:00"
+      },
+      {
+        "alert_id_sha256": "ed908da251034b88bf0a3525acd2d7f42c617b110918fd513a828b5c19e533e2",
+        "sensor_id": "soil.south_1.soil_moisture_south_1",
+        "alert_type": "soil_sensor_offline",
+        "disposition": "suppressed",
+        "opened_at": "2026-10-17T22:44:08.525127+00:00",
+        "updated_at": "2026-10-18T04:04:42.653595+00:00"
+      },
+      {
+        "alert_id_sha256": "0bc496bec1ba3f140ff3aa11703e1c2ea417b1c1492b4c28689a2ffc33c0b2b4",
+        "sensor_id": "soil.south_1.soil_temp_south_1",
+        "alert_type": "soil_sensor_offline",
+        "disposition": "suppressed",
+        "opened_at": "2026-10-17T22:44:08.532496+00:00",
+        "updated_at": "2026-10-18T04:04:42.65646+00:00"
+      },
+      {
+        "alert_id_sha256": "3f114996ac384f8c8fc4c5e95dc2fdb2e1979e4ca3e937c6ab3c09a15030d1db",
+        "sensor_id": "soil.south_1.soil_ec_south_1",
+        "alert_type": "soil_sensor_offline",
+        "disposition": "suppressed",
+        "opened_at": "2026-10-17T22:44:08.536821+00:00",
+        "updated_at": "2026-10-18T04:04:42.65934+00:00"
+      }
+    ],
+    "predecessors": [
+      {
+        "alert_id_sha256": "80335c1f5da13ee4dfe164de956a3436e731ab3a66797d0fdc3f19a1c2815204",
+        "sensor_id": "climate.soil_temp_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:01:25.707939+00:00",
+        "updated_at": "2026-10-17T21:44:08.933148+00:00"
+      },
+      {
+        "alert_id_sha256": "a53f3974cfe010d48e7449701e453198f1cbc47a4170c7dde48814d2f1b0c07e",
+        "sensor_id": "climate.soil_temp_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T18:51:19.685558+00:00",
+        "updated_at": "2026-10-17T20:31:21.434917+00:00"
+      },
+      {
+        "alert_id_sha256": "b4b88a57b31de5a39fc62d0cf455e2f9f04623010034033ff681ff3ac1441cf7",
+        "sensor_id": "climate.soil_moisture_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:01:25.715639+00:00",
+        "updated_at": "2026-10-17T21:44:08.938789+00:00"
+      },
+      {
+        "alert_id_sha256": "c514d648b63919245b73d03b40b6944f5cebee0985fa626ee95c42dddf67efbf",
+        "sensor_id": "climate.soil_moisture_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T18:51:19.691585+00:00",
+        "updated_at": "2026-10-17T20:31:21.440127+00:00"
+      },
+      {
+        "alert_id_sha256": "e88cec3c32237823d09b2546b6af2e3c64244a71387a77559a514f7b41392b4d",
+        "sensor_id": "climate.soil_ec_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:01:25.727842+00:00",
+        "updated_at": "2026-10-17T21:44:08.944618+00:00"
+      },
+      {
+        "alert_id_sha256": "ce22191277eef4735bf5dce2d0bcc6b7c526cb36f3795c20f2aa8c29cb16d236",
+        "sensor_id": "climate.soil_ec_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T18:51:19.707555+00:00",
+        "updated_at": "2026-10-17T20:31:21.44345+00:00"
+      },
+      {
+        "alert_id_sha256": "1deba9e96f404694373de9749ddd1ca8aa7bb823145a6fe3491dec605a526a92",
+        "sensor_id": "soil.south_1.soil_moisture_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:29:04.823273+00:00",
+        "updated_at": "2026-10-17T21:44:08.948739+00:00"
+      },
+      {
+        "alert_id_sha256": "6af93c03a005294bea52780b29dcba35498a9b2f7459854f30efcf20ddba467a",
+        "sensor_id": "soil.south_1.soil_moisture_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T19:16:20.967388+00:00",
+        "updated_at": "2026-10-17T20:31:21.446359+00:00"
+      },
+      {
+        "alert_id_sha256": "014128969dda869dfc9c0da312bc3083b4a2fe3c232918d9ef319a2c763c2d36",
+        "sensor_id": "soil.south_1.soil_temp_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:29:04.828294+00:00",
+        "updated_at": "2026-10-17T21:44:08.953405+00:00"
+      },
+      {
+        "alert_id_sha256": "cdf0e49e1b570f1314da71c695f7c595dece0e228755ff5cebd5418bdcd6e17e",
+        "sensor_id": "soil.south_1.soil_temp_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T19:16:20.972292+00:00",
+        "updated_at": "2026-10-17T20:31:21.452713+00:00"
+      },
+      {
+        "alert_id_sha256": "9a3098a5e99a89b20d8a4f51a83aa657d7bd9cf4ba7063990c2b78fb2cfaff08",
+        "sensor_id": "soil.south_1.soil_ec_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T21:29:04.831721+00:00",
+        "updated_at": "2026-10-17T21:44:08.957999+00:00"
+      },
+      {
+        "alert_id_sha256": "3050fd91b6c1b3b972e0d53658d3cf7d9b344dbfd97d968eece3b0e796897d68",
+        "sensor_id": "soil.south_1.soil_ec_south_1",
+        "disposition": "resolved",
+        "opened_at": "2026-10-17T19:16:20.975692+00:00",
+        "updated_at": "2026-10-17T20:31:21.455782+00:00"
+      }
+    ],
+    "catalog_expanded": false,
+    "physical_recovery_claimed": false,
+    "inference": "Two previous rows per exact sensor are resolved. Current soil_sensor_offline rows were suppressed after the Denver22:00 daytime monitor boundary; this matches acknowledged-gap suppression source semantics, but the stored timestamps alone do not prove cause or hardware recovery."
+  },
+  "unchanged_holds": [
+    "4F climate guard",
+    "exact soil identity classification",
+    "wetting physical/binary/rail/reset evidence",
+    "full original-clause readiness"
+  ],
+  "source_paths": [
+    "ingestor/tasks/alerts.py",
+    "ingestor/tasks/daily.py",
+    "scripts/experiment_v2_proof_packet.py",
+    "scripts/experiment_v2_readiness_guard.py"
+  ]
+}

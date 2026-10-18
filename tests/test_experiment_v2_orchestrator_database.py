@@ -198,8 +198,42 @@ def test_production_function_allowlists_are_source_locked_for_all_three_duties()
         "public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)",
         "public.fn_experiment_v2_freeze_export(uuid,text,text)",
         "public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)",
+        "public.fn_freeze_fixed_panel_native_previous_day()",
     )
     assert "equipment_direct_state_snapshots" in database.ROLE_ATTESTATION_SQL
     assert "equipment_state_source_receipts" in database.ROLE_ATTESTATION_SQL
     assert "candidate.prosecdef" in database.ROLE_ATTESTATION_SQL
     assert "policy/outbox/setpoint" in database.ROLE_ATTESTATION_SQL
+
+
+@pytest.mark.asyncio
+async def test_freezer_accepts_existing_native_callback_grant_but_not_an_extra_grant():
+    from dataclasses import replace
+
+    callback = "public.fn_freeze_fixed_panel_native_previous_day()"
+    granted = set(database.ROLE_FUNCTIONS[OrchestratorMode.FREEZER]) | {callback}
+    observed = []
+
+    class GrantConnection(Connection):
+        async def fetchrow(self, query, *args):
+            row = good_attestation("freezer-login")
+            row["has_unexpected_function_execute"] = bool(granted - set(args[1]))
+            row["has_required_function_execute"] = not (set(args[1]) - granted)
+            observed.append(set(args[1]))
+            return row
+
+    pools = []
+
+    async def factory(**kwargs):
+        pool = Pool(GrantConnection({}))
+        pools.append(pool)
+        return pool
+
+    cfg = replace(settings(), user="freezer-login", duty_role="verdify_experiment_outcome_freezer")
+    pool = await database.create_attested_pool(cfg, OrchestratorMode.FREEZER, pool_factory=factory)
+    assert callback in observed[0] and len(observed[0]) == 6
+    await pool.close()
+    granted.add("public.unreviewed_security_definer()")
+    with pytest.raises(database.DatabaseContractError, match="exact duty"):
+        await database.create_attested_pool(cfg, OrchestratorMode.FREEZER, pool_factory=factory)
+    assert pools[-1].closed

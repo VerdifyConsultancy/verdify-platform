@@ -1116,3 +1116,60 @@ def test_active_argo_operation_revision_must_be_exact() -> None:
     }
     with pytest.raises(collector.CollectionError, match="operation revision"):
         collector.current_argo_revision(app)
+
+
+def test_recovery_assembly_does_not_require_unrelated_physical_wetting_files(monkeypatch, tmp_path):
+    """Gate R cannot acquire a physical Gate P dependency through collection."""
+    base = json.loads((ROOT / "tests/fixtures/experiment-v2-readiness/base-proof.json").read_text())
+    monkeypatch.setattr(collector, "backup_evidence", lambda *_: (base["backup"], True))
+    monkeypatch.setattr(collector, "source_dependencies", lambda *args, **kwargs: base["dependencies"])
+    monkeypatch.setattr(collector, "climate_samples", lambda _: base["climate"]["samples"])
+    monkeypatch.setattr(collector, "alert_projection", lambda *args, **kwargs: base["alerts"])
+    runtime = base["runtime"]
+    facts = {
+        "attestation": {"connection": runtime["connection_generation"], "receipt": "a" * 64},
+        "writer_fact": {},
+        "writer_stable_since": collector.zulu(datetime.now(UTC) - timedelta(hours=1)),
+        "writer_name": "fixture-writer",
+        "writer_digest": base["provenance"]["writer"]["running_digest"],
+        "writer_recurring_errors": 0,
+        "images": base["provenance"]["images"],
+        "workloads": base["workloads"],
+        "argo": base["argo"],
+        "ingestor_env": {"VERDIFY_ACTIVE_EXPERIMENT_ID": "", "VERDIFY_POLICY_VECTOR_MODE": "off"},
+    }
+    database = {
+        "status": {
+            "lease_generation": runtime["lease_generation"],
+            "registry_revision": runtime["registry_revision"],
+            "component_enabled": False,
+            "admission_state": "closed",
+            "open_exposure_count": 0,
+        },
+        "runtime": runtime,
+        "generation": {"connection_generation": runtime["connection_generation"]},
+        "climate": [],
+    }
+    inputs = dict(
+        git_pin=base["provenance"]["git_pin"],
+        application_source=base["provenance"]["application_source_revision"],
+        experiment_id=base["provenance"]["experiment_id"],
+        state_path=tmp_path / "chain.json",
+        repo_root=tmp_path,
+        kube=None,
+        kube_facts=facts,
+        db=database,
+        preflights=base["evidence"],
+    )
+    # Empty temporary source root deliberately has no incident disposition. All
+    # Gate R causal-source projections above remain independently controlled.
+    packet = collector.assemble(base, mode="recovery", boundary="gate-r", **inputs)
+    incident = next(
+        row
+        for row in packet["issue_state"]["gate_p_641"]["prerequisites"]
+        if row["name"] == "wetting_incident_778_disposition"
+    )
+    assert incident == {"name": "wetting_incident_778_disposition", "complete": False}
+    # Proof must still refuse the exact same missing source evidence.
+    with pytest.raises(FileNotFoundError):
+        collector.assemble(base, mode="proof", boundary="gate-p", **inputs)
