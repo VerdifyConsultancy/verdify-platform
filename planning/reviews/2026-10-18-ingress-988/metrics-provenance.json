@@ -1,0 +1,23 @@
+{
+  "source": "existing Kepler Estate Prometheus connector",
+  "backend": "verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd",
+  "queries": [
+    {
+      "file": "metrics-incident.json",
+      "private_response_sha256": "627d4efcc826e347a7580eadea5ed46a9ab5e056441c3ee2f447becf75ecce3e",
+      "query": "sum by(code)(rate(traefik_service_requests_total{service=\"verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd\"}[5m]))",
+      "start": "2026-10-18T20:40:00Z",
+      "end": "2026-10-18T22:20:00Z",
+      "units": "extrapolated per-second rate",
+      "observations_per_code": 401
+    },
+    {
+      "file": "metrics-current.json",
+      "private_response_sha256": "897b69f3cf63c92db6ec7b0be1b151d6bbcc1c1bf66f8419551410e0376db5a0",
+      "query": "sum by(code,method)(increase(traefik_service_requests_total{service=\"verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd\"}[5m]))",
+      "units": "extrapolated five-minute increase, not raw requests",
+      "sample_time_from_each_value": true
+    }
+  ],
+  "original_parent_observations_preserved_in_report": true
+}

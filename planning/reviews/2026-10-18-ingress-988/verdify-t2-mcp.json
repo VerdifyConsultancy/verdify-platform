@@ -1,0 +1,34 @@
+{
+  "kind": "IngressRoute",
+  "metadata": {
+    "name": "verdify-t2-mcp",
+    "namespace": "verdify-prod",
+    "uid": "f245894f-502f-4fcd-8f7f-d2d42bd21b26",
+    "resourceVersion": "145840193",
+    "generation": 2,
+    "creationTimestamp": "2026-06-07T17:29:25Z",
+    "tracking_id": "verdify-prod-dark:traefik.io/IngressRoute:verdify-prod/verdify-t2-mcp"
+  },
+  "spec": {
+    "entryPoints": [
+      "verdify-web"
+    ],
+    "routes": [
+      {
+        "kind": "Rule",
+        "match": "Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)",
+        "middlewares": [
+          {
+            "name": "verdify-strip-identity-headers"
+          }
+        ],
+        "services": [
+          {
+            "name": "verdify-mcp",
+            "port": 8000
+          }
+        ]
+      }
+    ]
+  }
+}

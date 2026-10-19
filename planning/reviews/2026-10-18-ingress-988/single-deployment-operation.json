@@ -1,0 +1,37 @@
+{
+  "prepared_at": "2026-10-19T05:13:19.950354+00:00",
+  "expires_at": "2026-10-19T05:15:19.950516+00:00",
+  "release_revision": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
+  "api_image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+  "api_source": "617ab6dbd886ccc66905674f07265e22c155afff",
+  "resources": [
+    {
+      "group": "apps",
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "namespace": "verdify-prod"
+    }
+  ],
+  "changed_render_objects": [
+    [
+      "apps/v1",
+      "Deployment",
+      "verdify-prod",
+      "verdify-api"
+    ]
+  ],
+  "unchanged_render_objects": 128,
+  "whole_application_sync_prohibited": true,
+  "hooks": false,
+  "prune": false,
+  "rollback_exact_revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+  "rollback_selector": [
+    {
+      "group": "apps",
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "namespace": "verdify-prod"
+    }
+  ],
+  "patch_sha256": "65193b3fb3ec194d1423dda3418b611b8b98661cd24202eca64e00cf23b1fb6f"
+}

@@ -1,0 +1,166 @@
+{
+  "result": "EXACT_API_ONLY_OPERATION_AND_TWO_RUNTIME_REPLICAS_VERIFIED",
+  "at": "2026-10-19T05:17:21.175974+00:00",
+  "operation_started_at": "2026-10-19T05:13:20Z",
+  "operation_finished_at": "2026-10-19T05:13:25Z",
+  "release_revision": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
+  "resources": [
+    {
+      "group": "apps",
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "namespace": "verdify-prod"
+    }
+  ],
+  "operation_results": [
+    {
+      "group": "apps",
+      "hookPhase": "Running",
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4"
+      ],
+      "kind": "Deployment",
+      "message": "deployment.apps/verdify-api configured",
+      "name": "verdify-api",
+      "namespace": "verdify-prod",
+      "status": "Synced",
+      "syncPhase": "Sync",
+      "version": "v1"
+    }
+  ],
+  "whole_application_sync": false,
+  "hooks": false,
+  "prune": false,
+  "protected_workload_specs_and_uids_unchanged": [
+    [
+      "Deployment",
+      "experiment-v2-freezer"
+    ],
+    [
+      "Deployment",
+      "experiment-v2-lifecycle"
+    ],
+    [
+      "Deployment",
+      "experiment-v2-selector"
+    ],
+    [
+      "Deployment",
+      "verdify-db-backup-exporter"
+    ],
+    [
+      "Deployment",
+      "verdify-grafana"
+    ],
+    [
+      "Deployment",
+      "verdify-grafana-render-cache"
+    ],
+    [
+      "Deployment",
+      "verdify-hermes-iris"
+    ],
+    [
+      "Deployment",
+      "verdify-ingestor"
+    ],
+    [
+      "Deployment",
+      "verdify-lab"
+    ],
+    [
+      "Deployment",
+      "verdify-mcp"
+    ],
+    [
+      "Deployment",
+      "verdify-mqtt"
+    ],
+    [
+      "Deployment",
+      "verdify-planner"
+    ],
+    [
+      "Deployment",
+      "verdify-setpoint-server"
+    ],
+    [
+      "Deployment",
+      "verdify-traefik"
+    ],
+    [
+      "StatefulSet",
+      "verdify-db"
+    ],
+    [
+      "CronJob",
+      "verdify-band-curve-refresh"
+    ],
+    [
+      "CronJob",
+      "verdify-db-backup"
+    ],
+    [
+      "CronJob",
+      "verdify-db-watchdog"
+    ],
+    [
+      "CronJob",
+      "verdify-firmware-builder"
+    ],
+    [
+      "CronJob",
+      "verdify-fixed-panel-native-freezer"
+    ],
+    [
+      "CronJob",
+      "verdify-ha-gap-backfill"
+    ],
+    [
+      "CronJob",
+      "verdify-lab-publisher"
+    ],
+    [
+      "CronJob",
+      "verdify-vision"
+    ],
+    [
+      "CronJob",
+      "verdify-winter-feasibility"
+    ],
+    [
+      "CronJob",
+      "verdify-writer-watchdog"
+    ]
+  ],
+  "api_pods": [
+    {
+      "pod": "verdify-api-66ccbfc75c-9fhk5",
+      "uid": "c99d1949-1d7d-4836-b098-d048f6b17241",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "source": "617ab6dbd886ccc66905674f07265e22c155afff",
+      "provider": "https://frigate.frigate.svc.cluster.local:8971",
+      "tls_server_name": "cameras.vallery.net",
+      "main_sha256": "51aecd9dd402f8a5d50556f543b077be762dc025c388dab36eb837214376b838",
+      "token_mount_mode": "0o440",
+      "token_readable": true,
+      "token_mount_path": "/vfrigate/token"
+    },
+    {
+      "pod": "verdify-api-66ccbfc75c-krnnc",
+      "uid": "dd964fc7-decf-475d-9473-1153cdf39ab1",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "source": "617ab6dbd886ccc66905674f07265e22c155afff",
+      "provider": "https://frigate.frigate.svc.cluster.local:8971",
+      "tls_server_name": "cameras.vallery.net",
+      "main_sha256": "51aecd9dd402f8a5d50556f543b077be762dc025c388dab36eb837214376b838",
+      "token_mount_mode": "0o440",
+      "token_readable": true,
+      "token_mount_path": "/vfrigate/token"
+    }
+  ],
+  "source_main_sha256": "51aecd9dd402f8a5d50556f543b077be762dc025c388dab36eb837214376b838",
+  "provider_recovery_not_claimed": true
+}

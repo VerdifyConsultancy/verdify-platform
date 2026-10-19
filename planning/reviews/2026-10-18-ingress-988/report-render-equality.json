@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-19T05:29:50.424599+00:00",
+  "report_render_sha256": "40a4c1322d1621bea85ec765fd436e6353c9ee0633e0071226b85abcc54d7dd6",
+  "release_render_sha256": "40a4c1322d1621bea85ec765fd436e6353c9ee0633e0071226b85abcc54d7dd6",
+  "byte_identical": true,
+  "report_requires_sync": false,
+  "whole_application_sync_prohibited": true
+}

@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-19T05:01:19.812996+00:00",
+  "pod": "cloudflared-6cffbcbb5d-2pxzg",
+  "uid": "9f89dbdf-558f-465c-85a7-2e6634c35039",
+  "created_at": "2026-10-18T17:08:05Z",
+  "existing_mounted_config_rule_checks": [
+    {
+      "host": "api.verdify.ai",
+      "returncode": 0,
+      "output": "Using rules from /etc/cloudflared/config.yaml\nMatched rule #3\n\thostname: api.verdify.ai\n\tservice: https://192.168.7.10\n",
+      "sha256": "8dc458d4227d0dbd5382fbbcee5b6a91f75c658797fdf41e0f1b160a8df4d164"
+    },
+    {
+      "host": "mcp.verdify.ai",
+      "returncode": 0,
+      "output": "Using rules from /etc/cloudflared/config.yaml\nMatched rule #9\n\thostname: mcp.verdify.ai\n\tservice: https://192.168.7.10\n",
+      "sha256": "651aee810684efe60196f73cc175ce371a8c05f3aff9fb09d4eeecd5eef54924"
+    }
+  ],
+  "credential_file_contents_read_or_exported": false
+}

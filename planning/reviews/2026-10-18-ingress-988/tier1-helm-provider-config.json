@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "name": "traefik-apps",
+    "namespace": "kube-system",
+    "uid": "74861edc-58b6-4d9d-9de0-f89598cd3086",
+    "resourceVersion": "178512125",
+    "generation": 7,
+    "creationTimestamp": "2026-05-31T03:50:33Z",
+    "tracking_id": null
+  },
+  "chart": {
+    "chart": "traefik",
+    "repo": "https://traefik.github.io/charts",
+    "version": "40.2.0",
+    "targetNamespace": "traefik-apps"
+  },
+  "provider_config": {
+    "providers": {
+      "kubernetesCRD": {
+        "enabled": true,
+        "allowEmptyServices": true,
+        "allowCrossNamespace": true,
+        "labelSelector": "traefik-tier!=verdify"
+      },
+      "kubernetesIngress": {
+        "enabled": true,
+        "allowEmptyServices": true,
+        "ingressClass": "traefik-apps"
+      }
+    },
+    "ports": {
+      "web": {
+        "expose": {
+          "default": true
+        },
+        "exposedPort": 80,
+        "http": {
+          "redirections": {
+            "entryPoint": {
+              "to": "websecure",
+              "scheme": "https",
+              "permanent": true
+            }
+          }
+        }
+      },
+      "websecure": {
+        "expose": {
+          "default": true
+        },
+        "exposedPort": 443
+      }
+    },
+    "additionalArguments": null,
+    "ingressClass": {
+      "enabled": true,
+      "isDefaultClass": false,
+      "name": "traefik-apps"
+    }
+  },
+  "values_content_sha256": "af586b33ae4d54052d9409b78f62af21b059f74348a2f4427ce83e781f1219b7"
+}

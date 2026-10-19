@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-19T05:08:42.901970+00:00",
+  "pods": [
+    {
+      "pod": "verdify-api-b69dfb8b5-6fvtq",
+      "uid": "f384afcd-f77d-43ec-93fe-aec17d2ecb08",
+      "camera_provider": "http://frigate.frigate.svc.cluster.local:5000",
+      "go2rtc_provider": "",
+      "source": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "main_sha256": "9fd787454709b8c4650e14b9ec54dba4b29d7b848477b55b3d5ca5e1a606b1e0"
+    },
+    {
+      "pod": "verdify-api-b69dfb8b5-k6hkj",
+      "uid": "707dd965-2d6e-4a4b-bb80-bbad7bb38de5",
+      "camera_provider": "http://frigate.frigate.svc.cluster.local:5000",
+      "go2rtc_provider": "",
+      "source": "56b316f3fda666b25665dfc0f791d6be6db0fa46",
+      "main_sha256": "9fd787454709b8c4650e14b9ec54dba4b29d7b848477b55b3d5ca5e1a606b1e0"
+    }
+  ],
+  "only_nonsecret_environment_names_read": true
+}

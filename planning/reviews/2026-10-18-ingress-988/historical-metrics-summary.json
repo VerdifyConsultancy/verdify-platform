@@ -1,0 +1,79 @@
+[
+  {
+    "code": "0",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:46:30+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:09:15+00:00",
+    "peak_extrapolated_rate_per_second": 0.022222222222222223
+  },
+  {
+    "code": "200",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:40:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:20:00+00:00",
+    "peak_extrapolated_rate_per_second": 1.474074074074074
+  },
+  {
+    "code": "206",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:46:30+00:00",
+    "last_positive_sample_utc": "2026-10-18T21:43:45+00:00",
+    "peak_extrapolated_rate_per_second": 0.014814979425697322
+  },
+  {
+    "code": "301",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T22:05:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:09:45+00:00",
+    "peak_extrapolated_rate_per_second": 0.007407489712848663
+  },
+  {
+    "code": "302",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T21:39:30+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:16:15+00:00",
+    "peak_extrapolated_rate_per_second": 0.05555555555555556
+  },
+  {
+    "code": "304",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:50:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T21:40:45+00:00",
+    "peak_extrapolated_rate_per_second": 0.04814814814814815
+  },
+  {
+    "code": "401",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:40:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:20:00+00:00",
+    "peak_extrapolated_rate_per_second": 0.2111111111111111
+  },
+  {
+    "code": "404",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:40:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:16:45+00:00",
+    "peak_extrapolated_rate_per_second": 38.114814814814814
+  },
+  {
+    "code": "499",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:46:30+00:00",
+    "last_positive_sample_utc": "2026-10-18T21:11:45+00:00",
+    "peak_extrapolated_rate_per_second": 0.007407489712848661
+  },
+  {
+    "code": "502",
+    "samples": 401,
+    "first_positive_sample_utc": null,
+    "last_positive_sample_utc": null,
+    "peak_extrapolated_rate_per_second": 0.0
+  },
+  {
+    "code": "503",
+    "samples": 401,
+    "first_positive_sample_utc": "2026-10-18T20:40:00+00:00",
+    "last_positive_sample_utc": "2026-10-18T22:20:00+00:00",
+    "peak_extrapolated_rate_per_second": 0.08888888888888889
+  }
+]

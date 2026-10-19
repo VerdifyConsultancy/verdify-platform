@@ -1,0 +1,16 @@
+{
+  "base": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+  "source": "617ab6dbd886ccc66905674f07265e22c155afff",
+  "object_count": 129,
+  "changed_objects": [
+    [
+      "apps/v1",
+      "Deployment",
+      "verdify-prod",
+      "verdify-api"
+    ]
+  ],
+  "unchanged_objects": 128,
+  "secret_objects": 0,
+  "winter_objects_equal": true
+}

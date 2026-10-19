@@ -1,0 +1,53 @@
+{
+  "issue": 988,
+  "at": "2026-10-19T05:24:47.933219+00:00",
+  "issue_state": "OPEN",
+  "whole_issue_accepted": false,
+  "criteria": [
+    {
+      "clause": "Establish the authoritative active router/backend and ForwardAuth/authentication linkage, including any shared/global edge configuration, with source and observation timestamps.",
+      "disposition": "OBSERVED_PATH_QUALIFIED_WITH_STATED_GLOBAL_INVENTORY_LIMIT",
+      "private_input_hashes": {
+        "source-correlation.json": "f1d3b4043da53f9832f80fc959a622cdb4eaf0718174c2c5ab5ea87d3f730f69",
+        "rule-fingerprint.json": "aaa4dd23927229277cdc9540eeb9e94528e674b1568a1cf9d49684a6c96d8a03",
+        "mounted-tunnel-rule-check.json": "2971cce0bffa5ba07ee4c7e19ccd55c6baaace554944fdd243b6d91059a03ac2",
+        "live-tunnel-config.json": "641204500a79dc009464666f1640ca3bf2957af4d42187828c224d46dd7a69e6",
+        "tier1-helm-provider-config.json": "86e4f573c0efae3c00df58506cb913ec17eb03f9b8ed187174d7cfe727967449"
+      }
+    },
+    {
+      "clause": "Verify the intended authenticated public API/MCP behavior and expected denial cases through existing approved identities, or retain the exact access blocker. Anonymous MCP403 and internal smoke success are insufficient.",
+      "disposition": "AUTHENTICATED_PUBLIC_API_MCP_ACCEPTED",
+      "private_input_hashes": {
+        "public-auth-results.json": "2b17e85a1c45f7fc3e7c11e0513663f44e73a7666963e5f4c5428e4a275e4c52",
+        "public-auth-continuation.json": "7ce5781c14d7f06de16b7e0d10b43eb24a4e22540d1a69b24345807f8ed3344f",
+        "public-auth-after-api.json": "585d549f0c6c1d6c35bd5c0de8d05811ff005efe549b59a07f5e0227f04758f0",
+        "public-readiness-after.json": "98003a45bff562f298e997d43316265572d4cda5cdf95bdf47e1a1db9e59d59c"
+      }
+    },
+    {
+      "clause": "Retain exact-backend request/error windows and their source provenance, distinguishing extrapolated counter increases from raw request counts; establish an appropriate recurrence/durable-health observation before claiming recovery.",
+      "disposition": "PENDING_PROVIDER_AND_POST_REPAIR_NATURAL_WINDOWS",
+      "private_input_hashes": {
+        "metrics-incident.json": "627d4efcc826e347a7580eadea5ed46a9ab5e056441c3ee2f447becf75ecce3e",
+        "metrics-current.json": "897b69f3cf63c92db6ec7b0be1b151d6bbcc1c1bf66f8419551410e0376db5a0",
+        "historical-metrics-summary.json": "176c428809262824e7b6392c6dbe7a382b1d8b6d818463f7547d8df66b278b95"
+      }
+    },
+    {
+      "clause": "Record a supported cause/recurrence conclusion or an explicit unresolved result while preserving the original failures. Do not close from a source-resolved event or one zero-error window.",
+      "disposition": "CAMERA_CAUSE_SUPPORTED_HISTORICAL_ANONYMOUS_403_UNRESOLVED",
+      "private_input_hashes": {
+        "api-effective-camera-config-before.json": "53c6d7e092d9bf9a55747f0f3fc57499e3db0278e34ff583c9ed8979f29fd4b9",
+        "logs-tier2-old-503.json": "15ea662481fd239e18b4e6b3153c51e282d79627feee4a48e0362c230c92ad45",
+        "logs-tier2-503.json": "79b1c2dbfd155e6a86b23e8a71b5540ebf5807ce7f41831007baf5d6206ff8a5",
+        "runtime-after-verified.json": "cdbf5376c42eebe7b3930740ebc68474109e39d5b7d8a72ee80a3fdf2eec6bdc"
+      }
+    }
+  ],
+  "source_repair": "617ab6dbd886ccc66905674f07265e22c155afff",
+  "release": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
+  "runtime_result": "EXACT_API_ONLY_OPERATION_AND_TWO_RUNTIME_REPLICAS_VERIFIED",
+  "whole_application_sync": false,
+  "pending": "Provider readiness, both real public JPEGs and successive natural/exact-backend recovery windows; no user decision is required."
+}

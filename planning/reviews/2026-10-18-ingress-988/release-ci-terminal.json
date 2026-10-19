@@ -1,0 +1,105 @@
+{
+  "status": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+  "workflow": "verdify-platform-ci-zdmzd",
+  "workflow_uid": "8a7386be-09d0-4757-a6b4-81307d18d831",
+  "source_revision": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
+  "finished_at": "2026-10-19T05:25:40Z",
+  "actual_pods": 1,
+  "actual_build_pods": 0,
+  "all_eight_build_flags_false": true,
+  "path_impact": {
+    "base_revision": "9923036f2b008dd0ccc1a3a98742ffdafb7c1589",
+    "mode": "validate",
+    "paths_sha256": "a07856b1be4139ea675c8c259fb716f066ef6ad2f87ba5c91840e66e1d08ebee",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "7fc3956df475503f8ac52ae7d7e63a02484e1401"
+  },
+  "pod": "verdify-platform-ci-zdmzd-validate-1717501461",
+  "pod_uid": "4c439c02-b40f-4b46-bf7d-7bcfa4dd4cbf",
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "workflow_sha256": "9433ecdd4827531e7b01ce8086fbbba2b9853cc2416936353e54a2e88e06da7a",
+  "terminal_pod_sha256": "690ac0c65e80411692efb6cf698f4a630f2cf6fbcf9cc1be3e5656792cbb166a",
+  "terminal_summary_sha256": "0b1212c90d461db8e377eb9e422e8335b1a853cc5e870c0440c42dc4199d9313",
+  "full_main_log_sha256": "a76211ff14ba25a3ffc1df510fff1fb76c5789311c31080b973bafd6fe5a4118",
+  "full_main_log_bytes": 38570,
+  "verified_at": "2026-10-19T05:26:10.070427+00:00",
+  "full_main_log_file": "ci-logs.tar.gz",
+  "credential_pattern_hits": 0,
+  "declared_containers": [
+    "init",
+    "fetch-validate-context",
+    "wait",
+    "main"
+  ],
+  "actual_containers": [
+    {
+      "name": "init",
+      "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+      "restartCount": 0,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://24cda62e48c23729d8216cff4c2b8fd64ff739f12db677444fb51c31fe7d5fe6",
+          "exitCode": 0,
+          "finishedAt": "2026-10-19T05:13:25Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-19T05:13:24Z"
+        }
+      }
+    },
+    {
+      "name": "fetch-validate-context",
+      "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+      "restartCount": 0,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://3bd69a358141a2134b4f4f259a19540cbade9882a942a329855089519302e8c7",
+          "exitCode": 0,
+          "finishedAt": "2026-10-19T05:14:14Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-19T05:13:26Z"
+        }
+      }
+    },
+    {
+      "name": "main",
+      "imageID": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+      "restartCount": 0,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://f6239a1a0b9df289710dc525f795c3a5c8ce0ea9b5fcde91446f9107824d6849",
+          "exitCode": 0,
+          "finishedAt": "2026-10-19T05:25:36Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-19T05:14:16Z"
+        }
+      }
+    },
+    {
+      "name": "wait",
+      "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+      "restartCount": 0,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://0b6f55e717c6c40268a67c6d9a90875d1f4dcc336009eaa1608584383b11429f",
+          "exitCode": 0,
+          "finishedAt": "2026-10-19T05:25:37Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-19T05:14:15Z"
+        }
+      }
+    }
+  ],
+  "owner": [
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "blockOwnerDeletion": true,
+      "controller": true,
+      "kind": "Workflow",
+      "name": "verdify-platform-ci-zdmzd",
+      "uid": "8a7386be-09d0-4757-a6b4-81307d18d831"
+    }
+  ],
+  "full_main_log_member": "release-ci-full.log"
+}

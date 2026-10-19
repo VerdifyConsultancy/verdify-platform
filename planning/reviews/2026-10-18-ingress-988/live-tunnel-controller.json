@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "name": "cloudflared",
+    "namespace": "cloudflare",
+    "uid": "6e09545c-3aa6-4600-bb75-914d010698ac",
+    "resourceVersion": "282863397",
+    "generation": 73,
+    "creationTimestamp": "2026-05-31T06:10:55Z"
+  },
+  "containers": [
+    {
+      "name": "cloudflared",
+      "image": "cloudflare/cloudflared:2026.5.2",
+      "args": [
+        "tunnel",
+        "--config",
+        "/etc/cloudflared/config.yaml",
+        "--loglevel",
+        "info",
+        "run"
+      ],
+      "config_mounts": [
+        {
+          "mountPath": "/etc/cloudflared/config.yaml",
+          "name": "config",
+          "readOnly": true,
+          "subPath": "config.yaml"
+        },
+        {
+          "mountPath": "/etc/cloudflared/origin-ca.pem",
+          "name": "config",
+          "readOnly": true,
+          "subPath": "origin-ca.pem"
+        }
+      ]
+    }
+  ],
+  "status": {
+    "availableReplicas": 3,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-16T19:42:15Z",
+        "lastUpdateTime": "2026-10-16T19:42:15Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-07-11T09:22:10Z",
+        "lastUpdateTime": "2026-10-18T17:08:52Z",
+        "message": "ReplicaSet \"cloudflared-6cffbcbb5d\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      }
+    ],
+    "observedGeneration": 73,
+    "readyReplicas": 3,
+    "replicas": 3,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 3
+  },
+  "configMap_volumes": [
+    {
+      "configMap": {
+        "defaultMode": 420,
+        "items": [
+          {
+            "key": "config.yaml",
+            "path": "config.yaml"
+          },
+          {
+            "key": "origin-ca.pem",
+            "path": "origin-ca.pem"
+          }
+        ],
+        "name": "cloudflared-config"
+      },
+      "name": "config"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "Middleware",
+  "metadata": {
+    "name": "verdify-strip-identity-headers",
+    "namespace": "verdify-prod",
+    "uid": "b563928a-af6d-480c-80e6-962fe902414f",
+    "resourceVersion": "10122372",
+    "generation": 1,
+    "creationTimestamp": "2026-06-07T17:29:25Z",
+    "tracking_id": "verdify-prod-dark:traefik.io/Middleware:verdify-prod/verdify-strip-identity-headers"
+  },
+  "spec": {
+    "headers": {
+      "customRequestHeaders": {
+        "X-Authentik-Email": "",
+        "X-Authentik-Groups": "",
+        "X-Authentik-Name": "",
+        "X-Authentik-Uid": "",
+        "X-Authentik-Username": "",
+        "X-Forwarded-Email": "",
+        "X-Forwarded-User": ""
+      }
+    }
+  }
+}

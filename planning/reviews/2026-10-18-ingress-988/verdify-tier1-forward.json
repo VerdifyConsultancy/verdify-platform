@@ -1,0 +1,32 @@
+{
+  "kind": "IngressRoute",
+  "metadata": {
+    "name": "verdify-tier1-forward",
+    "namespace": "verdify-prod",
+    "uid": "18b5d966-5ba9-44ec-93af-19b91145eef6",
+    "resourceVersion": "280834748",
+    "generation": 4,
+    "creationTimestamp": "2026-06-07T18:17:13Z",
+    "tracking_id": "verdify-prod-dark:traefik.io/IngressRoute:verdify-prod/verdify-tier1-forward"
+  },
+  "spec": {
+    "entryPoints": [
+      "websecure",
+      "web"
+    ],
+    "routes": [
+      {
+        "kind": "Rule",
+        "match": "HostRegexp(`^[a-z0-9-]+\\.verdify\\.ai$`) && !Host(`www.verdify.ai`) && !Host(`www-dev.verdify.ai`) && !Host(`proposals-hello.verdify.ai`) && !Host(`auth.verdify.ai`) && !Host(`analytics.verdify.ai`) && !Host(`logs.verdify.ai`) && !Host(`botauth.verdify.ai`) && !Host(`crm.verdify.ai`) && !Host(`mqtt.verdify.ai`) && !Host(`traefik.verdify.ai`)",
+        "priority": 50,
+        "services": [
+          {
+            "name": "verdify-traefik",
+            "port": 80
+          }
+        ]
+      }
+    ],
+    "tls": {}
+  }
+}

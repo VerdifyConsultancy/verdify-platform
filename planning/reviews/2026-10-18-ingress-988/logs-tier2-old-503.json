@@ -1,0 +1,187 @@
+{
+  "source": "existing Kepler Estate Loki connector",
+  "original_response_sha256": "15ea662481fd239e18b4e6b3153c51e282d79627feee4a48e0362c230c92ad45",
+  "rows": [
+    {
+      "timestamp_ns": "1792357156233183125",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:59:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357152208 HTTP/1.1\" 503 40 \"-\" \"-\" 1016778 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4014ms\n"
+    },
+    {
+      "timestamp_ns": "1792357096243563784",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:58:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357092215 HTTP/1.1\" 503 40 \"-\" \"-\" 1016747 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4015ms\n"
+    },
+    {
+      "timestamp_ns": "1792357036228306825",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:57:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357032206 HTTP/1.1\" 503 40 \"-\" \"-\" 1016718 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4012ms\n"
+    },
+    {
+      "timestamp_ns": "1792356988230943877",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:56:24 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356984201 HTTP/1.1\" 503 40 \"-\" \"-\" 1016692 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4016ms\n"
+    },
+    {
+      "timestamp_ns": "1792356958228957918",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:55:54 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356954203 HTTP/1.1\" 503 40 \"-\" \"-\" 1016680 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4013ms\n"
+    },
+    {
+      "timestamp_ns": "1792356928226259906",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:55:24 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356924201 HTTP/1.1\" 503 40 \"-\" \"-\" 1016663 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4013ms\n"
+    },
+    {
+      "timestamp_ns": "1792356898230456127",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:54:54 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356894201 HTTP/1.1\" 503 40 \"-\" \"-\" 1016651 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4015ms\n"
+    },
+    {
+      "timestamp_ns": "1792356868235200575",
+      "pod": "verdify-traefik-56b8dbd695-58nzk",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:54:24 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356864202 HTTP/1.1\" 503 40 \"-\" \"-\" 1016632 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4017ms\n"
+    },
+    {
+      "timestamp_ns": "1792357156231707540",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:59:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357152209 HTTP/1.1\" 503 40 \"-\" \"-\" 1007564 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4012ms\n"
+    },
+    {
+      "timestamp_ns": "1792357096241522648",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:58:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357092216 HTTP/1.1\" 503 40 \"-\" \"-\" 1007536 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4012ms\n"
+    },
+    {
+      "timestamp_ns": "1792357036231768894",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:57:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357032205 HTTP/1.1\" 503 40 \"-\" \"-\" 1007507 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4015ms\n"
+    },
+    {
+      "timestamp_ns": "1792356988232335389",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:56:24 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356984202 HTTP/1.1\" 503 40 \"-\" \"-\" 1007482 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4017ms\n"
+    },
+    {
+      "timestamp_ns": "1792356958227255766",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:55:54 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356954201 HTTP/1.1\" 503 40 \"-\" \"-\" 1007469 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4012ms\n"
+    },
+    {
+      "timestamp_ns": "1792356928228084433",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:55:24 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356924202 HTTP/1.1\" 503 40 \"-\" \"-\" 1007452 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4014ms\n"
+    },
+    {
+      "timestamp_ns": "1792356898231872895",
+      "pod": "verdify-traefik-56b8dbd695-7sfvp",
+      "container": "traefik",
+      "line_address_redacted": "<address> - - [18/Oct/2026:20:54:54 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356894202 HTTP/1.1\" 503 40 \"-\" \"-\" 1007440 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 4015ms\n"
+    },
+    {
+      "timestamp_ns": "1792357156231796960",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:59984 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357152209 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792357096240898414",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:40016 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357092216 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792357036228010742",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:53424 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792357032206 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356988231709321",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:45824 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356984202 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356928225570683",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:59474 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356924201 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356898231338942",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:54072 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356894202 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356868234878141",
+      "pod": "verdify-api-75c7959d86-9s6dm",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:42058 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356864202 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792357156233318232",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:39128 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357152208 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792357096243528967",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:50852 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357092215 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792357036231292126",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:33420 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792357032205 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356988230911612",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:33006 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356984201 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356958228800335",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:38660 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356954203 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356958226936166",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:52864 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356954201 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356928227530794",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:39820 - \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792356924202 HTTP/1.1\" 503 Service Unavailable\n"
+    },
+    {
+      "timestamp_ns": "1792356898230317126",
+      "pod": "verdify-api-75c7959d86-lgks6",
+      "container": "api",
+      "line_address_redacted": "INFO:     <address>:52686 - \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792356894201 HTTP/1.1\" 503 Service Unavailable\n"
+    }
+  ],
+  "redactions": "address strings only; original private response retained"
+}

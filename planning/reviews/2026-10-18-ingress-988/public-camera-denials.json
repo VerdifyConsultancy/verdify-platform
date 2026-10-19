@@ -1,0 +1,24 @@
+{
+  "requests": [
+    {
+      "at": "2026-10-19T05:27:46.494949+00:00",
+      "host": "api.verdify.ai",
+      "public_ip": "104.26.8.72",
+      "path": "/api/v1/public/cameras/not-an-allowed-camera/latest.jpg",
+      "status": 404,
+      "cf_ray": "a4cd60240e9e798a-DEN",
+      "body_sha256": "5f853f55ea0fdfdc9d3ab7131c319443685cbf4f6556cd3363a3c7766ae454c8"
+    },
+    {
+      "at": "2026-10-19T05:27:46.969094+00:00",
+      "host": "api.verdify.ai",
+      "public_ip": "104.26.8.72",
+      "path": "/api/v1/public/cameras/greenhouse_1/latest.jpg?h=119",
+      "status": 422,
+      "cf_ray": "a4cd6026f84ee649-DEN",
+      "body_sha256": "a22961a71f57be4136b3d3fd94eb9005060f8d74951ba2bcb2488bfdca0501f4"
+    }
+  ],
+  "upstream_frame_requests": 0,
+  "no_redirects_or_retries": true
+}

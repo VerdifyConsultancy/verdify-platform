@@ -1,0 +1,77 @@
+{
+  "requests": [
+    {
+      "label": "api-no-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T04:52:29.701831+00:00",
+      "status": 403,
+      "elapsed_ms": 132,
+      "cf_ray": "a4cd2c75ed0636ed-DEN",
+      "content_type": "application/json",
+      "body_bytes": 59,
+      "body_sha256": "cdec9cc3cc76630927d25171f7e31827deae6f021a5eb69dc4dee3d97cbbbb07"
+    },
+    {
+      "label": "api-wrong-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T04:52:29.840454+00:00",
+      "status": 403,
+      "elapsed_ms": 174,
+      "cf_ray": "a4cd2c76cf1ffd76-DEN",
+      "content_type": "application/json",
+      "body_bytes": 59,
+      "body_sha256": "cdec9cc3cc76630927d25171f7e31827deae6f021a5eb69dc4dee3d97cbbbb07"
+    },
+    {
+      "label": "api-existing-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T04:52:30.018938+00:00",
+      "status": 400,
+      "elapsed_ms": 132,
+      "cf_ray": "a4cd2c77ed1de761-DEN",
+      "content_type": "application/json",
+      "body_bytes": 38,
+      "body_sha256": "6d24d4bcfbb8697765d26740374e43fc686128e0f4ab46aa37496a5fd59c576a"
+    },
+    {
+      "label": "mcp-wrong-bearer",
+      "host": "mcp.verdify.ai",
+      "method": "POST",
+      "path": "/mcp",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T04:52:30.157341+00:00",
+      "status": 401,
+      "elapsed_ms": 180,
+      "cf_ray": "a4cd2c78ce58e663-DEN",
+      "content_type": "application/json",
+      "body_bytes": 24,
+      "body_sha256": "782eeaa7f1915f6783146f8180751785584f0f24bd4e503165c7fc4a597da600"
+    },
+    {
+      "label": "mcp-existing-iris-initialize",
+      "host": "mcp.verdify.ai",
+      "method": "POST",
+      "path": "/mcp",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T04:52:30.343637+00:00",
+      "status": 200,
+      "elapsed_ms": 127,
+      "cf_ray": "a4cd2c79e8f89940-DEN",
+      "content_type": "text/event-stream",
+      "body_bytes": 940,
+      "body_sha256": "f9eef7d601e769fd9971c08796908bd4702ac9660fdd03a74fca581850f2e85f"
+    }
+  ],
+  "credential_values_retained": false,
+  "mutating_command_sent": false,
+  "provider_generations": 0
+}

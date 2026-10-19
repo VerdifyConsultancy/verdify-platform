@@ -1,0 +1,175 @@
+{
+  "source": "existing Kepler Estate Prometheus connector",
+  "original_response_sha256": "897b69f3cf63c92db6ec7b0be1b151d6bbcc1c1bf66f8419551410e0376db5a0",
+  "response": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "code": "0",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "200",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "217.01204080855393"
+          ]
+        },
+        {
+          "metric": {
+            "code": "200",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "206",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "301",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "302",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "304",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "401",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "8.668459560789158"
+          ]
+        },
+        {
+          "metric": {
+            "code": "401",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "49.01863188990729"
+          ]
+        },
+        {
+          "metric": {
+            "code": "404",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "404",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "405",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "499",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "499",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "502",
+            "method": "POST"
+          },
+          "value": [
+            1792385199.57,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "code": "503",
+            "method": "GET"
+          },
+          "value": [
+            1792385199.57,
+            "10.50721845908139"
+          ]
+        }
+      ],
+      "analysis": {}
+    }
+  },
+  "units": "Prometheus extrapolated rate or increase; never raw request counts",
+  "backend": "verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd"
+}

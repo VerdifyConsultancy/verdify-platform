@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-19T05:21:29.756372+00:00",
+  "host": "api.verdify.ai",
+  "public_ip": "104.26.8.72",
+  "path": "/health/detailed",
+  "status": 200,
+  "cf_ray": "a4cd56f16f85e667-DEN",
+  "elapsed_ms": 171,
+  "body_sha256": "bf7bc9266de1b02b2f31df4557ad7dadbe89d6550dcae34ca3fe8ea21e321e52",
+  "body": {
+    "status": "ready",
+    "git_sha": "617ab6dbd886ccc66905674f07265e22c155afff",
+    "git_ref": "617ab6dbd886ccc66905674f07265e22c155afff",
+    "build_time": "2026-10-19T04:56:44Z",
+    "checks": {
+      "db_reachable": true
+    }
+  },
+  "no_redirects_or_retries": true
+}

@@ -1,0 +1,61 @@
+{
+  "kind": "Deployment",
+  "metadata": {
+    "name": "verdify-traefik",
+    "namespace": "verdify-prod",
+    "uid": "c5ac81e4-ee08-491e-81d0-a8e240fb5cc9",
+    "resourceVersion": "214709475",
+    "generation": 13,
+    "creationTimestamp": "2026-06-07T17:29:24Z",
+    "tracking_id": "verdify-prod-dark:apps/Deployment:verdify-prod/verdify-traefik"
+  },
+  "containers": [
+    {
+      "name": "traefik",
+      "image": "docker.io/traefik:v3.7.1",
+      "args": [
+        "--global.checknewversion=false",
+        "--global.sendanonymoususage=false",
+        "--entryPoints.verdify-web.address=:8000/tcp",
+        "--entryPoints.traefik.address=:8080/tcp",
+        "--ping=true",
+        "--ping.entrypoint=traefik",
+        "--api.dashboard=false",
+        "--providers.kubernetescrd",
+        "--providers.kubernetescrd.namespaces=verdify-prod",
+        "--providers.kubernetescrd.labelselector=traefik-tier=verdify",
+        "--providers.kubernetescrd.allowEmptyServices=true",
+        "--log.level=INFO",
+        "--accesslog=true"
+      ],
+      "volumeMounts": []
+    }
+  ],
+  "volumes": [],
+  "status": {
+    "availableReplicas": 2,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-06-07T17:29:24Z",
+        "lastUpdateTime": "2026-08-21T23:07:08Z",
+        "message": "ReplicaSet \"verdify-traefik-56b8dbd695\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-09-25T20:28:28Z",
+        "lastUpdateTime": "2026-09-25T20:28:28Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      }
+    ],
+    "observedGeneration": 13,
+    "readyReplicas": 2,
+    "replicas": 2,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 2
+  }
+}

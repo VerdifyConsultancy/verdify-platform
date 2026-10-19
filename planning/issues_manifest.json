@@ -359,7 +359,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "9dd2a33227c2a5952ac0e49efd5b7c53e57336dce2a3ae2e03b56c47d8a8d4e2"
+      "body_sha256": "02ad3240022451f9d18d6a3817847ff6ed416ddaae04ccf724d0cf20e249eff7"
     },
     {
       "key": "563",
@@ -1125,7 +1125,7 @@
       "accepted": false,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "b11230eeb9b3a8dca90e075cc10e917abbe1df3f6b094883fe846f6f5a418925"
+      "body_sha256": "aff18fc715c18992e3cf2d7d4ca1e886d08daa858e522e38746ca5d6687f8d71"
     },
     {
       "key": "802",
@@ -1141,13 +1141,13 @@
     {
       "key": "988",
       "number": 988,
-      "title": "[C4][P1] Track tier-1 ingress incident a527cc46 and remaining public-path acceptance",
+      "title": "[C4][P1] Restore public camera snapshots and qualify authenticated ingress",
       "stage": "C4",
       "status": "open",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "7ee321f1e3ef42cf7956236c8f1d13004ab65826bc1630551ec225886c775ee6"
+      "body_sha256": "ffd798325a0922ef77b2e6513b1bc1054a34406f47ac95aacf4e9fed9749ef87"
     }
   ]
 }

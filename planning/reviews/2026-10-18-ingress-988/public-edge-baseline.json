@@ -1,0 +1,55 @@
+[
+  {
+    "label": "public-api-health",
+    "host": "api.verdify.ai",
+    "path": "/health",
+    "connected_public_ip": "104.26.8.72",
+    "at": "2026-10-19T04:48:50.234499+00:00",
+    "status": 200,
+    "elapsed_ms": 1731,
+    "headers": {
+      "server": "cloudflare",
+      "content-type": "application/json",
+      "cf-ray": "a4cd271a4b7e8d44-DEN"
+    },
+    "bytes": 301,
+    "body_sha256": "35b87200247b89b53c331440a677a4861671c3cc58cf021381e38437e5a1b73e",
+    "markers": {
+      "Invalid Host header": false,
+      "Invalid Origin header": false,
+      "unauthorized": false,
+      "Cloudflare": false,
+      "Access denied": false,
+      "no available server": false,
+      "Just a moment": false,
+      "challenge": false
+    }
+  },
+  {
+    "label": "public-mcp-anonymous",
+    "host": "mcp.verdify.ai",
+    "path": "/mcp",
+    "connected_public_ip": "104.26.8.72",
+    "at": "2026-10-19T04:48:51.992925+00:00",
+    "status": 401,
+    "elapsed_ms": 151,
+    "headers": {
+      "server": "cloudflare",
+      "content-type": "application/json",
+      "www-authenticate": "Bearer",
+      "cf-ray": "a4cd27254eb2d454-DEN"
+    },
+    "bytes": 24,
+    "body_sha256": "782eeaa7f1915f6783146f8180751785584f0f24bd4e503165c7fc4a597da600",
+    "markers": {
+      "Invalid Host header": false,
+      "Invalid Origin header": false,
+      "unauthorized": true,
+      "Cloudflare": false,
+      "Access denied": false,
+      "no available server": false,
+      "Just a moment": false,
+      "challenge": false
+    }
+  }
+]

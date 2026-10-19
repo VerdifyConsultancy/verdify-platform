@@ -1,0 +1,48 @@
+{
+  "result": "PUBLIC_API_AUTH_GUARD_ACCEPTED_AFTER_RELEASE",
+  "requests": [
+    {
+      "label": "api-no-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T05:17:30.858169+00:00",
+      "status": 403,
+      "elapsed_ms": 138,
+      "cf_ray": "a4cd511c0cb87adb-DEN",
+      "content_type": "application/json",
+      "body_bytes": 59,
+      "body_sha256": "cdec9cc3cc76630927d25171f7e31827deae6f021a5eb69dc4dee3d97cbbbb07"
+    },
+    {
+      "label": "api-wrong-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T05:17:31.003014+00:00",
+      "status": 403,
+      "elapsed_ms": 173,
+      "cf_ray": "a4cd511d2a714549-DEN",
+      "content_type": "application/json",
+      "body_bytes": 59,
+      "body_sha256": "cdec9cc3cc76630927d25171f7e31827deae6f021a5eb69dc4dee3d97cbbbb07"
+    },
+    {
+      "label": "api-existing-key",
+      "host": "api.verdify.ai",
+      "method": "POST",
+      "path": "/api/v1/greenhouses/vallery/lights/acceptance-no-command/invalid",
+      "connected_public_ip": "104.26.8.72",
+      "at": "2026-10-19T05:17:31.181945+00:00",
+      "status": 400,
+      "elapsed_ms": 132,
+      "cf_ray": "a4cd511e4eebe64f-DEN",
+      "content_type": "application/json",
+      "body_bytes": 38,
+      "body_sha256": "6d24d4bcfbb8697765d26740374e43fc686128e0f4ab46aa37496a5fd59c576a"
+    }
+  ],
+  "no_valid_command_sent": true
+}

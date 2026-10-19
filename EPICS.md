@@ -99,4 +99,4 @@ Hierarchy means ownership/roll-up only. Native blocked-by edges separately encod
   - [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) Decide whether a deterministic forecast comparator merits a new study (C8; open)
   - [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) Decide and scope a measured heating/overnight/resource study (C8; open)
 - [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) Adopt the enforcing descheduler under manual Argo ownership (C4; closed)
-- [#988](https://github.com/VerdifyConsultancy/verdify-platform/issues/988) Track tier-1 ingress incident a527cc46 and remaining public-path acceptance (C4; open)
+- [#988](https://github.com/VerdifyConsultancy/verdify-platform/issues/988) Restore public camera snapshots and qualify authenticated ingress (C4; open)

@@ -1,0 +1,72 @@
+{
+  "kind": "DaemonSet",
+  "metadata": {
+    "name": "traefik-apps",
+    "namespace": "traefik-apps",
+    "uid": "71bb08ff-54cc-4eb3-b7a4-ad4317353751",
+    "resourceVersion": "277797665",
+    "generation": 4,
+    "creationTimestamp": "2026-06-08T22:25:08Z",
+    "tracking_id": null
+  },
+  "containers": [
+    {
+      "name": "traefik-apps",
+      "image": "docker.io/traefik:v3.7.1",
+      "args": [
+        "--entryPoints.metrics.address=:9100/tcp",
+        "--entryPoints.traefik.address=:8080/tcp",
+        "--entryPoints.web.address=:8000/tcp",
+        "--entryPoints.websecure.address=:8443/tcp",
+        "--api.dashboard=true",
+        "--ping=true",
+        "--metrics.prometheus=true",
+        "--metrics.prometheus.entrypoint=metrics",
+        "--providers.kubernetescrd",
+        "--providers.kubernetescrd.labelSelector=traefik-tier!=verdify",
+        "--providers.kubernetescrd.allowCrossNamespace=true",
+        "--providers.kubernetescrd.allowEmptyServices=true",
+        "--providers.kubernetesingress",
+        "--providers.kubernetesingress.allowEmptyServices=true",
+        "--providers.kubernetesingress.ingressendpoint.publishedservice=traefik-apps/traefik-apps",
+        "--providers.kubernetesingress.ingressClass=traefik-apps",
+        "--entryPoints.web.http.redirections.entryPoint.to=:443",
+        "--entryPoints.web.http.redirections.entryPoint.scheme=https",
+        "--entryPoints.web.http.redirections.entryPoint.permanent=true",
+        "--entryPoints.websecure.http.tls=true",
+        "--log.level=INFO"
+      ],
+      "volumeMounts": [
+        {
+          "mountPath": "/data",
+          "name": "data"
+        },
+        {
+          "mountPath": "/tmp",
+          "name": "tmp"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "configMap": null,
+      "secret_reference_name": null
+    },
+    {
+      "name": "tmp",
+      "configMap": null,
+      "secret_reference_name": null
+    }
+  ],
+  "status": {
+    "currentNumberScheduled": 5,
+    "desiredNumberScheduled": 5,
+    "numberAvailable": 5,
+    "numberMisscheduled": 0,
+    "numberReady": 5,
+    "observedGeneration": 4,
+    "updatedNumberScheduled": 5
+  }
+}

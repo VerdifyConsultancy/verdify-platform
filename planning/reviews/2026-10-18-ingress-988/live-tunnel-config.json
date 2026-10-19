@@ -1,0 +1,46 @@
+{
+  "metadata": {
+    "name": "cloudflared-config",
+    "namespace": "cloudflare",
+    "uid": "f559f43b-495d-4a0c-af62-d4782494fef6",
+    "resourceVersion": "282861616",
+    "creationTimestamp": "2026-05-31T06:10:55Z"
+  },
+  "data_hashes": {
+    "config.yaml": "7cce7ea9a87bb770bbc8d500b5979c99cb6cf0f19ffb2d556fe9f4e2db743a3d",
+    "origin-ca.pem": "22b557a27055b33606b6559f37703928d3e4ad79f110b407d04986e1843543d1"
+  },
+  "exact_source_data_hash_match": true,
+  "source_revision": "0bf1f1ef74e0e3a45ce81fcc0ff1875d1dda05a8",
+  "relevant_ingress": [
+    {
+      "hostname": "api.verdify.ai",
+      "service": "https://192.168.7.10",
+      "originRequest": {
+        "originServerName": "api.verdify.ai"
+      }
+    },
+    {
+      "hostname": "mcp.verdify.ai",
+      "service": "https://192.168.7.10",
+      "originRequest": {
+        "originServerName": "mcp.verdify.ai"
+      }
+    },
+    {
+      "hostname": "*.verdify.ai",
+      "service": "https://192.168.7.10"
+    }
+  ],
+  "source_config_keys": [
+    "tunnel",
+    "credentials-file",
+    "metrics",
+    "no-autoupdate",
+    "grace-period",
+    "retries",
+    "originRequest",
+    "ingress"
+  ],
+  "credential_file_value_not_read": true
+}

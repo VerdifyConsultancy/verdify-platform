@@ -1,0 +1,7 @@
+{
+  "live_rule_sha256": "f72f492d4cf39c2efd7f083826b7ec616fff34712035da4f9d62cc4ea406df35",
+  "first20hex": "f72f492d4cf39c2efd7f",
+  "reported_backend_suffix": "f72f492d4cf39c2efd7f",
+  "suffix_equals_rule_sha256_prefix": true,
+  "provided_backend_not_runtime_api_dump": true
+}

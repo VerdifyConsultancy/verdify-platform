@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-18-vision-recovery/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 94-issue/73-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-18-ingress-988/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 94-issue/73-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -65,7 +65,7 @@ flowchart TD
     i980["#980 (closed) Resolve backup-exporter readiness timeouts without obscuri"]
     i981["#981 (open) Restore truthful energy source freshness and trace stale m"]
     i802["#802 (closed) Adopt the enforcing descheduler under manual Argo ownershi"]
-    i988["#988 (open) Track tier-1 ingress incident a527cc46 and remaining publi"]
+    i988["#988 (open) Restore public camera snapshots and qualify authenticated "]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 (open) Durability program: recoverable backups, measured RPO/RTO "]

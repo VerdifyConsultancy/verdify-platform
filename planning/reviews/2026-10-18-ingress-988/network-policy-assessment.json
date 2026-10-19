@@ -1,0 +1,10 @@
+{
+  "source_capture_sha256": "8e9662e9488be056135d21bc54a70919c335ce627deb1fa96999de4b7dca2b05",
+  "api_pod_uid": "c99d1949-1d7d-4836-b098-d048f6b17241",
+  "selected_egress_policies": [],
+  "existing_provider_service_port": 8971,
+  "existing_provider_target_port": 8973,
+  "egress_change_required_by_policy": false,
+  "network_mutations": 0,
+  "live_provider_connectivity_not_inferred_from_policy": true
+}

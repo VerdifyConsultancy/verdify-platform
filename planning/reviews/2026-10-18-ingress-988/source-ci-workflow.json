@@ -1,0 +1,212 @@
+{
+  "metadata": {
+    "name": "verdify-platform-ci-wknl4",
+    "uid": "de9aaca6-8b81-4b53-b4c3-9e325adf3d68"
+  },
+  "arguments": {
+    "parameters": [
+      {
+        "name": "revision",
+        "value": "617ab6dbd886ccc66905674f07265e22c155afff"
+      },
+      {
+        "name": "before-revision",
+        "value": "970299ae92f0e17af76f35bc2efee7b924e24f7b"
+      },
+      {
+        "name": "commit-message",
+        "value": "fix(api): restore public cameras through scoped authenticated TLS\n\nUse the existing two-camera vision credential and fixed fresh-frame HTTPS routes. Preserve TLS verification, allowlist, bounded JPEG validation and truthful failures; no unauthenticated admin fallback. Legacy h remains validated and documented as compatibility input for the provider's fixed 1080px frames. Restart: verdify-api; all other workloads unchanged."
+      }
+    ]
+  },
+  "phase": "Succeeded",
+  "startedAt": "2026-10-19T04:56:44Z",
+  "finishedAt": "2026-10-19T05:11:36Z",
+  "pod_nodes": [
+    {
+      "id": "verdify-platform-ci-wknl4-1936280490",
+      "name": "verdify-platform-ci-wknl4[1].build-api",
+      "displayName": "build-api",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-19T05:09:01Z",
+      "finishedAt": "2026-10-19T05:10:58Z",
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "digest",
+            "value": "sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+            "valueFrom": {
+              "path": "/publisher-state/digest"
+            }
+          },
+          {
+            "name": "image-ref",
+            "value": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+            "valueFrom": {
+              "path": "/publisher-state/image-ref"
+            }
+          },
+          {
+            "name": "short-sha",
+            "value": "617ab6dbd886",
+            "valueFrom": {
+              "path": "/publisher-state/short_sha"
+            }
+          },
+          {
+            "name": "source-revision",
+            "value": "617ab6dbd886ccc66905674f07265e22c155afff",
+            "valueFrom": {
+              "path": "/publisher-state/source_revision"
+            }
+          },
+          {
+            "name": "source-url",
+            "value": "https://github.com/VerdifyConsultancy/verdify-platform",
+            "valueFrom": {
+              "path": "/publisher-state/source_url"
+            }
+          },
+          {
+            "name": "source-released-at",
+            "value": "2026-10-19T04:53:38Z",
+            "valueFrom": {
+              "path": "/publisher-state/source_released_at"
+            }
+          },
+          {
+            "name": "resolved-revision",
+            "value": "617ab6dbd886ccc66905674f07265e22c155afff",
+            "valueFrom": {
+              "path": "/publisher-state/source_revision"
+            }
+          },
+          {
+            "name": "resolved-tree",
+            "value": "719cfe7a18f521882dbb5fcd26d4e7d5c03db68b",
+            "valueFrom": {
+              "path": "/publisher-state/resolved_tree"
+            }
+          },
+          {
+            "name": "output-contract-version",
+            "value": "agent-fleet.repo-build.outputs/2",
+            "valueFrom": {
+              "path": "/publisher-state/output_contract_version"
+            }
+          },
+          {
+            "name": "dockerfile-sha256",
+            "value": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+            "valueFrom": {
+              "path": "/publisher-state/dockerfile_sha256"
+            }
+          },
+          {
+            "name": "source-closure",
+            "value": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}",
+            "valueFrom": {
+              "path": "/publisher-state/source_closure.json"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdify-platform-ci-wknl4-2205643196",
+      "name": "verdify-platform-ci-wknl4[9].pin-digests",
+      "displayName": "pin-digests",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-19T05:11:02Z",
+      "finishedAt": "2026-10-19T05:11:26Z",
+      "outputs": {
+        "exitCode": "0"
+      }
+    },
+    {
+      "id": "verdify-platform-ci-wknl4-441045570",
+      "name": "verdify-platform-ci-wknl4[0].classify-push(0)",
+      "displayName": "classify-push(0)",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-19T04:56:44Z",
+      "finishedAt": "2026-10-19T05:08:50Z",
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "mode",
+            "value": "build",
+            "valueFrom": {
+              "path": "/impact/mode"
+            }
+          },
+          {
+            "globalName": "verdify-path-impact",
+            "name": "path-impact-receipt",
+            "value": "{\"base_revision\": \"970299ae92f0e17af76f35bc2efee7b924e24f7b\", \"mode\": \"build\", \"paths_sha256\": \"7a879df6c18ba8730eb4d10d8e9ed30d05fd540a79ad522064d85adfffaa9cdd\", \"profiles\": [\"api\"], \"reasons\": {\"api\": [\"api/main.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"617ab6dbd886ccc66905674f07265e22c155afff\"}",
+            "valueFrom": {
+              "path": "/impact/receipt.json"
+            }
+          },
+          {
+            "name": "api",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/api"
+            }
+          },
+          {
+            "name": "mcp",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/mcp"
+            }
+          },
+          {
+            "name": "ingestor",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/ingestor"
+            }
+          },
+          {
+            "name": "planner",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/planner"
+            }
+          },
+          {
+            "name": "migrate",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/migrate"
+            }
+          },
+          {
+            "name": "orchestrator",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/orchestrator"
+            }
+          },
+          {
+            "name": "setpoint-server",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/setpoint-server"
+            }
+          },
+          {
+            "name": "lab-publisher",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/lab-publisher"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

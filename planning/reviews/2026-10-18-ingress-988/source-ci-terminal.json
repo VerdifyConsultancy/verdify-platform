@@ -1,0 +1,540 @@
+{
+  "result": "SOURCE_GATE_SINGLE_API_BUILD_AND_PUBLISHER_VERIFIED",
+  "workflow": "verdify-platform-ci-wknl4",
+  "workflow_uid": "de9aaca6-8b81-4b53-b4c3-9e325adf3d68",
+  "source_revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+  "finished_at": "2026-10-19T05:11:36Z",
+  "profile_set": [
+    "api"
+  ],
+  "actual_pods": 3,
+  "image": {
+    "digest": "sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+    "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+    "short-sha": "617ab6dbd886",
+    "source-revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+    "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+    "source-released-at": "2026-10-19T04:53:38Z",
+    "resolved-revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+    "resolved-tree": "719cfe7a18f521882dbb5fcd26d4e7d5c03db68b",
+    "output-contract-version": "agent-fleet.repo-build.outputs/2",
+    "dockerfile-sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+    "source-closure": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+  },
+  "workflow_sha256": "59cff0bd44760d69b7c05ffbf8189c147d5921149fa593e81554030c715f464c",
+  "verified_at": "2026-10-19T05:12:43.521181+00:00",
+  "production_applied": false,
+  "scope": "source build receipt at its recorded time; later runtime is in runtime-after-verified.json",
+  "pods": [
+    {
+      "step": "build-api",
+      "pod": "verdify-platform-ci-wknl4-build-1936280490",
+      "pod_uid": "0744de9e-7631-4567-83bf-cb4fbdcaed9d",
+      "terminal_pod_sha256": "244c90b3984d5777eb3c32abc04d877f3bf7e85ae3d77c256e218ab48ca6b795",
+      "all_declared_zero_exit_zero_restarts": true,
+      "declared_containers": [
+        "init",
+        "registry-capacity-preflight",
+        "fetch-context",
+        "capture-build-inputs",
+        "test",
+        "verify-build-inputs",
+        "kaniko-build",
+        "registry-capacity-publish-gate",
+        "main",
+        "wait"
+      ],
+      "inputs": {
+        "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "dockerfile": "api/Dockerfile",
+        "context": ".",
+        "image": "verdifyconsultancy/verdify-api",
+        "test": "",
+        "docker_target": "",
+        "build_arg_1_name": "GIT_SHA",
+        "build_arg_1_value": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "build_arg_2_name": "",
+        "build_arg_2_value": "",
+        "test_cpu_request": "500m",
+        "test_memory_request": "1Gi",
+        "test_cpu_limit": "1500m",
+        "test_memory_limit": "4Gi",
+        "kaniko_cpu_request": "1",
+        "kaniko_memory_request": "2Gi",
+        "kaniko_cpu_limit": "3",
+        "kaniko_memory_limit": "4Gi",
+        "kaniko_ephemeral_request": "32Gi",
+        "kaniko_ephemeral_limit": "40Gi",
+        "allowed_publish_scopes": "verdifyconsultancy"
+      },
+      "outputs": {
+        "digest": "sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+        "short-sha": "617ab6dbd886",
+        "source-revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "source-url": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source-released-at": "2026-10-19T04:53:38Z",
+        "resolved-revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "resolved-tree": "719cfe7a18f521882dbb5fcd26d4e7d5c03db68b",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2",
+        "dockerfile-sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+        "source-closure": "{\"image\":\"verdifyconsultancy/verdify-api\",\"schema\":\"agent-fleet.vallery.net/repo-build-source-closure/v4\",\"status\":\"not-applicable\"}"
+      },
+      "logs": {
+        "init": {
+          "sha256": "70f95497f49f40ef689c41d93dd9e7287e653a22d6cb3bf6bd711ca46c782dfc",
+          "bytes": 957,
+          "archive_member": "source-ci-build-api-init.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "registry-capacity-preflight": {
+          "sha256": "6ef1876e6e5e1f83429209c216ed67d2fa6256e510b5d0616ed37b585681740f",
+          "bytes": 103,
+          "archive_member": "source-ci-build-api-registry-capacity-preflight.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "fetch-context": {
+          "sha256": "e8a1feae32d3ef8c6a73c320861101bdc8116fcb8debd5c5629cca8b4e74daa6",
+          "bytes": 3532,
+          "archive_member": "source-ci-build-api-fetch-context.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "capture-build-inputs": {
+          "sha256": "0f8202f045fbeae77a42b10a3ab7f86e96a7b6bb697d1a76f595fbc86628f160",
+          "bytes": 194,
+          "archive_member": "source-ci-build-api-capture-build-inputs.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "test": {
+          "sha256": "3e28c765e37f689e5ae3d34bf686ca65cd936a723dfe33bde220d9c3fd7cd32b",
+          "bytes": 41,
+          "archive_member": "source-ci-build-api-test.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "verify-build-inputs": {
+          "sha256": "0f8202f045fbeae77a42b10a3ab7f86e96a7b6bb697d1a76f595fbc86628f160",
+          "bytes": 194,
+          "archive_member": "source-ci-build-api-verify-build-inputs.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "kaniko-build": {
+          "sha256": "55391702d8d033a9a9678500d3fa72840011677017169aace0282fd2ce382cae",
+          "bytes": 55437,
+          "archive_member": "source-ci-build-api-kaniko-build.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "registry-capacity-publish-gate": {
+          "sha256": "6ef1876e6e5e1f83429209c216ed67d2fa6256e510b5d0616ed37b585681740f",
+          "bytes": 103,
+          "archive_member": "source-ci-build-api-registry-capacity-publish-gate.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "main": {
+          "sha256": "df9c79a431e11e3d00e2cac8932cb919484a22bbb56d534f95b3200b2017ccc5",
+          "bytes": 4204,
+          "archive_member": "source-ci-build-api-main.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "wait": {
+          "sha256": "a0d13b1eada18e38eec64e1a34ac763e777973d5c21cb1d12de5fdb262dd62e1",
+          "bytes": 5145,
+          "archive_member": "source-ci-build-api-wait.log",
+          "archive": "ci-logs.tar.gz"
+        }
+      },
+      "actual_container_termination": [
+        {
+          "name": "init",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://6ba54574e0ca31aa8d0f1fa0f0bee091569b1e32423eb12c86a29daac2f1484e",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:03Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:02Z"
+            }
+          }
+        },
+        {
+          "name": "registry-capacity-preflight",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://15e3c6488d4dbde87011172c96f63e1c0933199281443210a5aab523c2f7b6fd",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:09Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:04Z"
+            }
+          }
+        },
+        {
+          "name": "fetch-context",
+          "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://1abdaf79a8fde5457341b2ceb15db071b6507ecb3399bb4b225505a7cf0b01cb",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:26Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:10Z"
+            }
+          }
+        },
+        {
+          "name": "capture-build-inputs",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://ef0ba18cfe084331da3fe9dbc26d9c0f92c04e91c2644b4deda2d4549c9ed592",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:30Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:27Z"
+            }
+          }
+        },
+        {
+          "name": "test",
+          "imageID": "mirror.gcr.io/library/node@sha256:7725a5c2c83eed1d36258c66efae14b1ceccd021db9ed1d9559d3335ed3d68ed",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://d76f4da8b301dd88e224d949396222cef7e5667ce0168331d639b3558ad97784",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:31Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:31Z"
+            }
+          }
+        },
+        {
+          "name": "verify-build-inputs",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://4790df5e5968983d986f1103325e47e6a58f7c71f5750d933be8424790f58f32",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:09:35Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:32Z"
+            }
+          }
+        },
+        {
+          "name": "kaniko-build",
+          "imageID": "registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://bd1a5bf46298290844637dd4ccfb0f26f893b0c142a5e7072e811b5bf2cbd792",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:10:48Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:09:36Z"
+            }
+          }
+        },
+        {
+          "name": "registry-capacity-publish-gate",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://9af634ae65f6163463d4f97d6e1175e9bacc23dbd956f96e26e71cb748a8e59f",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:10:55Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:10:50Z"
+            }
+          }
+        },
+        {
+          "name": "main",
+          "imageID": "gcr.io/go-containerregistry/crane@sha256:82b7ed493481c78f20c80ecbc082d1cc61c78ad248bce1e58980ed47959055a7",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://46b0cb6b41ca4da450ef13079b4156bfa63f4dc82b82d3451bbc7abb32b2f922",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:10:57Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:10:56Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://5f26e04722897dab6e9c006d2f0234ce6691898b5c67ed4d2aa57d49079651b1",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:10:58Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:10:56Z"
+            }
+          }
+        }
+      ],
+      "owner": [
+        {
+          "apiVersion": "argoproj.io/v1alpha1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Workflow",
+          "name": "verdify-platform-ci-wknl4",
+          "uid": "de9aaca6-8b81-4b53-b4c3-9e325adf3d68"
+        }
+      ]
+    },
+    {
+      "step": "pin-digests",
+      "pod": "verdify-platform-ci-wknl4-pin-digests-2205643196",
+      "pod_uid": "0f589b31-5dc9-457d-a670-89a75afa6605",
+      "terminal_pod_sha256": "c2b7007f92e3e60e5525c90e82f28261b1a8ec133045cd0ab047d8db704870f7",
+      "all_declared_zero_exit_zero_restarts": true,
+      "declared_containers": [
+        "init",
+        "mint-publisher-token",
+        "main",
+        "wait"
+      ],
+      "inputs": {
+        "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "api-ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+        "mcp-ref": "",
+        "ingestor-ref": "",
+        "migrate-ref": "",
+        "orchestrator-ref": ""
+      },
+      "outputs": {},
+      "logs": {
+        "init": {
+          "sha256": "0e2356b831f34c815d10840c9d2c31c5c4875c33148c751f388243c436771c53",
+          "bytes": 969,
+          "archive_member": "source-ci-pin-digests-init.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "mint-publisher-token": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0,
+          "archive_member": "source-ci-pin-digests-mint-publisher-token.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "main": {
+          "sha256": "7e12d80bfb92b889e58e6a9cadf0637d4062ed4783f53544646334e10c11f440",
+          "bytes": 2781,
+          "archive_member": "source-ci-pin-digests-main.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "wait": {
+          "sha256": "c9b02887ca6cae41872210a05a1a0ee4f8a02055192c2c4f54a9f25eaa15a990",
+          "bytes": 1430,
+          "archive_member": "source-ci-pin-digests-wait.log",
+          "archive": "ci-logs.tar.gz"
+        }
+      },
+      "actual_container_termination": [
+        {
+          "name": "init",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://eb785f88347603cc6d49fd80932e49dd2b323399b65e182045fb863c58b84558",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:11:05Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:11:04Z"
+            }
+          }
+        },
+        {
+          "name": "mint-publisher-token",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://7db787f272ed82f5360cb7387f50fac74be3c986ef6117bd10ea267a94dd52ad",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:11:07Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:11:05Z"
+            }
+          }
+        },
+        {
+          "name": "main",
+          "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://27664130823da07758ec16f56ae004477579c2071aa3608acb998c390cce008a",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:11:26Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:11:08Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://0b0fb6adda5b42cc78c41764c511e42e440d89dbc344c86e1a06962599e66bbe",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:11:26Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T05:11:08Z"
+            }
+          }
+        }
+      ],
+      "owner": [
+        {
+          "apiVersion": "argoproj.io/v1alpha1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Workflow",
+          "name": "verdify-platform-ci-wknl4",
+          "uid": "de9aaca6-8b81-4b53-b4c3-9e325adf3d68"
+        }
+      ]
+    },
+    {
+      "step": "classify-push(0)",
+      "pod": "verdify-platform-ci-wknl4-validate-441045570",
+      "pod_uid": "a7427b45-c1e9-492c-baea-c5f3f6b83877",
+      "terminal_pod_sha256": "a1430ea41ae47396153d40bf405ef98f2d7c93b6ad566575c97b6cf495a7b77d",
+      "all_declared_zero_exit_zero_restarts": true,
+      "declared_containers": [
+        "init",
+        "fetch-validate-context",
+        "main",
+        "wait"
+      ],
+      "inputs": {
+        "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+        "base-revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+        "classify-push": "true"
+      },
+      "outputs": {
+        "mode": "build",
+        "path-impact-receipt": "{\"base_revision\": \"970299ae92f0e17af76f35bc2efee7b924e24f7b\", \"mode\": \"build\", \"paths_sha256\": \"7a879df6c18ba8730eb4d10d8e9ed30d05fd540a79ad522064d85adfffaa9cdd\", \"profiles\": [\"api\"], \"reasons\": {\"api\": [\"api/main.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"617ab6dbd886ccc66905674f07265e22c155afff\"}",
+        "api": "true",
+        "mcp": "false",
+        "ingestor": "false",
+        "planner": "false",
+        "migrate": "false",
+        "orchestrator": "false",
+        "setpoint-server": "false",
+        "lab-publisher": "false"
+      },
+      "logs": {
+        "init": {
+          "sha256": "75159e32f84f9ffb4752d5d870149e4a6e44c57a193e1f7a72ccf921dd8cf917",
+          "bytes": 962,
+          "archive_member": "source-ci-classify-push-init.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "fetch-validate-context": {
+          "sha256": "33d3d687b8fc7caa9f7442f7b077ce6f672e123b9529b315336db7f060561a7f",
+          "bytes": 340,
+          "archive_member": "source-ci-classify-push-fetch-validate-context.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "main": {
+          "sha256": "da6ed60bad881b3d22411f36cafcabc918673b4f1f0c00549a8a32f4488c571c",
+          "bytes": 38570,
+          "archive_member": "source-ci-classify-push-main.log",
+          "archive": "ci-logs.tar.gz"
+        },
+        "wait": {
+          "sha256": "2790976614e7390dbef2252a86a3bfa39055db748f2cd85255d3ba5c8f51614a",
+          "bytes": 7336,
+          "archive_member": "source-ci-classify-push-wait.log",
+          "archive": "ci-logs.tar.gz"
+        }
+      },
+      "actual_container_termination": [
+        {
+          "name": "init",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://164ee49ed3a6a4bbc81186ee899d553b845f969dafd64ca0c78e7cbaf7cfa69a",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T04:56:48Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T04:56:47Z"
+            }
+          }
+        },
+        {
+          "name": "fetch-validate-context",
+          "imageID": "docker.io/library/ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://7708097d3ea60b89251a240c3bc94ce36bf6fe5cf64d7c95b2a578f669c7f184",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T04:57:35Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T04:56:49Z"
+            }
+          }
+        },
+        {
+          "name": "main",
+          "imageID": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://d4e444fdfa1b56ac1d1f44cb39093184debcd95779b0ad7a5b86c6e9005948c2",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:08:50Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T04:57:37Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:b6acce3bed49965fb4a4b1a3ae37a8eea6de10ac8c111a46136177b8d9fab6fb",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://4b4c6fe576d54539a9842e96a75f435a33a73d68da549c228777054e57ba2ebe",
+              "exitCode": 0,
+              "finishedAt": "2026-10-19T05:08:50Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-19T04:57:37Z"
+            }
+          }
+        }
+      ],
+      "owner": [
+        {
+          "apiVersion": "argoproj.io/v1alpha1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Workflow",
+          "name": "verdify-platform-ci-wknl4",
+          "uid": "de9aaca6-8b81-4b53-b4c3-9e325adf3d68"
+        }
+      ]
+    }
+  ]
+}

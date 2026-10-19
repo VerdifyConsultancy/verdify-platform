@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-19T04:58:33.835556+00:00",
+  "sources": [
+    {
+      "repository": "VerdifyConsultancy/verdify-platform",
+      "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-tier1-apps-forward.yaml",
+      "file_sha256": "9c8f68ae66a41b9786fe6619d38379be62261207c16b95e53194d25ea7c55beb",
+      "source_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/617ab6dbd886ccc66905674f07265e22c155afff/deploy/k8s/overlays/prod/traefik/verdify-tier1-apps-forward.yaml",
+      "comparisons": [
+        {
+          "object": "verdify-tier1-forward",
+          "spec_exactly_matches_live_provider_input": true,
+          "live_uid": "18b5d966-5ba9-44ec-93af-19b91145eef6",
+          "live_rv": "280834748"
+        }
+      ]
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-platform",
+      "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml",
+      "file_sha256": "5f5e828b690bd75b2daa1606088e3c74df36bbd178072197726d4f81f2bfc834",
+      "source_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/617ab6dbd886ccc66905674f07265e22c155afff/deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml",
+      "comparisons": [
+        {
+          "object": "verdify-strip-identity-headers",
+          "spec_exactly_matches_live_provider_input": true,
+          "live_uid": "b563928a-af6d-480c-80e6-962fe902414f",
+          "live_rv": "10122372"
+        },
+        {
+          "object": "verdify-t2-api",
+          "spec_exactly_matches_live_provider_input": true,
+          "live_uid": "30081ade-42f2-43a5-8505-a78ab4bb1e8c",
+          "live_rv": "10122381"
+        },
+        {
+          "object": "verdify-t2-mcp",
+          "spec_exactly_matches_live_provider_input": true,
+          "live_uid": "f245894f-502f-4fcd-8f7f-d2d42bd21b26",
+          "live_rv": "145840193"
+        }
+      ]
+    },
+    {
+      "repository": "VerdifyConsultancy/verdify-platform",
+      "revision": "617ab6dbd886ccc66905674f07265e22c155afff",
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml",
+      "file_sha256": "b248770d835e69c1f5bf7b87df33ab0fabc81419fafa1dd35df67c96d91256a5",
+      "source_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/617ab6dbd886ccc66905674f07265e22c155afff/deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml",
+      "comparisons": [
+        {
+          "object": "verdify-traefik",
+          "controller_args_exactly_match_live": true,
+          "live_uid": "c5ac81e4-ee08-491e-81d0-a8e240fb5cc9",
+          "live_generation": 13
+        }
+      ]
+    },
+    {
+      "repository": "jvallery/network-infra",
+      "revision": "0bf1f1ef74e0e3a45ce81fcc0ff1875d1dda05a8",
+      "path": "deploy/networking/traefik-apps/helmchart.yaml",
+      "file_sha256": "c893b78fe5ae2ce881862d4daf3e42efd7b9452ff04dcc208bc89def872a5095",
+      "source_url": "https://github.com/jvallery/network-infra/blob/0bf1f1ef74e0e3a45ce81fcc0ff1875d1dda05a8/deploy/networking/traefik-apps/helmchart.yaml",
+      "values_content_exactly_matches_live": true,
+      "live_uid": "74861edc-58b6-4d9d-9de0-f89598cd3086",
+      "live_generation": 7,
+      "automatic_adoption_not_inferred": true
+    }
+  ],
+  "new_probes": 0,
+  "source_writes": 0,
+  "secret_values_recorded": false
+}
