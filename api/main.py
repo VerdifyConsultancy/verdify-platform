@@ -12,12 +12,14 @@ import asyncio
 import datetime as dt
 import hashlib
 import hmac
+import http.client
 import ipaddress
 import json
 import logging
 import os
 import re
 import smtplib
+import ssl
 import sys
 import time
 import urllib.parse
@@ -1409,7 +1411,7 @@ FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 CONTACT_NOTIFY_SUBJECT_PREFIX = "Verdify contact"
 PUBLIC_CAMERA_IDS = {"greenhouse_1", "greenhouse_2"}
 FRIGATE_BASE_URL_ENV = "VERDIFY_FRIGATE_PUBLIC_BASE_URL"
-GO2RTC_BASE_URL_ENV = "VERDIFY_GO2RTC_PUBLIC_BASE_URL"
+CAMERA_MAX_JPEG_BYTES = 8 * 1024 * 1024
 CLIMATE_ACTION_PROOF_MISSING_SQL = """
 WITH latest AS (
     SELECT climate_action,
@@ -1566,27 +1568,68 @@ def _turnstile_verify_sync(secret: str, token: str, remote_ip: str) -> bool:
     return bool(body.get("success"))
 
 
-def _read_camera_jpeg_sync(url: str) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "verdify-public-api/1.0"})
-    with urllib.request.urlopen(request, timeout=4) as response:
-        data = response.read()
-    if len(data) < 1024 or not data.startswith(b"\xff\xd8"):
-        raise ValueError("camera snapshot did not look like a JPEG")
-    return data
+class _CameraHTTPSConnection(http.client.HTTPSConnection):
+    """Use cluster DNS for transport while verifying the provider TLS identity."""
+
+    def __init__(self, host: str, port: int, *, tls_server_name: str):
+        super().__init__(host, port, timeout=15, context=ssl.create_default_context())
+        self.tls_server_name = tls_server_name
+
+    def connect(self):
+        http.client.HTTPConnection.connect(self)
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=self.tls_server_name)
 
 
 def _fetch_camera_snapshot_sync(camera_id: str, height: int) -> bytes:
-    go2rtc_base_url = os.environ.get(GO2RTC_BASE_URL_ENV, "http://192.168.30.142:1984").rstrip("/")
-    go2rtc_url = f"{go2rtc_base_url}/api/frame.jpeg?{urllib.parse.urlencode({'src': camera_id, 'h': height})}"
+    # The existing provider credential permits only these two fixed 1080px
+    # source-frame routes, with no query parameters. Keep legacy h validation
+    # at the public boundary; it cannot expand the upstream credential's scope.
+    if camera_id not in PUBLIC_CAMERA_IDS or not 120 <= height <= 1080:
+        raise ValueError("unsupported public camera request")
+    endpoint = urllib.parse.urlsplit(
+        os.environ.get(FRIGATE_BASE_URL_ENV, "https://frigate.frigate.svc.cluster.local:8971")
+    )
+    if (
+        endpoint.scheme != "https"
+        or not endpoint.hostname
+        or endpoint.username
+        or endpoint.password
+        or endpoint.path not in ("", "/")
+        or endpoint.query
+        or endpoint.fragment
+    ):
+        raise ValueError("camera provider must be an HTTPS origin")
+    tls_server_name = os.environ.get("VERDIFY_FRIGATE_TLS_SERVER_NAME", "cameras.vallery.net")
+    token = Path(os.environ.get("VERDIFY_FRIGATE_TOKEN_FILE", "/vfrigate/token")).read_text().strip()
+    if not token or not re.fullmatch(r"[A-Za-z0-9._~+/\-]+=*", token):
+        raise ValueError("invalid camera credential")
+    connection = _CameraHTTPSConnection(endpoint.hostname, endpoint.port or 443, tls_server_name=tls_server_name)
     try:
-        return _read_camera_jpeg_sync(go2rtc_url)
-    except Exception:
-        # Fall back to Frigate's latest detect frame if the source stream is unavailable.
-        pass
-
-    base_url = os.environ.get(FRIGATE_BASE_URL_ENV, "http://192.168.30.142:5000").rstrip("/")
-    url = f"{base_url}/api/{urllib.parse.quote(camera_id)}/latest.jpg?{urllib.parse.urlencode({'h': height, 'quality': 100})}"
-    return _read_camera_jpeg_sync(url)
+        connection.request(
+            "GET",
+            f"/api/vision/{camera_id}/latest.jpg",
+            headers={
+                "Host": tls_server_name,
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "verdify-public-api/2.0",
+            },
+        )
+        response = connection.getresponse()
+        # Never follow redirects, forward caller credentials or fall back to
+        # unauthenticated admin ports/cached detect frames.
+        if response.status != 200:
+            raise ValueError("camera provider rejected the request")
+        data = response.read(CAMERA_MAX_JPEG_BYTES + 1)
+        if (
+            response.getheader("Content-Type", "").split(";", 1)[0].strip().lower() != "image/jpeg"
+            or not 1024 <= len(data) <= CAMERA_MAX_JPEG_BYTES
+            or not data.startswith(b"\xff\xd8")
+            or not data.endswith(b"\xff\xd9")
+        ):
+            raise ValueError("camera provider returned an invalid JPEG")
+        return data
+    finally:
+        connection.close()
 
 
 async def _verify_turnstile_if_configured(token: str | None, remote_ip: str) -> bool:
@@ -3521,7 +3564,7 @@ async def public_planner_health():
 
 @app.get("/api/v1/public/cameras/{camera_id}/latest.jpg")
 async def public_camera_snapshot(camera_id: str, h: Annotated[int, Query(ge=120, le=1080)] = 1080):
-    """Public-safe proxy for the two greenhouse source-stream camera snapshots."""
+    """Public-safe fixed 1080px source frames; legacy h is accepted for compatibility."""
     if camera_id not in PUBLIC_CAMERA_IDS:
         raise HTTPException(status_code=404, detail="Unknown public camera")
     try:

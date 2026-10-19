@@ -91,6 +91,13 @@ spec:
             # cannot publish a stale label after a declarative rollout.
             - name: VERDIFY_PLANNER_MODEL_LABEL
               value: "hermes-iris/custom:gpt-6-luna/xhigh"
+            # Existing two-camera credential, shared with vision; no admin API.
+            - name: VERDIFY_FRIGATE_PUBLIC_BASE_URL
+              value: https://frigate.frigate.svc.cluster.local:8971
+            - name: VERDIFY_FRIGATE_TLS_SERVER_NAME
+              value: cameras.vallery.net
+            - name: VERDIFY_FRIGATE_TOKEN_FILE
+              value: /vfrigate/token
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -154,6 +161,9 @@ spec:
             limits:
               memory: "1Gi"
           volumeMounts:
+            - name: frigate-auth
+              mountPath: /vfrigate
+              readOnly: true
             - name: tmp
               mountPath: /tmp
           # GRACEFUL DRAIN (HA #231, Lane C). On SIGTERM the api must stay
@@ -205,6 +215,13 @@ spec:
       # change: ~5s endpoint drain + ~25s for uvicorn to finish in-flight work.
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: frigate-auth
+          secret:
+            secretName: verdify-frigate-vision-auth
+            defaultMode: 0440
+            items:
+              - key: token
+                path: token
         - name: tmp
           emptyDir: {}
 ---
