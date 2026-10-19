@@ -1,10 +1,15 @@
 {
-  "created_at": "2026-10-19T05:58:38.882765+00:00",
+  "created_at": "2026-10-19T06:10:32.213856+00:00",
   "source_repair": "617ab6dbd886ccc66905674f07265e22c155afff",
   "release": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
   "credential_pattern_hits": 0,
   "ci_log_archive": "ci-logs.tar.gz",
   "ci_log_members": [
+    {
+      "path": "closure-ci-full.log",
+      "bytes": 38570,
+      "sha256": "a5868dd48bdbedd5422ad0bb55452f080e73bb346e8ebf2efaeda9e72b962f59"
+    },
     {
       "path": "release-ci-full.log",
       "bytes": 38570,
@@ -109,13 +114,13 @@
   "files": [
     {
       "path": "CUSTODY.md",
-      "bytes": 3005,
-      "sha256": "44d1ca4391a10b1f31827aef090ca1dad2b82ff4653c9e66f6fd3203f0935fae"
+      "bytes": 5502,
+      "sha256": "72344b299092c9692744fc2fba3835321b30becf91b358d7dba8df1af74de86d"
     },
     {
       "path": "PRIVATE-CUSTODY.json",
-      "bytes": 114559,
-      "sha256": "2a32224cd9d41c8ea594d038c61f997a337c2ef312728497997d1e043b172c47"
+      "bytes": 135737,
+      "sha256": "db8996095c6d4160968186a89bc88b1cf508f70e723b5a2ca1a3d48a5a90af36"
     },
     {
       "path": "README.md",
@@ -126,6 +131,11 @@
       "path": "acceptance.json",
       "bytes": 3858,
       "sha256": "cc77833670722c68d30eacf4034470cb004c3eef01d36f5f197ed5d677ef41c9"
+    },
+    {
+      "path": "accepted-source-remote-verification.json",
+      "bytes": 22895,
+      "sha256": "ad52fb451d3495c0d14e16d6b4a899ca2213d98416e17e6e451c50d588657fc0"
     },
     {
       "path": "api-effective-camera-config-before.json",
@@ -144,8 +154,13 @@
     },
     {
       "path": "ci-logs.tar.gz",
-      "bytes": 35150,
-      "sha256": "544441d614895ff5657526f57fdfc42cc50cb32ed1c35efc0f9b90fe68b60149"
+      "bytes": 41450,
+      "sha256": "6437c6aeae0fe69b7dc826c6e58bfa346df668748098c50bea8370d5235171a3"
+    },
+    {
+      "path": "closure-ci-terminal.json",
+      "bytes": 3830,
+      "sha256": "3a76778c1dbf682e059e0fb72977ca8abadbb8934e1eb57228a07dbcb7aaa3d4"
     },
     {
       "path": "failed-recovery-observation.json",
@@ -161,6 +176,11 @@
       "path": "historical-metrics-summary.json",
       "bytes": 2491,
       "sha256": "176c428809262824e7b6392c6dbe7a382b1d8b6d818463f7547d8df66b278b95"
+    },
+    {
+      "path": "issue-publication-final.json",
+      "bytes": 999,
+      "sha256": "bf9f7a533c23c15bf8110c9744ed265ce8562169a5b4d2ebcf0cfb224e854b1f"
     },
     {
       "path": "live-tunnel-config.json",
@@ -211,6 +231,11 @@
       "path": "native-before.json",
       "bytes": 21403,
       "sha256": "996708047564b32e08326d8cc0cc2743e7c904942d8f9caa5d6e653f70384ee2"
+    },
+    {
+      "path": "native-final.json",
+      "bytes": 21161,
+      "sha256": "77f22b402d8f75b682d8b99287110d867bad334e9b01280cfcf5c138a3204eb5"
     },
     {
       "path": "native-open-published.json",
@@ -355,7 +380,7 @@
     {
       "path": "runtime-final.json",
       "bytes": 2901,
-      "sha256": "b69e3cfc74504669d2a1e335096afed82ab6b1e6f088980758dacfd3e66f07be"
+      "sha256": "7af547162178ab2583d8ef9846db39328b955f691b86c284edd837735faf6ba3"
     },
     {
       "path": "single-deployment-operation.json",

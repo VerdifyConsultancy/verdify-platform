@@ -1,0 +1,542 @@
+{
+  "result": "ALL_SOURCE_RELEASE_REPORT_AND_EVIDENCE_REMOTE_BYTES_VERIFIED",
+  "revision": "7e86ca14b2217526147094a3a5e7e892ec1711f9",
+  "main": "7e86ca14b2217526147094a3a5e7e892ec1711f9",
+  "at": "2026-10-19T05:59:32.847924+00:00",
+  "custody_url": "https://github.com/VerdifyConsultancy/verdify-platform/blob/7e86ca14b2217526147094a3a5e7e892ec1711f9/planning/reviews/2026-10-18-ingress-988/CUSTODY.md",
+  "manifest_file_count": 62,
+  "files": [
+    {
+      "path": "EPICS.md",
+      "bytes": 16156,
+      "sha256": "612f48745544de114182a5749951688c30303fb6022f0791072168812750cbdb",
+      "github_blob_sha": "224c2f786686da911797247beb5ac148f773003f",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "LANES.md",
+      "bytes": 30916,
+      "sha256": "42d232ac6316edf64a84f09c9a6a99e5045d075de349348a7fb0ecc4356c7a50",
+      "github_blob_sha": "2adadf6a2d897548f600580dbc4ee2dba43fc67f",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "MILESTONES.md",
+      "bytes": 14920,
+      "sha256": "e8db35bbab5767d230c99bbbb7ca9ff8ca4e2d1744b79272f25b9830c483541c",
+      "github_blob_sha": "f3920598a28bfc9c3c221905c6e72268f5764335",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "bytes": 14943,
+      "sha256": "5cfe631791c75c6cfc30687ec425bbcc61715c4d6dd8841e014de01ae2dc1117",
+      "github_blob_sha": "907c721e18635942a68bcab7bfb3abde8d7ecf2b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "SPRINTS.md",
+      "bytes": 31235,
+      "sha256": "444ea0814a52e984132279c034106b847cdc5c6b8d809bf3cc9f8aefb320813c",
+      "github_blob_sha": "8fc53f8b8842e1218f9faf0c27fcbec5aafe2f72",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "api/main.py",
+      "bytes": 279420,
+      "sha256": "51aecd9dd402f8a5d50556f543b077be762dc025c388dab36eb837214376b838",
+      "github_blob_sha": "99c313691cda9ec1baee8264550d653914e099ae",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/SECRETS.md",
+      "bytes": 19382,
+      "sha256": "31c38151df7dad015ed43a4867363b2ee95d41ebff0a194eee380c56e86a2b38",
+      "github_blob_sha": "7da3b193b78d357d304de3a5f290736ce73a9a19",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/base/api-deployment.yaml",
+      "bytes": 10614,
+      "sha256": "f78dfa0d62adf7b2475ee7fa9f679724b7ad0a53bee43130675bb965218e29c5",
+      "github_blob_sha": "76fc8e9c188519d64b82a35e701043717af150ba",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/kustomization.yaml",
+      "bytes": 19219,
+      "sha256": "a340fc265c274159ce942359b6fb688585101f12ee75dc8fca2893f22e741b5c",
+      "github_blob_sha": "8f10b67e888fc15fbe4b37f2a6918dafcaecf678",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/release-pins.yaml",
+      "bytes": 2629,
+      "sha256": "617701a3c63e3c89fa7fb2ac03a92232656a3652e9e1fc3e437ced3b6f8e5f9d",
+      "github_blob_sha": "c1147cd0851ab32ce00790628273170fe2905b05",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/DEPENDENCIES.md",
+      "bytes": 22920,
+      "sha256": "53d76d13e255c91ef25f3a5867a037631b7de7dc84fc62515e137c0898e0912a",
+      "github_blob_sha": "5e671eae5b7ad1563999efa33a7a73da8aac9e34",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "bytes": 399810,
+      "sha256": "a20a8d60c19bd357f1418ec52f8890d2a63a836e20c6604aa725a358a793a1be",
+      "github_blob_sha": "715c000d83035d3fbe1cc83a72635075e26c5184",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "bytes": 35075,
+      "sha256": "944b2526cd46155d9887c130fe395949cf1d3d9a4c445223dd8445b582ce2fcb",
+      "github_blob_sha": "23c6e0ad0563dc0ace757d2f4aa456950ee53536",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/CONTENT-MANIFEST.json",
+      "bytes": 13419,
+      "sha256": "b7b22207906eb38236118a386f1e58680b20ef705b5ceadd8a4921d1cf944a7d",
+      "github_blob_sha": "665bc8b45c769018e23a7a8565116baba0e2928e",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/CUSTODY.md",
+      "bytes": 3005,
+      "sha256": "44d1ca4391a10b1f31827aef090ca1dad2b82ff4653c9e66f6fd3203f0935fae",
+      "github_blob_sha": "f8ce2a037386607cb796bfaefbe1dd300d298e1b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/PRIVATE-CUSTODY.json",
+      "bytes": 114559,
+      "sha256": "2a32224cd9d41c8ea594d038c61f997a337c2ef312728497997d1e043b172c47",
+      "github_blob_sha": "6ca810a408004f3f91781b314794ada48125f459",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/README.md",
+      "bytes": 14694,
+      "sha256": "e1ec620e58809042203f0f2aeacee8b4777114b187a6ddb84f4bc175b86da5ad",
+      "github_blob_sha": "07713098ccb273ef2adf8b0c6fe3d79bff0f4abe",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/acceptance.json",
+      "bytes": 3858,
+      "sha256": "cc77833670722c68d30eacf4034470cb004c3eef01d36f5f197ed5d677ef41c9",
+      "github_blob_sha": "f60ac873dee3603b16239d173fe7f6fac62f1997",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/api-effective-camera-config-before.json",
+      "bytes": 834,
+      "sha256": "53c6d7e092d9bf9a55747f0f3fc57499e3db0278e34ff583c9ed8979f29fd4b9",
+      "github_blob_sha": "c9f9d72a6a8603579172319b9b92d2a25e7f33d1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/api-promotion-source.json",
+      "bytes": 1333,
+      "sha256": "baa2b46839db2001eaed7561892de1e72e441180b3ae49b4c2a5948dcf13c0fa",
+      "github_blob_sha": "ea20f1489d076be68b9a743875ea94e69e589747",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/checkpoint-remote-verification.json",
+      "bytes": 18322,
+      "sha256": "4cefc15f08c8b7728c37f7af9860007126b9ee5196355d22e573e62d13866078",
+      "github_blob_sha": "1af58408b3e499a15751758b098a885f61d94a1d",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/ci-logs.tar.gz",
+      "bytes": 35150,
+      "sha256": "544441d614895ff5657526f57fdfc42cc50cb32ed1c35efc0f9b90fe68b60149",
+      "github_blob_sha": "b2fc31e38c9e43e80bfbb973fc0a1d2ce3177683",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/failed-recovery-observation.json",
+      "bytes": 14383,
+      "sha256": "73353f3c912ffec71bf2fafc430e8c4e3a827711cd5b899134e1c59ce1373220",
+      "github_blob_sha": "2f6ab58fb8c2679773a82846fdbb0d95b2681546",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/focused-tests.txt",
+      "bytes": 80,
+      "sha256": "70bd93f29a65727e5cc0991aac37bb59b433f6d667824853361ad51e262a38ec",
+      "github_blob_sha": "d65afeee8b5be60c14d20c7f5d736f0bb8089060",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/historical-metrics-summary.json",
+      "bytes": 2491,
+      "sha256": "176c428809262824e7b6392c6dbe7a382b1d8b6d818463f7547d8df66b278b95",
+      "github_blob_sha": "41f8c5b84fcfff15d003bd0655b4c5b922c8ae00",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/live-tunnel-config.json",
+      "bytes": 1196,
+      "sha256": "641204500a79dc009464666f1640ca3bf2957af4d42187828c224d46dd7a69e6",
+      "github_blob_sha": "3a334f351049c6529f26341af4884460f14873dc",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/live-tunnel-controller.json",
+      "bytes": 2048,
+      "sha256": "05f75131bd5b5ccd0aedae0673fb567778b72a1cd9a391a393055d1cfd3b5c42",
+      "github_blob_sha": "f34ce3bdad6477381dc5a336362449b3b133947f",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/logs-after-api-provider-down.json",
+      "bytes": 10494,
+      "sha256": "f4287158402436263eb31aa54e85d8c6c654403f6e9812b111a513ebd4af910b",
+      "github_blob_sha": "9e37d2ffff3fae3d0b32a29d20169bf247637f4d",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/logs-tier2-503.json",
+      "bytes": 11211,
+      "sha256": "b23363b335748ca5f28f38d8f63a0c70ba07a2fd17a0d014cf3498428d537a6a",
+      "github_blob_sha": "5ae255c6524444f06d6df97b7658eee129055e7f",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/logs-tier2-old-503.json",
+      "bytes": 11226,
+      "sha256": "395cd4a519ff018f9bfd5b1fe58d4b638ab2947ebac2684f147455ccc7ec4ef0",
+      "github_blob_sha": "9a9ca75f95278a2b05f643bc3dc4a4f12864a2ff",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/metrics-current.json",
+      "bytes": 3531,
+      "sha256": "0fa9a7d2bece85f92d048871b401e93e3e2bab3d88fc744b6531aab8c6a045a9",
+      "github_blob_sha": "249c6a60802f273fd53dfd76c82bcff3970271d7",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/metrics-incident.json",
+      "bytes": 352568,
+      "sha256": "ffb42e65ceb345a69d14e74485eb5e7a61dd38f00a7279cc3d85b471bc61572e",
+      "github_blob_sha": "12d25ea62bb1355e83c5fb6cd88e86a787a1f87c",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/metrics-provenance.json",
+      "bytes": 1125,
+      "sha256": "3e23bb3ba8f3bbef20bf000095a2e6572678b42de86efd68a41004dbd76ada16",
+      "github_blob_sha": "6c95153905ced4e3654ab1949143451388f84c15",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/mounted-tunnel-rule-check.json",
+      "bytes": 870,
+      "sha256": "2971cce0bffa5ba07ee4c7e19ccd55c6baaace554944fdd243b6d91059a03ac2",
+      "github_blob_sha": "2c1b2cc7972c438982816599bfe13fce1d454524",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/native-before.json",
+      "bytes": 21403,
+      "sha256": "996708047564b32e08326d8cc0cc2743e7c904942d8f9caa5d6e653f70384ee2",
+      "github_blob_sha": "24c6a6c482e603eff100eaa1b158aaf6015dde74",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/native-open-published.json",
+      "bytes": 21357,
+      "sha256": "06751e0b6dd0a4d38ca5e04c890269b696c624e6d9ebe1fec3a74c1fc4d1cfaa",
+      "github_blob_sha": "51136be42311a490e65069bea7d5235719a11510",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/network-policy-assessment.json",
+      "bytes": 406,
+      "sha256": "6123ed9dda479ed598abe30be59cebf3e8cb7428dab1518fe5db8e45366ca6fc",
+      "github_blob_sha": "f9e1af53111c34634dfb569de4a843bff2f13ffd",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/owner-prerequisite-981.json",
+      "bytes": 3903,
+      "sha256": "8dbd13b646f4d658ee7906a711612948b69c3f6d196c19ca8c8d8ea1d1515be6",
+      "github_blob_sha": "e186ca49ca5737ccf98bb297d49b507827c3a523",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/planning-validation-closure.txt",
+      "bytes": 463,
+      "sha256": "aa936c6d49687b2ed3256516f24e7775bbf4c102fab19a18eda2b141889f033f",
+      "github_blob_sha": "aa98aa44c9bcf1be9b419fa9d40a21de7226d6a1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/planning-validation.txt",
+      "bytes": 463,
+      "sha256": "aa936c6d49687b2ed3256516f24e7775bbf4c102fab19a18eda2b141889f033f",
+      "github_blob_sha": "aa98aa44c9bcf1be9b419fa9d40a21de7226d6a1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/provider-after-recurrence.json",
+      "bytes": 1837,
+      "sha256": "a127ec54d143468ebd51e715fdf847f2762b6432d22378bbf4642b828cb101f6",
+      "github_blob_sha": "757b37a0cbba0d6c5af6535b718cd85a794e2795",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/provider-camera2-recurrence.json",
+      "bytes": 8979,
+      "sha256": "78e730df152ff5857c0f871d839eb66c14b98d3e2cefd5b0f64f6231fa3be1bf",
+      "github_blob_sha": "9a510700f6e18d132e503948ecac9c0f6743a2cf",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/provider-ready.json",
+      "bytes": 2672,
+      "sha256": "f888917aff3c5dee46b030598b87a8dcbc8c09501db54b8e6f2f2f33acd00955",
+      "github_blob_sha": "3b0a1932e772b5605780e118ed74fd3bb08583ff",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-auth-after-api.json",
+      "bytes": 1661,
+      "sha256": "585d549f0c6c1d6c35bd5c0de8d05811ff005efe549b59a07f5e0227f04758f0",
+      "github_blob_sha": "dd038051aa4c12c109b7b65a2a1219ac7e8dcc31",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-auth-continuation.json",
+      "bytes": 2422,
+      "sha256": "7ce5781c14d7f06de16b7e0d10b43eb24a4e22540d1a69b24345807f8ed3344f",
+      "github_blob_sha": "b49a8ee39a29bd7e122d4060695dc9c27af82db8",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-auth-results.json",
+      "bytes": 2600,
+      "sha256": "2b17e85a1c45f7fc3e7c11e0513663f44e73a7666963e5f4c5428e4a275e4c52",
+      "github_blob_sha": "7804c9aa1bcd005c34247d0c694175649711cccb",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-camera-after.json",
+      "bytes": 1439,
+      "sha256": "c16da8d3b31c3ca357403d0e00aae3c3ad556bdc9f6a2c6979927c82bf7b42bd",
+      "github_blob_sha": "852fe42c3bc81ef54f73d05c20336e53859296eb",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-camera-before.json",
+      "bytes": 1099,
+      "sha256": "e8bcfc6916c27567493ead6fb3761feaf7ff62cf7c01ded5ef0a06f3035264c9",
+      "github_blob_sha": "2299784f2b1e7276ed2a4b34358ba7781ae2f4c2",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-camera-denials.json",
+      "bytes": 785,
+      "sha256": "67e6eddc5666d53b8fd395f44ecc6d220bc0fd464d965ee48407dcba614ea09d",
+      "github_blob_sha": "48ca7cf31d7152eb53614c958f27e0f2b6023e83",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-camera-post-recurrence.json",
+      "bytes": 1439,
+      "sha256": "457d914e608a2e132a9a84b38679416b271586510bd77ac898f2b7ff0a7edb15",
+      "github_blob_sha": "78146d675a0fb08231b96da2ed0dcbd95c01a18a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-edge-baseline.json",
+      "bytes": 1518,
+      "sha256": "b7152c2330363dfc2520ec30393be4edcb7804f30b21ea09f65a00d54111368c",
+      "github_blob_sha": "028065f795f794b599ccb6b58d60cf30835fc746",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-edge-dns.json",
+      "bytes": 473,
+      "sha256": "a0a217bc0db568ff89ef34151ed154f59b854f3a38abe35292d11722346163b4",
+      "github_blob_sha": "57faeb309e574fa32129e1a7fe2e8354fc9bcd35",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-final-api.json",
+      "bytes": 1661,
+      "sha256": "e4db271ab6e0f49275f0a9a33018fa461f1917838e106f085e1528748aa3544d",
+      "github_blob_sha": "28b84ecb59d89a20768d87dbc61b2bff779c5350",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-final-mcp.json",
+      "bytes": 2422,
+      "sha256": "b9a6d7a81225301efaf6ba5436e9d575dc26ab8f7ffdb70d1e28bd27f79aeecd",
+      "github_blob_sha": "cc0e7a603f9866a77a87f0be7c94de8492daf4cf",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/public-readiness-after.json",
+      "bytes": 578,
+      "sha256": "98003a45bff562f298e997d43316265572d4cda5cdf95bdf47e1a1db9e59d59c",
+      "github_blob_sha": "ebb94ace648f72f57b84352fc6fdd1ad58d449ed",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/recovery-health.json",
+      "bytes": 18657,
+      "sha256": "70bf6cfa4a2c040ca4fc92b2aacb68391fb5bed6bc7fe3bdd511905f4006085b",
+      "github_blob_sha": "7ea1b9e6f366e840418d6458ce3bcfeb2d290ccc",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/recovery-observation-plan-02.json",
+      "bytes": 1130,
+      "sha256": "fe68e39a12445fccc86ea0b8b842a1dffd812755844b3b4490eb8d252d362506",
+      "github_blob_sha": "a49c60e2973fb4b987c93712916283da648456e7",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/release-ci-terminal.json",
+      "bytes": 3831,
+      "sha256": "26103bd344e366863bb48b86b6c3ac606a751d58255a9b003e4eaca760d81a0d",
+      "github_blob_sha": "6ae43c6cf3f3ea0c5dd8030183a4f64c531abd3c",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/render-source-diff.json",
+      "bytes": 338,
+      "sha256": "c65320a6a2b9f2f148e1e114ed8a18f964e61ca4a5c174a2e59f9b28ee4220ce",
+      "github_blob_sha": "55fac43801fa6389833b82e9826b81b8465fd959",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/report-ci-terminal.json",
+      "bytes": 3829,
+      "sha256": "94e234ea36b34d3ba14bfa31b317fc94c6743714ec66d5280059c5e48f12021a",
+      "github_blob_sha": "5a7f13b4acfee6ace65e1095c62e9fe25ce95edb",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/report-render-equality.json",
+      "bytes": 340,
+      "sha256": "c2b7e0e1996062dcf188070fce72d236a65173dee892731dd9bcf65c07e7c65b",
+      "github_blob_sha": "78ecb69b3a86132dc72924599d405b6f42bd8854",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/rule-fingerprint.json",
+      "bytes": 279,
+      "sha256": "aaa4dd23927229277cdc9540eeb9e94528e674b1568a1cf9d49684a6c96d8a03",
+      "github_blob_sha": "e57f8156949b1d214b7ff541853eec98f3f34c22",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/runtime-after-verified.json",
+      "bytes": 4256,
+      "sha256": "cdbf5376c42eebe7b3930740ebc68474109e39d5b7d8a72ee80a3fdf2eec6bdc",
+      "github_blob_sha": "b3b28dd00b24242788596ea5f54cb2aaf9d8a4fc",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/runtime-final.json",
+      "bytes": 2901,
+      "sha256": "b69e3cfc74504669d2a1e335096afed82ab6b1e6f088980758dacfd3e66f07be",
+      "github_blob_sha": "edd99ff70a2a1cef40b18e434025477cd6f9d6d4",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/single-deployment-operation.json",
+      "bytes": 1081,
+      "sha256": "3881956f8457c0e03a16dd92b416edf8b3771903d86e8493d2746922475ed10b",
+      "github_blob_sha": "8e6426ce61bdcfb83c6347289c526967cade357a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/source-ci-terminal.json",
+      "bytes": 21980,
+      "sha256": "b15e6b3faa80103c8704acdd4f5e7ab4a85bf31ea2571e88f3a24ff4c82b4fdd",
+      "github_blob_sha": "cdf3982ca44f2db1ee16ee1e12997c51463bdf1d",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/source-ci-workflow.json",
+      "bytes": 6826,
+      "sha256": "2e18aa679c4b2cf04cf7bb33a3843db2c7644504efd7ad8a59342751637954ea",
+      "github_blob_sha": "38795e9c11200e78e2f0819e8832bc812f126530",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/source-correlation.json",
+      "bytes": 3404,
+      "sha256": "f1d3b4043da53f9832f80fc959a622cdb4eaf0718174c2c5ab5ea87d3f730f69",
+      "github_blob_sha": "45c0b5edbd568fd1c26fd171cb9426fc778aa72b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/tier1-helm-provider-config.json",
+      "bytes": 1480,
+      "sha256": "86e4f573c0efae3c00df58506cb913ec17eb03f9b8ed187174d7cfe727967449",
+      "github_blob_sha": "5da45a9642e4e7e16f7b92b0fda11059f0549c79",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/traefik-apps-controller.json",
+      "bytes": 2177,
+      "sha256": "db665c9330cc9caea1f5494359dcec74d677d606f8d4dcf29988579f50162baa",
+      "github_blob_sha": "059ca925f0889eaf5f7cc61ee20be385b597ff8b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/verdify-strip-identity-headers.json",
+      "bytes": 698,
+      "sha256": "adfbe4970ee174219e921d635936fb5eabe56d0b23e8aef3f064f40a920fa0d3",
+      "github_blob_sha": "3f3491672d5ee9f1a57e3cd6ae4b18d392e29bc2",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/verdify-t2-api.json",
+      "bytes": 759,
+      "sha256": "b690da7db5c686940c43934eb465faa1c3db730ad67d41a809857b8b504f1d35",
+      "github_blob_sha": "2cab71775fdfacc2ece8dca77977b869302c474a",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/verdify-t2-mcp.json",
+      "bytes": 782,
+      "sha256": "1b95383a5194d1e16f1823bd38741649aa6cb2e3e17039bc450981b5860610e5",
+      "github_blob_sha": "c7d68fc894d6a7bb9025162625651b12f568a99b",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/verdify-tier1-forward.json",
+      "bytes": 1035,
+      "sha256": "e286a66ed68400fc29e37e8534ca99a7576b8f75fe58985f4d0ca243c7c0735c",
+      "github_blob_sha": "ceeadaee0414a10de3e9a0f5a017815ea9708c11",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "planning/reviews/2026-10-18-ingress-988/verdify-traefik-controller.json",
+      "bytes": 1891,
+      "sha256": "2847fdff0f9d999ca77515eda7a69425b7d909da9a114402a9784aa96c5d40e9",
+      "github_blob_sha": "8560c6983d7962e637761ec3ef74bdd569b94aa1",
+      "exact_remote_bytes": true
+    },
+    {
+      "path": "tests/test_api_authenticated_camera_snapshots.py",
+      "bytes": 6503,
+      "sha256": "ba0b000679fa83e960b3851b08d727d10e3ce281327a2798bf6a887fb9daf416",
+      "github_blob_sha": "255059f49bd9042b0f5f0bc4f89c78bf62b2fbe1",
+      "exact_remote_bytes": true
+    }
+  ]
+}

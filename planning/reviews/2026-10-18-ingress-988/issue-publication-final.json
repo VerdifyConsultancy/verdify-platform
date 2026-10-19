@@ -1,0 +1,26 @@
+[
+  {
+    "number": 75,
+    "state": "open",
+    "reason": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+    "body_sha256": "0d68e84d21e1afe3f3b726ea1c9b4fe616fb69204bc12044586daf267871e86c",
+    "title": "[C4][P1] Observability program: prove actionable health from source through device"
+  },
+  {
+    "number": 981,
+    "state": "open",
+    "reason": null,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+    "body_sha256": "aff18fc715c18992e3cf2d7d4ca1e886d08daa858e522e38746ca5d6687f8d71",
+    "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input"
+  },
+  {
+    "number": 988,
+    "state": "closed",
+    "reason": "completed",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/988",
+    "body_sha256": "814820be97ee86db9a95cf5786956b0a389b89672b1057b040024066a16c111b",
+    "title": "[C4][P1] Restore public camera snapshots and qualify authenticated ingress"
+  }
+]
