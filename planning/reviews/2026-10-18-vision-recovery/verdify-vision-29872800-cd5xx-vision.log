@@ -1,0 +1,3 @@
+2026-10-18T18:00:13.475223256-06:00 2026-10-19 00:00:13 [snapshot] ERROR greenhouse_1: snapshot failed (ConnectionRefusedError)
+2026-10-18T18:00:13.500835041-06:00 2026-10-19 00:00:13 [snapshot] ERROR greenhouse_2: snapshot failed (ConnectionRefusedError)
+2026-10-18T18:00:13.502081162-06:00 2026-10-19 00:00:13 [snapshot] INFO Done: 0/2 cameras captured

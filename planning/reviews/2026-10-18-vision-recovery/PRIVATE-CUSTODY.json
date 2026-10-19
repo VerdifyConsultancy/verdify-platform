@@ -1,0 +1,201 @@
+{
+  "private_base": "/private/tmp/verdify-vision-fix-20261018",
+  "export_scope": "hashes only; private diagnostic inventory/media/provider contents not exported",
+  "files": [
+    {
+      "name": "acceptance.json",
+      "bytes": 9300,
+      "sha256": "617a35386e08aaffde3174e8247177927a0d0e6b3135eb1bd2c8862f9a21de8a"
+    },
+    {
+      "name": "application-after-recovery.json",
+      "bytes": 48482,
+      "sha256": "f20c174fa22ef9c4ee066dba76ecae81674168027f7d90610f7b7fee6533fbad"
+    },
+    {
+      "name": "applications.json",
+      "bytes": 5613368,
+      "sha256": "ba73f6b0ae8db69651da12181f5df7447291ca6a1decb1864c8839605a8cc1d8"
+    },
+    {
+      "name": "capacity-summary.json",
+      "bytes": 3016,
+      "sha256": "210c71d60f02a8873562387a5a67473d4c707cacae99dbe6634e8a71c115b084"
+    },
+    {
+      "name": "capture-graph.py",
+      "bytes": 1259,
+      "sha256": "54c39ed4d97464c6ef87e32d909b18505d9cde7adf0dfba4a04fb7aaf8c77a55"
+    },
+    {
+      "name": "cronjob-current.json",
+      "bytes": 13135,
+      "sha256": "7b4a30debb374ef3eabb0851b1f1e977d0306faa3d8af62bab2fb7f46a5ed6d2"
+    },
+    {
+      "name": "db-before.txt",
+      "bytes": 1216,
+      "sha256": "3f789f5b1c0be90615ca2132f48c3c921452ddabe7c1787409880bcfc6ecde70"
+    },
+    {
+      "name": "db-read.sql",
+      "bytes": 859,
+      "sha256": "675ed1ac8da24f4ca5d1a59e0c1a4e08e5b660fb0222834fe47d95b163af0146"
+    },
+    {
+      "name": "db-verified.txt",
+      "bytes": 1223,
+      "sha256": "1bd15f10f9d9abb4957afb3ce6872e620f5d99f334b7bc9cf5d7b9bdaa17c23d"
+    },
+    {
+      "name": "failed-job-metadata.json",
+      "bytes": 21539,
+      "sha256": "adf33eb0d5b6ce9ee7159216c0a30defc74bd525b576b8908cdedb5581409e7a"
+    },
+    {
+      "name": "focused-tests.txt",
+      "bytes": 80,
+      "sha256": "1e6b4fbe33d23cc880df779e2dd0330dd0359555faab7d7943e31674e2319fe8"
+    },
+    {
+      "name": "github-vision-issues.json",
+      "bytes": 205260,
+      "sha256": "959be766eac6b52fd07ad7d71296ef5e2b6ee94229b66eff5b2c6d35c8fb24a4"
+    },
+    {
+      "name": "issue951.json",
+      "bytes": 12534,
+      "sha256": "803fb1b711af783ee47241e356dcf7fa964c0930d58da93737fc4f95eeadb7d2"
+    },
+    {
+      "name": "issue988.json",
+      "bytes": 21670,
+      "sha256": "ec8ef401014faae6bf0ec1cd8e74dfbb78cea85432518e4d561c8ce8f601be4a"
+    },
+    {
+      "name": "namespace-admission.json",
+      "bytes": 2132,
+      "sha256": "c5ef7d0b64d61c37643de76709ee5aec770e44ea99cbd4e5413dc12fd87cc017"
+    },
+    {
+      "name": "natural-job-metadata.json",
+      "bytes": 16523,
+      "sha256": "a300e487687156b5ee61ce1724f64f2b26fed0aa13490fcbf02ed0c26c749cb7"
+    },
+    {
+      "name": "natural-pod-full.json",
+      "bytes": 17715,
+      "sha256": "2d07181b97bed5de3ff90465c25c700a84ec0a99c3edfc070d4e5e20f31981cb"
+    },
+    {
+      "name": "node-usage.txt",
+      "bytes": 594,
+      "sha256": "e37771654f6b5037fcc7704a79c21fe6f59aff3c4a151ea70acd3d686f467331"
+    },
+    {
+      "name": "nodes.json",
+      "bytes": 382563,
+      "sha256": "a0683bb98f9671ed0dff65379e1782397cf8d76631711c47bd4563130d6ad9c7"
+    },
+    {
+      "name": "pod-usage.txt",
+      "bytes": 63882,
+      "sha256": "933aa1cd78533436a0c15511a6a5b1188dd816a77eb7073d3f117c50fbb6a4a4"
+    },
+    {
+      "name": "pods-preflight.json",
+      "bytes": 45059214,
+      "sha256": "f13d091395ed69aebf99f13ddf0d4c7de322171d567b529b3f495854fcbc977d"
+    },
+    {
+      "name": "prod-render-before.yaml",
+      "bytes": 2451008,
+      "sha256": "7d4e4affb033811c290da866d069abf7933833968951fc188624799929807390"
+    },
+    {
+      "name": "provider-history.json",
+      "bytes": 1758594,
+      "sha256": "ef69d08fe3e2ebb23d39733cec7beeb69d0da49b722b55f29dfe9863fff74219"
+    },
+    {
+      "name": "provider-pod.json",
+      "bytes": 32098,
+      "sha256": "bce35da93c01133858038c7ae36f8df3093d833e5ded8134764dc3e58ce56210"
+    },
+    {
+      "name": "provider-recovery-files.json",
+      "bytes": 108827,
+      "sha256": "6b5e476f8ca41b69c1c2fe868bc32ca79ec627047c55caa51852aa709d42b556"
+    },
+    {
+      "name": "provider-recovery-pr333.json",
+      "bytes": 1223,
+      "sha256": "198aed9f30ad2966407f7c2c62aac8055627ed8bc7d342498077d748c6825ce1"
+    },
+    {
+      "name": "read-failed-job.py",
+      "bytes": 3095,
+      "sha256": "1ea5cc49c36ebc0f4f3b16693bd54374caa5bd7cd71bb217167c695b1f43f9b4"
+    },
+    {
+      "name": "read-natural-job.py",
+      "bytes": 3096,
+      "sha256": "f5de12b45998d88121a2b9635bcc54feaf9547863d647a76e58ba857da6b61ec"
+    },
+    {
+      "name": "recovery-job-preview.json",
+      "bytes": 5885,
+      "sha256": "37d0b54cbb1aeff308729ba23e44db80af521fb019bacdb94d625674fe8a8288"
+    },
+    {
+      "name": "service-workload-inventory.json",
+      "bytes": 4896662,
+      "sha256": "7e85a1cd558cc5e0c1a98ab79c2f37f7bde8fac7819474b24302b41439eb7bd0"
+    },
+    {
+      "name": "update-source.py",
+      "bytes": 14986,
+      "sha256": "5923670c7addf1404e4c27a3dd83cf39e2b174546a45a2840ebe80d584f7fc52"
+    },
+    {
+      "name": "verdify-vision-29872800-cd5xx-vision-log-receipt.json",
+      "bytes": 333,
+      "sha256": "251fadce7216534b3cc3c0add4882cc18441442ab9dd50a0bad1098dba38e7c7"
+    },
+    {
+      "name": "verdify-vision-29872800-cd5xx-vision.log",
+      "bytes": 355,
+      "sha256": "2435cf1e04b47b9ea40c9257632a51e3681fe581c47eb61489c887c14cb227f8"
+    },
+    {
+      "name": "verdify-vision-29872800-wgdtd-vision-log-receipt.json",
+      "bytes": 333,
+      "sha256": "c991f26973c22fb38c6087f222be265153ff66b154c77ed6f559623b83dc03b9"
+    },
+    {
+      "name": "verdify-vision-29872800-wgdtd-vision.log",
+      "bytes": 355,
+      "sha256": "4640838e8c6dcef1527d27fb9c712942f81dabe02d4c07ea5fc79e271a230df9"
+    },
+    {
+      "name": "verdify-vision-29872980-jtgdp-vision-log-receipt.json",
+      "bytes": 333,
+      "sha256": "3eb6ea993d64823fb2e08955c87c2bbb101d2dbcd12b128c935aa98021d02fc3"
+    },
+    {
+      "name": "verdify-vision-29872980-jtgdp-vision.log",
+      "bytes": 576,
+      "sha256": "7c2475dfe9ffffdd838629f11d47385c25c46225e69577e329646ef783071b0d"
+    },
+    {
+      "name": "verify-acceptance.py",
+      "bytes": 5688,
+      "sha256": "9c7e6b05f8d424f87e89918170fc8b973416089626baf8310c68f7806fd389af"
+    },
+    {
+      "name": "vision-jobs.json",
+      "bytes": 96394,
+      "sha256": "82b4f0b654111137d4e88dc12a1b0192378075f6c4a3412ee2df0d3a1bd8c1d4"
+    }
+  ]
+}

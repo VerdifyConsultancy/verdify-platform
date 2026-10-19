@@ -2,12 +2,12 @@
 
 ## Current execution plan
 
-Reviewed **2026-10-18T21:10:01.450606+00:00** against source `1f132f20eea07ab57c5d705a9bd626ac6fe72faf`. [planning/reviews/2026-10-18-daytime-consumer/README.md](planning/reviews/2026-10-18-daytime-consumer/README.md) records current source, GitHub, runtime and evidence limits. All **47 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-10-19T03:57:19.989175+00:00** against source `af46d263352d6403201a4642378197e9ca00303c`. [planning/reviews/2026-10-18-vision-recovery/README.md](planning/reviews/2026-10-18-vision-recovery/README.md) records current source, GitHub, runtime and evidence limits. All **48 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
 | S3B — Unblocked source and diagnosis (October 19–23, 2026) | sprint | 22–34 | 40 | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410), [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) |
-| WAIT — Await authentic inputs or owner qualification | conditional | Unestimated | Not timeboxed | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783), [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) |
+| WAIT — Await authentic inputs or owner qualification | conditional | Unestimated | Not timeboxed | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783), [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981), [#988](https://github.com/VerdifyConsultancy/verdify-platform/issues/988) |
 | S3 — Prior S3 qualification scope — retained context | conditional | 0 | Not timeboxed | None |
 | ALTERNATE — Alternate pull when an S3 packet is blocked | conditional | Unestimated | Not timeboxed | [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) |
 | S4 — Integrated qualification and physical proof | conditional | Unestimated | Not timeboxed | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) |
@@ -103,6 +103,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#980](https://github.com/VerdifyConsultancy/verdify-platform/issues/980) (closed) | Resolve backup-exporter readiness timeouts without obscuring backup health | None; see concrete issue conditions | S |
 | [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) (open) | Restore truthful energy source freshness and trace stale meter input | None; see concrete issue conditions | S |
 | [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) (closed) | Adopt the enforcing descheduler under manual Argo ownership | None; see concrete issue conditions | M |
+| [#988](https://github.com/VerdifyConsultancy/verdify-platform/issues/988) (open) | Track tier-1 ingress incident a527cc46 and remaining public-path acceptance | None; see concrete issue conditions | M |
 
 ## C5 — Data/platform lead
 

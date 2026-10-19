@@ -40,7 +40,9 @@ Edit the canonical file, then re-copy into `src/`.
 The following remain secret inputs and are never created by this manifest:
 
 - `Secret/verdify-vision-key`, containing `gemini_api_key.txt`;
-- `Secret/verdify-app-secrets`, containing `POSTGRES_PASSWORD`.
+- `Secret/verdify-frigate-vision-auth`, containing the camera-scoped `token`;
+- `Secret/verdify-vision-runtime-db`, containing `password` for the existing
+  `verdify_vision_runtime_login` (expanded into the in-Pod DSN).
 
 ## Operations
 
@@ -69,3 +71,32 @@ kubectl -n verdify-prod logs job/verdify-vision-recovery-<timestamp>
 
 Then verify `max(image_observations.ts)` advanced and the
 `system.vision_pipeline` freshness alert clears.
+
+## Connection refusals and recovery acceptance
+
+The HTTPS service port 8971 deliberately targets the authenticated proxy's 8973
+listener. Keep `cameras.vallery.net` TLS verification and the two allowlisted
+`/api/vision/` routes; do not bypass authentication through port 5000.
+
+When both cameras report `ConnectionRefusedError` before analysis, compare the
+failed Job timestamp with the Sentinel-owned provider's availability and current
+Service/EndpointSlice. A planned provider stop can fail one run while later
+scheduled runs recover without a Verdify release. Preserve the original Job UID,
+conditions and sanitized logs; check existing natural successes before submitting
+a manual recovery. A healthy provider now does not explain its historical outage
+without the owning rollout/incident evidence.
+
+Use the controller's `batch.kubernetes.io/cronjob-scheduled-timestamp` annotation
+and actual Job owner UID to distinguish natural runs from manual canaries. The
+manifest declares no `timeZone`; do not infer UTC execution from its expression.
+
+Acceptance requires both real camera captures, a terminal successful container
+and fresh structured `image_observations` for both cameras with their linked
+`observations`, not only an advanced maximum timestamp. Independently recheck
+aggregate Argo health and retain old failures. A recovered provider and successful
+scheduled Job require no whole-application sync. Any explicit prohibition on a
+whole-application sync continues to apply.
+
+[October 18/19 recurrence and natural recovery](../../../planning/reviews/2026-10-18-vision-recovery/README.md)
+records the owning provider repair, two genuine analyses, six linked observations
+and the unchanged source/image contract.

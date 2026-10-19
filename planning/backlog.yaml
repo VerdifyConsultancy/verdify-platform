@@ -1211,7 +1211,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "October 18 execution checkpoint: PR #985 integrates the finite-probe diagnostics and per-tick dwell-limit correction, with strict native firmware/invariants, 154 causal YAML cases and zero-divergence replay retained. The bounded prefix pilot remains27/48 UNPROVEN; typed wetting custody preserves four missing/unsupported physical criteria. No OTA, production promotion, physical proof or full issue acceptance occurred. Reuse the completed source/native packet; unresolved child/runtime criteria remain active.\n\nPrior reviewed context: The 2026-10-18 07:07 UTC read-only runtime receipt observed verdify-prod-dark Synced/Healthy at comparison revision 83e148b60948d0c2328f8a22d819d481ff2c4ca6. Its last actual operation remains the successful selector-free full sync at 55285aafc96855419ba5e50ab11475cb71a60a0f, finished at 02:47:03 UTC; the newer comparison revision does not mean another sync or image promotion occurred. All 15 Deployments and the single verdify-db StatefulSet reported their desired replicas ready. Smoke passed 9/9 with API cb21fd3d/75f510f5, both MCP replicas exposing the expected 23 tools, a fresh complete 48-field setpoint snapshot and exactly one ESP32 writer connection. #980 remains accepted on its independent backup/cache, HTTP/Prometheus and delayed runtime evidence. #981 remains open on installed-source clock qualification under Home Assistant #878. #963 still needs deployed firmware/HA recovery proof, and #749 retains the original climate/soil readiness FAIL. Point-in-time service health does not establish sensor recovery, energy eligibility or those remaining acceptance clauses. Evidence: planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.md, 981-source-clock-packet.json and 749-sealed-diagnosis.md; the fresh runtime receipt is retained with the October 18 full-status review.\n\nCurrent execution allocation: ROLLUP. Next action: Reconcile the health matrix to the 07:07 runtime readback and accepted #980 receipt, then consume the concrete #981/#963/#749 next actions. Keep shared alert implementation in monitoring-stack; do not repeat accepted exporter delivery or infer missing sensor recovery from green smoke.\n\nExecution review: planning/reviews/2026-10-18-execution/README.md. All original acceptance clauses and completion edges remain unchanged.",
+      "baseline": "October 18 execution checkpoint: PR #985 integrates the finite-probe diagnostics and per-tick dwell-limit correction, with strict native firmware/invariants, 154 causal YAML cases and zero-divergence replay retained. The bounded prefix pilot remains27/48 UNPROVEN; typed wetting custody preserves four missing/unsupported physical criteria. No OTA, production promotion, physical proof or full issue acceptance occurred. Reuse the completed source/native packet; unresolved child/runtime criteria remain active.\n\nPrior reviewed context: The 2026-10-18 07:07 UTC read-only runtime receipt observed verdify-prod-dark Synced/Healthy at comparison revision 83e148b60948d0c2328f8a22d819d481ff2c4ca6. Its last actual operation remains the successful selector-free full sync at 55285aafc96855419ba5e50ab11475cb71a60a0f, finished at 02:47:03 UTC; the newer comparison revision does not mean another sync or image promotion occurred. All 15 Deployments and the single verdify-db StatefulSet reported their desired replicas ready. Smoke passed 9/9 with API cb21fd3d/75f510f5, both MCP replicas exposing the expected 23 tools, a fresh complete 48-field setpoint snapshot and exactly one ESP32 writer connection. #980 remains accepted on its independent backup/cache, HTTP/Prometheus and delayed runtime evidence. #981 remains open on installed-source clock qualification under Home Assistant #878. #963 still needs deployed firmware/HA recovery proof, and #749 retains the original climate/soil readiness FAIL. Point-in-time service health does not establish sensor recovery, energy eligibility or those remaining acceptance clauses. Evidence: planning/reviews/2026-10-17-s3-execution/980-exporter-acceptance.md, 981-source-clock-packet.json and 749-sealed-diagnosis.md; the fresh runtime receipt is retained with the October 18 full-status review.\n\nCurrent execution allocation: ROLLUP. Next action: Reconcile the health matrix to the 07:07 runtime readback and accepted #980 receipt, then consume the concrete #981/#963/#749 next actions. Keep shared alert implementation in monitoring-stack; do not repeat accepted exporter delivery or infer missing sensor recovery from green smoke.\n\nExecution review: planning/reviews/2026-10-18-execution/README.md. All original acceptance clauses and completion edges remain unchanged.\n\nOctober 19 03:54 UTC vision recurrence review: midnight Job29872800 failed both camera captures during Sentinel's stopped provider cutover. Owning Sentinel PR333 restored replicas0\u21921 at source82403efb; provider Ready01:09:07. The genuine controller-owned03:00 Job29872980 completed03:00:24, exit0/zero restarts, both JPEGs and analyses823/824 with six linked crop observations. Current source/render/ConfigMap hashes agree; 34 focused tests pass. Independent Verdify readback is Synced/Healthy with last operation still October18 21:07:33. Original failed Job retained; no sync, recovery Job, provider request or credential change was submitted. Evidence: planning/reviews/2026-10-18-vision-recovery/README.md. Recovery is accepted within #951's existing scope; no continuous-availability or crop-efficacy claim. The separate public-ingress incident #988 remains open and is now canonical standalone intake, without a new parent or dependency. Keep its public authentication/cause/recurrence acceptance separate from this natural vision recovery.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -3102,11 +3102,12 @@
         "scripts/frigate-snapshot.py",
         "deploy/k8s/vision"
       ],
-      "baseline": "October 6 UTC S1 acceptance: both cameras supplied fresh valid authenticated HTTPS images and natural Job 29854080 completed analyses 723/724. The live keyframe route avoids cached-preview replay; unauthenticated access remains denied. Closed at 00:13:09 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.",
+      "baseline": "October 6 UTC S1 acceptance: both cameras supplied fresh valid authenticated HTTPS images and natural Job 29854080 completed analyses 723/724. The live keyframe route avoids cached-preview replay; unauthenticated access remains denied. Closed at 00:13:09 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.\n\nOctober 19 03:54 UTC vision recurrence review: midnight Job29872800 failed both camera captures during Sentinel's stopped provider cutover. Owning Sentinel PR333 restored replicas0\u21921 at source82403efb; provider Ready01:09:07. The genuine controller-owned03:00 Job29872980 completed03:00:24, exit0/zero restarts, both JPEGs and analyses823/824 with six linked crop observations. Current source/render/ConfigMap hashes agree; 34 focused tests pass. Independent Verdify readback is Synced/Healthy with last operation still October18 21:07:33. Original failed Job retained; no sync, recovery Job, provider request or credential change was submitted. Evidence: planning/reviews/2026-10-18-vision-recovery/README.md. Recovery is accepted within #951's existing scope; no continuous-availability or crop-efficacy claim.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation.",
-      "status": "closed"
+      "status": "closed",
+      "accepted": true
     },
     {
       "key": "952",
@@ -3516,13 +3517,47 @@
       "decision": "External parent is jvallery/agents#4493. Current specific owner/project/catalog proof is required; whole-estate issue closure is not a prerequisite.",
       "status": "closed",
       "accepted": true
+    },
+    {
+      "key": "988",
+      "issue_number": 988,
+      "title": "Track tier-1 ingress incident a527cc46 and remaining public-path acceptance",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P1",
+      "effort": "M",
+      "owner_role": "Platform lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Retain the exact tier-1 ingress incident and qualify its remaining public-path, cause and recurrence evidence.",
+      "why": "Internal service health, a source-resolved event and a newer zero-error window do not establish authenticated public behavior or durable ingress recovery.",
+      "how": [
+        "Bind the authoritative active router/backend and authentication chain to source and timestamped runtime inputs.",
+        "Use existing approved identities for the intended public acceptance; retain the exact blocker if unavailable.",
+        "Preserve original counter windows and recurrence, distinguish extrapolated increases from raw counts, and record supported cause or explicit unresolved result."
+      ],
+      "acceptance": [
+        "Establish the authoritative active router/backend and ForwardAuth/authentication linkage, including any shared/global edge configuration, with source and observation timestamps.",
+        "Verify the intended authenticated public API/MCP behavior and expected denial cases through existing approved identities, or retain the exact access blocker. Anonymous MCP403 and internal smoke success are insufficient.",
+        "Retain exact-backend request/error windows and their source provenance, distinguishing extrapolated counter increases from raw request counts; establish an appropriate recurrence/durable-health observation before claiming recovery.",
+        "Record a supported cause/recurrence conclusion or an explicit unresolved result while preserving the original failures. Do not close from a source-resolved event or one zero-error window."
+      ],
+      "paths": [
+        "deploy/k8s/overlays/prod/traefik",
+        "planning/reviews/2026-10-18-daytime-consumer"
+      ],
+      "baseline": "## Current disposition\n\n**OPEN \u2014 historical observations retained; incident recovery and public-path acceptance are incomplete.** This is a tracking-only action. No diagnosis/repair, new probe, model/provider request, deployment, infrastructure/security change, new observer, or alert-review acknowledgement was performed.\n\nSearch before creation found the exact incident only in #410 execution comment6254249246, no exact-backend or ForwardAuth issue, and no matching ingress incident among the existing ingress records. #410 concerns realized solar-night dry-out; #775 is the campaign rollup. Their original acceptance and open states remain unchanged. Closed #686 concerns unauthenticated admin access and #801 concerns HostRegexp exclusions; neither is this incident. This issue adds no blocker or dependency to the completed model qualification.\n\n## Incident and dated observations\n\nExact backend: `verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd`.\n\nIncident: `a527cc469654b07dcf09c29648d3d27762ac71499985a0838a1b239712556a36`.\n\nAll times below are UTC on 2026-10-18. The incident state and Prometheus measurements were supplied by the parent/coordinator; the parent independently queried the exact backend. This implementation task did not remeasure those counters because its existing metrics proxy failed before the first query.\n\n| Observation | Timestamp/window end | Retained value and scope |\n|---|---|---|\n| Source incident began | 20:52:52.778 | Historical source event |\n| Source incident resolved | 20:59:52.858340 | Source-resolved only; review remained `null` |\n| Exact-backend five-minute 5xx ratio | 21:13:26.576 | `0.06580278392` = `6.580278392%` |\n| Parent independent exact-backend five-minute total increase | 21:19:46.389 | `279.609934`; Prometheus extrapolated increase, **not an integer raw request count** |\n| Parent independent same-backend five-minute 5xx increase | 21:19:46.713 | `0`; separately timestamped five-minute window |\n\nThe newer zero-error window does not erase older failures or establish durable recovery, root cause, recurrence prevention, or deployment causality. The two newer samples are separately timestamped; no exact raw request denominator or additional ratio is invented.\n\n## Implementation task's separate read-only evidence\n\nAt 21:15:35, public `https://api.verdify.ai/health` returned **200**, while anonymous `https://mcp.verdify.ai/mcp` returned **403**. No authorization was sent. These observations do not qualify authenticated public MCP access or sustained ingress recovery.\n\nThe existing Kubernetes API service-proxy path to Prometheus returned **502 ServiceUnavailable before the first query**. That access-path failure is separate from the tier-1 backend's application counters. No alternate access path or new probe was attempted.\n\nThe reviewed Verdify render forwards the multi-host tier-1 route to the tier-2 Traefik service. It declares no attached ForwardAuth middleware; stripping inbound identity headers is not a ForwardAuth call. Shared/global ingress or external authentication configuration was not inspected, so the active ForwardAuth/authentication chain remains unverified.\n\n## Exact task, source, and operation references\n\n- Implementation task `01a14cb6-71c3-7cf0-8739-598035d215ca`; original turn reference `01a15081`.\n- Parent/coordinator task supplying the incident/counter observations: `01a14ab0-e0f9-718a-8266-60bdb5130022`.\n- Model source `56b316f3fda666b25665dfc0f791d6be6db0fa46`.\n- Workflow `verdify-platform-ci-87whm`, UID `410c5d3a-6bbe-4aaf-89bb-c3cecce0dd2f`, terminal Succeeded **21:02:34**; preserved original validation and failed-build recovery custody.\n- Exact four-resource rollout `1f132f20eea07ab57c5d705a9bd626ac6fe72faf`, terminal Succeeded **21:07:33**. No full sync, hooks, migration or prune.\n- Published report source `af46d263352d6403201a4642378197e9ca00303c`: [execution report](https://github.com/VerdifyConsultancy/verdify-platform/blob/af46d263352d6403201a4642378197e9ca00303c/planning/reviews/2026-10-18-daytime-consumer/README.md).\n- Immutable evidence `84f5013d322b192ff3e54c9977e483d05bcfd819`: [custody and verified archives](https://github.com/VerdifyConsultancy/verdify-platform/blob/84f5013d322b192ff3e54c9977e483d05bcfd819/planning/reviews/2026-10-18-daytime-consumer/CUSTODY.md).\n- Existing incident context: [#410 execution comment](https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6254249246).\n\nNine internal-service smoke checks and two bounded ordinary MCP/model consumer cases remain accepted at their documented scope. They do not certify the public ingress/authentication path. Timing overlap or ordering alone supplies no rollout-cause attribution. The completed model/evidence packet is not reopened or rerun by this issue.\n\n## Remaining acceptance \u2014 all open\n\n- [ ] Establish the authoritative active router/backend and ForwardAuth/authentication linkage, including any shared/global edge configuration, with source and observation timestamps.\n- [ ] Verify the intended authenticated public API/MCP behavior and expected denial cases through existing approved identities, or retain the exact access blocker. Anonymous MCP403 and internal smoke success are insufficient.\n- [ ] Retain exact-backend request/error windows and their source provenance, distinguishing extrapolated counter increases from raw request counts; establish an appropriate recurrence/durable-health observation before claiming recovery.\n- [ ] Record a supported cause/recurrence conclusion or an explicit unresolved result while preserving the original failures. Do not close from a source-resolved event or one zero-error window.\n\nNext action: the existing implementation lane retains this issue as open evidence intake. Resolve the listed public-path/cause/recurrence gaps within separately scoped existing authority. This tracking action creates no new owner, observer, reservation, access route, or permission for operational changes. The prior 47-issue graph snapshot remains a historical snapshot; this newly created standalone issue is additional intake and does not alter any existing acceptance or dependency edge.\n\n\nCanonical intake October19: preserve this standalone open issue, original four acceptance clauses, no parent and no blocking edge. Existing source/provider correlation and the later36cb recurrence remain in the issue comments. No new ingress probe or operational change was performed by the vision repair. #951 natural recovery does not close this incident.",
+      "delivery": "Publish source-owned narrow changes only if diagnosis requires them; use existing delivery paths and verify the intended authenticated public behavior and recurrence contract. This canonical intake performs no deployment or new probe.",
+      "rollback": "Preserve original incident, counters, source identities and all dated comments. Retain the previous exact desired state for any later concrete repair; never erase failures or infer recovery from aggregate green.",
+      "decision": "No new decision is requested by this tracking update. Further ingress diagnosis or repair needs concrete scope under existing authority; no new observer, identity, reservation or credential is created.",
+      "status": "open"
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-18T21:10:01.450606+00:00",
-    "source_revision": "1f132f20eea07ab57c5d705a9bd626ac6fe72faf",
+    "reviewed_at": "2026-10-19T03:57:19.989175+00:00",
+    "source_revision": "af46d263352d6403201a4642378197e9ca00303c",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-10-18-daytime-consumer/README.md",
+    "review_path": "planning/reviews/2026-10-18-vision-recovery/README.md",
     "open_issues": [
       14,
       16,
@@ -3570,7 +3605,8 @@
       786,
       787,
       963,
-      981
+      981,
+      988
     ],
     "sprints": [
       {
@@ -3724,7 +3760,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Maintain accepted exporter delivery and explicit #981/#963/#749 residuals; consume S3B findings and avoid duplicate source qualification or false-green physical health.",
+        "next_action": "Reuse accepted natural #951 vision recovery and the current Synced/Healthy receipt, while retaining independent #988 public-ingress and #981/#963/#749 source/physical gaps. No repeated provider call or whole-application sync; shared alert changes stay in monitoring-stack.",
         "owner_role": "Platform lead"
       },
       {
@@ -4046,6 +4082,14 @@
         "hours_max": null,
         "next_action": "Home Assistant #878 remains the actual native external blocker. Consume its installed-source qualification before one natural source/DB advancement comparison; do not substitute fetch timestamps or infer a repair from a stable zero value.",
         "owner_role": "Data/platform lead"
+      },
+      {
+        "issue_number": 988,
+        "sprint": "WAIT",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Retain separate open ingress intake and existing recurrence/source correlation. Pull a concrete supported public authentication/cause/recurrence packet within scoped authority; vision recovery and internal smoke do not qualify it. No new blocker or nominal repair estimate is invented.",
+        "owner_role": "Platform lead"
       }
     ]
   }

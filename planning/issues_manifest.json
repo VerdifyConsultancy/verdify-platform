@@ -359,7 +359,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "c38a1e04f28267a7a0e7012306777da9d899b7fa5d720a7b62fc6a306a80c1d8"
+      "body_sha256": "9dd2a33227c2a5952ac0e49efd5b7c53e57336dce2a3ae2e03b56c47d8a8d4e2"
     },
     {
       "key": "563",
@@ -1001,10 +1001,10 @@
       "title": "[C4][P1] Restore authenticated greenhouse camera snapshots after connection refusals",
       "stage": "C4",
       "status": "closed",
-      "accepted": false,
+      "accepted": true,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "818be4184e466501e78293c62e704d625e5968ae22e1f1316978e021114fb4b7"
+      "body_sha256": "001664326dfb815c77c3702ddf5f516e1e62bdbcf3e8f694017c5dae16a7a84b"
     },
     {
       "key": "952",
@@ -1137,6 +1137,17 @@
       "parent": null,
       "blocked_by": [],
       "body_sha256": "aa57b8c8828c2ff335ae6c1b30ae66b7ea9b70f6de1a89db8cf30be25f17a366"
+    },
+    {
+      "key": "988",
+      "number": 988,
+      "title": "[C4][P1] Track tier-1 ingress incident a527cc46 and remaining public-path acceptance",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "7ee321f1e3ef42cf7956236c8f1d13004ab65826bc1630551ec225886c775ee6"
     }
   ]
 }

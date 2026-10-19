@@ -1,0 +1,5 @@
+2026-10-18T21:00:03.599234345-06:00 2026-10-19 03:00:03 [snapshot] INFO greenhouse_1: saved /snap/2026-10-18/greenhouse_1_2100.jpg (225 KB)
+2026-10-18T21:00:04.740708759-06:00 2026-10-19 03:00:04 [snapshot] INFO greenhouse_2: saved /snap/2026-10-18/greenhouse_2_2100.jpg (274 KB)
+2026-10-18T21:00:04.742169388-06:00 2026-10-19 03:00:04 [snapshot] INFO Done: 2/2 cameras captured
+2026-10-18T21:00:04.742178986-06:00 2026-10-19 03:00:04 [snapshot] INFO Triggering crop health analysis...
+2026-10-18T21:00:21.911622403-06:00 2026-10-19 03:00:21 [snapshot] INFO Analysis complete

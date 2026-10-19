@@ -1,0 +1,276 @@
+{
+  "schema": "verdify-vision-recurrence-acceptance/v1",
+  "verified_at": "2026-10-19T03:56:06.141683+00:00",
+  "source_revision": "af46d263352d6403201a4642378197e9ca00303c",
+  "result": "ACCEPTED_RECOVERY",
+  "failure": {
+    "metadata": {
+      "name": "verdify-vision-29872800",
+      "namespace": "verdify-prod",
+      "uid": "f2f2640b-a800-47d5-bbf6-edbad67f3b8a",
+      "resourceVersion": "283903038",
+      "generation": 1,
+      "creationTimestamp": "2026-10-19T00:00:00Z",
+      "ownerReferences": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-vision",
+          "uid": "4b0f62d3-20f2-4e28-b841-b7f649a12ddb"
+        }
+      ]
+    },
+    "status": {
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-19T00:00:16Z",
+          "lastTransitionTime": "2026-10-19T00:00:16Z",
+          "message": "Job has reached the specified backoff limit",
+          "reason": "BackoffLimitExceeded",
+          "status": "True",
+          "type": "FailureTarget"
+        },
+        {
+          "lastProbeTime": "2026-10-19T00:00:16Z",
+          "lastTransitionTime": "2026-10-19T00:00:16Z",
+          "message": "Job has reached the specified backoff limit",
+          "reason": "BackoffLimitExceeded",
+          "status": "True",
+          "type": "Failed"
+        }
+      ],
+      "failed": 2,
+      "ready": 0,
+      "startTime": "2026-10-19T00:00:00Z",
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "spec_bounds": {
+      "backoffLimit": 1,
+      "activeDeadlineSeconds": 900,
+      "ttlSecondsAfterFinished": 86400
+    }
+  },
+  "recovery": {
+    "metadata": {
+      "name": "verdify-vision-29872980",
+      "namespace": "verdify-prod",
+      "uid": "a79a37a9-db51-4669-89d2-97849d74921b",
+      "resourceVersion": "284285162",
+      "generation": 1,
+      "creationTimestamp": "2026-10-19T03:00:00Z",
+      "ownerReferences": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-vision",
+          "uid": "4b0f62d3-20f2-4e28-b841-b7f649a12ddb"
+        }
+      ]
+    },
+    "status": {
+      "completionTime": "2026-10-19T03:00:24Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-19T03:00:24Z",
+          "lastTransitionTime": "2026-10-19T03:00:24Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-19T03:00:24Z",
+          "lastTransitionTime": "2026-10-19T03:00:24Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "ready": 0,
+      "startTime": "2026-10-19T03:00:00Z",
+      "succeeded": 1,
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "spec_bounds": {
+      "backoffLimit": 1,
+      "activeDeadlineSeconds": 900,
+      "ttlSecondsAfterFinished": 86400
+    }
+  },
+  "natural_schedule_annotation": "2026-10-19T03:00:00Z",
+  "actual_pod": {
+    "name": "verdify-vision-29872980-jtgdp",
+    "uid": "84a4ba67-72ce-41c6-8387-e88f87c44fbe",
+    "container_status": [
+      {
+        "allocatedResources": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        },
+        "containerID": "containerd://be8025d1914aa7fb7e728f2564e649c252e4dd1d8a2867546b6e6ecb0d64c6c2",
+        "image": "sha256:6c163bf2695d78e75be4d1a261119830a0c5a08ebdc3e72619231c844734dec0",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000",
+        "lastState": {},
+        "name": "vision",
+        "ready": false,
+        "resources": {
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "256Mi"
+          }
+        },
+        "restartCount": 0,
+        "started": false,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://be8025d1914aa7fb7e728f2564e649c252e4dd1d8a2867546b6e6ecb0d64c6c2",
+            "exitCode": 0,
+            "finishedAt": "2026-10-19T03:00:21Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-19T03:00:02Z"
+          }
+        },
+        "user": {
+          "linux": {
+            "gid": 1000,
+            "supplementalGroups": [
+              1000
+            ],
+            "uid": 1000
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/vsrc",
+            "name": "vsrc",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/vkey",
+            "name": "vkey",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/vfrigate",
+            "name": "frigate-auth",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/snap",
+            "name": "snap"
+          },
+          {
+            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+            "name": "kube-api-access-6zv2b",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          }
+        ]
+      }
+    ]
+  },
+  "source_and_render": {
+    "five_configmap_keys_match": true,
+    "mounted_file_bytes_directly_read_from_terminated_pod": false,
+    "current_cronjob_template_matches_render": true,
+    "failed_and_successful_current_cronjob_specs_equal": true,
+    "configmap_identity": {
+      "metadata": {
+        "name": "verdify-vision-src",
+        "namespace": "verdify-prod",
+        "uid": "7c9e78e1-25c1-46b9-80f5-2abcbbbf0e39",
+        "resourceVersion": "283543939",
+        "creationTimestamp": "2026-07-03T15:45:35Z"
+      },
+      "key_sha256": {
+        "ai.yaml": "52c212a5735041206a29b53de3684b753aad0a8ce46c8cb1586d88804b8adfff",
+        "analyze-greenhouse-snapshot.py": "fdd0a769d566908703c03c2b81dfd3b7891d7989656ef1165a908390f45714bf",
+        "frigate-snapshot.py": "aed7e794eb3216bdee62117faeedfd16ff7d93e6fbe7fa69b665417ebdcd5431",
+        "vision-analysis.j2": "d9f1cf21a9b3d73ec28c9c68f2e4c1fa55d04f8fd6195d8df2590661f6ce10ab",
+        "zones.yaml": "36a01ef3ed8e224c872179d7cf7c1520a3a3fe29f8adc5e0dae0f92d3e1fc6b7"
+      }
+    },
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000"
+  },
+  "analysis_rows": [
+    {
+      "id": 824,
+      "ts": "2026-10-19T03:00:21.372094+00:00",
+      "camera": "greenhouse_2",
+      "model": "gemini-3.1-pro-preview",
+      "confidence": 0.85,
+      "processing_ms": 5673,
+      "tokens_used": 1929,
+      "structured_result": "object",
+      "detected_crops": 4,
+      "linked_observations": 3
+    },
+    {
+      "id": 823,
+      "ts": "2026-10-19T03:00:15.539847+00:00",
+      "camera": "greenhouse_1",
+      "model": "gemini-3.1-pro-preview",
+      "confidence": 0.8,
+      "processing_ms": 9140,
+      "tokens_used": 1823,
+      "structured_result": "object",
+      "detected_crops": 3,
+      "linked_observations": 3
+    }
+  ],
+  "linked_observations": 6,
+  "provider": {
+    "source": "82403efb1e9dcfebeb95ba5c265535d429781771",
+    "recovery_pr": "https://github.com/jvallery/sentinel/pull/333",
+    "merge_sha": "82403efb1e9dcfebeb95ba5c265535d429781771",
+    "pod_uid": "91c6fee3-09f5-407f-b784-da1380d99004",
+    "ready_at": "2026-10-19T01:09:07Z",
+    "service_port": 8971,
+    "target_port": 8973,
+    "tls_server_name": "cameras.vallery.net",
+    "endpoint_contract_changed": false
+  },
+  "application": {
+    "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+    "revision": "af46d263352d6403201a4642378197e9ca00303c",
+    "sync": "Synced",
+    "health": {
+      "lastTransitionTime": "2026-10-19T03:00:01Z",
+      "status": "Healthy"
+    },
+    "current_operation": null,
+    "last_operation_finished": "2026-10-18T21:07:33Z"
+  },
+  "scope": {
+    "whole_application_sync_prohibited": true,
+    "syncs_submitted": 0,
+    "jobs_launched": 0,
+    "new_provider_calls": 0,
+    "secrets_read": 0,
+    "failed_jobs_deleted": 0,
+    "images_built": 0,
+    "no_continuous_availability_claim": true,
+    "no_crop_health_or_physical_efficacy_claim": true,
+    "no_new_frame_timestamp_or_denial_probe": true
+  },
+  "notes": [
+    "The existing natural Job already succeeded before this diagnosis; the prepared manual recovery preview was never submitted.",
+    "The initial read-only SQL transaction aborted on nonexistent alert_log.resolved; corrected installed resolved_at query committed read-only.",
+    "No timeZone is declared; observed controller schedule includes 03:00/06:00 UTC. Do not infer UTC execution solely from the manifest cron expression.",
+    "The preserved natural log, valid-JPEG source checks and genuine structured DB output establish actual pipeline recovery; no new media bytes or model content are exported."
+  ]
+}

@@ -1,0 +1,6 @@
+/Users/jason/repos/verdify-platform/.venv/bin/python planning/schema.py planning/backlog.yaml
+OK: 94 issues, 9 stages, 73 dependency edges; coverage and DAG valid
+/Users/jason/repos/verdify-platform/.venv/bin/python -m planning.render --check
+Checked 94 issues and seven planning views
+/Users/jason/repos/verdify-platform/.venv/bin/python -m pytest planning/tests/test_backlog.py -q
+...........................................                              [100%]
