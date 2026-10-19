@@ -359,7 +359,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "02ad3240022451f9d18d6a3817847ff6ed416ddaae04ccf724d0cf20e249eff7"
+      "body_sha256": "0d68e84d21e1afe3f3b726ea1c9b4fe616fb69204bc12044586daf267871e86c"
     },
     {
       "key": "563",
@@ -1143,11 +1143,11 @@
       "number": 988,
       "title": "[C4][P1] Restore public camera snapshots and qualify authenticated ingress",
       "stage": "C4",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "ffd798325a0922ef77b2e6513b1bc1054a34406f47ac95aacf4e9fed9749ef87"
+      "body_sha256": "814820be97ee86db9a95cf5786956b0a389b89672b1057b040024066a16c111b"
     }
   ]
 }

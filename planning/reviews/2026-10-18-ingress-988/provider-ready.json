@@ -1,0 +1,99 @@
+{
+  "at": "2026-10-19T05:38:17.133323+00:00",
+  "deployment": {
+    "name": "frigate",
+    "namespace": "frigate",
+    "uid": "3f6e1ea1-7ff3-4481-9c41-3a37d4de53df",
+    "generation": 189
+  },
+  "status": {
+    "availableReplicas": 1,
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-19T05:38:00Z",
+        "lastUpdateTime": "2026-10-19T05:38:00Z",
+        "message": "Deployment has minimum availability.",
+        "reason": "MinimumReplicasAvailable",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-10-05T21:09:39Z",
+        "lastUpdateTime": "2026-10-19T05:38:00Z",
+        "message": "ReplicaSet \"frigate-5ff57dd549\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      }
+    ],
+    "observedGeneration": 189,
+    "readyReplicas": 1,
+    "replicas": 1,
+    "terminatingReplicas": 0,
+    "updatedReplicas": 1
+  },
+  "images": [
+    {
+      "name": "frigate",
+      "image": "ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c"
+    },
+    {
+      "name": "auth-proxy",
+      "image": "nginx:stable-alpine@sha256:dc5069ad14f19660b141b21236140b91656bf89bbc3e2417c70ae650cd66104c"
+    },
+    {
+      "name": "cache-metrics",
+      "image": "python:3.12-slim@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de"
+    }
+  ],
+  "service_ports": [
+    {
+      "name": "ui",
+      "port": 8971,
+      "protocol": "TCP",
+      "targetPort": 8973
+    },
+    {
+      "name": "rtsp",
+      "port": 8554,
+      "protocol": "TCP",
+      "targetPort": 8554
+    },
+    {
+      "name": "metrics",
+      "port": 9106,
+      "protocol": "TCP",
+      "targetPort": 9106
+    }
+  ],
+  "application_source": {
+    "path": "platform/kubernetes/frigate",
+    "repoURL": "https://github.com/jvallery/sentinel.git",
+    "targetRevision": "main"
+  },
+  "application_sync": {
+    "comparedTo": {
+      "destination": {
+        "namespace": "frigate",
+        "server": "https://kubernetes.default.svc"
+      },
+      "source": {
+        "path": "platform/kubernetes/frigate",
+        "repoURL": "https://github.com/jvallery/sentinel.git",
+        "targetRevision": "main"
+      }
+    },
+    "revision": "27d503a0dfede85931b788080bf30fa53f20db24",
+    "status": "Synced"
+  },
+  "application_health": {
+    "lastTransitionTime": "2026-10-19T05:37:19Z",
+    "status": "Degraded"
+  },
+  "last_owner_operation": {
+    "phase": "Succeeded",
+    "startedAt": "2026-10-19T05:37:07Z",
+    "finishedAt": "2026-10-19T05:37:14Z"
+  },
+  "provider_mutations_by_this_task": 0
+}

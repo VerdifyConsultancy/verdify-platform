@@ -1,0 +1,429 @@
+{
+  "result": "TWO_DISJOINT_WINDOWS_AND_NATURAL_CAMERA_RECOVERY_ACCEPTED",
+  "at": "2026-10-19T05:57:49.334522+00:00",
+  "operation_id": "verdify-988-post-provider-recurrence-20261019T054700Z",
+  "backend": "verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd",
+  "windows": [
+    {
+      "start": "2026-10-19T05:47:00Z",
+      "end": "2026-10-19T05:52:00Z",
+      "query": "sum by(code,method)(increase(traefik_service_requests_total{service=\"verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd\"}[5m] @ 1792389120))",
+      "input_file": "recovery-window-1-02.json",
+      "input_sha256": "17a12c543efe578ad32f6416fb9b1fcd26777de4261576494cbd6d7100a4df9e",
+      "total_extrapolated_increase": 701.3123442052015,
+      "status200_extrapolated_increase": 235.7384523211147,
+      "status5xx_extrapolated_increase": 0.0,
+      "rows": [
+        {
+          "code": "0",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "200",
+          "method": "GET",
+          "extrapolated_increase": 235.7384523211147,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "200",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "202",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "206",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "301",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "302",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "304",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "400",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "401",
+          "method": "GET",
+          "extrapolated_increase": 10.920626342034735,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "401",
+          "method": "POST",
+          "extrapolated_increase": 49.12493523482061,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "403",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "404",
+          "method": "GET",
+          "extrapolated_increase": 369.97277475167596,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "404",
+          "method": "POST",
+          "extrapolated_increase": 35.55555555555556,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "405",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "422",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "499",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "499",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "502",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        },
+        {
+          "code": "503",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389150.331
+        }
+      ]
+    },
+    {
+      "start": "2026-10-19T05:52:00Z",
+      "end": "2026-10-19T05:57:00Z",
+      "query": "sum by(code,method)(increase(traefik_service_requests_total{service=\"verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd\"}[5m] @ 1792389420))",
+      "input_file": "recovery-window-2-02.json",
+      "input_sha256": "0b12ea6f5f7da0745a77dd51652d424cc05852f716e805a2cd4c72ef66820c6a",
+      "total_extrapolated_increase": 303.7002312047876,
+      "status200_extrapolated_increase": 238.16041270414414,
+      "status5xx_extrapolated_increase": 0.0,
+      "rows": [
+        {
+          "code": "0",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "200",
+          "method": "GET",
+          "extrapolated_increase": 238.16041270414414,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "200",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "202",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "206",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "301",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "302",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "304",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "400",
+          "method": "POST",
+          "extrapolated_increase": 1.1111111111111112,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "401",
+          "method": "GET",
+          "extrapolated_increase": 10.997985422237221,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "401",
+          "method": "POST",
+          "extrapolated_increase": 51.208499745072885,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "403",
+          "method": "POST",
+          "extrapolated_increase": 2.2222222222222223,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "404",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "404",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "405",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "422",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "499",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "499",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "502",
+          "method": "POST",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        },
+        {
+          "code": "503",
+          "method": "GET",
+          "extrapolated_increase": 0.0,
+          "response_evaluation_timestamp": 1792389468.561
+        }
+      ]
+    }
+  ],
+  "natural_logs": {
+    "query": "{namespace=\"verdify-prod\",app=\"verdify-traefik\"} |= \"/api/v1/public/cameras/\"",
+    "start": "2026-10-19T05:47:00Z",
+    "end": "2026-10-19T05:57:00Z",
+    "original_file": "recovery-natural-logs-02.json",
+    "original_response_sha256": "6cc4d64b2369a334d40a5a61cc1e1977ed4e3ffd8adb8950f887622ac1f3b143",
+    "explicit_acceptance_probes_excluded": true,
+    "two_camera_success_counts": {
+      "greenhouse_1": 10,
+      "greenhouse_2": 10
+    },
+    "rows": [
+      {
+        "timestamp_ns": "1792389372962835628",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:56:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389372226 HTTP/1.1\" 200 125919 \"-\" \"-\" 1044103 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 710ms\n"
+      },
+      {
+        "timestamp_ns": "1792389312946413845",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:55:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389312225 HTTP/1.1\" 200 125876 \"-\" \"-\" 1044075 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 695ms\n"
+      },
+      {
+        "timestamp_ns": "1792389252958985348",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:54:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389252227 HTTP/1.1\" 200 125771 \"-\" \"-\" 1044041 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 706ms\n"
+      },
+      {
+        "timestamp_ns": "1792389192957340377",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:53:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389192228 HTTP/1.1\" 200 125697 \"-\" \"-\" 1044011 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 682ms\n"
+      },
+      {
+        "timestamp_ns": "1792389132922021876",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:52:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389132231 HTTP/1.1\" 200 125604 \"-\" \"-\" 1043982 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 665ms\n"
+      },
+      {
+        "timestamp_ns": "1792389072865868133",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:51:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389072231 HTTP/1.1\" 200 205790 \"-\" \"-\" 1043953 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 612ms\n"
+      },
+      {
+        "timestamp_ns": "1792389012885206048",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:50:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389012231 HTTP/1.1\" 200 205681 \"-\" \"-\" 1043740 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 632ms\n"
+      },
+      {
+        "timestamp_ns": "1792388952918432568",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:49:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792388952227 HTTP/1.1\" 200 125775 \"-\" \"-\" 1043711 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 662ms\n"
+      },
+      {
+        "timestamp_ns": "1792388892736793367",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:48:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792388892231 HTTP/1.1\" 200 205773 \"-\" \"-\" 1043682 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 487ms\n"
+      },
+      {
+        "timestamp_ns": "1792388832768178184",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-58nzk",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:47:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792388832229 HTTP/1.1\" 200 205498 \"-\" \"-\" 1043653 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 516ms\n"
+      },
+      {
+        "timestamp_ns": "1792389373103305124",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:56:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389372231 HTTP/1.1\" 200 205910 \"-\" \"-\" 1034862 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 850ms\n"
+      },
+      {
+        "timestamp_ns": "1792389313082264091",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:55:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389312231 HTTP/1.1\" 200 205811 \"-\" \"-\" 1034832 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 829ms\n"
+      },
+      {
+        "timestamp_ns": "1792389253030823923",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:54:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389252235 HTTP/1.1\" 200 205545 \"-\" \"-\" 1034800 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 778ms\n"
+      },
+      {
+        "timestamp_ns": "1792389192966057855",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:53:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389192234 HTTP/1.1\" 200 205635 \"-\" \"-\" 1034771 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 690ms\n"
+      },
+      {
+        "timestamp_ns": "1792389132934979836",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:52:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792389132241 HTTP/1.1\" 200 206042 \"-\" \"-\" 1034742 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 677ms\n"
+      },
+      {
+        "timestamp_ns": "1792389072941081138",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:51:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389072229 HTTP/1.1\" 200 125673 \"-\" \"-\" 1034712 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 687ms\n"
+      },
+      {
+        "timestamp_ns": "1792389012993804534",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:50:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792389012226 HTTP/1.1\" 200 125813 \"-\" \"-\" 1034501 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 741ms\n"
+      },
+      {
+        "timestamp_ns": "1792388952775278528",
+        "camera": "greenhouse_2",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:49:12 +0000] \"GET /api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&_=1792388952238 HTTP/1.1\" 200 205957 \"-\" \"-\" 1034472 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 519ms\n"
+      },
+      {
+        "timestamp_ns": "1792388892957499331",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:48:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792388892226 HTTP/1.1\" 200 125925 \"-\" \"-\" 1034443 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 708ms\n"
+      },
+      {
+        "timestamp_ns": "1792388832960825703",
+        "camera": "greenhouse_1",
+        "status": 200,
+        "pod": "verdify-traefik-56b8dbd695-7sfvp",
+        "line_address_redacted": "<address> - - [19/Oct/2026:05:47:12 +0000] \"GET /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&_=1792388832227 HTTP/1.1\" 200 125796 \"-\" \"-\" 1034414 \"verdify-prod-verdify-t2-api-ba105d302dab7978ed19@kubernetescrd\" \"http://<address>:8080\" 711ms\n"
+      }
+    ]
+  },
+  "units": "Prometheus extrapolated five-minute counter increases, not integer raw request counts; natural log entries are discrete retained records",
+  "finite_observation_not_perpetual_availability": true,
+  "source_fix_and_independent_provider_restore_both_required": true
+}

@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-10-19T05:30:35.503705+00:00",
+  "created_at": "2026-10-19T05:58:38.882765+00:00",
   "source_repair": "617ab6dbd886ccc66905674f07265e22c155afff",
   "release": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
   "credential_pattern_hits": 0,
@@ -9,6 +9,11 @@
       "path": "release-ci-full.log",
       "bytes": 38570,
       "sha256": "a76211ff14ba25a3ffc1df510fff1fb76c5789311c31080b973bafd6fe5a4118"
+    },
+    {
+      "path": "report-ci-full.log",
+      "bytes": 38570,
+      "sha256": "b74d41d5dc36880a5fd36dbcb11b8174007c3b18379fb9b20f9c10a353dfa6cb"
     },
     {
       "path": "source-ci-build-api-capture-build-inputs.log",
@@ -104,23 +109,23 @@
   "files": [
     {
       "path": "CUSTODY.md",
-      "bytes": 2761,
-      "sha256": "dc8f1385533f6b369e8efea5cca70a9a90d3530503c24d1161cda6eccbfd8788"
+      "bytes": 3005,
+      "sha256": "44d1ca4391a10b1f31827aef090ca1dad2b82ff4653c9e66f6fd3203f0935fae"
     },
     {
       "path": "PRIVATE-CUSTODY.json",
-      "bytes": 86819,
-      "sha256": "52d2286520eae48eabab91e0b5f08b802e74e9cee116da6b69428388c075cd25"
+      "bytes": 114559,
+      "sha256": "2a32224cd9d41c8ea594d038c61f997a337c2ef312728497997d1e043b172c47"
     },
     {
       "path": "README.md",
-      "bytes": 12145,
-      "sha256": "6e16d136def5332c8b75e17fbea54af415039769f315059f8d9ba7fb39a7ccc8"
+      "bytes": 14694,
+      "sha256": "e1ec620e58809042203f0f2aeacee8b4777114b187a6ddb84f4bc175b86da5ad"
     },
     {
       "path": "acceptance.json",
-      "bytes": 3619,
-      "sha256": "e3e4d84da692991b80768c5c425aeb548e0d367766f55fb40241ea1df87303c0"
+      "bytes": 3858,
+      "sha256": "cc77833670722c68d30eacf4034470cb004c3eef01d36f5f197ed5d677ef41c9"
     },
     {
       "path": "api-effective-camera-config-before.json",
@@ -133,9 +138,19 @@
       "sha256": "baa2b46839db2001eaed7561892de1e72e441180b3ae49b4c2a5948dcf13c0fa"
     },
     {
+      "path": "checkpoint-remote-verification.json",
+      "bytes": 18322,
+      "sha256": "4cefc15f08c8b7728c37f7af9860007126b9ee5196355d22e573e62d13866078"
+    },
+    {
       "path": "ci-logs.tar.gz",
-      "bytes": 28690,
-      "sha256": "2b23d0d53bba125422b736e335b966ae586968c46e5a22ed09fb02756fab5ae6"
+      "bytes": 35150,
+      "sha256": "544441d614895ff5657526f57fdfc42cc50cb32ed1c35efc0f9b90fe68b60149"
+    },
+    {
+      "path": "failed-recovery-observation.json",
+      "bytes": 14383,
+      "sha256": "73353f3c912ffec71bf2fafc430e8c4e3a827711cd5b899134e1c59ce1373220"
     },
     {
       "path": "focused-tests.txt",
@@ -198,6 +213,11 @@
       "sha256": "996708047564b32e08326d8cc0cc2743e7c904942d8f9caa5d6e653f70384ee2"
     },
     {
+      "path": "native-open-published.json",
+      "bytes": 21357,
+      "sha256": "06751e0b6dd0a4d38ca5e04c890269b696c624e6d9ebe1fec3a74c1fc4d1cfaa"
+    },
+    {
       "path": "network-policy-assessment.json",
       "bytes": 406,
       "sha256": "6123ed9dda479ed598abe30be59cebf3e8cb7428dab1518fe5db8e45366ca6fc"
@@ -208,9 +228,29 @@
       "sha256": "8dbd13b646f4d658ee7906a711612948b69c3f6d196c19ca8c8d8ea1d1515be6"
     },
     {
+      "path": "planning-validation-closure.txt",
+      "bytes": 463,
+      "sha256": "aa936c6d49687b2ed3256516f24e7775bbf4c102fab19a18eda2b141889f033f"
+    },
+    {
       "path": "planning-validation.txt",
       "bytes": 463,
       "sha256": "aa936c6d49687b2ed3256516f24e7775bbf4c102fab19a18eda2b141889f033f"
+    },
+    {
+      "path": "provider-after-recurrence.json",
+      "bytes": 1837,
+      "sha256": "a127ec54d143468ebd51e715fdf847f2762b6432d22378bbf4642b828cb101f6"
+    },
+    {
+      "path": "provider-camera2-recurrence.json",
+      "bytes": 8979,
+      "sha256": "78e730df152ff5857c0f871d839eb66c14b98d3e2cefd5b0f64f6231fa3be1bf"
+    },
+    {
+      "path": "provider-ready.json",
+      "bytes": 2672,
+      "sha256": "f888917aff3c5dee46b030598b87a8dcbc8c09501db54b8e6f2f2f33acd00955"
     },
     {
       "path": "public-auth-after-api.json",
@@ -228,6 +268,11 @@
       "sha256": "2b17e85a1c45f7fc3e7c11e0513663f44e73a7666963e5f4c5428e4a275e4c52"
     },
     {
+      "path": "public-camera-after.json",
+      "bytes": 1439,
+      "sha256": "c16da8d3b31c3ca357403d0e00aae3c3ad556bdc9f6a2c6979927c82bf7b42bd"
+    },
+    {
       "path": "public-camera-before.json",
       "bytes": 1099,
       "sha256": "e8bcfc6916c27567493ead6fb3761feaf7ff62cf7c01ded5ef0a06f3035264c9"
@@ -236,6 +281,11 @@
       "path": "public-camera-denials.json",
       "bytes": 785,
       "sha256": "67e6eddc5666d53b8fd395f44ecc6d220bc0fd464d965ee48407dcba614ea09d"
+    },
+    {
+      "path": "public-camera-post-recurrence.json",
+      "bytes": 1439,
+      "sha256": "457d914e608a2e132a9a84b38679416b271586510bd77ac898f2b7ff0a7edb15"
     },
     {
       "path": "public-edge-baseline.json",
@@ -248,9 +298,29 @@
       "sha256": "a0a217bc0db568ff89ef34151ed154f59b854f3a38abe35292d11722346163b4"
     },
     {
+      "path": "public-final-api.json",
+      "bytes": 1661,
+      "sha256": "e4db271ab6e0f49275f0a9a33018fa461f1917838e106f085e1528748aa3544d"
+    },
+    {
+      "path": "public-final-mcp.json",
+      "bytes": 2422,
+      "sha256": "b9a6d7a81225301efaf6ba5436e9d575dc26ab8f7ffdb70d1e28bd27f79aeecd"
+    },
+    {
       "path": "public-readiness-after.json",
       "bytes": 578,
       "sha256": "98003a45bff562f298e997d43316265572d4cda5cdf95bdf47e1a1db9e59d59c"
+    },
+    {
+      "path": "recovery-health.json",
+      "bytes": 18657,
+      "sha256": "70bf6cfa4a2c040ca4fc92b2aacb68391fb5bed6bc7fe3bdd511905f4006085b"
+    },
+    {
+      "path": "recovery-observation-plan-02.json",
+      "bytes": 1130,
+      "sha256": "fe68e39a12445fccc86ea0b8b842a1dffd812755844b3b4490eb8d252d362506"
     },
     {
       "path": "release-ci-terminal.json",
@@ -261,6 +331,11 @@
       "path": "render-source-diff.json",
       "bytes": 338,
       "sha256": "c65320a6a2b9f2f148e1e114ed8a18f964e61ca4a5c174a2e59f9b28ee4220ce"
+    },
+    {
+      "path": "report-ci-terminal.json",
+      "bytes": 3829,
+      "sha256": "94e234ea36b34d3ba14bfa31b317fc94c6743714ec66d5280059c5e48f12021a"
     },
     {
       "path": "report-render-equality.json",
@@ -276,6 +351,11 @@
       "path": "runtime-after-verified.json",
       "bytes": 4256,
       "sha256": "cdbf5376c42eebe7b3930740ebc68474109e39d5b7d8a72ee80a3fdf2eec6bdc"
+    },
+    {
+      "path": "runtime-final.json",
+      "bytes": 2901,
+      "sha256": "b69e3cfc74504669d2a1e335096afed82ab6b1e6f088980758dacfd3e66f07be"
     },
     {
       "path": "single-deployment-operation.json",

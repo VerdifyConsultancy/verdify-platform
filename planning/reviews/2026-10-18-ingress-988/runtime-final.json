@@ -1,0 +1,141 @@
+{
+  "at": "2026-10-19T05:58:00.272952+00:00",
+  "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "comparison_revision": "280a3239f82856a932f57ad68b781353eb5c7294",
+  "sync": "Synced",
+  "health": {
+    "lastTransitionTime": "2026-10-19T05:14:30Z",
+    "status": "Healthy"
+  },
+  "active_operation": null,
+  "last_operation_finished_at": "2026-10-19T05:13:25Z",
+  "last_operation_resources": [
+    {
+      "group": "apps",
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "namespace": "verdify-prod"
+    }
+  ],
+  "api_pods": [
+    {
+      "name": "verdify-api-66ccbfc75c-9fhk5",
+      "uid": "c99d1949-1d7d-4836-b098-d048f6b17241",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "ready": true,
+      "restartCount": 0
+    },
+    {
+      "name": "verdify-api-66ccbfc75c-krnnc",
+      "uid": "dd964fc7-decf-475d-9473-1153cdf39ab1",
+      "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "ready": true,
+      "restartCount": 0
+    }
+  ],
+  "earlier_actual_source_module_and_image_receipt": "runtime-after-verified.json",
+  "other_workload_specs_and_uids_unchanged": [
+    [
+      "Deployment",
+      "experiment-v2-freezer"
+    ],
+    [
+      "Deployment",
+      "experiment-v2-lifecycle"
+    ],
+    [
+      "Deployment",
+      "experiment-v2-selector"
+    ],
+    [
+      "Deployment",
+      "verdify-db-backup-exporter"
+    ],
+    [
+      "Deployment",
+      "verdify-grafana"
+    ],
+    [
+      "Deployment",
+      "verdify-grafana-render-cache"
+    ],
+    [
+      "Deployment",
+      "verdify-hermes-iris"
+    ],
+    [
+      "Deployment",
+      "verdify-ingestor"
+    ],
+    [
+      "Deployment",
+      "verdify-lab"
+    ],
+    [
+      "Deployment",
+      "verdify-mcp"
+    ],
+    [
+      "Deployment",
+      "verdify-mqtt"
+    ],
+    [
+      "Deployment",
+      "verdify-planner"
+    ],
+    [
+      "Deployment",
+      "verdify-setpoint-server"
+    ],
+    [
+      "Deployment",
+      "verdify-traefik"
+    ],
+    [
+      "StatefulSet",
+      "verdify-db"
+    ],
+    [
+      "CronJob",
+      "verdify-band-curve-refresh"
+    ],
+    [
+      "CronJob",
+      "verdify-db-backup"
+    ],
+    [
+      "CronJob",
+      "verdify-db-watchdog"
+    ],
+    [
+      "CronJob",
+      "verdify-firmware-builder"
+    ],
+    [
+      "CronJob",
+      "verdify-fixed-panel-native-freezer"
+    ],
+    [
+      "CronJob",
+      "verdify-ha-gap-backfill"
+    ],
+    [
+      "CronJob",
+      "verdify-lab-publisher"
+    ],
+    [
+      "CronJob",
+      "verdify-vision"
+    ],
+    [
+      "CronJob",
+      "verdify-winter-feasibility"
+    ],
+    [
+      "CronJob",
+      "verdify-writer-watchdog"
+    ]
+  ],
+  "whole_application_syncs_by_this_task": 0,
+  "additional_operations_since_api_release": 0
+}

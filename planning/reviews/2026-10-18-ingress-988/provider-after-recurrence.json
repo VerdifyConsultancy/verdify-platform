@@ -1,0 +1,59 @@
+{
+  "at": "2026-10-19T05:50:48.857110+00:00",
+  "existing_credential_values_not_retained": true,
+  "provider_mutations": 0,
+  "pods": [
+    {
+      "pod": "verdify-api-66ccbfc75c-9fhk5",
+      "uid": "c99d1949-1d7d-4836-b098-d048f6b17241",
+      "requests": [
+        {
+          "camera": "greenhouse_1",
+          "at": "2026-10-19T05:50:41.148333+00:00",
+          "status": 200,
+          "content_type": "image/jpeg",
+          "bytes": 126041,
+          "body_sha256": "0b9212942a5fc5bdfe1161f40eb86bb850d50143c29d989d837683d0e9891683",
+          "jpeg_markers": true,
+          "elapsed_ms": 1841
+        },
+        {
+          "camera": "greenhouse_2",
+          "at": "2026-10-19T05:50:43.003859+00:00",
+          "status": 200,
+          "content_type": "image/jpeg",
+          "bytes": 205692,
+          "body_sha256": "9a0da50a384952e7998953e0b2771defcc557a88fae45edb22d68d373a68f074",
+          "jpeg_markers": true,
+          "elapsed_ms": 1860
+        }
+      ]
+    },
+    {
+      "pod": "verdify-api-66ccbfc75c-krnnc",
+      "uid": "dd964fc7-decf-475d-9473-1153cdf39ab1",
+      "requests": [
+        {
+          "camera": "greenhouse_1",
+          "at": "2026-10-19T05:50:45.301570+00:00",
+          "status": 200,
+          "content_type": "image/jpeg",
+          "bytes": 126235,
+          "body_sha256": "d337ed5d3fc79273eb95838b1c07a49c1bc975ab8404312733ad7f968c407537",
+          "jpeg_markers": true,
+          "elapsed_ms": 1613
+        },
+        {
+          "camera": "greenhouse_2",
+          "at": "2026-10-19T05:50:46.929443+00:00",
+          "status": 200,
+          "content_type": "image/jpeg",
+          "bytes": 205937,
+          "body_sha256": "20dff19d2a995186800f9bf1c70aa55f6382352d2707425ecd530353bc66cfeb",
+          "jpeg_markers": true,
+          "elapsed_ms": 1903
+        }
+      ]
+    }
+  ]
+}

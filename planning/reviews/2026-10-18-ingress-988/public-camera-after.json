@@ -1,0 +1,44 @@
+[
+  {
+    "camera": "greenhouse_1",
+    "at": "2026-10-19T05:38:19.314833+00:00",
+    "public_ip": "104.26.8.72",
+    "path": "/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080&verdify_988_acceptance=after-20261019T053819",
+    "status": 200,
+    "elapsed_ms": 1605,
+    "headers": {
+      "server": "cloudflare",
+      "cf-ray": "a4cd6f972d97819b-DEN",
+      "content-type": "image/jpeg",
+      "cache-control": "public, max-age=14400, stale-while-revalidate=60",
+      "cf-cache-status": "MISS"
+    },
+    "bytes": 124823,
+    "body_sha256": "5fa1e0bba1cd4fbac5ab364492ecd5ba8f93334fa2b73fa8506de5dc0db89a92",
+    "native_image_decoder_dimensions": {
+      "pixelWidth": 1920,
+      "pixelHeight": 1080
+    }
+  },
+  {
+    "camera": "greenhouse_2",
+    "at": "2026-10-19T05:38:20.956833+00:00",
+    "public_ip": "104.26.8.72",
+    "path": "/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080&verdify_988_acceptance=after-20261019T053820",
+    "status": 200,
+    "elapsed_ms": 1725,
+    "headers": {
+      "server": "cloudflare",
+      "cf-ray": "a4cd6fa15828859e-DEN",
+      "content-type": "image/jpeg",
+      "cache-control": "public, max-age=14400, stale-while-revalidate=60",
+      "cf-cache-status": "MISS"
+    },
+    "bytes": 205205,
+    "body_sha256": "6d697b94864b7c85d7ae1a8394fc080f51f2c2794bbeb1c3222f2b06e0852eb3",
+    "native_image_decoder_dimensions": {
+      "pixelWidth": 1920,
+      "pixelHeight": 1080
+    }
+  }
+]

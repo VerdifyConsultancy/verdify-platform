@@ -1,8 +1,8 @@
 {
   "issue": 988,
-  "at": "2026-10-19T05:24:47.933219+00:00",
-  "issue_state": "OPEN",
-  "whole_issue_accepted": false,
+  "at": "2026-10-19T05:58:00.989012+00:00",
+  "issue_state": "CLOSED",
+  "whole_issue_accepted": true,
   "criteria": [
     {
       "clause": "Establish the authoritative active router/backend and ForwardAuth/authentication linkage, including any shared/global edge configuration, with source and observation timestamps.",
@@ -27,12 +27,13 @@
     },
     {
       "clause": "Retain exact-backend request/error windows and their source provenance, distinguishing extrapolated counter increases from raw request counts; establish an appropriate recurrence/durable-health observation before claiming recovery.",
-      "disposition": "PENDING_PROVIDER_AND_POST_REPAIR_NATURAL_WINDOWS",
+      "disposition": "TWO_DISJOINT_WINDOWS_AND_NATURAL_CAMERA_RECOVERY_ACCEPTED",
       "private_input_hashes": {
         "metrics-incident.json": "627d4efcc826e347a7580eadea5ed46a9ab5e056441c3ee2f447becf75ecce3e",
         "metrics-current.json": "897b69f3cf63c92db6ec7b0be1b151d6bbcc1c1bf66f8419551410e0376db5a0",
         "historical-metrics-summary.json": "176c428809262824e7b6392c6dbe7a382b1d8b6d818463f7547d8df66b278b95"
-      }
+      },
+      "recovery_evidence": "recovery-health.json"
     },
     {
       "clause": "Record a supported cause/recurrence conclusion or an explicit unresolved result while preserving the original failures. Do not close from a source-resolved event or one zero-error window.",
@@ -49,5 +50,9 @@
   "release": "7fc3956df475503f8ac52ae7d7e63a02484e1401",
   "runtime_result": "EXACT_API_ONLY_OPERATION_AND_TWO_RUNTIME_REPLICAS_VERIFIED",
   "whole_application_sync": false,
-  "pending": "Provider readiness, both real public JPEGs and successive natural/exact-backend recovery windows; no user decision is required."
+  "pending": null,
+  "camera_recovery_evidence": "public-camera-after.json",
+  "finite_observation_not_continuous_availability": true,
+  "historical_anonymous_mcp_403_cause": "UNRESOLVED_RETAINED",
+  "edge_cache_limit": "max-age14400 observed; distinct query MISS qualifies fresh images, no bare-URL freshness guarantee"
 }

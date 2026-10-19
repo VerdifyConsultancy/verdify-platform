@@ -65,7 +65,7 @@ flowchart TD
     i980["#980 (closed) Resolve backup-exporter readiness timeouts without obscuri"]
     i981["#981 (open) Restore truthful energy source freshness and trace stale m"]
     i802["#802 (closed) Adopt the enforcing descheduler under manual Argo ownershi"]
-    i988["#988 (open) Restore public camera snapshots and qualify authenticated "]
+    i988["#988 (closed) Restore public camera snapshots and qualify authenticated "]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 (open) Durability program: recoverable backups, measured RPO/RTO "]

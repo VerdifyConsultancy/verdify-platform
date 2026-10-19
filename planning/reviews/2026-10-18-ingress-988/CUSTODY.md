@@ -4,15 +4,18 @@ The API source617ab6db and API-only release7fc3956d are pushed to main. This
 review contains the original failure windows, the exact existing route and
 authentication chain, both runtime image/source/module identities, the exact
 single-Deployment operation, safe public auth/denial/readiness receipts, and
-terminal source/release CI proof. The report and canonical plan explicitly keep
-#988 open until actual public JPEG and natural/exact-backend recovery acceptance.
+terminal source/release CI proof. The report and canonical plan accept #988 after actual public JPEG and two later
+natural/exact-backend recovery windows pass. The failed first observation attempt
+is retained separately; it is not a successful window.
 
 [Acceptance matrix](acceptance.json) preserves all four original clauses.
 [Source CI](source-ci-terminal.json) includes all actual declared container
 termination and complete selected logs for gate, one build and publisher.
 [Release CI](release-ci-terminal.json) and [full gate log archive](ci-logs.tar.gz)
-prove the normal validation-only run completed. Final report CI and final native
-readback are appended only after they actually finish; no future pass is claimed.
+prove the normal validation-only run completed. [Report CI](report-ci-terminal.json) completed Succeeded05:43:09 with one
+validation Pod, no builds and all declared containers exit0/zero restarts. Final
+closure CI and native closed-state readback are appended only after actual
+completion; no future pass is claimed.
 
 [Public authentication](public-auth-continuation.json),
 [post-rollout API guard](public-auth-after-api.json),

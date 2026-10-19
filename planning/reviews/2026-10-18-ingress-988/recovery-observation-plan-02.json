@@ -1,0 +1,26 @@
+{
+  "created_at": "2026-10-19T05:51:43.794588+00:00",
+  "operation_id": "verdify-988-post-provider-recurrence-20261019T054700Z",
+  "windows": [
+    {
+      "start": "2026-10-19T05:47:00Z",
+      "end": "2026-10-19T05:52:00Z"
+    },
+    {
+      "start": "2026-10-19T05:52:00Z",
+      "end": "2026-10-19T05:57:00Z"
+    }
+  ],
+  "query_after": "2026-10-19T05:57:30Z",
+  "backend": "verdify-prod-verdify-tier1-forward-f72f492d4cf39c2efd7f@kubernetescrd",
+  "acceptance": "positive actual backend traffic, zero extrapolated5xx in both windows, natural successful two-camera requests excluding explicit acceptance marker; finite observation only",
+  "edge_cache_limit": "actual public Cache-Control max-age14400 observed; unique query URLs MISS qualify fresh capture, no bare-URL freshness guarantee or cache-policy repair is claimed",
+  "prior_failed_attempt_retained": {
+    "windows": [
+      "recovery-window-1.json",
+      "recovery-window-2.json"
+    ],
+    "logs": "recovery-natural-logs.json",
+    "reason": "Two actual camera2 503s at05:45:12 and05:46:12; first failed two-window attempt is not accepted or overwritten."
+  }
+}
