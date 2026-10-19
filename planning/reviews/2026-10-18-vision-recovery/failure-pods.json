@@ -1,0 +1,122 @@
+{
+  "job_uid": "f2f2640b-a800-47d5-bbf6-edbad67f3b8a",
+  "actual_failed_pods": [
+    {
+      "metadata": {
+        "name": "verdify-vision-29872800-cd5xx",
+        "namespace": "verdify-prod",
+        "uid": "c5d2c658-2558-4c5c-8c3e-cbe37de9b85c",
+        "resourceVersion": "283903037",
+        "generation": 1,
+        "creationTimestamp": "2026-10-19T00:00:12Z",
+        "ownerReferences": [
+          {
+            "apiVersion": "batch/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Job",
+            "name": "verdify-vision-29872800",
+            "uid": "f2f2640b-a800-47d5-bbf6-edbad67f3b8a"
+          }
+        ]
+      },
+      "phase": "Failed",
+      "containers": [
+        {
+          "name": "vision",
+          "image": "sha256:6c163bf2695d78e75be4d1a261119830a0c5a08ebdc3e72619231c844734dec0",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://68a18b1509238a24b8af85801406e0ebd01b6666910fd3e80c71129dc1d04c83",
+              "exitCode": 1,
+              "finishedAt": "2026-10-19T00:00:13Z",
+              "reason": "Error",
+              "startedAt": "2026-10-19T00:00:13Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "name": "verdify-vision-29872800-wgdtd",
+        "namespace": "verdify-prod",
+        "uid": "a65fc419-c0c0-4a5d-9b98-2f1ccd7658f9",
+        "resourceVersion": "283902484",
+        "generation": 1,
+        "creationTimestamp": "2026-10-19T00:00:00Z",
+        "ownerReferences": [
+          {
+            "apiVersion": "batch/v1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Job",
+            "name": "verdify-vision-29872800",
+            "uid": "f2f2640b-a800-47d5-bbf6-edbad67f3b8a"
+          }
+        ]
+      },
+      "phase": "Failed",
+      "containers": [
+        {
+          "name": "vision",
+          "image": "sha256:6c163bf2695d78e75be4d1a261119830a0c5a08ebdc3e72619231c844734dec0",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://58de6bf2cec85565ce4831548acb96097f6fd5bb433b5db33253423aa21cbfe3",
+              "exitCode": 1,
+              "finishedAt": "2026-10-19T00:00:02Z",
+              "reason": "Error",
+              "startedAt": "2026-10-19T00:00:01Z"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "sanitized_log_receipts": [
+    {
+      "at": "2026-10-19T03:48:24.449943+00:00",
+      "raw_log_sha256": "2435cf1e04b47b9ea40c9257632a51e3681fe581c47eb61489c887c14cb227f8",
+      "sanitized_log_sha256": "2435cf1e04b47b9ea40c9257632a51e3681fe581c47eb61489c887c14cb227f8",
+      "bytes": 355,
+      "credential_pattern_redactions": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "returncode": 0
+    },
+    {
+      "at": "2026-10-19T03:48:24.503084+00:00",
+      "raw_log_sha256": "4640838e8c6dcef1527d27fb9c712942f81dabe02d4c07ea5fc79e271a230df9",
+      "sanitized_log_sha256": "4640838e8c6dcef1527d27fb9c712942f81dabe02d4c07ea5fc79e271a230df9",
+      "bytes": 355,
+      "credential_pattern_redactions": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "returncode": 0
+    },
+    {
+      "at": "2026-10-19T03:53:27.133999+00:00",
+      "raw_log_sha256": "7c2475dfe9ffffdd838629f11d47385c25c46225e69577e329646ef783071b0d",
+      "sanitized_log_sha256": "7c2475dfe9ffffdd838629f11d47385c25c46225e69577e329646ef783071b0d",
+      "bytes": 576,
+      "credential_pattern_redactions": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "returncode": 0
+    }
+  ]
+}

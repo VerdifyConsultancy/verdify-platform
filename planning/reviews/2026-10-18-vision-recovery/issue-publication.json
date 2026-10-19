@@ -1,0 +1,20 @@
+[
+  {
+    "number": 75,
+    "state": "open",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+    "body_sha256": "9dd2a33227c2a5952ac0e49efd5b7c53e57336dce2a3ae2e03b56c47d8a8d4e2"
+  },
+  {
+    "number": 951,
+    "state": "closed",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/951",
+    "body_sha256": "001664326dfb815c77c3702ddf5f516e1e62bdbcf3e8f694017c5dae16a7a84b"
+  },
+  {
+    "number": 988,
+    "state": "open",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/988",
+    "body_sha256": "7ee321f1e3ef42cf7956236c8f1d13004ab65826bc1630551ec225886c775ee6"
+  }
+]

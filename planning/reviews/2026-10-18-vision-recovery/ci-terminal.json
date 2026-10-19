@@ -1,0 +1,30 @@
+{
+  "status": "DIRECT_TERMINAL_VALIDATE_ONLY_MAIN_CI_PASSED",
+  "workflow": "verdify-platform-ci-plclm",
+  "workflow_uid": "07f46ff9-7733-4bda-8071-2b20593d755f",
+  "source_revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+  "finished_at": "2026-10-19T04:12:37Z",
+  "actual_pods": 1,
+  "actual_build_pods": 0,
+  "all_eight_build_flags_false": true,
+  "path_impact": {
+    "base_revision": "af46d263352d6403201a4642378197e9ca00303c",
+    "mode": "validate",
+    "paths_sha256": "cefdd125476bd316543a92b8d9c384868643598d184d9175bc1c7e689b7c1164",
+    "profiles": [],
+    "reasons": {},
+    "schema": "verdify.path-impact/v1",
+    "source_revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b"
+  },
+  "pod": "verdify-platform-ci-plclm-validate-4128145948",
+  "pod_uid": "2cb5a6af-645f-42be-8cf7-06ca70c3afd4",
+  "all_declared_containers_zero_exit_zero_restarts": true,
+  "workflow_sha256": "9a325be6a674810ec42ceb176d277ff07291f372f413e6b51075129b82550100",
+  "terminal_pod_sha256": "33bf5d9a3ed345c1b7b213c24df8149aad4ebe266a14f1b2ce55fb370fbe1600",
+  "terminal_summary_sha256": "fb7952f306cc5bc4287129aeb7c500237a49d59bdd34726aa5667b75971e8ef8",
+  "full_main_log_sha256": "de401a43ce0069ff6af4f4322dec9e396c07037bf23b3b858f513bdcf684d00c",
+  "full_main_log_bytes": 38570,
+  "verified_at": "2026-10-19T04:12:56.917436+00:00",
+  "full_main_log_file": "ci-full-main-log.txt",
+  "credential_pattern_hits": 0
+}

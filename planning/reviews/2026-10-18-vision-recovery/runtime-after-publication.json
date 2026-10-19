@@ -1,0 +1,74 @@
+{
+  "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "comparison_revision": "af46d263352d6403201a4642378197e9ca00303c",
+  "sync": "Synced",
+  "health": {
+    "lastTransitionTime": "2026-10-19T03:00:01Z",
+    "status": "Healthy"
+  },
+  "active_operation": null,
+  "last_operation_finished": "2026-10-18T21:07:33Z",
+  "whole_application_sync_prohibition_preserved": true,
+  "syncs_submitted": 0,
+  "failed_and_successful_jobs": [
+    {
+      "name": "verdify-vision-29872800",
+      "uid": "f2f2640b-a800-47d5-bbf6-edbad67f3b8a",
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": "2026-10-19T00:00:16Z",
+            "lastTransitionTime": "2026-10-19T00:00:16Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "FailureTarget"
+          },
+          {
+            "lastProbeTime": "2026-10-19T00:00:16Z",
+            "lastTransitionTime": "2026-10-19T00:00:16Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ],
+        "failed": 2,
+        "ready": 0,
+        "startTime": "2026-10-19T00:00:00Z",
+        "terminating": 0,
+        "uncountedTerminatedPods": {}
+      }
+    },
+    {
+      "name": "verdify-vision-29872980",
+      "uid": "a79a37a9-db51-4669-89d2-97849d74921b",
+      "status": {
+        "completionTime": "2026-10-19T03:00:24Z",
+        "conditions": [
+          {
+            "lastProbeTime": "2026-10-19T03:00:24Z",
+            "lastTransitionTime": "2026-10-19T03:00:24Z",
+            "message": "Reached expected number of succeeded pods",
+            "reason": "CompletionsReached",
+            "status": "True",
+            "type": "SuccessCriteriaMet"
+          },
+          {
+            "lastProbeTime": "2026-10-19T03:00:24Z",
+            "lastTransitionTime": "2026-10-19T03:00:24Z",
+            "message": "Reached expected number of succeeded pods",
+            "reason": "CompletionsReached",
+            "status": "True",
+            "type": "Complete"
+          }
+        ],
+        "ready": 0,
+        "startTime": "2026-10-19T03:00:00Z",
+        "succeeded": 1,
+        "terminating": 0,
+        "uncountedTerminatedPods": {}
+      }
+    }
+  ]
+}

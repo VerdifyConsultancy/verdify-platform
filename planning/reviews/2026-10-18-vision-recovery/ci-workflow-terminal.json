@@ -1,0 +1,110 @@
+{
+  "name": "verdify-platform-ci-plclm",
+  "uid": "07f46ff9-7733-4bda-8071-2b20593d755f",
+  "phase": "Succeeded",
+  "startedAt": "2026-10-19T03:59:16Z",
+  "finishedAt": "2026-10-19T04:12:37Z",
+  "arguments": {
+    "parameters": [
+      {
+        "name": "revision",
+        "value": "970299ae92f0e17af76f35bc2efee7b924e24f7b"
+      },
+      {
+        "name": "before-revision",
+        "value": "af46d263352d6403201a4642378197e9ca00303c"
+      },
+      {
+        "name": "commit-message",
+        "value": "docs(vision): reconcile provider outage and natural pipeline recovery"
+      }
+    ]
+  },
+  "pod_nodes": [
+    {
+      "id": "verdify-platform-ci-plclm-4128145948",
+      "name": "verdify-platform-ci-plclm[0].classify-push(0)",
+      "displayName": "classify-push(0)",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-19T03:59:16Z",
+      "finishedAt": "2026-10-19T04:12:28Z",
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "mode",
+            "value": "validate",
+            "valueFrom": {
+              "path": "/impact/mode"
+            }
+          },
+          {
+            "globalName": "verdify-path-impact",
+            "name": "path-impact-receipt",
+            "value": "{\"base_revision\": \"af46d263352d6403201a4642378197e9ca00303c\", \"mode\": \"validate\", \"paths_sha256\": \"cefdd125476bd316543a92b8d9c384868643598d184d9175bc1c7e689b7c1164\", \"profiles\": [], \"reasons\": {}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"970299ae92f0e17af76f35bc2efee7b924e24f7b\"}",
+            "valueFrom": {
+              "path": "/impact/receipt.json"
+            }
+          },
+          {
+            "name": "api",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/api"
+            }
+          },
+          {
+            "name": "mcp",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/mcp"
+            }
+          },
+          {
+            "name": "ingestor",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/ingestor"
+            }
+          },
+          {
+            "name": "planner",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/planner"
+            }
+          },
+          {
+            "name": "migrate",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/migrate"
+            }
+          },
+          {
+            "name": "orchestrator",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/orchestrator"
+            }
+          },
+          {
+            "name": "setpoint-server",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/setpoint-server"
+            }
+          },
+          {
+            "name": "lab-publisher",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/lab-publisher"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

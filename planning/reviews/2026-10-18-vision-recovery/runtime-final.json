@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-19T04:13:32.732382+00:00",
+  "application_uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+  "comparison_revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+  "sync": "Synced",
+  "health": {
+    "lastTransitionTime": "2026-10-19T03:00:01Z",
+    "status": "Healthy"
+  },
+  "active_operation": null,
+  "last_operation_finished": "2026-10-18T21:07:33Z",
+  "syncs_submitted": 0,
+  "jobs_launched": 0,
+  "provider_calls": 0,
+  "original_failed_and_natural_successful_job_uids": [
+    "f2f2640b-a800-47d5-bbf6-edbad67f3b8a",
+    "a79a37a9-db51-4669-89d2-97849d74921b"
+  ]
+}

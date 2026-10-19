@@ -1,0 +1,134 @@
+{
+  "at": "2026-10-19T04:01:15.696623+00:00",
+  "revision": "970299ae92f0e17af76f35bc2efee7b924e24f7b",
+  "base": "af46d263352d6403201a4642378197e9ca00303c",
+  "result": "ALL_CHANGED_REMOTE_BLOBS_MATCH",
+  "files": [
+    {
+      "path": "EPICS.md",
+      "blob_sha1": "b99793d8371d80df7465c398cc5cb454e87783b4",
+      "sha256": "f38274c48c6ac2bedda456f65ade21682d2dece793138d354d59c205d553d3b0",
+      "bytes": 16164
+    },
+    {
+      "path": "LANES.md",
+      "blob_sha1": "a8b504931919d70583d3425f3ded685f5d8570b0",
+      "sha256": "c92740a5e8d4fcb6961d6791c282f19116159e1b32f3115722cc2853e108a599",
+      "bytes": 31007
+    },
+    {
+      "path": "MILESTONES.md",
+      "blob_sha1": "049233bb8f163d01f646d759125a46ad6ecafa66",
+      "sha256": "aaea1f900511e779962287ce24e6a20eb4c42de661d60ab57ef04c023eabcc9b",
+      "bytes": 15003
+    },
+    {
+      "path": "PROJECT_BOARD.md",
+      "blob_sha1": "603ebfb3f2aec3d9504c1ab44019fe9916c36768",
+      "sha256": "902d9826c4c4a2ea3220d2018cf9160e41c14fc5e66a83d5b503b2264822dbb0",
+      "bytes": 15026
+    },
+    {
+      "path": "SPRINTS.md",
+      "blob_sha1": "0bea40a96f27b2a425a7fa87dc1cd1ba1c9c6f92",
+      "sha256": "173c9c35e6a5b10fd5c86eb41f0cfd49b219fca433741188e9b4bc5ae85c1e6f",
+      "bytes": 31554
+    },
+    {
+      "path": "deploy/k8s/vision/README.md",
+      "blob_sha1": "2a162e32b4683dc9ee482c2dbcf3f9da535a01d1",
+      "sha256": "1cea45971a83bfd5480549d905098b63b5513fdc024521061f44b599d904f151",
+      "bytes": 4897
+    },
+    {
+      "path": "planning/DEPENDENCIES.md",
+      "blob_sha1": "c9e403629466dc3f776bf612a2c0ef2a6ed42b71",
+      "sha256": "cfb1aa1ec118ca9da0b6d38502c3e49d583718d369f3378d3ac12194728d8d0e",
+      "bytes": 22922
+    },
+    {
+      "path": "planning/README.md",
+      "blob_sha1": "ca2d5446362cd5f3449fa67d8b73ccc7bd8e131f",
+      "sha256": "746f2066ae141a1df598da6550ff2059c8934f5f2bd65225b6414c74e2ea73a5",
+      "bytes": 3800
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "blob_sha1": "c2968e906e307bf1a67d035c623c3584b566827c",
+      "sha256": "3f92b2594da2738514888658b2f39888ceaaebd5c408b31f13b9876379d58067",
+      "bytes": 397235
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "blob_sha1": "371e2283a2cf601006a4d3e2a3ac53b37926b379",
+      "sha256": "471f3622fe4596dc681c66fce67ca42b86beefc97f17a4c04799d40bc57f8146",
+      "bytes": 35083
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/DEPENDENCIES.md",
+      "blob_sha1": "aab7f0b32febd453a15f337fee07b4ccefba5a61",
+      "sha256": "5eae7329dfa1233c9a6eed7099f58761a157cacfcc6f18409e7256d7f0cf4569",
+      "bytes": 1348
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/PRIVATE-CUSTODY.json",
+      "blob_sha1": "e45724ff1aa32afead810747b6420b60181a1cbf",
+      "sha256": "b6ca8a6b94ea0060a5a19db1f14d4738f5fd4579f186385c3d0076009f4c916c",
+      "bytes": 6388
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/README.md",
+      "blob_sha1": "2f06ed94f5ec9ba6d052de36cff5aaaa67ef9453",
+      "sha256": "10af10be8ecfc5233c622e09f84f9fa6b94e674afda3b71020e90fa9a236f235",
+      "bytes": 6085
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/acceptance.json",
+      "blob_sha1": "8932be4d941365e9e1eec14b1c8445ea78f476aa",
+      "sha256": "9ee6cec3d5c14aa5364a416910527260dd5f6277dba0aaee0caec78d1de2f666",
+      "bytes": 9272
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/db-verification.sql",
+      "blob_sha1": "6336cb3194b2b41df75674df38a0f28126ced513",
+      "sha256": "675ed1ac8da24f4ca5d1a59e0c1a4e08e5b660fb0222834fe47d95b163af0146",
+      "bytes": 859
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/focused-tests.txt",
+      "blob_sha1": "c75ea1d81e39726e99b20fee8514bfb6d325de79",
+      "sha256": "1e6b4fbe33d23cc880df779e2dd0330dd0359555faab7d7943e31674e2319fe8",
+      "bytes": 80
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/native-before.json",
+      "blob_sha1": "02f9273b7156e840d710a0853e754df58a3421db",
+      "sha256": "83ae4009e188f5208aa4716ef2f52d4d48226ef6771c786ec1b68f9d78212948",
+      "bytes": 21462
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/planning-validation.txt",
+      "blob_sha1": "aa98aa44c9bcf1be9b419fa9d40a21de7226d6a1",
+      "sha256": "aa936c6d49687b2ed3256516f24e7775bbf4c102fab19a18eda2b141889f033f",
+      "bytes": 463
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/verdify-vision-29872800-cd5xx-vision.log",
+      "blob_sha1": "6de4b0ce01bb75660c24e0e6f98fd1a76339d2d6",
+      "sha256": "2435cf1e04b47b9ea40c9257632a51e3681fe581c47eb61489c887c14cb227f8",
+      "bytes": 355
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/verdify-vision-29872800-wgdtd-vision.log",
+      "blob_sha1": "d1b2f3337b50956d6af3199c1089c5a15f21668c",
+      "sha256": "4640838e8c6dcef1527d27fb9c712942f81dabe02d4c07ea5fc79e271a230df9",
+      "bytes": 355
+    },
+    {
+      "path": "planning/reviews/2026-10-18-vision-recovery/verdify-vision-29872980-jtgdp-vision.log",
+      "blob_sha1": "e0c82f4410bb002155ce0766ac7b924f9841389e",
+      "sha256": "7c2475dfe9ffffdd838629f11d47385c25c46225e69577e329646ef783071b0d",
+      "bytes": 576
+    }
+  ]
+}
