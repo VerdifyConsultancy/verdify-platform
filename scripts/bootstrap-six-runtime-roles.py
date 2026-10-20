@@ -358,6 +358,31 @@ def sealed_sql_278():
     )
 
 
+SOURCE_CLOCK_MIGRATION = (
+    279,
+    "279-authentic-meter-source-clock-consumers.sql",
+    "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
+)
+SUCCESSOR_279 = {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+}
+
+
+def sealed_sql_279():
+    predecessor = sealed_sql_278()
+    current = seal_profile_sql(278, SUCCESSOR_277)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(279, SUCCESSOR_279), 1)
+        + " AND "
+        + ledger_row_sql(*SOURCE_CLOCK_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -370,6 +395,8 @@ def sealed_sql():
         + sealed_sql_277()
         + " OR "
         + sealed_sql_278()
+        + " OR "
+        + sealed_sql_279()
         + ")"
     )
 

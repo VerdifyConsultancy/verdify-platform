@@ -1,0 +1,34 @@
+{
+  "before": {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
+  "qualified_successor": {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
+  "after_rollback": {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
+  "rollback_verified": true,
+  "consumer_views": 2,
+  "persisted_energy_changes": false,
+  "native_probe_source_sha256": "422b791d55bbab681acea77eecddc63c53f7f9d215cdffffb44c8124a324e3a7",
+  "exact_final_migration_sha256": "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
+  "final_migration_qualification_pending": false,
+  "final_migration_rollback_verified": true,
+  "inside_transaction_receipts_match": true,
+  "qualification_source_sha256": "cf6ec0a95b6d8f9bc596b989fbb35da5eceb09adce0a6c915f89ec9b7a5c626a",
+  "native_consumer_fixture": {
+    "native_consumer_cases": 7,
+    "all_passed": true,
+    "partial_scope_preserved": true,
+    "scoring_denied": true,
+    "old_revision_preserved": true
+  },
+  "native_consumer_rollback_verified": true
+}
