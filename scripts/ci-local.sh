@@ -253,7 +253,7 @@ $PY -m pytest -q -rs \
   tests/test_site_content_refresh.py \
   tests/test_slack_config.py \
   tests/test_slack_ops.py \
-  tests/test_soil_dryout_alert.py \
+  tests/test_soil_dryout_alert.py tests/test_soil_saturation.py \
   tests/test_solar_band_anchors.py \
   tests/test_solar_constants_check.py \
   tests/test_tempest_sync.py \
