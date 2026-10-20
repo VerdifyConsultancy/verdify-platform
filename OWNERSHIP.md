@@ -660,7 +660,7 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 ### A6 Adopt the verdify-db data PVC
 
-- PersistentVolumeClaim (1): `db-data-verdify-db-0`: pre-created by kubectl and bound by the `db-data` volumeClaimTemplate. Confirm the `Prune=false,Delete=false` annotations and record it in the map; never prune it (R10).
+- PersistentVolumeClaim (1): `db-data-verdify-db-0`: pre-created by kubectl and bound by the `db-data` volumeClaimTemplate. Declared in `deploy/k8s/overlays/prod/db-data-protected-pvc.yaml` with `Prune=false,Delete=false`, retaining its exact 50Gi Longhorn class and existing bound volume. The central map records it as protected; verify live annotation/UID after adoption (#994). Never prune it (R10); neither claim deletion nor StatefulSet recreation is a rollback.
 
 ### A7 Adopt the verdify-descheduler Namespace and record cluster-scoped objects
 
