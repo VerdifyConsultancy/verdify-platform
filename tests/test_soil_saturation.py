@@ -1,11 +1,14 @@
 import asyncio
+import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
-from ingestor.soil_saturation import Sample, SaturationTarget, evaluate_saturation, saturation_evaluation_status
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestor"))
+from soil_saturation import Sample, SaturationTarget, evaluate_saturation, saturation_evaluation_status  # noqa: E402
 
 NOW = datetime(2026, 10, 20, 12, tzinfo=UTC)
 # Synthetic fixture only: never a production commissioned target.
