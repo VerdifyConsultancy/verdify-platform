@@ -1,4 +1,4 @@
-# S6 API source: 3a7df6e3bb73ed60cd7fd885da78629f1a6868e6 (qualified manual repo-build).
+# API source: 183af7a93fe236ab97f4556173a07195515b732a (qualified #1008 Turnstile build).
 # Migrate source: 599b7474013e0a5d845ff616639c1a0f1c0da022 (qualified exact278 runner).
 # Ingestor: frozen-live-base backport 1df311defd23d5bca01673262fecdd71e7fe81d7.
 # MCP and experiment-v2-orchestrator pins retained unchanged.
@@ -25,7 +25,7 @@ metadata:
   name: release-pin-verdify-api
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-api
-  digest: sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb
+  digest: sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
