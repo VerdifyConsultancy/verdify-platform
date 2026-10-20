@@ -206,7 +206,7 @@ $PY -m pytest -q -rs \
   tests/test_g5_dualwrite_validation.py \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
-  tests/test_grafana_manifest_security.py \
+  tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py \
   tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ingestor_setpoint_placement.py \

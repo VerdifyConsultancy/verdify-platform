@@ -9,3 +9,5 @@ The canonical HTTP route definitions compile through the tokenless file-provider
 Verify the invalid/oversize query boundary and OpenAPI maxima, one valid frame plus an in-process hit on each intended API replica, generic upstream-failure behavior and a bounded 429 burst on an **invalid camera identity**. That negative path never calls the NVR or DB. Do not use a camera-frame burst as a load test against the family's security NVR.
 
 Cloudflare edge/WAF policy and Turnstile Secret custody remain owner follow-through. This source packet does not change DNS, Cloudflare policy or credentials, and does not claim whole-issue acceptance for those unresolved clauses.
+
+Successful upstream frame refreshes emit `public_camera_upstream_refresh` with only the fixed camera identity and byte count. Compare two same-Pod TTL requests (including an ignored query parameter) against one refresh log entry and MISS/HIT headers. The provider deliberately disables access logs; no provider logging, credential or camera settings are changed.

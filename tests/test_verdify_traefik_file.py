@@ -39,7 +39,8 @@ def test_generated_projection_and_all_routes_are_current(documents):
             backend = source["services"][0]
             server = actual["http"]["services"][key]["loadBalancer"]["servers"][0]
             assert server["url"] == f"http://{backend['name']}.verdify-prod.svc.cluster.local:{backend['port']}"
-    assert actual["http"]["routers"]["verdify-t2-graphs-0"]["priority"] == 100
+    assert actual["http"]["routers"]["verdify-t2-graphs-0"]["priority"] == 200
+    assert actual["http"]["routers"]["verdify-t2-graphs-1"]["priority"] == 100
     assert "PathPrefix(`/mcp`)" in actual["http"]["routers"]["verdify-t2-mcp-0"]["rule"]
     stripped = actual["http"]["middlewares"]["verdify-strip-identity-headers"]["headers"]["customRequestHeaders"]
     assert stripped and all(value == "" for value in stripped.values())

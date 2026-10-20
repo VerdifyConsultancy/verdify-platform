@@ -702,3 +702,12 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 ### A15 Greenhouse device rows under per-lane device authority (D-06)
 
 - `physical-device:iot/ha-shelly-2b1c9427`, `physical-device:iot/ha-shelly-b3a979c8`: the final record keeps the greenhouse meters in this lane (status `owned`). Per D-06 the IoT device-authority rows (Shellys and the ESP32 controller/probes) belong to jvallery/homeassistant, with proxmox-infrastructure linking to them; this file links rather than copies. Remaining work: add an alert for the meters (A13).
+
+### S6 saved public Grafana (#1002)
+
+The 20 `site-*` dashboards alone use native externally shared saved queries;
+`verdify_public/grafana_catalog.json` records approved public links and panel IDs.
+The API filters public panel metadata and uses the existing renderer credential
+for bounded PNG generation. Renderer Service port 8081 admits API pods only;
+Grafana administration stays on existing SSO. No datasource credentials or
+arbitrary render URLs are exposed. See `docs/runbooks/grafana-saved-public.md`.

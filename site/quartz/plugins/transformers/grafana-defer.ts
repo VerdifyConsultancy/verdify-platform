@@ -1,6 +1,7 @@
 import { QuartzTransformerPlugin } from "../types"
 import { visit } from "unist-util-visit"
 import { Root } from "hast"
+import publicShares from "./grafana-public-shares.json"
 
 // Build-time replacement of Grafana embed iframes with progressive-
 // enhancement placeholder <div class="grafana-embed">. The companion
@@ -81,6 +82,22 @@ function toLiveDashboardUrl(src: string): string {
   return url.toString()
 }
 
+function toSavedPublicUrl(src: string): string {
+  const url = new URL(src)
+  const uid = url.pathname.split("/")[2]
+  const share = (publicShares as Record<string, { token: string; panels: number[] }>)[uid]
+  if (!share) throw new Error(`Unshared Grafana dashboard ${uid}`)
+  const panel = url.searchParams.get("panelId") || url.searchParams.get("viewPanel")
+  if (panel && !share.panels.includes(Number(panel))) throw new Error(`Unknown saved panel ${uid}/${panel}`)
+  url.pathname = `/public-dashboards/${share.token}`
+  url.searchParams.delete("viewPanel")
+  if (panel) url.searchParams.set("panelId", panel)
+  for (const key of [...url.searchParams.keys()]) {
+    if (key.startsWith("var-") || key === "orgId") url.searchParams.delete(key)
+  }
+  return url.toString()
+}
+
 export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
   const opts = { ...defaultOptions, ...userOpts }
   return {
@@ -114,13 +131,16 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
               const title = typeof node.properties.title === "string" ? node.properties.title : ""
 
               const renderSrc = toRenderUrl(src, heightNum, opts.widthMultiplier)
-              const liveSrc = toLiveDashboardUrl(src)
+              const publicUrl = new URL(toSavedPublicUrl(src))
+              publicUrl.searchParams.set("height", String(heightNum))
+              const publicSrc = publicUrl.toString()
+              const liveSrc = toSavedPublicUrl(toLiveDashboardUrl(src))
 
               node.tagName = "div"
               node.children = []
               node.properties = {
                 className: ["grafana-embed"],
-                "data-iframe-src": src,
+                "data-iframe-src": publicSrc,
                 "data-image-src": renderSrc,
                 "data-live-src": liveSrc,
                 "data-title": title,

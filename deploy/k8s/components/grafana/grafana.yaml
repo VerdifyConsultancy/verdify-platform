@@ -420,6 +420,9 @@ spec:
     - name: http
       port: 3000
       targetPort: http
+    - name: renderer
+      port: 8081
+      targetPort: renderer
 ---
 # Ingress allow: the base default-deny-ingress otherwise drops all inbound.
 # Accept 3000 from the in-namespace tier-2 verdify-traefik (the public edge for
@@ -496,3 +499,22 @@ data:
     .theme-dark .main-view { background-color: #071512 !important; }
     .theme-dark [class*=dashboard] { background-color: #071512 !important; }
     .theme-dark [class*=canvas] { background-color: #071512 !important; }
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-grafana-renderer-from-api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: grafana
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: api
+      ports:
+        - protocol: TCP
+          port: 8081

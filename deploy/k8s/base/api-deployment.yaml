@@ -85,6 +85,13 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
+            # Reuse the existing renderer identity, never Grafana admin or DB credentials.
+            - name: GRAFANA_RENDERER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-grafana-secrets
+                  key: GRAFANA_RENDERER_TOKEN
+                  optional: true
             # Public planner attribution must identify the effective Hermes
             # transport profile. Keep this
             # explicit as well as api/main.py's safe default so an older image
