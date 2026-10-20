@@ -37,6 +37,8 @@ spec:
           # Cordoned control-plane nodes share the general class but cannot
           # receive this pod. Exclude their NoSchedule taints from skew math.
           nodeTaintsPolicy: Honor
+          # Count the new ReplicaSet independently while old pods retire.
+          matchLabelKeys: [pod-template-hash]
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
