@@ -1,0 +1,88 @@
+{
+  "schema": "verdify-s6-reviewed-release-v1",
+  "prepared_at": "2026-10-20T18:34:53.204736+00:00",
+  "changes": {
+    "verdify-api": {
+      "before": "sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4",
+      "after": "sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb"
+    },
+    "verdify-ingestor": {
+      "before": "sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000",
+      "after": "sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32"
+    },
+    "verdify-migrate": {
+      "before": "sha256:0bdb10cfd458de4b1bd4e201024efbf19aa724e0087cf5dcf88ce02c9a0043ae",
+      "after": "sha256:e11479fe4f8032f60ddc040c132ac2a21fdcb9cdd785a6086249517a2ad6f46c"
+    },
+    "verdify-lab-publisher-k3s": {
+      "before": "sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a",
+      "after": "sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d"
+    }
+  },
+  "manual_build_selection": "API and frozen-base ingestor use returned immutable digests from existing repo-build template. Actuator candidate entries are unchanged.",
+  "migration_review": {
+    "applied_count": 284,
+    "source_count": 285,
+    "pending": [
+      "278-grafana-public-saved-query-bounds.sql"
+    ],
+    "changed": [],
+    "missing": []
+  },
+  "live_deployment_verified": false,
+  "builds": {
+    "verdify-api": {
+      "workflow": "verdify-s6-api-weather-20261020",
+      "uid": "497c9283-20a2-4dfc-99ca-4261a4e8eea0",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T18:27:40Z",
+      "source": "3a7df6e3bb73ed60cd7fd885da78629f1a6868e6",
+      "digest": "sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb"
+    },
+    "verdify-lab-publisher-k3s": {
+      "workflow": "verdify-s6-publisher-weather-20261020",
+      "uid": "d72142a0-a1e2-4255-a4da-06132c2fd5d1",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T18:30:00Z",
+      "source": "3a7df6e3bb73ed60cd7fd885da78629f1a6868e6",
+      "digest": "sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d"
+    },
+    "verdify-ingestor": {
+      "workflow": "verdify-s6-ingestor-frozen-backport-20261020",
+      "uid": "203ecfed-2940-4122-9ca8-ba89449ae53b",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T17:46:03Z",
+      "source": "1df311defd23d5bca01673262fecdd71e7fe81d7",
+      "digest": "sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32"
+    },
+    "verdify-migrate": {
+      "workflow": "verdify-platform-ci-9xntt",
+      "phase": "Succeeded",
+      "source": "2d2371adb55a09d9b8acce41c14c9b3bf7fb8325",
+      "digest": "sha256:e11479fe4f8032f60ddc040c132ac2a21fdcb9cdd785a6086249517a2ad6f46c"
+    }
+  },
+  "ingestor_scope": {
+    "base_live_source": "c386f834de7a1acbd1ad74300218ab7922cf6d4b",
+    "identical_base_layers": 17,
+    "new_file_layers": 2,
+    "runtime_targets": "uncommissioned",
+    "alarm_enabled": false,
+    "actuation": false
+  },
+  "unchanged_release_images": [
+    "verdify-mcp",
+    "verdify-experiment-v2-orchestrator",
+    "verdify-planner",
+    "verdify-setpoint-server"
+  ],
+  "anonymous_grafana_org_access": "retained until compatibility passes; separate PR #1024",
+  "rollback": "Restore prior API/ingestor/publisher pins if needed; retain the current migrate image and immutable applied ledger. Never prune DB or Grafana PVCs.",
+  "approved_public_dashboards": 21,
+  "source_checks": {
+    "focused_passed": 49,
+    "generator_check": "passed",
+    "production_render": "passed",
+    "pending_drift": "S6 owned changes only; no DB StatefulSet/PVC spec changes"
+  }
+}
