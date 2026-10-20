@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-10-20T19:05:36.638777+00:00",
+  "prune_enabled": false,
+  "retired": [
+    {
+      "name": "verdify-grafana-render-cache-config-87mt2bb78k",
+      "uid": "f2908171-6165-443f-841d-3506ebdea0f5",
+      "recovery_file": "verdify-grafana-render-cache-config-87mt2bb78k-recovery.json",
+      "uid_and_resource_version_preconditions": true,
+      "no_pod_reference": true,
+      "dry_run_query_ignored_and_delete_occurred": true
+    },
+    {
+      "name": "verdify-traefik-routing-568kkg9dfk",
+      "uid": "056b204d-ab90-44a8-ad03-cb3f9df67317",
+      "recovery_file": "verdify-traefik-routing-568kkg9dfk-recovery.json",
+      "uid_and_resource_version_preconditions": true,
+      "no_pod_reference": true,
+      "body_dry_run_preserved_uid_and_version": true
+    }
+  ]
+}

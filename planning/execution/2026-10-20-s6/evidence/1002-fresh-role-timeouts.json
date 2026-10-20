@@ -1,0 +1,9 @@
+{
+  "role": "verdify_grafana_runtime_login",
+  "statement_timeout": "15s",
+  "idle_transaction_timeout": "15s",
+  "curated_view_select_count": 50,
+  "outside_curated_application_select_count": 0,
+  "application_write_count": 0,
+  "observed_at": "2026-10-20T19:24:17.136167+00:00"
+}

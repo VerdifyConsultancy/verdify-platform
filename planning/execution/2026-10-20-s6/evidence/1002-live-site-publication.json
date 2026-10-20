@@ -1,0 +1,72 @@
+{
+  "observed_at": "2026-10-20T19:14:33.131785+00:00",
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "cloudflare": true,
+      "native_dashboard_uids": [
+        "site-evidence-economics",
+        "site-home"
+      ],
+      "native_link_count": 14,
+      "legacy_public_iframes": 0,
+      "unshared_sign_in_links": false
+    },
+    {
+      "path": "/data/forecast/",
+      "status": 200,
+      "cloudflare": true,
+      "native_dashboard_uids": [
+        "greenhouse-weather"
+      ],
+      "native_link_count": 15,
+      "legacy_public_iframes": 0,
+      "unshared_sign_in_links": false
+    },
+    {
+      "path": "/start/climate",
+      "status": 200,
+      "cloudflare": true,
+      "native_dashboard_uids": [
+        "site-climate",
+        "site-evidence-operations"
+      ],
+      "native_link_count": 16,
+      "legacy_public_iframes": 0,
+      "unshared_sign_in_links": false
+    },
+    {
+      "path": "/data/operations",
+      "status": 200,
+      "cloudflare": true,
+      "native_dashboard_uids": [
+        "site-climate",
+        "site-evidence-operations"
+      ],
+      "native_link_count": 25,
+      "legacy_public_iframes": 0,
+      "unshared_sign_in_links": true
+    }
+  ],
+  "job": "verdify-lab-publisher-29875385",
+  "image": "sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d",
+  "publication_status": {
+    "last_attempt": {
+      "at_utc": "2026-10-20T19:12:31Z",
+      "failure_class": null,
+      "outcome": "succeeded"
+    },
+    "last_contention_at_utc": "2026-10-12T23:09:17Z",
+    "last_success": {
+      "at_utc": "2026-10-20T19:12:31Z",
+      "content_sha256": "sha256:9a62b4eaa83d1ac337b939ff70cb2b6dbe91f9aa89b6ffb6104fb8624dfd3073",
+      "fresh_until_utc": "2026-10-20T19:32:31Z",
+      "public_sha256": "sha256:050ec59d2283f649cadf3d999e8ffb959e47d446ef26bce2064f5ca50f1cd1f8",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:050ec59d2283f649cadf3d999e8ffb959e47d446ef26bce2064f5ca50f1cd1f8"
+  }
+}

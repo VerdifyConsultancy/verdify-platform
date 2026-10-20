@@ -1,0 +1,181 @@
+{
+  "campaign": "S6 execution 2026-10-20",
+  "recorded_at": "2026-10-20T19:26:53.769719+00:00",
+  "planning_pr": 1014,
+  "planning_merge": "0af7f21356229aa1308fff7f055eabd219ea199c",
+  "current_open_issue_count": 61,
+  "audit_new_issues": [
+    1021,
+    1022
+  ],
+  "closed_issues": [
+    994,
+    1006,
+    1002
+  ],
+  "whole_issues_retained_open": [
+    297,
+    1007,
+    1008
+  ],
+  "final_runtime": {
+    "observed_at": "2026-10-20T19:23:40.147825+00:00",
+    "revision": "7dd6dcb3c68dd0295a968918592961cc1a20badb",
+    "sync": "Synced",
+    "health": "Healthy",
+    "operation": "Succeeded",
+    "resources": 134,
+    "selectors_absent": true,
+    "prune": false,
+    "protected": {
+      "pod/verdify-db-0": {
+        "uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+        "uid_and_spec_unchanged": true
+      },
+      "pvc/db-data-verdify-db-0": {
+        "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+        "uid_and_spec_unchanged": true
+      },
+      "pvc/verdify-grafana-data": {
+        "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+        "uid_and_spec_unchanged": true
+      }
+    },
+    "deployments": {
+      "verdify-api": {
+        "replicas": 2,
+        "ready": 2,
+        "images": {
+          "api": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb"
+        }
+      },
+      "verdify-ingestor": {
+        "replicas": 1,
+        "ready": 1,
+        "images": {
+          "ingestor": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32"
+        }
+      },
+      "verdify-grafana": {
+        "replicas": 1,
+        "ready": 1,
+        "images": {
+          "grafana": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+          "renderer": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+        }
+      },
+      "verdify-grafana-render-cache": {
+        "replicas": 2,
+        "ready": 2,
+        "images": {
+          "render-cache": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      },
+      "verdify-traefik": {
+        "replicas": 2,
+        "ready": 2,
+        "images": {
+          "traefik": "docker.io/traefik:v3.7.1"
+        }
+      }
+    },
+    "grafana_anonymous_enabled": false,
+    "admin_sso_enabled": true,
+    "basic_auth_enabled": false,
+    "cache_distinct_worker_domains": 2,
+    "admin_authenticated_browser_readback": "existing admin dashboard list remains accessible after reload"
+  },
+  "packets": {
+    "994": {
+      "status": "accepted-closed",
+      "evidence": "evidence/994-acceptance.json"
+    },
+    "1006": {
+      "status": "accepted-closed",
+      "evidence": "evidence/1006-acceptance.json"
+    },
+    "1002": {
+      "status": "accepted-closed",
+      "approved_public_shares": 21,
+      "evidence": [
+        "evidence/1002-locked-acceptance.json",
+        "evidence/1002-fresh-role-timeouts.json",
+        "evidence/1002-live-site-publication.json"
+      ]
+    },
+    "1008": {
+      "status": "bounded-app-packet-delivered-whole-issue-open",
+      "evidence": "evidence/1008-acceptance-scoped.json",
+      "limitation": "50 unique ignored query values force edge misses: 42x200/8x429; cached same-URL edge criterion, public TTL discrepancy and Turnstile remain open"
+    },
+    "297": {
+      "status": "evaluator-foundation-delivered-whole-issue-open",
+      "evidence": "evidence/297-live-acceptance-scoped.json",
+      "active_alarm": false,
+      "actuation": false
+    },
+    "1007": {
+      "status": "discovery-packet-finished-with-attribution-gap",
+      "retained_window_hours": 24,
+      "known_internal_calls": 578,
+      "former_peer_calls": 42,
+      "loopback_calls": 4,
+      "external_identity_confirmed": false,
+      "new_token_issued": false,
+      "whole_issue": "open",
+      "next_prerequisites": [
+        "product#1010",
+        "jvallery/network-infra#752"
+      ]
+    }
+  },
+  "failures_and_recovery": {
+    "initial_migration_refusal": "evidence/s6-first-sync-failure-receipt.json",
+    "exact_278_runner_repair_pr": 1027,
+    "migration_native_rollback_proof": "../../reviews/2026-10-20-s6-promotion/278-native-rollback-qualification.json",
+    "migrator_build_collection_failures": 2,
+    "successful_migrator_cluster_tests": {
+      "passed": 68,
+      "fixture_skips": 18
+    },
+    "stalled_cache_operation": "1ba1349c terminated only after proven scheduler deadlock; no selective-sync fallback",
+    "cache_eligibility_fix_pr": 1028,
+    "final_cache_per_revision_spread_pr": 1024,
+    "obsolete_configmaps": "evidence/s6-obsolete-configmap-retirement.json",
+    "cache_verification_correction": "evidence/1002-cache-pool-observation.json"
+  },
+  "builds": {
+    "api": {
+      "workflow": "verdify-s6-api-weather-20261020",
+      "uid": "497c9283-20a2-4dfc-99ca-4261a4e8eea0",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T18:27:40Z",
+      "source": "3a7df6e3bb73ed60cd7fd885da78629f1a6868e6",
+      "digest": "sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb"
+    },
+    "publisher": {
+      "workflow": "verdify-s6-publisher-weather-20261020",
+      "uid": "d72142a0-a1e2-4255-a4da-06132c2fd5d1",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T18:30:00Z",
+      "source": "3a7df6e3bb73ed60cd7fd885da78629f1a6868e6",
+      "digest": "sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d"
+    },
+    "ingestor": {
+      "workflow": "verdify-s6-ingestor-frozen-backport-20261020",
+      "uid": "203ecfed-2940-4122-9ca8-ba89449ae53b",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T17:46:03Z",
+      "source": "1df311defd23d5bca01673262fecdd71e7fe81d7",
+      "digest": "sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32"
+    },
+    "migrate": {
+      "workflow": "verdify-s6-migrate278-complete-deps-20261020",
+      "uid": "79258c52-7ac2-4954-b5a0-f271eef2fd20",
+      "phase": "Succeeded",
+      "finished_at": "2026-10-20T18:50:49Z",
+      "source": "599b7474013e0a5d845ff616639c1a0f1c0da022",
+      "digest": "sha256:d0a52b98d29323f2f42161b14dba83169ca159258ca61610b8d671d6e1588b31"
+    }
+  }
+}

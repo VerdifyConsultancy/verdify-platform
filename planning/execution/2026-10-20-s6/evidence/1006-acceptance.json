@@ -1,0 +1,69 @@
+{
+  "observed_at": "2026-10-20T17:11:40.133423+00:00",
+  "issue": 1006,
+  "observation_started_at": "2026-10-20T16:11:20.918988+00:00",
+  "elapsed_seconds": 3613.133919,
+  "same_two_pods": true,
+  "zero_restarts": true,
+  "no_token_mounts": true,
+  "no_kubernetes_provider": true,
+  "old_grants_absent": true,
+  "secret_get_list_watch_denied": true,
+  "central_map_checked_revision": "d318c5586ff45f8a17ee75867742170e804d22e0",
+  "central_map_clear": true,
+  "log_window": {
+    "observed_at": "2026-10-20T17:11:35.192461+00:00",
+    "since": "2026-10-20T16:11:20Z",
+    "rows": [
+      {
+        "pod": "verdify-traefik-64dd84d544-8hf6v",
+        "bytes": 997200,
+        "lines": 5458,
+        "forbidden": 0,
+        "first": "2026-10-20T10:11:20.201763493-06:00",
+        "last": "2026-10-20T11:11:32.603867848-06:00",
+        "at_byte_cap": false
+      },
+      {
+        "pod": "verdify-traefik-64dd84d544-h5lfl",
+        "bytes": 997216,
+        "lines": 5456,
+        "forbidden": 0,
+        "first": "2026-10-20T10:11:22.915963992-06:00",
+        "last": "2026-10-20T11:11:34.189428939-06:00",
+        "at_byte_cap": false
+      }
+    ]
+  },
+  "public_probes": [
+    {
+      "host": "api.verdify.ai",
+      "path": "/health",
+      "status": 200,
+      "cloudflare": true
+    },
+    {
+      "host": "lab.verdify.ai",
+      "path": "/",
+      "status": 200,
+      "cloudflare": true
+    },
+    {
+      "host": "labs.verdify.ai",
+      "path": "/",
+      "status": 200,
+      "cloudflare": true
+    },
+    {
+      "host": "mcp.verdify.ai",
+      "path": "/mcp",
+      "status": 401,
+      "cloudflare": true
+    }
+  ],
+  "public_png_cache_receipt": "1006-cf-render.json",
+  "argo_health": "Healthy",
+  "argo_current_compare_status": "OutOfSync",
+  "argo_last_applied_revision": "411774f87d7d802ad3303a8ef578865a2b7b7ece",
+  "limitation": "Pending own sprint changes may make main OutOfSync; this receipt verifies the deployed tokenless route cohort and issue-specific hour."
+}

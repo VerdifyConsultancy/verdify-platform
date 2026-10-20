@@ -1,0 +1,22 @@
+{
+  "reviewed_at": "2026-10-20T19:26:53.769719+00:00",
+  "current_open_issue_count": 61,
+  "closed_since_original_audit": [
+    994,
+    1006,
+    1002
+  ],
+  "new_open_issues": [
+    {
+      "number": 1021,
+      "disposition": "ready-scoped-source-preparation",
+      "runtime_prerequisite": "accepted Cortex longctx.mm image probe not established by this audit"
+    },
+    {
+      "number": 1022,
+      "disposition": "ready-scoped-passive-flow-and-placement-preparation",
+      "readback": "one Ready singleton, fresh existing Lease, soft node affinity, broad egress remains"
+    }
+  ],
+  "sprint_scope_expanded": false
+}

@@ -2361,11 +2361,12 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "Full issue review, October 18, 2026. Delivery state: ALERT ONLY SOURCE PREPARATION READY ACTUATION BLOCKED.\n\nCompleted or retained scope: October2 native input audit and explicit null-input contract exist. Existing soil_dryout/offline/feedback-gap alerts are not equivalent to a sustained saturation evaluator. Migration064/101 status surfaces compare cached measurements to seeded thresholds. The dated native audit found no commissioned position/calibration/persistence/hysteresis/freshness metadata. Current source retains the seed assumptions.\n\nRemaining actual acceptance: Sustained saturation triggers and recovers with explicit sensor validity; no stale seed is treated as crop truth.; One eligible saturated zone\u2019s scheduled drip is truthfully skipped/shrunk and recorded, with safe fallback for invalid evidence.; No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/297 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-5949126837 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/issues/45\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: CONTROL. Next action: Reuse the existing null-input contract to prepare the smallest alert-only evaluator and missing/stale/persistence/recovery fixtures. Configuration must remain unavailable/disabled until measured values exist; actual eligible drip skip/shrink follows #45.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-scoped. Build only the sustained-saturation alert evaluator and missing/stale/persistence/recovery negative fixtures. Keep configuration unavailable/disabled without measured targets. #45 still blocks drip skip/shrink and full acceptance; no irrigation actuation in this packet. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "S6 evaluator/fixture/unavailable-posture packet deployed via an exact-live-base backport. Five real minutes: zero restarts/schema drops; scheduled status is unavailable/uncommissioned with actuation disabled. No operating alarm, source adapter or alert lifecycle is claimed; full issue remains open and #45 gates physical actuation.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
-      "status": "open"
+      "status": "open",
+      "accepted": false
     },
     {
       "key": "296",
@@ -3707,8 +3708,8 @@
     {
       "key": "994",
       "issue_number": 994,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Record the verdify-db data PVC db-data-verdify-db-0 as protected",
       "stage": "C5",
       "kind": "task",
@@ -3731,7 +3732,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Add/read back Prune=false,Delete=false protection on the exact production DB PVC; update owner/central records in the same change set, verify unchanged DB pod UID and no workload diff. Complete before #999 DB pin. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted/closed after exact original-PVC adoption, unchanged DB pod/spec, full hooks and source-bound live smoke. See planning/execution/2026-10-20-s6/README.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add/read back Prune=false,Delete=false protection on the exact production DB PVC; update owner/central records in the same change set, verify unchanged DB pod UID and no workload diff. Complete before #999 DB pin."
@@ -3966,8 +3967,8 @@
     {
       "key": "1002",
       "issue_number": 1002,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Stop anonymous internet users running ad-hoc SQL via graphs.verdify.ai Grafana",
       "stage": "C4",
       "kind": "task",
@@ -3990,7 +3991,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Implement the approved public-dashboard/curated-public-data solution while preserving anonymous lab graphs and PNG fallbacks. Reject arbitrary anonymous SQL, constrain DB grants/statement timeout, and verify actual anonymous embeds over the public path. Do not simply disable the public graphs. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted/closed at 7dd6dcb3 after 21 explicitly approved native shares, 401 classic SQL/datasource denials, curated-view-only 15s DB role, real public interactive/PNG checks and natural 421-page publication. See planning/execution/2026-10-20-s6/README.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Implement the approved public-dashboard/curated-public-data solution while preserving anonymous lab graphs and PNG fallbacks. Reject arbitrary anonymous SQL, constrain DB grants/statement timeout, and verify actual anonymous embeds over the public path. Do not simply disable the public graphs."
@@ -4095,8 +4096,8 @@
     {
       "key": "1006",
       "issue_number": 1006,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Scope the internet-facing verdify-traefik to verdify-prod: its ClusterRole can read all 936 Secrets in 84 namespaces",
       "stage": "C4",
       "kind": "task",
@@ -4108,7 +4109,7 @@
       "what": "Scope the internet-facing verdify-traefik to verdify-prod: its ClusterRole can read all 936 Secrets in 84 namespaces",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Replace broad Traefik ClusterRole/Binding with least-privilege namespaced RBAC; deliver the Role first, then remove exact old grants and central ownership rows. Prove denied Secret access, working routes and one hour without required-resource RBAC denials."
+        "Jason selected Git-generated file routing because Traefik CRD informers always watch Secrets. Remove the Kubernetes provider and token, preserve routes/readiness, retire exact grants and central ownership entries; verify route/cache behavior and one hour of logs."
       ],
       "acceptance": [
         "`kubectl auth can-i list secrets -A --as=system:serviceaccount:verdify-prod:verdify-traefik` returns no, and `get secrets -n verdify-prod` returns no",
@@ -4120,10 +4121,10 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Replace broad Traefik ClusterRole/Binding with least-privilege namespaced RBAC; deliver the Role first, then remove exact old grants and central ownership rows. Prove denied Secret access, working routes and one hour without required-resource RBAC denials. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted/closed after a full natural hour without Kubernetes credentials or grants: same two pods, zero restarts, zero forbidden log entries, public route and PNG checks. See planning/execution/2026-10-20-s6/README.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Replace broad Traefik ClusterRole/Binding with least-privilege namespaced RBAC; deliver the Role first, then remove exact old grants and central ownership rows. Prove denied Secret access, working routes and one hour without required-resource RBAC denials."
+      "decision": "Explicit October 20 decision: use Git-generated file routing without Kubernetes credentials or grants, preserving the no-Secret-access requirement."
     },
     {
       "key": "1007",
@@ -4153,7 +4154,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-external. One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "S6 discovery packet complete with an explicit attribution gap. Retained 24h success logs show known internal use and former peers but cannot confirm an external client identity. No token issued. Whole issue remains open behind #1010 attribution and network-infra#752 cutover. See planning/execution/2026-10-20-s6/README.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready."
@@ -4188,7 +4189,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Add query maxima, bounded camera cache and fetch concurrency, then trusted-client rate/in-flight limits. Test limits with mocked NVR/DB fixtures first; verify deployed bounds with bounded probes. Edge policy and Turnstile custody remain owner follow-through, not blockers to app work. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "S6 app bounds/cache/origin rate packet deployed and verified. Public maxima/422, one refresh per pod across query variations, and 8/50 throttled origin-reaching public requests pass; both frontends stay 200. Same-URL requests are Cloudflare-cache-served (public max-age 14400 versus origin 20s), so literal edge throttling/TTL and Turnstile acceptance remain open.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add query maxima, bounded camera cache and fetch concurrency, then trusted-client rate/in-flight limits. Test limits with mocked NVR/DB fixtures first; verify deployed bounds with bounded probes. Edge policy and Turnstile custody remain owner follow-through, not blockers to app work."
@@ -4288,10 +4289,78 @@
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path."
+    },
+    {
+      "key": "1021",
+      "issue_number": 1021,
+      "status": "open",
+      "accepted": false,
+      "title": "Switch verdify-vision from shared Gemini credentials to Cortex longctx.mm",
+      "stage": "C5",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Prepare the DR-29 verdify-vision provider switch without creating replacement Gemini keys.",
+      "why": "Remove the shared home/business provider credential dependency while preserving successful vision output.",
+      "how": [
+        "Confirm an accepted longctx.mm image-input probe on cortex-ai-compute#375, inspect actual gateway egress and existing credential custody, then prepare the minimal endpoint/client change.",
+        "Deliver in this owner lane and verify one real successful run plus no Gemini reference. Preserve the existing Secret and do not revoke the key without explicit authorization."
+      ],
+      "acceptance": [
+        "One successful verdify-vision run uses the approved Cortex route with unchanged output contract.",
+        "The CronJob references no Gemini key; Argo and running image/revision are verified.",
+        "Record the actual receipt on cortex-ai-compute#375; do not infer acceptance from source configuration."
+      ],
+      "paths": [
+        "ingestor",
+        "deploy/k8s"
+      ],
+      "baseline": "New during S6 execution. Source preparation is ready-scoped; the current Cortex owner issue still calls for the image probe and this audit did not establish its acceptance receipt. Runtime switch waits on that explicit prerequisite. Not added to S6.",
+      "delivery": "Use the supported owner CI/GitOps and a bounded successful production run after route proof.",
+      "rollback": "Retain the prior exact workload/image configuration; do not revoke or delete existing credentials.",
+      "decision": "DR-29 selects Cortex longctx.mm for this consumer; per-consumer Gemini keys are not the selected approach."
+    },
+    {
+      "key": "1022",
+      "issue_number": 1022,
+      "status": "open",
+      "accepted": false,
+      "title": "Make the ESP32 writer identity and egress exact without losing safe failover",
+      "stage": "C5",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Confirm the existing singleton/Lease fence, gather actual flows and define a bounded eligible-node set before narrowing writer egress.",
+      "why": "Replace broad writer egress with named dependencies and an exact greenhouse network identity while preserving the single-writer and failover contracts.",
+      "how": [
+        "Passively inventory actual dependencies and eligible nodes. Reuse #240 acceptance where applicable; never open a test device connection.",
+        "Confirm current HA placement tradeoffs before any affinity change. Narrow only proven destinations and keep the builder OTA policy separate.",
+        "Use an attended GitOps rollout, passive writer metric and fresh HA/MQTT/database/metrics inputs; hand off the exact source set to network-infra#42 through its owner."
+      ],
+      "acceptance": [
+        "One replica and the fail-closed Lease are confirmed in source and live.",
+        "Predictable eligible placement and failover tradeoff are recorded with network-infra#42.",
+        "Broad egress is replaced with observed named dependencies; the writer and other inputs remain healthy without opening a test device connection.",
+        "The intended revision is deployed and verified through Argo and live behavior."
+      ],
+      "paths": [
+        "ingestor",
+        "deploy/k8s"
+      ],
+      "baseline": "New during S6 execution. Passive readback at 18:06Z: one Ready Recreate writer replica, an existing freshly renewed Lease, soft node affinity and broad egress still present. Source/flow preparation is ready-scoped; narrowing waits on actual flow evidence and a recorded failover tradeoff. No workload or network mutation was performed. Not added to S6.",
+      "delivery": "Use this lane for workload policy and the network owner for UDM changes; verify passively after the attended rollout.",
+      "rollback": "Retain the exact prior Deployment and policy; restore only the owned scoped change if inputs or writer health regress.",
+      "decision": "Preserve #240 and the recorded HA policy; do not silently hard-pin the writer or merge the builder OTA path into writer egress."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-20T15:31:29.571834+00:00",
+    "reviewed_at": "2026-10-20T19:26:53.769719+00:00",
     "source_revision": "01735457467fa1fd8918641dfa48cd583e092896",
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-20-sprint-audit/README.md",
@@ -4340,7 +4409,6 @@
       991,
       992,
       993,
-      994,
       995,
       996,
       997,
@@ -4348,16 +4416,16 @@
       999,
       1000,
       1001,
-      1002,
       1003,
       1004,
       1005,
-      1006,
       1007,
       1008,
       1009,
       1010,
-      1011
+      1011,
+      1021,
+      1022
     ],
     "sprints": [
       {
@@ -4365,8 +4433,8 @@
         "title": "S6 \u2014 Public exposure and safe control preparation (October 21\u201327, 2026)",
         "kind": "sprint",
         "capacity_hours": 40,
-        "goal": "Reduce verified public attack surface and protect production data; deliver an alert-only saturation evaluator. Six bounded packets total 25\u201334 engineering hours with at least 6 hours reserve. #1007 contributes discovery only, not its blocked cutover.",
-        "exit": "Issue-specific live acceptance for delivered security/data changes, alert-only evaluator with disabled uncommissioned inputs, and an attributed MCP client or explicit evidence gap. Whole-issue closure only where all current criteria pass."
+        "goal": "All six original S6 bounded packets are delivered with issue-specific evidence in planning/execution/2026-10-20-s6. Three issues are closed; #297, #1007 and #1008 retain explicit whole-issue follow-through in backlog. No alternate was automatically added. The original 25\u201334h planning estimate remains in the dated audit.",
+        "exit": "Completed packet receipts are distinct from full issue acceptance; remaining work requires its named evidence/owner boundary and a fresh capacity allocation."
       },
       {
         "id": "ALTERNATE",
@@ -4452,10 +4520,10 @@
       },
       {
         "issue_number": 297,
-        "sprint": "NEXT",
-        "hours_min": 4,
-        "hours_max": 6,
-        "next_action": "Build only the sustained-saturation alert evaluator and missing/stale/persistence/recovery negative fixtures. Keep configuration unavailable/disabled without measured targets. #45 still blocks drip skip/shrink and full acceptance; no irrigation actuation in this packet.",
+        "sprint": "BACKLOG",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "S6 evaluator foundation delivered. Prepare the actual measured-target/source and alert-lifecycle adapter; keep unavailable without commissioned evidence. #45 gates drip skip/shrink and full physical acceptance.",
         "owner_role": "Control lead"
       },
       {
@@ -4747,14 +4815,6 @@
         "owner_role": "Platform/security lead"
       },
       {
-        "issue_number": 994,
-        "sprint": "NEXT",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "Add/read back Prune=false,Delete=false protection on the exact production DB PVC; update owner/central records in the same change set, verify unchanged DB pod UID and no workload diff. Complete before #999 DB pin.",
-        "owner_role": "Platform/security lead"
-      },
-      {
         "issue_number": 995,
         "sprint": "BACKLOG",
         "hours_min": null,
@@ -4811,14 +4871,6 @@
         "owner_role": "Platform/security lead"
       },
       {
-        "issue_number": 1002,
-        "sprint": "NEXT",
-        "hours_min": 8,
-        "hours_max": 10,
-        "next_action": "Implement the approved public-dashboard/curated-public-data solution while preserving anonymous lab graphs and PNG fallbacks. Reject arbitrary anonymous SQL, constrain DB grants/statement timeout, and verify actual anonymous embeds over the public path. Do not simply disable the public graphs.",
-        "owner_role": "Platform/security lead"
-      },
-      {
         "issue_number": 1003,
         "sprint": "BACKLOG",
         "hours_min": null,
@@ -4843,27 +4895,19 @@
         "owner_role": "Platform/security lead"
       },
       {
-        "issue_number": 1006,
-        "sprint": "NEXT",
-        "hours_min": 6,
-        "hours_max": 8,
-        "next_action": "Replace broad Traefik ClusterRole/Binding with least-privilege namespaced RBAC; deliver the Role first, then remove exact old grants and central ownership rows. Prove denied Secret access, working routes and one hour without required-resource RBAC denials.",
-        "owner_role": "Platform/security lead"
-      },
-      {
         "issue_number": 1007,
-        "sprint": "NEXT",
-        "hours_min": 1,
-        "hours_max": 1,
-        "next_action": "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready.",
+        "sprint": "BACKLOG",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "S6 discovery packet finished with an attribution gap; retain whole-issue follow-through behind #1010 and network-infra#752. No additional discovery hour is committed.",
         "owner_role": "Platform/security lead"
       },
       {
         "issue_number": 1008,
-        "sprint": "NEXT",
-        "hours_min": 5,
-        "hours_max": 7,
-        "next_action": "Add query maxima, bounded camera cache and fetch concurrency, then trusted-client rate/in-flight limits. Test limits with mocked NVR/DB fixtures first; verify deployed bounds with bounded probes. Edge policy and Turnstile custody remain owner follow-through, not blockers to app work.",
+        "sprint": "BACKLOG",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "S6 origin-bound application packet delivered. Resolve owner edge camera TTL/rate semantics and the literal cached-URL burst criterion, then Turnstile custody or an explicit form decision. Do not count origin-miss proof as edge acceptance.",
         "owner_role": "Platform/security lead"
       },
       {
@@ -4888,6 +4932,22 @@
         "hours_min": null,
         "hours_max": null,
         "next_action": "Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path.",
+        "owner_role": "Platform/security lead"
+      },
+      {
+        "issue_number": 1021,
+        "sprint": "BACKLOG",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Confirm an accepted longctx.mm image-input probe on cortex-ai-compute#375, inspect actual gateway egress and existing credential custody, then prepare the minimal endpoint/client change.",
+        "owner_role": "Platform/security lead"
+      },
+      {
+        "issue_number": 1022,
+        "sprint": "BACKLOG",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Passively inventory actual dependencies and eligible nodes. Reuse #240 acceptance where applicable; never open a test device connection.",
         "owner_role": "Platform/security lead"
       }
     ]

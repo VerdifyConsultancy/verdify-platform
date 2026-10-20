@@ -1,0 +1,307 @@
+[
+  {
+    "number": 1022,
+    "title": "Pin the sole ESP32 writer workload: replicas=1, fail-closed Lease, predictable node placement and egress narrowed from 0.0.0.0/0",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1022"
+  },
+  {
+    "number": 1021,
+    "title": "Switch the verdify-vision CronJob from the shared Gemini key to the Cortex longctx.mm route (DR-29)",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1021"
+  },
+  {
+    "number": 1011,
+    "title": "[AUD] Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1011"
+  },
+  {
+    "number": 1010,
+    "title": "[AUD] Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010"
+  },
+  {
+    "number": 1009,
+    "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009"
+  },
+  {
+    "number": 1008,
+    "title": "[AUD] Add rate limits and request bounds to anonymous api.verdify.ai: the public camera route triggers a fresh home-Frigate snapshot on every request",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1008"
+  },
+  {
+    "number": 1007,
+    "title": "[AUD] Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1007"
+  },
+  {
+    "number": 1005,
+    "title": "[AUD] Give verdify-lab real node redundancy instead of two replicas on one RWO volume",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1005"
+  },
+  {
+    "number": 1004,
+    "title": "[AUD] Bring kubectl-patched verdify-prod workloads back under Git ownership",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1004"
+  },
+  {
+    "number": 1003,
+    "title": "[AUD] Route verdify-platform main changes, including prod release pins, through validated PRs",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1003"
+  },
+  {
+    "number": 1001,
+    "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001"
+  },
+  {
+    "number": 1000,
+    "title": "[OWN] Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06)",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1000"
+  },
+  {
+    "number": 999,
+    "title": "[OWN] Pin the remaining tag-only verdify-prod images by digest",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/999"
+  },
+  {
+    "number": 998,
+    "title": "[OWN] Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13)",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/998"
+  },
+  {
+    "number": 997,
+    "title": "[OWN] Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/997"
+  },
+  {
+    "number": 996,
+    "title": "[OWN] Remove laptop-root-era verdify-agent RBAC",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/996"
+  },
+  {
+    "number": 995,
+    "title": "[OWN] Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/995"
+  },
+  {
+    "number": 993,
+    "title": "[OWN] Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/993"
+  },
+  {
+    "number": 992,
+    "title": "[OWN] Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04)",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/992"
+  },
+  {
+    "number": 991,
+    "title": "[OWN] Prune verdify-db-rehearsal run residue (non-data, D-04)",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/991"
+  },
+  {
+    "number": 990,
+    "title": "[OWN] Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/990"
+  },
+  {
+    "number": 981,
+    "title": "[C4][P2] Restore truthful energy source freshness and trace stale meter input",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981"
+  },
+  {
+    "number": 963,
+    "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963"
+  },
+  {
+    "number": 785,
+    "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
+  },
+  {
+    "number": 784,
+    "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784"
+  },
+  {
+    "number": 783,
+    "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783"
+  },
+  {
+    "number": 782,
+    "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782"
+  },
+  {
+    "number": 775,
+    "title": "[C0][P1] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775"
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+  },
+  {
+    "number": 749,
+    "title": "[C1][P1] Qualify current three-probe readiness and explicit safety dependencies",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749"
+  },
+  {
+    "number": 642,
+    "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642"
+  },
+  {
+    "number": 641,
+    "title": "[C1][P1] Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+  },
+  {
+    "number": 640,
+    "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640"
+  },
+  {
+    "number": 639,
+    "title": "[C1][P1] Qualify the component executor, exclusivity and recovery behavior in containment",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+  },
+  {
+    "number": 588,
+    "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588"
+  },
+  {
+    "number": 587,
+    "title": "[C1][P1] Qualify lifecycle authority and blinded monitoring in containment",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
+  },
+  {
+    "number": 581,
+    "title": "[C2][P1] Complete the bounded AI-admission pilot and publish a decision",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581"
+  },
+  {
+    "number": 434,
+    "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434"
+  },
+  {
+    "number": 430,
+    "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430"
+  },
+  {
+    "number": 412,
+    "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412"
+  },
+  {
+    "number": 410,
+    "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410"
+  },
+  {
+    "number": 398,
+    "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398"
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390"
+  },
+  {
+    "number": 386,
+    "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386"
+  },
+  {
+    "number": 378,
+    "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378"
+  },
+  {
+    "number": 370,
+    "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370"
+  },
+  {
+    "number": 369,
+    "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369"
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368"
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367"
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359"
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350"
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299"
+  },
+  {
+    "number": 298,
+    "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298"
+  },
+  {
+    "number": 297,
+    "title": "[C6][P2] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297"
+  },
+  {
+    "number": 218,
+    "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218"
+  },
+  {
+    "number": 75,
+    "title": "[C4][P2] Observability program: prove actionable health from source through device",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75"
+  },
+  {
+    "number": 52,
+    "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52"
+  },
+  {
+    "number": 51,
+    "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51"
+  },
+  {
+    "number": 45,
+    "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45"
+  },
+  {
+    "number": 31,
+    "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31"
+  },
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-10-20T19:02:44.171259Z",
+  "completed_at": "2026-10-20T19:07:45.002315+00:00",
+  "elapsed_seconds": 300.829,
+  "pod": "verdify-ingestor-7bdd8d7cdb-ld4fv",
+  "uid": "4d873505-0c66-4983-ad2e-132bcd583c4b",
+  "digest": "sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32",
+  "same_pod_zero_restarts": true,
+  "schema_validation_errors": 0,
+  "log_lines": 188,
+  "log_truncated": false,
+  "scheduled_saturation_status": [
+    "2026-10-20T19:03:14 INFO soil_saturation available=False active=False reason=uncommissioned_targets actuation=disabled"
+  ],
+  "source_file_hashes": {
+    "/app/ingestor/ingestor.py": "715360cb9fa8d876d4f4565d2cad430c0e76afbd1800b10454416f392e104755",
+    "/app/ingestor/soil_saturation.py": "7de96ae4472c56fad8e80fcf6d043827b1032c6755fe6744fa1217b435a96961"
+  },
+  "active_alarm": false,
+  "actuation": false
+}
