@@ -15,7 +15,7 @@ export default (() => {
     var status = document.getElementById("verdify-contact-status");
     var slot = document.createElement("div");
     slot.setAttribute("aria-label", "Contact verification");
-    form.insertBefore(slot, submit);
+    form.insertBefore(slot, submit ? submit.closest(".verdify-contact-actions") || submit : null);
     var verified = false;
     var widget;
     function pending() { verified = false; if (submit) submit.disabled = true; }
