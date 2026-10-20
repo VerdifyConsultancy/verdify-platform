@@ -96,9 +96,9 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) (open) | Restore truthful energy source freshness and trace stale meter input | None; see concrete issue conditions | S |
 | [#802](https://github.com/VerdifyConsultancy/verdify-platform/issues/802) (closed) | Adopt the enforcing descheduler under manual Argo ownership | None; see concrete issue conditions | M |
 | [#988](https://github.com/VerdifyConsultancy/verdify-platform/issues/988) (closed) | Restore public camera snapshots and qualify authenticated ingress | None; see concrete issue conditions | M |
-| [#990](https://github.com/VerdifyConsultancy/verdify-platform/issues/990) (open) | Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer | None; see concrete issue conditions | M |
-| [#991](https://github.com/VerdifyConsultancy/verdify-platform/issues/991) (open) | Prune verdify-db-rehearsal run residue (non-data, D-04) | None; see concrete issue conditions | M |
-| [#993](https://github.com/VerdifyConsultancy/verdify-platform/issues/993) (open) | Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component | None; see concrete issue conditions | M |
+| [#990](https://github.com/VerdifyConsultancy/verdify-platform/issues/990) (closed) | Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer | None; see concrete issue conditions | M |
+| [#991](https://github.com/VerdifyConsultancy/verdify-platform/issues/991) (closed) | Prune verdify-db-rehearsal run residue (non-data, D-04) | None; see concrete issue conditions | M |
+| [#993](https://github.com/VerdifyConsultancy/verdify-platform/issues/993) (closed) | Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component | None; see concrete issue conditions | M |
 | [#995](https://github.com/VerdifyConsultancy/verdify-platform/issues/995) (open) | Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects | None; see concrete issue conditions | M |
 | [#997](https://github.com/VerdifyConsultancy/verdify-platform/issues/997) (open) | Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy | None; see concrete issue conditions | M |
 | [#998](https://github.com/VerdifyConsultancy/verdify-platform/issues/998) (open) | Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13) | None; see concrete issue conditions | M |
@@ -131,7 +131,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#977](https://github.com/VerdifyConsultancy/verdify-platform/issues/977) (closed) | Decide the database replica policy before November 12; keep optional reclaim separate | None; see concrete issue conditions | S |
 | [#992](https://github.com/VerdifyConsultancy/verdify-platform/issues/992) (open) | Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04) | None; see concrete issue conditions | M |
 | [#994](https://github.com/VerdifyConsultancy/verdify-platform/issues/994) (closed) | Record the verdify-db data PVC db-data-verdify-db-0 as protected | None; see concrete issue conditions | M |
-| [#996](https://github.com/VerdifyConsultancy/verdify-platform/issues/996) (open) | Remove laptop-root-era verdify-agent RBAC | None; see concrete issue conditions | M |
+| [#996](https://github.com/VerdifyConsultancy/verdify-platform/issues/996) (closed) | Remove laptop-root-era verdify-agent RBAC | None; see concrete issue conditions | M |
 | [#1021](https://github.com/VerdifyConsultancy/verdify-platform/issues/1021) (open) | Switch verdify-vision from shared Gemini credentials to Cortex longctx.mm | None; see concrete issue conditions | M |
 | [#1022](https://github.com/VerdifyConsultancy/verdify-platform/issues/1022) (open) | Make the ESP32 writer identity and egress exact without losing safe failover | None; see concrete issue conditions | M |
 

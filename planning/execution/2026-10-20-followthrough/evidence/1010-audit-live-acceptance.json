@@ -1,0 +1,140 @@
+{
+  "observed_at": "2026-10-20T23:18:59.805733+00:00",
+  "pod_evidence": [
+    {
+      "pod": "verdify-mcp-74dd5f7696-d744f",
+      "uid": "a180aa3a-6fb7-49b5-a9f0-a4805b508ee9",
+      "events": [
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "climate",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 924.105,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "equipment_state",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 423.531,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "lessons_search",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 4556.288,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "acknowledge_trigger",
+          "capability": "write_capable",
+          "result": "completed",
+          "duration_ms": 275.983,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "equipment_state",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 418.85,
+          "peer_ip": "127.0.0.1",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        }
+      ]
+    },
+    {
+      "pod": "verdify-mcp-74dd5f7696-tr7xd",
+      "uid": "a8895fec-7583-4d8c-a196-35eaf08e5f17",
+      "events": [
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "plan_status",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 354.666,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "get_setpoints",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 732.987,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "knowledge_search",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 6033.378,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "equipment_state",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 439.173,
+          "peer_ip": "10.42.4.242",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        },
+        {
+          "event": "mcp_tool_call",
+          "audience": "iris",
+          "tool": "equipment_state",
+          "capability": "read",
+          "result": "completed",
+          "duration_ms": 413.324,
+          "peer_ip": "127.0.0.1",
+          "client_ip_source": "transport_peer",
+          "auth_mode": "enforce"
+        }
+      ]
+    }
+  ],
+  "loki_event_count": 10,
+  "loki_matching_tools": [
+    "acknowledge_trigger",
+    "climate",
+    "equipment_state",
+    "get_setpoints",
+    "knowledge_search",
+    "lessons_search",
+    "plan_status"
+  ],
+  "client_ip_source": "transport_peer",
+  "real_client_ip_acceptance_blocked_by": "jvallery/network-infra#743",
+  "no_forwarded_headers_trusted": true
+}

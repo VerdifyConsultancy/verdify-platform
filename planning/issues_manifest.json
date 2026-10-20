@@ -1122,7 +1122,7 @@
       "accepted": false,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "894251ee4c1972aa16ddbb88fdb6640d44b087ffbd02a6bd25e9a5f8ae7fcef2"
+      "body_sha256": "8aeac4c2b5bbea64051d2e7bc32862d9da71029f381af9184db334890f9b5aeb"
     },
     {
       "key": "802",
@@ -1151,22 +1151,22 @@
       "number": 990,
       "title": "[C4][P3] Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "b7f54993136b1ce040efebb6327e10c62a646182c981fa9a4127acdb9dfa14c3"
+      "body_sha256": "9462cff5f1be53ca75bfd323fb46416afb2c63a1ecb239994f210829da9681df"
     },
     {
       "key": "991",
       "number": 991,
       "title": "[C4][P3] Prune verdify-db-rehearsal run residue (non-data, D-04)",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "5dc78a9f99de44058123e95ab2c936bcf639d15aadd99ea35c8505ec98165c8d"
+      "body_sha256": "746764334b5cd5086fa28fc6ed3b7304154aee3118ced02ab8edd4fd641fa04a"
     },
     {
       "key": "992",
@@ -1184,11 +1184,11 @@
       "number": 993,
       "title": "[C4][P3] Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "93a671ef85db4e90bae993133b4fd9ee7f47ff51c3f5c423e48322bd84ca9273"
+      "body_sha256": "d66990b581df7720bea15df70f66d39f8481497300de39e5f547859ffd8eee7f"
     },
     {
       "key": "994",
@@ -1217,11 +1217,11 @@
       "number": 996,
       "title": "[C5][P2] Remove laptop-root-era verdify-agent RBAC",
       "stage": "C5",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "316d07fb5b7ba91e18645a8e84bbf4d1b0d5b571f6c50b45a3b0cde6d40a2e43"
+      "body_sha256": "3b3249bef6b733e4a689379ba87cc678eae764bf3ac21abc23b17855eb07c2ae"
     },
     {
       "key": "997",
@@ -1344,7 +1344,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "44548749e329ce78916a6a1551a4d9df2042a3da4ac1f791699533f324f072e9"
+      "body_sha256": "72215eb4d57c938256e24dc0ae590c53b85e3365792c1f6fcfe9a6d9111c88ed"
     },
     {
       "key": "1008",
@@ -1377,7 +1377,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "6e657877ef8652811fb282985585aff5ffc02e868620526df54877e7462bdfb6"
+      "body_sha256": "a4b28fc48b0a1124bdbe88273774ed0cd0d4469cd533a96e0c92366850d9ed42"
     },
     {
       "key": "1011",
@@ -1388,7 +1388,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "13bbcee53f62932608f115814a8a346824f8e5e77ece4208d81461ea7abbb01a"
+      "body_sha256": "55a9d5889d83fca551b576213ae60bac3bf93a42a3bbaa857241eeeb3891b3d0"
     },
     {
       "key": "1021",
