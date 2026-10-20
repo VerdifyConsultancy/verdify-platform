@@ -85,9 +85,11 @@ function toLiveDashboardUrl(src: string): string {
 function toSavedPublicUrl(src: string): string {
   const url = new URL(src)
   const uid = url.pathname.split("/")[2]
-  const share = (publicShares as Record<string, { token: string; panels: number[] }>)[uid]
+  const share = Object.hasOwn(publicShares, uid)
+    ? (publicShares as Record<string, { token: string; panels: number[] }>)[uid]
+    : undefined
   if (!share) throw new Error(`Unshared Grafana dashboard ${uid}`)
-  const panel = url.searchParams.get("panelId") || url.searchParams.get("viewPanel")
+  const panel = (url.searchParams.get("panelId") || url.searchParams.get("viewPanel"))?.replace(/^panel-/, "")
   if (panel && !share.panels.includes(Number(panel))) throw new Error(`Unknown saved panel ${uid}/${panel}`)
   url.pathname = `/public-dashboards/${share.token}`
   url.searchParams.delete("viewPanel")
@@ -111,7 +113,7 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
                 const href = node.properties.href
                 if (href.startsWith(opts.matchPrefix) && /\/d(?:-solo)?\//.test(href)) {
                   const uid = new URL(href).pathname.split("/")[2]
-                  if (uid in publicShares) node.properties.href = toSavedPublicUrl(href)
+                  if (Object.hasOwn(publicShares, uid)) node.properties.href = toSavedPublicUrl(href)
                   else node.properties.title = "Requires Grafana sign-in"
                 }
                 return
@@ -126,7 +128,7 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
               const src = node.properties.src
               if (!src.startsWith(opts.matchPrefix)) return
               const uid = new URL(src).pathname.split("/")[2]
-              if (!(uid in publicShares)) {
+              if (!Object.hasOwn(publicShares, uid)) {
                 // The sharing allowlist is intentional. An unshared dashboard
                 // gets a signed-in link, never a public iframe or PNG request.
                 node.tagName = "p"

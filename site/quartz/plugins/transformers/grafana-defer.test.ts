@@ -59,3 +59,19 @@ test("unknown panels in an approved dashboard fail closed", () => {
     src: "https://graphs.verdify.ai/d-solo/site-home/home?panelId=999999",
   }, children: [] }), /Unknown saved panel/)
 })
+
+
+test("prototype names are not approved shares", () => {
+  const output = transform({ type: "element", tagName: "iframe", properties: {
+    src: "https://graphs.verdify.ai/d-solo/__proto__/hidden?panelId=1",
+  }, children: [] })
+  assert.equal(output.tagName, "p")
+  assert.equal("data-iframe-src" in output.properties, false)
+})
+
+test("Grafana scene panel keys preserve the approved numeric panel", () => {
+  const output = transform({ type: "element", tagName: "a", properties: {
+    href: "https://graphs.verdify.ai/d/site-home/home?viewPanel=panel-30",
+  }, children: [] })
+  assert.equal(new URL(String(output.properties.href)).searchParams.get("panelId"), "30")
+})
