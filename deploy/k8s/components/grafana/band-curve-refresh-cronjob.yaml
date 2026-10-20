@@ -57,7 +57,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: refresh
-              image: timescale/timescaledb:2.25.2-pg16
+              image: timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140
               securityContext:
                 allowPrivilegeEscalation: false
                 runAsNonRoot: true

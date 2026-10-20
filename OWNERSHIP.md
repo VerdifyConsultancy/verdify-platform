@@ -701,6 +701,8 @@ The dedicated `verdify-mcp` ServiceAccount disables token automount on the accou
 
 ### A12 Pin tag-only images by digest
 
+The non-database references are prepared as exact linux/amd64 child-manifest pins derived from running node-cache indexes and verified resolvable at the origin (#999). No image version upgrade or layer download was used. The database StatefulSet remains tag-pinned until its separate attended fresh-backup window; source preparation is not live acceptance. See `planning/execution/2026-10-20-followthrough/999-exact-runtime-manifests.json`.
+
 - `docker.io/traefik:v3.7.1`, `eclipse-mosquitto:2`, `postgres:16`, `python:3.12-alpine`, `python:3.13-alpine`, `timescale/timescaledb:2.25.2-pg16` in `verdify-db`, `verdify-api`, `verdify-ingestor`, `verdify-planner`, `verdify-setpoint-server`, `verdify-mqtt`, `verdify-db-backup-exporter`, `verdify-traefik` and CronJobs `verdify-band-curve-refresh`, `verdify-db-backup`, `verdify-db-watchdog`, `verdify-fixed-panel-native-freezer`, `verdify-writer-watchdog`.
 
 ## Meter source clock (#981)
