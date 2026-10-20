@@ -1,5 +1,5 @@
 # API source: 183af7a93fe236ab97f4556173a07195515b732a (qualified #1008 Turnstile build).
-# Migrate source: f6db3547dc1afc7e7065cefd09309d874ebd3ba1 (qualified exact279 runner).
+# Migrate source: c6c1e3d9500d4e6dfd1c41ae37dc8a0fe7a9ba78 (qualified exact279 runner).
 # Ingestor: exact-live-base two-file source-clock backport 91c28828f586e7fedcb49ce832344ebb6ba525df.
 # MCP source: 165fa244d082dadcb386b5081344a77b15a5535b (secret-free dispatch audit).
 # API and experiment-v2-orchestrator pins retained unchanged.
@@ -50,7 +50,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:b583cc90600d005d73bc028078fd19afadd7bd9f93aa152f6760bb54cd5f22c0
+  digest: sha256:5219aba3d90134c984c258b32fe4682070309a7d27a9ab6fe2be80ba2f608d14
 ---
 apiVersion: builtin
 kind: ImageTagTransformer

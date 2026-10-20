@@ -9,7 +9,7 @@
   "hold_until": "Required source and promotion checks pass, source PRs merge, and complete production diff is reviewed.",
   "selected": {
     "verdify-ingestor": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
-    "verdify-migrate": "sha256:b583cc90600d005d73bc028078fd19afadd7bd9f93aa152f6760bb54cd5f22c0",
+    "verdify-migrate": "sha256:5219aba3d90134c984c258b32fe4682070309a7d27a9ab6fe2be80ba2f608d14",
     "verdify-mcp": "sha256:d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c"
   },
   "rollback_pins": {
@@ -36,7 +36,7 @@
     "main_dockerfile_unchanged": true
   },
   "migrator": {
-    "source": "f6db3547dc1afc7e7065cefd09309d874ebd3ba1",
+    "source": "c6c1e3d9500d4e6dfd1c41ae37dc8a0fe7a9ba78",
     "migration": "279-authentic-meter-source-clock-consumers.sql",
     "migration_sha256": "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
     "native_rollback_and_receipt_transition_passed": true,
