@@ -58,7 +58,7 @@ def test_renderer_rejects_unbounded_or_injected_parameters(params):
 def test_renderer_target_is_fixed_and_caller_urls_or_credentials_are_ignored():
     panel = CATALOG["site-climate"]["panels"][0]
     url, options = render_parameters("site-climate", panel, {"url": "http://evil", "renderKey": "bad", "width": "800"})
-    assert urlsplit(url).netloc == "verdify-grafana:3000"
+    assert urlsplit(url).netloc == "graphs.verdify.ai"
     assert parse_qs(urlsplit(url).query)["panelId"] == [str(panel)]
     assert "evil" not in url and "bad" not in url
     assert options["width"] == "800"

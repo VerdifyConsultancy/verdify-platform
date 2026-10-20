@@ -91,7 +91,7 @@ def render_parameters(uid: str, panel: int, params: dict[str, str]) -> tuple[str
     if not 320 <= width <= 1600 or not 80 <= height <= 1600:
         raise ValueError("invalid dimensions")
     token = CATALOG[uid]["token"]
-    url = f"{GRAFANA}/public-dashboards/{token}?{urllib.parse.urlencode(query)}"
+    url = f"https://graphs.verdify.ai/public-dashboards/{token}?{urllib.parse.urlencode(query)}"
     return url, {"width": str(width), "height": str(height), "timeout": "45", "encoding": "png"}
 
 
