@@ -88,3 +88,16 @@ def test_cancellation_cannot_release_worker_capacity():
         assert not bounded.pending
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("value", ["now-6M/M", "now/M", "now-1y/y", "now-30d/d", "now+72h"])
+def test_saved_calendar_date_math_is_preserved(value):
+    panel = CATALOG["site-evidence-economics"]["panels"][0]
+    url, _ = render_parameters("site-evidence-economics", panel, {"from": value})
+    assert parse_qs(urlsplit(url).query)["from"] == [value]
+
+
+@pytest.mark.parametrize("value", ["now-6M/M?url=evil", "now/d/../../etc", "now-1y;SELECT"])
+def test_calendar_date_math_cannot_carry_paths_or_queries(value):
+    with pytest.raises(ValueError):
+        render_parameters("site-home", CATALOG["site-home"]["panels"][0], {"from": value})

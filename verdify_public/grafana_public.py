@@ -79,7 +79,7 @@ def render_parameters(uid: str, panel: int, params: dict[str, str]) -> tuple[str
     query = {"panelId": str(panel), "kiosk": "true", "refresh": ""}
     for key, default in (("from", "now-6h"), ("to", "now")):
         value = params.get(key, default)
-        if not re.fullmatch(r"(?:now(?:[+-]\d{1,3}[mhdw])?|\d{13})", value):
+        if not re.fullmatch(r"(?:now(?:[+-]\d{1,3}[smhdwMy])?(?:/[smhdwMy])?|\d{13})", value):
             raise ValueError("invalid time")
         query[key] = value
     theme = params.get("theme", "light")
