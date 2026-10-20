@@ -54,6 +54,43 @@ spec:
         - name: verdify-lab
           port: 8080
 ---
+# #1008: use socket-peer IPs (depth zero), never a caller-supplied header.
+# Public clients share their tier-1 proxy peer bucket; this deliberately favors
+# bounded origin load over claiming unverified end-client-IP fairness.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-api-rate-limit
+  namespace: verdify-prod
+  labels: {app.kubernetes.io/part-of: verdify, traefik-tier: verdify}
+spec:
+  rateLimit:
+    average: 20
+    burst: 30
+    sourceCriterion: {ipStrategy: {depth: 0}}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-api-inflight
+  namespace: verdify-prod
+  labels: {app.kubernetes.io/part-of: verdify, traefik-tier: verdify}
+spec:
+  inFlightReq:
+    amount: 12
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-camera-rate-limit
+  namespace: verdify-prod
+  labels: {app.kubernetes.io/part-of: verdify, traefik-tier: verdify}
+spec:
+  rateLimit:
+    average: 2
+    burst: 6
+    sourceCriterion: {ipStrategy: {depth: 0}}
+---
 # api.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -68,9 +105,21 @@ spec:
   entryPoints: [verdify-web]
   routes:
     - kind: Rule
+      match: Host(`api.verdify.ai`) && PathPrefix(`/api/v1/public/cameras/`)
+      priority: 100
+      middlewares:
+        - name: verdify-strip-identity-headers
+        - name: verdify-camera-rate-limit
+        - name: verdify-api-inflight
+      services:
+        - name: verdify-api
+          port: 8080
+    - kind: Rule
       match: Host(`api.verdify.ai`)
       middlewares:
         - name: verdify-strip-identity-headers
+        - name: verdify-api-rate-limit
+        - name: verdify-api-inflight
       services:
         - name: verdify-api
           port: 8080

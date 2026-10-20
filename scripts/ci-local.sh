@@ -49,7 +49,7 @@ $RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py t
 
 step "tokenless Verdify file routing and least-privilege regression"
 $PY scripts/generate-verdify-traefik-file.py --check
-$PY -m pytest -q tests/test_verdify_traefik_file.py
+$PY -m pytest -q tests/test_verdify_traefik_file.py tests/test_public_camera_cache.py tests/test_api_authenticated_camera_snapshots.py
 
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
