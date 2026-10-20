@@ -1,7 +1,7 @@
 # Saved public Grafana panels (#1002)
 
-Jason approved native public sharing for exactly the 20 existing `site-*`
-dashboards on 2026-10-20. Public link identifiers and allowed panel IDs live in
+Jason approved native public sharing for the 20 existing `site-*` dashboards and subsequently the
+existing Greenhouse: Weather dashboard on 2026-10-20 (21 total). Public link identifiers and allowed panel IDs live in
 `verdify_public/grafana_catalog.json`; Quartz has a checked identical catalog.
 No other dashboards or datasource access are shared.
 
@@ -32,7 +32,7 @@ migration while the existing public paths remain available. Verify saved-panel
 interactive rendering and repeated PNG cache HIT behavior through the real
 public hostname. Then set `GF_AUTH_ANONYMOUS_ENABLED=false`, restart Grafana via
 GitOps, verify native shares still work, and prove unauthenticated `/api/ds/query`
-and datasource-resource requests return 401. Verify all 20 metadata links and
+and datasource-resource requests return 401. Verify all 21 metadata links and
 at least the Home/Climate panels in the lab, including time selection and PNGs.
 Keep the issue open until those live proofs and the private-field/query probes
 are recorded. Rollback is the prior release pin plus prior route/cache config;

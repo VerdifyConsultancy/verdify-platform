@@ -11,10 +11,15 @@ from verdify_public.grafana_public import CATALOG, BoundedWork, panel_metadata, 
 
 def test_exactly_approved_catalog_and_source_panels():
     root = Path(__file__).resolve().parents[1]
-    assert len(CATALOG) == 20
+    assert len(CATALOG) == 21
     assert CATALOG == json.loads((root / "site/quartz/plugins/transformers/grafana-public-shares.json").read_text())
     for uid, row in CATALOG.items():
-        dashboard = json.loads((root / f"grafana/dashboards/{uid}.json").read_text())
+        source = (
+            "grafana/provisioning/dashboards/json/weather.json"
+            if uid == "greenhouse-weather"
+            else f"grafana/dashboards/{uid}.json"
+        )
+        dashboard = json.loads((root / source).read_text())
         assert dashboard["uid"] == uid
         assert not dashboard.get("templating", {}).get("list")
 

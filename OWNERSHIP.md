@@ -705,7 +705,8 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 ### S6 saved public Grafana (#1002)
 
-The 20 `site-*` dashboards alone use native externally shared saved queries;
+The 20 `site-*` dashboards and the existing Greenhouse: Weather dashboard use
+native externally shared saved queries (21 total, explicitly approved);
 `verdify_public/grafana_catalog.json` records approved public links and panel IDs.
 The API filters public panel metadata and uses the existing renderer credential
 for bounded PNG generation. Renderer Service port 8081 admits API pods only;
