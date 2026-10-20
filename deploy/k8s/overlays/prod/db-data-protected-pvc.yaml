@@ -1,0 +1,17 @@
+# Adopt the existing bound claim without changing the StatefulSet claim template.
+# #994: this is production data, never a prune/rollback deletion target.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data-verdify-db-0
+  namespace: verdify-prod
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: longhorn-v1-workspace-rwo
+  volumeMode: Filesystem
+  volumeName: pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411

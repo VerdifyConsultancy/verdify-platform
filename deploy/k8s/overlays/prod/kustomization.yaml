@@ -38,6 +38,8 @@ resources:
   - writer-watchdog.yaml
   # #382 durable source spool: claim and sole consumer land together.
   - ingestor-state-pvc.yaml
+  # #994: adopt/protect the exact existing production DB claim, no template change.
+  - db-data-protected-pvc.yaml
   # #575 / proxmox-infrastructure#86: adopt the already-migrated portable R2
   # Hermes run-state claim in Git. The original component claim is deleted from
   # this production render by the paired retirement patch below.
