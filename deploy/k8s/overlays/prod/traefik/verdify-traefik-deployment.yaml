@@ -46,6 +46,11 @@ spec:
       nodeSelector:
         agentfleet.vallery.net/node-class: general
       serviceAccountName: verdify-traefik
+      automountServiceAccountToken: false
+      volumes:
+        - name: file-routing
+          configMap:
+            name: verdify-traefik-routing
       # HA ha-1 / Lane A (#229): serving-tier priority so the tier-2 edge proxy
       # is preempted only after batch, and never starved under node pressure.
       priorityClassName: verdify-serving
@@ -82,13 +87,17 @@ spec:
             - "--entryPoints.traefik.address=:8080/tcp"
             - "--ping=true"
             - "--ping.entrypoint=traefik"
+            # A missing/invalid generated file must never become Ready.
+            - "--ping.manualrouting=true"
             - "--api.dashboard=false"
-            - "--providers.kubernetescrd"
-            - "--providers.kubernetescrd.namespaces=verdify-prod"
-            - "--providers.kubernetescrd.labelselector=traefik-tier=verdify"
-            - "--providers.kubernetescrd.allowEmptyServices=true"
+            - "--providers.file.filename=/etc/traefik/dynamic/routes.yaml"
+            - "--providers.file.watch=false"
             - "--log.level=INFO"
             - "--accesslog=true"
+          volumeMounts:
+            - name: file-routing
+              mountPath: /etc/traefik/dynamic
+              readOnly: true
           ports:
             - name: verdify-web
               containerPort: 8000

@@ -47,6 +47,10 @@ $RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py t
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_*.py
 
+step "tokenless Verdify file routing and least-privilege regression"
+$PY scripts/generate-verdify-traefik-file.py --check
+$PY -m pytest -q tests/test_verdify_traefik_file.py
+
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
 

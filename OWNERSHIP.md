@@ -664,7 +664,7 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 ### A7 Adopt the verdify-descheduler Namespace and record cluster-scoped objects
 
-- Namespace (1): `verdify-descheduler` (excluded from the #802 seven-object adoption). Record PriorityClasses `verdify-*`, ClusterRole/Binding `verdify-traefik` and `verdify-descheduler` in the central map (R1 cluster-scoped entries).
+- Namespace (1): `verdify-descheduler` (excluded from the #802 seven-object adoption). Record PriorityClasses `verdify-*` and ClusterRole/Binding `verdify-descheduler` in the central map (R1 cluster-scoped entries). #1006 replaces the tier-2 Kubernetes provider with Git-generated file routing: ServiceAccount `verdify-traefik` has token automount disabled and no Role/Binding; retire the old same-named ClusterRole/Binding only after the tokenless rollout is verified.
 
 ### A8 Delete verdify-agent RBAC residue
 
