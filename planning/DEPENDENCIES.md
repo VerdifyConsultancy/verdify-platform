@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-18-ingress-988/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 94-issue/68-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-20-sprint-audit/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 116-issue/70-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -66,6 +66,25 @@ flowchart TD
     i981["#981 (open) Restore truthful energy source freshness and trace stale m"]
     i802["#802 (closed) Adopt the enforcing descheduler under manual Argo ownershi"]
     i988["#988 (closed) Restore public camera snapshots and qualify authenticated "]
+    i990["#990 (open) Delete verdify-prod qualification and restore-drill residu"]
+    i991["#991 (open) Prune verdify-db-rehearsal run residue (non-data, D-04)"]
+    i993["#993 (open) Adopt NetworkPolicy verdify-prod/allow-db-from-restore int"]
+    i995["#995 (open) Adopt Namespace verdify-descheduler in place and record Ve"]
+    i997["#997 (open) Keep Verdify dashboards single-sourced: delete stale Confi"]
+    i998["#998 (open) Retire writer/DB watchdog CronJobs after monitoring-stack "]
+    i999["#999 (open) Pin the remaining tag-only verdify-prod images by digest"]
+    i1000["#1000 (open) Close health coverage gaps for Verdify items and alert the"]
+    i1001["#1001 (open) Track Verdify transitions owned elsewhere (agents#4461, #4"]
+    i1002["#1002 (open) Stop anonymous internet users running ad-hoc SQL via graph"]
+    i1003["#1003 (open) Route verdify-platform main changes, including prod releas"]
+    i1004["#1004 (open) Bring kubectl-patched verdify-prod workloads back under Gi"]
+    i1005["#1005 (open) Give verdify-lab real node redundancy instead of two repli"]
+    i1006["#1006 (open) Scope the internet-facing verdify-traefik to verdify-prod:"]
+    i1007["#1007 (open) Put edge pre-auth in front of mcp.verdify.ai: one static I"]
+    i1008["#1008 (open) Add rate limits and request bounds to anonymous api.verdif"]
+    i1009["#1009 (open) Sign greenhouse ESP32 firmware and flash only reviewed arc"]
+    i1010["#1010 (open) Log the audience and real client IP of every successful ve"]
+    i1011["#1011 (open) Bound verdify-mcp egress and stop mounting the default Ser"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 (open) Durability program: recoverable backups, measured RPO/RTO "]
@@ -73,10 +92,13 @@ flowchart TD
     i672["#672 (closed) Make compressed-chunk ownership restoration a supported bl"]
     i382["#382 (closed) Persist ingestor queue and spool across restart and node l"]
     i396["#396 (closed) Design and rehearse CNPG alongside the live database on cu"]
-    i245["#245 (open) Execute a separately bounded database cutover only after p"]
+    i245["#245 (closed) Execute a separately bounded database cutover only after p"]
     i643["#643 (closed) Extend least-privilege database roles beyond the already-r"]
     i49["#49 (closed) Audit and close historical suppressed sensor alerts withou"]
     i977["#977 (closed) Decide the database replica policy before November 12; kee"]
+    i992["#992 (open) Retire the verdify-db-rehearsal experiment namespace now t"]
+    i994["#994 (open) Record the verdify-db data PVC db-data-verdify-db-0 as pro"]
+    i996["#996 (open) Remove laptop-root-era verdify-agent RBAC"]
   end
   subgraph C6["C6: Evidence-led control and irrigation"]
     i359["#359 (open) Control program: truthful crop corridors before evidence-l"]
@@ -122,16 +144,16 @@ flowchart TD
   i424 --> i749
   i778 --> i749
   i949 --> i749
-  i749 --> i641
-  i639 --> i641
   i587 --> i641
+  i639 --> i641
   i747 --> i641
+  i749 --> i641
   i371 --> i782
   i779 --> i782
   i780 --> i782
   i781 --> i782
-  i639 --> i783
   i587 --> i783
+  i639 --> i783
   i641 --> i588
   i782 --> i588
   i783 --> i588
@@ -165,8 +187,8 @@ flowchart TD
   i371 --> i410
   i419 --> i410
   i424 --> i410
-  i785 --> i378
   i371 --> i378
+  i785 --> i378
   i378 --> i361
   i410 --> i361
   i427 --> i214
@@ -186,6 +208,8 @@ flowchart TD
   i371 --> i379
   i419 --> i379
   i781 --> i787
+  i390 --> i963
+  i994 --> i999
 ```
 
 ## Exact edge list
@@ -196,16 +220,16 @@ flowchart TD
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) (closed) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) (open) |
 | [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778) (closed) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) (open) |
 | [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) (closed) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) (open) |
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) (open) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) (open) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) (open) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) (open) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
 | [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747) (closed) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) (open) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) |
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) (open) |
 | [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779) (closed) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) (open) |
 | [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) (closed) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) (open) |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) (closed) | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) (open) |
-| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) (open) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) (open) |
 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) (open) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) (open) |
+| [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) (open) | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) (open) |
 | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) (open) | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588) (open) |
 | [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) (open) | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588) (open) |
 | [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) (open) | [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588) (open) |
@@ -225,8 +249,8 @@ flowchart TD
 | [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) (closed) | [#672](https://github.com/VerdifyConsultancy/verdify-platform/issues/672) (closed) |
 | [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) (closed) | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) |
 | [#672](https://github.com/VerdifyConsultancy/verdify-platform/issues/672) (closed) | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) |
-| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (open) |
-| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (open) |
+| [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (closed) |
+| [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (closed) |
 | [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) (closed) | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) (closed) |
 | [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) (closed) | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) (closed) |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) (closed) | [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) (open) |
@@ -239,8 +263,8 @@ flowchart TD
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (open) |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) (closed) | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (open) |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) (closed) | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (open) |
-| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) (open) | [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378) (open) |
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378) (open) |
+| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) (open) | [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378) (open) |
 | [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378) (open) | [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361) (closed) |
 | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (open) | [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361) (closed) |
 | [#427](https://github.com/VerdifyConsultancy/verdify-platform/issues/427) (closed) | [#214](https://github.com/VerdifyConsultancy/verdify-platform/issues/214) (closed) |
@@ -260,5 +284,7 @@ flowchart TD
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (closed) |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (closed) |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) (closed) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (closed) |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) (open) |
+| [#994](https://github.com/VerdifyConsultancy/verdify-platform/issues/994) (open) | [#999](https://github.com/VerdifyConsultancy/verdify-platform/issues/999) (open) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.

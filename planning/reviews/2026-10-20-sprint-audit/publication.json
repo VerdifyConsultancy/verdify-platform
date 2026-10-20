@@ -1,0 +1,458 @@
+{
+  "recorded_at": "2026-10-20T15:37:56.090185+00:00",
+  "audit_commit": "15f6628f4a0330975d0b7866689b87bf34d374e8",
+  "milestone": {
+    "number": 38,
+    "title": "S6 \u2014 Public exposure and safe control preparation (October 21\u201327, 2026)",
+    "html_url": "https://github.com/VerdifyConsultancy/verdify-platform/milestone/38",
+    "due_on": "2026-10-27T00:00:00Z"
+  },
+  "open_issue_count": 62,
+  "updated_issue_count": 62,
+  "selected_issues": [
+    297,
+    994,
+    1002,
+    1006,
+    1007,
+    1008
+  ],
+  "verification": "Independent GETs confirm exact open issue coverage, all 62 audit bodies/next actions, unchanged issue states, exactly six S6 milestone members, and unchanged nonselected milestone assignments. Native dependencies were not mutated.",
+  "initial_verification_limit": "The publisher completed all 62 updates, and its first independent open-issue readback passed body/selected-milestone checks. Its immediate milestone-list equality assertion then failed without retaining that response. A subsequent independent list and this verifier both confirm exactly the intended six. No update was replayed and no issue was closed.",
+  "issues": [
+    {
+      "number": 16,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "updated_at": "2026-10-20T15:35:39Z",
+      "body_sha256": "a6e58a4412896ea0ad13521538b800bb8f8ef4f197160edf30ad66ecb0dde241",
+      "milestone": 30
+    },
+    {
+      "number": 31,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+      "updated_at": "2026-10-20T15:35:41Z",
+      "body_sha256": "376a2f7a4655699ecda321d602ed74e397b913d09391342120d9321a4f99d243",
+      "milestone": 31
+    },
+    {
+      "number": 45,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+      "updated_at": "2026-10-20T15:35:42Z",
+      "body_sha256": "48e732b66277006fbd9ecd6846e0cf05f3ca23466d7597d57d1a660ed41fa076",
+      "milestone": 30
+    },
+    {
+      "number": 51,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+      "updated_at": "2026-10-20T15:35:44Z",
+      "body_sha256": "cb216c036bc4c402db3a955e96a8acc0851d10b4441aa549232f71f7d8d6bd9a",
+      "milestone": 30
+    },
+    {
+      "number": 52,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+      "updated_at": "2026-10-20T15:35:45Z",
+      "body_sha256": "468fb2bde7e42b0dbc49b6da575229f71cfd23e5c2586b06c52adad14cc41cf5",
+      "milestone": 30
+    },
+    {
+      "number": 75,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "updated_at": "2026-10-20T15:35:47Z",
+      "body_sha256": "5a704c196aa532d33403b6bdde052717e7f21a4aa430d40feead03cddf98a26a",
+      "milestone": 27
+    },
+    {
+      "number": 218,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "updated_at": "2026-10-20T15:35:48Z",
+      "body_sha256": "d46f411e2c4f9c457273c714b751fe60ff7f430cc0185ee462ec6548628fbc71",
+      "milestone": 28
+    },
+    {
+      "number": 297,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+      "updated_at": "2026-10-20T15:35:50Z",
+      "body_sha256": "cc3e673f4b81c9ae5834a2413b2a424360bee8bc3292e51d1ca561be8e0e2ce6",
+      "milestone": 38
+    },
+    {
+      "number": 298,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+      "updated_at": "2026-10-20T15:35:52Z",
+      "body_sha256": "444d7c0380030d7a4b73d6b0db1ef3708997eb6b45c7bb021ad594cd08a4f2bb",
+      "milestone": 30
+    },
+    {
+      "number": 299,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+      "updated_at": "2026-10-20T15:35:53Z",
+      "body_sha256": "7ec86770284ab571e3bd89e1ae74fa9b856bc08abd1eadb465cc3950bc070385",
+      "milestone": 29
+    },
+    {
+      "number": 350,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "updated_at": "2026-10-20T15:35:55Z",
+      "body_sha256": "2d7dc4745432c4f2244d48c18bdbe4ccf02b45e8fe0d2cd8cde44ef3530f8b94",
+      "milestone": 29
+    },
+    {
+      "number": 359,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "updated_at": "2026-10-20T15:35:57Z",
+      "body_sha256": "9f443feb2587ae75be8129a13c2d987c684cb29f438b23bfc3037d0d54d00f0a",
+      "milestone": 29
+    },
+    {
+      "number": 367,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+      "updated_at": "2026-10-20T15:35:58Z",
+      "body_sha256": "e8f23de6aad412c2e1d016b106d1a30bd083452dad088a5630904505efcb949f",
+      "milestone": 29
+    },
+    {
+      "number": 368,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+      "updated_at": "2026-10-20T15:36:00Z",
+      "body_sha256": "84866baf3521b6910c9734a938c4339f37c48df32541ce3112f08093159c1431",
+      "milestone": 29
+    },
+    {
+      "number": 369,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+      "updated_at": "2026-10-20T15:36:01Z",
+      "body_sha256": "099e63dc2f72b89c8869040ccde76223b693cfd057dca6ea7c505e1268d1e303",
+      "milestone": 29
+    },
+    {
+      "number": 370,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+      "updated_at": "2026-10-20T15:36:03Z",
+      "body_sha256": "59f7263420b2d83cc766b0db2ec009df0cd048cefd5ec91b2a8236ef8838819a",
+      "milestone": 29
+    },
+    {
+      "number": 378,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+      "updated_at": "2026-10-20T15:36:04Z",
+      "body_sha256": "eca1bb8d0d6b18e08fc3a80cb0798bf44dbf231943842740eec24cc0f461bb59",
+      "milestone": 29
+    },
+    {
+      "number": 386,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+      "updated_at": "2026-10-20T15:36:06Z",
+      "body_sha256": "0b944af4ce320f3184606292df58f493f722fb20bd7204496e787e7eb7e68cc9",
+      "milestone": 37
+    },
+    {
+      "number": 390,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+      "updated_at": "2026-10-20T15:36:08Z",
+      "body_sha256": "ac91ad790c07bcc1cfb907eebbbf42651997c14078352c9d6846bd73828c49b0",
+      "milestone": 37
+    },
+    {
+      "number": 398,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+      "updated_at": "2026-10-20T15:36:11Z",
+      "body_sha256": "d9f51e53c53b9305648501992cc4762453241eb70e981542b588d069e7dff69e",
+      "milestone": 30
+    },
+    {
+      "number": 410,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+      "updated_at": "2026-10-20T15:36:12Z",
+      "body_sha256": "277658e20ecf3a64b413fb842dd7cefedd5733b720d618382133cbecf0aec80e",
+      "milestone": 29
+    },
+    {
+      "number": 412,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+      "updated_at": "2026-10-20T15:36:14Z",
+      "body_sha256": "036cd30baa9104e75a64742ab2321d0262d6efe2e4f42fcd6c905e29dadb6e51",
+      "milestone": 30
+    },
+    {
+      "number": 430,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "updated_at": "2026-10-20T15:36:16Z",
+      "body_sha256": "3c087c98e985df40b3a99bb833da1170329a2c42739c51e3d8f65f6c2533a53e",
+      "milestone": 29
+    },
+    {
+      "number": 434,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+      "updated_at": "2026-10-20T15:36:17Z",
+      "body_sha256": "b45e820fb5a8c5a982c5c6067e51975c813e3d75ba9a2c4a65bb19a2a1856a79",
+      "milestone": 29
+    },
+    {
+      "number": 581,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "updated_at": "2026-10-20T15:36:19Z",
+      "body_sha256": "8c605c08f2a0eaad6fb554aee516cd6f95ceb98e0e393c8bdbc43a0275d417b5",
+      "milestone": 25
+    },
+    {
+      "number": 587,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+      "updated_at": "2026-10-20T15:36:21Z",
+      "body_sha256": "26f101d1c728e2053ccc176f47034acb0e36f4dfdf2e005794830f73ffcad986",
+      "milestone": 34
+    },
+    {
+      "number": 588,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+      "updated_at": "2026-10-20T15:36:23Z",
+      "body_sha256": "d5f80fa060177d641da7fcf0180ee1a5caa821258cd01672733c0521cf7d1fde",
+      "milestone": 36
+    },
+    {
+      "number": 639,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+      "updated_at": "2026-10-20T15:36:24Z",
+      "body_sha256": "b2e7d130565b7b858eb976377dc12694aba7c45f2f2d1687c2978f0b6213f4bb",
+      "milestone": 34
+    },
+    {
+      "number": 640,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+      "updated_at": "2026-10-20T15:36:26Z",
+      "body_sha256": "9d9bf22a591a1bccb31cb1a198038528f8326b34351e73af224573557069a77d",
+      "milestone": 36
+    },
+    {
+      "number": 641,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "updated_at": "2026-10-20T15:36:28Z",
+      "body_sha256": "dd550fae6e88a3e1d76992b2c978f0800d7b36d30e5723eedd859094295398af",
+      "milestone": 35
+    },
+    {
+      "number": 642,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+      "updated_at": "2026-10-20T15:36:30Z",
+      "body_sha256": "ffdce7f95b7dd2af54d51d44e0bab249422582616559ead5c9fcfeb768a402cb",
+      "milestone": 36
+    },
+    {
+      "number": 749,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+      "updated_at": "2026-10-20T15:36:32Z",
+      "body_sha256": "3e56cd27a3a2a02fa3a7cb8938ccd880bb4eade3d6ff6aeb43fdb6bebb4897c7",
+      "milestone": 34
+    },
+    {
+      "number": 751,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+      "updated_at": "2026-10-20T15:36:34Z",
+      "body_sha256": "548008de6cb5b4dc5cd2d53b0042a70bb0041653f1e78bc104cc5531a9573da7",
+      "milestone": 30
+    },
+    {
+      "number": 775,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "updated_at": "2026-10-20T15:36:35Z",
+      "body_sha256": "aa764d42327b6bdcd1065b75d451072703f8c0ee38b6b3a72db53fb441664aba",
+      "milestone": 23
+    },
+    {
+      "number": 782,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+      "updated_at": "2026-10-20T15:36:37Z",
+      "body_sha256": "357a4ac59533248dea9a4748f2638e8409505b333eea95a804cf0807a3006c85",
+      "milestone": 34
+    },
+    {
+      "number": 783,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+      "updated_at": "2026-10-20T15:36:39Z",
+      "body_sha256": "5f05603b7b4ebbfb98606e37ed9ba8b2b354a4038cd0423f414a25b8c4749c90",
+      "milestone": 35
+    },
+    {
+      "number": 784,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+      "updated_at": "2026-10-20T15:36:41Z",
+      "body_sha256": "11b4ef5b7640825dbce309b4dc6598d1dcc560675f61ff068512be95036ce8e9",
+      "milestone": 26
+    },
+    {
+      "number": 785,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "updated_at": "2026-10-20T15:36:43Z",
+      "body_sha256": "f8a2a11a335b424ca2fa0f161c6f74d4eeb24a1bfed2cb7d7419e4e7df52fcae",
+      "milestone": 26
+    },
+    {
+      "number": 963,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+      "updated_at": "2026-10-20T15:36:44Z",
+      "body_sha256": "2f817d7e5821ff3ecee5ff4845c53ea904e0c6e1e576cd2a5cf6b62da214fe8a",
+      "milestone": 37
+    },
+    {
+      "number": 981,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+      "updated_at": "2026-10-20T15:36:46Z",
+      "body_sha256": "25b2d1cf5151ac8bb60a624842c3504fa24f29d2abfb3781e9168629bc1b1e3d",
+      "milestone": 34
+    },
+    {
+      "number": 990,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/990",
+      "updated_at": "2026-10-20T15:36:48Z",
+      "body_sha256": "e6b9c0abae43088fd7d3daedf56d15274e7d6abbb84654bb2c0f1bec64165a02",
+      "milestone": null
+    },
+    {
+      "number": 991,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/991",
+      "updated_at": "2026-10-20T15:36:50Z",
+      "body_sha256": "06833e3ef4dd9285b8e8e4182215f19581cd6a28166706b08b68d0f3624a43de",
+      "milestone": null
+    },
+    {
+      "number": 992,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/992",
+      "updated_at": "2026-10-20T15:36:51Z",
+      "body_sha256": "8e2611aa17be57007a568ee04efd9d3223511c1e171cf0732ab1c7efcc6110ba",
+      "milestone": null
+    },
+    {
+      "number": 993,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/993",
+      "updated_at": "2026-10-20T15:36:53Z",
+      "body_sha256": "2674b96e24db6db36e2eb75b11de7b2ccc62d18b60d186b5a5e47e3d74a5686d",
+      "milestone": null
+    },
+    {
+      "number": 994,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/994",
+      "updated_at": "2026-10-20T15:36:55Z",
+      "body_sha256": "899287406acb07fb13d0a76ac68b6d3ea5447ee4f67b5d75a2f6eac15db8a558",
+      "milestone": 38
+    },
+    {
+      "number": 995,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/995",
+      "updated_at": "2026-10-20T15:36:56Z",
+      "body_sha256": "3176a4cce61835b4026d56d9ba3095c92e2c8ee77866dbdf08cd2564313ec2e1",
+      "milestone": null
+    },
+    {
+      "number": 996,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/996",
+      "updated_at": "2026-10-20T15:36:58Z",
+      "body_sha256": "e355f65189bbcde03c24ff784dc8523c7c45d6c9bef7fb87f4e2fc869699759f",
+      "milestone": null
+    },
+    {
+      "number": 997,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/997",
+      "updated_at": "2026-10-20T15:36:59Z",
+      "body_sha256": "6f57a4650a3b6f7707c1c3b8ecf88109f0bfea3feade0d408b494be1135a20b8",
+      "milestone": null
+    },
+    {
+      "number": 998,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/998",
+      "updated_at": "2026-10-20T15:37:00Z",
+      "body_sha256": "28458b6be2a04ac6aa59236692497f3b361fc0feb0a839873e5edac60f086959",
+      "milestone": null
+    },
+    {
+      "number": 999,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/999",
+      "updated_at": "2026-10-20T15:37:02Z",
+      "body_sha256": "b64868ceb9a1c5d6f0f3d6fda5ca1ee0a7e30974b48c225034ae22753ee19fae",
+      "milestone": null
+    },
+    {
+      "number": 1000,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1000",
+      "updated_at": "2026-10-20T15:37:03Z",
+      "body_sha256": "1ad87efea2aa64e92c2f60bc1609cd4ed9223bc5da5805faecaa6963ff282bc5",
+      "milestone": null
+    },
+    {
+      "number": 1001,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001",
+      "updated_at": "2026-10-20T15:37:05Z",
+      "body_sha256": "221ba8e32dd1e9a16642f2ae38204b01a6ebfa6ff66de699c175afd99a231288",
+      "milestone": null
+    },
+    {
+      "number": 1002,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1002",
+      "updated_at": "2026-10-20T15:37:07Z",
+      "body_sha256": "609faf6bbd3dd07a1e5c53dae5262e26ab7c45734d6072fbee554631a1ef415e",
+      "milestone": 38
+    },
+    {
+      "number": 1003,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1003",
+      "updated_at": "2026-10-20T15:37:09Z",
+      "body_sha256": "fbbaabbdf52c47144bc977a7cba8ff5fe0ebf23dc3224b5cac32dc330c115a25",
+      "milestone": null
+    },
+    {
+      "number": 1004,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1004",
+      "updated_at": "2026-10-20T15:37:10Z",
+      "body_sha256": "9af2249564431ec83743231358dfd78e218d912b9014e65c5478c9bdb214d215",
+      "milestone": null
+    },
+    {
+      "number": 1005,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1005",
+      "updated_at": "2026-10-20T15:37:12Z",
+      "body_sha256": "d8d7e0859bed2c38eb8189829e3d3cd9d1b89101aaf8db82cc2d9e6024a49800",
+      "milestone": null
+    },
+    {
+      "number": 1006,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1006",
+      "updated_at": "2026-10-20T15:37:14Z",
+      "body_sha256": "ace63b32f43e38eb750da874dfd09d27fb39efa9b535bfbc589351689e734f10",
+      "milestone": 38
+    },
+    {
+      "number": 1007,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1007",
+      "updated_at": "2026-10-20T15:37:16Z",
+      "body_sha256": "822d34f57461c972a058d5feb0e4ee26051785a046b3bf019526b8d084c964ad",
+      "milestone": 38
+    },
+    {
+      "number": 1008,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1008",
+      "updated_at": "2026-10-20T15:37:18Z",
+      "body_sha256": "d3899cf6e3f80df56df2f7f0843949af2e5cd7abc28e9c259e4a99ec4cf350d4",
+      "milestone": 38
+    },
+    {
+      "number": 1009,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009",
+      "updated_at": "2026-10-20T15:37:19Z",
+      "body_sha256": "2bdd2edb4c64d800632b313d3cd8cb3dd970bdb6aee5e2f73b21362c72125d04",
+      "milestone": null
+    },
+    {
+      "number": 1010,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010",
+      "updated_at": "2026-10-20T15:37:21Z",
+      "body_sha256": "ee56e96e38289e0e803c53e05a48ec3fe77a67fe57d5e9abd6234b06e5f45e3d",
+      "milestone": null
+    },
+    {
+      "number": 1011,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1011",
+      "updated_at": "2026-10-20T15:37:22Z",
+      "body_sha256": "db6746bcb78185670fdbeeb986a1cda6d0d563a015ebc937b89d1acf3102b135",
+      "milestone": null
+    }
+  ]
+}
