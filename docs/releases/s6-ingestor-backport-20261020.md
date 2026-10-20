@@ -16,3 +16,11 @@ Build this exact branch commit with the existing in-cluster
 promote only that reviewed ingestor digest alongside separately reviewed API
 changes. Do not copy main's ingestor candidate as though it were this backport.
 The evaluator remains unavailable/uncommissioned and performs no DB/device call.
+
+The first full rebuild changed package-install layers despite identical dependency
+manifests, so its digest is not selected for production. The final release-only
+Dockerfile derives from the exact live digest and copies only `ingestor.py` and
+`soil_saturation.py`. It inherits all runtime libraries, system packages, command,
+user and environment from the live image. Verify all 17 base-layer digests remain
+an identical prefix before promotion. No live container filesystem or mounted
+Secret is copied; the base is the existing immutable registry image.
