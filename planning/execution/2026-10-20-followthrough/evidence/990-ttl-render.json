@@ -1,0 +1,8 @@
+{
+  "kind": "Job",
+  "name": "verdify-backup-pair-restore-ttl-proof",
+  "ttlSecondsAfterFinished": 86400,
+  "activeDeadlineSeconds": 3600,
+  "backoffLimit": 0,
+  "submitted": false
+}

@@ -52,6 +52,7 @@ def test_rendered_restore_uses_source_bound_owner_checks():
     assert restore.index('-f "${RESTORED_OWNER_TEST_SQL}"') < restore.index('-f "${AUDIT_SQL}"')
     assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
     assert job["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+    assert job["spec"]["ttlSecondsAfterFinished"] == 86400
 
 
 def test_optional_v2_interface_audit_uses_same_denied_restore_and_blocks_on_drift():
@@ -74,6 +75,7 @@ def test_optional_v2_interface_audit_uses_same_denied_restore_and_blocks_on_drif
     assert "first_interface}" in restore and "second_interface}" in restore
     assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
     assert audited["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+    assert ordinary["spec"]["ttlSecondsAfterFinished"] == audited["spec"]["ttlSecondsAfterFinished"] == 86400
 
 
 @pytest.mark.parametrize("database_owner", ["verdify", 'fixture owner"quoted'])

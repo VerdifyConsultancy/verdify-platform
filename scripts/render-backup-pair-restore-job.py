@@ -75,6 +75,8 @@ def render(stem: str, run_id: str, *, v2_interface_audit: bool = False) -> list[
         "spec": {
             "backoffLimit": 0,
             "activeDeadlineSeconds": 3600,
+            # Retain a day for attended log custody; bound finished Job lifetime (#990).
+            "ttlSecondsAfterFinished": 86400,
             "template": {
                 "metadata": {"labels": labels},
                 "spec": {
