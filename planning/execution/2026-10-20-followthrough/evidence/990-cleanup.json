@@ -1,0 +1,1108 @@
+{
+  "observed_at": "2026-10-20T20:24:34.239354+00:00",
+  "issue": 990,
+  "private_custody_sha256": "e23654526e90bca44163c62a1e88c592eb63ef716e2c46ef09a44144fac44d7d",
+  "archive_exported": false,
+  "apps_before": [
+    {
+      "name": "verdify-prod-dark",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "53893d1ee1fd81ffca708218bcd8268ac14f8aff"
+    },
+    {
+      "name": "verdify-prod-secrets-local-prod",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "3abe88b9a92d7b773bc1f17fa9a04dabf42a05b1"
+    },
+    {
+      "name": "verdify-descheduler",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5"
+    }
+  ],
+  "deleted": [
+    {
+      "kind": "Job",
+      "name": "greenhouse-quiet-60m",
+      "uid": "a68a3185-11e8-4a14-95ff-472c4d5ff799",
+      "resourceVersion": "94599505",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-diagnose-20260927",
+      "uid": "d9808712-292c-433e-abd7-e3020a66ddc8",
+      "resourceVersion": "219858074",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-20260927",
+      "uid": "0db0459e-a540-494f-ba66-93dc8298f65a",
+      "resourceVersion": "219854609",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0255diff0928",
+      "uid": "5e8bd8a6-dd02-4dbd-8da7-d99321b7325e",
+      "resourceVersion": "223369595",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0255digest0928",
+      "uid": "a0271c34-3958-490c-bbb4-67ac8f171b85",
+      "resourceVersion": "223301462",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0255exactdb0928",
+      "uid": "8fe9f9cd-1b1b-4590-b7c0-83c866820d2d",
+      "resourceVersion": "223315050",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0261q0928",
+      "uid": "75397b86-c499-4d3d-b514-041a5760b4d0",
+      "resourceVersion": "224796279",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0full0928",
+      "uid": "c93d23a7-b7b2-47f4-b9eb-bb8aad7b7ec0",
+      "resourceVersion": "223190978",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c0target0928",
+      "uid": "7c21e9ed-5bc7-4c8d-bd61-d9f3d375dcd8",
+      "resourceVersion": "223159770",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-c5owner0927",
+      "uid": "19e5a192-3c57-439c-9b40-c9c8d79e66ed",
+      "resourceVersion": "222992511",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-climate2661001a",
+      "uid": "6eacab03-199d-483d-a58b-36de5244dbd0",
+      "resourceVersion": "231367999",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-climate2661001b",
+      "uid": "ede292a8-49f5-4dfe-895a-590ff3e6fea1",
+      "resourceVersion": "231368060",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-diag-0927",
+      "uid": "42d7c16f-7008-484f-9083-dd0ed24d8740",
+      "resourceVersion": "221480858",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-ediff-0927",
+      "uid": "7f5c9305-3083-4a73-89cf-0a8d747ef2b8",
+      "resourceVersion": "221543197",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-effacl-0927",
+      "uid": "8883ebc8-21f1-4360-a25c-9b66a0699fd4",
+      "resourceVersion": "221506407",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-observation2671001a",
+      "uid": "147a9b70-2766-4e3d-86d9-b49c28ffffd4",
+      "resourceVersion": "231645822",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-observation2671001b",
+      "uid": "28fe4121-223a-4e27-a051-f61b1d557bbf",
+      "resourceVersion": "231650042",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-owner217-0927",
+      "uid": "0a8c0b8b-520a-4390-ae24-9bb7647f1624",
+      "resourceVersion": "222156075",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-owner672-0927",
+      "uid": "70777164-2b33-418e-99f4-0ce396923e1c",
+      "resourceVersion": "222138277",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-parity-0927",
+      "uid": "eb56eb8c-b82c-4342-bf72-a655555cdc23",
+      "resourceVersion": "221454379",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-role2681001a",
+      "uid": "7fdbb062-7ab6-4d79-ad9c-c1ae99189a81",
+      "resourceVersion": "231884953",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-role2681001b",
+      "uid": "82eef834-1b4e-48ec-acb8-75a0be6df0ae",
+      "resourceVersion": "231885084",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-role2681001c",
+      "uid": "3839b2f6-9a1d-4526-a13c-48f1828b31b9",
+      "resourceVersion": "232081625",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-role2691001a",
+      "uid": "5425d686-d44a-44d9-8121-24709b7fab78",
+      "resourceVersion": "232458654",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-scheduled-0927",
+      "uid": "cf438825-8444-4c2f-be06-957d52591151",
+      "resourceVersion": "221414125",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-v2-20260927",
+      "uid": "47ba2588-d05e-4c1f-b3cd-a9f93f139577",
+      "resourceVersion": "219885646",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-v2cur2540928",
+      "uid": "9d6035a1-d3ac-4bf5-9f72-5a2624af74b0",
+      "resourceVersion": "223170255",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-v2cur2550928",
+      "uid": "4149cf77-9ae0-44fd-97b4-a7e5b5919c4c",
+      "resourceVersion": "223542452",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-v2int0928",
+      "uid": "41d8ef2e-9823-49d5-8134-5cb35ba4dc32",
+      "resourceVersion": "223126089",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-pair-restore-verify3",
+      "uid": "68daa401-ea48-4958-9741-2bb092c01549",
+      "resourceVersion": "219908543",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-backup-role-parity-diagnose-20260927",
+      "uid": "a84e0555-95a2-4d25-9614-480d7c711028",
+      "resourceVersion": "219890688",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-c0-restore-probe-20260926",
+      "uid": "8702778b-d1d2-4c31-b93f-51efa55dc077",
+      "resourceVersion": "219256421",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-db-backup-pair-verify-20260927",
+      "uid": "e44ec120-8fb3-43bf-bf47-f3429845e4c9",
+      "resourceVersion": "219843286",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-lab-receipt-singlelink-repair-20261013",
+      "uid": "c98b1210-a506-45cc-bb36-1c9de6915772",
+      "resourceVersion": "268123644",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-logical-restore-audit-20260926",
+      "uid": "46352f0d-585e-4d39-b312-022638d4cf3d",
+      "resourceVersion": "219349160",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node4-20261006",
+      "uid": "a43116d5-1d07-4fb0-9b73-3e5bc54ba339",
+      "resourceVersion": "247382681",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node4-20261011",
+      "uid": "fcfb74a3-a875-4109-a83e-c28bc60fe6f8",
+      "resourceVersion": "262195132",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node5-20261006",
+      "uid": "ce5de07a-fc33-4fa9-a686-798beb5afb72",
+      "resourceVersion": "247385036",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node5-20261011",
+      "uid": "852edf2d-0ac7-4d59-93aa-b17b7f7d9641",
+      "resourceVersion": "262195188",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node6-20261006",
+      "uid": "1c5c2b1a-8fb7-493d-b2b8-24ccda330c80",
+      "resourceVersion": "247385893",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-lab-image-warm-node6-20261011",
+      "uid": "530f249c-261a-45aa-a18d-a8528facbe53",
+      "resourceVersion": "262195167",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-role-ha-backfill",
+      "uid": "cff632cf-d78d-4380-824e-a7ab62d7ce33",
+      "resourceVersion": "246402324",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-role-lab-publisher",
+      "uid": "463d5541-6e4c-4451-bdcb-80105333bc42",
+      "resourceVersion": "246401790",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-s2-role-vision",
+      "uid": "30bdd5bb-c3fa-4029-ae50-dd67c3bb6128",
+      "resourceVersion": "246402320",
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "operator-rehearsal-probe-files",
+      "uid": "908bc453-01ea-4b87-9045-c03f987c6896",
+      "resourceVersion": "143940367",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "operator-rehearsal-probe-script",
+      "uid": "a6eb994c-ff46-4e6e-8960-8c9e20fe5ae3",
+      "resourceVersion": "143972094",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-20260927-scripts",
+      "uid": "0f6080a3-6756-4534-87f9-6d92063e007c",
+      "resourceVersion": "219854288",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0255diff0928-scripts",
+      "uid": "35640df0-bef8-4aa0-b65c-5fef82ec9c7c",
+      "resourceVersion": "223318497",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0255digest0928-scripts",
+      "uid": "46df0e8c-1905-4f83-b75d-5ea6cfaef254",
+      "resourceVersion": "223288849",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0255exactdb0928-scripts",
+      "uid": "1da4fd51-2aa2-47bf-a10b-88e7a28755ab",
+      "resourceVersion": "223304900",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0261q0928-scripts",
+      "uid": "2269b18f-a434-4b10-a77d-722d38c801a0",
+      "resourceVersion": "224664641",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0full0928-scripts",
+      "uid": "0248dd39-7815-4b44-af40-db050fb3f611",
+      "resourceVersion": "223176047",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c0target0928-scripts",
+      "uid": "ecf5d1e0-2353-4e6b-9d44-d1cd248d74cf",
+      "resourceVersion": "223149109",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-c5owner0927-scripts",
+      "uid": "562890b0-ffd8-497a-971f-1553143382e3",
+      "resourceVersion": "222979638",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-climate2661001a-scripts",
+      "uid": "7efb7436-6882-4549-9086-528452d76f2c",
+      "resourceVersion": "231263506",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-climate2661001b-scripts",
+      "uid": "26ddcb8b-a756-4c18-ace5-fc85631a5c06",
+      "resourceVersion": "231263526",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-diag-0927-scripts",
+      "uid": "4aa1e69f-7dad-4cbc-878e-66db1ea324ac",
+      "resourceVersion": "221463816",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-ediff-0927-scripts",
+      "uid": "d57e31a2-12cf-4ea2-a97a-f656ff41b6f4",
+      "resourceVersion": "221516889",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-effacl-0927-scripts",
+      "uid": "17aa057b-04f2-42d6-9db5-251532a8bdb5",
+      "resourceVersion": "221490778",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-observation2671001a-scripts",
+      "uid": "4a41d67b-449f-4f3d-a2bf-2cb5fa27e212",
+      "resourceVersion": "231520756",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-observation2671001b-scripts",
+      "uid": "c849a8a1-8604-40d0-87d3-f5fe4803f4da",
+      "resourceVersion": "231520766",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-owner217-0927-scripts",
+      "uid": "afeee0ec-e719-487d-a05b-ecaa4b768f8e",
+      "resourceVersion": "222144867",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-owner217-0927-source",
+      "uid": "5fcfc64e-e0a1-4744-acab-6557d14c7b0a",
+      "resourceVersion": "222144869",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-owner672-0927-scripts",
+      "uid": "e7d1fdb8-0e32-44b6-b4b2-53ace2adcb60",
+      "resourceVersion": "222128256",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-parity-0927-scripts",
+      "uid": "5ce1ae82-61b8-4f02-81c5-20718ac31352",
+      "resourceVersion": "221441253",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-role2681001a-scripts",
+      "uid": "1ae62979-0405-44f6-8dc9-a97ad555b8f3",
+      "resourceVersion": "231731229",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-role2681001b-scripts",
+      "uid": "57f53aad-7b2a-43ec-af91-e21d7749a9fc",
+      "resourceVersion": "231733948",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-role2681001c-scripts",
+      "uid": "bfb8d20f-cc29-42cd-8800-12ae97e3ff61",
+      "resourceVersion": "231978210",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-role2691001a-scripts",
+      "uid": "f3a53bba-cf57-4363-8fce-ab9605da23a5",
+      "resourceVersion": "232353035",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-scheduled-0927-scripts",
+      "uid": "cd2521d8-e51b-4b1c-93e0-75597946f503",
+      "resourceVersion": "221395058",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-v2-20260927-scripts",
+      "uid": "66897f05-0bee-4241-a3bd-6981ff153843",
+      "resourceVersion": "219863433",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-v2cur2540928-scripts",
+      "uid": "b8282601-a020-4486-b8e7-bedc66bb900e",
+      "resourceVersion": "223160413",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-v2cur2550928-scripts",
+      "uid": "06810228-4fbe-4228-8911-959222ed0d81",
+      "resourceVersion": "223532696",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-v2int0928-scripts",
+      "uid": "189b265c-5287-477f-a049-ed9f92f4a7ba",
+      "resourceVersion": "223108812",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-backup-pair-restore-verify3-scripts",
+      "uid": "0e3617ba-1913-47b3-84e0-cdf66febbcf7",
+      "resourceVersion": "219894014",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-c0-entrypoint-contract-20260926",
+      "uid": "562a2a34-f289-4be2-a9b7-07899226dcd7",
+      "resourceVersion": "219298528",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-c0-restore-probe-20260926-script",
+      "uid": "e54ec123-9cc6-4018-a927-599997a88f26",
+      "resourceVersion": "219230419",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-c0-restore-probe-20260926-sql",
+      "uid": "b0e6a033-4da1-4a9b-8456-a6bfe08c651c",
+      "resourceVersion": "219230425",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-logical-restore-audit-20260926-audit-sql",
+      "uid": "e7d19036-a4d2-4427-9e49-c59749958cca",
+      "resourceVersion": "219329359",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-logical-restore-audit-20260926-script",
+      "uid": "eab1aa31-1262-48ef-ad0b-84bdf68d84f8",
+      "resourceVersion": "219329343",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-runtime-login-probe-20261011",
+      "uid": "6a6af1d1-6c5c-4184-aeac-7ead12ab366c",
+      "resourceVersion": "262277874",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-runtime-qualification-s2",
+      "uid": "1f6060f0-c442-464f-b00b-c1237b2ab9d7",
+      "resourceVersion": "246401498",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-20260927-deny-all",
+      "uid": "ce77a622-51ce-4375-af5e-3e26287090a3",
+      "resourceVersion": "219854289",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0255diff0928-deny-all",
+      "uid": "1b196cff-30dd-4f51-a358-fe417c63a091",
+      "resourceVersion": "223318495",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0255digest0928-deny-all",
+      "uid": "04253d94-a42a-4a7f-8adb-8ad33001527c",
+      "resourceVersion": "223288848",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0255exactdb0928-deny-all",
+      "uid": "787f5a39-3ce3-4f39-9462-e066a778bf0a",
+      "resourceVersion": "223304899",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0261q0928-deny-all",
+      "uid": "df56d188-148b-4d79-bd0e-bb6473ac9aeb",
+      "resourceVersion": "224664643",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0full0928-deny-all",
+      "uid": "9a1224ca-1369-4ebc-aa53-cfc2577c64fe",
+      "resourceVersion": "223176062",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c0target0928-deny-all",
+      "uid": "e5ea16c0-c199-4afc-b47e-4beca9cdf36a",
+      "resourceVersion": "223149110",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-c5owner0927-deny-all",
+      "uid": "d3ef847f-33c7-453e-8338-b4bc77af9f5a",
+      "resourceVersion": "222979639",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-climate2661001a-deny-all",
+      "uid": "0d8a3b6a-e367-44ac-b934-5e4042383c4b",
+      "resourceVersion": "231263509",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-climate2661001b-deny-all",
+      "uid": "db1fa2d0-4b86-43ad-9de8-c58a3774b50c",
+      "resourceVersion": "231263529",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-diag-0927-deny-all",
+      "uid": "288627d9-270a-49f6-9cd7-fc9d053155a5",
+      "resourceVersion": "221463819",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-ediff-0927-deny-all",
+      "uid": "8ae0d90f-e7ca-45f5-bc0b-c419b7c12dcb",
+      "resourceVersion": "221516891",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-effacl-0927-deny-all",
+      "uid": "ddbf590c-9653-495d-992d-b141b2d30bed",
+      "resourceVersion": "221490785",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-observation2671001a-deny-all",
+      "uid": "e8830992-1059-4121-83e2-16d16754b32e",
+      "resourceVersion": "231520757",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-observation2671001b-deny-all",
+      "uid": "00429021-4572-412e-9e49-1e5eb53b3c00",
+      "resourceVersion": "231520768",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-owner217-0927-deny-all",
+      "uid": "a3eec0e2-2289-49e2-b440-ef9f0d1b8327",
+      "resourceVersion": "222144868",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-owner672-0927-deny-all",
+      "uid": "d4e49fec-e642-4a08-9254-128844043419",
+      "resourceVersion": "222128257",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-parity-0927-deny-all",
+      "uid": "d65bc1c0-e5a4-4939-a163-4c249c408648",
+      "resourceVersion": "221441254",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-role2681001a-deny-all",
+      "uid": "2a547492-8386-416a-8a96-778bbb0cfda4",
+      "resourceVersion": "231731247",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-role2681001b-deny-all",
+      "uid": "f0d069e9-2ed2-4279-b4a4-350fa9d4ad44",
+      "resourceVersion": "231733971",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-role2681001c-deny-all",
+      "uid": "2a59168a-e7ff-4e84-9e97-15267f136d2f",
+      "resourceVersion": "231978211",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-role2691001a-deny-all",
+      "uid": "f1211d25-a48f-42c5-a88f-6f9b02f2c36f",
+      "resourceVersion": "232353040",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-scheduled-0927-deny-all",
+      "uid": "be6b7494-6beb-409c-9404-6fb2c75b761f",
+      "resourceVersion": "221395061",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-v2-20260927-deny-all",
+      "uid": "c9fccf2f-3ddf-45db-9210-dfc7a43e4a2e",
+      "resourceVersion": "219863437",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-v2cur2540928-deny-all",
+      "uid": "b973d9d3-506b-4f5b-80ba-460f8b3553dd",
+      "resourceVersion": "223160416",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-v2cur2550928-deny-all",
+      "uid": "046338e3-170c-480d-a857-d3e8d63683cf",
+      "resourceVersion": "223532697",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-v2int0928-deny-all",
+      "uid": "a6c72142-c8d6-4018-8346-ec8881aac70c",
+      "resourceVersion": "223108813",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-backup-pair-restore-verify3-deny-all",
+      "uid": "c26d9ec8-8a7f-426d-b336-fed4aa3f0d95",
+      "resourceVersion": "219894016",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-c0-contract-clone-deny-all-20260926",
+      "uid": "bfba6854-e4bd-476b-a202-1307fb1806f8",
+      "resourceVersion": "219243242",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-c0-entrypoint-clone-deny-all-20260926",
+      "uid": "dee299ed-b857-4671-aa48-45d738487a62",
+      "resourceVersion": "219300479",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-c0-main-entrypoint-clone-20260926-deny-all",
+      "uid": "89ba07c9-b0ea-49bc-80e3-0a618ac5eca3",
+      "resourceVersion": "219407564",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-c0-restore-probe-20260926-deny-all",
+      "uid": "b9872ade-b874-4da3-a334-5835b73d9ce3",
+      "resourceVersion": "219230428",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-logical-restore-audit-20260926-deny-all",
+      "uid": "e2831123-6573-45c1-92f8-796cecae2c89",
+      "resourceVersion": "219329348",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-runtime-login-probe-20261011",
+      "uid": "68e1b9f0-5221-4571-ac96-2bca31cd802e",
+      "resourceVersion": "262277875",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-s2-lab-image-warm-deny-all-20261006",
+      "uid": "3cd05d92-11b4-47ab-9b72-03d95f26c777",
+      "resourceVersion": "247380806",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "NetworkPolicy",
+      "name": "verdify-s2-lab-image-warm-deny-all-20261011",
+      "uid": "3b7567da-5d50-4259-9fa1-18a4133072cf",
+      "resourceVersion": "262194874",
+      "matching_pods_immediately_before_delete": 0,
+      "matching_controllers": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    }
+  ],
+  "retained": [],
+  "apps_after": [
+    {
+      "name": "verdify-prod-dark",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "53893d1ee1fd81ffca708218bcd8268ac14f8aff"
+    },
+    {
+      "name": "verdify-prod-secrets-local-prod",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "3abe88b9a92d7b773bc1f17fa9a04dabf42a05b1"
+    },
+    {
+      "name": "verdify-descheduler",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "b523a9b1ffecf0f82f8952763a1c0de207e540b5"
+    }
+  ],
+  "deleted_counts": {
+    "Job": 44,
+    "ConfigMap": 38,
+    "NetworkPolicy": 36
+  }
+}
