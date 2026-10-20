@@ -675,6 +675,10 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 - ConfigMap (4): `verdify-grafana-dashboards-0`, `verdify-grafana-dashboards-1`, `verdify-grafana-dashboards-2`, `verdify-grafana-dashboards-3`. The namespace itself and `ci-dbg-*` residue are jvallery/agents'.
 
+## MCP identity and egress (#1011)
+
+The dedicated `verdify-mcp` ServiceAccount disables token automount on the account and Pod, with no bindings or added Kubernetes authority. `verdify-mcp-egress` permits declared DNS, same-namespace DB and public IPv4 HTTPS dependencies while excluding LAN/NAS/device/API paths. Public HTTPS is not hostname enforcement. See `docs/operations/MCP_NETWORK_BOUNDARY.md`; deployment and packet/tool acceptance remain required.
+
 ### A10 Replace the writer/DB watchdogs with monitoring-stack alerts
 
 - `alert-path:verdify-writer-watchdog`: resolved by rule R13 (the independent-path list is closed). monitoring-stack adds `verdify.writer-ownership` rules covering writer and DB death; once they fire in a test, retire CronJobs `verdify-writer-watchdog` and `verdify-db-watchdog` here (non-data). Tracked with [monitoring-stack#834](https://github.com/jvallery/monitoring-stack/issues/834).
@@ -721,7 +725,3 @@ The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; 
 ## Rehearsal non-data cleanup (#991)
 
 The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.
-
-## MCP identity and egress (#1011)
-
-The dedicated `verdify-mcp` ServiceAccount disables token automount on the account and Pod, with no bindings or added Kubernetes authority. `verdify-mcp-egress` permits declared DNS, same-namespace DB and public IPv4 HTTPS dependencies while excluding LAN/NAS/device/API paths. Public HTTPS is not hostname enforcement. See `docs/operations/MCP_NETWORK_BOUNDARY.md`; deployment and packet/tool acceptance remain required.
