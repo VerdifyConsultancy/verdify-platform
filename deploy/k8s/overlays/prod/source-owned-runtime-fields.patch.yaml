@@ -1,0 +1,119 @@
+# #1004: exact audited runtime fields; no node taint changes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-db-backup-exporter
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-grafana
+spec:
+  template:
+    spec:
+      tolerations: []
+      nodeSelector:
+        kubernetes.io/hostname: vm-k3s-node7
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+  annotations:
+    operations.vallery.net/temporary-bootstrap-copy: null
+    operations.vallery.net/temporary-scale: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mcp
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mqtt
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-planner
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-traefik
+  namespace: verdify-prod
+spec:
+  template:
+    spec:
+      tolerations: []
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-band-curve-refresh
+spec:
+  suspend: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-db-backup
+spec:
+  suspend: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-db-watchdog
+spec:
+  suspend: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-fixed-panel-native-freezer
+  namespace: verdify-prod
+spec:
+  suspend: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-writer-watchdog
+spec:
+  suspend: false
