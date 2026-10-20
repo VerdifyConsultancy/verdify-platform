@@ -1,0 +1,51 @@
+{
+  "observed_at": "2026-10-20T20:21:40.184825+00:00",
+  "issue": 990,
+  "target_counts": {
+    "Job": 44,
+    "ConfigMap": 38,
+    "NetworkPolicy": 36
+  },
+  "protected": [
+    "allow-db-from-restore",
+    "kube-root-ca.crt",
+    "all PVC/PV/DB objects"
+  ],
+  "claim_gc_dependency_count": 0,
+  "preexisting_jobs_without_retained_pods": 43,
+  "available_logs": [
+    {
+      "pod": "verdify-lab-receipt-singlelink-repair-20261013-qbb7x",
+      "container": "repair",
+      "bytes": 549,
+      "sha256": "5c0cef4e967a4c3b0b10fcb4f0179c29b8b91c9e935d0cebe7a2c3f63721f32e"
+    }
+  ],
+  "existing_citation_files": [
+    {
+      "path": "docs/research/experiment-v2-restored-interface-2026-09-28.md",
+      "sha256": "f39a57a010d7922b1c2ff061357e55a74e48b238f261bb5636b9268dee553d25"
+    },
+    {
+      "path": "docs/runbooks/lab-runtime-topology-269-qualification.json",
+      "sha256": "25edc18460f294e9a044b6d76212ef54bd4543b2a5a3cea2afc36f1865d126d1"
+    },
+    {
+      "path": "docs/runbooks/runtime-role-extension-643-qualification.json",
+      "sha256": "9d1949c681c5c5df9a50ffd4ec77e08e0a6f8cd4c754fc0b8a5f7b01a902f1bc"
+    },
+    {
+      "path": "planning/reviews/2026-10-12/work-inventory.json",
+      "sha256": "0a0ebbd1813bb9bf4bf7addbaa08ca862db2b49be9825da3bcd380df1654b6cc"
+    }
+  ],
+  "custody": {
+    "artifact": "verdify-990-recovery.tar.gz.age",
+    "ciphertext_sha256": "e23654526e90bca44163c62a1e88c592eb63ef716e2c46ef09a44144fac44d7d",
+    "ciphertext_bytes": 1208551,
+    "plaintext_input_bytes": 6349460,
+    "independent_decryption_hash_match": true,
+    "location": "private local operator custody, excluded from Git",
+    "exported_to_github": false
+  }
+}

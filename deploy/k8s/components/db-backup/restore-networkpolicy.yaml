@@ -1,0 +1,21 @@
+# Adopted unchanged from the live restore path; do not remove during residue cleanup (#993).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-restore
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: db-restore
+    ports:
+    - port: 5432
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes:
+  - Ingress

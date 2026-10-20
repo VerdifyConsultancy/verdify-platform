@@ -1,0 +1,166 @@
+{
+  "observed_at": "2026-10-20T20:10:59.288239+00:00",
+  "issue": 997,
+  "namespace_removed": false,
+  "production_configmaps_before": {
+    "verdify-grafana-dashboards-0": {
+      "uid": "fb7e91a2-4286-4506-898b-953484dc7f16",
+      "data_sha256": "ad008ecfb965d3236f5eebcb6820ced77e32f8f5ab1154fb0cfba0236c9a2406"
+    },
+    "verdify-grafana-dashboards-1": {
+      "uid": "fb2771d1-a4a5-4a99-84fa-eee18958d039",
+      "data_sha256": "b73a306471ac4f5d882a25654d2b6d5eed5b3fe00f73a1903f89b5b6b8ee1b05"
+    },
+    "verdify-grafana-dashboards-2": {
+      "uid": "16f1f686-8f02-4947-a254-e0cbc4a9c3d9",
+      "data_sha256": "56622558e12bc2c3f64e024a072e543644e432911010188861f2fd2d5bbe1a31"
+    },
+    "verdify-grafana-dashboards-3": {
+      "uid": "c3f9d2f7-8fcf-46d2-8de8-243b6c0927b1",
+      "data_sha256": "0ba705ca08277df9d458d77cfbf7dcc79239a2e6400938c618adb61038046a7d"
+    }
+  },
+  "removed": [
+    {
+      "name": "verdify-grafana-dashboards-0",
+      "uid": "49898810-3a87-40a7-a4fc-864d6edda722",
+      "resourceVersion": "71732653",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "name": "verdify-grafana-dashboards-1",
+      "uid": "735414c0-b988-4f1f-bb99-d941aad560c5",
+      "resourceVersion": "71732667",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "name": "verdify-grafana-dashboards-2",
+      "uid": "d89cacda-c1b7-46ed-b046-e972838d80af",
+      "resourceVersion": "71698067",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    },
+    {
+      "name": "verdify-grafana-dashboards-3",
+      "uid": "0e5d5f9f-9233-46c8-960d-2593f035c3f6",
+      "resourceVersion": "71698070",
+      "pod_and_controller_references": 0,
+      "body_dry_run_preserved_identity": true,
+      "absent_readback": true
+    }
+  ],
+  "production_configmaps_unchanged": true,
+  "public_dashboards_after": [
+    {
+      "uid": "site-climate",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-controller",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-cooling",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-heating",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-humidity",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-lighting",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-climate-water",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-evidence-dashboards",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-evidence-economics",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-evidence-operations",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-evidence-planning-quality",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-greenhouse-crops",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-greenhouse-equipment",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-greenhouse-zones",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-home",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-inference-infra",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-intelligence",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-intelligence-data",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-intelligence-planning",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "site-irrigation",
+      "status": 200,
+      "metadata_present": true
+    },
+    {
+      "uid": "greenhouse-weather",
+      "status": 200,
+      "metadata_present": true
+    }
+  ],
+  "public_dashboard_count": 21
+}
