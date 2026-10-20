@@ -12,12 +12,14 @@ Transport: streamable-http on port 8400
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import math
 import os
 import re
 import sys
+import time
 import urllib.parse
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -510,6 +512,8 @@ _AUDIENCE_TOKEN_ENV_NAMES = {
 _BEARER_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9._~+/\-]+=*")
 
 _TOOL_AUTH_LOGGER = logging.getLogger("verdify.mcp.auth")
+_TOOL_AUDIT_LOGGER = logging.getLogger("verdify.mcp.audit")
+_TOOL_AUDIT_LOGGER.setLevel(logging.INFO)
 _MCP_PATH = "/mcp"
 
 
@@ -763,6 +767,41 @@ def _request_bearer_token(server) -> str | None:
     return _bearer_token_from_authorization(headers.get("authorization"))
 
 
+# Conservative capability classification: mixed-action tools remain write-capable.
+_TOOL_READ_ONLY = frozenset(
+    {
+        "climate",
+        "scorecard",
+        "outcome_kpi",
+        "equipment_state",
+        "forecast",
+        "get_setpoints",
+        "plan_status",
+        "history",
+        "lessons",
+        "lessons_search",
+        "knowledge_search",
+        "topology",
+        "position_current",
+        "crop_history",
+        "crop_lifecycle",
+    }
+)
+
+
+def _tool_transport_peer(server):
+    """Record only the transport peer; forwarded claims are never promoted to identity."""
+    try:
+        request = server._mcp_server.request_context.request
+    except (AttributeError, LookupError):
+        return None
+    host = getattr(getattr(request, "client", None), "host", None)
+    try:
+        return str(ipaddress.ip_address(host))
+    except (TypeError, ValueError):
+        return None
+
+
 class AudienceAuthorizedFastMCP(FastMCP):
     """FastMCP with server-side audience authorization at the dispatch choke point.
 
@@ -775,8 +814,40 @@ class AudienceAuthorizedFastMCP(FastMCP):
     """
 
     async def call_tool(self, name, arguments):
-        authorize_tool_call(name, _request_bearer_token(self))
-        return await super().call_tool(name, arguments)
+        token = _request_bearer_token(self)
+        authorize_tool_call(name, token)
+        audience = None
+        if auth_mode() != "off":
+            registry, _unknown = audience_token_registry()
+            audience = resolve_token_audience(token, registry)
+        peer = _tool_transport_peer(self)
+        started = time.monotonic()
+        outcome = "exception"
+        try:
+            result = await super().call_tool(name, arguments)
+            # Completed is a dispatch outcome, never a claim that a business action succeeded.
+            outcome = "tool_error" if getattr(result, "isError", False) is True else "completed"
+            return result
+        except asyncio.CancelledError:
+            outcome = "cancelled"
+            raise
+        finally:
+            _TOOL_AUDIT_LOGGER.info(
+                "%s",
+                _json(
+                    {
+                        "event": "mcp_tool_call",
+                        "audience": audience,
+                        "tool": name if name in TOOL_AUDIENCES else "unregistered",
+                        "capability": "read" if name in _TOOL_READ_ONLY else "write_capable",
+                        "result": outcome,
+                        "duration_ms": round((time.monotonic() - started) * 1000, 3),
+                        "peer_ip": peer,
+                        "client_ip_source": "transport_peer" if peer else "unavailable",
+                        "auth_mode": auth_mode(),
+                    }
+                ),
+            )
 
     async def list_tools_unfiltered(self):
         """Internal inventory for readiness/registry checks, never protocol dispatch."""
@@ -5439,6 +5510,11 @@ _assert_tool_audience_registry_complete()
 # ═══════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    # One JSON line per allowed dispatch, independent of Uvicorn/root log levels.
+    _audit_handler = logging.StreamHandler(sys.stdout)
+    _audit_handler.setFormatter(logging.Formatter("%(message)s"))
+    _TOOL_AUDIT_LOGGER.addHandler(_audit_handler)
+    _TOOL_AUDIT_LOGGER.propagate = False
     os.environ.setdefault("MCP_HTTP_HOST", "127.0.0.1")
     os.environ.setdefault("MCP_HTTP_PORT", "8000")
     if _mcp_runtime_db_role_required():
