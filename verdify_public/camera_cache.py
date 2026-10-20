@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections.abc import Callable
+
+# Reuse the public server operational logger; no provider URL, token or image bytes.
+log = logging.getLogger("uvicorn.error")
 
 
 class PublicCameraCache:
@@ -40,6 +44,7 @@ class PublicCameraCache:
             if not data or len(data) > self.max_bytes:
                 raise ValueError("invalid camera response size")
             self.cached[camera_id] = (self.clock(), data)
+            log.info("public_camera_upstream_refresh camera=%s bytes=%d", camera_id, len(data))
             return data
         finally:
             self.pending.pop(camera_id, None)
