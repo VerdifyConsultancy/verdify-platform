@@ -5,8 +5,12 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+import os
+
 from shelly_energy import INSERT_SQL as SHELLY_INSERT_SQL
-from shelly_energy import POWER_ENTITIES, WRITE_FIELDS, build_sample
+from shelly_energy import WRITE_FIELDS
+from shelly_modbus import build_sample as build_modbus_sample
+from shelly_modbus import read_registers, unavailable_sample
 
 from ._common import (
     _CENTER_FEEDBACK_MAP,
@@ -318,16 +322,41 @@ async def site_content_refresh(pool: asyncpg.Pool) -> None:
             log.error("site_content_refresh: could not record site_content_stale alert: %s", e)
 
 
+_shelly_previous_sources = (None, None)
+
+
 async def shelly_sync(pool: asyncpg.Pool) -> None:
-    token = _load_token(HA_TOKEN_FILE)
-    loop = asyncio.get_event_loop()
-    states = await loop.run_in_executor(None, _fetch_ha_batch, token, list(POWER_ENTITIES))
-    # Keep a gap row even on complete fetch failure. The interval reader must
-    # see missingness rather than bridge it from the last successful poll.
-    sample = build_sample(states, datetime.now(UTC))
+    global _shelly_previous_sources
+    loop = asyncio.get_running_loop()
+    try:
+        identity, registers = await loop.run_in_executor(
+            None, read_registers, os.environ.get("VERDIFY_SHELLY_MODBUS_HOST")
+        )
+        sample = build_modbus_sample(identity, registers, datetime.now(UTC), _shelly_previous_sources)
+    except (OSError, ValueError):
+        # Preserve a gap row on transport/identity/protocol failure; never attach
+        # a new observation clock to cached HA watts or an old successful read.
+        sample = unavailable_sample(datetime.now(UTC))
     async with pool.acquire() as conn:
         await conn.execute(SHELLY_INSERT_SQL, *(getattr(sample, field) for field in WRITE_FIELDS))
-    log.debug("Shelly power evidence: ch0=%s ch1=%s", sample.ch0_quality, sample.ch1_quality)
+    _shelly_previous_sources = tuple(
+        source if quality == "ok" else previous
+        for source, quality, previous in zip(
+            (sample.ch0_source_ts, sample.ch1_source_ts),
+            (sample.ch0_quality, sample.ch1_quality),
+            _shelly_previous_sources,
+            strict=True,
+        )
+    )
+    log.info(
+        "shelly_source_sample revision=%s ch0=%s ch1=%s source0=%s source1=%s observed=%s",
+        sample.measurement_revision,
+        sample.ch0_quality,
+        sample.ch1_quality,
+        sample.ch0_source_ts,
+        sample.ch1_source_ts,
+        sample.ts,
+    )
 
 
 async def gpu_power_sync(pool: asyncpg.Pool) -> None:
