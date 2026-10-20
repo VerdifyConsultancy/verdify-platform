@@ -180,8 +180,6 @@ Data PVCs follow R10: they carry `Prune=false,Delete=false`, and deleting one ne
 | `cluster-object:priorityclass/verdify-serving` | verdify-serving | k3s vallery (cluster-scoped) | PriorityClass value 100000, globalDefault False. | running | VerdifyConsultancy/verdify-platform:deploy/k8s/overlays/prod | **none** | none recorded | `owned` |
 | `cluster-object:rbac/verdify-descheduler` | ClusterRoles/Bindings from verdify-descheduler | k3s vallery (cluster-scoped RBAC) | 2 objects: Cluster:verdify-descheduler, Cluster:verdify-descheduler. | running | VerdifyConsultancy/verdify-platform:deploy/k8s/descheduler | **none** | none recorded | `owned`; registered estate exception (cluster-wide pod delete); record in map (A7) |
 | `cluster-object:rbac/verdify-prod-dark` | Retired tier-2 Kubernetes-provider RBAC | k3s vallery | #1006 removed the ClusterRole/Binding and every namespaced grant; file routing has zero Kubernetes access. | retired | deploy/k8s/overlays/prod/traefik | **none** | none | R18 satisfied by zero grants; no replacement Role/Binding exists |
-| `cluster-object:rbac/live-verdify-agent` | ClusterRoles/Bindings: live:verdify-agent | k3s vallery (cluster-scoped RBAC) | verdify-agent-cluster-readonly role+binding (seen only in 2026-06-07 audit inventory). 2 objects: Cluster:verdify-agent-cluster-readonly, Cluster:verdify-agent-cluster-readonly. | running | live-only | **none** | none recorded | `adopt`; delete residue after subject check (A8) |
-| `cluster-object:rbac/verdify-prod-dark` | ClusterRoles/Bindings from verdify-prod-dark | k3s vallery (cluster-scoped RBAC) | 2 objects: Cluster:verdify-traefik, Cluster:verdify-traefik. | running | VerdifyConsultancy/verdify-platform:deploy/k8s/overlays/prod | **none** | none recorded | `owned`; record cluster-scoped `verdify-traefik` ClusterRole/Binding in map (A7) |
 | `cluster-object:rbac/live-verdify-agent` | ClusterRoles/Bindings: live:verdify-agent | k3s vallery (cluster-scoped RBAC) | Four obsolete RBAC objects removed with UID/version guards after their sole subject namespace was confirmed absent (#996). | retired | planning/execution/2026-10-20-followthrough/evidence/996-rbac-removal.json | **none** | none | accepted retirement |
 
 ### NetworkPolicy groups and CNPG ObjectStores
@@ -668,6 +666,18 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 - Namespace (1): `verdify-descheduler` (excluded from the #802 seven-object adoption). Record PriorityClasses `verdify-*` and ClusterRole/Binding `verdify-descheduler` in the central map (R1 cluster-scoped entries). #1006 replaces the tier-2 Kubernetes provider with Git-generated file routing: ServiceAccount `verdify-traefik` has token automount disabled and no Role/Binding; retire the old same-named ClusterRole/Binding only after the tokenless rollout is verified.
 
+## October 20 follow-through
+
+#996: removed only the four obsolete verdify-agent RBAC objects. Both bindings referenced ServiceAccount verdify-staging/verdify-agent; the entire namespace is absent, no valid subject/token or other role binding remains, and no credential was touched. Exact metadata, verified body-level dry-runs and absence readbacks are in `planning/execution/2026-10-20-followthrough/evidence/996-rbac-removal.json`; recovery manifests remain in private operator custody. This supersedes A8’s historical adoption instruction.
+
+#993: adopt allow-db-from-restore with identical pod selectors and TCP 5432 ingress. Argo tracking and a read-only restore-path database connectivity probe are required after sync; the policy is preserved.
+
+#997: all four untracked duplicate dashboard ConfigMaps in verdify-platform were removed with exact UID/version guards and verified body-level dry-runs. Namespace and unrelated ci-dbg resources were preserved. Production ConfigMap UIDs/data hashes are unchanged; all 21 approved native public metadata routes return 200 through Cloudflare. Receipt: `planning/execution/2026-10-20-followthrough/evidence/997-dashboard-copy-removal.json`. Monitoring owner source cleanup is tracked in jvallery/monitoring-stack#832 / #488. This supersedes A9’s historical deletion instruction.
+
+## Qualification residue retirement (#990)
+
+A1 is complete at the live object boundary: 44 inactive Jobs, 38 runner ConfigMaps and 36 deny-all NetworkPolicies were removed with exact identities, verified body-level dry-runs, immediate zero-consumer checks and absent readbacks. `allow-db-from-restore`, root CA, all data objects and active workloads are preserved. Available logs, pre-state and four existing citations are retained in verified private encrypted operator custody; only sanitized receipts are published under `planning/execution/2026-10-20-followthrough/evidence/990-*`. The renderer now retains finished Jobs for 86400 seconds; its focused tests and rendered sample pass. Checked source merge remains the final delivery step. This supersedes A1’s historical deletion instruction.
+
 ### A8 Delete verdify-agent RBAC residue
 
 - `cluster-object:rbac/live-verdify-agent`: `adopt`; ClusterRole and ClusterRoleBinding `verdify-agent-cluster-readonly` (live-only).
@@ -723,14 +733,3 @@ The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; 
 ## Rehearsal non-data cleanup (#991)
 
 The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.
-## October 20 follow-through
-
-#996: removed only the four obsolete verdify-agent RBAC objects. Both bindings referenced ServiceAccount verdify-staging/verdify-agent; the entire namespace is absent, no valid subject/token or other role binding remains, and no credential was touched. Exact metadata, verified body-level dry-runs and absence readbacks are in `planning/execution/2026-10-20-followthrough/evidence/996-rbac-removal.json`; recovery manifests remain in private operator custody. This supersedes A8’s historical adoption instruction.
-
-#993: adopt allow-db-from-restore with identical pod selectors and TCP 5432 ingress. Argo tracking and a read-only restore-path database connectivity probe are required after sync; the policy is preserved.
-
-#997: all four untracked duplicate dashboard ConfigMaps in verdify-platform were removed with exact UID/version guards and verified body-level dry-runs. Namespace and unrelated ci-dbg resources were preserved. Production ConfigMap UIDs/data hashes are unchanged; all 21 approved native public metadata routes return 200 through Cloudflare. Receipt: `planning/execution/2026-10-20-followthrough/evidence/997-dashboard-copy-removal.json`. Monitoring owner source cleanup is tracked in jvallery/monitoring-stack#832 / #488. This supersedes A9’s historical deletion instruction.
-
-## Qualification residue retirement (#990)
-
-A1 is complete at the live object boundary: 44 inactive Jobs, 38 runner ConfigMaps and 36 deny-all NetworkPolicies were removed with exact identities, verified body-level dry-runs, immediate zero-consumer checks and absent readbacks. `allow-db-from-restore`, root CA, all data objects and active workloads are preserved. Available logs, pre-state and four existing citations are retained in verified private encrypted operator custody; only sanitized receipts are published under `planning/execution/2026-10-20-followthrough/evidence/990-*`. The renderer now retains finished Jobs for 86400 seconds; its focused tests and rendered sample pass. Checked source merge remains the final delivery step. This supersedes A1’s historical deletion instruction.
