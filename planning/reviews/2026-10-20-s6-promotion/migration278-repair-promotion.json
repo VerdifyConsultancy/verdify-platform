@@ -1,0 +1,17 @@
+{
+  "workflow": "verdify-s6-migrate278-complete-deps-20261020",
+  "uid": "79258c52-7ac2-4954-b5a0-f271eef2fd20",
+  "phase": "Succeeded",
+  "finished_at": "2026-10-20T18:50:49Z",
+  "source": "599b7474013e0a5d845ff616639c1a0f1c0da022",
+  "digest": "sha256:d0a52b98d29323f2f42161b14dba83169ca159258ca61610b8d671d6e1588b31",
+  "before_desired_digest": "sha256:e11479fe4f8032f60ddc040c132ac2a21fdcb9cdd785a6086249517a2ad6f46c",
+  "focused_cluster_tests": {
+    "passed": 68,
+    "skipped": 18
+  },
+  "native_rollback_proof": "278-native-rollback-qualification.json",
+  "failed_first_sync": "1bac5528484cc2d80f899b160ec9ac35080e68ea / Failed / no workload rollout",
+  "other_three_selected_images": "unchanged from promotion-input.json",
+  "live_deployment_verified": false
+}
