@@ -80,6 +80,7 @@ from mqtt_fanout import (
 from observation_spool import ObservationSpool
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
+from soil_saturation import saturation_evaluation_status
 from source_spool import SourceSpool
 from tasks import (
     BAND_DRIVEN_PARAMS,
@@ -4490,6 +4491,8 @@ async def task_loop(
         ("tempest_sync", 300, tempest_sync),
         ("ha_sensor_sync", 300, ha_sensor_sync),
         ("alert_monitor", 300, alert_monitor),
+        # #297: unavailable until measured saturation targets and alert adapter exist.
+        ("soil_saturation_status", 3600, saturation_evaluation_status),
         ("planner_memory_ingest", 300, planner_memory_ingest_sync),
         # Daily RAG-snapshot refresh: re-materialize the vault/docs corpus into
         # site_content so Iris retrieval doesn't silently drift stale (#43).
