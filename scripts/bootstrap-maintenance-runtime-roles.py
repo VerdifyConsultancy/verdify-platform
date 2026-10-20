@@ -47,7 +47,15 @@ FUNCTIONS = {
 
 
 def contract_sql():
-    checks = ["(" + _ordinary.sealed_sql_276() + " OR " + _ordinary.sealed_sql_277() + ")"]
+    checks = [
+        "("
+        + _ordinary.sealed_sql_276()
+        + " OR "
+        + _ordinary.sealed_sql_277()
+        + " OR "
+        + _ordinary.sealed_sql_278()
+        + ")"
+    ]
     for duty in DUTIES:
         role = "verdify_" + duty + "_runtime"
         login = role + "_login"

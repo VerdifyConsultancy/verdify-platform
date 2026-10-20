@@ -1,0 +1,32 @@
+{
+  "observed_at": "2026-10-20T18:41:52.419599+00:00",
+  "migration_sha256": "3ba5b19da2695d6656cfd5174dac0028eba917738f5498b83af0914ec5d86312",
+  "before": {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+    "grafana_defaults": [
+      "search_path=verdify_grafana_runtime, pg_catalog, public, pg_temp"
+    ]
+  },
+  "inside_rolled_back_transaction": {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+    "grafana_defaults": [
+      "search_path=verdify_grafana_runtime, pg_catalog, public, pg_temp",
+      "statement_timeout=15s",
+      "idle_in_transaction_session_timeout=15s"
+    ]
+  },
+  "after_rollback": {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02",
+    "grafana_defaults": [
+      "search_path=verdify_grafana_runtime, pg_catalog, public, pg_temp"
+    ]
+  },
+  "protected_boundaries_unchanged": true,
+  "rollback_verified": true
+}

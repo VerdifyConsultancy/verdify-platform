@@ -336,6 +336,28 @@ def sealed_sql_277():
     )
 
 
+GRAFANA_TIMEOUT_MIGRATION = (
+    278,
+    "278-grafana-public-saved-query-bounds.sql",
+    "3ba5b19da2695d6656cfd5174dac0028eba917738f5498b83af0914ec5d86312",
+)
+
+
+def sealed_sql_278():
+    # Keep every277 authority predicate, bind the exact278 runner stamp, and
+    # retain all three natively measured seals. Only Grafana role defaults change.
+    predecessor = sealed_sql_277()
+    current = seal_profile_sql(277, SUCCESSOR_277)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(278, SUCCESSOR_277), 1)
+        + " AND "
+        + ledger_row_sql(*GRAFANA_TIMEOUT_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -346,6 +368,8 @@ def sealed_sql():
         + sealed_sql_276()
         + " OR "
         + sealed_sql_277()
+        + " OR "
+        + sealed_sql_278()
         + ")"
     )
 
