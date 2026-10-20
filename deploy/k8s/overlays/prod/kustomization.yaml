@@ -233,6 +233,7 @@ patches:
   # wedged writer, never during a DB outage) + soft anti-affinity off the
   # storage-flaky node6. Applying RESTARTS the single ESP32 writer (gated).
   - path: ingestor-resilience.patch.yaml
+  - path: shelly-source-clock.patch.yaml
   # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
   # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
   # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by

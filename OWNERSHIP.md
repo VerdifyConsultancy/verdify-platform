@@ -721,3 +721,6 @@ The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; 
 ## Rehearsal non-data cleanup (#991)
 
 The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.
+## Meter source clock (#981)
+
+The read-only ingestor consumer uses the HA-owned Shelly source contract with explicit `shelly_modbus_source_v2` evidence. Original channel IDs, signed power, source/observation clocks and missingness are preserved. Device identity/endpoint remain owned by homeassistant; the consumer and its exact runtime release pin belong here. See `docs/operations/SHELLY_SOURCE_CLOCK_CONSUMER.md`.

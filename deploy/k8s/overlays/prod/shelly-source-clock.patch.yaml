@@ -1,0 +1,14 @@
+# Endpoint and wire contract owned by homeassistant docs/operations/SHELLY_SOURCE_CLOCK.md.
+# Read-only Modbus function 04; no new credentials, device setting or network route.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_SHELLY_MODBUS_HOST
+              value: "192.168.10.36"
