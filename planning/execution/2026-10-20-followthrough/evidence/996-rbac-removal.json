@@ -1,0 +1,49 @@
+{
+  "observed_at": "2026-10-20T19:54:14.459405+00:00",
+  "issue": 996,
+  "subject_namespace_absent": true,
+  "exact_bindings_only": true,
+  "credentials_touched": false,
+  "objects": [
+    {
+      "kind": "ClusterRoleBinding",
+      "namespace": null,
+      "name": "verdify-agent-cluster-readonly",
+      "uid": "4d26b7b8-a873-4819-999f-e2612cb12f8d",
+      "resourceVersion": "2166620",
+      "body_dry_run_preserved_identity": true,
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "RoleBinding",
+      "namespace": "verdify-prod",
+      "name": "verdify-agent-prod-restricted",
+      "uid": "98888313-8f4a-4aea-90ba-9dd4a1b96b50",
+      "resourceVersion": "2166617",
+      "body_dry_run_preserved_identity": true,
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ClusterRole",
+      "namespace": null,
+      "name": "verdify-agent-cluster-readonly",
+      "uid": "4f8d65e3-e7fd-4a74-8688-1ae5aa63acf9",
+      "resourceVersion": "2166618",
+      "body_dry_run_preserved_identity": true,
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Role",
+      "namespace": "verdify-prod",
+      "name": "verdify-agent-prod-restricted",
+      "uid": "a5525721-b2fd-4724-ace3-493ae163de2e",
+      "resourceVersion": "2166611",
+      "body_dry_run_preserved_identity": true,
+      "deleted": true,
+      "absent_readback": true
+    }
+  ]
+}

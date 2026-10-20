@@ -11,6 +11,7 @@ kind: Component
 # Contains the NAMESPACED resources only (they inherit the overlay namespace):
 #   - dumps-pvc.yaml      verdify-db-dumps PVC (binds storage-infra's static NFS PV)
 #   - backup-cronjob.yaml nightly pg_dump -Fc + retention + db-backup->db allow
+#   - restore-networkpolicy.yaml unchanged restore-to-db ingress (#993)
 #
 # The cluster-scoped synology-iscsi-ssd StorageClass is DELIBERATELY NOT here —
 # it lives in ./storageclass as its own kustomization so it is applied once per
@@ -23,6 +24,7 @@ kind: Component
 resources:
   - dumps-pvc.yaml
   - backup-cronjob.yaml
+  - restore-networkpolicy.yaml
   # Always-on RPO alarm source: reads the dumps PVC mtime read-only and exports
   # verdify_db_backup_last_success_timestamp_seconds for the VerdifyDBBackupStale
   # alert (no kube-state-metrics in this cluster). See its header.
