@@ -172,6 +172,7 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  - path: iris-token-generation.patch.yaml
   # Restore the unchanged Iris image from its verified node4 cache while the
   # registry mirror cannot resolve that digest. Remove after cold-pull recovery.
   - path: iris-cached-image-placement.patch.yaml
