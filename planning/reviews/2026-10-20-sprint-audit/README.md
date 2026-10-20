@@ -80,3 +80,9 @@ Use existing credentials, source-owner boundaries and supported CI/GitOps. Heavy
 Before a future production sync, inspect the complete pending diff, use an exact revision full nonpruning sync with hooks, and check the submitted selector is absent/empty. Verify Argo intended revision/health, exact running digests, one writer and issue-specific behavior; an Argo green status alone is insufficient. Preserve DB/PVCs. Individual issue status stays open when its remaining owner, physical, natural-window or final acceptance is incomplete. Sprint milestone membership commits the scoped packet above, not an assertion that its whole issue will close.
 
 This change publishes the audit and execution scope. It performs no product/security remediation or production mutation.
+
+## GitHub publication and independent readback
+
+[S6 milestone 38](https://github.com/VerdifyConsultancy/verdify-platform/milestone/38) contains exactly #297, #994, #1002, #1006, #1007 and #1008. All 62 open issue bodies carry the scoped audit disposition/next action; their acceptance text and native dependencies were preserved. Independent GETs verified all bodies, all 62 open states, exact six-issue sprint membership and unchanged nonselected milestone assignments. [publication.json](publication.json) retains the timestamp, per-issue hashes and an initial milestone-list verification failure followed by the successful independent readback. No mutation was replayed to obtain that verification.
+
+The audit source and all generated planning views are published on `codex/issue-audit-sprint-20261020`; default-branch planning remains unchanged until that source is integrated. The GitHub sprint and per-issue audit are already published. Validation: all 43 existing planning tests, published schema/source-path validation, seven generated-view checks, normal pre-commit hooks and diff checks passed.
