@@ -30,7 +30,7 @@ def test_admin_oauth_is_confidential_and_group_scoped_with_password_clients_disa
     }
     assert env["GF_AUTH_GENERIC_OAUTH_AUTH_URL"]["value"] == "https://auth.vallery.net/application/o/authorize/"
     assert env["GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH"]["value"] == "contains(groups || `[]`, 'admins') && 'Admin'"
-    assert env["GF_AUTH_ANONYMOUS_ENABLED"]["value"] == "true"
+    assert env["GF_AUTH_ANONYMOUS_ENABLED"]["value"] == "false"
     assert env["GF_AUTH_ANONYMOUS_ORG_ROLE"]["value"] == "Viewer"
     assert env["GF_USERS_VIEWERS_CAN_EDIT"]["value"] == "false"
     assert env["GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP"]["value"] == "true"

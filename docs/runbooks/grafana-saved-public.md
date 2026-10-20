@@ -35,5 +35,10 @@ GitOps, verify native shares still work, and prove unauthenticated `/api/ds/quer
 and datasource-resource requests return 401. Verify all 21 metadata links and
 at least the Home/Climate panels in the lab, including time selection and PNGs.
 Keep the issue open until those live proofs and the private-field/query probes
-are recorded. Rollback is the prior release pin plus prior route/cache config;
-never prune the Grafana claim or revoke existing admin SSO.
+are recorded. If compatibility fails before the access cutover, restore the prior API and
+publisher pins plus route/cache config. Retain the current migrate pin: migration
+278 is ledgered and must never be removed, edited or run through an older runner.
+A timeout reversal, if needed, is a new forward migration. After cutover prefer
+fixing the saved-share path; re-enabling anonymous org access reopens arbitrary
+SQL access and requires a deliberate incident decision. Never prune the Grafana
+claim or revoke existing admin SSO.

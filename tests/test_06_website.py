@@ -85,8 +85,8 @@ class TestGrafana:
         status = curl_get("https://127.0.0.1/api/health", "graphs.verdify.ai")
         assert status == 200, f"Grafana health returned {status}"
 
-    def test_grafana_anonymous_access(self):
-        """Anonymous read access must work."""
+    def test_grafana_classic_api_requires_sign_in(self):
+        """Native shares do not grant anonymous classic API access."""
         result = subprocess.run(
             [
                 "curl",
@@ -103,7 +103,7 @@ class TestGrafana:
         )
         lines = result.stdout.strip().split("\n")
         status = int(lines[-1])
-        assert status == 200, f"Grafana anonymous access returned {status}"
+        assert status == 401, f"Grafana classic API returned {status}"
 
     def test_grafana_datasource(self):
         """verdify-tsdb datasource must exist (checked via internal Grafana API)."""

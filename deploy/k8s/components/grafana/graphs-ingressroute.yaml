@@ -9,7 +9,7 @@
 # pending this Grafana Service.
 #
 # strip-identity-headers mirrors the other tier-2 routes: the public edge trusts
-# no inbound forward-auth identity. Grafana itself is anonymous-Viewer.
+# no inbound forward-auth identity. Grafana exposes only approved native public shares without sign-in.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:

@@ -20,9 +20,9 @@
 # verdify-grafana-dashboards-{0,1} ConfigMaps (split to stay under the 1MiB
 # ConfigMap limit) mounted under /etc/grafana/provisioning/dashboards/json.
 #
-# PUBLIC EMBED: anonymous Viewer + allow_embedding + cookie_samesite=none/secure
-# + root_url=https://graphs.verdify.ai, so the cross-site lab.verdify.ai
-# /d-solo iframes render with no login.
+# PUBLIC EMBED: the 20 approved native saved-query shares are public.
+# Anonymous org access is disabled; classic datasource APIs require admin SSO.
+# allow_embedding permits the native public pages in lab.verdify.ai.
 #
 # IMAGES: upstream Grafana and renderer are hand-pinned by immutable multi-arch
 # digest. Grafana 11.6.0 is past support and the former renderer 3.12.6 is in
@@ -117,9 +117,9 @@ spec:
               value: "false"
             - name: GF_SERVER_DOMAIN
               value: graphs.verdify.ai
-            # --- anonymous public viewing (no login for the embeds) ---
+            # --- public access is limited to native saved-query shares (#1002) ---
             - name: GF_AUTH_ANONYMOUS_ENABLED
-              value: "true"
+              value: "false"
             - name: GF_AUTH_ANONYMOUS_ORG_NAME
               value: "Main Org."
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
@@ -130,7 +130,7 @@ spec:
               value: "false"
             # Admin sign-in uses the existing global Authentik service (#174).
             # Basic and form password clients are disabled in Grafana 12.4.5;
-            # anonymous Viewer embeds remain independent of admin sign-in.
+            # native public shares remain independent of admin sign-in.
             - name: GF_AUTH_BASIC_ENABLED
               value: "false"
             - name: GF_AUTH_DISABLE_LOGIN_FORM
