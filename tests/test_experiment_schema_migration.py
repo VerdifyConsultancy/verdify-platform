@@ -331,6 +331,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "276-ordinary-maintenance-runtime-boundaries.sql",
         # Getter replacement and its MCP receipt advance remain a forward-only successor.
         "277-realized-solar-night-readback-timeline.sql",
+        # Public Grafana defaults must run forward, never be pre-stamped in baseline history.
+        "278-grafana-public-saved-query-bounds.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
