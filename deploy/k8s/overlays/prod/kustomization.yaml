@@ -296,7 +296,7 @@ images:
   # Qualified repo-build: verdify-s6-publisher-weather-20261020.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d
+    digest: sha256:a13dc8481a46829b5844fac733ca8717c4aaa4e9ca12fdf3b03d9286db0ae555
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace

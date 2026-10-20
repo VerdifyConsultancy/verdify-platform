@@ -85,11 +85,6 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
-            - name: VERDIFY_TURNSTILE_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: verdify-contact-turnstile
-                  key: VERDIFY_TURNSTILE_SECRET
             # Reuse the existing renderer identity, never Grafana admin or DB credentials.
             - name: GRAFANA_RENDERER_TOKEN
               valueFrom:
