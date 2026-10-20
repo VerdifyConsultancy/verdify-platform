@@ -333,6 +333,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "277-realized-solar-night-readback-timeline.sql",
         # Public Grafana defaults must run forward, never be pre-stamped in baseline history.
         "278-grafana-public-saved-query-bounds.sql",
+        # Authentic source-clock consumers and successor seals must run forward.
+        "279-authentic-meter-source-clock-consumers.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
