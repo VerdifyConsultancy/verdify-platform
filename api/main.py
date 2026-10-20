@@ -69,6 +69,7 @@ for _p in reversed(("/app", str(_REPO_ROOT), "/mnt/iris/verdify")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 from verdify_public.build_provenance import image_git_sha  # noqa: E402
+from verdify_public.camera_cache import PublicCameraCache  # noqa: E402
 from verdify_public.output_policy import (  # noqa: E402
     PUBLIC_CROP_EXCLUDE_SLUGS,
     PUBLIC_CROP_SQL_NAME_PATTERN,
@@ -1412,6 +1413,7 @@ CONTACT_NOTIFY_SUBJECT_PREFIX = "Verdify contact"
 PUBLIC_CAMERA_IDS = {"greenhouse_1", "greenhouse_2"}
 FRIGATE_BASE_URL_ENV = "VERDIFY_FRIGATE_PUBLIC_BASE_URL"
 CAMERA_MAX_JPEG_BYTES = 8 * 1024 * 1024
+_PUBLIC_CAMERA_CACHE = PublicCameraCache(frozenset(PUBLIC_CAMERA_IDS), ttl_s=20, max_bytes=CAMERA_MAX_JPEG_BYTES)
 CLIMATE_ACTION_PROOF_MISSING_SQL = """
 WITH latest AS (
     SELECT climate_action,
@@ -2453,7 +2455,7 @@ async def delete_crop(crop_id: int, _write_access: None = Depends(require_write_
 
 
 @app.get("/api/v1/crops/{crop_id}/observations")
-async def list_observations(crop_id: int, limit: int = 20):
+async def list_observations(crop_id: int, limit: Annotated[int, Query(ge=1, le=500)] = 20):
     async with pool.acquire() as conn:
         await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
@@ -2518,7 +2520,7 @@ async def create_observation(
 
 
 @app.get("/api/v1/observations/recent", response_model=list[ObservationWithCrop])
-async def recent_observations(limit: int = 20):
+async def recent_observations(limit: Annotated[int, Query(ge=1, le=500)] = 20):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             f"""
@@ -2542,7 +2544,7 @@ async def recent_observations(limit: int = 20):
 
 
 @app.get("/api/v1/crops/{crop_id}/events")
-async def list_events(crop_id: int, limit: int = 20):
+async def list_events(crop_id: int, limit: Annotated[int, Query(ge=1, le=500)] = 20):
     async with pool.acquire() as conn:
         await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
@@ -2589,7 +2591,7 @@ async def create_event(crop_id: int, event: EventCreate, _write_access: None = D
 
 
 @app.get("/api/v1/crops/{crop_id}/health", response_model=list[HealthTrendPoint])
-async def crop_health(crop_id: int, days: int = 30):
+async def crop_health(crop_id: int, days: Annotated[int, Query(ge=1, le=365)] = 30):
     async with pool.acquire() as conn:
         await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
@@ -3567,14 +3569,19 @@ async def public_camera_snapshot(camera_id: str, h: Annotated[int, Query(ge=120,
     """Public-safe fixed 1080px source frames; legacy h is accepted for compatibility."""
     if camera_id not in PUBLIC_CAMERA_IDS:
         raise HTTPException(status_code=404, detail="Unknown public camera")
+    cached = _PUBLIC_CAMERA_CACHE.cached.get(camera_id)
+    cache_hit = cached is not None and time.monotonic() - cached[0] < _PUBLIC_CAMERA_CACHE.ttl_s
     try:
-        data = await asyncio.to_thread(_fetch_camera_snapshot_sync, camera_id, h)
+        data = await _PUBLIC_CAMERA_CACHE.get(camera_id, lambda: _fetch_camera_snapshot_sync(camera_id, h))
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Camera snapshot unavailable") from exc
     return Response(
         content=data,
         media_type="image/jpeg",
-        headers={"Cache-Control": "public, max-age=20, stale-while-revalidate=60"},
+        headers={
+            "Cache-Control": "public, max-age=20, stale-while-revalidate=60",
+            "X-Camera-Cache": "HIT" if cache_hit else "MISS",
+        },
     )
 
 
