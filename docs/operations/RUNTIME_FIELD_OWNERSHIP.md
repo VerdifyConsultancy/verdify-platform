@@ -1,0 +1,9 @@
+# Runtime field ownership (#1004)
+
+The October20 readback at product revision f63518c8 found no remaining Longhorn recovery taint on any node. Eight Deployments still carried its old NoSchedule toleration. The prod overlay explicitly clears that obsolete list; it does not change any node taint or add placement authority.
+
+Grafana has one Recreate replica and the original Bound Longhorn RWO claim. Declare its existing node7 selector so this field adoption preserves its actual placement. Moving that volume is a separate reviewed placement change. The source excludes the Lab’s two temporary bootstrap/scale annotations. Because an apply cannot remove absent, independently owned metadata, run `scripts/reconcile-runtime-temporary-annotations.py --apply` after source acceptance. This exact-name operation checks UID and resourceVersion and proves the Pod spec is unchanged. Its default invocation is read-only. Five CronJobs whose live false suspend value was previously implicit now declare false. Existing replica, container, image, env, device and storage contracts are preserved.
+
+The sanitized audit records exact object UIDs, scheduling/suspend differences, historical manager names and field paths. It includes no Secret data, env values, or raw kubectl annotations. Historical kubectl manager presence alone is not a functional drift finding; never erase managedFields to make the audit pass. Verify desired values and actual field ownership after the normal attended full sync. This change introduces no blanket force-conflicts or application-wide SSA switch.
+
+The descheduler suspend ignore is still preserved while #995 adopts its Namespace. Remove that ignore in the central catalog after #995 live acceptance, with its explicit source suspend value unchanged. Production Application source ownership follows the agents catalog lane (#4461). Those remaining criteria keep #1004 open after this bounded runtime-field adoption.

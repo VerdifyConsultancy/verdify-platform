@@ -260,6 +260,9 @@ patches:
 # name/newName/digest shape; the actuator fails unless each appears exactly once.
 # The planner, setpoint-server and lab-publisher-k3s entries are release pins,
 # advanced by hand.
+  # Explicit audited runtime values; no data or first-party image changes.
+  - path: source-owned-runtime-fields.patch.yaml
+
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
