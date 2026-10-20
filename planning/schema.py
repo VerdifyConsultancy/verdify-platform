@@ -92,7 +92,7 @@ class WorkItem(StrictModel):
     title: str
     stage: str
     kind: Literal["task", "epic"]
-    priority: Literal["P0", "P1", "P2"]
+    priority: Literal["P0", "P1", "P2", "P3"]
     effort: Literal["S", "M", "L"]
     owner_role: str
     parent: str | None

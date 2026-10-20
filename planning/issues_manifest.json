@@ -4,13 +4,13 @@
     {
       "key": "775",
       "number": 775,
-      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "title": "[C0][P1] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
       "stage": "C0",
       "status": "open",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "6959624395248a60afddb60a94cffdd45cc3d81bf67c6218ebf7a91ca7490021"
+      "body_sha256": "54f4d68bc25aea1271835c0e40197f6bb656c3378bd43462578ad57b1c718776"
     },
     {
       "key": "incident",
@@ -89,7 +89,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "aa587c1da10e592b4fc4c362d20189820607bbaef3512c65729d9d2c9399ffef"
+      "body_sha256": "2434edce4cd22749f82e19a13aebeb1d552c8263163868363da21bdaf07adfae"
     },
     {
       "key": "750",
@@ -116,7 +116,7 @@
     {
       "key": "749",
       "number": 749,
-      "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+      "title": "[C1][P1] Qualify current three-probe readiness and explicit safety dependencies",
       "stage": "C1",
       "status": "open",
       "accepted": false,
@@ -126,7 +126,7 @@
         778,
         949
       ],
-      "body_sha256": "f378f472c42f8c2b3e35db606e54b627fb5596635304b40b1eddcedff16ad03d"
+      "body_sha256": "c991e7e852cf729d108977f5acbd9179af88294d4c5e6e6353d693f46246b1f4"
     },
     {
       "key": "641",
@@ -137,12 +137,12 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [
-        749,
-        639,
         587,
-        747
+        639,
+        747,
+        749
       ],
-      "body_sha256": "7337f76ce81bb795d70ba33dc247df371939c503e7c464082f041010ba156440"
+      "body_sha256": "d9ac6fd246f6ab48278562752212b33f3878e62a12b0a66ddd1b3431e988aac5"
     },
     {
       "key": "639",
@@ -153,7 +153,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "e4ee4c59f2436254ababe20d75f9898430ef898386cd6619155f861e88a08770"
+      "body_sha256": "0e6872d66bd6920e4d1ef3530e62a05ba4199f095905b582c542f81c467a0c9c"
     },
     {
       "key": "587",
@@ -164,12 +164,12 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "7bbabe0dd486c314a697e4f716957e320f29f884c24c7fb55b1ba94095206dae"
+      "body_sha256": "102fd601c6d5e40f8458ceb612f26965d78f67124d66df1a4bc5b4f8b3301ea9"
     },
     {
       "key": "study_design",
       "number": 782,
-      "title": "[C0][P1] Finish the empirical inputs and frozen exploratory scientific contract",
+      "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
       "stage": "C0",
       "status": "open",
       "accepted": false,
@@ -180,7 +180,7 @@
         780,
         781
       ],
-      "body_sha256": "db6f398bb4de700dcef0c3280ee0eb9f15b1b4bf15753a8130758ea2066a398b"
+      "body_sha256": "0b0082782eb257c95757d0497eb6bd2d32283e4978de2b0fb5687260c3a7e77c"
     },
     {
       "key": "integration",
@@ -191,10 +191,10 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [
-        639,
-        587
+        587,
+        639
       ],
-      "body_sha256": "750360091b211b3af03460c888d105565596b031fc5d031ac500675c103a4017"
+      "body_sha256": "5f3a83230e983d7d2089cefb94477d0765b7be3f44fe176a63a1d2743bee240f"
     },
     {
       "key": "588",
@@ -209,7 +209,7 @@
         782,
         783
       ],
-      "body_sha256": "fcccbac1f0b48fd4476eab6da658b687d8f5d90650b7bb38b757750e3fe9cb3b"
+      "body_sha256": "f1ffdb166b7853f0c6e6bdc32767acecc668cd9b791a0c7fea094bfd64879812"
     },
     {
       "key": "642",
@@ -222,7 +222,7 @@
       "blocked_by": [
         588
       ],
-      "body_sha256": "0e4f14fb8ac280bb3f7c5300aba637a69d49cf68eba1f995ce9d2e6062cf02e2"
+      "body_sha256": "ac05f8d0633562cda956408cbcafa1619f7ca67ffe73d21eefb7656ea90c8f79"
     },
     {
       "key": "640",
@@ -235,12 +235,12 @@
       "blocked_by": [
         642
       ],
-      "body_sha256": "965dce8d9c7f206da3f1b028c54556dd3a0485924cab419cce85e375a9fa8733"
+      "body_sha256": "e28cfec100264e980062e9a4f56e2820cafa8f20dba37b6fedeb1059aa7bd214"
     },
     {
       "key": "pilot_run",
       "number": 784,
-      "title": "[C3][P2] Operate the full blinded assigned-day pilot with immutable custody",
+      "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
       "stage": "C3",
       "status": "open",
       "accepted": false,
@@ -248,12 +248,12 @@
       "blocked_by": [
         640
       ],
-      "body_sha256": "8c03d8d0def3885f1086808de7691109e69fad065ec5d0bf5e338784f7ab6225"
+      "body_sha256": "a2efb87b2607a0e7d38afa19cd1b95b545bd540bdf55103d464c7acbefdb718b"
     },
     {
       "key": "readout",
       "number": 785,
-      "title": "[C3][P2] Reveal once, reproduce the frozen analysis and decide the program outcome",
+      "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
       "stage": "C3",
       "status": "open",
       "accepted": false,
@@ -261,7 +261,7 @@
       "blocked_by": [
         784
       ],
-      "body_sha256": "49c8fbf68ed2799ecb327bc2645a48fbc47e2cd0fa0e0aee16d582ed131a8ce2"
+      "body_sha256": "d3f431bb75213fd7b9a91e7b4488a455a2812a980aa22ae6e548ab89b17a58f8"
     },
     {
       "key": "644",
@@ -324,7 +324,7 @@
         303,
         419
       ],
-      "body_sha256": "8ff7bf43dd98965b0e0c750aeb045d3c6d8cbbc97296ca6a68ea30eae03d09a4"
+      "body_sha256": "d849e48e218d37bd3e1b1874b94f93f37e6f85656b4e21ca18d9ba00cadfd64e"
     },
     {
       "key": "433",
@@ -359,7 +359,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "0d68e84d21e1afe3f3b726ea1c9b4fe616fb69204bc12044586daf267871e86c"
+      "body_sha256": "1a8fa0b8e3940863ed4444cbb8e80b12b06d58cdb124670cfdfb5a599ebe325e"
     },
     {
       "key": "563",
@@ -434,7 +434,7 @@
     {
       "key": "386",
       "number": 386,
-      "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
       "stage": "C4",
       "status": "open",
       "accepted": false,
@@ -442,7 +442,7 @@
       "blocked_by": [
         303
       ],
-      "body_sha256": "1faead1d510a5509924cedfded0711a595ded356b3eab869b8d29c7c6c57407d"
+      "body_sha256": "12658eeec3e1d7e88abda734e758b5a5a6b922d35b9ad2b8a950dd5cea9b93e2"
     },
     {
       "key": "218",
@@ -453,7 +453,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "ee0ea773e22b2ee3f041da6424b0dc03eb8f24018b5328cdb74db6f1e266ebd8"
+      "body_sha256": "f8c00c92a94e688e5f3284089e9d56aaa14bb79f1765553949a4c72feb9d557e"
     },
     {
       "key": "670",
@@ -509,14 +509,14 @@
       "number": 245,
       "title": "[C5][P2] Execute a separately bounded database cutover only after parity and rollback proof",
       "stage": "C5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 218,
       "blocked_by": [
         382,
         396
       ],
-      "body_sha256": "85af6886697e4ff7c7cb3e00dfeecf28dfa03373c8fd4c2bac15cfec10197f6d"
+      "body_sha256": "27c27c45adc2427ed282cf32d069173d53fa75f5998fa021b28c8b293b116bca"
     },
     {
       "key": "643",
@@ -551,18 +551,18 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "594e9d150843926b3c5b53d89c0f6bda8553be4fca6797f23bf9fc2067d58b79"
+      "body_sha256": "eb66b41b3798f3d9f95e736415368b8386c0172ff96cd9feb6d73262552fe236"
     },
     {
       "key": "430",
       "number": 430,
-      "title": "[C6][P2] Simplify firmware only while preserving autonomous control and observable truth",
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
       "stage": "C6",
       "status": "open",
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "8f51752d7f936406a0a1b155890f4b7240d068225d9ae20e9119cb40fa5a6bbe"
+      "body_sha256": "8518c004171998d3aa4107e5d582d7ca55ca6e0a84df7f3b2b4bfe03d0fa61e6"
     },
     {
       "key": "428",
@@ -588,7 +588,7 @@
       "blocked_by": [
         424
       ],
-      "body_sha256": "0fd15c244c755a8283e18e795a089d6e6da7a99edfb879dac462c3563666934f"
+      "body_sha256": "b572ec587c5fb257085e41195f0a3e79fe4ff574f6d9b9338037af94237b0314"
     },
     {
       "key": "367",
@@ -601,12 +601,12 @@
       "blocked_by": [
         390
       ],
-      "body_sha256": "b23d2a9c14fff7b56ffb8ae8772a5971a280384cf83ff08583818d0ef520a13e"
+      "body_sha256": "804edeb78ce48de538a2dfd189ceb71606e5a317b7a94555a1ec9754a91b37ac"
     },
     {
       "key": "370",
       "number": 370,
-      "title": "[C6][P2] Consolidate equipment conflict resolution into one pure arbitration function",
+      "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
       "stage": "C6",
       "status": "open",
       "accepted": false,
@@ -614,12 +614,12 @@
       "blocked_by": [
         367
       ],
-      "body_sha256": "25a5f2543f429cb2ac9d7a8e454ac1f2afdb45d4661464f67a7f34f1f794a4e9"
+      "body_sha256": "d4a54e251937e1873b9c83949476392c8574a8f2d3d45de6b4dcbf1ec2902ca9"
     },
     {
       "key": "369",
       "number": 369,
-      "title": "[C6][P2] Remove dead tunables and code from a verified consumer inventory",
+      "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
       "stage": "C6",
       "status": "open",
       "accepted": false,
@@ -628,7 +628,7 @@
         390,
         433
       ],
-      "body_sha256": "69a131db81fc0294006b8270688a700a4261bf339b70854067003200226bd08e"
+      "body_sha256": "50b6b80c208b8f605e8ccc793865632a5098f65192c115b9da695b95ed59b595"
     },
     {
       "key": "324",
@@ -657,21 +657,21 @@
         419,
         424
       ],
-      "body_sha256": "0fb4c80580a1e8e8e7994caf95650e3a149593015064c7c1006b18d32fa071aa"
+      "body_sha256": "c38ef397f222f05b8424b089240362dbf4e1cad0173663745b11b19f1c5fbec1"
     },
     {
       "key": "378",
       "number": 378,
-      "title": "[C6][P2] Decide corridor widths from fixed-target crop and resource evidence",
+      "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
       "stage": "C6",
       "status": "open",
       "accepted": false,
       "parent": 359,
       "blocked_by": [
-        785,
-        371
+        371,
+        785
       ],
-      "body_sha256": "2576a8830a626841505c1716114b5135bd9be894695f160a441cf18be20fd4d7"
+      "body_sha256": "db36510c767c0a183f5fd7e0b85d32edf20cedb7d1af7b98bdb61f988ce81ed9"
     },
     {
       "key": "361",
@@ -710,12 +710,12 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "0cf201dcd574795777d0dcc3a445393798ed58958cb02158e33e23ab414a724a"
+      "body_sha256": "b5ee0b936346038190d4b794b5ec9fcdf08b29faa407f2a50f19fe950fd609f1"
     },
     {
       "key": "434",
       "number": 434,
-      "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
       "stage": "C6",
       "status": "open",
       "accepted": false,
@@ -723,7 +723,7 @@
       "blocked_by": [
         299
       ],
-      "body_sha256": "cc64845a17acb795f3f06454aada8ac49d06d2256ec120221a2f029a5999db35"
+      "body_sha256": "c5b80d7905dc31ece419d243cbdbff3de7b996791c6735f636de8f58f0e06726"
     },
     {
       "key": "299",
@@ -736,7 +736,7 @@
       "blocked_by": [
         390
       ],
-      "body_sha256": "230cedbd5ed5fbbe1f0a6b78a877e8451ff0d838c4d7f46720f454008a4f0eba"
+      "body_sha256": "8e6cdbae13d233b9070dabfe9b9b0fafc6268d1b6ed949d0596deb4f35a6fad7"
     },
     {
       "key": "297",
@@ -749,7 +749,7 @@
       "blocked_by": [
         45
       ],
-      "body_sha256": "1aefbda322a889b7c1d18e28c4380fd27c497348b5116bc62388e8d91cb6bad4"
+      "body_sha256": "93d5466223ec5555eb97ee5b48609c9a27420cbf29439db9d82837a99295fdff"
     },
     {
       "key": "296",
@@ -775,7 +775,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "323aeb5c4deab0e3b95684b0f3e6ff86521970905efc05dab2e5a2f888fbddc3"
+      "body_sha256": "a060616de93974cee0742c64db3d8ec9be2afcfc6206232dbd5a948a3ea121c2"
     },
     {
       "key": "751",
@@ -786,7 +786,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "d42a0e6a47ff1a28ecc1e2f6f9cd2e9a9d158afc448ffed14fea1a66905d7ee8"
+      "body_sha256": "1248f52f7ed380dc5a391006529bd4daa50291cf0856557f9bce06d9a5797c54"
     },
     {
       "key": "298",
@@ -797,7 +797,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "b907afe8094983044ff1ed49243c9f552f14b3fd41c7407e2d8d20eeb8042a2b"
+      "body_sha256": "127349f9623235710c3b4a862bd14d5b6c7316b9a3c5360f1b2a907cc33631ec"
     },
     {
       "key": "398",
@@ -810,12 +810,12 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "8d030e79347eab17981d059cd54823e698fd973e1eccced10066f1a284e8fd4f"
+      "body_sha256": "6d960e8cb229e2176a030224baa1fded4be7c38ac99758f78f1809d62fa98940"
     },
     {
       "key": "45",
       "number": 45,
-      "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+      "title": "[C7][P1] Commission soil and runoff feedback before enabling irrigation decisions",
       "stage": "C7",
       "status": "open",
       "accepted": false,
@@ -823,40 +823,40 @@
       "blocked_by": [
         398
       ],
-      "body_sha256": "cb38a883a47d032aaa9b16dff4f1924d81c98fa0ee0e256603458d83d82d9537"
+      "body_sha256": "08030791081af75527a96ca78047f050fce2bb7ad9e762c039a000fd04517389"
     },
     {
       "key": "51",
       "number": 51,
-      "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
       "stage": "C7",
       "status": "open",
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "60bb5e1e1622133bafe802816853895f36579332c2cb204158997dae28b34392"
+      "body_sha256": "1ca6cf20c6b9a5add71f9695509dcbd0d3ab3aa9a22b6a0ae27a223fc743750c"
     },
     {
       "key": "52",
       "number": 52,
-      "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+      "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
       "stage": "C7",
       "status": "open",
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "e1594ef1e0d119b293aeb6231f99cd2d9888063e073fdd7aea1b3aa12c06c4a7"
+      "body_sha256": "2b33bc27f0bc4f9ca77d447facdcc435588f423378e09df575ac640689270012"
     },
     {
       "key": "412",
       "number": 412,
-      "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+      "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
       "stage": "C7",
       "status": "open",
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "5f918bacffb19ad2b9ebfa16dc61b2b9d3774804dd406f21ab12ee8310056257"
+      "body_sha256": "ba6e0319158c7776ed9c54e410b20b0093b42430833aba534a2843676482d7e4"
     },
     {
       "key": "174",
@@ -883,13 +883,13 @@
     {
       "key": "31",
       "number": 31,
-      "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
       "stage": "C8",
       "status": "open",
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "fd9c897f21f3ffa601c0b116692163eb8415ecf9cd088de5e22fa850ec55dc79"
+      "body_sha256": "2f8a29edd3d7a9021a471edd460d69e6d2fc55ad31fc15e0326d626cdd824292"
     },
     {
       "key": "606",
@@ -1075,8 +1075,10 @@
       "status": "open",
       "accepted": false,
       "parent": 75,
-      "blocked_by": [],
-      "body_sha256": "fd2757a16993cb6be9d357a466b4a8a6ce29b2021bddea63692ca3784d253cea"
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "0fbb6a61635fdcfcd322b395899d65c9ade86e8f882b499e4b044b67ed5063bf"
     },
     {
       "key": "976",
@@ -1114,13 +1116,13 @@
     {
       "key": "981",
       "number": 981,
-      "title": "[C4][P1] Restore truthful energy source freshness and trace stale meter input",
+      "title": "[C4][P2] Restore truthful energy source freshness and trace stale meter input",
       "stage": "C4",
       "status": "open",
       "accepted": false,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "aff18fc715c18992e3cf2d7d4ca1e886d08daa858e522e38746ca5d6687f8d71"
+      "body_sha256": "0b4cabc1acbc61a1c154b869e784cefcfc183829ecb0638544e1a8a629ff96d6"
     },
     {
       "key": "802",
@@ -1143,6 +1145,250 @@
       "parent": null,
       "blocked_by": [],
       "body_sha256": "814820be97ee86db9a95cf5786956b0a389b89672b1057b040024066a16c111b"
+    },
+    {
+      "key": "990",
+      "number": 990,
+      "title": "[C4][P3] Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "b7f54993136b1ce040efebb6327e10c62a646182c981fa9a4127acdb9dfa14c3"
+    },
+    {
+      "key": "991",
+      "number": 991,
+      "title": "[C4][P3] Prune verdify-db-rehearsal run residue (non-data, D-04)",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "cd59155c3341fb02f75b867bc4e2d35ac84e0d2eb273dedd1471157435761bda"
+    },
+    {
+      "key": "992",
+      "number": 992,
+      "title": "[C5][P2] Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04)",
+      "stage": "C5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "2ae9be946e50b860285ba0130decfe678644a209db76e68c59bb0aac8d14d3ca"
+    },
+    {
+      "key": "993",
+      "number": 993,
+      "title": "[C4][P3] Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "93a671ef85db4e90bae993133b4fd9ee7f47ff51c3f5c423e48322bd84ca9273"
+    },
+    {
+      "key": "994",
+      "number": 994,
+      "title": "[C5][P2] Record the verdify-db data PVC db-data-verdify-db-0 as protected",
+      "stage": "C5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "d3c0157331ee049fb1c15a015d12d9585a37babc7620043dc29417c828769a1c"
+    },
+    {
+      "key": "995",
+      "number": 995,
+      "title": "[C4][P3] Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "379eb7f2d41dae8afc197edd2966e5d1b784c9103b5af3e8d162d914c386f6c6"
+    },
+    {
+      "key": "996",
+      "number": 996,
+      "title": "[C5][P2] Remove laptop-root-era verdify-agent RBAC",
+      "stage": "C5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "316d07fb5b7ba91e18645a8e84bbf4d1b0d5b571f6c50b45a3b0cde6d40a2e43"
+    },
+    {
+      "key": "997",
+      "number": 997,
+      "title": "[C4][P3] Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "c8065dc78c3743e9451ef5946d0ffe7e1b2c8d94cdbf67b32647e14580010443"
+    },
+    {
+      "key": "998",
+      "number": 998,
+      "title": "[C4][P2] Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13)",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "205ab759cd7dad6e0c6587f57e373c32e988a61768e74057560ddea5b775bc3e"
+    },
+    {
+      "key": "999",
+      "number": 999,
+      "title": "[C4][P3] Pin the remaining tag-only verdify-prod images by digest",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [
+        994
+      ],
+      "body_sha256": "04e210e5c482e5b4d59416c7f310290f6fa13f1925b02ea37f879d6df816a699"
+    },
+    {
+      "key": "1000",
+      "number": 1000,
+      "title": "[C4][P2] Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06)",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "a9bc311d173bc57d11385051abef51ce4aa429aead08256a04f3b88f97f66326"
+    },
+    {
+      "key": "1001",
+      "number": 1001,
+      "title": "[C4][P3] Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16)",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "2a69b9de29af3420535da6f88c49d82f1eebe2c500cf300b38ff606badb42496"
+    },
+    {
+      "key": "1002",
+      "number": 1002,
+      "title": "[C4][P1] Stop anonymous internet users running ad-hoc SQL via graphs.verdify.ai Grafana",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "e2127f4e3ab619f1c391b6abc850ae0e46393efb8b19df4c4958842349736b4b"
+    },
+    {
+      "key": "1003",
+      "number": 1003,
+      "title": "[C4][P2] Route verdify-platform main changes, including prod release pins, through validated PRs",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "19af8bd73f918bd0f8e49f5336a189b90da9ca01987da30e65f2c4b0f54b963a"
+    },
+    {
+      "key": "1004",
+      "number": 1004,
+      "title": "[C4][P2] Bring kubectl-patched verdify-prod workloads back under Git ownership",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "5634238d7fd042b7ca8f98b488b37a9c0bd739f56bb6ab40340b9ec686adfbf1"
+    },
+    {
+      "key": "1005",
+      "number": 1005,
+      "title": "[C4][P3] Give verdify-lab real node redundancy instead of two replicas on one RWO volume",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "4c799462ed7f3108d826a51da71129477ffebbded25ffbbc5d2d0a7458f5c687"
+    },
+    {
+      "key": "1006",
+      "number": 1006,
+      "title": "[C4][P1] Scope the internet-facing verdify-traefik to verdify-prod: its ClusterRole can read all 936 Secrets in 84 namespaces",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "63eeb8a63e88478054a655e8d7a0bd08950d76b58b65a93bbda7a06461e5af8a"
+    },
+    {
+      "key": "1007",
+      "number": 1007,
+      "title": "[C4][P1] Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "c489a5be773df4b947afadee7f91e8a2833ff02206f26f88eb90ebce20b91182"
+    },
+    {
+      "key": "1008",
+      "number": 1008,
+      "title": "[C4][P2] Add rate limits and request bounds to anonymous api.verdify.ai: the public camera route triggers a fresh home-Frigate snapshot on every request",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "8b0ce54b483f1718d29f3eaa54240adea21b494f6c388d3b651d8f01efacbe8b"
+    },
+    {
+      "key": "1009",
+      "number": 1009,
+      "title": "[C4][P2] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "806b621d391e6ea6fd088315fd0214fa4ff2dcf53cdb1d7c300a0ffedaf9d87c"
+    },
+    {
+      "key": "1010",
+      "number": 1010,
+      "title": "[C4][P3] Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "d25af844f361db236cc7955ad06cae2964ef233eebc5f724dec8c012df9c2f62"
+    },
+    {
+      "key": "1011",
+      "number": 1011,
+      "title": "[C4][P3] Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods",
+      "stage": "C4",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "13bbcee53f62932608f115814a8a346824f8e5e77ece4208d81461ea7abbb01a"
     }
   ]
 }
