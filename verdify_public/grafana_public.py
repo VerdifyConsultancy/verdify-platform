@@ -38,7 +38,7 @@ def public_panel(token: str, referer: str) -> int | None:
     return panel
 
 
-def panel_metadata(document: dict, panel_id: int | None) -> dict:
+def panel_metadata(document: dict, panel_id: int | None, height: int = 400) -> dict:
     if panel_id is None:
         return document
     result = copy.deepcopy(document)
@@ -56,7 +56,7 @@ def panel_metadata(document: dict, panel_id: int | None) -> dict:
     panel = find(dashboard["panels"])
     if panel is None:
         raise ValueError("saved panel unavailable")
-    panel["gridPos"] = {"x": 0, "y": 0, "w": 24, "h": 10}
+    panel["gridPos"] = {"x": 0, "y": 0, "w": 24, "h": max(1, min(40, (height - 110) // 36))}
     dashboard["panels"] = [panel]
     dashboard["refresh"] = ""
     return result
@@ -86,12 +86,13 @@ def render_parameters(uid: str, panel: int, params: dict[str, str]) -> tuple[str
     if theme not in {"light", "dark"}:
         raise ValueError("invalid theme")
     query["theme"] = theme
+    query["height"] = params.get("height", "400")
     width, height = int(params.get("width", "1000")), int(params.get("height", "400"))
     if not 320 <= width <= 1600 or not 80 <= height <= 1600:
         raise ValueError("invalid dimensions")
     token = CATALOG[uid]["token"]
     url = f"{GRAFANA}/public-dashboards/{token}?{urllib.parse.urlencode(query)}"
-    return url, {"width": str(width), "height": str(height + 80), "timeout": "45", "encoding": "png"}
+    return url, {"width": str(width), "height": str(height), "timeout": "45", "encoding": "png"}
 
 
 def fetch_png(url: str, options: dict[str, str]) -> bytes:

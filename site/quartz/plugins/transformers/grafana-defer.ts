@@ -131,7 +131,9 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
               const title = typeof node.properties.title === "string" ? node.properties.title : ""
 
               const renderSrc = toRenderUrl(src, heightNum, opts.widthMultiplier)
-              const publicSrc = toSavedPublicUrl(src)
+              const publicUrl = new URL(toSavedPublicUrl(src))
+              publicUrl.searchParams.set("height", String(heightNum))
+              const publicSrc = publicUrl.toString()
               const liveSrc = toSavedPublicUrl(toLiveDashboardUrl(src))
 
               node.tagName = "div"

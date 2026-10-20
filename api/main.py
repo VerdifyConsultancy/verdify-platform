@@ -6950,7 +6950,9 @@ async def saved_public_dashboard(token: str, request: Request):
     try:
         panel = grafana_public.public_panel(token, request.headers.get("referer", ""))
         document = await grafana_public.METADATA_WORK.run(grafana_public.fetch_metadata, token)
-        return grafana_public.panel_metadata(document, panel)
+        referer_query = urllib.parse.parse_qs(urllib.parse.urlsplit(request.headers.get("referer", "")).query)
+        height = int(referer_query.get("height", ["400"])[0])
+        return grafana_public.panel_metadata(document, panel, height)
     except OverflowError:
         raise HTTPException(429, "Dashboard metadata busy") from None
     except ValueError:
