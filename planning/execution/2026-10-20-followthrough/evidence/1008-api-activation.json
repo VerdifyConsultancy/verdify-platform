@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-10-20T21:01:42.198421+00:00",
+  "revision": "ca5241b2c0b8e9f1021123439fa790e08f3537f4",
+  "sync": "Synced",
+  "health": "Healthy",
+  "operation": "Succeeded",
+  "task_count": 134,
+  "selectors_absent": true,
+  "ready_api_replicas": 2,
+  "required_secret_reference_verified": true,
+  "public_token_denials": [
+    {
+      "probe": "missing",
+      "status": 400,
+      "detail": "Missing contact verification token",
+      "cloudflare": true
+    },
+    {
+      "probe": "invalid",
+      "status": 400,
+      "detail": "Contact verification failed",
+      "cloudflare": true
+    }
+  ],
+  "positive_contact_submission": false
+}

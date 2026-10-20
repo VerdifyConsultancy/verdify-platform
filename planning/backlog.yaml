@@ -3492,7 +3492,7 @@
         "api",
         "grafana"
       ],
-      "baseline": "October19 05:23 UTC dependency refresh: Home Assistant #878 closed COMPLETED at04:27:44 after PR#894, merged ff250799a553262317ee8802c72682422fb6d398. Its accepted installed-source contract qualifies authentic per-channel update time and power from the existing enabled read-only Modbus endpoint, including advancing stable0W. Native HA representation clocks do not expose this provenance; existing consumer stale denial and NULL aggregate remain correct. No HA runtime/configuration change was needed. Source contract: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/operations/SHELLY_SOURCE_CLOCK.md; evidence: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/home/evidence/source-clock-20261018/README.md.\n\nThe external prerequisite is complete, so #981 is ready for a bounded versioned Verdify consumer adoption packet and its own negative/deployment acceptance. It remains OPEN. Do not substitute observation/fetch/ingest time for source time, reinterpret reversed channel1 CT or partial-circuit coverage, infer scientific eligibility, repeat accepted owner probes or invent a new credential/network route. The native predecessor link is retained as closed history. No #981 implementation or production source read was performed by the #988 repair.\n\nCurrent execution allocation: ALTERNATE ready pull after the active #988 repair. Next action: inspect the accepted installed-version contract, prepare the smallest source-clock consumer adoption with meaningful stale/missing/disconnected/future/nonfinite denials, then verify deployed behavior and one later natural intended source/DB comparison. Original acceptance and the #787 energy dependency remain unchanged.\n\nPrior dated evidence, retained unchanged:\n\nThe bounded source/ingestion comparison at 02:05 UTC and four read-only Shelly RPCs at 02:11 UTC on October 18 completed with zero mutations. At those observations, intended channel 0 read zero watts while HA last_updated and last_reported remained 2026-10-17T23:53:51Z; ingestion truthfully marked it stale after 300 seconds and denied the aggregate with null watts_total. Channel 1 source time advanced and its reversed-CT/partial-circuit negative value was preserved. Device system time and an available zero reading do not establish an advancing per-channel sample clock or prove an HA defect. The 06:59:54 UTC native graph still records open jvallery/homeassistant#878 as the single external blocker. The 07:07 product smoke passed, but it does not qualify that source clock or grant energy eligibility. Evidence: planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json and the fresh full-status graph/runtime receipts.\n\nCurrent execution allocation: S3. Next action: Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready. Consume accepted HA#878/PR#894 in an explicit new same-response Modbus source-time+signed-power revision. Preserve old-row meaning, source/ingest clocks, stable-zero advancement, reversed CT and stale/missing/future/nonfinite/disconnected denial. Verify deployed consumer and one later natural source/DB comparison. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October19 05:23 UTC dependency refresh: Home Assistant #878 closed COMPLETED at04:27:44 after PR#894, merged ff250799a553262317ee8802c72682422fb6d398. Its accepted installed-source contract qualifies authentic per-channel update time and power from the existing enabled read-only Modbus endpoint, including advancing stable0W. Native HA representation clocks do not expose this provenance; existing consumer stale denial and NULL aggregate remain correct. No HA runtime/configuration change was needed. Source contract: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/operations/SHELLY_SOURCE_CLOCK.md; evidence: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/home/evidence/source-clock-20261018/README.md.\n\nThe external prerequisite is complete, so #981 is ready for a bounded versioned Verdify consumer adoption packet and its own negative/deployment acceptance. It remains OPEN. Do not substitute observation/fetch/ingest time for source time, reinterpret reversed channel1 CT or partial-circuit coverage, infer scientific eligibility, repeat accepted owner probes or invent a new credential/network route. The native predecessor link is retained as closed history. No #981 implementation or production source read was performed by the #988 repair.\n\nCurrent execution allocation: ALTERNATE ready pull after the active #988 repair. Next action: inspect the accepted installed-version contract, prepare the smallest source-clock consumer adoption with meaningful stale/missing/disconnected/future/nonfinite denials, then verify deployed behavior and one later natural intended source/DB comparison. Original acceptance and the #787 energy dependency remain unchanged.\n\nPrior dated evidence, retained unchanged:\n\nThe bounded source/ingestion comparison at 02:05 UTC and four read-only Shelly RPCs at 02:11 UTC on October 18 completed with zero mutations. At those observations, intended channel 0 read zero watts while HA last_updated and last_reported remained 2026-10-17T23:53:51Z; ingestion truthfully marked it stale after 300 seconds and denied the aggregate with null watts_total. Channel 1 source time advanced and its reversed-CT/partial-circuit negative value was preserved. Device system time and an available zero reading do not establish an advancing per-channel sample clock or prove an HA defect. The 06:59:54 UTC native graph still records open jvallery/homeassistant#878 as the single external blocker. The 07:07 product smoke passed, but it does not qualify that source clock or grant energy eligibility. Evidence: planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json and the fresh full-status graph/runtime receipts.\n\nCurrent execution allocation: S3. Next action: Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready. Consume accepted HA#878/PR#894 in an explicit new same-response Modbus source-time+signed-power revision. Preserve old-row meaning, source/ingest clocks, stable-zero advancement, reversed CT and stale/missing/future/nonfinite/disconnected denial. Verify deployed consumer and one later natural source/DB comparison. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.\n\nFollow-through #1034: authentic same-response Modbus reader plus explicit new revision and exact279 diagnostic consumer/C0/bootstrap successor qualified. Final migration, seven native consumer cases and both native bootstrap expressions passed rollback-only qualification with unchanged post-rollback live seals/ledger. Exact migrator image b583cc90600d005d73bc028078fd19afadd7bd9f93aa152f6760bb54cd5f22c0 and frozen two-file ingestor backport 9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61 built. Required checked merge, promotion, hook-bearing sync, five-minute clean-schema and natural source advancement acceptance remain; no device setting or persisted energy row changed during qualification.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation.",
@@ -3633,7 +3633,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Preserve cited evidence and prune exact non-data rehearsal residue only after checking current references. Keep all data intact. If approved #992 retirement subsumes the objects, close with that actual receipt instead of doing duplicate cleanup. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Complete non-data removal verified live: 81 inactive Jobs, six terminal bare Pods, the zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies absent after UID/version dry-runs and consumer/selector checks. Seven available logs/nine citation files preserved in encrypted private local custody; 80 old Jobs already lacked a retained Pod. CNPG Cluster, eight PVCs, two protected runtime policies, central/operator credentials and both Application specs/health preserved. Owner-record/source receipt publication is pending; issue remains open. Evidence: planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Preserve cited evidence and prune exact non-data rehearsal residue only after checking current references. Keep all data intact. If approved #992 retirement subsumes the objects, close with that actual receipt instead of doing duplicate cleanup."
@@ -4162,8 +4162,8 @@
     {
       "key": "1008",
       "issue_number": 1008,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Add rate limits and request bounds to anonymous api.verdify.ai: the public camera route triggers a fresh home-Frigate snapshot on every request",
       "stage": "C4",
       "kind": "task",
@@ -4189,7 +4189,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "S6 app bounds/cache/origin rate packet deployed and verified. Public maxima/422, one refresh per pod across query variations, and 8/50 throttled origin-reaching public requests pass; both frontends stay 200. Same-URL requests are Cloudflare-cache-served (public max-age 14400 versus origin 20s), so literal edge throttling/TTL and Turnstile acceptance remain open.",
+      "baseline": "Complete and live-accepted on 2026-10-20: application query maxima/cache/concurrency and tier-2 controls remain deployed; network-infra#756 declares the 20-second camera cache and Cloudflare rate rule, with 11 provider 429 denials in a same-URL 50-request/7.854-second burst while both frontends stay 200. agents#5200 seals Turnstile custody; #1030 publishes the widget first, then #1032 activates the exact API/required Secret reference. Full 134-task non-pruning sync at ca5241b2c0b8e9f1021123439fa790e08f3537f4 is Synced/Healthy; both API replicas run source 183af7a93fe236ab97f4556173a07195515b732a / digest e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8. Missing/invalid token probes deny 400, managed widget automatic Success observed, smoke 9/9 and exactly one writer pass. No successful contact/email test was sent; observed-colo throttling does not prove an exact global quota. Evidence: planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add query maxima, bounded camera cache and fetch concurrency, then trusted-client rate/in-flight limits. Test limits with mocked NVR/DB fixtures first; verify deployed bounds with bounded probes. Edge policy and Turnstile custody remain owner follow-through, not blockers to app work."
@@ -4253,7 +4253,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.\n\nFollow-through #1035 adds one secret-free allowed-dispatch event with audience, tool, conservative capability, outcome, duration and explicit transport peer. Focused authorization/audit checks: 99 pass; exact MCP image d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c built after supplying the missing checksum-pinned render tool. Checked merge, deployment, natural Hermes/Loki evidence remain. External-client identity is not inferred from pod addresses or untrusted forwarded headers; network-infra#743 trust path remains open.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP."
@@ -4420,7 +4420,6 @@
       1004,
       1005,
       1007,
-      1008,
       1009,
       1010,
       1011,
@@ -4433,7 +4432,7 @@
         "title": "S6 \u2014 Public exposure and safe control preparation (October 21\u201327, 2026)",
         "kind": "sprint",
         "capacity_hours": 40,
-        "goal": "All six original S6 bounded packets are delivered with issue-specific evidence in planning/execution/2026-10-20-s6. Three issues are closed; #297, #1007 and #1008 retain explicit whole-issue follow-through in backlog. No alternate was automatically added. The original 25\u201334h planning estimate remains in the dated audit.",
+        "goal": "All six original S6 bounded packets are delivered with issue-specific evidence in planning/execution/2026-10-20-s6. Four issues are closed; #297 and #1007 retain explicit whole-issue follow-through in backlog. No alternate was automatically added. The original 25\u201334h planning estimate remains in the dated audit.",
         "exit": "Completed packet receipts are distinct from full issue acceptance; remaining work requires its named evidence/owner boundary and a fresh capacity allocation."
       },
       {
@@ -4779,7 +4778,7 @@
         "sprint": "ALTERNATE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Consume accepted HA#878/PR#894 in an explicit new same-response Modbus source-time+signed-power revision. Preserve old-row meaning, source/ingest clocks, stable-zero advancement, reversed CT and stale/missing/future/nonfinite/disconnected denial. Verify deployed consumer and one later natural source/DB comparison.",
+        "next_action": "Merge checked #1034 and promote only exact279 migrator plus frozen control-preserving ingestor backport; full sync/hooks, five-minute clean-schema and natural source advancement acceptance remain.",
         "owner_role": "Data/platform lead"
       },
       {
@@ -4795,7 +4794,7 @@
         "sprint": "BACKLOG",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Preserve cited evidence and prune exact non-data rehearsal residue only after checking current references. Keep all data intact. If approved #992 retirement subsumes the objects, close with that actual receipt instead of doing duplicate cleanup.",
+        "next_action": "Live non-data cleanup complete; merge sanitized receipts and corresponding owner records, then close. Data retirement stays under #992 verified dump/snapshot custody.",
         "owner_role": "Platform/security lead"
       },
       {
@@ -4903,14 +4902,6 @@
         "owner_role": "Platform/security lead"
       },
       {
-        "issue_number": 1008,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "S6 origin-bound application packet delivered. Resolve owner edge camera TTL/rate semantics and the literal cached-URL burst criterion, then Turnstile custody or an explicit form decision. Do not count origin-miss proof as edge acceptance.",
-        "owner_role": "Platform/security lead"
-      },
-      {
         "issue_number": 1009,
         "sprint": "BACKLOG",
         "hours_min": null,
@@ -4923,7 +4914,7 @@
         "sprint": "ALTERNATE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP.",
+        "next_action": "Merge/deploy checked #1035 audit image and verify natural Hermes events in Pod logs/Loki. Keep external-client attribution open until the network-owned trusted-origin path is accepted.",
         "owner_role": "Platform/security lead"
       },
       {

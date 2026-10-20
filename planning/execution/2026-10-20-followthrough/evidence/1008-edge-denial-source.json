@@ -1,0 +1,17 @@
+{
+  "same_url_requests": 50,
+  "elapsed_seconds": 7.854,
+  "statuses": {
+    "200": 39,
+    "429": 11
+  },
+  "all_cloudflare": true,
+  "successful_cache_statuses": {
+    "EXPIRED": 1,
+    "HIT": 38
+  },
+  "cloudflare_denial_count": 11,
+  "origin_plaintext_denial_count": 0,
+  "camera_payloads_saved": false,
+  "max_age_20_on_success": true
+}

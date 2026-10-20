@@ -716,3 +716,8 @@ arbitrary render URLs are exposed. See `docs/runbooks/grafana-saved-public.md`.
 ## Contact verification (#1008)
 
 The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; the API checks the token, hostname and `contact` action before acquiring a database connection. Central credential custody is `jvallery/agents`, Secret `verdify-prod/verdify-contact-turnstile`. Cloudflare widget and camera edge rules belong to `jvallery/network-infra`.
+
+
+## Rehearsal non-data cleanup (#991)
+
+The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.

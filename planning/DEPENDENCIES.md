@@ -81,7 +81,7 @@ flowchart TD
     i1005["#1005 (open) Give verdify-lab real node redundancy instead of two repli"]
     i1006["#1006 (closed) Scope the internet-facing verdify-traefik to verdify-prod:"]
     i1007["#1007 (open) Put edge pre-auth in front of mcp.verdify.ai: one static I"]
-    i1008["#1008 (open) Add rate limits and request bounds to anonymous api.verdif"]
+    i1008["#1008 (closed) Add rate limits and request bounds to anonymous api.verdif"]
     i1009["#1009 (open) Sign greenhouse ESP32 firmware and flash only reviewed arc"]
     i1010["#1010 (open) Log the audience and real client IP of every successful ve"]
     i1011["#1011 (open) Bound verdify-mcp egress and stop mounting the default Ser"]
