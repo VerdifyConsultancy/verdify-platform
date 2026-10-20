@@ -269,7 +269,7 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         "becomes a plan; Operations owns live controller state.</p></div>",
         "</div>",
         "",
-        "[Open the full weather dashboard (Grafana sign-in)](https://graphs.verdify.ai/d/greenhouse-weather/greenhouse3a-weather?orgId=1&from=now-24h&to=now%2B48h&timezone=America%2FDenver&refresh=5m)",
+        "[Open the full weather dashboard](https://graphs.verdify.ai/d/greenhouse-weather/greenhouse3a-weather?orgId=1&from=now-24h&to=now%2B48h&timezone=America%2FDenver&refresh=5m)",
         "",
         "## Forecast Graphs",
         "",

@@ -34,21 +34,21 @@ test("full dashboard links use only the approved native share", () => {
     `/public-dashboards/${publicShares["site-climate"].token}`)
 })
 
-test("unshared Weather embeds become sign-in links without a public iframe or PNG", () => {
+test("unshared Equipment embeds become sign-in links without a public iframe or PNG", () => {
   const output = transform({ type: "element", tagName: "iframe", properties: {
-    src: "https://graphs.verdify.ai/d-solo/greenhouse-weather/weather?panelId=20&from=now-24h&to=now",
+    src: "https://graphs.verdify.ai/d-solo/greenhouse-equipment/equipment?panelId=20&from=now-24h&to=now",
   }, children: [] })
   assert.equal(output.tagName, "p")
   const link = output.children[0] as Element
   const url = new URL(String(link.properties.href))
-  assert.equal(url.pathname, "/d/greenhouse-weather/weather")
+  assert.equal(url.pathname, "/d/greenhouse-equipment/equipment")
   assert.equal(url.searchParams.get("viewPanel"), "20")
   assert.match((link.children[0] as { value: string }).value, /sign-in/)
   assert.equal("data-image-src" in output.properties, false)
 })
 
 test("unshared dashboard links retain authentication and never acquire a public token", () => {
-  const href = "https://graphs.verdify.ai/d/greenhouse-weather/weather"
+  const href = "https://graphs.verdify.ai/d/greenhouse-equipment/equipment"
   const output = transform({ type: "element", tagName: "a", properties: { href }, children: [] })
   assert.equal(output.properties.href, href)
   assert.equal(output.properties.title, "Requires Grafana sign-in")
@@ -74,4 +74,17 @@ test("Grafana scene panel keys preserve the approved numeric panel", () => {
     href: "https://graphs.verdify.ai/d/site-home/home?viewPanel=panel-30",
   }, children: [] })
   assert.equal(new URL(String(output.properties.href)).searchParams.get("panelId"), "30")
+})
+
+
+test("approved Weather forecast embeds retain their native share and future time range", () => {
+  const output = transform({ type: "element", tagName: "iframe", properties: {
+    src: "https://graphs.verdify.ai/d-solo/greenhouse-weather/weather?panelId=20&from=now-24h&to=now%2B48h",
+    height: "350",
+  }, children: [] })
+  assert.equal(output.tagName, "div")
+  const url = new URL(String(output.properties["data-iframe-src"]))
+  assert.equal(url.pathname, `/public-dashboards/${publicShares["greenhouse-weather"].token}`)
+  assert.equal(url.searchParams.get("panelId"), "20")
+  assert.equal(url.searchParams.get("to"), "now+48h")
 })
