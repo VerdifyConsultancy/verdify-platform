@@ -1,0 +1,15 @@
+{
+  "phase": "Failed",
+  "revision": "1bac5528484cc2d80f899b160ec9ac35080e68ea",
+  "started_at": "2026-10-20T18:38:27Z",
+  "finished_at": "2026-10-20T18:40:21Z",
+  "message": "one or more synchronization tasks completed unsuccessfully",
+  "resource_count": 3,
+  "protected_objects_unchanged": [
+    "pod/verdify-db-0",
+    "pvc/db-data-verdify-db-0",
+    "pvc/verdify-grafana-data"
+  ],
+  "failure": "migration 278 absent from exact reviewed successor allowlist",
+  "workload_rollout_occurred": false
+}

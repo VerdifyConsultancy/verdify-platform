@@ -749,7 +749,7 @@
       "blocked_by": [
         45
       ],
-      "body_sha256": "93d5466223ec5555eb97ee5b48609c9a27420cbf29439db9d82837a99295fdff"
+      "body_sha256": "5c42e2ef63b28e1768b28315ccc37ea95447f24038976b92172f6cac88008ec5"
     },
     {
       "key": "296",
@@ -1195,11 +1195,11 @@
       "number": 994,
       "title": "[C5][P2] Record the verdify-db data PVC db-data-verdify-db-0 as protected",
       "stage": "C5",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "d3c0157331ee049fb1c15a015d12d9585a37babc7620043dc29417c828769a1c"
+      "body_sha256": "924464e4cef446c8685ff8679a32d104c5ecdf0e34cb46f5b2b343d2aa77f580"
     },
     {
       "key": "995",
@@ -1256,7 +1256,7 @@
       "blocked_by": [
         994
       ],
-      "body_sha256": "04e210e5c482e5b4d59416c7f310290f6fa13f1925b02ea37f879d6df816a699"
+      "body_sha256": "5e46cadf4fb76c8f01bd28c0633a9f23f9c864c4583633623162a1a2d954ba83"
     },
     {
       "key": "1000",
@@ -1285,11 +1285,11 @@
       "number": 1002,
       "title": "[C4][P1] Stop anonymous internet users running ad-hoc SQL via graphs.verdify.ai Grafana",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "e2127f4e3ab619f1c391b6abc850ae0e46393efb8b19df4c4958842349736b4b"
+      "body_sha256": "dca766e645e5c992fa7847f2fb12f181060555474e4ffca5443ee8851aa2c2a4"
     },
     {
       "key": "1003",
@@ -1329,11 +1329,11 @@
       "number": 1006,
       "title": "[C4][P1] Scope the internet-facing verdify-traefik to verdify-prod: its ClusterRole can read all 936 Secrets in 84 namespaces",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "63eeb8a63e88478054a655e8d7a0bd08950d76b58b65a93bbda7a06461e5af8a"
+      "body_sha256": "98a220d338aca7489cbd69dfc22c1f5195953cb43b9162d5abb45ff093a8fced"
     },
     {
       "key": "1007",
@@ -1344,7 +1344,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "c489a5be773df4b947afadee7f91e8a2833ff02206f26f88eb90ebce20b91182"
+      "body_sha256": "44548749e329ce78916a6a1551a4d9df2042a3da4ac1f791699533f324f072e9"
     },
     {
       "key": "1008",
@@ -1355,7 +1355,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "8b0ce54b483f1718d29f3eaa54240adea21b494f6c388d3b651d8f01efacbe8b"
+      "body_sha256": "b668e578753bc41cf5a761a7f7ce361f3391d192687f40bd64efe63dba1ada89"
     },
     {
       "key": "1009",
@@ -1389,6 +1389,28 @@
       "parent": null,
       "blocked_by": [],
       "body_sha256": "13bbcee53f62932608f115814a8a346824f8e5e77ece4208d81461ea7abbb01a"
+    },
+    {
+      "key": "1021",
+      "number": 1021,
+      "title": "[C5][P2] Switch verdify-vision from shared Gemini credentials to Cortex longctx.mm",
+      "stage": "C5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "3b766fe1bca053f537b061df389f8f0ead4f9d9c7925d6bc4a5b6fabb931d4a8"
+    },
+    {
+      "key": "1022",
+      "number": 1022,
+      "title": "[C5][P2] Make the ESP32 writer identity and egress exact without losing safe failover",
+      "stage": "C5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "84b129744e061e11c9f284ff239fd51479c9b39e242f403223615dcb47ff6d7a"
     }
   ]
 }

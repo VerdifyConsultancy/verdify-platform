@@ -1,0 +1,56 @@
+{
+  "started_at": "2026-10-20T19:08:48.939319+00:00",
+  "expected_api_digest": "sha256:36cd4dd386335a88e130e143fc514e417a7e54036f96925f72afe8733b2c27bb",
+  "cache_probes": [
+    {
+      "pod": "verdify-api-7ddf4bd967-lzx22",
+      "first_cache": "MISS",
+      "second_cache": "HIT",
+      "same_jpeg_sha256": "54a0d4fd284b011f4defd900f0e453e8ed97cf853c7b3e8096e32283ec9d1f37",
+      "upstream_refresh_log_count": 1,
+      "within_ttl": true,
+      "origin_cache_control": "public, max-age=20, stale-while-revalidate=60",
+      "openapi_maxima_and_422_passed": true
+    },
+    {
+      "pod": "verdify-api-7ddf4bd967-zxfj6",
+      "first_cache": "MISS",
+      "second_cache": "HIT",
+      "same_jpeg_sha256": "aa0c577d3a0a19081132deb1bbdac08b64a8273f587de20db09da68108f6a12a",
+      "upstream_refresh_log_count": 1,
+      "within_ttl": true,
+      "origin_cache_control": "public, max-age=20, stale-while-revalidate=60",
+      "openapi_maxima_and_422_passed": true
+    }
+  ],
+  "burst": {
+    "requests": 50,
+    "elapsed_s": 4.036,
+    "statuses": {
+      "200": 42,
+      "429": 8
+    },
+    "all_cloudflare": true,
+    "unique_unknown_query_to_force_edge_miss": true
+  },
+  "frontend_probes": [
+    {
+      "host": "verdify.ai",
+      "status": 200,
+      "forced_public_dns": true
+    },
+    {
+      "host": "lab.verdify.ai",
+      "status": 200,
+      "forced_public_dns": true
+    }
+  ],
+  "public_openapi_maxima_verified": true,
+  "live_middlewares": [
+    "verdify-api-inflight",
+    "verdify-api-rate-limit",
+    "verdify-camera-rate-limit",
+    "verdify-strip-identity-headers"
+  ],
+  "completed_at": "2026-10-20T19:08:57.929908+00:00"
+}

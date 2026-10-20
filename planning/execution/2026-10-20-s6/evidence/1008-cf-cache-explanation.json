@@ -1,0 +1,12 @@
+{
+  "observed_at": "2026-10-20T19:07Z",
+  "public_same_url_burst": "no 429 observed; edge cache answers do not reach origin middleware",
+  "response_headers": {
+    "cache-control": "public, max-age=14400, stale-while-revalidate=60",
+    "cf-cache-status": "UPDATING",
+    "age": 70,
+    "x-camera-cache": "HIT"
+  },
+  "whole_issue_acceptance": "open; edge criterion is not claimed",
+  "next_probe": "bounded unique unknown query values force origin while preserving the fixed per-camera cache key"
+}

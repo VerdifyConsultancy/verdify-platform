@@ -1,0 +1,71 @@
+{
+  "observed_at": "2026-10-20T16:04:22.410847+00:00",
+  "issue": 994,
+  "product_pr": 1015,
+  "central_pr": "jvallery/agents#5175",
+  "revision": "bdd6f6c058269e581e1f6927ba26eae04ee67b9f",
+  "argo_sync": "Synced",
+  "argo_health": "Healthy",
+  "operation_phase": "Succeeded",
+  "operation_started_at": "2026-10-20T15:57:51Z",
+  "operation_finished_at": "2026-10-20T15:59:36Z",
+  "operation_resource_count": 130,
+  "selectors": [],
+  "pvc_uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+  "pvc_spec_unchanged": true,
+  "pvc_bound": "Bound",
+  "protection": "Prune=false,Delete=false",
+  "tracking_id": "verdify-prod-dark:/PersistentVolumeClaim:verdify-prod/db-data-verdify-db-0",
+  "db_pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+  "db_pod_spec_unchanged": true,
+  "smoke_passed": 9,
+  "smoke_failed": 0,
+  "device_writer_connections": 1,
+  "hook_results": [
+    {
+      "kind": "ConfigMap",
+      "name": "verdify-c0-boundary-contract-240-248-c67h948tfk",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-migrate",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "experiment-v2-direct-launch-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-runtime-role-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-mcp-runtime-role-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-experiment-v2-credential-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-six-runtime-role-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-maintenance-runtime-role-bootstrap",
+      "phase": "Succeeded"
+    },
+    {
+      "kind": "Job",
+      "name": "verdify-winter-archive-init",
+      "phase": "Succeeded"
+    }
+  ]
+}

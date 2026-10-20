@@ -1,0 +1,1 @@
+{"observation":"first two cold requests can reach different pod-local caches through two edge pods","verification":"bounded repeated requests must return HIT matching a prior warmed image","architecture":"file provider routes a ClusterIP; service ClientIP affinity is per edge pod, not per browser","acceptance_before_corrected_probe":false}

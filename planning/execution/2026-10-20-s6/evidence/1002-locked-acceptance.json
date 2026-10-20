@@ -1,0 +1,287 @@
+{
+  "phase": "locked",
+  "started_at": "2026-10-20T19:23:05.467718+00:00",
+  "shares": [
+    {
+      "uid": "site-climate",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-controller",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 10,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-cooling",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-heating",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 3,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-humidity",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 12,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-lighting",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 9,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-climate-water",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 4,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-evidence-dashboards",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 50,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-evidence-economics",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-evidence-operations",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-evidence-planning-quality",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-greenhouse-crops",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-greenhouse-equipment",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-greenhouse-zones",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 11,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-home",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-inference-infra",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 10,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-intelligence",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 2,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-intelligence-data",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 10,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-intelligence-planning",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 5,
+      "single_panel_only": true
+    },
+    {
+      "uid": "site-irrigation",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 1,
+      "single_panel_only": true
+    },
+    {
+      "uid": "greenhouse-weather",
+      "metadata_status": 200,
+      "time_controls": true,
+      "single_panel_id": 10,
+      "single_panel_only": true
+    }
+  ],
+  "renders": [
+    {
+      "uid": "site-home",
+      "panel": 30,
+      "from": "now-6h",
+      "attempts": [
+        {
+          "cache": "HIT",
+          "sha256": "48fb39ad9016895e942fbbf9ea4c7d94522dbae5e12e5810bd24d882b0121bd4",
+          "bytes": 52114
+        },
+        {
+          "cache": "HIT",
+          "sha256": "641c60fe617a62d6e1bf46feb32729290bcdec47ce367715d74f4df0aefa24ea",
+          "bytes": 52205
+        },
+        {
+          "cache": "HIT",
+          "sha256": "48fb39ad9016895e942fbbf9ea4c7d94522dbae5e12e5810bd24d882b0121bd4",
+          "bytes": 52114
+        }
+      ],
+      "cache_hit_matches_prior_image": true,
+      "bytes": 52114,
+      "sha256": "48fb39ad9016895e942fbbf9ea4c7d94522dbae5e12e5810bd24d882b0121bd4",
+      "cloudflare": true
+    },
+    {
+      "uid": "site-climate",
+      "panel": 2,
+      "from": "now-6h",
+      "attempts": [
+        {
+          "cache": "MISS",
+          "sha256": "e41cc0ca0a250f1dacd7a7baf361b1e8b81aa715e5f80fcfdc135533ed17e51d",
+          "bytes": 23435
+        },
+        {
+          "cache": "HIT",
+          "sha256": "e41cc0ca0a250f1dacd7a7baf361b1e8b81aa715e5f80fcfdc135533ed17e51d",
+          "bytes": 23435
+        }
+      ],
+      "cache_hit_matches_prior_image": true,
+      "bytes": 23435,
+      "sha256": "e41cc0ca0a250f1dacd7a7baf361b1e8b81aa715e5f80fcfdc135533ed17e51d",
+      "cloudflare": true
+    },
+    {
+      "uid": "site-evidence-economics",
+      "panel": 10,
+      "from": "now-6M/M",
+      "attempts": [
+        {
+          "cache": "MISS",
+          "sha256": "c12aadba146aab739d3fd039b3ed8cfce6d2456637d3c893cbb5272314c0bab3",
+          "bytes": 35153
+        },
+        {
+          "cache": "HIT",
+          "sha256": "c12aadba146aab739d3fd039b3ed8cfce6d2456637d3c893cbb5272314c0bab3",
+          "bytes": 35153
+        }
+      ],
+      "cache_hit_matches_prior_image": true,
+      "bytes": 35153,
+      "sha256": "c12aadba146aab739d3fd039b3ed8cfce6d2456637d3c893cbb5272314c0bab3",
+      "cloudflare": true
+    },
+    {
+      "uid": "greenhouse-weather",
+      "panel": 20,
+      "from": "now-24h",
+      "attempts": [
+        {
+          "cache": "MISS",
+          "sha256": "338c1b80a7d49ea1a3dd8f7c2d4ac3a176ea7db40470f9ae3dfba97b87e59f81",
+          "bytes": 48336
+        },
+        {
+          "cache": "MISS",
+          "sha256": "778d6923387e4a81ad958e3d1d26836a1fe19a4564dacd5c1fad8832555a8c83",
+          "bytes": 48272
+        },
+        {
+          "cache": "HIT",
+          "sha256": "338c1b80a7d49ea1a3dd8f7c2d4ac3a176ea7db40470f9ae3dfba97b87e59f81",
+          "bytes": 48336
+        }
+      ],
+      "cache_hit_matches_prior_image": true,
+      "bytes": 48336,
+      "sha256": "338c1b80a7d49ea1a3dd8f7c2d4ac3a176ea7db40470f9ae3dfba97b87e59f81",
+      "cloudflare": true
+    }
+  ],
+  "saved_query": {
+    "status": 200,
+    "frame_count": 1,
+    "field_names": [
+      "time",
+      "Temp"
+    ],
+    "caller_sql_ignored": true
+  },
+  "classic_denials": [
+    {
+      "path": "/api/ds/query",
+      "public_token_as_bearer": false,
+      "status": 401
+    },
+    {
+      "path": "/api/ds/query",
+      "public_token_as_bearer": true,
+      "status": 401
+    },
+    {
+      "path": "/api/datasources/uid/verdify-tsdb/resources/",
+      "public_token_as_bearer": false,
+      "status": 401
+    },
+    {
+      "path": "/api/datasources",
+      "public_token_as_bearer": false,
+      "status": 401
+    },
+    {
+      "path": "/api/dashboards/uid/site-home",
+      "public_token_as_bearer": false,
+      "status": 401
+    }
+  ],
+  "unknown_share_status": 404,
+  "completed_at": "2026-10-20T19:23:56.519234+00:00"
+}

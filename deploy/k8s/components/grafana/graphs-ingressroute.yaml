@@ -43,10 +43,10 @@ spec:
       services:
         - name: verdify-grafana-render-cache
           port: 8080
-          # Cache storage is intentionally pod-local. Pin a browser to one
-          # replica for the bounded cache lifetime so an immediate repeat
-          # render is a HIT instead of a second cold render on its peer.
-          # This cookie carries no identity or authorization state.
+          # The file provider binds this cookie to the Service URL. Kubernetes
+          # ClientIP affinity is per edge pod, so a browser may warm both
+          # pod-local caches before a repeated PNG is a HIT. This cookie
+          # carries no identity or authorization state.
           sticky:
             cookie:
               name: verdify_render_cache

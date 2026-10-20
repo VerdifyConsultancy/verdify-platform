@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-20-sprint-audit/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 116-issue/70-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-20-sprint-audit/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 118-issue/70-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -75,11 +75,11 @@ flowchart TD
     i999["#999 (open) Pin the remaining tag-only verdify-prod images by digest"]
     i1000["#1000 (open) Close health coverage gaps for Verdify items and alert the"]
     i1001["#1001 (open) Track Verdify transitions owned elsewhere (agents#4461, #4"]
-    i1002["#1002 (open) Stop anonymous internet users running ad-hoc SQL via graph"]
+    i1002["#1002 (closed) Stop anonymous internet users running ad-hoc SQL via graph"]
     i1003["#1003 (open) Route verdify-platform main changes, including prod releas"]
     i1004["#1004 (open) Bring kubectl-patched verdify-prod workloads back under Gi"]
     i1005["#1005 (open) Give verdify-lab real node redundancy instead of two repli"]
-    i1006["#1006 (open) Scope the internet-facing verdify-traefik to verdify-prod:"]
+    i1006["#1006 (closed) Scope the internet-facing verdify-traefik to verdify-prod:"]
     i1007["#1007 (open) Put edge pre-auth in front of mcp.verdify.ai: one static I"]
     i1008["#1008 (open) Add rate limits and request bounds to anonymous api.verdif"]
     i1009["#1009 (open) Sign greenhouse ESP32 firmware and flash only reviewed arc"]
@@ -97,8 +97,10 @@ flowchart TD
     i49["#49 (closed) Audit and close historical suppressed sensor alerts withou"]
     i977["#977 (closed) Decide the database replica policy before November 12; kee"]
     i992["#992 (open) Retire the verdify-db-rehearsal experiment namespace now t"]
-    i994["#994 (open) Record the verdify-db data PVC db-data-verdify-db-0 as pro"]
+    i994["#994 (closed) Record the verdify-db data PVC db-data-verdify-db-0 as pro"]
     i996["#996 (open) Remove laptop-root-era verdify-agent RBAC"]
+    i1021["#1021 (open) Switch verdify-vision from shared Gemini credentials to Co"]
+    i1022["#1022 (open) Make the ESP32 writer identity and egress exact without lo"]
   end
   subgraph C6["C6: Evidence-led control and irrigation"]
     i359["#359 (open) Control program: truthful crop corridors before evidence-l"]
@@ -285,6 +287,6 @@ flowchart TD
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (closed) |
 | [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) (closed) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (closed) |
 | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#963](https://github.com/VerdifyConsultancy/verdify-platform/issues/963) (open) |
-| [#994](https://github.com/VerdifyConsultancy/verdify-platform/issues/994) (open) | [#999](https://github.com/VerdifyConsultancy/verdify-platform/issues/999) (open) |
+| [#994](https://github.com/VerdifyConsultancy/verdify-platform/issues/994) (closed) | [#999](https://github.com/VerdifyConsultancy/verdify-platform/issues/999) (open) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.
