@@ -68,6 +68,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 for _p in reversed(("/app", str(_REPO_ROOT), "/mnt/iris/verdify")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+from verdify_public import grafana_public  # noqa: E402
 from verdify_public.build_provenance import image_git_sha  # noqa: E402
 from verdify_public.camera_cache import PublicCameraCache  # noqa: E402
 from verdify_public.output_policy import (  # noqa: E402
@@ -6941,3 +6942,35 @@ async def get_component_experiment_status(
     except (KeyError, TypeError, ValueError, ValidationError) as exc:
         log.error("experiment lifecycle status function returned an invalid contract error=%s", type(exc).__name__)
         raise HTTPException(503, "Confirmed-component v2 status database duty unavailable") from exc
+
+
+@app.get("/api/public/dashboards/{token}", response_model=dict)
+async def saved_public_dashboard(token: str, request: Request):
+    """Public metadata only; native saved-panel queries remain Grafana-owned."""
+    try:
+        panel = grafana_public.public_panel(token, request.headers.get("referer", ""))
+        document = await grafana_public.METADATA_WORK.run(grafana_public.fetch_metadata, token)
+        return grafana_public.panel_metadata(document, panel)
+    except OverflowError:
+        raise HTTPException(429, "Dashboard metadata busy") from None
+    except ValueError:
+        raise HTTPException(404, "Saved public dashboard or panel unavailable") from None
+    except Exception:
+        raise HTTPException(502, "Public dashboard provider unavailable") from None
+
+
+@app.get("/render/d-solo/{uid}/{slug}")
+@app.get("/render/d/{uid}/{slug}")
+async def saved_public_panel_png(uid: str, slug: str, request: Request, panelId: int = Query(..., ge=1)):
+    """Fixed saved-panel renderer; no user URL, SQL, headers, or credentials."""
+    try:
+        url, options = grafana_public.render_parameters(uid, panelId, dict(request.query_params))
+    except (ValueError, TypeError):
+        raise HTTPException(422, "Invalid saved panel, time or dimensions") from None
+    try:
+        png = await grafana_public.RENDER_WORK.run(grafana_public.fetch_png, url, options)
+    except OverflowError:
+        raise HTTPException(429, "Panel renderer busy") from None
+    except Exception:
+        raise HTTPException(502, "Saved panel renderer unavailable") from None
+    return Response(png, media_type="image/png", headers={"Cache-Control": "public, max-age=60"})

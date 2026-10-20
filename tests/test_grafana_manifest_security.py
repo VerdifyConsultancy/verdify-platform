@@ -106,12 +106,26 @@ def test_manifest_locks_the_runtime_validated_renderer_v5_configuration_and_prob
     assert renderer["securityContext"]["runAsUser"] == 65532
 
 
-def test_renderer_port_is_not_exposed_by_the_public_service_or_network_policy():
+def test_renderer_port_is_reachable_only_by_the_api_and_requires_existing_token():
     documents = _documents()
     service = next(document for document in documents if document.get("kind") == "Service")
     policy = next(document for document in documents if document.get("kind") == "NetworkPolicy")
 
-    assert service["spec"]["ports"] == [{"name": "http", "port": 3000, "targetPort": "http"}]
+    assert service["spec"]["ports"] == [
+        {"name": "http", "port": 3000, "targetPort": "http"},
+        {"name": "renderer", "port": 8081, "targetPort": "renderer"},
+    ]
+    renderer_policy = next(
+        d for d in documents if d.get("metadata", {}).get("name") == "allow-grafana-renderer-from-api"
+    )
+    assert renderer_policy["spec"]["ingress"] == [
+        {
+            "from": [{"podSelector": {"matchLabels": {"app.kubernetes.io/component": "api"}}}],
+            "ports": [{"protocol": "TCP", "port": 8081}],
+        }
+    ]
+    routes = (ROOT / "deploy/k8s/components/grafana/graphs-ingressroute.yaml").read_text()
+    assert "port: 8081" not in routes
     ingress_ports = [port["port"] for rule in policy["spec"]["ingress"] for port in rule.get("ports", [])]
     assert ingress_ports == [3000]
 

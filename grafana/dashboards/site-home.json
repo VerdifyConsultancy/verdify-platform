@@ -821,7 +821,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Solar (W/m\u00b2)"
+              "options": "Solar (W/m²)"
             },
             "properties": [
               {
@@ -851,11 +851,11 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "custom.axisLabel",
-                "value": "W/m\u00b2"
+                "value": "W/m²"
               },
               {
                 "id": "custom.gradientMode",
@@ -886,7 +886,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('30 minutes', ts) AS time, round(avg(solar_irradiance_w_m2)::numeric, 0) AS \"Solar (W/m\u00b2)\" FROM climate WHERE $__timeFilter(ts) AND solar_irradiance_w_m2 IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT time_bucket('30 minutes', ts) AS time, round(avg(solar_irradiance_w_m2)::numeric, 0) AS \"Solar (W/m²)\" FROM climate WHERE $__timeFilter(ts) AND solar_irradiance_w_m2 IS NOT NULL GROUP BY 1 ORDER BY 1",
           "refId": "B"
         }
       ],
@@ -1042,7 +1042,7 @@
           "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp in desired band (%)\",\n       vpd_compliance_pct AS \"VPD in desired band (%)\",\n       compliance_pct AS \"Both axes in desired band (%)\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
         }
       ],
-      "title": "House-Average Desired-Band Reading Fractions \u2014 Temp, VPD, Both",
+      "title": "House-Average Desired-Band Reading Fractions — Temp, VPD, Both",
       "type": "timeseries",
       "transparent": true
     },
@@ -1235,7 +1235,7 @@
           "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       round((heat_stress_h + cold_stress_h)::numeric, 2) AS \"Temp Stress Hours\",\n       round((vpd_high_stress_h + vpd_low_stress_h)::numeric, 2) AS \"VPD Stress Hours\",\n       round(total_stress_h::numeric, 2) AS \"Total Stress-Category Hours\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
         }
       ],
-      "title": "Nominal Binary Stress-Axis Hours \u2014 Temp, VPD, Total",
+      "title": "Nominal Binary Stress-Axis Hours — Temp, VPD, Total",
       "type": "timeseries",
       "transparent": true
     },
@@ -1244,7 +1244,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
+      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses °F and VPD uses kPa; measured climate and recorded relay series are separate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1254,7 +1254,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "\u00b0F",
+            "axisLabel": "°F",
             "axisPlacement": "auto",
             "drawStyle": "line",
             "fillOpacity": 0,
@@ -1382,7 +1382,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -1425,7 +1425,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -2805,7 +2805,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
+      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses °F and VPD uses kPa; measured climate and recorded relay series are separate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2887,7 +2887,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -2930,7 +2930,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -4409,7 +4409,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -4421,7 +4421,7 @@
               },
               {
                 "id": "custom.axisLabel",
-                "value": "W/m\u00b2"
+                "value": "W/m²"
               }
             ]
           },
@@ -4444,7 +4444,7 @@
               },
               {
                 "id": "unit",
-                "value": "mol/m\u00b2"
+                "value": "mol/m²"
               },
               {
                 "id": "custom.axisPlacement",
@@ -4452,7 +4452,7 @@
               },
               {
                 "id": "custom.axisLabel",
-                "value": "mol/m\u00b2"
+                "value": "mol/m²"
               }
             ]
           },
@@ -4485,7 +4485,7 @@
               },
               {
                 "id": "unit",
-                "value": "mol/m\u00b2"
+                "value": "mol/m²"
               },
               {
                 "id": "custom.axisPlacement",
@@ -4493,7 +4493,7 @@
               },
               {
                 "id": "custom.axisLabel",
-                "value": "mol/m\u00b2"
+                "value": "mol/m²"
               }
             ]
           },
@@ -4538,7 +4538,7 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "min",
@@ -4550,7 +4550,7 @@
               },
               {
                 "id": "custom.axisLabel",
-                "value": "W/m\u00b2"
+                "value": "W/m²"
               }
             ]
           },
@@ -4637,7 +4637,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, initcap(availability) || ' \u2014 ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+          "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -4693,7 +4693,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, provenance || ' \u00b7 ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+          "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "C",
           "sql": {
             "columns": [
@@ -4764,7 +4764,7 @@
           "refId": "F"
         }
       ],
-      "title": "Light Evidence \u2014 Interior DLI Unavailable",
+      "title": "Light Evidence — Interior DLI Unavailable",
       "type": "timeseries",
       "transparent": true
     },
@@ -5111,7 +5111,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Solar 30-min avg (W/m\u00b2)"
+              "options": "Solar 30-min avg (W/m²)"
             },
             "properties": [
               {
@@ -5141,11 +5141,11 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "custom.axisLabel",
-                "value": "W/m\u00b2"
+                "value": "W/m²"
               },
               {
                 "id": "custom.gradientMode",
@@ -5176,7 +5176,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "WITH bounds AS (\n  SELECT\n    $__timeFrom()::timestamptz AS raw_from_ts,\n    ($__timeFrom()::timestamptz - interval '30 minutes') AS from_ts,\n    $__timeTo()::timestamptz AS to_ts\n), minute_rates AS (\n  SELECT time_bucket('1 minute', ts) AS time,\n         AVG(solar_irradiance_w_m2) AS solar_w_m2\n  FROM climate, bounds\n  WHERE ts >= bounds.from_ts\n    AND ts <= bounds.to_ts\n    AND solar_irradiance_w_m2 IS NOT NULL\n  GROUP BY 1\n), smoothed AS (\n  SELECT time,\n         AVG(solar_w_m2) OVER (ORDER BY time ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS solar_w_m2_30m\n  FROM minute_rates\n)\nSELECT time,\n       ROUND(solar_w_m2_30m::numeric, 0) AS \"Solar 30-min avg (W/m\u00b2)\"\nFROM smoothed, bounds\nWHERE time >= bounds.raw_from_ts\nORDER BY time",
+          "rawSql": "WITH bounds AS (\n  SELECT\n    $__timeFrom()::timestamptz AS raw_from_ts,\n    ($__timeFrom()::timestamptz - interval '30 minutes') AS from_ts,\n    $__timeTo()::timestamptz AS to_ts\n), minute_rates AS (\n  SELECT time_bucket('1 minute', ts) AS time,\n         AVG(solar_irradiance_w_m2) AS solar_w_m2\n  FROM climate, bounds\n  WHERE ts >= bounds.from_ts\n    AND ts <= bounds.to_ts\n    AND solar_irradiance_w_m2 IS NOT NULL\n  GROUP BY 1\n), smoothed AS (\n  SELECT time,\n         AVG(solar_w_m2) OVER (ORDER BY time ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS solar_w_m2_30m\n  FROM minute_rates\n)\nSELECT time,\n       ROUND(solar_w_m2_30m::numeric, 0) AS \"Solar 30-min avg (W/m²)\"\nFROM smoothed, bounds\nWHERE time >= bounds.raw_from_ts\nORDER BY time",
           "refId": "B"
         }
       ],
@@ -5254,7 +5254,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Solar 30-min avg (W/m\u00b2)"
+              "options": "Solar 30-min avg (W/m²)"
             },
             "properties": [
               {
@@ -5284,11 +5284,11 @@
               },
               {
                 "id": "unit",
-                "value": "watt/m\u00b2"
+                "value": "watt/m²"
               },
               {
                 "id": "custom.axisLabel",
-                "value": "W/m\u00b2"
+                "value": "W/m²"
               },
               {
                 "id": "custom.gradientMode",
@@ -5319,7 +5319,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "WITH bounds AS (\n  SELECT\n    $__timeFrom()::timestamptz AS raw_from_ts,\n    ($__timeFrom()::timestamptz - interval '30 minutes') AS from_ts,\n    $__timeTo()::timestamptz AS to_ts\n), minute_rates AS (\n  SELECT time_bucket('1 minute', ts) AS time,\n         AVG(solar_irradiance_w_m2) AS solar_w_m2\n  FROM climate, bounds\n  WHERE ts >= bounds.from_ts\n    AND ts <= bounds.to_ts\n    AND solar_irradiance_w_m2 IS NOT NULL\n  GROUP BY 1\n), smoothed AS (\n  SELECT time,\n         AVG(solar_w_m2) OVER (ORDER BY time ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS solar_w_m2_30m\n  FROM minute_rates\n)\nSELECT time,\n       ROUND(solar_w_m2_30m::numeric, 0) AS \"Solar 30-min avg (W/m\u00b2)\"\nFROM smoothed, bounds\nWHERE time >= bounds.raw_from_ts\nORDER BY time",
+          "rawSql": "WITH bounds AS (\n  SELECT\n    $__timeFrom()::timestamptz AS raw_from_ts,\n    ($__timeFrom()::timestamptz - interval '30 minutes') AS from_ts,\n    $__timeTo()::timestamptz AS to_ts\n), minute_rates AS (\n  SELECT time_bucket('1 minute', ts) AS time,\n         AVG(solar_irradiance_w_m2) AS solar_w_m2\n  FROM climate, bounds\n  WHERE ts >= bounds.from_ts\n    AND ts <= bounds.to_ts\n    AND solar_irradiance_w_m2 IS NOT NULL\n  GROUP BY 1\n), smoothed AS (\n  SELECT time,\n         AVG(solar_w_m2) OVER (ORDER BY time ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS solar_w_m2_30m\n  FROM minute_rates\n)\nSELECT time,\n       ROUND(solar_w_m2_30m::numeric, 0) AS \"Solar 30-min avg (W/m²)\"\nFROM smoothed, bounds\nWHERE time >= bounds.raw_from_ts\nORDER BY time",
           "refId": "B"
         }
       ],
@@ -5636,7 +5636,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
+      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses °F and VPD uses kPa; measured climate and recorded relay series are separate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5646,7 +5646,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "\u00b0F",
+            "axisLabel": "°F",
             "axisPlacement": "auto",
             "drawStyle": "line",
             "fillOpacity": 0,
@@ -6571,7 +6571,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Diagnostic only: 15-minute climate averages minus cached targets, divided by half-width with floors 0.5\u00b0F / 0.05 kPa and clipped to \u00b12.5. The \u00b11 reference is NOT a measured band edge when the target is asymmetric or the width floor applies. Zero refers to the cached target, not accepted control. Climate rows are not greenhouse-filtered in this legacy query. Recorded system-state families are separate; this is not the device arbitration calculation.",
+      "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Diagnostic only: 15-minute climate averages minus cached targets, divided by half-width with floors 0.5°F / 0.05 kPa and clipped to ±2.5. The ±1 reference is NOT a measured band edge when the target is asymmetric or the width floor applies. Zero refers to the cached target, not accepted control. Climate rows are not greenhouse-filtered in this legacy query. Recorded system-state families are separate; this is not the device arbitration calculation.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -6581,7 +6581,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "normalized \u0394 (band-half-widths)",
+            "axisLabel": "normalized Δ (band-half-widths)",
             "axisPlacement": "auto",
             "drawStyle": "line",
             "fillOpacity": 0,
@@ -6744,7 +6744,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Reconstructed Temp \u0394"
+              "options": "Reconstructed Temp Δ"
             },
             "properties": [
               {
@@ -6816,7 +6816,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Reconstructed VPD \u0394"
+              "options": "Reconstructed VPD Δ"
             },
             "properties": [
               {
@@ -7266,7 +7266,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT b.ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (c.temp_avg - b.temp_target)/GREATEST(0.5,(b.temp_high-b.temp_low)/2)))::float AS \"Reconstructed Temp \u0394\",\n  GREATEST(-2.5, LEAST(2.5, (c.vpd_avg - b.vpd_target)/GREATEST(0.05,(b.vpd_high-b.vpd_low)/2)))::float AS \"Reconstructed VPD \u0394\"\nFROM v_band_curve b\nJOIN LATERAL (\n  SELECT avg(temp_avg) AS temp_avg, avg(vpd_avg) AS vpd_avg FROM climate\n  WHERE ts >= b.ts AND ts < b.ts + interval '15 minutes' AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\n) c ON c.temp_avg IS NOT NULL\nWHERE $__timeFilter(b.ts) AND b.ts <= now()\nORDER BY b.ts",
+          "rawSql": "SELECT b.ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (c.temp_avg - b.temp_target)/GREATEST(0.5,(b.temp_high-b.temp_low)/2)))::float AS \"Reconstructed Temp Δ\",\n  GREATEST(-2.5, LEAST(2.5, (c.vpd_avg - b.vpd_target)/GREATEST(0.05,(b.vpd_high-b.vpd_low)/2)))::float AS \"Reconstructed VPD Δ\"\nFROM v_band_curve b\nJOIN LATERAL (\n  SELECT avg(temp_avg) AS temp_avg, avg(vpd_avg) AS vpd_avg FROM climate\n  WHERE ts >= b.ts AND ts < b.ts + interval '15 minutes' AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\n) c ON c.temp_avg IS NOT NULL\nWHERE $__timeFilter(b.ts) AND b.ts <= now()\nORDER BY b.ts",
           "refId": "A"
         },
         {
@@ -7328,152 +7328,7 @@
   "timezone": "America/Denver",
   "version": 3,
   "templating": {
-    "list": [
-      {
-        "name": "show_solar",
-        "type": "custom",
-        "label": "Show Solar",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      },
-      {
-        "name": "show_temp",
-        "type": "custom",
-        "label": "Show Temp",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      },
-      {
-        "name": "show_humidity",
-        "type": "custom",
-        "label": "Show Humidity",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      },
-      {
-        "name": "show_electric",
-        "type": "custom",
-        "label": "Show Electric",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      },
-      {
-        "name": "show_gas",
-        "type": "custom",
-        "label": "Show Gas",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      },
-      {
-        "name": "show_water",
-        "type": "custom",
-        "label": "Show Water",
-        "hide": 2,
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
-        "options": [
-          {
-            "selected": true,
-            "text": "1",
-            "value": "1"
-          },
-          {
-            "selected": false,
-            "text": "0",
-            "value": "0"
-          }
-        ],
-        "query": "1,0"
-      }
-    ]
+    "list": []
   },
   "style": "light"
 }
