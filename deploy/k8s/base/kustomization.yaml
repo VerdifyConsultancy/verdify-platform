@@ -37,6 +37,7 @@ resources:
   # VERDIFY_WRITER_LEASE_ENABLED=1 (gated prod arm).
   - ingestor-rbac.yaml
   - networkpolicy.yaml
+  - mcp-egress-networkpolicy.yaml
 
 # Image namespace. Canonical org namespace is
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER

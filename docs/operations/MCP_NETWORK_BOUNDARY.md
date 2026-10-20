@@ -1,0 +1,11 @@
+# MCP runtime isolation (#1011)
+
+The MCP Deployment uses the dedicated `verdify-mcp` ServiceAccount. Both the account and Pod disable token automount; no Role, RoleBinding, token Secret or Kubernetes permission is added. Existing application credentials and image-pull references remain unchanged.
+
+`verdify-mcp-egress` selects only MCP Pods. It permits TCP/UDP53 to the current CoreDNS selector in kube-system, TCP5432 to this namespace's database Pods, and TCP443 to public IPv4 destinations. Private, loopback, link-local, shared, documentation, benchmarking, multicast and reserved ranges are excluded from the public rule. No arbitrary pod-CIDR, LAN/NAS, device-VLAN or API-server path is allowed. Other components' policies and the sole ESP32 writer are unchanged.
+
+The deployed tools use the database for greenhouse, forecast, plan and trigger state. Semantic embedding uses OpenAI HTTPS; Slack configuration names its public HTTPS endpoint. No additional remote planner endpoint is declared on the MCP Deployment, so no speculative internal HTTP destination is opened. The existing admin-only legacy `plan_run` import/packaging path is separate from normal Hermes tool calls and remains part of workload drift review; this policy does not repair or claim that path works.
+
+Standard Kubernetes NetworkPolicy cannot restrict HTTPS by hostname or SNI. Public443 is therefore a bounded transport allowance for existing provider dependencies, **not OpenAI-only enforcement**. Provider-domain enforcement requires an existing approved proxy/FQDN policy path; none is introduced here. IPv6 is not granted by this IPv4 rule. Kubernetes loopback/host exceptions still follow the CNI's semantics; source tests are not proof of packet enforcement.
+
+Validation includes a rendered additive-policy guard, dedicated account/no-token/no-binding checks, and a security-negative destination matrix. Live acceptance must verify actual tokenless Pods, exact policy/selector readback, unchanged 23-tool inventory, DB-backed climate/forecast calls through the authenticated MCP transport, permitted public TLS connectivity and denied LAN/NAS/device/API connections. No physical setpoint, planner-cycle or Slack post is required as a probe. A merge or static matrix alone does not close #1011.

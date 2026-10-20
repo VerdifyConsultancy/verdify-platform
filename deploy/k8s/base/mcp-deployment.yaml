@@ -5,6 +5,15 @@
 # handles initialize or exposes tool inventory, then applies the audience matrix
 # again at tool dispatch. NetworkPolicy additionally restricts ingress to
 # in-namespace clients; this service is NEVER given a raw LB IP.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-mcp
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mcp
+automountServiceAccountToken: false
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,6 +43,8 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: mcp
     spec:
+      serviceAccountName: verdify-mcp
+      automountServiceAccountToken: false
       # Private in-org images live at ghcr.io/verdifyconsultancy/*. The
       # ghcr-jvallery-readonly secret in the namespace carries host-level
       # (ghcr.io) auth that covers both orgs; reference it explicitly here so
