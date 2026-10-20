@@ -1,0 +1,12 @@
+# Platform #1007: restart the singleton gateway after the separately owned
+# verdify-hermes Secret rotation (agents #5218). MCP rolls through its reviewed
+# new image pin in wave10 before this existing wave20 gateway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.ai/iris-token-generation: "20261020-1007"

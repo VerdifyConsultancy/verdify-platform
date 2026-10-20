@@ -55,5 +55,17 @@
     "Five real minutes without ingestor validation/restart errors",
     "Natural scheduled authentic source advancement and strict missing/future/stale denial",
     "Natural Hermes audit event plus matching Loki receipt; forwarded claims stay untrusted"
-  ]
+  ],
+  "iris_rotation": {
+    "central_pr": "https://github.com/jvallery/agents/pull/5218",
+    "changed_key": "verdify-hermes/VERDIFY_MCP_TOKEN",
+    "must_reconcile_before_sync": true,
+    "gateway_generation": "20261020-1007",
+    "future_mac_clients": "onboard separately; no unused credentials issued",
+    "required_acceptance": [
+      "Hermes internal exact23 tools",
+      "old Iris value rejected at origin",
+      "Iris-only rejected by Access"
+    ]
+  }
 }
