@@ -20,9 +20,16 @@ def test_public_render_path_uses_cache_without_becoming_a_second_grafana_front_d
     ingress = _documents("graphs-ingressroute.yaml")[0]
     routes = ingress["spec"]["routes"]
 
-    assert routes[0]["match"] == "Host(`graphs.verdify.ai`) && PathPrefix(`/render/`)"
-    assert routes[0]["priority"] == 100
-    assert routes[0]["services"] == [
+    assert len(routes) == 3
+    metadata, render, dashboard = routes
+    assert metadata["match"] == (
+        "Host(`graphs.verdify.ai`) && Method(`GET`) && PathRegexp(`^/api/public/dashboards/[a-f0-9]{32}$`)"
+    )
+    assert metadata["priority"] == 200
+    assert metadata["services"] == [{"name": "verdify-api", "port": 8080}]
+    assert render["match"] == "Host(`graphs.verdify.ai`) && PathPrefix(`/render/`)"
+    assert render["priority"] == 100
+    assert render["services"] == [
         {
             "name": "verdify-grafana-render-cache",
             "port": 8080,
@@ -38,13 +45,13 @@ def test_public_render_path_uses_cache_without_becoming_a_second_grafana_front_d
             },
         }
     ]
-    assert routes[1]["match"] == "Host(`graphs.verdify.ai`)"
-    assert routes[1]["services"] == [{"name": "verdify-grafana", "port": 3000}]
+    assert dashboard["match"] == "Host(`graphs.verdify.ai`)"
+    assert dashboard["services"] == [{"name": "verdify-grafana", "port": 3000}]
 
     config = (COMPONENT / "nginx-render-cache.conf").read_text(encoding="utf-8")
     assert "location /render/" in config
     assert "location / {\n        return 404;" in config
-    assert "proxy_pass http://verdify-grafana:3000;" in config
+    assert "proxy_pass http://verdify-api:8080;" in config
 
 
 def test_render_cache_coalesces_cold_renders_without_unbounded_server_stale():
