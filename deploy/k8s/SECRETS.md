@@ -265,3 +265,7 @@ No Secret object or value is rendered here. The migration/source native
 qualification and explicit credential/delivery scope remain pending; do not
 sync merely because these names now appear in source. Existing backup, database,
 migration and other bootstrap owner credentials are unchanged.
+
+## Public contact verification (#1008)
+
+`verdify-contact-turnstile` / `VERDIFY_TURNSTILE_SECRET` is rendered by agents central KSOPS into `verdify-prod`, consumed only by `verdify-api`. The public widget sitekey belongs in Quartz; hostname `lab.verdify.ai` and action `contact` are checked at Siteverify. No secret is stored in this repository.

@@ -712,3 +712,7 @@ The API filters public panel metadata and uses the existing renderer credential
 for bounded PNG generation. Renderer Service port 8081 admits API pods only;
 Grafana administration stays on existing SSO. No datasource credentials or
 arbitrary render URLs are exposed. See `docs/runbooks/grafana-saved-public.md`.
+
+## Contact verification (#1008)
+
+The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; the API checks the token, hostname and `contact` action before acquiring a database connection. Central credential custody is `jvallery/agents`, Secret `verdify-prod/verdify-contact-turnstile`. Cloudflare widget and camera edge rules belong to `jvallery/network-infra`.

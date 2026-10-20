@@ -12,7 +12,7 @@ const hasContentH1 = (page: any) =>
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
   header: [],
-  afterBody: [Component.GrafanaEmbeds()],
+  afterBody: [Component.GrafanaEmbeds(), Component.ContactVerification()],
   footer: Component.Footer({
     links: {
       Home: "/",

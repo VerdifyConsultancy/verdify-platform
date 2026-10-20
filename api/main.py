@@ -1568,7 +1568,7 @@ def _turnstile_verify_sync(secret: str, token: str, remote_ip: str) -> bool:
             body = json.loads(response.read().decode("utf-8"))
     except Exception:
         return False
-    return bool(body.get("success"))
+    return body.get("success") is True and body.get("hostname") == "lab.verdify.ai" and body.get("action") == "contact"
 
 
 class _CameraHTTPSConnection(http.client.HTTPSConnection):
