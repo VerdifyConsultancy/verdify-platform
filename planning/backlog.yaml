@@ -413,7 +413,8 @@
       "acceptance": [
         "All child acceptance has a scoped receipt or explicit stop decision.",
         "All assignments, failures and null outcomes retained through final decision.",
-        "No revived timed shadow, canary, A/A or 80% power prerequisites."
+        "No revived timed shadow, canary, A/A or 80% power prerequisites.",
+        "Fresh source/Argo/runtime/backup receipts identify any remaining mismatch before #749/#641 acceptance is credited (carried from closed #750)."
       ],
       "paths": [
         "research/planner-efficacy",
@@ -456,11 +457,12 @@
         "experiment_orchestrator/readiness.py",
         "experiment_orchestrator/launch_control.py"
       ],
-      "baseline": "October 18 execution checkpoint: PR #985 integrates the finite-probe diagnostics and per-tick dwell-limit correction, with strict native firmware/invariants, 154 causal YAML cases and zero-divergence replay retained. The bounded prefix pilot remains27/48 UNPROVEN; typed wetting custody preserves four missing/unsupported physical criteria. No OTA, production promotion, physical proof or full issue acceptance occurred. Reuse the completed source/native packet; unresolved child/runtime criteria remain active.\n\nPrior reviewed context: Core ordinary runtime, closed #747 bounded backup/recovery and later full-sync/exporter delivery retain their separate accepted receipts. Current contained #639/#587 now include actual-role, begin-bundle, lifecycle and named-alert proof. #749 original readiness remains failed and #641 has no successful physical proof. This zero-hour roll-up must not repeat resolved orphan recovery or treat emergency-safe handoff/closed predecessors as current Gate P acceptance.\n\nCurrent execution allocation: ROLLUP. Next action: Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.\n\nExecution review: planning/reviews/2026-10-18-execution/README.md. All original acceptance clauses and completion edges remain unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): this C1 roll-up layer is removed; #749 and #641 are direct children of #581, the final safe-state clause is carried into #641 acceptance and the mismatch-receipt clause into #581. #747 stays closed history. October 18 execution checkpoint: PR #985 integrates the finite-probe diagnostics and per-tick dwell-limit correction, with strict native firmware/invariants, 154 causal YAML cases and zero-divergence replay retained. The bounded prefix pilot remains27/48 UNPROVEN; typed wetting custody preserves four missing/unsupported physical criteria. No OTA, production promotion, physical proof or full issue acceptance occurred. Reuse the completed source/native packet; unresolved child/runtime criteria remain active.\n\nPrior reviewed context: Core ordinary runtime, closed #747 bounded backup/recovery and later full-sync/exporter delivery retain their separate accepted receipts. Current contained #639/#587 now include actual-role, begin-bundle, lifecycle and named-alert proof. #749 original readiness remains failed and #641 has no successful physical proof. This zero-hour roll-up must not repeat resolved orphan recovery or treat emergency-safe handoff/closed predecessors as current Gate P acceptance.\n\nCurrent execution allocation: ROLLUP. Next action: Refresh roll-up status using accepted contained receipts and concrete remaining readiness/prefix/physical gaps; remove next-action prose about already-corrected checkboxes.\n\nExecution review: planning/reviews/2026-10-18-execution/README.md. All original acceptance clauses and completion edges remain unchanged.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None independent of the concrete #641 physical-window decision.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "747",
@@ -505,7 +507,7 @@
       "priority": "P0",
       "effort": "M",
       "owner_role": "Runtime/release lead",
-      "parent": "750",
+      "parent": "581",
       "depends_on": [
         "424",
         "incident",
@@ -544,7 +546,7 @@
       "priority": "P1",
       "effort": "L",
       "owner_role": "Runtime/release lead",
-      "parent": "750",
+      "parent": "581",
       "depends_on": [
         "749",
         "639",
@@ -561,7 +563,8 @@
       "acceptance": [
         "Fresh one-shot attempt/authority binds actual current source and real baseline/target/baseline observations.",
         "Two distinct complete advancing full-48 epochs at each required boundary; mismatch closes exposure before recovery.",
-        "Physical exclusivity, rescue and full-state recovery pass. Finish at confirmed baseline, component off, ID cleared, vector off and zero exposure; verify the required draft/shadow/closed lifecycle state and ordinary-writer handoff. A failed or emergency-safe abort remains failure evidence and does not close this proof."
+        "Physical exclusivity, rescue and full-state recovery pass. Finish at confirmed baseline, component off, ID cleared, vector off and zero exposure; verify the required draft/shadow/closed lifecycle state and ordinary-writer handoff. A failed or emergency-safe abort remains failure evidence and does not close this proof.",
+        "Final safe state (baseline-confirmed, component-off) and the recovery receipt are verified; no randomized design/draw/launch authority is granted (carried from closed #750)."
       ],
       "paths": [
         "experiment_orchestrator/launch_control.py",
@@ -910,7 +913,10 @@
       "acceptance": [
         "Independent rerun yields identical tables/decision from original frozen inputs.",
         "One audited reveal with uncertainty, low-power/null consequences and measured scope.",
-        "Explicit stop/repair/retest/follow-on decision; no profit/resource/other-season extrapolation."
+        "Explicit stop/repair/retest/follow-on decision; no profit/resource/other-season extrapolation.",
+        "Comparator follow-on (carried from closed #786): explicit go/no-go; if go, a fixed numeric rule and a genuine chronological held-out corpus, no revealed-schedule tuning or physical claim from offline command replay, and any new trial has its own identity, lock/draw and measured claim.",
+        "Resource follow-on (carried from closed #787): explicit go/no-go on a measured heating/overnight/resource study using #410 overnight and #981 electricity evidence as inputs; every claimed resource has independent eligible calibrated coverage/uncertainty, stale/modeled values stay labeled; if go, the study is a prospective season/overnight design with a bounded measured claim that can test climate improvement and resource benefit as stated, or the claim is explicitly narrowed; and no yield/profit/whole-resource claim, hardware purchase, gas tuning or seasonal controller expansion follows automatically from the current pilot or without a separate decision.",
+        "Response-model follow-on (carried from closed #379): any grey-box/MPC proposal first passes held-out calibration/response gates against persistence and simpler baselines; no PID treatment arm or new outer-loop control enters the current experiment; any justified controller change gets a separately reviewed bounded implementation/release plan."
       ],
       "paths": [
         "research/planner-efficacy/switchback/v2_analysis.py",
@@ -1093,7 +1099,9 @@
       "acceptance": [
         "Wrong topology, impossible cycling, stale outdoor inputs and absent required receipts deny release.",
         "Actual relay/cfg outcomes bind exact source/binary/version and demonstrate a recovery path.",
-        "Failed candidates are never promoted to last-good; ordinary CI never performs OTA."
+        "Failed candidates are never promoted to last-good; ordinary CI never performs OTA.",
+        "Cause is reproduced or heap/watchdog uncertainty is explicitly bounded with current load/reset evidence; software-reset and watchdog reset counts are reported separately (carried from closed #428).",
+        "The candidate meets predeclared heap/fragmentation/loop-timing and clean-runtime criteria under representative worst-case load; no last-good promotion rests solely on compile/replay success, a reset-count omission or a projected heap improvement, and the last-good floor is qualified by actual recovery (carried from closed #428)."
       ],
       "paths": [
         "firmware",
@@ -1859,11 +1867,12 @@
         "docs/reviews",
         "scripts"
       ],
-      "baseline": "S3B P4 completed one bounded read-only capture: 80 diagnostic rows from 13:58:53\u201315:20:41UTC report firmware 2026.10.2.0637.620a218a-wifi-bound, increasing uptime and repeated last-boot reason Software reset. These are 80 samples, not 80 reset events. Free heap 63.21\u201363.25kB and largest block 54\u201360kB meet existing 32/16kB floors for 78 complete pairs; two incomplete pairs remain unknown. The 2.336kB lifetime minimum is historical. No profile/reset-log rows, representative loop timing or worst-case load were observed.\n\nP4 also hashed the retained matching-version 1,106,304-byte local binary (SHA256 0f84ea9a06a8c96928d3675361515aa8fa1ab39528d256353babb59717bd9176) and three older copies. Matching-version archive/provenance is absent beside the inspected copy; no bake, live-flash identity or recovery qualification is inferred. The bounded packet is complete, while representative candidate runtime and last-good recovery acceptance remain open. No causal basis for a heap rewrite, stress/reset or promotion was established.\n\nCurrent execution allocation: S3B. Next action: P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion.\n\nEvidence: planning/reviews/2026-10-18-s3b-execution/p4-passive-heap/README.md. Existing acceptance clauses, issue state and completion edges are unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): remaining candidate-runtime and last-good criteria are consolidated into #390 acceptance; S3B P4 evidence stays linked. A concrete causal heap/watchdog question gets a new scoped issue. S3B P4 completed one bounded read-only capture: 80 diagnostic rows from 13:58:53\u201315:20:41UTC report firmware 2026.10.2.0637.620a218a-wifi-bound, increasing uptime and repeated last-boot reason Software reset. These are 80 samples, not 80 reset events. Free heap 63.21\u201363.25kB and largest block 54\u201360kB meet existing 32/16kB floors for 78 complete pairs; two incomplete pairs remain unknown. The 2.336kB lifetime minimum is historical. No profile/reset-log rows, representative loop timing or worst-case load were observed.\n\nP4 also hashed the retained matching-version 1,106,304-byte local binary (SHA256 0f84ea9a06a8c96928d3675361515aa8fa1ab39528d256353babb59717bd9176) and three older copies. Matching-version archive/provenance is absent beside the inspected copy; no bake, live-flash identity or recovery qualification is inferred. The bounded packet is complete, while representative candidate runtime and last-good recovery acceptance remain open. No causal basis for a heap rewrite, stress/reset or promotion was established.\n\nCurrent execution allocation: S3B. Next action: P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion.\n\nEvidence: planning/reviews/2026-10-18-s3b-execution/p4-passive-heap/README.md. Existing acceptance clauses, issue state and completion edges are unchanged.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "368",
@@ -2741,11 +2750,12 @@
         "firmware/test",
         "deploy/k8s/components/firmware-twin"
       ],
-      "baseline": "Current source contains a read-only twin image/deployment and agreement reporter, so the old design-only description is obsolete. No complete declared oracle coverage or accepted native runtime/output is evidenced. The generated fleet registry still omits verdify-twin. Closed #606 is a not-planned consolidation: its owning-registry registration, immutable build and device-denied runtime obligations remain here. The twin is unselected and outside the current pilot critical path; #31 owns its coverage work.\n\nCurrent execution allocation: FUTURE. Next action: Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): this zero-hour twin roll-up is consolidated into #31, which now carries its outstanding clauses and the consolidated #606 registration/build/runtime obligations and sits directly under #775. Current source contains a read-only twin image/deployment and agreement reporter, so the old design-only description is obsolete. No complete declared oracle coverage or accepted native runtime/output is evidenced. The generated fleet registry still omits verdify-twin. Closed #606 is a not-planned consolidation: its owning-registry registration, immutable build and device-denied runtime obligations remain here. The twin is unselected and outside the current pilot critical path; #31 owns its coverage work.\n\nCurrent execution allocation: FUTURE. Next action: Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "No immediate decision required. If this option is pulled, choose the specific oracle question and scope; it is not a pilot prerequisite.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "31",
@@ -2756,7 +2766,7 @@
       "priority": "P2",
       "effort": "L",
       "owner_role": "Research/platform lead",
-      "parent": "14",
+      "parent": "775",
       "depends_on": [],
       "what": "Map every active Setpoints consumer to real export/replay input or an explicitly excluded/default-only scope before trusting divergence.",
       "why": "Historical replay_emit coverage populated only a subset, so a tuned field could silently use a compiled default and create false parity or divergence.",
@@ -2768,7 +2778,10 @@
       "acceptance": [
         "Every active consumer is covered or explicitly excluded from the oracle claim with a reason.",
         "Missing required input and a known nondefault divergence fail loudly; identical-source self-diff passes.",
-        "No twin result can qualify full current 48-field physical exposure or new transport by default."
+        "No twin result can qualify full current 48-field physical exposure or new transport by default.",
+        "Coverage limitations are explicit; unsupported/default-only fields cannot produce a full-parity PASS (carried from closed #14).",
+        "Source/build/runtime and actual read-only output receipts exist with no startup compiler/pip downloads; verdify-twin is registered only through the owning Agents registry ci_submission profile with an immutable digest-pinned build and device-denied runtime (carried from closed #14/#606).",
+        "One concrete oracle question is selected before investment; the current pilot remains independent and a future twin gate is adopted only after useful positive and negative evidence (carried from closed #14)."
       ],
       "paths": [
         "firmware/test/replay_emit.cpp",
@@ -2904,7 +2917,6 @@
       "owner_role": "Research/platform lead",
       "parent": "775",
       "depends_on": [
-        "readout",
         "forecast_truth"
       ],
       "what": "Decide whether a deterministic forecast comparator merits a new study",
@@ -2924,11 +2936,12 @@
         "experiment_orchestrator",
         "docs/research"
       ],
-      "baseline": "PR #932/efaa4b67 delivered matched-surface comparator preparation with eight input identities. Numeric rule, genuine training/chronological holdout, sample size/calendar and final #785-linked decision remain unresolved. No-build, measurement repair, inconclusive retest and a separately identified prospective comparison are valid options. No current implementation or additional treatment arm is selected.\n\nCurrent execution allocation: FUTURE. Next action: Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): the deterministic-comparator go/no-go is consolidated into #785 acceptance. PR #932 preparation stays referenced. PR #932/efaa4b67 delivered matched-surface comparator preparation with eight input identities. Numeric rule, genuine training/chronological holdout, sample size/calendar and final #785-linked decision remain unresolved. No-build, measurement repair, inconclusive retest and a separately identified prospective comparison are valid options. No current implementation or additional treatment arm is selected.\n\nCurrent execution allocation: FUTURE. Next action: Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "Future follow-on selection only after a concrete decision rationale; no immediate question needed.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "379",
@@ -2941,7 +2954,6 @@
       "owner_role": "Research/platform lead",
       "parent": "359",
       "depends_on": [
-        "comparator",
         "371",
         "419"
       ],
@@ -2962,11 +2974,12 @@
         "firmware",
         "docs/research"
       ],
-      "baseline": "The grey-box/MPC option remains unselected. Closed #371 and #419 provide bounded score/replay provenance, not a calibrated response model or counterfactual benefit. Historical open-loop comparisons and failed models remain evidence. No model implementation, controller authority or new treatment arm is warranted before a falsifiable held-out question and simpler-baseline comparison are selected.\n\nCurrent execution allocation: FUTURE. Next action: Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): the grey-box/MPC option is consolidated into #785's follow-on decision, whose acceptance now carries this issue's held-out-gate, no-new-arm and separate-plan clauses. Failed-model history stays linked as evidence. The grey-box/MPC option remains unselected. Closed #371 and #419 provide bounded score/replay provenance, not a calibrated response model or counterfactual benefit. Historical open-loop comparisons and failed models remain evidence. No model implementation, controller authority or new treatment arm is warranted before a falsifiable held-out question and simpler-baseline comparison are selected.\n\nCurrent execution allocation: FUTURE. Next action: Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "No immediate decision required. A future request to select MPC would need a named use case and measured validation objective; do not infer it from the pilot.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "economics",
@@ -2979,9 +2992,6 @@
       "owner_role": "Research/platform lead",
       "parent": "775",
       "depends_on": [
-        "readout",
-        "410",
-        "981",
         "resource_contract"
       ],
       "what": "Decide and scope a measured heating/overnight/resource study",
@@ -3002,11 +3012,12 @@
         "config",
         "docs/research"
       ],
-      "baseline": "e52284cf delivered whole-resource/overnight preparation covering physical meter boundaries, calibration/clocks/tariffs/uncertainty and DST. No eligible whole-resource endpoint exists: partial electricity and ambiguous shared water do not establish gas/economic/whole-greenhouse savings. #981/#878 source-clock work and #410 overnight evidence are relevant to a selected measured study, not mandatory hardware work before an explicit no-go. This future program does not gate the no-energy nine-state pilot.\n\nCurrent execution allocation: FUTURE. Next action: Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
+      "baseline": "Closed not_planned 2026-10-20 (Jason-approved estate consolidation): the heating/overnight/resource go/no-go and its coverage rules are consolidated into #785 acceptance; #410 and #981 are inputs to that decision, not blockers. Specification e52284cf stays referenced. e52284cf delivered whole-resource/overnight preparation covering physical meter boundaries, calibration/clocks/tariffs/uncertainty and DST. No eligible whole-resource endpoint exists: partial electricity and ambiguous shared water do not establish gas/economic/whole-greenhouse savings. #981/#878 source-clock work and #410 overnight evidence are relevant to a selected measured study, not mandatory hardware work before an explicit no-go. This future program does not gate the no-energy nine-state pilot.\n\nCurrent execution allocation: FUTURE. Next action: Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "Future: select the resource/overnight claim or no-go; purchase/installation/gas changes require a concrete separately scoped decision. No present decision is needed for source bookkeeping.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "949",
@@ -3561,7 +3572,6 @@
     "capacity_hours_per_week": 40,
     "review_path": "planning/reviews/2026-10-18-ingress-988/README.md",
     "open_issues": [
-      14,
       16,
       31,
       45,
@@ -3580,13 +3590,11 @@
       369,
       370,
       378,
-      379,
       386,
       390,
       398,
       410,
       412,
-      428,
       430,
       434,
       581,
@@ -3597,15 +3605,12 @@
       641,
       642,
       749,
-      750,
       751,
       775,
       782,
       783,
       784,
       785,
-      786,
-      787,
       963,
       981
     ],
@@ -3708,14 +3713,6 @@
       }
     ],
     "allocations": [
-      {
-        "issue_number": 14,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Keep zero-hours roll-up and select a concrete oracle question only if it resolves an observed validation gap; then consume #31 and consolidated #606 scope.",
-        "owner_role": "Research/platform lead"
-      },
       {
         "issue_number": 16,
         "sprint": "ROLLUP",
@@ -3861,14 +3858,6 @@
         "owner_role": "Control lead"
       },
       {
-        "issue_number": 379,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Leave unallocated; reuse #786/#785 dispositions to decide whether response modeling is warranted before implementing another model.",
-        "owner_role": "Research/platform lead"
-      },
-      {
         "issue_number": 386,
         "sprint": "RELEASE",
         "hours_min": null,
@@ -3907,14 +3896,6 @@
         "hours_max": null,
         "next_action": "At the shared field survey, record current position and the justified no-change or reversible closure decision, then a bounded safety readback if changed and a visible study-intervention record.",
         "owner_role": "Operator with data/control lead"
-      },
-      {
-        "issue_number": 428,
-        "sprint": "S3B",
-        "hours_min": 4,
-        "hours_max": 6,
-        "next_action": "P4 passive diagnosis/custody is complete: reuse 80 diagnostic rows, 78 complete heap pairs and the exact known binary hashes. Select further profiling or code only from a concrete causal question; representative timing/load and recovery remain unmeasured. Carry the shared #390/#963 matrix forward without repeating this snapshot, stress, reset, OTA or last-good promotion.",
-        "owner_role": "Control lead"
       },
       {
         "issue_number": 430,
@@ -3997,14 +3978,6 @@
         "owner_role": "Runtime/release lead"
       },
       {
-        "issue_number": 750,
-        "sprint": "ROLLUP",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Reuse published #985/native/contained receipts and track concrete remaining #749/#641 gates. No duplicate restore, exhausted denial, message send or physical proof loop.",
-        "owner_role": "Runtime/release lead"
-      },
-      {
         "issue_number": 751,
         "sprint": "PHYSICAL",
         "hours_min": null,
@@ -4051,22 +4024,6 @@
         "hours_max": null,
         "next_action": "Prepare immutable report skeleton and independent reproduction command now; consume completed #784 custody once and publish the bounded result, including inconclusive/no-benefit if warranted.",
         "owner_role": "Research lead"
-      },
-      {
-        "issue_number": 786,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Keep prepared/unallocated. Let #785 select no-build, repair, retest or an explicitly scoped prospective comparator; do not build an extra arm now.",
-        "owner_role": "Research/platform lead"
-      },
-      {
-        "issue_number": 787,
-        "sprint": "FUTURE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Leave conditional. Use the existing specification to choose the narrowest measurable follow-on or explicit no-go after readout; do not automatically buy hardware, tune gas or fix every meter before deciding.",
-        "owner_role": "Research/platform lead"
       },
       {
         "issue_number": 963,

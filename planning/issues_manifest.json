@@ -10,7 +10,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "34b3541af2b99518b6c39792deb73cdf31a05a10fabb7e2417a232b4b6c50978"
+      "body_sha256": "6959624395248a60afddb60a94cffdd45cc3d81bf67c6218ebf7a91ca7490021"
     },
     {
       "key": "incident",
@@ -89,18 +89,18 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "8a17083b568eec174c2353ac4e3f04af30599c8629f50f5227b8189d495fe10d"
+      "body_sha256": "aa587c1da10e592b4fc4c362d20189820607bbaef3512c65729d9d2c9399ffef"
     },
     {
       "key": "750",
       "number": 750,
       "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "d65bac8e8d89a13be99e386f27884afb1b46e084ee496437d4272d750c881387"
+      "body_sha256": "25c42c0b379e6a8102eeb4e2b8514216ed40ec22a1bb9eafdaf402a4944136d3"
     },
     {
       "key": "747",
@@ -120,13 +120,13 @@
       "stage": "C1",
       "status": "open",
       "accepted": false,
-      "parent": 750,
+      "parent": 581,
       "blocked_by": [
         424,
         778,
         949
       ],
-      "body_sha256": "ba545c6ced077e118bc54d2f7bad3801f3c93627a7c2ad4063e47a96ca2d6085"
+      "body_sha256": "f378f472c42f8c2b3e35db606e54b627fb5596635304b40b1eddcedff16ad03d"
     },
     {
       "key": "641",
@@ -135,14 +135,14 @@
       "stage": "C1",
       "status": "open",
       "accepted": false,
-      "parent": 750,
+      "parent": 581,
       "blocked_by": [
         749,
         639,
         587,
         747
       ],
-      "body_sha256": "0f5834533d06aeea492c06234ded8324e17e4621c32616d6d351ae3da2291348"
+      "body_sha256": "7337f76ce81bb795d70ba33dc247df371939c503e7c464082f041010ba156440"
     },
     {
       "key": "639",
@@ -261,7 +261,7 @@
       "blocked_by": [
         784
       ],
-      "body_sha256": "b264aa3fc7837930fbd83f6c1b5487a9351c09dae2b164e65557f658262ff5e9"
+      "body_sha256": "49c8fbf68ed2799ecb327bc2645a48fbc47e2cd0fa0e0aee16d582ed131a8ce2"
     },
     {
       "key": "644",
@@ -324,7 +324,7 @@
         303,
         419
       ],
-      "body_sha256": "b4705a0e21e70a5bde0533558055b0e2ad2a79825c677eedc7c73c0eaa7b6575"
+      "body_sha256": "8ff7bf43dd98965b0e0c750aeb045d3c6d8cbbc97296ca6a68ea30eae03d09a4"
     },
     {
       "key": "433",
@@ -551,7 +551,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "e72da470e5cce6471a9cc31799a95acbba24c540696409dadd54ee669e206bf5"
+      "body_sha256": "594e9d150843926b3c5b53d89c0f6bda8553be4fca6797f23bf9fc2067d58b79"
     },
     {
       "key": "430",
@@ -562,20 +562,20 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "8736867d506245ed6ec98802f42fc16c3179735992b44e43a76726fcd4fe11e4"
+      "body_sha256": "8f51752d7f936406a0a1b155890f4b7240d068225d9ae20e9119cb40fa5a6bbe"
     },
     {
       "key": "428",
       "number": 428,
       "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
       "stage": "C6",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 430,
       "blocked_by": [
         433
       ],
-      "body_sha256": "863713a5f88800f74b08c62ad7799aae35d9c9ce382215114ac53407b1e0fc5e"
+      "body_sha256": "b41b9655f9bb0fc60ea53267be439eca31762d163b28606429e541097624a7a5"
     },
     {
       "key": "368",
@@ -874,11 +874,11 @@
       "number": 14,
       "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
       "stage": "C8",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "96011cadd914d9570f0986b5e7113a88f563e6e5a3b55b7048d3861232f873de"
+      "body_sha256": "bef9184be8ff7734c7cc792a7f909807f535cd9af6aefffb7006aa67f98f0656"
     },
     {
       "key": "31",
@@ -887,9 +887,9 @@
       "stage": "C8",
       "status": "open",
       "accepted": false,
-      "parent": 14,
+      "parent": 775,
       "blocked_by": [],
-      "body_sha256": "72979a7498b84f02cae26bd687bcd979392088b40c991a5d4e31776547025e45"
+      "body_sha256": "fd9c897f21f3ffa601c0b116692163eb8415ecf9cd088de5e22fa850ec55dc79"
     },
     {
       "key": "606",
@@ -933,45 +933,40 @@
       "number": 786,
       "title": "[C8][P2] Decide whether a deterministic forecast comparator merits a new study",
       "stage": "C8",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [
-        785,
         780
       ],
-      "body_sha256": "0e74f75d808fd9fffe67a8234b148740f4ade48a9470a4971c62389409aa3092"
+      "body_sha256": "ca5375d3db01d9f60d19ef7b2f2a5298e735b9bed120df5006a2ae96774f2cf2"
     },
     {
       "key": "379",
       "number": 379,
       "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
       "stage": "C8",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 359,
       "blocked_by": [
-        786,
         371,
         419
       ],
-      "body_sha256": "86da6141ffeca5d54cd8aeaaeed4ed6865fb93bebb01a7e0d6240c3495a658ff"
+      "body_sha256": "d908c3eb69fb2708da472d8e7982890b98a246430eeb4d95ae9f95b5dbb65539"
     },
     {
       "key": "economics",
       "number": 787,
       "title": "[C8][P2] Decide and scope a measured heating/overnight/resource study",
       "stage": "C8",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [
-        785,
-        410,
-        981,
         781
       ],
-      "body_sha256": "a1f9e98147b74291b9567c99d7aac7f5bf8f19c123bef5e1eb13a62cddc692b2"
+      "body_sha256": "7463bd7c9057a1de46b031d5ba7a77569158774f0e0bc73df11df15b46f116f7"
     },
     {
       "key": "949",

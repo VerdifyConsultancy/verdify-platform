@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-18-ingress-988/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 94-issue/73-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-18-ingress-988/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 94-issue/68-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -17,7 +17,7 @@ flowchart TD
     i782["#782 (open) Finish the empirical inputs and frozen exploratory scienti"]
   end
   subgraph C1["C1: Recovery and integrated physical qualification"]
-    i750["#750 (open) Recovery/proof campaign: rebaseline current state and seal"]
+    i750["#750 (closed) Recovery/proof campaign: rebaseline current state and seal"]
     i747["#747 (closed) Verify corrected scheduled backups and current production "]
     i749["#749 (open) Qualify current three-probe readiness and explicit safety "]
     i641["#641 (open) Complete one fresh attended physical baseline–target–basel"]
@@ -81,7 +81,7 @@ flowchart TD
   subgraph C6["C6: Evidence-led control and irrigation"]
     i359["#359 (open) Control program: truthful crop corridors before evidence-l"]
     i430["#430 (open) Simplify firmware only while preserving autonomous control"]
-    i428["#428 (open) Diagnose heap/watchdog risk and qualify the actual last-go"]
+    i428["#428 (closed) Diagnose heap/watchdog risk and qualify the actual last-go"]
     i368["#368 (open) Define shared sensor jump, flatline and contributor-integr"]
     i367["#367 (open) Consolidate anti-chatter into one explicit dwell contract"]
     i370["#370 (open) Consolidate equipment conflict resolution into one pure ar"]
@@ -109,14 +109,14 @@ flowchart TD
   end
   subgraph C8["C8: Comparator and full resource claim"]
     i174["#174 (closed) Rehome only current Verdify admin surfaces to global SSO, "]
-    i14["#14 (open) Twin program: qualify declared oracle coverage before usin"]
+    i14["#14 (closed) Twin program: qualify declared oracle coverage before usin"]
     i31["#31 (open) Close twin setpoint and actuator coverage gaps with genera"]
     i606["#606 (closed) Register the twin build profile only through its owning fl"]
     i638["#638 (closed) Unify future manifest/vector wire schema and content ident"]
     i586["#586 (closed) Qualify a future atomic firmware policy engine with crash-"]
-    i786["#786 (open) Decide whether a deterministic forecast comparator merits "]
-    i379["#379 (open) Gate grey-box forecasting and MPC on validated response mo"]
-    i787["#787 (open) Decide and scope a measured heating/overnight/resource stu"]
+    i786["#786 (closed) Decide whether a deterministic forecast comparator merits "]
+    i379["#379 (closed) Gate grey-box forecasting and MPC on validated response mo"]
+    i787["#787 (closed) Decide and scope a measured heating/overnight/resource stu"]
   end
   i371 --> i779
   i424 --> i749
@@ -182,14 +182,9 @@ flowchart TD
   i638 --> i586
   i390 --> i586
   i785 --> i586
-  i785 --> i786
   i780 --> i786
-  i786 --> i379
   i371 --> i379
   i419 --> i379
-  i785 --> i787
-  i410 --> i787
-  i981 --> i787
   i781 --> i787
 ```
 
@@ -233,7 +228,7 @@ flowchart TD
 | [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (open) |
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (open) |
 | [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) (closed) | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) (closed) |
-| [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) (closed) | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) (open) |
+| [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) (closed) | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) (closed) |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) (closed) | [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) (open) |
 | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) (open) |
 | [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) (open) | [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) (open) |
@@ -261,14 +256,9 @@ flowchart TD
 | [#638](https://github.com/VerdifyConsultancy/verdify-platform/issues/638) (closed) | [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586) (closed) |
 | [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586) (closed) |
 | [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) (open) | [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586) (closed) |
-| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) (open) | [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) (open) |
-| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) (closed) | [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) (open) |
-| [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) (open) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (open) |
-| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (open) |
-| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (open) |
-| [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) (open) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (open) |
-| [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (open) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (open) |
-| [#981](https://github.com/VerdifyConsultancy/verdify-platform/issues/981) (open) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (open) |
-| [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) (closed) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (open) |
+| [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) (closed) | [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786) (closed) |
+| [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (closed) |
+| [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) (closed) | [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379) (closed) |
+| [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781) (closed) | [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) (closed) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.
