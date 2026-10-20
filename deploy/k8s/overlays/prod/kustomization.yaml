@@ -292,12 +292,11 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491
-  # Hand-pinned Lab publisher: source 5e992d1747eb, build-lab-publisher in
-  # agent-fleet-ci/verdify-platform-ci-njkcq; exact published digest verified.
-  # Content/runtime acceptance remains attended-release evidence.
+  # S6 native public shares (21 approved): source 3a7df6e3bb73.
+  # Qualified repo-build: verdify-s6-publisher-weather-20261020.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a
+    digest: sha256:9fbffb4fb6c887f3b646b63e7824eb376293deb53688ddbf30c767232bff266d
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
