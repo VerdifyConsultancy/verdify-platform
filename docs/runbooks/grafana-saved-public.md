@@ -23,6 +23,13 @@ until the worker really exits. The renderer also enforces its existing maximum
 of four browser operations. PNGs are bounded at 4MiB, 1600px dimensions and 50s.
 Renderer port 8081 admits API pods only and is never a public Traefik backend.
 
+The file provider routes the cache ClusterIP; its sticky cookie binds that Service
+URL. ClientIP cache affinity is per edge pod, so a browser can reach either of the
+two pod-local caches. Warmup can be MISS/MISS/HIT. Verify a bounded repeated HIT
+matches an observed cached PNG variant; do not assume the first two requests use
+the same cache. The replica pair spreads per pod-template-hash across the two
+eligible worker domains, excluding NoSchedule-tainted control-plane domains.
+
 Migration 278 sets 15s statement/idle-transaction limits on the existing read-only
 Grafana login. Recreate Grafana before claiming the default reaches its pool.
 No base-table privileges or other runtime logins change.
