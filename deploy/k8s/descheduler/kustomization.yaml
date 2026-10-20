@@ -1,12 +1,13 @@
 # VP-01 (#802): the manual verdify-descheduler Argo Application owns exactly
-# these seven existing objects. The Agents repository owns the Application and
-# AppProject. Namespace labels and product workload labels stay outside this
-# source; namespace.yaml and STAGED-rebalanceable-labels-patch.yaml are historical.
+# these eight existing objects, including namespace adoption under #995.
+# Agents owns the exact Application pin and AppProject. Existing namespace
+# labels are preserved; STAGED-rebalanceable-labels-patch.yaml stays historical.
 # See descheduler-arm.md for adoption, verification and the non-cascading inverse.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - namespace.yaml
   - rbac.yaml
   - policy-configmap.yaml
   - cronjob.yaml
