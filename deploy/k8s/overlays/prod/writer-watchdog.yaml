@@ -105,7 +105,7 @@ spec:
             # pattern. Writes /shared/lease_state for the psql container:
             #   ok <age_s> | absent | read_failed
             - name: lease-check
-              image: python:3.13-alpine
+              image: python:3.13-alpine@sha256:ba27df8b6499cc3756cff167690f3fcb5321faa1703b3a914df5f4fdadb32f05
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
@@ -187,7 +187,7 @@ spec:
               # timescaledb image: psql for alert_log paging + busybox wget
               # for the kube API lease read. Same image the DB runs, so it is
               # always present on the storage nodes.
-              image: timescale/timescaledb:2.25.2-pg16
+              image: timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true

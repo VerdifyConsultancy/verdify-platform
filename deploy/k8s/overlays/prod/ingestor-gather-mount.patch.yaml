@@ -57,7 +57,7 @@ spec:
         # ADDITIVE to the base wait-for-db initContainer (strategic merge keys by
         # name; wait-for-db is preserved). Provides a glibc psql in /opt/pgclient.
         - name: install-psql
-          image: postgres:16
+          image: postgres:16@sha256:485935f94cc7165afa896978809c37b592dc07f0a37d2c8f645f12412d0212c8
           command: ["bash", "-c"]
           args:
             - |

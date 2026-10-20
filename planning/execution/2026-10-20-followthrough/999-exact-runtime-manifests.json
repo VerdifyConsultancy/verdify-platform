@@ -1,0 +1,80 @@
+{
+  "observed_at": "2026-10-20T22:16:12.529410+00:00",
+  "images": [
+    {
+      "tag": "timescale/timescaledb:2.25.2-pg16",
+      "pin": "sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140",
+      "cached_index": "sha256:1e07c25f3ba3fdecd2a445a7fb8f5380bd0f9464a60fd4ad00566dbee31d1e55",
+      "config": "sha256:eaffcfd638426b30dda81d9eda3abb29320281199031d4c36a57af6464e2431f",
+      "layers": 18,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    },
+    {
+      "tag": "python:3.13-alpine",
+      "pin": "sha256:ba27df8b6499cc3756cff167690f3fcb5321faa1703b3a914df5f4fdadb32f05",
+      "cached_index": "sha256:d4e655c89f3de31c85ca1db076f9afc907a5b810f4e6ad0705b3dbbbee1016ec",
+      "config": "sha256:050f6d1f4e5f89af62e03f6fcd1c06be2a401339b3694adc4c0a2850d9d8b1e7",
+      "layers": 4,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    },
+    {
+      "tag": "postgres:16",
+      "pin": "sha256:485935f94cc7165afa896978809c37b592dc07f0a37d2c8f645f12412d0212c8",
+      "cached_index": "sha256:b95a32efde63847a27c3fe207cdb03c3b9e5b689c7de0452c712fe69ac75f3d2",
+      "config": "sha256:80f4c7a5e91618546dce5b4fe60cf03b14c0f9efa7e40157278d122772ced8d2",
+      "layers": 14,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    },
+    {
+      "tag": "eclipse-mosquitto:2",
+      "pin": "sha256:12436df85d6b2b91e63c71184da35ec89400a98abdc688a78b1403a11ecf44b4",
+      "cached_index": "sha256:5d1a7ac4fc8322af27a4fa2e3a2ed03aecabdfa481af0ff62b8bb530f475ab13",
+      "config": "sha256:8c4aa03990b1b9b542d42c0d4daabe03381d3e06c0279f82936eeee81cf2c905",
+      "layers": 3,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    },
+    {
+      "tag": "python:3.12-alpine",
+      "pin": "sha256:2d07747661646f3d904e995a232fb19e461afde69e67e6f7f3b52c7b968a88b3",
+      "cached_index": "sha256:236173eb74001afe2f60862de935b74fcbd00adfca247b2c27051a70a6a39a2d",
+      "config": "sha256:d10dc7bdd3eafc178ccc7672fb3cb319a4c6c34d332a4234832777868e1e18f3",
+      "layers": 4,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    },
+    {
+      "tag": "traefik:v3.7.1",
+      "pin": "sha256:72ed9e98f2395fca5a9e1c67e131910c21ff06e694955da8e0eae0e5206fc27b",
+      "cached_index": "sha256:6b9cbca6fac42ab0075f5437d8dc1685cfd188626d8d515839ea94f8b6271c42",
+      "config": "sha256:c7884ffa7a8be9185718011b6ca075c8c6756e0104e5f6f432f72ae7a85fa8d2",
+      "layers": 4,
+      "public_manifest_resolves": true,
+      "platform": "linux/amd64"
+    }
+  ],
+  "no_layers_downloaded": true,
+  "no_version_upgrades": true,
+  "stateful_database_pin_requires_separate_backup_window": true,
+  "changed_source_files": [
+    "deploy/k8s/base/migration-job.yaml",
+    "deploy/k8s/base/api-deployment.yaml",
+    "deploy/k8s/base/ingestor-deployment.yaml",
+    "deploy/k8s/components/mqtt-broker/mqtt-broker.yaml",
+    "deploy/k8s/components/planner/planner-deployment.yaml",
+    "deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml",
+    "deploy/k8s/components/setpoint-server/setpoint-server.yaml",
+    "deploy/k8s/components/db-backup/backup-freshness-exporter.yaml",
+    "deploy/k8s/components/db-backup/backup-cronjob.yaml",
+    "deploy/k8s/overlays/prod/db-watchdog.yaml",
+    "deploy/k8s/overlays/prod/native-panel-freezer.yaml",
+    "deploy/k8s/overlays/prod/writer-watchdog.yaml",
+    "deploy/k8s/overlays/prod/ingestor-gather-mount.patch.yaml",
+    "deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml"
+  ],
+  "stateful_database_included": false,
+  "live_deployment_accepted": false
+}
