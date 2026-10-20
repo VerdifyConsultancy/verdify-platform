@@ -1,0 +1,33 @@
+{
+  "submitted_at": "2026-10-20T23:26:44.306287+00:00",
+  "job": "verdify-999-prepin-backup-r2-20261020",
+  "uid": "b3bccbed-885e-4866-8d66-5c8330359eaf",
+  "source_cronjob_uid": "e17742c4-9863-409b-9700-6110f1830629",
+  "limits": {
+    "limits": {
+      "memory": "1Gi"
+    },
+    "requests": {
+      "cpu": "100m",
+      "memory": "256Mi"
+    }
+  },
+  "image": "timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140",
+  "db_reader_only": true,
+  "existing_dump_pvc_only": true,
+  "historical_retention_disabled_for_this_job": true,
+  "active_deadline_seconds": 900,
+  "readback_completed_at": "2026-10-20T23:30:03Z",
+  "readback_job": "verdify-999-backup-readback-20261020",
+  "readback_job_uid": "9f61a5c8-c5cc-4c23-9931-d7c9920a77db",
+  "dump_stem": "verdify-20261020T232646Z",
+  "dump_bytes": 522353849,
+  "toc_lines": 10843,
+  "dump_sha256": "24d90a666229f27c241c38a88edddad346c529ae771589d18399347bec8578fb",
+  "roles_sha256": "79c99f1812ba9947e917fe3df4189b8e969850372ee957f1e84827901cb21c5d",
+  "manifest_sha256": "6997cb22e989f7893d647ba65ababbbad9c59b9e7226b8ba1398c8c1d335b8b5",
+  "pair_checksums_match": true,
+  "password_clauses_absent": true,
+  "independent_offsite_custody_claimed": false,
+  "database_restart_pending": true
+}

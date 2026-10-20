@@ -6,8 +6,8 @@
 # it. This file now records that live state (VP-01, #802), so re-applying it
 # no longer silently disarms the controller. Evictions stay gated by the
 # policy's exclusion layers (only `verdify.ai/rebalanceable=true` pods in
-# verdify-prod), PDBs and maxNoOfPodsToEvictPerNode: 1. To pause it, set
-# `suspend: true` on the live object; `suspend` is deliberately not in Git.
+# verdify-prod), PDBs and maxNoOfPodsToEvictPerNode: 1. Pause state is
+# reviewed in Git (#1004); the attended owner sync applies it.
 #
 # Runs hourly at :15 (was */30; 2026-10-11 cluster CronJob cadence review).
 # It only corrects replica spread after node events, so an hour of skew is
@@ -22,6 +22,8 @@ metadata:
   labels:
     app.kubernetes.io/name: descheduler
 spec:
+  # Adopt the existing live false state. A routine pause changes this in Git.
+  suspend: false
   schedule: "15 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

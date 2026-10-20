@@ -17,10 +17,11 @@ Do not relabel product workloads or force an eviction to prove adoption.
 
 ## Source and ownership boundary
 
-`VerdifyConsultancy/verdify-platform/deploy/k8s/descheduler` renders seven objects:
+`VerdifyConsultancy/verdify-platform/deploy/k8s/descheduler` renders eight objects:
 
 | Kind | Name | Namespace |
 | --- | --- | --- |
+| Namespace | verdify-descheduler | cluster |
 | CronJob | descheduler | verdify-descheduler |
 | ConfigMap | descheduler-policy | verdify-descheduler |
 | ServiceAccount | descheduler | verdify-descheduler |
@@ -32,30 +33,32 @@ Do not relabel product workloads or force an eviction to prove adoption.
 `jvallery/agents` declares the `verdify-descheduler` AppProject in
 `platform/gitops/projects/` and manual Application in
 `platform/gitops/applications/local-prod/`. The Application uses an accepted
-immutable product revision, has no resource-deletion finalizer, and cannot create
-the namespace. Its AppProject allows only the seven resource kinds above.
-`Namespace`, Secret, Job, Pod and Deployment are outside that allowlist.
+immutable product revision and has no resource-deletion finalizer. Its AppProject
+allows only the resource kinds above; Secret, Job, Pod and Deployment are outside
+that allowlist. `CreateNamespace=false` remains; the explicit existing Namespace
+manifest carries `Prune=false,Delete=false` and preserves its four labels.
 
-The existing namespace and its external labels are not adopted. Neither
-`namespace.yaml` nor `STAGED-rebalanceable-labels-patch.yaml` is rendered; both are
-historical material, not apply instructions. The previous dry-run/relabel/arm
-procedure is preserved in Git history and #234.
+The eight-object Namespace adoption completed under #995 on October 20, 2026,
+at product `162e8fcbf51d0141cadb2517ba95d2ec7498a9f6`: all original UIDs,
+functional payloads, Namespace labels/finalizers and current pause state were
+unchanged, and all eight objects gained the expected tracking. The historical
+`STAGED-rebalanceable-labels-patch.yaml` is not rendered or an apply instruction.
 
-The live `spec.suspend` flag remains an operator pause. Git deliberately omits
-it; the Application ignores that exact CronJob field and uses
-`RespectIgnoreDifferences=true` so a manual reconciliation preserves the pause.
-Keep automation and pruning off. Normal operation must not use `kubectl apply -k`
-or the old staged patches as a second desired-state writer.
+#1004 records `spec.suspend: false` in Git and removes the exact suspend ignore
+from the owning Agents Application in its companion. Until that companion and
+accepted child source are delivered, the prior ignore remains live; do not claim
+source-only preparation removed it. Routine pauses go through source and an
+attended manual, non-pruning sync. Keep automation off and do not use
+`kubectl apply -k` as a second desired-state writer.
 
 ## Attended adoption
 
 1. Confirm context `vallery`, accepted product and Agents commits, and current
-   ownership. Export the seven full objects and the Namespace separately; retain
+   ownership. Export the eight full objects; retain
    UIDs, server-defaulted specs, labels and tracking annotations before applying
    anything. Read the CronJob's suspend flag and active Jobs. Confirm the exact
    Application and AppProject are absent or still match the reviewed plan.
-2. Render this source at the accepted product commit. Require seven objects and
-   no Namespace. Compare every source leaf, including array members, with the
+2. Render this source at the accepted product commit. Require the eight objects above. Compare every source leaf, including array members, with the
    export; review API defaults separately. The final server-defaulted comparison
    must show no spec, policy, RBAC or namespace-label change. Stop for any drift
    beyond the intended Argo ownership metadata.
@@ -65,9 +68,9 @@ or the old staged patches as a second desired-state writer.
    advance an unrelated root or reconcile the whole estate for this adoption.
    Bind the Application to the accepted product commit before its first sync.
 4. Diff the exact `verdify-descheduler` Application and sync that revision with
-   pruning disabled. The resource set must be exactly the seven objects above.
+   pruning disabled. The resource set must be exactly the eight objects above.
    Do not use replace/force or delete/recreate. No new Job is part of the sync.
-5. Read back all seven UIDs, specs and ownership metadata, plus Namespace labels.
+5. Read back all eight UIDs, specs and ownership metadata, plus Namespace labels.
    Require unchanged UIDs and specs, unchanged namespace labels, the expected
    tracking owner and `Synced`/`Healthy` at the accepted product revision. Confirm
    the live suspend value is unchanged. Check namespace access: the descheduler
@@ -78,26 +81,29 @@ or the old staged patches as a second desired-state writer.
    eviction outcomes and exclusion-policy behavior; an empty candidate set is
    valid but does not prove a forced relocation. Verify the product's single
    ingestor connection remains one and no singleton is evicted. Re-read the
-   seven objects and Application after that run for reconciliation durability.
+   eight objects and Application after that run for reconciliation durability.
 7. Refresh the Agents live ring snapshot and assign the now-existing Application
    to its manual ring using actual evidence. Do not put a prospective Application
    into the live snapshot. Update #802 only with the observed acceptance results.
 
 ## Pause and inverse
 
-For an operational pause, set only the live CronJob's `spec.suspend: true` under
-the current operator's authority. This prevents new Jobs; it does not stop an
-already-running Job. The ignored field remains paused across manual Argo syncs.
-Do not change enforce arguments as an ownership rollback.
+For a routine pause, commit `spec.suspend: true`, deliver its accepted child source
+through the owning Agents catalog, and run the attended full non-pruning sync.
+Verify the source, live pause and Application agree. Suspending prevents new Jobs;
+it does not stop an already-running Job. Resume through the same source path.
+An urgent containment pause must be recorded and reconciled into Git before the
+next sync, so that an old `false` pin cannot silently resume it. Do not change
+enforce arguments as an ownership rollback.
 
 To reverse adoption while preserving service, first remove the Application and
 AppProject from their owning Agents declarations/catalogs (and their sync-policy
 entry/generated classification), or otherwise restore the reviewed prior catalog
 revision without unrelated changes. Ensure the automated parents cannot recreate
 them. Delete only the `verdify-descheduler` Application **without cascading**;
-verify it has no resources finalizer before deletion. Preserve all seven objects,
+verify it has no resources finalizer before deletion. Preserve all eight objects,
 Jobs, the Namespace and product workloads. Remove only that Application's Argo
-tracking metadata from the seven objects, restoring the pre-adoption metadata,
+tracking metadata from the eight objects, restoring the pre-adoption metadata,
 then remove the dedicated AppProject if no Application references it. Re-read
 UIDs, specs, suspend state and namespace labels against the export. The CronJob
 continues its existing schedule. Never use `kubectl delete -k` as this inverse.
