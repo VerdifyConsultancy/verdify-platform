@@ -1,0 +1,226 @@
+{
+  "observed_at": "2026-10-20T22:33:48.310117+00:00",
+  "queries": {
+    "availability": "kube_deployment_status_replicas_available{namespace=\"verdify-prod\",deployment=~\"experiment-v2-(freezer|lifecycle|selector)|verdify-mqtt|verdify-hermes-iris\"}",
+    "cronjob_last_success": "kube_cronjob_status_last_successful_time{namespace=~\"verdify-prod|verdify-descheduler\",cronjob=~\"descheduler|verdify-fixed-panel-native-freezer|verdify-winter-feasibility\"}",
+    "shelly_presence": "iot:unifi_client_expected{client_id=~\"unifi-211920907986099|unifi-46687778400400\"}",
+    "shelly_services": "fleet_ip_probe_expected{probe_target=~\".*192[.]168[.]10[.](36|132).*\"}"
+  },
+  "results": {
+    "availability": [
+      {
+        "metric": {
+          "__name__": "kube_deployment_status_replicas_available",
+          "deployment": "verdify-mqtt",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.686,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_deployment_status_replicas_available",
+          "deployment": "verdify-hermes-iris",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.686,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_deployment_status_replicas_available",
+          "deployment": "experiment-v2-selector",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.686,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_deployment_status_replicas_available",
+          "deployment": "experiment-v2-freezer",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.686,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_deployment_status_replicas_available",
+          "deployment": "experiment-v2-lifecycle",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.686,
+          "1"
+        ]
+      }
+    ],
+    "cronjob_last_success": [
+      {
+        "metric": {
+          "__name__": "kube_cronjob_status_last_successful_time",
+          "cronjob": "descheduler",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-descheduler",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.896,
+          "1792534507"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_cronjob_status_last_successful_time",
+          "cronjob": "verdify-winter-feasibility",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.896,
+          "1792477818"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "kube_cronjob_status_last_successful_time",
+          "cronjob": "verdify-fixed-panel-native-freezer",
+          "instance": "kube-state-metrics.observability.svc:8080",
+          "job": "kube-state-metrics",
+          "namespace": "verdify-prod",
+          "service": "kube-state-metrics"
+        },
+        "value": [
+          1792535627.896,
+          "1792477806"
+        ]
+      }
+    ],
+    "shelly_presence": [
+      {
+        "metric": {
+          "__name__": "iot:unifi_client_expected",
+          "client_id": "unifi-211920907986099",
+          "device_type": "monitor",
+          "friendly_name": "Shelly ProEM50 1",
+          "vlan": "iot"
+        },
+        "value": [
+          1792535628.085,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "iot:unifi_client_expected",
+          "client_id": "unifi-46687778400400",
+          "device_type": "monitor",
+          "friendly_name": "Shelly ProEM50 2",
+          "vlan": "iot"
+        },
+        "value": [
+          1792535628.085,
+          "1"
+        ]
+      }
+    ],
+    "shelly_services": [
+      {
+        "metric": {
+          "__name__": "fleet_ip_probe_expected",
+          "endpoint_id": "unifi-211920907986099",
+          "instance": "10.42.6.166:9100",
+          "job": "observability-service-contracts",
+          "pod": "service-contract-exporter-64bf8d5d86-pcrl6",
+          "probe_job": "fleet-ip-services",
+          "probe_target": "192.168.10.36:502",
+          "scrape_namespace": "observability",
+          "service": "service-contract-exporter"
+        },
+        "value": [
+          1792535628.301,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "fleet_ip_probe_expected",
+          "endpoint_id": "unifi-46687778400400",
+          "instance": "10.42.6.166:9100",
+          "job": "observability-service-contracts",
+          "pod": "service-contract-exporter-64bf8d5d86-pcrl6",
+          "probe_job": "fleet-ip-services",
+          "probe_target": "http://192.168.10.132:80/",
+          "scrape_namespace": "observability",
+          "service": "service-contract-exporter"
+        },
+        "value": [
+          1792535628.301,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "fleet_ip_probe_expected",
+          "endpoint_id": "unifi-211920907986099",
+          "instance": "10.42.4.250:9100",
+          "job": "observability-service-contracts",
+          "pod": "service-contract-exporter-64bf8d5d86-s795h",
+          "probe_job": "fleet-ip-services",
+          "probe_target": "192.168.10.36:502",
+          "scrape_namespace": "observability",
+          "service": "service-contract-exporter"
+        },
+        "value": [
+          1792535628.301,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "fleet_ip_probe_expected",
+          "endpoint_id": "unifi-46687778400400",
+          "instance": "10.42.4.250:9100",
+          "job": "observability-service-contracts",
+          "pod": "service-contract-exporter-64bf8d5d86-s795h",
+          "probe_job": "fleet-ip-services",
+          "probe_target": "http://192.168.10.132:80/",
+          "scrape_namespace": "observability",
+          "service": "service-contract-exporter"
+        },
+        "value": [
+          1792535628.301,
+          "1"
+        ]
+      }
+    ]
+  },
+  "mutations_performed": false
+}
