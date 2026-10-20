@@ -149,7 +149,17 @@ def test_277_retains_every276_authority_predicate_and_binds_exact_successor():
     expected += " AND " + six.ledger_row_sql(*six.GETTER_MIGRATION) + ")"
     assert six.sealed_sql_277() == expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.GETTER_MIGRATION)
-    assert six.sealed_sql() == historical.sealed_sql()[:-1] + " OR " + expected + " OR " + six.sealed_sql_278() + ")"
+    assert (
+        six.sealed_sql()
+        == historical.sealed_sql()[:-1]
+        + " OR "
+        + expected
+        + " OR "
+        + six.sealed_sql_278()
+        + " OR "
+        + six.sealed_sql_279()
+        + ")"
+    )
 
 
 def test_maintenance_or_is_scoped_inside_unchanged_authority_conjunction():
@@ -162,7 +172,15 @@ def test_maintenance_or_is_scoped_inside_unchanged_authority_conjunction():
     assert old.count(six.sealed_sql_276()) == 1
     assert maintenance.contract_sql() == old.replace(
         six.sealed_sql_276(),
-        "(" + six.sealed_sql_276() + " OR " + six.sealed_sql_277() + " OR " + six.sealed_sql_278() + ")",
+        "("
+        + six.sealed_sql_276()
+        + " OR "
+        + six.sealed_sql_277()
+        + " OR "
+        + six.sealed_sql_278()
+        + " OR "
+        + six.sealed_sql_279()
+        + ")",
         1,
     )
     assert maintenance.DUTIES == historical.DUTIES
