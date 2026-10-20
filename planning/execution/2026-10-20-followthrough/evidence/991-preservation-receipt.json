@@ -1,0 +1,119 @@
+{
+  "observed_at": "2026-10-20T21:19:42.142877+00:00",
+  "issue": 991,
+  "target_counts": {
+    "Job": 81,
+    "Pod": 6,
+    "Deployment": 1,
+    "ConfigMap": 16,
+    "NetworkPolicy": 14
+  },
+  "protected": [
+    "all database and PVC/PV objects",
+    "all Argo tracked objects",
+    "cnpg-default-monitoring",
+    "kube-root-ca.crt",
+    "cnpg-s2-runtime-client-ingress",
+    "cnpg-s2-runtime-client-only"
+  ],
+  "claim_gc_dependency_count": 0,
+  "available_logs": [
+    {
+      "pod": "verdify-cnpg-s2-archive-recheck-20261012-xb456",
+      "container": "reader",
+      "bytes": 1462,
+      "sha256": "fd0cf3bf6e0de5765efca49f36a8c291ed69b7d0f5d0881da5596a1a973ac8cf"
+    },
+    {
+      "pod": "verdify-s2-promoted-spool-image-metadata",
+      "container": "qualification",
+      "bytes": 292,
+      "sha256": "448789dd148593f354227eaa65b17816b65da8d93ced965f5facf9a866d749d6"
+    },
+    {
+      "pod": "verdify-s2-promoted-spool-qualification",
+      "container": "qualification",
+      "bytes": 572,
+      "sha256": "8c6b7ed706eaf3184bfff2fb1bd3fc5970a6876cf9885f0c30ba1ab1760f1c97"
+    },
+    {
+      "pod": "verdify-s2-promoted-spool-qualification-v2",
+      "container": "qualification",
+      "bytes": 409,
+      "sha256": "778e1089aa2cd2d1ef6ba1b3380ee613e8a811ab65c866d0ca33b471239b766d"
+    },
+    {
+      "pod": "verdify-s2-promoted-spool-qualification-v3",
+      "container": "qualification",
+      "bytes": 2078,
+      "sha256": "a50d355d838643bb48761c6c6ae438f2f5ac2f6a432dfdd4fc423e495c50effa"
+    },
+    {
+      "pod": "verdify-s2-promoted-spool-qualification-v4",
+      "container": "qualification",
+      "bytes": 5844,
+      "sha256": "1e39d2992b9d4dfeb06346c8ff9a37d60331478bf54f24dd20c061a2d2f2dfe1"
+    },
+    {
+      "pod": "verdify-s2-spool-recover",
+      "container": "qualification",
+      "bytes": 1142,
+      "sha256": "ca162eebc270add578919055b0813ddb7106408ee797698fe4b7afbdc1188ddf"
+    }
+  ],
+  "existing_citation_files": [
+    {
+      "path": "planning/reviews/2026-10-20-sprint-audit/before-open-issues.json",
+      "sha256": "96f21f9a54157328cbe80aeedcca154c9b23b3bc52b65bc8b8ed32d5432b0579",
+      "bytes": 533506
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current274-primary-loss.json",
+      "sha256": "24b95445897e996d799ae2eadbd1ad3ce48f092d8862f15234b0568ef0729740",
+      "bytes": 3766
+    },
+    {
+      "path": "planning/reviews/2026-10-12/RUNTIME.md",
+      "sha256": "a1b4a8b80296e2a179eeddb2b193c4e035ad6e0c679f10cc88dafef345b40c79",
+      "bytes": 5379
+    },
+    {
+      "path": "planning/reviews/2026-10-12/runtime-summary.json",
+      "sha256": "978ac72526f5071980ddcd74b905c46705380c89627bfa7236e743fa7735fd5a",
+      "bytes": 147696
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-12/archive-recheck-job.json",
+      "sha256": "798dbbafb6ac1fcf0b148ee89c07b28e30d1c352e2219ade88243a48901ba176",
+      "bytes": 5425
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-06/evidence/382/current-runtime-promoted-reader-custody.json",
+      "sha256": "1a16534b6af6537fbb51bae600848d7b60a4ad96afa8eb8691af763d238a6cca",
+      "bytes": 5285
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-12/contained-recovery.md",
+      "sha256": "96502a07071745fabf5734c5512a1ff279dab011632aa0d68e5337725c5707c6",
+      "bytes": 13216
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-12/archive-custody-recheck.json",
+      "sha256": "321582b9efddd5689251e128c647d74c6d6fe783d4141cb763ab204bb42de35b",
+      "bytes": 5882
+    },
+    {
+      "path": "docs/handoffs/s2-2026-10-12/contained-recovery-receipt.json",
+      "sha256": "e78ff2429851b8817f0bbc8d1ce33898b7f24fb5fe390f178741e3946cbe6240",
+      "bytes": 38735
+    }
+  ],
+  "preexisting_jobs_without_retained_pods": 80,
+  "custody": {
+    "ciphertext_sha256": "ab8db37c68713559fa80776ff81fb91112dcfe332b8763d0dd513702416952e3",
+    "ciphertext_bytes": 535183,
+    "independent_decryption_hash_match": true,
+    "archive_exported": false,
+    "custody_class": "private local operator recovery; not exported"
+  }
+}

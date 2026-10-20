@@ -1,0 +1,6 @@
+{
+  "observed_at": "2026-10-20T21:26:36.442527+00:00",
+  "all_eight_pvcs_and_cluster_unchanged": true,
+  "both_apps_unchanged": true,
+  "metadata_only_secret_deletion_verified": true
+}

@@ -1122,7 +1122,7 @@
       "accepted": false,
       "parent": 75,
       "blocked_by": [],
-      "body_sha256": "0b4cabc1acbc61a1c154b869e784cefcfc183829ecb0638544e1a8a629ff96d6"
+      "body_sha256": "894251ee4c1972aa16ddbb88fdb6640d44b087ffbd02a6bd25e9a5f8ae7fcef2"
     },
     {
       "key": "802",
@@ -1166,7 +1166,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "cd59155c3341fb02f75b867bc4e2d35ac84e0d2eb273dedd1471157435761bda"
+      "body_sha256": "5dc78a9f99de44058123e95ab2c936bcf639d15aadd99ea35c8505ec98165c8d"
     },
     {
       "key": "992",
@@ -1351,11 +1351,11 @@
       "number": 1008,
       "title": "[C4][P2] Add rate limits and request bounds to anonymous api.verdify.ai: the public camera route triggers a fresh home-Frigate snapshot on every request",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "b668e578753bc41cf5a761a7f7ce361f3391d192687f40bd64efe63dba1ada89"
+      "body_sha256": "0dc6c75dc63dba752c26c2700ba3fcace6a021b27a2d626f48c8f0e7665924cc"
     },
     {
       "key": "1009",
@@ -1377,7 +1377,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "d25af844f361db236cc7955ad06cae2964ef233eebc5f724dec8c012df9c2f62"
+      "body_sha256": "6e657877ef8652811fb282985585aff5ffc02e868620526df54877e7462bdfb6"
     },
     {
       "key": "1011",
