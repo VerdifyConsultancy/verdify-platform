@@ -107,6 +107,15 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
         () => {
           return (tree: Root) => {
             visit(tree, "element", (node) => {
+              if (node.tagName === "a" && typeof node.properties?.href === "string") {
+                const href = node.properties.href
+                if (href.startsWith(opts.matchPrefix) && /\/d(?:-solo)?\//.test(href)) {
+                  const uid = new URL(href).pathname.split("/")[2]
+                  if (uid in publicShares) node.properties.href = toSavedPublicUrl(href)
+                  else node.properties.title = "Requires Grafana sign-in"
+                }
+                return
+              }
               if (
                 node.tagName !== "iframe" ||
                 !node.properties ||
@@ -116,6 +125,22 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
               }
               const src = node.properties.src
               if (!src.startsWith(opts.matchPrefix)) return
+              const uid = new URL(src).pathname.split("/")[2]
+              if (!(uid in publicShares)) {
+                // The sharing allowlist is intentional. An unshared dashboard
+                // gets a signed-in link, never a public iframe or PNG request.
+                node.tagName = "p"
+                node.properties = { className: ["grafana-auth-required"] }
+                node.children = [{
+                  type: "element",
+                  tagName: "a",
+                  properties: { href: toLiveDashboardUrl(src), target: "_blank", rel: ["noopener", "noreferrer"] },
+                  children: [{ type: "text", value: uid === "greenhouse-weather"
+                    ? "Open weather graph (Grafana sign-in)"
+                    : "Open graph (Grafana sign-in)" }],
+                }]
+                return
+              }
 
               const heightAttr = node.properties.height
               const heightStr =

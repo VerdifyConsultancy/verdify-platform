@@ -58,6 +58,8 @@ RUN cp -a /app/site/quartz /app/site/docs \
     && mkdir -p /srv/verdify/verdify-site /srv/verdify /mnt/iris/verdify-vault /work \
     && chown -R 1000:1000 /opt/verdify-site /app /srv/verdify /mnt/iris /work
 
+RUN npm test -- quartz/plugins/transformers/grafana-defer.test.ts
+
 USER 1000:1000
 ENV HOME=/home/node \
     PATH="/opt/venv/bin:${PATH}" \
