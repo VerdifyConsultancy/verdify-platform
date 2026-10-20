@@ -687,6 +687,10 @@ Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-n
 
 - `docker.io/traefik:v3.7.1`, `eclipse-mosquitto:2`, `postgres:16`, `python:3.12-alpine`, `python:3.13-alpine`, `timescale/timescaledb:2.25.2-pg16` in `verdify-db`, `verdify-api`, `verdify-ingestor`, `verdify-planner`, `verdify-setpoint-server`, `verdify-mqtt`, `verdify-db-backup-exporter`, `verdify-traefik` and CronJobs `verdify-band-curve-refresh`, `verdify-db-backup`, `verdify-db-watchdog`, `verdify-fixed-panel-native-freezer`, `verdify-writer-watchdog`.
 
+## Meter source clock (#981)
+
+The read-only ingestor consumer uses the HA-owned Shelly source contract with explicit `shelly_modbus_source_v2` evidence. Original channel IDs, signed power, source/observation clocks and missingness are preserved. Device identity/endpoint remain owned by homeassistant; the consumer and its exact runtime release pin belong here. See `docs/operations/SHELLY_SOURCE_CLOCK_CONSUMER.md`.
+
 ### A13 Close health coverage gaps
 
 - See [Coverage gaps](#coverage-gaps); also probes 04, 08 and 09 of `physical-device:iot-aggregate/greenhouse-probes` are unavailable (product issue #751).
@@ -721,6 +725,3 @@ The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; 
 ## Rehearsal non-data cleanup (#991)
 
 The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.
-## Meter source clock (#981)
-
-The read-only ingestor consumer uses the HA-owned Shelly source contract with explicit `shelly_modbus_source_v2` evidence. Original channel IDs, signed power, source/observation clocks and missingness are preserved. Device identity/endpoint remain owned by homeassistant; the consumer and its exact runtime release pin belong here. See `docs/operations/SHELLY_SOURCE_CLOCK_CONSUMER.md`.
