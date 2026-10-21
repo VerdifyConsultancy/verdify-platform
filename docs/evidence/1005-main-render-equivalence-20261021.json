@@ -1,0 +1,7 @@
+{
+  "full_sync_revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+  "equivalent_desired_revision": "985665e65cb4f24da95919e73c6065478949145c",
+  "render_sha256": "4709e66fe5a335ede5a3d19b6dd968c10a336ff8a5cdf69c7c19638008670519",
+  "render_identical": true,
+  "later_change": "normal CI-managed candidate pins only; release transformer unchanged"
+}

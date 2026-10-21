@@ -1,0 +1,20 @@
+{
+  "observed_at": "2026-10-21T03:22:31.448456+00:00",
+  "full_sync_revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+  "current_desired_revision": "985665e65cb4f24da95919e73c6065478949145c",
+  "current_desired_render_identical": true,
+  "application": "Synced Healthy",
+  "full_operation_finished_at": "2026-10-21T02:50:44Z",
+  "prune": false,
+  "selectors_absent": true,
+  "api_source": "183af7a93fe236ab97f4556173a07195515b732a",
+  "api_digest": "sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8",
+  "smoke_passed": 9,
+  "smoke_failed": 0,
+  "passive_esp32_connections": 1,
+  "smoke_output_sha256": "0b6bfff8a750ffe6d9d7aa61f3b23903ca1d477674e5963c2a87da9f8cdcb116",
+  "device_census_output_sha256": "4de515b79d4b4a9f936f07a0acd1a0781f00ea7ac8953ec6683e216012b4a115",
+  "original_db_pod_preserved": "f082e4c4-3774-49e0-afd7-332b487cb309",
+  "original_lab_pvc_preserved": "1bd6ffec-7246-4e15-b080-287a9cf37418",
+  "physical_commissioning_or_ota_claimed": false
+}

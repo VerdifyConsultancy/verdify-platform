@@ -1,0 +1,7 @@
+{
+  "deleted_uid": "5a3dd10c-8b91-4844-aef9-d93d2f28479a",
+  "origin_http_status": 200,
+  "measurement_failed": "Mac system resolver selected 192.168.7.10, so CF-Ray assertion failed",
+  "accepted_recovery_proof": false,
+  "correction": "Use public resolver 1.1.1.1 edge IP with normal TLS server-name validation, then repeat after both caches recover"
+}

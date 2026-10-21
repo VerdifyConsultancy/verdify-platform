@@ -1,0 +1,37 @@
+{
+  "observed_at": "2026-10-21T03:21:33.458513+00:00",
+  "job": "verdify-lab-publisher-29875865",
+  "job_uid": "8f6fed1a-b636-4aa3-9747-aacd4046b58f",
+  "cronjob_uid": "79aa5222-4fb3-439b-ba33-28101c514543",
+  "natural_schedule": "2026-10-21T03:05:00Z",
+  "job_started_at": "2026-10-21T03:05:00Z",
+  "job_completed_at": "2026-10-21T03:14:02Z",
+  "new_image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41",
+  "job_pod_uid": "1a11c881-ce6f-47c2-806e-e296f2b69793",
+  "manual_job_forced": false,
+  "both_serving_caches": [
+    {
+      "pod": "verdify-lab-7b485f96c4-b4rh7",
+      "uid": "1af4800c-812b-4315-88dc-80910400ea70",
+      "node": "vm-k3s-node4",
+      "publication_at": "2026-10-21T03:12:53Z",
+      "public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+      "files": 809
+    },
+    {
+      "pod": "verdify-lab-7b485f96c4-qhmhh",
+      "uid": "b7c829c8-12a4-479a-9b04-bbabe6408af3",
+      "node": "vm-k3s-node5",
+      "publication_at": "2026-10-21T03:12:53Z",
+      "public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+      "files": 809
+    }
+  ],
+  "public_edge_receipt_matches": true,
+  "public_http_status": 200,
+  "cf_cache_status": "DYNAMIC",
+  "cf_ray_present": true,
+  "verified_tls_server_name": "lab.verdify.ai",
+  "original_pvc_uid": "1bd6ffec-7246-4e15-b080-287a9cf37418",
+  "original_database_pod_uid": "f082e4c4-3774-49e0-afd7-332b487cb309"
+}
