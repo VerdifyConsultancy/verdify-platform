@@ -1,0 +1,253 @@
+{
+  "started_at": "2026-10-21T02:49:11.345001+00:00",
+  "issue": 992,
+  "target": "b2",
+  "concurrency": 1,
+  "global_settings_changed": false,
+  "objects": [
+    {
+      "pvc": "verdify-cnpg-s2-integration-1",
+      "volume": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+      "volume_uid": "9573f600-48dd-4238-b8aa-7a46f2becf49",
+      "snapshot": "verdify992-20261021-5bc955b4",
+      "snapshot_uid": "0d2fe02c-741f-4db9-ae42-4d3098321ef3",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:49:14Z",
+        "size": 28385280,
+        "restoreSize": 21474836480,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-5bc955b4",
+      "backup_uid": "25f97f0f-564d-4f79-ba99-bbdaa67cff8f",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:49:29.953616+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-5bc955b4",
+        "snapshotCreatedAt": "2026-10-21T02:49:19Z",
+        "backupCreatedAt": "2026-10-21T02:49:26Z",
+        "size": "4343201792",
+        "volumeSize": "21474836480",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "ec6b0f863d9f90dc8a8642ff0deca94b63c3e8fc2625237d24c90e6716aa6a93"
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-1-wal",
+      "volume": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+      "volume_uid": "2961da22-0ba0-4856-8815-580163e7c1a9",
+      "snapshot": "verdify992-20261021-8ec30e16",
+      "snapshot_uid": "b979b278-acde-47d1-8bee-be37aa193bde",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:49:31Z",
+        "size": 0,
+        "restoreSize": 5368709120,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-8ec30e16",
+      "backup_uid": "0e9cee99-03c4-42a7-97cc-9f571b8f52ee",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:49:46.982165+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-8ec30e16",
+        "snapshotCreatedAt": "2026-10-21T02:49:36Z",
+        "backupCreatedAt": "2026-10-21T02:49:42Z",
+        "size": "1296039936",
+        "volumeSize": "5368709120",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "d99f6b6734c5f679cf60b6226119989aa9a61afdea6edb24872b042b8c268427"
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-2",
+      "volume": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+      "volume_uid": "49174bfd-645b-4723-a405-cd6c26f3bd81",
+      "snapshot": "verdify992-20261021-4975744d",
+      "snapshot_uid": "4f91603b-294c-476b-b1af-b1ac4219cd43",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:49:48Z",
+        "size": 25776128,
+        "restoreSize": 21474836480,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-4975744d",
+      "backup_uid": "588607df-b1ec-48cf-9dae-9377f19af863",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:50:04.077736+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-4975744d",
+        "snapshotCreatedAt": "2026-10-21T02:49:54Z",
+        "backupCreatedAt": "2026-10-21T02:50:00Z",
+        "size": "4311744512",
+        "volumeSize": "21474836480",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "513e121949e360f815398b0f4f6f10a955af99fc09ac1b7e9939e754d30a3932"
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-2-wal",
+      "volume": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+      "volume_uid": "e749ed7e-522b-486e-b1f3-31664571bfa0",
+      "snapshot": "verdify992-20261021-428fa291",
+      "snapshot_uid": "b3ce16af-7fb9-4896-9369-7eabfb6471f1",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:50:06Z",
+        "size": 208896,
+        "restoreSize": 5368709120,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-428fa291",
+      "backup_uid": "1ee87dc3-0d9c-4b50-b638-4dceb50181f3",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:50:21.852950+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-428fa291",
+        "snapshotCreatedAt": "2026-10-21T02:50:11Z",
+        "backupCreatedAt": "2026-10-21T02:50:16Z",
+        "size": "782237696",
+        "volumeSize": "5368709120",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "9945d7cfcdac1de113577ce452d57db73b2407f60bf2800bbeab89a97720f33b"
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-3",
+      "volume": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+      "volume_uid": "287f8539-cda4-4c82-8697-8284801aa8de",
+      "snapshot": "verdify992-20261021-6e951ccb",
+      "snapshot_uid": "f5dc1b2d-4187-47cc-aba7-162ce6845c81",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:50:23Z",
+        "size": 34897920,
+        "restoreSize": 21474836480,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-6e951ccb",
+      "backup_uid": "a48434af-1dfc-42c4-a700-ba181e42fde8",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:50:38.926358+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-6e951ccb",
+        "snapshotCreatedAt": "2026-10-21T02:50:28Z",
+        "backupCreatedAt": "2026-10-21T02:50:34Z",
+        "size": "4290772992",
+        "volumeSize": "21474836480",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "6ec0ec7cf457322606b7c69840ad5bc15062a3f1c897a6f092bea200f2871a48"
+    },
+    {
+      "pvc": "verdify-cnpg-s2-integration-3-wal",
+      "volume": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+      "volume_uid": "124e706a-7035-411d-a28e-8eaab3a4578e",
+      "snapshot": "verdify992-20261021-463e7de8",
+      "snapshot_uid": "f0027a57-be69-4871-b633-3aefd1d9beaf",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:50:40Z",
+        "size": 0,
+        "restoreSize": 5368709120,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-463e7de8",
+      "backup_uid": "91986a05-0b79-484c-9765-ca99c01a6182",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:50:56.261369+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-463e7de8",
+        "snapshotCreatedAt": "2026-10-21T02:50:46Z",
+        "backupCreatedAt": "2026-10-21T02:50:51Z",
+        "size": "782237696",
+        "volumeSize": "5368709120",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "424beff131675c840bc044e5164076d4b16ee644712067419330125e0992980c"
+    },
+    {
+      "pvc": "verdify-s2-spool-382-7fa4f802",
+      "volume": "pvc-116e36a0-be6b-42aa-9643-ef4b638492db",
+      "volume_uid": "9bbc2e0b-36f2-4aab-a1ec-57096574a21a",
+      "snapshot": "verdify992-20261021-116e36a0",
+      "snapshot_uid": "59ae373d-d603-44ba-98b1-110dbb3933d2",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:51:01Z",
+        "size": 0,
+        "restoreSize": 2147483648,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-116e36a0",
+      "backup_uid": "d53f867c-bc8a-455d-84b8-68023ae87605",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:51:23.496521+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-116e36a0",
+        "snapshotCreatedAt": "2026-10-21T02:51:13Z",
+        "backupCreatedAt": "2026-10-21T02:51:17Z",
+        "size": "142606336",
+        "volumeSize": "2147483648",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "98bf6610a15ae13ccfb138a2104eb8cb226e434dd5b77463388ac8167725e4ef"
+    },
+    {
+      "pvc": "verdify-s2-spool-qualification",
+      "volume": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+      "volume_uid": "7c0f9af2-f480-424c-a606-a38a1df1f7f0",
+      "snapshot": "verdify992-20261021-a7158960",
+      "snapshot_uid": "160d4081-3cc5-44e7-aaf8-208f07bb6c05",
+      "snapshot_ready": true,
+      "snapshot_status": {
+        "creationTime": "2026-10-21T02:51:28Z",
+        "size": 0,
+        "restoreSize": 2147483648,
+        "checksum": ""
+      },
+      "backup": "verdify992-20261021-a7158960",
+      "backup_uid": "25fdda9e-30d9-4385-8581-7e93296d19e4",
+      "backup_state": "Completed",
+      "progress": 100,
+      "completed_at": "2026-10-21T02:51:50.969037+00:00",
+      "backup_status": {
+        "snapshotName": "verdify992-20261021-a7158960",
+        "snapshotCreatedAt": "2026-10-21T02:51:40Z",
+        "backupCreatedAt": "2026-10-21T02:51:45Z",
+        "size": "260046848",
+        "volumeSize": "2147483648",
+        "compressionMethod": "lz4",
+        "newlyUploadedDataSize": null,
+        "reUploadedDataSize": "0"
+      },
+      "backup_url_sha256": "a50e51e4cb8cb7bca3089526700d362fde2f3fcbd6285e117d166ba249ec6c68"
+    }
+  ],
+  "finished_at": "2026-10-21T02:51:50.969244+00:00",
+  "all_eight_native_backups_completed": true,
+  "independent_reader_verification_pending": true,
+  "data_deletion_performed": false
+}

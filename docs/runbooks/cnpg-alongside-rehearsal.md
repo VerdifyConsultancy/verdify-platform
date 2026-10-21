@@ -1,5 +1,7 @@
 # #396: current-storage CNPG alongside rehearsal
 
+> Retired experiment (#992 / DR-49): historical procedure only. No production CNPG cutover or recreation of `verdify-db-rehearsal` is planned. Deployment profiles are retained only under `tests/fixtures/retired-cnpg-rehearsal`; future qualification requires an explicitly supported target.
+
 Status: source preparation; operand image and a scratch extension ABI fixture are
 qualified. No Verdify CNPG deployment, role-complete restore, failover or PITR
 has been performed by this change. Production `DB_HOST=verdify-db`, its

@@ -1,5 +1,7 @@
 # Fresh contained S2 integration recovery
 
+> Retired experiment (#992 / DR-49): historical procedure only. No production CNPG cutover or recreation of `verdify-db-rehearsal` is planned. Deployment profiles are retained only under `tests/fixtures/retired-cnpg-rehearsal`; future qualification requires an explicitly supported target.
+
 The original S2 clone ran Timescale background jobs after its accepted seal. On October11, before any integration-fixture DML, native catalog and physical-chunk facts had changed and the full COPY protocol failed on a removed chunk. Frozen A/B, with zero background workers, still matched all952 objects,77 sequences and42 study tables. Keep those historical proofs and the rejected S2 evidence intact.
 
 `deploy/k8s/cnpg/rehearsal/cluster/s2-current274-integration-recovery.yaml` declares one new three-instance `verdify-cnpg-s2-integration`, using the accepted frozen-B reader-only recovery lineage. It binds source Cluster UID `4f697776-df25-4e22-b930-0b76cf35496e`, Backup UID `8e3c2874-f16c-4ca2-b85d-09629910ac64`, backupID `20261006T052358`, timeline1 and inclusive target `2026-10-06T05:38:19.219172+00:00`. The compatible image, synchronous durability, required Proxmox-host anti-affinity and storage classes remain exact. `timescaledb.max_background_workers=0` is present before the first PostgreSQL start. The new clone has no WAL-archiver plugin and only the original read-side recovery authority.

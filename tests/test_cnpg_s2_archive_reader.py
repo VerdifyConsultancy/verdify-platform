@@ -48,7 +48,9 @@ def test_refuses_reversed_or_unbounded_wal_protection_range(lsn):
 
 
 def test_archive_reader_policy_has_no_ingress_or_database_route():
-    policy = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/cnpg-s2-archive-reader-policy.yaml").read_text())
+    policy = yaml.safe_load(
+        (ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/cnpg-s2-archive-reader-policy.yaml").read_text()
+    )
     spec = policy["spec"]
     assert "ingress" not in spec
     assert spec["podSelector"]["matchLabels"] == m.render(*fixture())["spec"]["template"]["metadata"]["labels"]
