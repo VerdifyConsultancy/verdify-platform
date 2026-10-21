@@ -1,0 +1,72 @@
+{
+  "observed_at": "2026-10-20T23:19:25.379262+00:00",
+  "policy_uid": "634cfe23-b334-4be8-bc10-7d8232dea352",
+  "policy_spec": {
+    "ingress": [
+      {
+        "from": [
+          {
+            "podSelector": {
+              "matchLabels": {
+                "app.kubernetes.io/component": "db-restore"
+              }
+            }
+          }
+        ],
+        "ports": [
+          {
+            "port": 5432,
+            "protocol": "TCP"
+          }
+        ]
+      }
+    ],
+    "podSelector": {
+      "matchLabels": {
+        "app.kubernetes.io/component": "db"
+      }
+    },
+    "policyTypes": [
+      "Ingress"
+    ]
+  },
+  "tracking_id": "verdify-prod-dark:networking.k8s.io/NetworkPolicy:verdify-prod/allow-db-from-restore",
+  "dry_run_job_uid": "21ddcddb-fe68-454a-9aab-222fea5e5f52",
+  "job_status": {
+    "completionTime": "2026-10-20T23:15:34Z",
+    "conditions": [
+      {
+        "lastProbeTime": "2026-10-20T23:15:34Z",
+        "lastTransitionTime": "2026-10-20T23:15:34Z",
+        "message": "Reached expected number of succeeded pods",
+        "reason": "CompletionsReached",
+        "status": "True",
+        "type": "SuccessCriteriaMet"
+      },
+      {
+        "lastProbeTime": "2026-10-20T23:15:34Z",
+        "lastTransitionTime": "2026-10-20T23:15:34Z",
+        "message": "Reached expected number of succeeded pods",
+        "reason": "CompletionsReached",
+        "status": "True",
+        "type": "Complete"
+      }
+    ],
+    "ready": 0,
+    "startTime": "2026-10-20T23:15:23Z",
+    "succeeded": 1,
+    "terminating": 0,
+    "uncountedTerminatedPods": {}
+  },
+  "read_only_command": [
+    "pg_isready",
+    "-h",
+    "verdify-db.verdify-prod.svc",
+    "-p",
+    "5432",
+    "-t",
+    "5"
+  ],
+  "no_credentials_pvcs_sql_or_data_writes": true,
+  "disposable_job_removed_after_receipt": true
+}

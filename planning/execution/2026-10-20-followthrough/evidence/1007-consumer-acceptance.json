@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-10-20T23:17:29.696314+00:00",
+  "consumers": [
+    {
+      "pod": "verdify-hermes-iris-584f789bfb-599jn",
+      "uid": "dd2e3ace-165f-4e5c-ab28-b4295a8392b6",
+      "checks": {
+        "initialize_status": 200,
+        "tool_count": 23,
+        "read_only_equipment_state_status": 200,
+        "read_only_tool_is_error": false,
+        "old_iris_status": 401,
+        "consumer_uses_rotated_generation": true
+      }
+    },
+    {
+      "pod": "verdify-mcp-74dd5f7696-d744f",
+      "uid": "a180aa3a-6fb7-49b5-a9f0-a4805b508ee9",
+      "checks": {
+        "initialize_status": 200,
+        "tool_count": 23,
+        "read_only_equipment_state_status": 200,
+        "read_only_tool_is_error": false,
+        "old_iris_status": 401,
+        "consumer_uses_rotated_generation": true
+      }
+    },
+    {
+      "pod": "verdify-mcp-74dd5f7696-tr7xd",
+      "uid": "a8895fec-7583-4d8c-a196-35eaf08e5f17",
+      "checks": {
+        "initialize_status": 200,
+        "tool_count": 23,
+        "read_only_equipment_state_status": 200,
+        "read_only_tool_is_error": false,
+        "old_iris_status": 401,
+        "consumer_uses_rotated_generation": true
+      }
+    }
+  ],
+  "no_mutating_tools_called": true,
+  "future_client_credentials_issued": false
+}

@@ -1,0 +1,98 @@
+{
+  "observed_at": "2026-10-20T23:13:35.339473+00:00",
+  "replicas": [
+    {
+      "pod": "verdify-mcp-74dd5f7696-d744f",
+      "uid": "a180aa3a-6fb7-49b5-a9f0-a4805b508ee9",
+      "serviceAccountName": "verdify-mcp",
+      "automount": false,
+      "results": {
+        "serviceaccount_token_file_present": false,
+        "private_tcp": [
+          {
+            "target": "kubernetes_vip",
+            "connected": false
+          },
+          {
+            "target": "nas_dsm",
+            "connected": false
+          },
+          {
+            "target": "meter_modbus",
+            "connected": false
+          },
+          {
+            "target": "internal_mqtt",
+            "connected": false
+          },
+          {
+            "target": "kubernetes_service",
+            "connected": false
+          }
+        ],
+        "db_tcp": {
+          "target": "database",
+          "connected": true
+        },
+        "dns_resolves": true,
+        "public_tls": [
+          {
+            "host": "api.openai.com",
+            "verified_tls": true
+          },
+          {
+            "host": "hooks.slack.com",
+            "verified_tls": true
+          }
+        ]
+      }
+    },
+    {
+      "pod": "verdify-mcp-74dd5f7696-tr7xd",
+      "uid": "a8895fec-7583-4d8c-a196-35eaf08e5f17",
+      "serviceAccountName": "verdify-mcp",
+      "automount": false,
+      "results": {
+        "serviceaccount_token_file_present": false,
+        "private_tcp": [
+          {
+            "target": "kubernetes_vip",
+            "connected": false
+          },
+          {
+            "target": "nas_dsm",
+            "connected": false
+          },
+          {
+            "target": "meter_modbus",
+            "connected": false
+          },
+          {
+            "target": "internal_mqtt",
+            "connected": false
+          },
+          {
+            "target": "kubernetes_service",
+            "connected": false
+          }
+        ],
+        "db_tcp": {
+          "target": "database",
+          "connected": true
+        },
+        "dns_resolves": true,
+        "public_tls": [
+          {
+            "host": "api.openai.com",
+            "verified_tls": true
+          },
+          {
+            "host": "hooks.slack.com",
+            "verified_tls": true
+          }
+        ]
+      }
+    }
+  ],
+  "no_esp32_connection_made": true
+}

@@ -1,0 +1,23 @@
+{
+  "baseline_revision": "33ed324e9a74aa34892bd35f365ce94d564798c8",
+  "object_count": 137,
+  "added": [],
+  "removed": [],
+  "changed_objects": [
+    [
+      "StatefulSet",
+      "verdify-prod",
+      "verdify-db"
+    ],
+    [
+      "CronJob",
+      "verdify-prod",
+      "verdify-db-backup"
+    ]
+  ],
+  "before_render_sha256": "caaf7e892a2b9a09ee54a4ed28d82718f65a1baaaab230e21a7b58cd9ea6d292",
+  "after_render_sha256": "7c3ad8539eff76edf6f5536b073731d23ffab5c5d5a2ca3e5e400563503a354c",
+  "all_pvc_manifests_identical": true,
+  "database_image_version_unchanged": true,
+  "fresh_backup_and_attended_sync_pending": true
+}

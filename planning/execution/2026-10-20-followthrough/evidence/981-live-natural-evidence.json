@@ -1,0 +1,115 @@
+[
+  {
+    "observed_at": "2026-10-20T23:17:43.790658+00:00",
+    "query_read_only": true,
+    "rows": [
+      {
+        "ledger": [
+          {
+            "seq": 279,
+            "filename": "db/migrations/279-authentic-meter-source-clock-consumers.sql",
+            "sha256": "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
+            "stamp_method": "runner"
+          }
+        ]
+      },
+      {
+        "role_receipts_match": true
+      },
+      {
+        "energy": [
+          {
+            "ts": "2026-10-20T23:13:41.841122+00:00",
+            "measurement_revision": "shelly_modbus_source_v2",
+            "ch0_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch1_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch0_quality": "future",
+            "ch1_quality": "future",
+            "ch0_power_w": 0,
+            "ch1_power_w": 9.979681968688965,
+            "watts_total": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "observed_at": "2026-10-20T23:18:26.880191+00:00",
+    "query_read_only": true,
+    "rows": [
+      {
+        "ledger": [
+          {
+            "seq": 279,
+            "filename": "db/migrations/279-authentic-meter-source-clock-consumers.sql",
+            "sha256": "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
+            "stamp_method": "runner"
+          }
+        ]
+      },
+      {
+        "role_receipts_match": true
+      },
+      {
+        "energy": [
+          {
+            "ts": "2026-10-20T23:13:41.841122+00:00",
+            "measurement_revision": "shelly_modbus_source_v2",
+            "ch0_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch1_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch0_quality": "future",
+            "ch1_quality": "future",
+            "ch0_power_w": 0,
+            "ch1_power_w": 9.979681968688965,
+            "watts_total": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "observed_at": "2026-10-20T23:19:28.656989+00:00",
+    "query_read_only": true,
+    "rows": [
+      {
+        "ledger": [
+          {
+            "seq": 279,
+            "filename": "db/migrations/279-authentic-meter-source-clock-consumers.sql",
+            "sha256": "e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114",
+            "stamp_method": "runner"
+          }
+        ]
+      },
+      {
+        "role_receipts_match": true
+      },
+      {
+        "energy": [
+          {
+            "ts": "2026-10-20T23:18:42.6735+00:00",
+            "measurement_revision": "shelly_modbus_source_v2",
+            "ch0_source_ts": "2026-10-20T23:18:43+00:00",
+            "ch1_source_ts": "2026-10-20T23:18:43+00:00",
+            "ch0_quality": "future",
+            "ch1_quality": "future",
+            "ch0_power_w": 0,
+            "ch1_power_w": 9.878031730651855,
+            "watts_total": null
+          },
+          {
+            "ts": "2026-10-20T23:13:41.841122+00:00",
+            "measurement_revision": "shelly_modbus_source_v2",
+            "ch0_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch1_source_ts": "2026-10-20T23:13:42+00:00",
+            "ch0_quality": "future",
+            "ch1_quality": "future",
+            "ch0_power_w": 0,
+            "ch1_power_w": 9.979681968688965,
+            "watts_total": null
+          }
+        ]
+      }
+    ]
+  }
+]

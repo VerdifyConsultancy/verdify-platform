@@ -1,0 +1,23 @@
+{
+  "observed_at": "2026-10-20T23:18:08.353112+00:00",
+  "application_id": "5111f606-9fa7-4f7a-9cfc-5e132ec2d35b",
+  "public_probes": [
+    {
+      "probe": "unauthenticated",
+      "status": 302,
+      "method": "POST",
+      "cloudflare_ray_present": true,
+      "cloudflare": true,
+      "access_denial": true
+    },
+    {
+      "probe": "iris_only",
+      "status": 302,
+      "method": "POST",
+      "cloudflare_ray_present": true,
+      "cloudflare": true,
+      "access_denial": true
+    }
+  ],
+  "no_client_credentials_issued": true
+}

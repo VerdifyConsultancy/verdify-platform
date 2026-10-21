@@ -1,0 +1,11 @@
+{
+  "990": {
+    "exact_target_absence_count": 118
+  },
+  "996": {
+    "exact_target_absence_count": 4
+  },
+  "original_db_and_grafana_claims_bound": true,
+  "absent_subject_namespace": true,
+  "observed_at": "2026-10-20T23:19:25.181977+00:00"
+}

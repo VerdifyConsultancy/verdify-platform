@@ -3492,7 +3492,7 @@
         "api",
         "grafana"
       ],
-      "baseline": "October19 05:23 UTC dependency refresh: Home Assistant #878 closed COMPLETED at04:27:44 after PR#894, merged ff250799a553262317ee8802c72682422fb6d398. Its accepted installed-source contract qualifies authentic per-channel update time and power from the existing enabled read-only Modbus endpoint, including advancing stable0W. Native HA representation clocks do not expose this provenance; existing consumer stale denial and NULL aggregate remain correct. No HA runtime/configuration change was needed. Source contract: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/operations/SHELLY_SOURCE_CLOCK.md; evidence: https://github.com/jvallery/homeassistant/blob/ff250799a553262317ee8802c72682422fb6d398/docs/home/evidence/source-clock-20261018/README.md.\n\nThe external prerequisite is complete, so #981 is ready for a bounded versioned Verdify consumer adoption packet and its own negative/deployment acceptance. It remains OPEN. Do not substitute observation/fetch/ingest time for source time, reinterpret reversed channel1 CT or partial-circuit coverage, infer scientific eligibility, repeat accepted owner probes or invent a new credential/network route. The native predecessor link is retained as closed history. No #981 implementation or production source read was performed by the #988 repair.\n\nCurrent execution allocation: ALTERNATE ready pull after the active #988 repair. Next action: inspect the accepted installed-version contract, prepare the smallest source-clock consumer adoption with meaningful stale/missing/disconnected/future/nonfinite denials, then verify deployed behavior and one later natural intended source/DB comparison. Original acceptance and the #787 energy dependency remain unchanged.\n\nPrior dated evidence, retained unchanged:\n\nThe bounded source/ingestion comparison at 02:05 UTC and four read-only Shelly RPCs at 02:11 UTC on October 18 completed with zero mutations. At those observations, intended channel 0 read zero watts while HA last_updated and last_reported remained 2026-10-17T23:53:51Z; ingestion truthfully marked it stale after 300 seconds and denied the aggregate with null watts_total. Channel 1 source time advanced and its reversed-CT/partial-circuit negative value was preserved. Device system time and an available zero reading do not establish an advancing per-channel sample clock or prove an HA defect. The 06:59:54 UTC native graph still records open jvallery/homeassistant#878 as the single external blocker. The 07:07 product smoke passed, but it does not qualify that source clock or grant energy eligibility. Evidence: planning/reviews/2026-10-17-s3-execution/981-source-clock-packet.json and the fresh full-status graph/runtime receipts.\n\nCurrent execution allocation: S3. Next action: Consume the actual installed-source result from Home Assistant #878, make only an evidenced owner-lane repair if needed, then verify one bounded natural source/DB advancement and stale/missing denial. Correct the issue dependency prose to name the existing external blocker; selected nine-state #782 remains independent while #787 retains its energy dependency.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready. Consume accepted HA#878/PR#894 in an explicit new same-response Modbus source-time+signed-power revision. Preserve old-row meaning, source/ingest clocks, stable-zero advancement, reversed CT and stale/missing/future/nonfinite/disconnected denial. Verify deployed consumer and one later natural source/DB comparison. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.\n\nFollow-through #1034: authentic same-response Modbus reader plus explicit new revision and exact279 diagnostic consumer/C0/bootstrap successor qualified. Final migration, seven native consumer cases and both native bootstrap expressions passed rollback-only qualification with unchanged post-rollback live seals/ledger. Exact migrator image b583cc90600d005d73bc028078fd19afadd7bd9f93aa152f6760bb54cd5f22c0 and frozen two-file ingestor backport 9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61 built. Required checked merge, promotion, hook-bearing sync, five-minute clean-schema and natural source advancement acceptance remain; no device setting or persisted energy row changed during qualification.",
+      "baseline": "Consumer delivered at33ed324e with real runner migration279 and matching role receipts; smoke9/9, exactly one ESP32 socket, actual327-second stable ingestor observation/no validation errors. Two natural zero-W source clocks advance but slightly lead observation, so future quality and NULL aggregate correctly remain. Reopened for valid-freshness acceptance; source owner follow-up jvallery/homeassistant#932. No clock tolerance or scientific eligibility inferred. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
       "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation.",
@@ -3572,8 +3572,8 @@
     {
       "key": "990",
       "issue_number": 990,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Delete verdify-prod qualification and restore-drill residue; add TTL to the restore-job renderer",
       "stage": "C4",
       "kind": "task",
@@ -3599,7 +3599,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Add restore-renderer TTL; retain cited logs, recount exact inactive Jobs/ConfigMaps/Policies and recheck zero matching pods before exact-name cleanup. Exclude allow-db-from-restore and all data. Reconcile the conflicting historical counts in the execution receipt. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted live at full 137-task non-pruning production sync 33ed324e: Synced/Healthy, exact 118 residue targets absent, restore policy preserved/tracked, original DB/Grafana claims Bound. Renderer TTL and both owner records merged. Private encrypted recovery custody retained; raw archive export was rejected, sanitized metadata only published. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add restore-renderer TTL; retain cited logs, recount exact inactive Jobs/ConfigMaps/Policies and recheck zero matching pods before exact-name cleanup. Exclude allow-db-from-restore and all data. Reconcile the conflicting historical counts in the execution receipt."
@@ -3607,8 +3607,8 @@
     {
       "key": "991",
       "issue_number": 991,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Prune verdify-db-rehearsal run residue (non-data, D-04)",
       "stage": "C4",
       "kind": "task",
@@ -3633,7 +3633,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Complete non-data removal verified live: 81 inactive Jobs, six terminal bare Pods, the zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies absent after UID/version dry-runs and consumer/selector checks. Seven available logs/nine citation files preserved in encrypted private local custody; 80 old Jobs already lacked a retained Pod. CNPG Cluster, eight PVCs, two protected runtime policies, central/operator credentials and both Application specs/health preserved. Owner-record/source receipt publication is pending; issue remains open. Evidence: planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md.",
+      "baseline": "Accepted non-data retirement after product#1036 and central#5205 merged. Exact 81 Jobs, six terminal bare Pods, zero-replica proof Deployment,16 ConfigMaps,14 orphan policies,eight untracked client-auth copies absent. CNPG Cluster/eight PVCs/runtime policies/central credentials/two Apps preserved; private encrypted recovery custody retained. Data retirement remains separate #992. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Preserve cited evidence and prune exact non-data rehearsal residue only after checking current references. Keep all data intact. If approved #992 retirement subsumes the objects, close with that actual receipt instead of doing duplicate cleanup."
@@ -3676,8 +3676,8 @@
     {
       "key": "993",
       "issue_number": 993,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Adopt NetworkPolicy verdify-prod/allow-db-from-restore into the db-backup component",
       "stage": "C4",
       "kind": "task",
@@ -3700,7 +3700,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Adopt allow-db-from-restore with identical live spec into db-backup; verify Argo tracking, no widened access and supported restore connectivity. Preserve the policy during #990 cleanup. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted live at33ed324e: identical original restore NetworkPolicy spec and UID634cfe23 retained, Argo tracking adopted, App Synced/Healthy. Tokenless read-only pg_isready dry-run succeeded23:15:34Z; no Secret/PVC/SQL/data write, disposable Job removed. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Adopt allow-db-from-restore with identical live spec into db-backup; verify Argo tracking, no widened access and supported restore connectivity. Preserve the policy during #990 cleanup."
@@ -3772,8 +3772,8 @@
     {
       "key": "996",
       "issue_number": 996,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Remove laptop-root-era verdify-agent RBAC",
       "stage": "C5",
       "kind": "task",
@@ -3796,7 +3796,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Inspect binding subjects and live consumers before removing exactly the four obsolete RBAC objects; preserve a metadata-only inverse/readback. Stop for any active consumer; token revocation is not implied. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Accepted after product#1031 and central#5205 merged; four exact obsolete RBAC objects absent, old subject namespace absent, no credentials touched. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inspect binding subjects and live consumers before removing exactly the four obsolete RBAC objects; preserve a metadata-only inverse/readback. Stop for any active consumer; token revocation is not implied."
@@ -4154,7 +4154,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "S6 discovery packet complete with an explicit attribution gap. Retained 24h success logs show known internal use and former peers but cannot confirm an external client identity. No token issued. Whole issue remains open behind #1010 attribution and network-infra#752 cutover. See planning/execution/2026-10-20-s6/README.md.",
+      "baseline": "Whole-host Cloudflare Access Block Everyone is live; future Mac clients retain hostname with no unused credentials issued. Public unauthenticated/Iris-only requests receive Access302. Rotated Iris generation is reconciled via central#5218; actual Hermes and both MCP replicas authenticate23 tools/read-only equipment_state, old Iris gets401. Monitoring#1045 source/check remains pending; deployed Worker returns success1/status302/ray1 on both collectors. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready."
@@ -4253,7 +4253,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.\n\nFollow-through #1035 adds one secret-free allowed-dispatch event with audience, tool, conservative capability, outcome, duration and explicit transport peer. Focused authorization/audit checks: 99 pass; exact MCP image d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c built after supplying the missing checksum-pinned render tool. Checked merge, deployment, natural Hermes/Loki evidence remain. External-client identity is not inferred from pod addresses or untrusted forwarded headers; network-infra#743 trust path remains open.",
+      "baseline": "Audit source#1035 is deployed at33ed324e; ten real bounded events from both pods are visible in Loki, including natural Hermes and read-only acceptance calls. Audience/tool/capability/dispatch outcome/duration/actual transport peer recorded, no arguments/tokens/result payloads. Real external client IP remains blocked by network-infra#743; no forwarded header trust added. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP."
@@ -4285,7 +4285,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "Dedicated non-automounting SA and MCP egress policy deployed at33ed324e. Both actual replicas have no token file; five private API/NAS/meter/MQTT targets denied, DNS/DB/public TLS work; Hermes and both replicas execute read-only equipment_state. Public IPv4 TLS is not OpenAI-only FQDN enforcement; forecast acceptance and explicit hostname restriction remain open. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path."

@@ -1,14 +1,21 @@
 # October 20 remaining unblocked follow-through
 
-Jason authorized continued owner-lane delivery, deployment and live verification, starting with #1008. The earlier S6 audit/receipts remain historical acceptance evidence.
+Current live checkpoint: the full non-pruning, hook-bearing production sync to `33ed324e9a74aa34892bd35f365ce94d564798c8` completed all137 tasks at23:12:44Z, without a resource selector. The Application is Synced/Healthy. Source-bound smoke passed9/9 and the socket census found exactly one ESP32 writer. The ingestor stayed Ready for327 actual seconds, with zero restarts or schema-validation errors. Sanitized live receipts are in `evidence/`; raw recovery archives remain private.
 
 | Issue | Current result | Remaining acceptance |
 | --- | --- | --- |
-| #1008 | Camera-only Cloudflare freshness and cached-request per-IP limiter are deployed; 50 same-URL requests yielded eight 429s in 3.382 seconds, both sites 200. Network PR #756 merged. Turnstile widget exists, central encrypted custody PR #5200 merged and Secret-only Argo reconciled. Publisher-first PR #1030 merged; exact full sync submitted. Both selected images built successfully. | Served publisher generation and actual widget check, then checked API activation PR #1032, full sync and live token denial. |
-| #990 | Exactly 44 inactive Jobs, 38 runner ConfigMaps and 36 unreferenced deny-all NetworkPolicies removed by UID/version guards and verified body-level dry-runs. Every policy selector matched zero pods immediately before deletion; no live controller consumer. Restore ingress, root CA and all data objects preserved. All three product Applications were Synced/Healthy after cleanup. Renderer now emits a 86400-second TTL; two focused tests pass. | Checked merge of renderer/receipts. |
-| #993 | Desired restore policy spec exactly equals live; no widened selector or port. | Checked merge, full sync, Argo tracking and read-only connectivity probe. |
-| #996 | Four obsolete roles/bindings removed; sole identity namespace absent, no other binding consumers, no credential touched. | Product/central ownership records merge. |
-| #997 | Four stale ConfigMaps removed after checking all pod/controller references. Production four ConfigMap UIDs/content hashes unchanged; all 21 approved public dashboard metadata routes return 200 through Cloudflare. | Monitoring PR #1039 removes 26 staged and eight legacy JSON copies with byte-identical full observability render; owner/central records merge. |
+| #1008 | Closed: provider cache/rate limits and Turnstile are deployed and verified. | No successful contact/email was sent; observed-colo throttling is not an exact global quota claim. |
+| #990 | Closed: exact118 residue targets absent; renderer TTL and owner records merged; App Synced/Healthy. | Private local archives are not off-Mac recovery proof. |
+| #991 | Closed: non-data rehearsal residue retired; original Cluster/eightPVCs/credentials/Apps preserved; both owner records merged. | Data retirement remains #992. |
+| #993 | Closed: identical restore policy/originalUID tracked by Argo; tokenless pg_isready dry-run succeeded; disposableJob removed. | No restore/data-write drill was performed. |
+| #996 | Closed: four exact obsolete RBAC objects and old subject namespace absent; both owner records merged. | None. |
+| #995 | Namespace source/companion merged. Exact69/34-object parent path deltas reviewed; owner PR jvallery/agents#5222 awaits required nativeCI. | Parent delivery, full eight-object child sync, NamespaceUID/spec/tracking and pause readback. |
+| #997 | Four stale live ConfigMaps absent; production copies/publiclinks preserved. | Consolidated monitoring#1045 checked merge and owner/central retirement readback; supersedes monitoring#1039. |
+| #981 | Authentic Modbus revision and migration279 deployed; actual natural zero-W clocks advance; strict future denial works. | Natural samples slightly lead observation; valid freshness remains unqualified. Source owner jvallery/homeassistant#932. No retimestamping/tolerance/scientific eligibility. |
+| #1007 | Whole-host Access BlockEveryone; no future-client credentials. RotatedIris works in Hermes/bothMCP replicas, oldtoken401; publicIris-only302. Worker green on both collectors. | monitoring#1045 source/check merge and final ownership readback. |
+| #1011 | Dedicated tokenlessSA; both replicas deny five private targets, retainDNS/DB/publicTLS, read-only tool works. | OpenAI-only hostname enforcement and forecast-specific acceptance remain open; IP-blockTLS allowance is not FQDN enforcement. |
+| #1010 | Ten actual tool events observed in bothpodlogs andLoki with audience/tool/dispatch/duration/transportpeer, no arguments/tokens/results. | Real clientIP depends on network-infra#743; forwarded claims stay untrusted. |
+| #999 | Fifteen nonDB image fields are pinned to installed child digests. Separate DBpin prepared. | Pre-pin backup refused role export because migration278 added two legitimate15s Grafanatimeouts. Narrow guard correction qualified against9 read-only SQLcases; fresh backup, checkedmerge and attended DBrollout still required. |
 
 ## Recovery custody and limits
 

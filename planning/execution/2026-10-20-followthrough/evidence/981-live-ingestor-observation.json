@@ -1,0 +1,85 @@
+{
+  "started_at": "2026-10-20T23:13:24.182789+00:00",
+  "finished_at": "2026-10-20T23:18:51.719211+00:00",
+  "elapsed_seconds": 327.5,
+  "pod": "verdify-ingestor-5559659f94-sqz4c",
+  "uid": "d40f2876-ff91-4012-8f36-5464741535b3",
+  "image_digest": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
+  "observations": [
+    {
+      "at": "2026-10-20T23:13:24.450696+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:13:49.578184+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:14:14.846519+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:14:39.994628+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:15:05.138304+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:15:30.307214+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:15:55.438100+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:16:20.554635+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:16:45.702843+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:17:10.848745+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:17:35.990711+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:18:01.113687+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:18:26.402911+00:00",
+      "ready": true,
+      "restarts": 0
+    },
+    {
+      "at": "2026-10-20T23:18:51.616229+00:00",
+      "ready": true,
+      "restarts": 0
+    }
+  ],
+  "error_counts": {
+    "ValidationError": 0,
+    "row failed schema validation": 0
+  },
+  "log_lines_examined": 128
+}

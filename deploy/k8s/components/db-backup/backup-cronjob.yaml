@@ -152,10 +152,15 @@ spec:
                   # them without password hashes; credentials are restored through
                   # their separately authorized Secret source, never this artifact.
                   # A role setting can itself hold a token. The live role
-                  # settings are search_path only; fail closed if that changes.
+                  # settings are search_path plus the exact Grafana timeout pair from
+                  # migration278. Fail closed on every other role/value/database scope.
                   unsafe_role_settings="$(psql -X -qAt -v ON_ERROR_STOP=1 \
                     -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" \
-                    -c "SELECT count(*) FROM pg_db_role_setting, LATERAL unnest(setconfig) setting WHERE split_part(setting, '=', 1) <> 'search_path'")"
+                    -c "SELECT count(*) FROM pg_db_role_setting, LATERAL unnest(setconfig) setting
+                     WHERE split_part(setting, '=', 1) <> 'search_path'
+                       AND NOT (setrole IN (SELECT oid FROM pg_roles WHERE rolname = 'verdify_grafana_runtime_login')
+                                AND setdatabase = 0
+                                AND setting IN ('statement_timeout=15s', 'idle_in_transaction_session_timeout=15s'))")"
                   if [ "${unsafe_role_settings}" != 0 ]; then
                     echo "[backup] FATAL: unapproved role setting could expose a secret" >&2
                     exit 1

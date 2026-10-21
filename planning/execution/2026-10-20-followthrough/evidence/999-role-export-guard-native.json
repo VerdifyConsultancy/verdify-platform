@@ -1,0 +1,16 @@
+{
+  "observed_at": "2026-10-20T23:25:04.187267+00:00",
+  "read_only": true,
+  "exact_guard_sql_sha256": "a98ffcce6f3471c2cc835b3db9e0539d64a37161d7fcc37aee867ffcaf008a1d",
+  "results": [
+    {
+      "unapproved_live_settings": 0
+    },
+    {
+      "fixture_count": 9,
+      "all_expected_decisions": true
+    }
+  ],
+  "known_source": "db/migrations/278-grafana-public-saved-query-bounds.sql",
+  "unknown_role_value_and_database_scope_fail_closed": true
+}
