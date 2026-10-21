@@ -1,9 +1,8 @@
+# Preserve the existing MCP 10 / Hermes 20 / writer 30 dependency order.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-mcp
-  annotations:
-    argocd.argoproj.io/sync-wave: '1'
 spec:
   template:
     spec:
@@ -19,8 +18,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-ingestor
-  annotations:
-    argocd.argoproj.io/sync-wave: '1'
 spec:
   template:
     spec:

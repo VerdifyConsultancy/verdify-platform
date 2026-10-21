@@ -80,12 +80,12 @@ def test_relay_has_fixed_tls_destinations_and_never_logs_credentials(rendered):
 
 def test_delivery_orders_ready_relay_then_clients_then_restrictions(rendered):
     by_name = {x["metadata"]["name"]: x for x in rendered if x and x["kind"] == "Deployment"}
-    for name, wave in [("verdify-outbound", "0"), ("verdify-mcp", "1"), ("verdify-ingestor", "1")]:
+    for name, wave in [("verdify-outbound", "0"), ("verdify-mcp", "10"), ("verdify-ingestor", "30")]:
         assert by_name[name]["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == wave
     assert (
         policy(rendered, "allow-ingestor-device-egress")["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"]
-        == "2"
+        == "40"
     )
-    assert policy(rendered, "verdify-mcp-egress")["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "2"
+    assert policy(rendered, "verdify-mcp-egress")["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "40"
     writer = by_name["verdify-ingestor"]
     assert writer["spec"]["replicas"] == 1 and writer["spec"]["strategy"]["type"] == "Recreate"

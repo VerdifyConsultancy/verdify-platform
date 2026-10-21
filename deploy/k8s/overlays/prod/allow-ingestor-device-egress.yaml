@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
   annotations:
-    argocd.argoproj.io/sync-wave: '2'
+    argocd.argoproj.io/sync-wave: '40'
 spec:
   podSelector:
     matchLabels:
