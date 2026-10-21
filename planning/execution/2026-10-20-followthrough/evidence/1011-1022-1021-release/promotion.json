@@ -1,0 +1,32 @@
+{
+  "prepared_at": "2026-10-21T10:11:40.245238+00:00",
+  "canonical_main_source": "303d7c9aae197e7b020c7848bede08b89941add0",
+  "image_source": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+  "base_image_digest": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
+  "selected_image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor",
+  "old_digest": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
+  "new_digest": "sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+  "only_code_paths_replaced": [
+    "ingestor/tasks/_common.py",
+    "ingestor/ai_config.py"
+  ],
+  "canonical_code_hashes_equal_built_files": true,
+  "migrations_changed_since_live_migrator": false,
+  "all_rollback_pins": {
+    "registry.vallery.net/verdifyconsultancy/verdify-api": "sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8",
+    "registry.vallery.net/verdifyconsultancy/verdify-mcp": "sha256:d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c",
+    "registry.vallery.net/verdifyconsultancy/verdify-ingestor": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
+    "registry.vallery.net/verdifyconsultancy/verdify-migrate": "sha256:5219aba3d90134c984c258b32fe4682070309a7d27a9ab6fe2be80ba2f608d14",
+    "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+  },
+  "all_result_pins": {
+    "registry.vallery.net/verdifyconsultancy/verdify-api": "sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8",
+    "registry.vallery.net/verdifyconsultancy/verdify-mcp": "sha256:d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c",
+    "registry.vallery.net/verdifyconsultancy/verdify-ingestor": "sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+    "registry.vallery.net/verdifyconsultancy/verdify-migrate": "sha256:5219aba3d90134c984c258b32fe4682070309a7d27a9ab6fe2be80ba2f608d14",
+    "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator": "sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+  },
+  "release_pin_before_sha256": "9fd6fa293aa64cc0f54b02fb324ae3b487f68953ac38be375784e7e484725d03",
+  "release_pin_after_sha256": "a0c9795178ff8350213189cabeede5c9a95008f0788263ba8f1b43067ff3efc7",
+  "production_sync": "pending attended full non-pruning sync"
+}

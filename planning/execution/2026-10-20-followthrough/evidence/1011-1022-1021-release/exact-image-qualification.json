@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-10-21T10:08:48.575003+00:00",
+  "job_uid": "1064e4c3-c895-4748-83ca-9d4efd35bcad",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+  "result": {
+    "two_code_file_hashes_match_reviewed_source": true,
+    "forecast_environment_uses_fixed_relay": true,
+    "actual_image_has_cortex_sdk_client_support": true,
+    "constructor_timeout_seconds": 90,
+    "automatic_retries": 0,
+    "network_or_database_calls": 0,
+    "real_credentials_used": false
+  },
+  "uid_guarded_disposable_cleanup": "absent"
+}

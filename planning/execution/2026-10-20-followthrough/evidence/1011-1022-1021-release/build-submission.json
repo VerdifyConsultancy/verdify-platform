@@ -1,0 +1,15 @@
+{
+  "submitted_at": "2026-10-21T10:00:46.483542+00:00",
+  "name": "verdify-outbound-vision-live-backport-20261021",
+  "uid": "604b2b96-cda5-4984-9665-62d0d24d90c1",
+  "source": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+  "image": "verdifyconsultancy/verdify-ingestor",
+  "base_digest": "sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61",
+  "deadline_seconds": 3600,
+  "existing_template": "repo-build-verdifyconsultancy",
+  "only_replaced_paths": [
+    "/app/ingestor/tasks/_common.py",
+    "/app/ingestor/ai_config.py"
+  ],
+  "new_credentials_or_rbac": false
+}
