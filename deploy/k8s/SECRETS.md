@@ -269,3 +269,7 @@ migration and other bootstrap owner credentials are unchanged.
 ## Public contact verification (#1008)
 
 `verdify-contact-turnstile` / `VERDIFY_TURNSTILE_SECRET` is rendered by agents central KSOPS into `verdify-prod`, consumed only by `verdify-api`. The public widget sitekey belongs in Quartz; hostname `lab.verdify.ai` and action `contact` are checked at Siteverify. No secret is stored in this repository.
+
+## Verdify local vision (#1021)
+
+`verdify-vision-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to `llm.primary.longctx.mm`, owned and sealed in agents KSOPS. The vision CronJob mounts it at `/vcortex/api_key.txt`. The old `verdify-vision-key` Gemini Secret is retained without workload references; deleting or revoking it is outside this change.

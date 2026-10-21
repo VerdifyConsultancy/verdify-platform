@@ -76,8 +76,8 @@ spec:
                   value: /vsrc/ai.yaml
                 - name: TEMPLATES_DIR
                   value: /vsrc
-                - name: GEMINI_API_KEY_FILE
-                  value: /vkey/gemini_api_key.txt
+                - name: CORTEX_API_KEY_FILE
+                  value: /vcortex/api_key.txt
                 - name: VERDIFY_FRIGATE_URL
                   value: https://frigate.frigate.svc.cluster.local:8971
                 - name: VERDIFY_FRIGATE_TLS_SERVER_NAME
@@ -116,7 +116,7 @@ spec:
                   mountPath: /vsrc
                   readOnly: true
                 - name: vkey
-                  mountPath: /vkey
+                  mountPath: /vcortex
                   readOnly: true
                 - name: frigate-auth
                   mountPath: /vfrigate
@@ -129,7 +129,7 @@ spec:
                 name: verdify-vision-src
             - name: vkey
               secret:
-                secretName: verdify-vision-key
+                secretName: verdify-vision-cortex
             - name: frigate-auth
               secret:
                 secretName: verdify-frigate-vision-auth

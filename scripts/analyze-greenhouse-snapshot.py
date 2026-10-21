@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-analyze-greenhouse-snapshot.py — Analyze greenhouse camera snapshots via Gemini Vision.
+analyze-greenhouse-snapshot.py — Analyze greenhouse camera snapshots via Cortex Vision.
 
-Sends each snapshot to Gemini 2.0 Flash with structured prompt including zone context,
+Sends each snapshot to the local longctx.mm route with structured prompt including zone context,
 crop inventory, and current sensor readings. Inserts structured observations into
 image_observations table.
 
@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -85,12 +86,41 @@ async def get_zone_mapping(conn, camera: str) -> list[str]:
 
 
 def build_prompt(camera: str, zones: list[str], conditions: dict, crops: list[dict]) -> str:
-    """Build the Gemini Vision analysis prompt from template."""
+    """Build the structured vision analysis prompt from template."""
     return ai.render_template("vision", "prompt", camera=camera, zones=zones, conditions=conditions, crops=crops)
 
 
+def cortex_vision_response(image_bytes: bytes, prompt: str) -> tuple[str, int | None]:
+    """One bounded image request; no cloud fallback or implicit retry."""
+    response = ai.get_client("vision").chat.completions.create(
+        model=ai.model_name("vision"),
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(image_bytes).decode("ascii")},
+                    },
+                ],
+            }
+        ],
+        temperature=ai.temperature("vision"),
+        max_tokens=ai.max_tokens("vision"),
+        response_format={"type": "json_object"},
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+    )
+    if not response.choices or response.choices[0].finish_reason != "stop":
+        raise ValueError("Cortex vision completion did not finish within its bounded budget")
+    text = response.choices[0].message.content
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Cortex vision returned no visible JSON")
+    return text.strip(), getattr(response.usage, "total_tokens", None)
+
+
 async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict | None:
-    """Analyze a single greenhouse snapshot via Gemini Vision."""
+    """Analyze a single greenhouse snapshot via Cortex Vision."""
     camera = camera_from_filename(image_path.name)
     zones = await get_zone_mapping(conn, camera)
     if not zones:
@@ -105,28 +135,11 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
         log.info("DRY RUN — prompt for %s:\n%s", image_path.name, prompt[:500])
         return None
 
-    # Call Gemini Vision
+    # The successful Cortex image-input probe is recorded on #1021 / cortex #375.
     start = time.time()
     try:
-        from google import genai
-
-        client = ai.get_client("vision")
-
-        image_bytes = image_path.read_bytes()
-        response = client.models.generate_content(
-            model=ai.model_name("vision"),
-            contents=[
-                genai.types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
-                prompt,
-            ],
-            config=genai.types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=ai.temperature("vision"),
-            ),
-        )
-
+        raw_text, token_count = cortex_vision_response(image_path.read_bytes(), prompt)
         elapsed_ms = int((time.time() - start) * 1000)
-        raw_text = response.text.strip()
 
         # Strip markdown code fences if present
         if raw_text.startswith("```"):
@@ -135,8 +148,6 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
                 raw_text = raw_text[:-3].strip()
 
         result = json.loads(raw_text)
-        tokens = getattr(response, "usage_metadata", None)
-        token_count = tokens.total_token_count if tokens else None
 
         # Insert into DB
         image_observation_id = await conn.fetchval(
@@ -169,6 +180,9 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
             result.get("overall_confidence", 0),
         )
 
+        # Legacy source='gemini-vision' is the existing least-privilege SQL duty
+        # identifier (migration 268) and daily-plan selector, not provider identity.
+        # Preserve that contract; image_observations.model records longctx.mm.
         # Auto-populate observations table per detected crop
         for obs in result.get("observations", []):
             crop_name = obs.get("crop", "")
@@ -215,10 +229,10 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
         return result
 
     except json.JSONDecodeError as e:
-        log.error("%s: Gemini returned invalid JSON: %s", image_path.name, str(e)[:100])
+        log.error("%s: Cortex returned invalid JSON: %s", image_path.name, str(e)[:100])
         return None
     except Exception as e:
-        log.error("%s: Gemini API error: %s", image_path.name, e)
+        log.error("%s: Cortex API error (%s)", image_path.name, type(e).__name__)
         return None
 
 

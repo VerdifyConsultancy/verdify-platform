@@ -761,6 +761,14 @@ The suspended builder requires an explicit reviewed full commit SHA and verifies
 
 Monitoring PR [#1048](https://github.com/jvallery/monitoring-stack/pull/1048) and the existing writer-ownership alert are loaded and healthy in both production collectors, with real-duration isolated firing, metrics-source suppression and recovery receipts. After full non-pruning sync f5214011, the two CronJobs and six dedicated ServiceAccount/Role/RoleBinding objects passed UID/resourceVersion/functional-hash guards, deletion and absent readback at 2026-10-21T02:52Z. CronJobs used Orphan propagation; completed Jobs/Pods, credential Secrets, SQL roles, historical alert rows and all PVCs were preserved. Private encrypted recovery passed independent decryption. Central owner reconciliation is agents#5240. The October 19 inventory rows above describe the historical pre-retirement snapshot.
 
+## Rehearsal final retirement (#992), 2026-10-21
+
+The former rehearsal namespace, CNPG Cluster, eight claims, three Applications, two AppProjects and legacy Garage bucket/two keys are absent. The October 19 inventory rows above are historical. Storage-infra retains the eight original Released/Retain PVs and detached Longhorn volumes, native snapshots and all eight B2 backups. Independently verified logical dumps and sealed recovery remain private. Production database and lab claim identities are unchanged; smoke passed 9/9 and exactly one device connection was observed. See [final receipts](planning/execution/2026-10-20-followthrough/evidence/992-final/README.md).
+
+## Local vision provider (#1021)
+
+The product owns the longctx.mm vision client and CronJob reference to `verdify-vision-cortex/api_key.txt`; Cortex owns the route/provider identity and agents owns sealed Secret delivery. Source preparation follows the live image-input receipt. Production credential delivery and one real successful run remain required; no Gemini key deletion or revocation is included.
+
 ## Fixed outbound dependencies (#1011 / #1022)
 
 `verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only fixed OpenAI embedding, Slack chat-post and Open-Meteo forecast paths; the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
