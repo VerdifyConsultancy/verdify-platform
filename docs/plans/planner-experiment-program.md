@@ -48,7 +48,7 @@ corrections below are detail-level and none weakens the report's conclusions.
 | All eight firmware compiled defaults in the Section 5 table | `firmware/greenhouse/globals.yaml` `initial_value`s (not `tunables.yaml`) |
 | Volatile water/runtime crash state (`restore_value: no`) | `globals.yaml:1214-1217,1291-1339` |
 | No MCP server-side authorization at all — the Hermes tool scope is client-side only; the Bearer token is sent but never validated | `mcp/server.py:257-276` (no auth code); `hermes-config.yaml:430` |
-| `verdify-prod-dark` Argo app is real prod and sources `overlays/prod`; no app targets `overlays/prod-dark`; twin manifest is an offline corpus loop absent from prod, with runtime gcc/pip and open 443 egress | `deploy/k8s/argocd/apps/verdify-prod-dark.yaml:39,59`; `components/firmware-twin/twin-shadow-deployment.yaml` |
+| `verdify-prod-dark` Argo app is real prod and sources `overlays/prod`; no app targets `overlays/prod-dark`; twin manifest is an offline corpus loop absent from prod, with runtime gcc/pip and open 443 egress | [central production Application](https://github.com/jvallery/agents/blob/main/platform/gitops/applications/local-prod/verdify-prod-dark.yaml); `components/firmware-twin/twin-shadow-deployment.yaml` |
 | `verdify-config` consumed via `envFrom` with no rollout trigger | plain ConfigMap, `base/kustomization.yaml:29` |
 
 ### 1.2 Methodology integrity

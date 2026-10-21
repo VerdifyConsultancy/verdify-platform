@@ -1130,14 +1130,8 @@ def test_prod_source_cannot_recreate_retired_hermes_claim():
     assert "verdify-hermes-iris-data-portable-20260801" in pvc_names
     assert "verdify-hermes-iris-data" not in pvc_names
 
-    application = yaml.safe_load((REPO_ROOT / "deploy/k8s/argocd/apps/verdify-prod-dark.yaml").read_text())
-    ignored_pvcs = {
-        item.get("name")
-        for item in application["spec"].get("ignoreDifferences", [])
-        if item.get("kind") == "PersistentVolumeClaim"
-    }
-    assert "verdify-hermes-iris-data" not in ignored_pvcs
-    assert "verdify-hermes-iris-data-portable-20260801" in ignored_pvcs
+    # Application storage-ignore regression coverage belongs to jvallery/agents
+    # control-plane/agent-fleet-control/scripts/test_render_sync_classification.py with the owned declaration.
 
 
 def test_materializer_runs_one_canonical_final_normalization_per_output(mcp_server, monkeypatch):

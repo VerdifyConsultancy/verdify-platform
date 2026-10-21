@@ -1,6 +1,6 @@
 # Verdify Platform ArgoCD
 
-Last updated: 2026-09-23
+Last updated: 2026-10-21
 
 Agent name: `verdify-platform`
 
@@ -35,7 +35,7 @@ revive the old branch model.
 |---|---|---|---|---|
 | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync uses the release preflight and rollback checks. |
 
-Production Application manifests live in `deploy/k8s/argocd/apps/`. The former
+The live production Application declaration is owned by [jvallery/agents](https://github.com/jvallery/agents/blob/main/platform/gitops/applications/local-prod/verdify-prod-dark.yaml) and reconciled by `agent-fleet-local-prod-apps`. Adoption preserved its UID, full spec, manual sync and storage ignores. Change its policy in that owner; this repo owns `deploy/k8s/overlays/prod` and its rendered resources. The inactive product-side declaration was removed after live parenting verification. The former
 `verdify-platform-lab-stage` Application/AppProject and its source overlay were
 retired with the abandoned alternate Lab generator on 2026-08-30.
 

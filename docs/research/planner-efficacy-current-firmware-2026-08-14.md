@@ -1467,7 +1467,7 @@ secret-management path to the assignment service alone; commit only its
 domain-separated hash, never the secret itself. Preserve the singleton
 `Recreate` ingestor.
 The production Argo application is historically named
-[`verdify-prod-dark`](../../deploy/k8s/argocd/apps/verdify-prod-dark.yaml), but its source
+[`verdify-prod-dark`](https://github.com/jvallery/agents/blob/main/platform/gitops/applications/local-prod/verdify-prod-dark.yaml), but its source
 is `deploy/k8s/overlays/prod`; that is the only study target. Never sync the
 actual `overlays/prod-dark` device-dark shape as if it were production.
 
