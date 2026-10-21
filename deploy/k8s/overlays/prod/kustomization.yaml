@@ -171,6 +171,7 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  - path: source-owned-fields-ssa.patch.yaml
   - path: outbound-clients.patch.yaml
   - path: iris-token-generation.patch.yaml
   # Restore the unchanged Iris image from its verified node4 cache while the

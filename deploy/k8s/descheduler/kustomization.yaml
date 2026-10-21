@@ -11,3 +11,6 @@ resources:
   - rbac.yaml
   - policy-configmap.yaml
   - cronjob.yaml
+
+patches:
+  - path: source-owned-fields-ssa.patch.yaml

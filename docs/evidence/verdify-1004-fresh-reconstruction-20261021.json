@@ -1,0 +1,90 @@
+{
+  "observed_at": "2026-10-21T12:26:35.756550+00:00",
+  "method": "Fresh renamed objects through Kubernetes create --dry-run=server, compared with actual live specs",
+  "real_objects_created": false,
+  "live_mutations": false,
+  "reconstructed_targets": [
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-lifecycle",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-db-backup-exporter",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-hermes-iris",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-lab",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mqtt",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-traefik",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "reconstruction_difference_paths": []
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "reconstruction_difference_paths": []
+    }
+  ],
+  "only_operational_marker_excluded": "spec.template.metadata.annotations[kubectl.kubernetes.io/restartedAt]",
+  "newly_source_owned_labels": [
+    "verdify-api",
+    "verdify-mcp",
+    "verdify-lab",
+    "verdify-planner"
+  ],
+  "newly_source_owned_spread_policies": [
+    "verdify-lab",
+    "verdify-planner"
+  ],
+  "new_device_connection": false
+}
