@@ -1,0 +1,49 @@
+{
+  "observed_at": "2026-10-21T02:33:35.154499+00:00",
+  "reviewed_commit": "5e66777c",
+  "render_sha256": "4709e66fe5a335ede5a3d19b6dd968c10a336ff8a5cdf69c7c19638008670519",
+  "desired_object_count": 134,
+  "allowed_functional_changes": [
+    [
+      "ConfigMap",
+      "verdify-lab-cache-origin-config"
+    ],
+    [
+      "CronJob",
+      "verdify-lab-publisher"
+    ],
+    [
+      "Deployment",
+      "verdify-lab"
+    ],
+    [
+      "Deployment",
+      "verdify-lab-cache-origin"
+    ],
+    [
+      "NetworkPolicy",
+      "verdify-lab-cache-origin"
+    ],
+    [
+      "NetworkPolicy",
+      "verdify-lab-serving-cache-egress"
+    ],
+    [
+      "Service",
+      "verdify-lab-cache-origin"
+    ]
+  ],
+  "unchanged_hook_recreations": [
+    "verdify-experiment-v2-credential-bootstrap",
+    "verdify-maintenance-runtime-role-bootstrap",
+    "verdify-mcp-runtime-role-bootstrap",
+    "verdify-migrate",
+    "verdify-runtime-role-bootstrap",
+    "verdify-six-runtime-role-bootstrap"
+  ],
+  "metadata_only_diffs": 117,
+  "no_other_functional_drift": true,
+  "no_secret_objects": true,
+  "all_134_server_dryrun_accepted": true,
+  "live_watchdog_deletion_separate_uid_guarded_orphan": true
+}

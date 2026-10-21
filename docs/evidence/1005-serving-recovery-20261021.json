@@ -1,0 +1,2307 @@
+{
+  "started_at": "2026-10-21T02:57:31.635599+00:00",
+  "scope": "two sequential serving-pod deletions; no node drain or shared-storage mutation",
+  "revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+  "phases": [
+    {
+      "deleted_pod": "verdify-lab-7b485f96c4-dbdb5",
+      "deleted_uid": "22a3e9ed-b385-407b-ad25-a2c74c35c112",
+      "deleted_node": "vm-k3s-node5",
+      "started_at": "2026-10-21T02:57:31.881524+00:00",
+      "samples": [
+        {
+          "at": "2026-10-21T02:57:31.933402+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:35.437308+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:39.186224+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:42.696029+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:46.062639+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:49.549846+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:52.864484+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:56.309149+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:57:59.790244+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:03.232250+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:06.648919+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:10.025519+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:13.376630+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:16.774279+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:20.123758+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:23.459090+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:26.767280+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:30.077335+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:33.466532+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:36.858393+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:40.213595+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:43.765164+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:47.136716+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:50.465252+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:53.771667+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:58:57.333122+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:00.737330+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:04.102648+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:07.444060+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:10.841620+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:14.230256+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:17.536395+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:20.854496+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:24.241369+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:27.636957+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:30.958041+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:34.279035+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:37.583389+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:41.000828+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:44.462115+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:47.768185+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:51.146906+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:54.768115+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T02:59:58.087638+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:01.450600+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 2
+        }
+      ],
+      "recovered_at": "2026-10-21T03:00:02.074089+00:00",
+      "elapsed_seconds": 150.14,
+      "two_ready_distinct_nodes": [
+        {
+          "uid": "1af4800c-812b-4315-88dc-80910400ea70",
+          "node": "vm-k3s-node4"
+        },
+        {
+          "uid": "e2631038-6f3a-4f9c-a660-e5f07500ecfe",
+          "node": "vm-k3s-node6"
+        }
+      ]
+    },
+    {
+      "deleted_pod": "verdify-lab-7b485f96c4-zd84t",
+      "deleted_uid": "e2631038-6f3a-4f9c-a660-e5f07500ecfe",
+      "deleted_node": "vm-k3s-node6",
+      "started_at": "2026-10-21T03:00:02.241263+00:00",
+      "samples": [
+        {
+          "at": "2026-10-21T03:00:02.334434+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:06.221768+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:10.258356+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:13.881547+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:17.364704+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:20.696924+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:24.184550+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:27.546636+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:31.179498+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:34.614590+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:37.967901+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:41.313601+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:44.775767+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:48.415932+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:51.759611+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:55.203971+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:00:58.581069+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:01.933100+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:05.388726+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:08.893083+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:12.241482+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:15.590926+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:18.904982+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:22.280879+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:25.641957+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:28.959029+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:32.473463+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:35.834583+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:39.150444+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:42.454058+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:46.758452+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:50.345440+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:53.666404+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:01:57.110939+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:00.437469+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:03.808807+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:07.297580+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:10.707836+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:14.304186+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:17.778592+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:21.117942+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:24.434416+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:27.844051+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:31.193090+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:34.571476+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:38.054076+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:41.362431+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:44.659098+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        },
+        {
+          "at": "2026-10-21T03:02:47.969383+00:00",
+          "public": [
+            {
+              "path": "/",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            },
+            {
+              "path": "/_publication-status.json",
+              "status": 200,
+              "cf_cache_status": "DYNAMIC",
+              "cf_ray_present": true,
+              "cache_control": "no-cache, no-store, must-revalidate",
+              "verified_tls_server_name": "lab.verdify.ai",
+              "edge_ip_from_public_resolver": "172.67.70.122"
+            }
+          ],
+          "ready_endpoints": 1
+        }
+      ],
+      "recovered_at": "2026-10-21T03:02:48.269592+00:00",
+      "elapsed_seconds": 165.93,
+      "two_ready_distinct_nodes": [
+        {
+          "uid": "1af4800c-812b-4315-88dc-80910400ea70",
+          "node": "vm-k3s-node4"
+        },
+        {
+          "uid": "b7c829c8-12a4-479a-9b04-bbabe6408af3",
+          "node": "vm-k3s-node5"
+        }
+      ]
+    }
+  ],
+  "finished_at": "2026-10-21T03:02:48.269651+00:00",
+  "continuous_public_http200": true,
+  "minimum_ready_endpoints": 1,
+  "both_sequential_recoveries_passed": true
+}

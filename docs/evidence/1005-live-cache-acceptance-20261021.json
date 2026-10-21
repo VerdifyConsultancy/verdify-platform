@@ -1,0 +1,79 @@
+{
+  "observed_at": "2026-10-21T03:21:11.678995+00:00",
+  "revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+  "application_health": "Healthy",
+  "application_sync": "Synced",
+  "current_desired_revision": "985665e65cb4f24da95919e73c6065478949145c",
+  "desired_render_equivalence": {
+    "full_sync_revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+    "equivalent_desired_revision": "985665e65cb4f24da95919e73c6065478949145c",
+    "render_sha256": "4709e66fe5a335ede5a3d19b6dd968c10a336ff8a5cdf69c7c19638008670519",
+    "render_identical": true,
+    "later_change": "normal CI-managed candidate pins only; release transformer unchanged"
+  },
+  "full_operation_finished_at": "2026-10-21T02:50:44Z",
+  "selectors_absent": true,
+  "prune": false,
+  "private_origin_ready": true,
+  "retained_original_lab_pvc_uid": "1bd6ffec-7246-4e15-b080-287a9cf37418",
+  "database_pod_uid_preserved": "f082e4c4-3774-49e0-afd7-332b487cb309",
+  "two_ready_distinct_node_caches": [
+    {
+      "pod": "verdify-lab-7b485f96c4-b4rh7",
+      "uid": "1af4800c-812b-4315-88dc-80910400ea70",
+      "node": "vm-k3s-node4",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41",
+      "no_pvc_token_or_secret_volume": true,
+      "manifest_files": 809,
+      "committed_public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+      "publication_receipt": {
+        "last_attempt": {
+          "at_utc": "2026-10-21T03:12:53Z",
+          "failure_class": null,
+          "outcome": "succeeded"
+        },
+        "last_contention_at_utc": "2026-10-12T23:09:17Z",
+        "last_success": {
+          "at_utc": "2026-10-21T03:12:53Z",
+          "content_sha256": "sha256:a73bd39494ad474c74be59308d13b8f66eb78562d88ffd492b564b77e5d30b80",
+          "fresh_until_utc": "2026-10-21T03:32:53Z",
+          "public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+          "source": "s3_content_prefix",
+          "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+        },
+        "schema_version": 1,
+        "served_public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62"
+      },
+      "client_source_sha256": "d4cfa036a911becc6e5707d22b8304b5939d48a6037f37d59b073b2f9d829d88"
+    },
+    {
+      "pod": "verdify-lab-7b485f96c4-qhmhh",
+      "uid": "b7c829c8-12a4-479a-9b04-bbabe6408af3",
+      "node": "vm-k3s-node5",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41",
+      "no_pvc_token_or_secret_volume": true,
+      "manifest_files": 809,
+      "committed_public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+      "publication_receipt": {
+        "last_attempt": {
+          "at_utc": "2026-10-21T03:12:53Z",
+          "failure_class": null,
+          "outcome": "succeeded"
+        },
+        "last_contention_at_utc": "2026-10-12T23:09:17Z",
+        "last_success": {
+          "at_utc": "2026-10-21T03:12:53Z",
+          "content_sha256": "sha256:a73bd39494ad474c74be59308d13b8f66eb78562d88ffd492b564b77e5d30b80",
+          "fresh_until_utc": "2026-10-21T03:32:53Z",
+          "public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62",
+          "source": "s3_content_prefix",
+          "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+        },
+        "schema_version": 1,
+        "served_public_sha256": "sha256:49737fa56f08b1aac11fc71840b4432e882e9e0eec8cb68dfe27f08420641e62"
+      },
+      "client_source_sha256": "d4cfa036a911becc6e5707d22b8304b5939d48a6037f37d59b073b2f9d829d88"
+    }
+  ],
+  "ready_endpoint_count": 2
+}

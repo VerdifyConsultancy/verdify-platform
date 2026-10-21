@@ -1,0 +1,73 @@
+{
+  "observed_at": "2026-10-21T02:28:40.056305+00:00",
+  "accepted_parent_pr": "jvallery/agents#5234",
+  "parent_source": "ee2a66bbc32eebd91a14d8d4bddadf98766c2399",
+  "child_revision": "80f0df46fe2e3c8047ed92af20cf0c1b8f758b07",
+  "full_operation_finished_at": "2026-10-21T02:28:23Z",
+  "full_sync_count": 8,
+  "prune": false,
+  "selectors_absent": true,
+  "all_existing_uids_and_functional_payloads_unchanged": true,
+  "namespace_labels_finalizers_preserved": true,
+  "namespace_prune_delete_protected": true,
+  "cronjob_suspend": false,
+  "forced_job_created": false,
+  "objects": [
+    {
+      "kind": "Namespace",
+      "name": "verdify-descheduler",
+      "uid": "f45e99c6-ddc7-4fa0-94d9-ff61d741e923",
+      "functional_payload_sha256": "f228d4a413be015bc037caef65b62f40441f56c697312950ff2aa358b26bcc73",
+      "tracking_id": "verdify-descheduler:/Namespace:verdify-descheduler/verdify-descheduler"
+    },
+    {
+      "kind": "ServiceAccount",
+      "name": "descheduler",
+      "uid": "7bd8fc67-bfcc-465e-a4d5-f1ca48d1dedc",
+      "functional_payload_sha256": "ffe345c0d565896b92c0af4166b448e8259247be9a439b2be1bcdc9eaa77b1cd",
+      "tracking_id": "verdify-descheduler:/ServiceAccount:verdify-descheduler/descheduler"
+    },
+    {
+      "kind": "Role",
+      "name": "descheduler",
+      "uid": "82a5823f-3809-40cd-b983-9b7fe4a5f2de",
+      "functional_payload_sha256": "39b7aa9890bb3cadd3d5f679bb6698bf8e6f8f839f943ef4da242cfa41c8eac3",
+      "tracking_id": "verdify-descheduler:rbac.authorization.k8s.io/Role:verdify-descheduler/descheduler"
+    },
+    {
+      "kind": "ClusterRole",
+      "name": "verdify-descheduler",
+      "uid": "49612888-396d-48f2-9121-70ba1db65e20",
+      "functional_payload_sha256": "c18fcb1ec44a8bb060ae46442f0890f807bc260d17256d654c922346024e9fa4",
+      "tracking_id": "verdify-descheduler:rbac.authorization.k8s.io/ClusterRole:verdify-descheduler/verdify-descheduler"
+    },
+    {
+      "kind": "RoleBinding",
+      "name": "descheduler",
+      "uid": "1eb7ecd8-55a9-4400-adeb-69a9a52eedf3",
+      "functional_payload_sha256": "748ffa8d51371c883bd34a738d792c06090cf40668070abfc1135eb1a04bc90a",
+      "tracking_id": "verdify-descheduler:rbac.authorization.k8s.io/RoleBinding:verdify-descheduler/descheduler"
+    },
+    {
+      "kind": "ClusterRoleBinding",
+      "name": "verdify-descheduler",
+      "uid": "06e5beac-e2d8-4e60-994f-d65730b95888",
+      "functional_payload_sha256": "0db67bf37b1f7983c48e45d54ebaefa6579bf33b6d1505f2228d058276080540",
+      "tracking_id": "verdify-descheduler:rbac.authorization.k8s.io/ClusterRoleBinding:verdify-descheduler/verdify-descheduler"
+    },
+    {
+      "kind": "ConfigMap",
+      "name": "descheduler-policy",
+      "uid": "0235fc61-6cbe-40b0-b34a-0e4c60b9834c",
+      "functional_payload_sha256": "02b15a64b8d7c42fab3983abef70eaf68cff4b4afbf65bce6b4d41d4b3fd1626",
+      "tracking_id": "verdify-descheduler:/ConfigMap:verdify-descheduler/descheduler-policy"
+    },
+    {
+      "kind": "CronJob",
+      "name": "descheduler",
+      "uid": "44197533-2941-4edc-9467-69cba41bebc8",
+      "functional_payload_sha256": "db59659db0a8ca212a5c6801d8f9ac493f7e5acb954ad93a1ee41c99602ad9d6",
+      "tracking_id": "verdify-descheduler:batch/CronJob:verdify-descheduler/descheduler"
+    }
+  ]
+}

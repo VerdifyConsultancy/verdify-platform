@@ -1,0 +1,76 @@
+{
+  "observed_at": "2026-10-21T02:52:06.953955+00:00",
+  "revision": "f52140110097ab21c18cc4a99ac84052a05ad505",
+  "replacement_both_collectors_healthy": true,
+  "independent_encrypted_recovery_verified": true,
+  "all_eight_delete_body_dryruns_passed": true,
+  "objects": [
+    {
+      "kind": "CronJob",
+      "name": "verdify-db-watchdog",
+      "uid": "3dde024d-1216-4705-9eee-18485ee80b83",
+      "functional_sha256": "77a2d3b1eaecc3c9492054698dcdbb97e2f0e9a751f287ccca6698280f416c1d",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-writer-watchdog",
+      "uid": "2978785a-3f89-4a44-86d2-d253d208e3f7",
+      "functional_sha256": "96446a77aff1f61598e714d8a33c01df892e71ebbaf9800738fe9ec54c6374db",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ServiceAccount",
+      "name": "verdify-db-watchdog",
+      "uid": "56662d91-1847-4a8c-86dc-55e8ab2779f4",
+      "functional_sha256": "ffe345c0d565896b92c0af4166b448e8259247be9a439b2be1bcdc9eaa77b1cd",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "ServiceAccount",
+      "name": "verdify-writer-watchdog",
+      "uid": "772ca524-e504-43eb-a242-2891d7ad62ee",
+      "functional_sha256": "ffe345c0d565896b92c0af4166b448e8259247be9a439b2be1bcdc9eaa77b1cd",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Role",
+      "name": "verdify-db-watchdog",
+      "uid": "0a31ea7a-97b3-475c-bb87-0f46c050deca",
+      "functional_sha256": "e068d3e95c4e6a19f7532d3778b9f8dd3524cc3c94e657eb48244b667d4c0a34",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "Role",
+      "name": "verdify-writer-watchdog",
+      "uid": "9f446db9-8ab9-4c41-b222-37eaf3b4dc43",
+      "functional_sha256": "b8fbd747ac3c34d7a7165097cdd78bc3f92920e3dc09b9d16ef31032cd09907b",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "RoleBinding",
+      "name": "verdify-db-watchdog",
+      "uid": "55514553-71a5-4a4e-b5cd-662fc58861cc",
+      "functional_sha256": "0504d8b6c7740d789c11e4f41bd91b5038e5191423ea0c39004603855e8c08af",
+      "deleted": true,
+      "absent_readback": true
+    },
+    {
+      "kind": "RoleBinding",
+      "name": "verdify-writer-watchdog",
+      "uid": "c632477a-83b2-495f-b690-ce1726ee1739",
+      "functional_sha256": "d2cddba99dff8357d5c495573bdb53a4c49cbfc9c250b609d06d424f3146d8e7",
+      "deleted": true,
+      "absent_readback": true
+    }
+  ],
+  "cronjob_propagation": "Orphan",
+  "completed_jobs_and_pods_targeted": false,
+  "credentials_sql_roles_history_and_pvcs_targeted": false
+}
