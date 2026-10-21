@@ -1,0 +1,28 @@
+{
+  "observed_at": "2026-10-21T01:29:19.215101+00:00",
+  "revision": "b76939ff11f7e909fa58514bb8ed52eccfb5afbc",
+  "application": "Synced Healthy",
+  "full_sync_finished_at": "2026-10-21T01:22:47Z",
+  "task_count": 137,
+  "prune": false,
+  "selectors_absent": true,
+  "live_builder_command_matches_source": true,
+  "live_default_revision": "empty (fail closed)",
+  "live_command_prefix_refusals": {
+    "(empty)": 64,
+    "main": 64,
+    "v2026.1": 64,
+    "aaaaaaaaaaaa": 64
+  },
+  "live_egress_spec_matches_source": true,
+  "firmware_builder_suspended": true,
+  "active_firmware_jobs": 0,
+  "no_compile_flash_or_credential_rotation_performed": true,
+  "database_pod_uid_unchanged_ready_no_restarts": true,
+  "original_db_and_lab_pvcs_bound": true,
+  "remaining_issue_1009": [
+    "toolchain pins and signed artifact/verified flash separation",
+    "network-infra77 passive ACL proof",
+    "approved credential compensation and attended390 recovery/flash packet"
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "observed_at": "2026-10-21T01:31:31.717889+00:00",
+  "source_revision": "e511e75d3986c7a41ebd8939422bab1e6fc62be7",
+  "application": "Synced Healthy",
+  "runtime_rule_count": 12,
+  "source_configmap_mount_hashes_match": true,
+  "both_collectors": [
+    {
+      "collector": "prometheus",
+      "mounted_rule_sha256": "7b8a343ec98977a31a432c56535b4af7d4d2d72333654961c96cc8e36d645a63",
+      "group": "verdify.runtime-health",
+      "last_evaluation": "2026-10-21T01:31:04.68227596Z",
+      "rules": [
+        {
+          "name": "VerdifyOutcomeFreezerUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyLifecycleUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifySelectorUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyMQTTUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyIrisUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyDatabaseUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyDeschedulerStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyFixedPanelFreezerStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyWinterFeasibilityStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifySouthAirProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        },
+        {
+          "name": "VerdifySouth2SoilProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        },
+        {
+          "name": "VerdifyWestSoilProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        }
+      ],
+      "writer_rule_health": "ok"
+    },
+    {
+      "collector": "prometheus-replica",
+      "mounted_rule_sha256": "7b8a343ec98977a31a432c56535b4af7d4d2d72333654961c96cc8e36d645a63",
+      "group": "verdify.runtime-health",
+      "last_evaluation": "2026-10-21T01:31:04.692636377Z",
+      "rules": [
+        {
+          "name": "VerdifyOutcomeFreezerUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyLifecycleUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifySelectorUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyMQTTUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyIrisUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyDatabaseUnavailable",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyDeschedulerStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyFixedPanelFreezerStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifyWinterFeasibilityStalled",
+          "health": "ok",
+          "state": "inactive"
+        },
+        {
+          "name": "VerdifySouthAirProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        },
+        {
+          "name": "VerdifySouth2SoilProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        },
+        {
+          "name": "VerdifyWestSoilProbeUnavailable",
+          "health": "ok",
+          "state": "pending"
+        }
+      ],
+      "writer_rule_health": "ok"
+    }
+  ],
+  "native_fixture_cases_passed": 33,
+  "writer_db_actual_synthetic_firing_receipt": "998-writer-db-synthetic-acceptance.json",
+  "physical_commissioning_claimed": false
+}

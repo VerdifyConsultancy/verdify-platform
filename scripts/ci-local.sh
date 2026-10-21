@@ -230,6 +230,7 @@ $PY -m pytest -q -rs \
   tests/test_planner_memory_ingest.py \
   tests/test_planner_runtime_db_boundary.py \
   tests/test_six_runtime_role_bootstrap.py \
+  tests/test_maintenance_runtime_boundaries.py \
   tests/test_policy_arbiter_migration.py \
   tests/test_policy_arbiter_worker.py \
   tests/test_policy_delivery_worker.py \
