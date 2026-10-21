@@ -215,7 +215,10 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-    version: recommended
+    # Exact defaults of the qualified ESPHome 2026.6.5 builder image (#1009).
+    # Do not resolve a moving recommended alias during an attended build.
+    version: 5.5.4
+    platform_version: 55.3.39
     sdkconfig_options:
       # lwIP otherwise defaults to one slot and silently ignores pool.ntp.org.
       CONFIG_LWIP_SNTP_MAX_SERVERS: "2"
