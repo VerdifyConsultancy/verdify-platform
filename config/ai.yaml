@@ -6,6 +6,9 @@
 # Keys are stored in external files (never in this config).
 # Paths can be overridden via environment variables.
 keys:
+  cortex:
+    file: ${CORTEX_API_KEY_FILE:-/vcortex/api_key.txt}
+    provider: cortex
   openai:
     file: ${OPENAI_API_KEY_FILE:-/mnt/agents/shared/credentials/openai_api_key.txt}
     provider: openai
@@ -26,8 +29,9 @@ models:
     purpose: "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml."
 
   vision:
-    provider: gemini
-    model: gemini-3.1-pro-preview
+    provider: cortex
+    base_url: ${CORTEX_BASE_URL:-https://cortex.vallery.net/v1}
+    model: llm.primary.longctx.mm
     temperature: 0.2
     max_output_tokens: 4096
     purpose: "Camera snapshot crop health analysis"

@@ -764,3 +764,7 @@ Monitoring PR [#1048](https://github.com/jvallery/monitoring-stack/pull/1048) an
 ## Rehearsal final retirement (#992), 2026-10-21
 
 The former rehearsal namespace, CNPG Cluster, eight claims, three Applications, two AppProjects and legacy Garage bucket/two keys are absent. The October 19 inventory rows above are historical. Storage-infra retains the eight original Released/Retain PVs and detached Longhorn volumes, native snapshots and all eight B2 backups. Independently verified logical dumps and sealed recovery remain private. Production database and lab claim identities are unchanged; smoke passed 9/9 and exactly one device connection was observed. See [final receipts](planning/execution/2026-10-20-followthrough/evidence/992-final/README.md).
+
+## Local vision provider (#1021)
+
+The product owns the longctx.mm vision client and CronJob reference to `verdify-vision-cortex/api_key.txt`; Cortex owns the route/provider identity and agents owns sealed Secret delivery. Source preparation follows the live image-input receipt. Production credential delivery and one real successful run remain required; no Gemini key deletion or revocation is included.

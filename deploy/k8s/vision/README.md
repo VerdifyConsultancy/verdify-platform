@@ -39,7 +39,7 @@ Edit the canonical file, then re-copy into `src/`.
 
 The following remain secret inputs and are never created by this manifest:
 
-- `Secret/verdify-vision-key`, containing `gemini_api_key.txt`;
+- `Secret/verdify-vision-cortex`, containing dedicated inference-only `api_key.txt` for `llm.primary.longctx.mm` (agents KSOPS custody);
 - `Secret/verdify-frigate-vision-auth`, containing the camera-scoped `token`;
 - `Secret/verdify-vision-runtime-db`, containing `password` for the existing
   `verdify_vision_runtime_login` (expanded into the in-Pod DSN).
@@ -100,3 +100,9 @@ whole-application sync continues to apply.
 [October 18/19 recurrence and natural recovery](../../../planning/reviews/2026-10-18-vision-recovery/README.md)
 records the owning provider repair, two genuine analyses, six linked observations
 and the unchanged source/image contract.
+
+## Cortex route (#1021)
+
+The image-input probe on Cortex #375 accepted fresh synthetic one/ten-image requests through `https://cortex.vallery.net/v1` / `llm.primary.longctx.mm`. Vision now uses the OpenAI-compatible client, one image/request, no automatic retries or cloud fallback, 90-second timeout and configured 4,096-token cap with thinking disabled. Truncated, empty or malformed JSON fails the run instead of inserting an accepted observation. The historical `observations.source=gemini-vision` remains the migration-268 SQL duty identifier and daily-plan selector; `image_observations.model` records the actual local route. This avoids silently broadening the runtime DB role. The old Gemini Secret is neither mounted nor deleted/revoked.
+
+Production activation requires a dedicated scoped Cortex identity delivered through agents KSOPS; never project the operator or Frigate key into Verdify. Verify current egress to the gateway, exact GitOps revision/digest, and one real camera capture/analysis run with fresh database outputs before closing #1021. The bounded synthetic probe does not satisfy actual workload acceptance.
