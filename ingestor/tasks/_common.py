@@ -1064,7 +1064,7 @@ _DENVER = ZoneInfo("America/Denver")
 
 
 _FORECAST_URL = (
-    "https://api.open-meteo.com/v1/forecast"
+    os.environ.get("VERDIFY_FORECAST_BASE_URL", "https://api.open-meteo.com").rstrip("/") + "/v1/forecast"
     "?latitude=40.1672&longitude=-105.1019"
     "&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,"
     "apparent_temperature,precipitation_probability,precipitation,"

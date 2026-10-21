@@ -1,0 +1,9 @@
+{
+  "observed_at": "2026-10-21T06:06:15.521455+00:00",
+  "job_uid": "e3ef96ec-3077-4325-987f-2002a6858cc4",
+  "namespace": "verdify-prod",
+  "nginx_config_test": "passed",
+  "terminal_job_succeeded": 1,
+  "new_credentials_or_rbac": false,
+  "disposable_job_and_configmap_uid_guarded_cleanup": "absent"
+}

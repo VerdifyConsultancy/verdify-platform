@@ -1,0 +1,235 @@
+# #1011/#1022: fixed-host TLS-verifying relay, never an arbitrary forward proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-outbound-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: outbound
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+data:
+  default.conf: "# Fixed destinations only: incoming Host/URI cannot select an upstream\
+    \ host.\naccess_log off;\nerror_log /dev/stderr crit;\nresolver 10.43.0.10 valid=30s\
+    \ ipv6=off;\nresolver_timeout 5s;\nproxy_ssl_verify on;\nproxy_ssl_trusted_certificate\
+    \ /etc/ssl/certs/ca-certificates.crt;\nproxy_ssl_server_name on;\nproxy_connect_timeout\
+    \ 5s;\nproxy_send_timeout 10s;\nproxy_read_timeout 45s;\nproxy_redirect off;\n\
+    client_max_body_size 2m;\nserver { listen 8080; location = /healthz { return 200\
+    \ 'ok'; } location / { return 404; } }\nserver {\n  listen 8081;\n  server_name\
+    \ _;\n  location = /v1/embeddings {\n    limit_except POST { deny all; }\n   \
+    \ proxy_set_header Host api.openai.com;\n    proxy_set_header X-Forwarded-Host\
+    \ \"\";\n    proxy_set_header X-Forwarded-For \"\";\n    proxy_set_header Forwarded\
+    \ \"\";\n    proxy_ssl_name api.openai.com;\n    set $fixed_host api.openai.com;\n\
+    \    proxy_pass https://$fixed_host$request_uri;\n  }\n  location / { return 404;\
+    \ }\n}\nserver {\n  listen 8082;\n  server_name _;\n  location = /api/chat.postMessage\
+    \ {\n    limit_except POST { deny all; }\n    proxy_set_header Host slack.com;\n\
+    \    proxy_set_header X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For\
+    \ \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name slack.com;\n\
+    \    set $fixed_host slack.com;\n    proxy_pass https://$fixed_host$request_uri;\n\
+    \  }\n  location / { return 404; }\n}\nserver {\n  listen 8083;\n  server_name\
+    \ _;\n  location = /v1/forecast {\n    limit_except GET { deny all; }\n    proxy_set_header\
+    \ Host api.open-meteo.com;\n    proxy_set_header X-Forwarded-Host \"\";\n    proxy_set_header\
+    \ X-Forwarded-For \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name\
+    \ api.open-meteo.com;\n    set $fixed_host api.open-meteo.com;\n    proxy_pass\
+    \ https://$fixed_host$request_uri;\n  }\n  location / { return 404; }\n}\n"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-outbound
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: outbound
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-outbound
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: outbound
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: outbound
+      annotations:
+        verdify.ai/outbound-config-sha256: 5dd427478999bb73a763605c4fa160b1220e118bf45323b9449df275c6b7b7e2
+    spec:
+      serviceAccountName: verdify-outbound
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: outbound
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: relay
+        image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+        command:
+        - nginx
+        - -g
+        - daemon off;
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: health
+          containerPort: 8080
+        - name: openai
+          containerPort: 8081
+        - name: slack
+          containerPort: 8082
+        - name: forecast
+          containerPort: 8083
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          periodSeconds: 15
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/nginx
+      volumes:
+      - name: config
+        configMap:
+          name: verdify-outbound-config
+      - name: tmp
+        emptyDir:
+          sizeLimit: 16Mi
+      - name: cache
+        emptyDir:
+          sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-outbound
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: outbound
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+spec:
+  selector:
+    app.kubernetes.io/component: outbound
+  ports:
+  - name: openai
+    port: 8081
+    targetPort: 8081
+  - name: slack
+    port: 8082
+    targetPort: 8082
+  - name: forecast
+    port: 8083
+    targetPort: 8083
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-outbound-boundary
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: outbound
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: outbound
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: mcp
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: ingestor
+    ports:
+    - protocol: TCP
+      port: 8081
+    - protocol: TCP
+      port: 8082
+    - protocol: TCP
+      port: 8083
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 0.0.0.0/8
+        - 10.0.0.0/8
+        - 100.64.0.0/10
+        - 127.0.0.0/8
+        - 169.254.0.0/16
+        - 172.16.0.0/12
+        - 192.0.0.0/24
+        - 192.0.2.0/24
+        - 192.168.0.0/16
+        - 198.18.0.0/15
+        - 198.51.100.0/24
+        - 203.0.113.0/24
+        - 224.0.0.0/4
+        - 240.0.0.0/4
+    ports:
+    - protocol: TCP
+      port: 443

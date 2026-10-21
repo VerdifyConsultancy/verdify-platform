@@ -760,3 +760,7 @@ The suspended builder requires an explicit reviewed full commit SHA and verifies
 ## Watchdog replacement and retirement (#998)
 
 Monitoring PR [#1048](https://github.com/jvallery/monitoring-stack/pull/1048) and the existing writer-ownership alert are loaded and healthy in both production collectors, with real-duration isolated firing, metrics-source suppression and recovery receipts. After full non-pruning sync f5214011, the two CronJobs and six dedicated ServiceAccount/Role/RoleBinding objects passed UID/resourceVersion/functional-hash guards, deletion and absent readback at 2026-10-21T02:52Z. CronJobs used Orphan propagation; completed Jobs/Pods, credential Secrets, SQL roles, historical alert rows and all PVCs were preserved. Private encrypted recovery passed independent decryption. Central owner reconciliation is agents#5240. The October 19 inventory rows above describe the historical pre-retirement snapshot.
+
+## Fixed outbound dependencies (#1011 / #1022)
+
+`verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only fixed OpenAI embedding, Slack chat-post and Open-Meteo forecast paths; the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
