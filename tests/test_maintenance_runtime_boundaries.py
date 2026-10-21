@@ -22,7 +22,8 @@ spec.loader.exec_module(module)
 
 
 def watchdog():
-    docs = yaml.safe_load_all((ROOT / "deploy/k8s/overlays/prod/writer-watchdog.yaml").read_text())
+    # Historical migration-276 caller contract; never rendered or deployed.
+    docs = yaml.safe_load_all((ROOT / "deploy/k8s/archive/retired-watchdogs/writer-watchdog.yaml").read_text())
     job = next(d for d in docs if d["kind"] == "CronJob")
     return job, job["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
 

@@ -1,0 +1,9 @@
+# Retire product watchdogs (#998)
+
+Prerequisite: monitoring-stack #1048 is merged and `network-infra-observability` has converged; both Prometheus collectors have loaded the exact checked `VerdifyDatabaseUnavailable` and existing `VerdifyWriterCountNotExactlyOne` leaves, with successful evaluation. The production-duration isolated firing and recovery receipt must match those leaves. Never stop production DB or interrupt the real writer to test this.
+
+Review the product render: exactly eight objects disappear (two CronJobs, two ServiceAccounts, two Roles, two RoleBindings). No other object changes. After required PR CI and merge, capture the current eight exact UIDs, absence of active watchdog Jobs, protected DB/PVC identities and alert-rule readback. Preserve a private recovery copy of the eight non-Secret definitions. Apply the attended full non-pruning production sync with hooks and no selector. Source removal alone does not delete objects because prune is disabled.
+
+Re-read current UIDs and active Job state, then delete only the exact two CronJobs and their six dedicated grants with UID/resourceVersion preconditions. Retain historical Jobs, every credential/DB role, PVC and historical alert row. Do not broadly prune. Verify all eight exact objects are absent, original protected claims are Bound, both replacement rule leaves remain loaded, Argo is Synced/Healthy at the intended revision, and the real writer count remains exactly one. Refresh the owner inventory from actual delivery.
+
+Before completion, failure of the replacement prerequisite leaves the existing watchdogs intact. After a retirement failure, fix forward or restore the exact accepted definitions after checking current UIDs and source; do not create a second writer or mutate live database credentials as a rollback step.

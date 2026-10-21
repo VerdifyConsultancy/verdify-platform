@@ -75,31 +75,13 @@ def test_climate_db_failures_spool_before_retry():
     assert "await _drain_climate_spool(pool)" in src
 
 
-def test_prod_db_watchdog_is_narrowly_scoped():
-    src = Path("deploy/k8s/overlays/prod/db-watchdog.yaml").read_text()
-    assert "name: verdify-db-watchdog" in src
-    assert 'resourceNames: ["verdify-db-0"]' in src
-    assert 'resourceNames: ["verdify-db"]' in src
-    assert 'verbs: ["get", "delete"]' in src
-    assert 'api("DELETE", f"/pods/{pod_name}")' in src
-    assert "CrashLoopBackOff" in src
-    assert "I/O error|could not open configuration file" in src
-
-
-def test_prod_watchdogs_run_at_least_every_five_minutes():
-    """The writer watchdog is the only writer-death alert path (2026-07-11 P0).
-
-    The 2026-10-11 cadence review slowed both watchdogs from */2 to every five
-    minutes to cut cluster Job churn; never slower than that, and keep their
-    finished Jobs reaped quickly.
-    """
-    writer = Path("deploy/k8s/overlays/prod/writer-watchdog.yaml").read_text()
-    db = Path("deploy/k8s/overlays/prod/db-watchdog.yaml").read_text()
-    assert 'schedule: "*/5 * * * *"' in writer
-    assert 'schedule: "1-59/5 * * * *"' in db
-    for src in (writer, db):
-        assert "concurrencyPolicy: Forbid" in src
-        assert "ttlSecondsAfterFinished: 600" in src
+def test_retired_watchdogs_are_absent_from_the_production_source():
+    source = Path("deploy/k8s/overlays/prod/kustomization.yaml").read_text()
+    patches = Path("deploy/k8s/overlays/prod/source-owned-runtime-fields.patch.yaml").read_text()
+    for name in ("db-watchdog", "writer-watchdog"):
+        assert name + ".yaml" not in source
+        assert "name: verdify-" + name not in patches
+        assert not Path("deploy/k8s/overlays/prod/" + name + ".yaml").exists()
 
 
 def test_ha_gap_backfill_script_is_bounded_and_idempotent():
