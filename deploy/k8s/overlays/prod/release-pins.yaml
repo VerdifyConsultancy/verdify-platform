@@ -1,6 +1,6 @@
 # API source: 183af7a93fe236ab97f4556173a07195515b732a (qualified #1008 Turnstile build).
 # Migrate source: c6c1e3d9500d4e6dfd1c41ae37dc8a0fe7a9ba78 (qualified exact279 runner).
-# Ingestor: exact-live-base two-file source-clock backport 91c28828f586e7fedcb49ce832344ebb6ba525df.
+# Ingestor: exact-live-base forecast/Cortex two-file backport ac99b925e6091e510483c5bba1f61b4a81d823ba.
 # MCP source: 165fa244d082dadcb386b5081344a77b15a5535b (secret-free dispatch audit).
 # API and experiment-v2-orchestrator pins retained unchanged.
 # Release pins: the digests production runs for the five images that the
@@ -42,7 +42,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61
+  digest: sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8
 ---
 apiVersion: builtin
 kind: ImageTagTransformer

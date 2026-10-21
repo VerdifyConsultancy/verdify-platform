@@ -1,0 +1,31 @@
+{
+  "name": "verdify-outbound-vision-live-backport-20261021",
+  "uid": "604b2b96-cda5-4984-9665-62d0d24d90c1",
+  "phase": "Succeeded",
+  "nodes": [
+    {
+      "displayName": "verdify-outbound-vision-live-backport-20261021",
+      "phase": "Succeeded",
+      "parameters": {
+        "digest": "sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+        "source-revision": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+        "resolved-revision": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+        "resolved-tree": "09ab52104ec10e1b34619ba5ffbc61c898c8ba41",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2"
+      }
+    },
+    {
+      "displayName": "build",
+      "phase": "Succeeded",
+      "parameters": {
+        "digest": "sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+        "image-ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8",
+        "source-revision": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+        "resolved-revision": "ac99b925e6091e510483c5bba1f61b4a81d823ba",
+        "resolved-tree": "09ab52104ec10e1b34619ba5ffbc61c898c8ba41",
+        "output-contract-version": "agent-fleet.repo-build.outputs/2"
+      }
+    }
+  ]
+}
