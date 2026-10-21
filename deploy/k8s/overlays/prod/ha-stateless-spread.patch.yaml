@@ -24,11 +24,8 @@
 # NOT touched here: verdify-ingestor / verdify-setpoint-server (single-writer
 # device path — gated ha-3), grafana (RWO PVC singleton — stays replicas:1).
 #
-# Storage exception: lab-site uses the shared ReadWriteOnce
-# verdify-lab-site-cache PVC. It keeps two replicas, but uses ScheduleAnyway
-# while required pod affinity co-locates both replicas on whichever eligible
-# worker hosts the portable cache; hard hostname spread conflicts with a shared
-# RWO cache.
+# Lab serving caches are independent emptyDir generations. Required anti-affinity
+# separates the two live serving replicas; the publisher retains its RWO origin.
 #
 # ha-5 (#230, this commit): verdify-planner added — the last replicas:1
 # stateless serving surface. It is a stateless HTTP service (run state lives in
@@ -49,10 +46,17 @@ spec:
       maxSurge: 1
   template:
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: lab-site
+              topologyKey: kubernetes.io/hostname
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: DoNotSchedule
           matchLabelKeys:
             - pod-template-hash
           labelSelector:
