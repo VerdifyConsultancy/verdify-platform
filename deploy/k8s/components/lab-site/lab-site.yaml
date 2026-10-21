@@ -1,8 +1,8 @@
 # Verdify lab/research site — lab.verdify.ai (#124, part of #88 / #111 / #15).
 #
 # WHAT: the public Quartz static research garden ("the lab"). The nginx runtime
-# still serves static HTML on :8080, but the live public tree now comes from the
-# `verdify-lab-site-cache` PVC populated by the in-cluster lab publisher. The
+# serves static HTML on :8080 from a per-pod validated cache. A private origin
+# exports only the publisher public tree and its hash manifest. The
 # serving image contains no site content: the validated cache is the only public
 # tree, so a stale or unrelated baked frontend cannot supersede Quartz.
 #
@@ -115,10 +115,10 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-site
 spec:
-  # Each replacement validates the shared public tree before it can become
+  # Each replacement validates its private serving tree before it can become
   # Ready. Two sequential cache scans exceeded Kubernetes' 600-second default
   # during the 2026-09-27 rollout while both old and new sites stayed healthy.
-  progressDeadlineSeconds: 1500
+  progressDeadlineSeconds: 1800
   replicas: 1
   selector:
     matchLabels:
@@ -127,10 +127,7 @@ spec:
     # Stateless static site — a rolling replace is safe (no single-writer/device
     # constraint; the api/mcp/ingestor safety posture does not apply here).
     #
-    # Spelled out rather than left to the 25% defaults, because the rounding is
-    # load-bearing here: with replicas 1 the surge pod starts BEFORE the old pod
-    # drains, so both hold the cache PVC at once. That is only legal while both
-    # land on the same node — see the required pod affinity below.
+    # Validate a new private cache before draining any serving replica.
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
@@ -140,26 +137,12 @@ spec:
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: lab-site
-        verdify.ai/lab-cache-cohort: portable-rwo
     spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
-      # STORAGE CO-LOCATION (load-bearing). verdify-lab-site-cache is
-      # ReadWriteOnce, so every replica and rolling surge pod must share one
-      # node while they co-mount it. Required self-affinity expresses that
-      # relationship without pinning the workload to a named machine:
-      # The cache-cohort label is deliberately narrower than the Deployment
-      # selector. It lets a new portable cohort seed beside the temporary
-      # stateless Ore-outage Pods, then keeps every later cache consumer on the
-      # same hostname.
-      affinity:
-        podAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  verdify.ai/lab-cache-cohort: portable-rwo
-              topologyKey: kubernetes.io/hostname
+      # Serving caches are per-pod; the private origin keeps publisher RWO custody.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -170,7 +153,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: lab-site
-          # Content-free runtime, pinned by digest. The Lab PVC and ConfigMap are
+          # Content-free runtime, pinned by digest. The validated cache and ConfigMap are
           # the only content/config authority; no Astro or baked Quartz payload
           # exists in this container to replace the published site accidentally.
           image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
@@ -229,36 +212,38 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-      initContainers:
-        # Use the publisher image for the same lock, validation, and ready-marker
-        # protocol as the CronJob. An empty cache stays unready until a publisher
-        # installs a validated Quartz tree; it is never filled from a baked site.
-        - name: prepare-private-public-root
+        - name: cache-refresh
           image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
-          imagePullPolicy: IfNotPresent
-          command:
-            - prepare-lab-cache
-            - --root
-            - /work/publisher
-            - --legacy
-            - /work/public
+          command: [python3, /app/scripts/sync-lab-serving-cache.py]
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi, ephemeral-storage: 4Gi}
+            limits: {cpu: "1", memory: 512Mi, ephemeral-storage: 4Gi}
           volumeMounts:
-            - name: lab-cache
-              mountPath: /work
+            - {name: lab-cache, mountPath: /work}
+            - {name: tmp, mountPath: /tmp}
+      initContainers:
+        - name: prepare-private-public-root
+          image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
+          command: [python3, /app/scripts/sync-lab-serving-cache.py, --once]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi, ephemeral-storage: 4Gi}
+            limits: {cpu: "1", memory: 512Mi, ephemeral-storage: 4Gi}
+          volumeMounts:
+            - {name: lab-cache, mountPath: /work}
+            - {name: tmp, mountPath: /tmp}
       # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
       terminationGracePeriodSeconds: 30
       volumes:
         - name: lab-cache
-          persistentVolumeClaim:
-            claimName: verdify-lab-site-cache
+          emptyDir: {sizeLimit: 4Gi}
         - name: tmp
           emptyDir: {}
         - name: nginx-cache

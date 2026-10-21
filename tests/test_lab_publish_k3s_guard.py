@@ -1252,9 +1252,8 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     assert publisher_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
     assert site_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
 
-    # STORAGE CO-LOCATION. The cache PVC is ReadWriteOnce, so the serving pods,
-    # rollout surge, and publisher must share a hostname. Required pod affinity
-    # preserves that relationship without pinning the group to one named worker.
+    # The publisher retains RWO custody. Serving pods have independent validated
+    # caches and must not inherit its co-location or credentials.
     assert deployment["spec"]["replicas"] == 1
     assert deployment["spec"]["strategy"]["rollingUpdate"] == {"maxUnavailable": 0, "maxSurge": 1}
     expected_co_location = {
@@ -1271,13 +1270,17 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
             ],
         },
     }
+    assert publisher_spec["affinity"] == expected_co_location
+    publisher_cache = next(v for v in publisher_spec["volumes"] if v["name"] == "lab-cache")
+    assert publisher_cache["persistentVolumeClaim"]["claimName"] == "verdify-lab-site-cache"
+    assert "podAffinity" not in site_spec.get("affinity", {})
+    assert "verdify.ai/lab-cache-cohort" not in deployment["spec"]["template"]["metadata"]["labels"]
+    serving_cache = next(v for v in site_spec["volumes"] if v["name"] == "lab-cache")
+    assert serving_cache == {"name": "lab-cache", "emptyDir": {"sizeLimit": "4Gi"}}
+    assert site_spec["automountServiceAccountToken"] is False
     for pod_spec in (publisher_spec, site_spec):
         assert "nodeSelector" not in pod_spec
-        assert pod_spec["affinity"] == expected_co_location
         assert not pod_spec.get("tolerations")
-        cache_volume = next(volume for volume in pod_spec["volumes"] if volume["name"] == "lab-cache")
-        assert cache_volume["persistentVolumeClaim"]["claimName"] == "verdify-lab-site-cache"
-    assert deployment["spec"]["template"]["metadata"]["labels"]["verdify.ai/lab-cache-cohort"] == "portable-rwo"
 
     application = yaml.safe_load((REPO_ROOT / "deploy/k8s/argocd/apps/verdify-prod-dark.yaml").read_text())
     lab_cache_ignore = next(
@@ -1301,7 +1304,10 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
         "--legacy",
         "/work/public",
     ]
-    assert site_prepare["command"] == publisher_init["command"]
+    assert site_prepare["command"] == ["python3", "/app/scripts/sync-lab-serving-cache.py", "--once"]
+    refresher = next(c for c in site_spec["containers"] if c["name"] == "cache-refresh")
+    assert refresher["command"] == ["python3", "/app/scripts/sync-lab-serving-cache.py"]
+    assert "envFrom" not in refresher and "env" not in refresher
     assert site_prepare["image"] == publisher_init["image"]
 
     site_container = site_spec["containers"][0]
@@ -1396,7 +1402,15 @@ def test_rendered_prod_uses_only_the_cache_backed_quartz_runtime():
 
     assert deployment["spec"]["replicas"] == 2
     assert "nodeSelector" not in deployment_pod
-    assert deployment_pod["affinity"] == expected_affinity
+    assert "podAffinity" not in deployment_pod["affinity"]
+    anti = deployment_pod["affinity"]["podAntiAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"]
+    assert anti == [
+        {
+            "labelSelector": {"matchLabels": {"app.kubernetes.io/component": "lab-site"}},
+            "topologyKey": "kubernetes.io/hostname",
+        }
+    ]
+    assert deployment_pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] == "DoNotSchedule"
     assert [item["name"] for item in deployment_pod["initContainers"]] == ["prepare-private-public-root"]
     assert site_container["image"] == (
         "nginxinc/nginx-unprivileged:1.29-alpine"

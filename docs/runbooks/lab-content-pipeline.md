@@ -2,7 +2,11 @@
 
 Quartz under `site/` is the only supported Lab generator. The production
 publisher runs every 30 minutes (:05 and :35), builds the newest S3-backed content, validates
-it, and atomically installs it on the `verdify-lab-site-cache` PVC.
+it, and atomically installs it on the `verdify-lab-site-cache` PVC. Independent
+serving caches then mirror the hash-committed, public-output-validated generation
+through a private origin; their last validated tree remains available during
+origin recovery. See [serving cache redundancy](lab-serving-cache-redundancy.md)
+for delivery and failure verification.
 
 ## Fast status
 

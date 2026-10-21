@@ -217,6 +217,7 @@ $PY -m pytest -q -rs \
   tests/test_observation_spool.py \
   tests/test_observational_source_migration.py \
   tests/test_lab_generator_standardization.py \
+  tests/test_lab_serving_cache.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_transport_runtime.py \

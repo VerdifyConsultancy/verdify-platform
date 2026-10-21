@@ -750,6 +750,10 @@ The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Depl
 
 The [Home Assistant authority reference](https://github.com/jvallery/homeassistant/blob/8788ae3d75da11681719ca28ea79f7ad16f3f594/docs/operations/GREENHOUSE_DEVICE_AUTHORITY.md) gives stable rows for the greenhouse controller, probe aggregate and meters `ha-shelly-b3a979c8` / `ha-shelly-2b1c9427` (owner PR#933). Product item ownership and firmware authority remain here; IoT device authority is Home Assistant under D-06. Physical placement/calibration and repair are not inferred from software aliases. The same change set carries the central source-link companion; #1000 remains open until rules/firing and owner records are accepted.
 
+## Independent Lab serving caches (#1005)
+
+The product lane declares `verdify-lab-cache-origin` (ConfigMap, Deployment, ClusterIP Service and NetworkPolicy) plus `verdify-lab-serving-cache-egress`. These render only in the Lab component and stay in `verdify-prod`. The private origin reads the existing RWO cache without credentials or a public route; the public Lab pods use independent validated emptyDir generations, with no PVC mount, API token or secret. The retained publisher PVC, S3/DB identities, publisher schedule and content writer stay in this lane. Central owner registration accompanies this source change. Delivery and live acceptance are pending the checked publisher image and the tests in `docs/runbooks/lab-serving-cache-redundancy.md`.
+
 ## Firmware builder admission and egress (#1009)
 
 The suspended builder requires an explicit reviewed full commit SHA and verifies the checked-out commit before assembling secrets or compiling. Its egress permits public IPv4 HTTPS, kube-system DNS and the existing ESP32 OTA endpoint only, excluding private/reserved networks from toolchain traffic. This preparation does not sign firmware, change toolchain versions, rotate OTA credentials or qualify the network-lane ACL; those remaining cutover criteria stay on #1009.
