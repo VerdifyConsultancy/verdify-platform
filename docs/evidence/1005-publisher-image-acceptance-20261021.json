@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-10-21T02:26:53.098521+00:00",
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41",
+  "digest": "sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41",
+  "source_revision": "5ada459bfa1b9899b13d5afef41d521763e03bec",
+  "workflow": "verdify-platform-ci-rngd2",
+  "workflow_uid": "5a18fad4-172e-4797-b20a-e3542750910f",
+  "workflow_phase": "Succeeded",
+  "manifest_and_config_digests_verified": true,
+  "oci_revision_matches_source": true,
+  "architecture": "amd64",
+  "os": "linux",
+  "layers_downloaded": false,
+  "five_managed_release_pins_promoted": false
+}
