@@ -1,0 +1,36 @@
+{
+  "observed_at": "2026-10-21T00:48:05.127556+00:00",
+  "revision": "6444f37277c9e4030b6d2715ca8bce786f6aa5b4",
+  "application": "Synced Healthy",
+  "full_nonpruning_hook_bearing_sync": true,
+  "sync_finished_at": "2026-10-21T00:29:44Z",
+  "tasks": 137,
+  "statefulset_uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+  "database_pod_uid": "f082e4c4-3774-49e0-afd7-332b487cb309",
+  "database_pod_recreated_ready_no_restarts": true,
+  "pinned_image": "timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140",
+  "runtime_image_id": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6",
+  "qualified_manifest_equivalence": {
+    "running_index_or_manifest": "sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6",
+    "linux_amd64_child": "sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140",
+    "config": "sha256:eaffcfd638426b30dda81d9eda3abb29320281199031d4c36a57af6464e2431f",
+    "layers": 18,
+    "layers_downloaded": false
+  },
+  "original_database_pvc_uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+  "original_database_pvc_bound": true,
+  "backup_command_matches_merged_source": true,
+  "backup_command_sha256": "6d9c14ad39526ab07fc8c422d6a82200dc5ff716424baf1149ed228d0792cff8",
+  "database": {
+    "postgres": "16.11",
+    "timescaledb": "2.25.2",
+    "latest_climate": "2026-10-21T00:47:29.013326+00:00",
+    "latest_energy": "2026-10-21T00:43:47.894787+00:00",
+    "migration_max": 279,
+    "ordinary_receipts_match": true
+  },
+  "smoke_checks_passed": 9,
+  "esp32_connections": 1,
+  "esp32_connection_owner": "verdify-ingestor",
+  "offsite_restore_proof": false
+}

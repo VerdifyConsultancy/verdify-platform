@@ -200,6 +200,7 @@ $PY -m pytest -q -rs \
   tests/test_probe_diagnostics_native.py \
   tests/test_policy_relay_dwell_refresh.py \
   tests/test_firmware_builder_image.py \
+  tests/test_firmware_builder_admission.py \
   tests/test_firmware_provisional_rollback.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \

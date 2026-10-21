@@ -5,8 +5,8 @@
 # Nothing runs on a schedule — an operator (human or cluster agent) triggers a
 # run explicitly:
 #
-#   # compile + archive only (default, safe):
-#   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-build-$(date +%s)
+#   # compile + archive only: set FW_REVISION to the reviewed full commit SHA
+#   # in the generated Job before submitting it. The template default fails closed.
 #
 #   # compile + archive + FLASH the device (safety-checked; run the preflight first):
 #   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-flash-$(date +%s) \
@@ -79,11 +79,38 @@ spec:
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
+            except:
+              - 0.0.0.0/8
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.0.0.0/24
+              - 192.0.2.0/24
+              - 192.168.0.0/16
+              - 198.18.0.0/15
+              - 198.51.100.0/24
+              - 203.0.113.0/24
+              - 224.0.0.0/4
+              - 240.0.0.0/4
+      ports:
+        - {port: 443, protocol: TCP}
+    - to:
+        - ipBlock:
+            cidr: 192.168.10.111/32
+      ports:
+        - {port: 3232, protocol: TCP}
     - ports:
         - {port: 53, protocol: UDP}
         - {port: 53, protocol: TCP}
       to:
-        - namespaceSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -132,7 +159,7 @@ spec:
                 - name: PROMOTE_LAST_GOOD
                   value: "0"           # 1 = also promote this build to the rollback floor
                 - name: FW_REVISION
-                  value: "main"        # git rev to build
+                  value: ""            # required: reviewed full 40-character lowercase commit SHA
                 - name: FW_VERSION
                   value: ""            # empty = derive YYYY.M.D.HHMM.<short-sha>
                 - name: DEVICE_IP
@@ -158,9 +185,17 @@ spec:
               command: [bash, -euo, pipefail, -c]
               args:
                 - |
+                  # Refuse mutable refs before clone, secrets assembly or compilation.
+                  if [[ ! "${FW_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "[builder] FW_REVISION must be a reviewed full lowercase commit SHA" >&2
+                    exit 64
+                  fi
                   echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
                   git clone --filter=blob:none "https://x-access-token:${GIT_TOKEN}@github.com/VerdifyConsultancy/verdify-platform.git" /work
-                  cd /work && git checkout -q "${FW_REVISION}"
+                  cd /work
+                  test "$(git cat-file -t "${FW_REVISION}")" = commit
+                  git checkout --detach -q "${FW_REVISION}"
+                  test "$(git rev-parse HEAD)" = "${FW_REVISION}"
                   SHORT_SHA="$(git rev-parse --short HEAD)"
                   if [ -z "${FW_VERSION}" ]; then
                     FW_VERSION="$(date +%Y.%-m.%-d.%H%M).${SHORT_SHA}"
