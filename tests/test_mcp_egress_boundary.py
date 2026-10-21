@@ -99,11 +99,14 @@ def test_lan_metadata_cluster_and_other_ports_denied(rendered, address, port):
     assert not allowed(policy, address, port)
 
 
-def test_only_declared_dns_database_and_public_tls_paths(rendered):
+def test_only_declared_dns_database_and_fixed_relay_paths(rendered):
     p = next(
         x for x in rendered if x and x["kind"] == "NetworkPolicy" and x["metadata"]["name"] == "verdify-mcp-egress"
     )
-    assert allowed(p, "1.1.1.1", 443)
+    assert not allowed(p, "1.1.1.1", 443)
+    assert allowed(p, "10.42.1.4", 8081, pod_labels={"app.kubernetes.io/component": "outbound"})
+    assert allowed(p, "10.42.1.4", 8082, pod_labels={"app.kubernetes.io/component": "outbound"})
+    assert not allowed(p, "10.42.1.4", 8083, pod_labels={"app.kubernetes.io/component": "outbound"})
     assert allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "db"})
     assert not allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "api"})
     assert not allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "db"}, namespace="other")

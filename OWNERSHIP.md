@@ -768,3 +768,7 @@ The former rehearsal namespace, CNPG Cluster, eight claims, three Applications, 
 ## Local vision provider (#1021)
 
 The product owns the longctx.mm vision client and CronJob reference to `verdify-vision-cortex/api_key.txt`; Cortex owns the route/provider identity and agents owns sealed Secret delivery. Source preparation follows the live image-input receipt. Production credential delivery and one real successful run remain required; no Gemini key deletion or revocation is included.
+
+## Fixed outbound dependencies (#1011 / #1022)
+
+`verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only fixed OpenAI embedding, Slack chat-post and Open-Meteo forecast paths; the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
