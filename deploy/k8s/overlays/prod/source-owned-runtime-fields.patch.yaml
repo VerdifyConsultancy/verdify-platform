@@ -99,21 +99,7 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: verdify-db-watchdog
-spec:
-  suspend: false
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
   name: verdify-fixed-panel-native-freezer
   namespace: verdify-prod
-spec:
-  suspend: false
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: verdify-writer-watchdog
 spec:
   suspend: false

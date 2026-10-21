@@ -22,7 +22,8 @@ spec.loader.exec_module(module)
 
 
 def watchdog():
-    docs = yaml.safe_load_all((ROOT / "deploy/k8s/overlays/prod/writer-watchdog.yaml").read_text())
+    # Historical migration-276 caller contract; never rendered or deployed.
+    docs = yaml.safe_load_all((ROOT / "tests/fixtures/retired-watchdogs/writer-watchdog.yaml").read_text())
     job = next(d for d in docs if d["kind"] == "CronJob")
     return job, job["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
 
@@ -292,3 +293,22 @@ def test_valid_lease_uses_psql_stdin_quoting(tmp_path):
     assert '--set=lease_state="$LEASE_KIND"' in script
     assert "<<'SQL'" in script
     assert "${LEASE_AGE_S}" not in script.split("SELECT * FROM", 1)[1]
+
+
+def test_retired_product_watchdog_objects_cannot_reenter_the_production_render():
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    objects = {(d["kind"], d["metadata"]["name"]) for d in yaml.safe_load_all(rendered) if d}
+    retired = {
+        (kind, name)
+        for kind in ["CronJob", "ServiceAccount", "Role", "RoleBinding"]
+        for name in ["verdify-db-watchdog", "verdify-writer-watchdog"]
+    }
+    assert not objects & retired
+    assert ("StatefulSet", "verdify-db") in objects
+    assert ("PersistentVolumeClaim", "db-data-verdify-db-0") in objects

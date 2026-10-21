@@ -34,8 +34,6 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
-  - db-watchdog.yaml
-  - writer-watchdog.yaml
   # #382 durable source spool: claim and sole consumer land together.
   - ingestor-state-pvc.yaml
   # #994: adopt/protect the exact existing production DB claim, no template change.
