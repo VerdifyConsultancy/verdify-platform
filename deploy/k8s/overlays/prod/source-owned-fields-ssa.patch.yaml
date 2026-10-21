@@ -1,0 +1,99 @@
+# #1004: metadata-only Argo SSA handoff; preserve all resource protections.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-db-backup-exporter
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-grafana
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mcp
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mqtt
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-planner
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-traefik
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+  namespace: verdify-prod
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-band-curve-refresh
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-lab-publisher
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-vision
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
