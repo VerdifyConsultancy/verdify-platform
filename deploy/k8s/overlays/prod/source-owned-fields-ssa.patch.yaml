@@ -1,4 +1,4 @@
-# #1004: metadata-only Argo SSA handoff; preserve all resource protections.
+# #1004: capture existing live scheduling fields and request Argo SSA ownership.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,6 +12,11 @@ metadata:
   name: verdify-api
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: 'true'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -47,6 +52,21 @@ metadata:
   name: verdify-lab
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: 'true'
+    spec:
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: lab-site
+        matchLabelKeys:
+        - pod-template-hash
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,6 +74,11 @@ metadata:
   name: verdify-mcp
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: 'true'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -68,6 +93,21 @@ metadata:
   name: verdify-planner
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: 'true'
+    spec:
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: planner
+        matchLabelKeys:
+        - pod-template-hash
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
 ---
 apiVersion: apps/v1
 kind: Deployment
