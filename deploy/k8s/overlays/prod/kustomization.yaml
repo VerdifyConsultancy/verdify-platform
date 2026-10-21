@@ -266,6 +266,26 @@ patches:
   # Explicit audited runtime values; no data or first-party image changes.
   - path: source-owned-runtime-fields.patch.yaml
 
+  # #218: portable retained state; no device-writer placement or image change.
+  - path: portable-stateful-placement.patch.yaml
+    target:
+      group: apps
+      version: v1
+      kind: StatefulSet
+      name: verdify-db
+  - path: portable-stateful-placement.patch.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: verdify-grafana
+  - path: portable-stateful-placement.patch.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: verdify-hermes-iris
+
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api

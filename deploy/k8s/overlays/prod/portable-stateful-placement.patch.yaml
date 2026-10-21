@@ -1,0 +1,9 @@
+# #218: retained Longhorn state must be attachable on either general worker.
+# Keep the DB singleton and the existing Recreate strategies for Grafana/Hermes.
+# Replacing the whole selector avoids preserving an obsolete hostname pin.
+- op: replace
+  path: /spec/template/spec/nodeSelector
+  value:
+    kubernetes.io/os: linux
+    agentfleet.vallery.net/node-class: general
+    storage.vallery.net/longhorn-attach: "true"
