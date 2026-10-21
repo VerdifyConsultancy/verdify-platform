@@ -1,0 +1,17 @@
+{
+  "host": "api.open-meteo.com",
+  "relay_trust_bundle_used": true,
+  "rows": [
+    {
+      "verify_depth": 1,
+      "verified": false,
+      "result": "C=US, O=ISRG, CN=Root YR\nerror 22 at 2 depth lookup: certificate chain too long\nerror <public-certificate-fixture>/leaf.pem: verification failed"
+    },
+    {
+      "verify_depth": 3,
+      "verified": true,
+      "result": "<public-certificate-fixture>/leaf.pem: OK"
+    }
+  ],
+  "tls_verification_remains_required": true
+}

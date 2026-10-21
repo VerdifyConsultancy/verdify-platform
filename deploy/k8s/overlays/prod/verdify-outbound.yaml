@@ -1,4 +1,3 @@
-# #1011/#1022: fixed-host TLS-verifying relay, never an arbitrary forward proxy.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,15 +10,16 @@ metadata:
 data:
   default.conf: "# Fixed destinations only: incoming Host/URI cannot select an upstream\
     \ host.\naccess_log off;\nerror_log /dev/stderr crit;\nresolver 10.43.0.10 valid=30s\
-    \ ipv6=off;\nresolver_timeout 5s;\nproxy_ssl_verify on;\nproxy_ssl_trusted_certificate\
-    \ /etc/ssl/certs/ca-certificates.crt;\nproxy_ssl_server_name on;\nproxy_connect_timeout\
-    \ 5s;\nproxy_send_timeout 10s;\nproxy_read_timeout 45s;\nproxy_redirect off;\n\
-    client_max_body_size 2m;\nserver { listen 8080; location = /healthz { return 200\
-    \ 'ok'; } location / { return 404; } }\nserver {\n  listen 8081;\n  server_name\
-    \ _;\n  location = /v1/embeddings {\n    limit_except POST { deny all; }\n   \
-    \ proxy_set_header Host api.openai.com;\n    proxy_set_header X-Forwarded-Host\
-    \ \"\";\n    proxy_set_header X-Forwarded-For \"\";\n    proxy_set_header Forwarded\
-    \ \"\";\n    proxy_ssl_name api.openai.com;\n    set $fixed_host api.openai.com;\n\
+    \ ipv6=off;\nresolver_timeout 5s;\nproxy_ssl_verify on;\n# Open-Meteo cross-signs\
+    \ Root YR via ISRG Root X1: retain full verification.\nproxy_ssl_verify_depth\
+    \ 3;\nproxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;\nproxy_ssl_server_name\
+    \ on;\nproxy_connect_timeout 5s;\nproxy_send_timeout 10s;\nproxy_read_timeout\
+    \ 45s;\nproxy_redirect off;\nclient_max_body_size 2m;\nserver { listen 8080; location\
+    \ = /healthz { return 200 'ok'; } location / { return 404; } }\nserver {\n  listen\
+    \ 8081;\n  server_name _;\n  location = /v1/embeddings {\n    limit_except POST\
+    \ { deny all; }\n    proxy_set_header Host api.openai.com;\n    proxy_set_header\
+    \ X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For \"\";\n    proxy_set_header\
+    \ Forwarded \"\";\n    proxy_ssl_name api.openai.com;\n    set $fixed_host api.openai.com;\n\
     \    proxy_pass https://$fixed_host$request_uri;\n  }\n  location / { return 404;\
     \ }\n}\nserver {\n  listen 8082;\n  server_name _;\n  location = /api/chat.postMessage\
     \ {\n    limit_except POST { deny all; }\n    proxy_set_header Host slack.com;\n\
@@ -66,7 +66,7 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: outbound
       annotations:
-        verdify.ai/outbound-config-sha256: 5dd427478999bb73a763605c4fa160b1220e118bf45323b9449df275c6b7b7e2
+        verdify.ai/outbound-config-sha256: a7fe660d538322afa89bf4006c400a8655df2bb8b546a27706d5494f7bc5704a
     spec:
       serviceAccountName: verdify-outbound
       automountServiceAccountToken: false
