@@ -198,13 +198,18 @@ milestones:
 1. **Firmware OTA in-cluster** — CLOSED 2026-07-13 (operator-directed).
    `deploy/k8s/components/firmware-builder/`: a suspended-CronJob job template
    (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
-   runs the official esphome image, assembles `secrets.yaml` from k8s Secrets
+   requires a reviewed full 40-character lowercase `FW_REVISION` in the generated
+   Job (empty, branch and tag references fail before clone), runs the pinned
+   esphome image, assembles `secrets.yaml` from k8s Secrets
    (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
    `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
-   toolchain cached on a PVC, archives to the `verdify-firmware-artifacts`
+   toolchain in a bounded per-Job cache, archives to the `verdify-firmware-artifacts`
    PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
    workstation**), and—only with the explicit `FLASH=1` live flag—uploads to
    192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
+   policy permits public IPv4 HTTPS, cluster DNS and only the device OTA port;
+   it excludes private/reserved ranges from toolchain egress. This is transport
+   restriction, not a provider-hostname allowlist. The
    preflight/verify steps (`firmware-deploy-preflight.sh`,
    `wait-for-firmware-version.sh`, `make sensor-health`) already run
    kube-backend from any cluster pod.
