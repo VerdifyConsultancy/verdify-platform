@@ -84,6 +84,15 @@ class AIConfig:
     def get_client(self, task: str):
         """Create an API client for the given task's provider."""
         provider = self.config["models"][task]["provider"]
+        if provider == "cortex":
+            from openai import OpenAI
+
+            return OpenAI(
+                api_key=self.api_key(provider),
+                base_url=self.model(task)["base_url"],
+                timeout=90.0,
+                max_retries=0,
+            )
         if provider == "openai":
             from openai import OpenAI
 
