@@ -32,7 +32,7 @@ def render(cluster, backup, custody, admission, *, freeze_background_workers=Fal
         and admission.get("historical_seals_and_ledger_retained") is True,
         "S2 baseline lacks complete native admission/data/time seal",
     )
-    declared = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/s2-cluster.yaml").read_text())
+    declared = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/s2-cluster.yaml").read_text())
     for field in ("storage", "walStorage", "affinity", "resources", "instances", "imageName"):
         actual = cluster["spec"].get(field)
         if field in ("storage", "walStorage") and isinstance(actual, dict):

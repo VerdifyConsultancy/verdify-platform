@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-CLUSTERS = ROOT / "deploy/k8s/cnpg/rehearsal/cluster"
+CLUSTERS = ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster"
 
 
 def load(filename, module_name):
@@ -23,7 +23,7 @@ def load(filename, module_name):
 m = load("cnpg-s2-integration-current275-transition.py", "integration_current275")
 
 
-def test_actual_rehearsal_render_cannot_recreate_original_initdb_or_archive_writer():
+def test_archived_rehearsal_fixture_preserves_original_read_only_recovery_boundary():
     rendered = subprocess.check_output(["kustomize", "build", str(CLUSTERS)], text=True, timeout=30)
     objects = list(yaml.safe_load_all(rendered))
     clusters = [obj for obj in objects if obj["kind"] == "Cluster"]

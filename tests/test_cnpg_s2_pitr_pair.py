@@ -16,7 +16,7 @@ spec.loader.exec_module(m)
 
 def s2_fixture():
     cluster, backup, custody = fixture()
-    cluster = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/s2-cluster.yaml").read_text())
+    cluster = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/s2-cluster.yaml").read_text())
     cluster["metadata"]["uid"] = m.SOURCE_UID
     backup["spec"]["cluster"]["name"] = m.SOURCE
     backup["metadata"]["ownerReferences"] = [{"kind": "Cluster", "name": m.SOURCE, "uid": m.SOURCE_UID}]

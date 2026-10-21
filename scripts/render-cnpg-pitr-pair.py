@@ -177,7 +177,7 @@ def render(cluster, backup, custody, scheduled_backup=None):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     base = next(o for o in module.render(IMAGE) if o["kind"] == "Cluster")
-    reader = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/object-store.yaml").read_text())
+    reader = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/object-store.yaml").read_text())
     reader["metadata"]["name"] = STORE
     reader["spec"].pop("retentionPolicy", None)
     credentials = reader["spec"]["configuration"]["s3Credentials"]

@@ -1,0 +1,11 @@
+{
+  "observed_at": "2026-10-21T03:02:47.286287+00:00",
+  "namespace": "verdify-db-rehearsal",
+  "uid": "c2733a00-bd5f-4a76-9ab9-3be2118958d3",
+  "labels_added": {
+    "estate.vallery.net/disposable": "true",
+    "estate.vallery.net/expires": "2026-10-20"
+  },
+  "purpose_security_labels_finalizers_preserved": true,
+  "source_data_deleted": false
+}

@@ -66,7 +66,7 @@ def test_archive_egress_matches_only_observed_traefik_backend_and_checked_in_ren
     )
     policy = next(o for o in objects if o["kind"] == "NetworkPolicy" and o["metadata"]["name"].endswith("-isolation"))
     checked = yaml.safe_load(
-        (ROOT / "deploy/k8s/cnpg/rehearsal/cluster/verdify-cnpg-rehearsal-isolation.yaml").read_text()
+        (ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/verdify-cnpg-rehearsal-isolation.yaml").read_text()
     )
     assert policy == checked
     backend = [r for r in policy["spec"]["egress"] if any(p["port"] == 8443 for p in r["ports"])]
@@ -118,7 +118,9 @@ def test_shared_region_ref_preserves_credentials_and_cluster_pod_template():
         "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:" + "a" * 64
     )
     store = next(o for o in objects if o["kind"] == "ObjectStore")
-    assert store == yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/object-store.yaml").read_text())
+    assert store == yaml.safe_load(
+        (ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/object-store.yaml").read_text()
+    )
     assert store["spec"]["configuration"]["s3Credentials"] == {
         "accessKeyId": {"name": "verdify-cnpg-rehearsal-s3-writer", "key": "AWS_ACCESS_KEY_ID"},
         "secretAccessKey": {"name": "verdify-cnpg-rehearsal-s3-writer", "key": "AWS_SECRET_ACCESS_KEY"},
@@ -129,7 +131,7 @@ def test_shared_region_ref_preserves_credentials_and_cluster_pod_template():
     assert store["spec"]["configuration"]["data"] == {"compression": "gzip"}
     assert not any(o["kind"] == "Secret" for o in objects)
     cluster = next(o for o in objects if o["kind"] == "Cluster")
-    checked_cluster = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/cluster.yaml").read_text())
+    checked_cluster = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/cluster.yaml").read_text())
     checked_cluster["spec"]["imageName"] = cluster["spec"]["imageName"]
     assert cluster == checked_cluster
     assert not any(e["name"] in {"AWS_REGION", "AWS_DEFAULT_REGION"} for e in cluster["spec"].get("env", []))
@@ -139,7 +141,7 @@ def test_complete_native_witness_admission_has_isolated_memory_budget():
     # Actual full-witness installation exhausted the original 2Gi cgroup and
     # failed over. Reserve schedulable memory and preserve full admission guards
     # under the qualified isolated target's ceiling; shared buffers stay fixed.
-    checked = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/cluster.yaml").read_text())
+    checked = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/cluster.yaml").read_text())
     cluster = next(o for o in module.render(checked["spec"]["imageName"]) if o["kind"] == "Cluster")
     assert cluster == checked
     assert cluster["metadata"]["namespace"] == "verdify-db-rehearsal"
@@ -151,3 +153,9 @@ def test_complete_native_witness_admission_has_isolated_memory_budget():
     assert cluster["spec"]["postgresql"]["parameters"]["shared_buffers"] == "256MB"
     assert cluster["spec"]["instances"] == 3
     assert cluster["spec"]["postgresql"]["synchronous"]["dataDurability"] == "required"
+
+
+def test_retired_rehearsal_has_no_active_deployment_source():
+    assert not (ROOT / "deploy/k8s/cnpg/rehearsal").exists()
+    for path in (ROOT / "deploy/k8s").rglob("kustomization.yaml"):
+        assert "cnpg/rehearsal" not in path.read_text(), path

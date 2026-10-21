@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_s2_client_has_only_exact_target_postgres_and_dns_egress_no_ingress():
-    path = ROOT / "deploy/k8s/cnpg/rehearsal/cluster/cnpg-s2-runtime-client-policy.yaml"
+    path = ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/cnpg-s2-runtime-client-policy.yaml"
     client, server = list(yaml.safe_load_all(path.read_text()))
     selector = client["spec"]["podSelector"]["matchLabels"]
     assert selector == {
@@ -40,9 +40,9 @@ def test_s2_client_labels_do_not_select_broad_server_or_historical_client_policy
         "verdify.ai/qualification-target": "verdify-cnpg-s2",
     }
     broad = yaml.safe_load(
-        (ROOT / "deploy/k8s/cnpg/rehearsal/cluster/verdify-cnpg-rehearsal-isolation.yaml").read_text()
+        (ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/verdify-cnpg-rehearsal-isolation.yaml").read_text()
     )
     assert any(labels.get(k) != v for k, v in broad["spec"]["podSelector"]["matchLabels"].items())
     assert labels["app.kubernetes.io/component"] != "cnpg-runtime-qualification"
-    deny = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/deny-all-rehearsal.yaml").read_text())
+    deny = yaml.safe_load((ROOT / "tests/fixtures/retired-cnpg-rehearsal/cluster/deny-all-rehearsal.yaml").read_text())
     assert deny["spec"] == {"podSelector": {}, "policyTypes": ["Ingress", "Egress"]}
