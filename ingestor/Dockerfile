@@ -1,4 +1,4 @@
-# Exact-live-base release-only backport for #981. Do not merge this Dockerfile to main.
-FROM registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32
-COPY --chown=1000:1000 ingestor/tasks/ha.py /app/ingestor/tasks/ha.py
-COPY --chown=1000:1000 ingestor/shelly_modbus.py /app/ingestor/shelly_modbus.py
+# Exact-live-base release-only backport for #1011/#1022/#1021. Do not merge this Dockerfile to main.
+FROM registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:9cc29da84f834acdb563d3878d4506a91a3178c1fe505c3697f69db19af25e61
+COPY --chown=1000:1000 ingestor/tasks/_common.py /app/ingestor/tasks/_common.py
+COPY --chown=1000:1000 ingestor/ai_config.py /app/ingestor/ai_config.py
