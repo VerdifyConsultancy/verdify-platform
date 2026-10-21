@@ -1,0 +1,7 @@
+{
+  "observed_at": "2026-10-21T05:43:18.830086+00:00",
+  "garage_hdd_cluster_healthy": true,
+  "exact_bucket_and_alias_absent": true,
+  "both_scoped_provider_keys_absent": true,
+  "B2_deletion_calls": 0
+}

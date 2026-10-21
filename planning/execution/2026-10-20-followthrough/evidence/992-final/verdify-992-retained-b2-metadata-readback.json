@@ -1,0 +1,67 @@
+{
+  "observed_at": "2026-10-21T05:39:26.135597+00:00",
+  "cluster_independent_sealed_reader": true,
+  "ciphertext_sha256_verified": true,
+  "reader_only": true,
+  "all_eight_config_hashes_unchanged_and_blocks_present": true,
+  "results": [
+    {
+      "volume": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+      "backup": "verdify992-20261021-5bc955b4",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 1913,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+      "backup": "verdify992-20261021-8ec30e16",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 89,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+      "backup": "verdify992-20261021-4975744d",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 1898,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+      "backup": "verdify992-20261021-428fa291",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 59,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+      "backup": "verdify992-20261021-6e951ccb",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 1887,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+      "backup": "verdify992-20261021-463e7de8",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 59,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-116e36a0-be6b-42aa-9643-ef4b638492db",
+      "backup": "verdify992-20261021-116e36a0",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 20,
+      "referenced_missing": 0
+    },
+    {
+      "volume": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+      "backup": "verdify992-20261021-a7158960",
+      "config_sha256_unchanged": true,
+      "referenced_unique_blocks": 108,
+      "referenced_missing": 0
+    }
+  ],
+  "new_block_hash_sample_performed": false,
+  "existing_935_hash_receipt_preserved": true
+}
