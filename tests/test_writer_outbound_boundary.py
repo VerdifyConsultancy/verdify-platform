@@ -61,6 +61,8 @@ def test_relay_has_fixed_tls_destinations_and_never_logs_credentials(rendered):
     )
     conf = cm["data"]["default.conf"]
     assert "proxy_ssl_verify on;" in conf and "proxy_ssl_server_name on;" in conf
+    # The cross-signed Open-Meteo chain requires two intermediates.
+    assert "proxy_ssl_verify_depth 3;" in conf
     assert "access_log off;" in conf and "error_log /dev/stderr crit;" in conf
     for host, path in [
         ("api.openai.com", "/v1/embeddings"),
