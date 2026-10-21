@@ -1,0 +1,113 @@
+{
+  "observed_at": "2026-10-20T23:40:15.831808+00:00",
+  "query": "{__name__=~\"homeassistant_sensor_state|homeassistant_entity_available\",entity=~\"sensor.greenhouse_(south_temp_degf|south_rh|south_2_soil_moisture|west_soil_moisture|probe_health|active_probe_count)\"}",
+  "results": [
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_south_temp_degf",
+        "friendly_name": "Greenhouse South Temp (\u00b0F)",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "0"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_south_rh",
+        "friendly_name": "Greenhouse South RH (%)",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "0"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_south_2_soil_moisture",
+        "friendly_name": "Greenhouse South 2 Soil Moisture (%)",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "0"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_west_soil_moisture",
+        "friendly_name": "Greenhouse West Soil Moisture (%)",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "0"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_active_probe_count",
+        "friendly_name": "Greenhouse Active Probe Count",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_entity_available",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_probe_health",
+        "friendly_name": "Greenhouse Probe Health",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "homeassistant_sensor_state",
+        "domain": "sensor",
+        "entity": "sensor.greenhouse_active_probe_count",
+        "friendly_name": "Greenhouse Active Probe Count",
+        "instance": "home-assistant",
+        "job": "home-assistant",
+        "source": "home-assistant"
+      },
+      "value": [
+        1792539615.83,
+        "4"
+      ]
+    }
+  ],
+  "source_alias_revision": "33ed324e9a74aa34892bd35f365ce94d564798c8",
+  "physical_repair_claimed": false
+}

@@ -743,3 +743,9 @@ The Lab contact form renders the managed Turnstile widget for `lab.verdify.ai`; 
 ## Rehearsal non-data cleanup (#991)
 
 The 81 inactive standalone Jobs, six terminal bare Pods, zero-replica proof Deployment, 16 runner ConfigMaps, 14 orphan policies and eight untracked client-auth copies were removed after exact preconditions and private evidence preservation. All eight PVCs, the CNPG Cluster, two protected runtime policies, and both Applications remain unchanged. See `planning/execution/2026-10-20-followthrough/LIVE-RECEIPTS.md`; #992 remains subject to verified dump/snapshot custody.
+
+## Exact health keys and IoT authority (A13/A15)
+
+[Health coverage keys](docs/operations/HEALTH_COVERAGE_KEYS.md) supplies the five Deployment selectors, three CronJob last-success selectors, declared probe04/08/09 HA availability keys and both exact Shelly controller/service keys. Monitoring rule/firing delivery is tracked in [monitoring-stack#1032](https://github.com/jvallery/monitoring-stack/issues/1032); absence of a rule is not hidden by an existing metric or aggregate health signal.
+
+The [Home Assistant authority reference](https://github.com/jvallery/homeassistant/blob/8788ae3d75da11681719ca28ea79f7ad16f3f594/docs/operations/GREENHOUSE_DEVICE_AUTHORITY.md) gives stable rows for the greenhouse controller, probe aggregate and meters `ha-shelly-b3a979c8` / `ha-shelly-2b1c9427` (owner PR#933). Product item ownership and firmware authority remain here; IoT device authority is Home Assistant under D-06. Physical placement/calibration and repair are not inferred from software aliases. The same change set carries the central source-link companion; #1000 remains open until rules/firing and owner records are accepted.
