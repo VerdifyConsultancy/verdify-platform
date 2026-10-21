@@ -1,0 +1,58 @@
+{
+  "submitted_at": "2026-10-21T00:50:05.706383+00:00",
+  "namespace": "agent-fleet-ci",
+  "job": "verdify-1016-writer-db-synthetic-20261021",
+  "job_uid": "5758ba29-fafc-48a8-9578-55f0ce639c73",
+  "configmap_uid": "ac6e1a34-336c-406a-98fb-93ad61e7c34b",
+  "deadline_seconds": 420,
+  "rule_sha256": {
+    "VerdifyWriterCountNotExactlyOne": "db34a797ea8a406fdee0de54458eaddc738210cc4de8aa67804e635d12280a9d",
+    "VerdifyDatabaseUnavailable": "15d2b3f01164bb30b53f1bde963e53fb0bbb7fe5817718a402a30efe0478a6ab"
+  },
+  "config_sha256": {
+    "prometheus.yml": "8b56e904394eb71a3937cb865084a54e912707cad27b247f33d6c7ad2088ee25",
+    "rules.yml": "90952e03eb349e833f234057cb1fc5e2b9f4747234e074eb12e22c9a5ed6f155",
+    "fixture.py": "112e941cf89d9bdca038984148cd5d7c716624474936ae5cd1a564b28d3069b8"
+  },
+  "production_writer_rule_identical": true,
+  "db_rule_native_unit_qualified": true,
+  "production_for_unchanged": {
+    "VerdifyWriterCountNotExactlyOne": "1m",
+    "VerdifyDatabaseUnavailable": "3m"
+  },
+  "no_credentials_pvcs_real_device_or_database_connections_or_alertmanager": true,
+  "observed_at": "2026-10-21T00:55:13.017909+00:00",
+  "finished_at": "2026-10-21T00:54:35Z",
+  "pod_uid": "6ac6c490-1ab1-4f9f-8699-20fef4df12e0",
+  "container_exit_codes": {
+    "engine": 0,
+    "fixture": 0
+  },
+  "config_readback_hashes_match": true,
+  "qualification": {
+    "started_at": "2026-10-21T00:50:20.000129+00:00",
+    "input_is_synthetic": true,
+    "real_device_or_database_connections": 0,
+    "alertmanager_configured": false,
+    "service_account_token_mounted": false,
+    "firings": {
+      "VerdifyWriterCountNotExactlyOne": {
+        "observed_at": "2026-10-21T00:51:55.249631+00:00",
+        "elapsed_seconds": 65.0,
+        "activeAt": "2026-10-21T00:50:52.015769535Z",
+        "pending_seen": true
+      },
+      "VerdifyDatabaseUnavailable": {
+        "observed_at": "2026-10-21T00:53:55.306110+00:00",
+        "elapsed_seconds": 185.1,
+        "activeAt": "2026-10-21T00:50:52.015769535Z",
+        "pending_seen": true
+      }
+    },
+    "failure_injected_at": "2026-10-21T00:50:50.219466+00:00",
+    "source_outage_suppression_verified_at": "2026-10-21T00:54:00.308454+00:00",
+    "recovery_verified_at": "2026-10-21T00:54:30.320802+00:00",
+    "passed": true
+  },
+  "cleanup": "UID-verified disposable Job and ConfigMap removed"
+}
