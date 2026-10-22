@@ -26,6 +26,10 @@ metadata:
   name: verdify-ingestor
 spec:
   template:
+    metadata:
+      annotations:
+        # Reload only the existing encrypted MQTT fields; no release-pin change.
+        homeassistant.vallery.net/mqtt-identity-generation: "20261021-isolated-v1"
     spec:
       affinity:
         nodeAffinity:
