@@ -33,6 +33,8 @@ def test_retained_state_has_two_worker_eligibility_without_hostname(workloads, k
 def test_portability_keeps_singleton_storage_and_recreate_boundaries(workloads):
     db = workloads["StatefulSet", "verdify-db"]
     assert db["spec"]["replicas"] == 1
+    assert db["spec"]["volumeClaimTemplates"][0]["apiVersion"] == "v1"
+    assert db["spec"]["volumeClaimTemplates"][0]["kind"] == "PersistentVolumeClaim"
     assert db["spec"]["volumeClaimTemplates"][0]["metadata"]["name"] == "db-data"
     assert db["spec"]["volumeClaimTemplates"][0]["spec"]["accessModes"] == ["ReadWriteOnce"]
     assert "ServerSideApply=true" in db["metadata"]["annotations"]["argocd.argoproj.io/sync-options"]
