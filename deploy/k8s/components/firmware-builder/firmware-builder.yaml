@@ -177,7 +177,7 @@ spec:
             - name: PLATFORMIO_CORE_DIR
               value: /cache/platformio
             - name: ESPHOME_DATA_DIR
-              value: /cache/esphome-data
+              value: /work/firmware/.esphome
             - name: ESPHOME_DEFAULT_COMPILE_PROCESS_LIMIT
               value: '1'
             - name: HOME

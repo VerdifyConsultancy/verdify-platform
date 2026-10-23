@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import posixpath
+import re
 from pathlib import Path
 
 import yaml
@@ -25,3 +27,20 @@ def test_firmware_builder_uses_the_qualified_immutable_esphome_image() -> None:
     assert builder["image"] == ESPHOME_IMAGE
     assert cronjob["spec"]["suspend"] is True
     assert not any(entry["name"] == "FLASH" for entry in builder["env"])
+
+
+def test_builder_project_resolves_the_tracked_platformio_pre_scripts() -> None:
+    cronjob = next(
+        document
+        for document in yaml.safe_load_all(MANIFEST.read_text())
+        if document and document.get("kind") == "CronJob"
+    )
+    builder = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["initContainers"][0]
+    data = next(entry["value"] for entry in builder["env"] if entry["name"] == "ESPHOME_DATA_DIR")
+    project = posixpath.join(data, "build/greenhouse")
+    scripts = re.findall(r"^\s*- pre:(.+)$", (ROOT / "firmware/greenhouse.yaml").read_text(), re.MULTILINE)
+    assert scripts
+    for script in scripts:
+        resolved = posixpath.normpath(posixpath.join(project, script))
+        assert resolved.startswith("/work/firmware/"), resolved
+        assert (ROOT / resolved.removeprefix("/work/")).is_file(), resolved
