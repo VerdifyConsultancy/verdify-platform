@@ -174,9 +174,6 @@ patches:
   - path: source-owned-fields-ssa.patch.yaml
   - path: outbound-clients.patch.yaml
   - path: iris-token-generation.patch.yaml
-  # Restore the unchanged Iris image from its verified node4 cache while the
-  # registry mirror cannot resolve that digest. Remove after cold-pull recovery.
-  - path: iris-cached-image-placement.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no
@@ -266,7 +263,9 @@ patches:
   # Explicit audited runtime values; no data or first-party image changes.
   - path: source-owned-runtime-fields.patch.yaml
 
-  # #218: portable retained state; no device-writer placement or image change.
+  # #218: adopt the legacy DB selector owner before making retained state portable.
+  - path: portable-db-ssa.patch.yaml
+  # Portable retained state; no device-writer placement or image change.
   - path: portable-stateful-placement.patch.yaml
     target:
       group: apps

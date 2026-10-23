@@ -1,0 +1,8 @@
+# #218: server-side apply owns the complete atomic nodeSelector map, so the
+# obsolete kubectl-owned hostname does not survive the declared replacement.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
