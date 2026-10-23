@@ -5010,22 +5010,46 @@ async def _handle_setpoint_notification(pool: asyncpg.Pool, payload: str) -> Non
 
 
 async def setpoint_listener(pool: asyncpg.Pool) -> None:
-    """Listen for DB setpoint changes and push to ESP32 in real-time."""
+    """Keep LISTEN alive across DB recovery without replacing the ESP32 client."""
 
     async def _on_notify(_conn, _pid, _channel, payload):
         await _handle_setpoint_notification(pool, payload)
 
-    # Acquire a dedicated connection for LISTEN (can't share with pool)
-    conn = await asyncpg.connect(DB_DSN)
-    await conn.add_listener("setpoint_changed", _on_notify)
-    log.info("Setpoint listener: LISTEN on setpoint_changed channel")
+    connected_once = False
+    while True:
+        conn = None
+        disconnected = asyncio.Event()
 
-    try:
-        while True:
-            await asyncio.sleep(60)
-    finally:
-        await conn.remove_listener("setpoint_changed", _on_notify)
-        await conn.close()
+        def _on_disconnect(_conn):
+            disconnected.set()
+
+        try:
+            # LISTEN needs a dedicated connection, not a pooled connection.
+            conn = await asyncpg.connect(DB_DSN, timeout=10)
+            conn.add_termination_listener(_on_disconnect)
+            await conn.add_listener("setpoint_changed", _on_notify)
+            if connected_once:
+                # NOTIFY is not durable. Reuse the normal fenced dispatcher to
+                # reconcile eligible pending rows after the subscription returns.
+                shared.setpoint_dispatch_requested.set()
+            connected_once = True
+            log.info("Setpoint listener: LISTEN on setpoint_changed channel")
+            if conn.is_closed():
+                disconnected.set()
+            await disconnected.wait()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.warning("Setpoint listener unavailable: %s", type(exc).__name__)
+        finally:
+            if conn is not None:
+                conn.remove_termination_listener(_on_disconnect)
+                if not conn.is_closed():
+                    try:
+                        await conn.close(timeout=5)
+                    except Exception as exc:
+                        log.warning("Setpoint listener close failed: %s", type(exc).__name__)
+        await asyncio.sleep(1)
 
 
 # ──────────────────────────────────────────────────────────────

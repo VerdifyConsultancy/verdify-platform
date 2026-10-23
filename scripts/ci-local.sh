@@ -72,6 +72,7 @@ $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_devic
 
 step "pure-logic / contract tests"
 $PY -m pytest -q -rs \
+  tests/test_setpoint_listener_reconnect.py \
   tests/test_275_c0_delivery.py \
   tests/test_277_getter_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
