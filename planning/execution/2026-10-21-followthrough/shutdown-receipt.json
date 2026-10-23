@@ -1,0 +1,269 @@
+{
+  "schema": "verdify-followthrough-stop-v1",
+  "observed_at": "2026-10-21T17:15:58.430352+00:00",
+  "source_base": "dc07643b87bcf3495af1be5c665eeff741b2f48c",
+  "state": "paused_for_shutdown_preparation",
+  "containment_target": {
+    "namespace_present": false,
+    "retained_pvs": [
+      {
+        "name": "pvc-116e36a0-be6b-42aa-9643-ef4b638492db",
+        "uid": "f93fb728-5bec-4d64-b181-e08090a8b268",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-s2-spool-382-7fa4f802"
+      },
+      {
+        "name": "pvc-428fa291-e672-44c6-8d44-1b0980dfbcdf",
+        "uid": "f9ff34e4-7907-4243-91d3-87bdbfe82e44",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-2-wal"
+      },
+      {
+        "name": "pvc-463e7de8-3eaa-4d05-904c-f84f6455e531",
+        "uid": "b9755702-ab66-4b1c-88ed-f02c1ba107d3",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-3-wal"
+      },
+      {
+        "name": "pvc-4975744d-876f-4f2a-8b44-2ff908ea0431",
+        "uid": "1f723520-f858-4134-9ba5-6c7be7b87012",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-2"
+      },
+      {
+        "name": "pvc-5bc955b4-d4fa-4772-8fb9-ff7b7c902543",
+        "uid": "9f82644a-3658-4480-a535-d6bdf1a54b4a",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-1"
+      },
+      {
+        "name": "pvc-6e951ccb-1807-4d40-ac5c-57c7f9b872d8",
+        "uid": "455870f3-5c7c-4dec-9e41-28c110c8b918",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-3"
+      },
+      {
+        "name": "pvc-8ec30e16-a09e-439e-b5a5-b4e201656aa0",
+        "uid": "4e9d2192-0f6f-4b8e-8341-02e002e4d389",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-cnpg-s2-integration-1-wal"
+      },
+      {
+        "name": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+        "uid": "8197e64e-e6ad-4ed3-a6f0-fea54e070fc3",
+        "phase": "Released",
+        "reclaim": "Retain",
+        "claim": "verdify-s2-spool-qualification"
+      }
+    ]
+  },
+  "production": [
+    {
+      "name": "verdify-prod-dark",
+      "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "dc07643b87bcf3495af1be5c665eeff741b2f48c",
+      "active_operation": false
+    },
+    {
+      "name": "verdify-descheduler",
+      "uid": "2452e668-6e69-46b3-9d6d-cabfeff8ac35",
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "f9f8f45c9c912499acdcb5b0fd7421937ab07a91",
+      "active_operation": false
+    }
+  ],
+  "writer": {
+    "observed_at": "2026-10-21T17:15:10.917196+00:00",
+    "existing_connection": {
+      "source_ip": "10.42.6.161",
+      "source_port": 47258,
+      "destination_ip": "192.168.10.111",
+      "destination_port": 6053,
+      "inode": "675859596",
+      "state": "ESTABLISHED"
+    },
+    "new_connection_opened": false
+  },
+  "placement_storage": [
+    {
+      "claim": "db-data-verdify-db-0",
+      "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "volume": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "phase": "Bound",
+      "longhorn": {
+        "robustness": "healthy",
+        "state": "attached",
+        "nodeID": "vm-k3s-node7",
+        "numberOfReplicas": 3,
+        "lastBackupAt": "2026-10-21T09:41:56Z",
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-07-09T14:26:56Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-07-09T14:26:56Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-07-27T02:03:07Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-07-09T14:26:56Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ]
+      }
+    },
+    {
+      "claim": "verdify-grafana-data",
+      "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "volume": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "phase": "Bound",
+      "longhorn": {
+        "robustness": "healthy",
+        "state": "attached",
+        "nodeID": "vm-k3s-node7",
+        "numberOfReplicas": 2,
+        "lastBackupAt": "2026-10-21T10:47:07Z",
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-05T19:42:03Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-05T19:42:03Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-05T19:42:03Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-10-05T19:42:03Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ]
+      }
+    },
+    {
+      "claim": "verdify-hermes-iris-data-portable-20260801",
+      "uid": "6b6b2f30-c414-4325-a803-87b19010851f",
+      "volume": "pvc-6b6b2f30-c414-4325-a803-87b19010851f",
+      "phase": "Bound",
+      "longhorn": {
+        "robustness": "healthy",
+        "state": "attached",
+        "nodeID": "vm-k3s-node4",
+        "numberOfReplicas": 2,
+        "lastBackupAt": "2026-10-21T10:11:01Z",
+        "conditions": [
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-08-01T15:14:04Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "WaitForBackingImage"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-08-01T15:14:04Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "TooManySnapshots"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-09-21T02:55:11Z",
+            "message": "",
+            "reason": "",
+            "status": "True",
+            "type": "Scheduled"
+          },
+          {
+            "lastProbeTime": "",
+            "lastTransitionTime": "2026-08-01T15:14:04Z",
+            "message": "",
+            "reason": "",
+            "status": "False",
+            "type": "Restore"
+          }
+        ]
+      }
+    }
+  ],
+  "changes_deployed": false,
+  "new_jobs_submitted": 0,
+  "new_device_connections": 0,
+  "new_messages_sent": 0,
+  "ci_started": false,
+  "unrelated_checkout": "Original checkout retains pre-existing untracked .kube/; untouched",
+  "validation": {
+    "kustomize_build": "passed",
+    "render_scope": "only nodeSelector changes in verdify-db, verdify-grafana and verdify-hermes-iris; all other rendered objects identical; zero Secrets",
+    "full_ci": "not started before pause"
+  },
+  "live_read_only_attempts": [
+    {
+      "query": "fn_lighting_minutes_policy(now(),vallery)",
+      "timeout_seconds": 8,
+      "exit_code": 3,
+      "outcome": "statement timeout; connection ended, read-only transaction discarded; no result or mutation"
+    },
+    {
+      "query": "direct bounded diagnostics/climate/cfg/text telemetry",
+      "outcome": "passed",
+      "duration_seconds": 0.127,
+      "spread_F": 0.720001220703125,
+      "south_temperature": null,
+      "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+      "lighting": "both OFF/lux_sufficient; no solar-boundary acceptance"
+    }
+  ],
+  "resume_requires_explicit_user_instruction": true
+}
