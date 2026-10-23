@@ -15,6 +15,10 @@ if [[ -z "$FW_VERSION" ]]; then
     usage
     exit 2
 fi
+if [[ ! "$FW_VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
+    echo "Invalid firmware version" >&2
+    exit 2
+fi
 shift || true
 
 PROMOTE=0
@@ -33,7 +37,12 @@ BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/firmware/.esphome/build/greenhouse/.pioenvs/g
 GENERATED_BUILD_DIR="$(dirname "$(dirname "$BUILD_DIR")")"
 ESPHOME_DATA_ROOT="$(dirname "$(dirname "$GENERATED_BUILD_DIR")")"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$REPO_ROOT/firmware/artifacts}"
-DEST="$ARTIFACT_ROOT/$FW_VERSION"
+ARCHIVE_NAME="${ARTIFACT_DIRECTORY_NAME:-$FW_VERSION}"
+if [[ -n "${ARTIFACT_DIRECTORY_NAME:-}" ]] && [[ ! "$ARCHIVE_NAME" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "Immutable artifact directory requires a full source SHA" >&2
+    exit 2
+fi
+DEST="$ARTIFACT_ROOT/$ARCHIVE_NAME"
 PROVENANCE_DIR="$DEST/provenance"
 SOURCE_SNAPSHOT_DIR="$DEST/source-snapshot"
 GENERATED_SOURCE_DIR="$DEST/generated-src"
@@ -66,7 +75,12 @@ for f in "${required[@]}"; do
     fi
 done
 
-mkdir -p "$DEST"
+if [[ -n "${ARTIFACT_DIRECTORY_NAME:-}" ]]; then
+    mkdir -p "$ARTIFACT_ROOT"
+    mkdir "$DEST" # An immutable source archive must never overwrite a prior build.
+else
+    mkdir -p "$DEST"
+fi
 for f in "${required[@]}"; do
     cp "$BUILD_DIR/$f" "$DEST/$f"
 done

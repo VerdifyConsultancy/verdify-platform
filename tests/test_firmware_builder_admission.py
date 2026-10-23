@@ -19,7 +19,7 @@ def documents():
 
 def builder():
     job = next(d for d in documents() if d["kind"] == "CronJob")
-    return job["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
+    return job["spec"]["jobTemplate"]["spec"]["template"]["spec"]["initContainers"][0]
 
 
 @pytest.mark.parametrize("revision", ["", "main", "v2026.1", "a" * 12, "A" * 40, "a" * 39 + ";", "-help"])
@@ -46,9 +46,9 @@ def test_exact_commit_passes_admission_and_checkout_is_verified():
     assert next(e for e in builder()["env"] if e["name"] == "FW_REVISION")["value"] == ""
 
 
-def test_builder_private_networks_are_excluded_except_ota():
+def test_builder_private_networks_and_device_are_excluded():
     policy = next(d for d in documents() if d["kind"] == "NetworkPolicy")
-    public, ota, dns = policy["spec"]["egress"]
+    public, dns = policy["spec"]["egress"]
     block = public["to"][0]["ipBlock"]
     exceptions = [ipaddress.ip_network(n) for n in block["except"]]
     assert block["cidr"] == "0.0.0.0/0"
@@ -64,7 +64,6 @@ def test_builder_private_networks_are_excluded_except_ota():
         "224.0.0.1",
     ]:
         assert any(ipaddress.ip_address(address) in network for network in exceptions)
-    assert ota == {"to": [{"ipBlock": {"cidr": "192.168.10.111/32"}}], "ports": [{"port": 3232, "protocol": "TCP"}]}
     assert dns["to"] == [
         {
             "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}},

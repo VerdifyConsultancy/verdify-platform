@@ -1,37 +1,5 @@
-# In-cluster firmware OTA capability (closes handoff §5.1, operator-directed
-# 2026-07-13: "fix this so you can OTA from the cluster").
-#
-# WHAT THIS IS: a suspended CronJob used purely as a reusable Job template.
-# Nothing runs on a schedule — an operator (human or cluster agent) triggers a
-# run explicitly:
-#
-#   # compile + archive only: set FW_REVISION to the reviewed full commit SHA
-#   # in the generated Job before submitting it. The template default fails closed.
-#
-#   # compile + archive + FLASH the device (safety-checked; run the preflight first):
-#   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-flash-$(date +%s) \
-#     --dry-run=client -o json | \
-#     python3 -c 'import json,sys; j=json.load(sys.stdin); c=j["spec"]["template"]["spec"]["containers"][0]; \
-#       [e.update(value="1") for e in c["env"] if e["name"]=="FLASH"]; print(json.dumps(j))' | kubectl create -f -
-#
-# The OTA itself REMAINS safety-checked policy-wise (AGENTS.md): the agent runs
-# scripts/firmware-deploy-preflight.sh (kube backend) and asks; only an
-# an explicit FLASH=1 request triggers the job after the preflight passes.
-#
-# Secrets consumed (never logged; secrets.yaml is assembled in an emptyDir):
-#   verdify-firmware-ota/ota_password        (exists)
-#   verdify-app-secrets/ESP32_API_KEY        (exists — the device Noise PSK)
-#   verdify-firmware-wifi/{wifi_ssid,wifi_password}  (one-time operator create;
-#     the WLAN passphrase never lived in-cluster before)
-#   verdify-github-token/GITHUB_TOKEN        (read-only clone token)
-#
-# Artifacts: firmware/artifacts moves OFF the laptop onto the
-# verdify-firmware-artifacts PVC — archive-firmware-artifacts.sh runs with
-# ARTIFACT_ROOT=/artifacts, so last-good.ota.bin (the rollback floor read by
-# firmware-rollback.sh and the deploy preflight's bake clock) is durable and
-# cluster-resident. The old node-bound toolchain cache PVC is retained for
-# recovery, but builds use a bounded per-Job cache so they can run on any
-# eligible worker.
+# Suspended compile/archive/sign template. It has no device egress and cannot flash.
+# Use scripts/firmware-release-job.py to bind one exact revision across containers.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -40,7 +8,8 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: firmware-builder
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes:
+  - ReadWriteOnce
   storageClassName: longhorn-v1-workspace-rwo
   resources:
     requests:
@@ -54,15 +23,13 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: firmware-builder
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes:
+  - ReadWriteOnce
   storageClassName: longhorn-v1-rebuildable-rwo
   resources:
     requests:
       storage: 10Gi
 ---
-# Device-VLAN + toolchain egress for the builder pod ONLY. Compile needs the
-# internet (PlatformIO registry, GitHub); flash needs the ESP32 (192.168.10.111
-# OTA :3232). Mirrors the sanctioned ingestor device-egress shape.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -74,43 +41,42 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/component: firmware-builder
-  policyTypes: ["Egress"]
+  policyTypes:
+  - Egress
   egress:
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 0.0.0.0/8
-              - 10.0.0.0/8
-              - 100.64.0.0/10
-              - 127.0.0.0/8
-              - 169.254.0.0/16
-              - 172.16.0.0/12
-              - 192.0.0.0/24
-              - 192.0.2.0/24
-              - 192.168.0.0/16
-              - 198.18.0.0/15
-              - 198.51.100.0/24
-              - 203.0.113.0/24
-              - 224.0.0.0/4
-              - 240.0.0.0/4
-      ports:
-        - {port: 443, protocol: TCP}
-    - to:
-        - ipBlock:
-            cidr: 192.168.10.111/32
-      ports:
-        - {port: 3232, protocol: TCP}
-    - ports:
-        - {port: 53, protocol: UDP}
-        - {port: 53, protocol: TCP}
-      to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 0.0.0.0/8
+        - 10.0.0.0/8
+        - 100.64.0.0/10
+        - 127.0.0.0/8
+        - 169.254.0.0/16
+        - 172.16.0.0/12
+        - 192.0.0.0/24
+        - 192.0.2.0/24
+        - 192.168.0.0/16
+        - 198.18.0.0/15
+        - 198.51.100.0/24
+        - 203.0.113.0/24
+        - 224.0.0.0/4
+        - 240.0.0.0/4
+    ports:
+    - port: 443
+      protocol: TCP
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -120,8 +86,7 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: firmware-builder
 spec:
-  # Template-only: never scheduled. Trigger with `kubectl create job --from=`.
-  schedule: "0 0 31 2 *"  # Feb 31 never occurs; belt for the suspenders below
+  schedule: 0 0 31 2 *
   suspend: true
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
@@ -144,113 +109,192 @@ spec:
             runAsGroup: 1000
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
-            seccompProfile: {type: RuntimeDefault}
-          containers:
-            - name: builder
-              # Official ESPHome image: carries the esphome CLI; PlatformIO
-              # pulls the xtensa toolchain into the per-Job cache.
-              image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities: {drop: ["ALL"]}
-              env:
-                - name: FLASH
-                  value: "0"           # 1 = upload to the device after compile (gated)
-                - name: PROMOTE_LAST_GOOD
-                  value: "0"           # 1 = also promote this build to the rollback floor
-                - name: FW_REVISION
-                  value: ""            # required: reviewed full 40-character lowercase commit SHA
-                - name: FW_VERSION
-                  value: ""            # empty = derive YYYY.M.D.HHMM.<short-sha>
-                - name: DEVICE_IP
-                  value: "192.168.10.111"
-                - name: GIT_TOKEN
-                  valueFrom: {secretKeyRef: {name: verdify-github-token, key: GITHUB_TOKEN}}
-                - name: OTA_PASSWORD
-                  valueFrom: {secretKeyRef: {name: verdify-firmware-ota, key: ota_password}}
-                - name: API_ENCRYPTION_KEY
-                  valueFrom: {secretKeyRef: {name: verdify-app-secrets, key: ESP32_API_KEY}}
-                - name: WIFI_SSID
-                  valueFrom: {secretKeyRef: {name: verdify-firmware-wifi, key: wifi_ssid}}
-                - name: WIFI_PASSWORD
-                  valueFrom: {secretKeyRef: {name: verdify-firmware-wifi, key: wifi_password}}
-                - name: PLATFORMIO_CORE_DIR
-                  value: /cache/platformio
-                - name: ESPHOME_DATA_DIR
-                  value: /cache/esphome-data
-                - name: ESPHOME_DEFAULT_COMPILE_PROCESS_LIMIT
-                  value: "1"         # serial compile stays within the 6Gi namespace limit
-                - name: HOME
-                  value: /tmp
-              command: [bash, -euo, pipefail, -c]
-              args:
-                - |
-                  # Refuse mutable refs before clone, secrets assembly or compilation.
-                  if [[ ! "${FW_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
-                    echo "[builder] FW_REVISION must be a reviewed full lowercase commit SHA" >&2
-                    exit 64
-                  fi
-                  echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
-                  git clone --filter=blob:none "https://x-access-token:${GIT_TOKEN}@github.com/VerdifyConsultancy/verdify-platform.git" /work
-                  cd /work
-                  test "$(git cat-file -t "${FW_REVISION}")" = commit
-                  git checkout --detach -q "${FW_REVISION}"
-                  test "$(git rev-parse HEAD)" = "${FW_REVISION}"
-                  SHORT_SHA="$(git rev-parse --short HEAD)"
-                  if [ -z "${FW_VERSION}" ]; then
-                    FW_VERSION="$(date +%Y.%-m.%-d.%H%M).${SHORT_SHA}"
-                  fi
-                  echo "[builder] fw_version=${FW_VERSION}"
-
-                  # secrets.yaml lives only in the pod's tmpfs-backed workdir;
-                  # values are NEVER echoed.
-                  umask 077
-                  cat > /work/firmware/secrets.yaml <<SECRETS
-                  wifi_ssid: "${WIFI_SSID}"
-                  wifi_password: "${WIFI_PASSWORD}"
-                  ota_password: "${OTA_PASSWORD}"
-                  api_encryption_key: "${API_ENCRYPTION_KEY}"
-                  SECRETS
-
-                  cd /work/firmware
-                  echo "[builder] compiling (downloads the xtensa toolchain into the per-Job cache)"
-                  esphome -s fw_version "${FW_VERSION}" compile greenhouse.yaml
-
-                  BUILD_DIR="${ESPHOME_DATA_DIR}/build/greenhouse/.pioenvs/greenhouse"
-                  echo "[builder] build dir: ${BUILD_DIR}"
-                  sha256sum "${BUILD_DIR}/firmware.ota.bin"
-
-                  echo "[builder] archiving to the artifacts PVC"
-                  cd /work
-                  PROMOTE_FLAG=""
-                  if [ "${PROMOTE_LAST_GOOD}" = "1" ]; then PROMOTE_FLAG="--promote-last-good"; fi
-                  ARTIFACT_ROOT=/artifacts BUILD_DIR="${BUILD_DIR}" \
-                    bash scripts/archive-firmware-artifacts.sh "${FW_VERSION}" ${PROMOTE_FLAG}
-                  (cd "/artifacts/${FW_VERSION}" && sha256sum -c SHA256SUMS)
-                  ls -la /artifacts/ | head
-
-                  if [ "${FLASH}" = "1" ]; then
-                    echo "[builder] FLASH=1 — uploading to ${DEVICE_IP}:3232 (OTA)"
-                    cd /work/firmware
-                    esphome -s fw_version "${FW_VERSION}" upload greenhouse.yaml --device "${DEVICE_IP}"
-                    echo "[builder] OTA upload complete; verify with wait-for-firmware-version.sh + sensor-health"
-                  else
-                    echo "[builder] FLASH=0 — compile+archive only (no device contact)"
-                  fi
-              volumeMounts:
-                - {name: artifacts, mountPath: /artifacts}
-                - {name: cache, mountPath: /cache}
-                - {name: work, mountPath: /work}
-                - {name: tmp, mountPath: /tmp}
-              resources:
-                requests: {cpu: "1", memory: 2Gi}
-                limits: {cpu: "4", memory: 6Gi}
+            seccompProfile:
+              type: RuntimeDefault
           volumes:
+          - name: artifacts
+            persistentVolumeClaim:
+              claimName: verdify-firmware-artifacts
+          - name: cache
+            emptyDir:
+              sizeLimit: 10Gi
+          - name: work
+            emptyDir: {}
+          - name: tmp
+            emptyDir: {}
+          - name: release-tools
+            configMap:
+              name: verdify-firmware-release-tools
+          - name: trust
+            configMap:
+              name: verdify-firmware-release-trust
+          - name: signing
+            secret:
+              secretName: verdify-firmware-signing
+              items:
+              - key: cosign.key
+                path: cosign.key
+              defaultMode: 288
+          automountServiceAccountToken: false
+          initContainers:
+          - name: builder
+            image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: FW_REVISION
+              value: ''
+            - name: FW_VERSION
+              value: ''
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-github-token
+                  key: GITHUB_TOKEN
+            - name: OTA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-firmware-ota
+                  key: ota_password
+            - name: API_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: ESP32_API_KEY
+            - name: WIFI_SSID
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-firmware-wifi
+                  key: wifi_ssid
+            - name: WIFI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-firmware-wifi
+                  key: wifi_password
+            - name: PLATFORMIO_CORE_DIR
+              value: /cache/platformio
+            - name: ESPHOME_DATA_DIR
+              value: /cache/esphome-data
+            - name: ESPHOME_DEFAULT_COMPILE_PROCESS_LIMIT
+              value: '1'
+            - name: HOME
+              value: /tmp
+            command:
+            - bash
+            - -euo
+            - pipefail
+            - -c
+            args:
+            - |
+              # Refuse mutable refs before clone, secrets assembly or compilation.
+              if [[ ! "${FW_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
+                echo "[builder] FW_REVISION must be a reviewed full lowercase commit SHA" >&2
+                exit 64
+              fi
+              test ! -e "/artifacts/${FW_REVISION}" || { echo "[builder] immutable artifact already exists" >&2; exit 64; }
+              [ "${FLASH:-0}" = "0" ] || { echo "[builder] compile template refuses FLASH" >&2; exit 64; }
+              echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
+              git clone --filter=blob:none "https://x-access-token:${GIT_TOKEN}@github.com/VerdifyConsultancy/verdify-platform.git" /work
+              cd /work
+              test "$(git cat-file -t "${FW_REVISION}")" = commit
+              git checkout --detach -q "${FW_REVISION}"
+              test "$(git rev-parse HEAD)" = "${FW_REVISION}"
+              SHORT_SHA="$(git rev-parse --short HEAD)"
+              if [ -z "${FW_VERSION}" ]; then
+                FW_VERSION="$(date +%Y.%-m.%-d.%H%M).${SHORT_SHA}"
+              fi
+              echo "[builder] fw_version=${FW_VERSION}"
+
+              # secrets.yaml lives only in the pod's tmpfs-backed workdir;
+              # values are NEVER echoed.
+              umask 077
+              cat > /work/firmware/secrets.yaml <<SECRETS
+              wifi_ssid: "${WIFI_SSID}"
+              wifi_password: "${WIFI_PASSWORD}"
+              ota_password: "${OTA_PASSWORD}"
+              api_encryption_key: "${API_ENCRYPTION_KEY}"
+              SECRETS
+
+              cd /work/firmware
+              echo "[builder] compiling (downloads the xtensa toolchain into the per-Job cache)"
+              esphome -s fw_version "${FW_VERSION}" compile greenhouse.yaml
+
+              BUILD_DIR="${ESPHOME_DATA_DIR}/build/greenhouse/.pioenvs/greenhouse"
+              echo "[builder] build dir: ${BUILD_DIR}"
+              sha256sum "${BUILD_DIR}/firmware.ota.bin"
+
+              echo "[builder] archiving to the artifacts PVC"
+              cd /work
+              ARTIFACT_ROOT=/artifacts ARTIFACT_DIRECTORY_NAME="${FW_REVISION}" BUILD_DIR="${BUILD_DIR}" \
+                bash scripts/archive-firmware-artifacts.sh "${FW_VERSION}"
+              (cd "/artifacts/${FW_REVISION}" && sha256sum -c SHA256SUMS)
+              python3 /release-tools/firmware_release.py manifest --revision "${FW_REVISION}" \
+                --firmware-version "${FW_VERSION}" --toolchain "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+
+              echo "[builder] compile and archive complete; no device contact"
+            volumeMounts:
             - name: artifacts
-              persistentVolumeClaim: {claimName: verdify-firmware-artifacts}
+              mountPath: /artifacts
             - name: cache
-              emptyDir: {sizeLimit: 10Gi}
+              mountPath: /cache
             - name: work
-              emptyDir: {}
+              mountPath: /work
             - name: tmp
-              emptyDir: {}
+              mountPath: /tmp
+            - name: release-tools
+              mountPath: /release-tools
+              readOnly: true
+            resources:
+              requests:
+                cpu: '1'
+                memory: 2Gi
+              limits:
+                cpu: '4'
+                memory: 6Gi
+          containers:
+          - name: signer
+            image: ghcr.io/sigstore/cosign/cosign@sha256:0f06154836d2de34f887a5c273506d52ca43edaa1d9e53e6510fa78a48f69c2d
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: FW_REVISION
+              value: ''
+            - name: COSIGN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-firmware-signing
+                  key: password
+            - name: HOME
+              value: /tmp
+            args:
+            - sign-blob
+            - --yes
+            - --key=/signing/cosign.key
+            - --signing-config=/trust/offline-signing.json
+            - --bundle=/artifacts/$(FW_REVISION)/release.sigstore.json
+            - /artifacts/$(FW_REVISION)/release.json
+            volumeMounts:
+            - name: artifacts
+              mountPath: /artifacts
+            - name: signing
+              mountPath: /signing
+              readOnly: true
+            - name: trust
+              mountPath: /trust
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
