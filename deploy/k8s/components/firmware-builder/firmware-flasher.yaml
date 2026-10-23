@@ -1,0 +1,207 @@
+# Default verify-only; a separately authorized attended flash selects action=flash.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-firmware-flasher-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-flasher
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: firmware-flasher
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 192.168.10.111/32
+    ports:
+    - port: 3232
+      protocol: TCP
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-firmware-flasher
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-flasher
+spec:
+  schedule: 0 0 31 2 *
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 172800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: firmware-flasher
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+          - name: artifacts
+            persistentVolumeClaim:
+              claimName: verdify-firmware-artifacts
+              readOnly: true
+          - name: verified
+            emptyDir:
+              sizeLimit: 512Mi
+          - name: tmp
+            emptyDir:
+              sizeLimit: 32Mi
+          - name: trust
+            configMap:
+              name: verdify-firmware-release-trust
+          - name: release-tools
+            configMap:
+              name: verdify-firmware-release-tools
+          automountServiceAccountToken: false
+          initContainers:
+          - image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: FW_REVISION
+              value: ''
+            - name: EXPECTED_MANIFEST_SHA256
+              value: ''
+            - name: HOME
+              value: /tmp
+            command:
+            - python3
+            - /release-tools/firmware_release.py
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            volumeMounts:
+            - name: release-tools
+              mountPath: /release-tools
+              readOnly: true
+            - name: verified
+              mountPath: /verified
+            - name: trust
+              mountPath: /trust
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: artifacts
+              mountPath: /artifacts
+              readOnly: true
+            name: stage-reviewed-artifact
+            args:
+            - stage
+          - name: verify-signature
+            image: ghcr.io/sigstore/cosign/cosign@sha256:0f06154836d2de34f887a5c273506d52ca43edaa1d9e53e6510fa78a48f69c2d
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            args:
+            - verify-blob
+            - --key=/trust/cosign.pub
+            - --bundle=/verified/release.sigstore.json
+            - --insecure-ignore-tlog=true
+            - --insecure-ignore-sct=true
+            - /verified/release.json
+            env:
+            - name: HOME
+              value: /tmp
+            volumeMounts:
+            - name: verified
+              mountPath: /verified
+              readOnly: true
+            - name: trust
+              mountPath: /trust
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+          containers:
+          - image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: FW_REVISION
+              value: ''
+            - name: EXPECTED_MANIFEST_SHA256
+              value: ''
+            - name: HOME
+              value: /tmp
+            - name: OTA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-firmware-ota
+                  key: ota_password
+            command:
+            - python3
+            - /release-tools/firmware_release.py
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            volumeMounts:
+            - name: release-tools
+              mountPath: /release-tools
+              readOnly: true
+            - name: verified
+              mountPath: /verified
+            - name: trust
+              mountPath: /trust
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            name: flash-reviewed-artifact
+            args:
+            - verify
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: firmware-verifier-deny-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-artifact-verifier
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: firmware-artifact-verifier
+  policyTypes: [Egress]
+  egress: []

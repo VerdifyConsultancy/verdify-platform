@@ -19,9 +19,9 @@ def test_firmware_builder_uses_the_qualified_immutable_esphome_image() -> None:
         for document in yaml.safe_load_all(MANIFEST.read_text())
         if document and document.get("kind") == "CronJob"
     )
-    containers = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"]
+    containers = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["initContainers"]
     builder = next(container for container in containers if container["name"] == "builder")
 
     assert builder["image"] == ESPHOME_IMAGE
     assert cronjob["spec"]["suspend"] is True
-    assert next(entry for entry in builder["env"] if entry["name"] == "FLASH")["value"] == "0"
+    assert not any(entry["name"] == "FLASH" for entry in builder["env"])

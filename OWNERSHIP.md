@@ -772,3 +772,15 @@ The product owns the longctx.mm vision client and CronJob reference to `verdify-
 ## Fixed outbound dependencies (#1011 / #1022)
 
 `verdify-outbound` Deployment/Service/ServiceAccount, `verdify-outbound-config` and `verdify-outbound-boundary` are product-owned in verdify-prod. They expose only fixed OpenAI embedding, Slack chat-post and Open-Meteo forecast paths; the ingestor and MCP have no direct Internet route after adoption. See [delivery and live acceptance](docs/runbooks/outbound-boundary.md). The writer's exact Shelly TCP/502 endpoint is the approved additional greenhouse-VLAN dependency. Production adoption is tracked in #1011/#1022; source and configuration-test success alone do not close either issue.
+
+## Separate signed firmware build and flash (#1009)
+
+The product owns the suspended `verdify-firmware-builder` compile/archive/sign
+Job template, suspended `verdify-firmware-flasher` verification/upload template,
+their separate egress policies, and generated `verdify-firmware-release-tools`
+and `verdify-firmware-release-trust` ConfigMaps. Both retain the original
+`verdify-firmware-artifacts` PVC. The compiler has public HTTPS/DNS only; the
+flasher has only device TCP/3232 and defaults to verification without contact.
+Agents owns encrypted `verdify-firmware-signing` custody. Only the signer mounts
+that private key; the product pins its public key and immutable cosign image.
+This change performs no flash, OTA credential rotation or rollback-floor promotion.

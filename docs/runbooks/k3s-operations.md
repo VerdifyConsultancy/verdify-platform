@@ -195,24 +195,14 @@ secrets. The procedure and its traps:
 These items record remaining infrastructure work and completed portability
 milestones:
 
-1. **Firmware OTA in-cluster** — CLOSED 2026-07-13 (operator-directed).
-   `deploy/k8s/components/firmware-builder/`: a suspended-CronJob job template
-   (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
-   requires a reviewed full 40-character lowercase `FW_REVISION` in the generated
-   Job (empty, branch and tag references fail before clone), runs the pinned
-   esphome image, assembles `secrets.yaml` from k8s Secrets
-   (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
-   `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
-   toolchain in a bounded per-Job cache, archives to the `verdify-firmware-artifacts`
-   PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
-   workstation**), and—only with the explicit `FLASH=1` live flag—uploads to
-   192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
-   policy permits public IPv4 HTTPS, cluster DNS and only the device OTA port;
-   it excludes private/reserved ranges from toolchain egress. This is transport
-   restriction, not a provider-hostname allowlist. The
-   preflight/verify steps (`firmware-deploy-preflight.sh`,
-   `wait-for-firmware-version.sh`, `make sensor-health`) already run
-   kube-backend from any cluster pod.
+1. **Firmware build and verified OTA in-cluster** — separate suspended Job
+   templates compile/archive/sign and verify/flash. The builder requires an exact
+   full source revision, cannot contact the controller and cannot auto-promote
+   last-good. The independent flasher requires the reviewed manifest hash and
+   pinned signature key; verification is its default action. No firmware is
+   rebuilt during flashing. See [signed-artifact operations](firmware-signed-artifacts.md)
+   and `scripts/firmware-release-job.py`. Existing preflight, rollback and
+   database-backed post-flash checks remain required for an attended release.
 2. **Secret sealing / source reconciliation** — `docs/runbooks/verdify-secret-sealing-plan.md`
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.

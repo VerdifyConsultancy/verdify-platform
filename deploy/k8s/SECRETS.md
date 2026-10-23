@@ -273,3 +273,14 @@ migration and other bootstrap owner credentials are unchanged.
 ## Verdify local vision (#1021)
 
 `verdify-vision-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to `llm.primary.longctx.mm`, owned and sealed in agents KSOPS. The vision CronJob mounts it at `/vcortex/api_key.txt`. The old `verdify-vision-key` Gemini Secret is retained without workload references; deleting or revoking it is outside this change.
+
+## Firmware artifact signing (#1009)
+
+`verdify-firmware-signing` contains `cosign.key` and `password`. Agents owns the
+single SOPS source and Secret-only reconciliation. Only the build Pod's signer
+container mounts the private key; the compiler and flasher cannot read it.
+The public key is product-owned `cosign.pub`, SHA256
+`4a3b1fe0a863ff330a7ff938f827949ad28be846b1da549e090bf35935cc177e`.
+Jason explicitly approved this new key and encrypted custody on 2026-10-23.
+It grants no permission to flash, rotate OTA credentials or open a device
+connection. See [signed-artifact operations](../../docs/runbooks/firmware-signed-artifacts.md).
