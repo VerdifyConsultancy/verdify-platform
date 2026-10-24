@@ -15,7 +15,10 @@
 # apiVersion/kind/metadata/type in cleartext so kustomize + kubeconform can still
 # parse the manifest shape, and so operators can see WHICH keys exist without
 # seeing their values.
+# SSH trust Stage 1 / D1 (Jason, 2026-10-24): every file is encrypted to exactly two recipients,
+# age-fleet (age1jd6c7lm…d5k, operator Mac + offline escrow) and age-cluster (age1xqatkma…0a8r,
+# held only in argocd/sops-age). Rebase before sealing so a new file picks up both.
 creation_rules:
   - path_regex: deploy/k8s/.*\.sops\.ya?ml$
     encrypted_regex: "^(data|stringData)$"
-    age: age1jd6c7lm7vhj56gve6dvj59mepwpukhnyyh8wyca9y7mrjfeyqs8qjvqd5k
+    age: age1jd6c7lm7vhj56gve6dvj59mepwpukhnyyh8wyca9y7mrjfeyqs8qjvqd5k,age1xqatkmaluhuutg342tm27d2wrdy7snts0lgjc40q04sjswxywchq9r0a8r
