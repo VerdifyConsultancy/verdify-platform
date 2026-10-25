@@ -309,14 +309,14 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a
-  # Hand-pinned grow-light writer: source cb21fd3d3295, build-setpoint-server in
-  # agent-fleet-ci/verdify-platform-ci-8wkb8. The #399 HA call allowlist confines
+  # Hand-pinned grow-light writer: source 3c9d6ad8ae3b (#1088, HA_TOKEN_FILE), build-setpoint-server
+  # in agent-fleet-ci/verdify-platform-ci-tlpsc. Rollback: 21336cd82de4 (source cb21fd3d3295). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491
+    digest: sha256:a009c2a3be621fda4080276a376a1d19428aadfea2b0131234fa0a97ba04fe6a
   # S6 native public shares (21 approved): source 3a7df6e3bb73.
   # Qualified repo-build: verdify-s6-publisher-weather-20261020.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
