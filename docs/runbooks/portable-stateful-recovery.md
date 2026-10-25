@@ -45,3 +45,39 @@ Replicas share the estate/cluster and depend on storage and network health.
 NAS-backed dump custody and offsite backups have separate availability and
 restore-time limits. This change adds scheduling recovery, not a CNPG cutover,
 zero RPO, a full disaster restore, or physical controller qualification.
+
+## Lab cache origin and host-loss boundaries (#1076)
+
+The private lab-cache origin uses Recreate on the existing
+`verdify-lab-site-cache` RWO claim. Both origin and publisher carry
+`verdify.ai/lab-cache-cohort=portable-rwo` and required same-host cohort
+affinity. This prevents a surge replacement from waiting indefinitely beside
+an origin on a cordoned node, and keeps a replacement with an active publisher
+that still holds the attachment. Public serving caches retain their last
+validated generation during origin interruption; a new serving replica needs
+an origin refresh before becoming Ready.
+
+Qualify the normal template rollout first. For an attended relocation, wait
+for every active publisher to finish, record the origin/claim UID and current
+node's schedulability, then cordon only that node and replace only the origin
+Pod with a UID precondition. Do not drain the node or touch another workload.
+Require a Ready origin on another eligible worker within ten minutes, no
+attach failure lasting over two minutes, and successful serving-cache refresh.
+Restore only the cordon owned by this operation even if verification fails.
+If a scheduled publisher joins the cohort, let it finish rather than force
+volume detach or interrupt its export.
+
+On 2026-10-25, DB/Grafana/Hermes are eligible on node4 (oro) and node5 (opal);
+control-plane nodes remain cordoned and GPU reservations are unchanged. The
+lab cohort has no general-worker selector and can use untainted eligible
+workers with its RWO/affinity constraints. Read current node labels, taints,
+requests, working sets and volume replicas before every operation.
+
+The #218 DB planned relocation measured 43.9 seconds between successful reads.
+That measurement is not an unplanned-host-loss RTO or a lab-origin recovery
+measurement. Unplanned loss of an active RWO host remains operator-bound:
+confirm fencing before a release through storage-infra#714's supported path.
+Do not infer automatic PostgreSQL failover from Longhorn replicas, force a
+volume detach, or reuse a planned-move interval as an outage guarantee.
+Scheduling/rollout warning coverage and its loaded-rule receipt belong to
+monitoring-stack; link the deployed rule names in the #1076 acceptance receipt.

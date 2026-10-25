@@ -26,12 +26,11 @@ spec:
     matchLabels:
       app.kubernetes.io/component: lab-cache-origin
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+    type: Recreate
   template:
     metadata:
+      annotations:
+        verdify.ai/storage-contract: portable-rwo-recreate-v1
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: lab-cache-origin
