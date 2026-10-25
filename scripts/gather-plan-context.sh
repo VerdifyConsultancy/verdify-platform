@@ -58,7 +58,7 @@ mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATE
 DB+=(-t -A)
 mapfile -t DB_OPTIONAL < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS}")
 DB_OPTIONAL+=(-t -A)
-HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
+HA_TOKEN=$(cat "${HA_TOKEN_FILE:-/var/run/secrets/verdify/ha_token.txt}" 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON:-python3}"

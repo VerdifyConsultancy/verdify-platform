@@ -73,7 +73,7 @@ spec:
                       name: verdify-ha-backfill-runtime-db
                       key: password
                 - name: HA_TOKEN_FILE
-                  value: /mnt/agents/shared/credentials/ha_token.txt
+                  value: /var/run/secrets/verdify/ha_token.txt
                 - name: PYTHONPATH
                   value: /app/ingestor:/app
                 - name: HOME
@@ -83,7 +83,7 @@ spec:
                   mountPath: /opt/verdify-ha-gap-backfill
                   readOnly: true
                 - name: ha-token
-                  mountPath: /mnt/agents/shared/credentials
+                  mountPath: /var/run/secrets/verdify
                   readOnly: true
                 - name: tmp
                   mountPath: /tmp

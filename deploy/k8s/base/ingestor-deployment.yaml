@@ -50,7 +50,7 @@ spec:
         # (the CI gate recomputes it). NOTE: a revision bump makes the NEXT
         # gated ArgoCD sync Recreate the single writer — same gated-restart
         # semantics as any other pod-template change here.
-        verdify.io/config-revision: "913430b974ab"
+        verdify.io/config-revision: "8a6126c56dd2"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: ingestor
@@ -109,6 +109,12 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
+            # HA token file read by config.py (HA_TOKEN_FILE) and by the
+            # mounted gather-plan-context.sh. It must match the ha-token
+            # volumeMount below (storage-infra#1198 moved it off the legacy
+            # NAS-share path name; the token itself comes from KSOPS).
+            - name: HA_TOKEN_FILE
+              value: /var/run/secrets/verdify/ha_token.txt
             # HA-3.2 FENCE (#240): the Lease holderIdentity is this pod's name,
             # so two pods are always distinct holders. POD_NAMESPACE scopes the
             # Lease to this overlay's namespace. Downward API — no secret.
@@ -201,9 +207,8 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            # HA token mounted at the SAME path config.py reads
-            # (HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt) so
-            # load_token() works unchanged. The shelly_sync / ha_sensor_sync /
+            # HA token mounted at the path the HA_TOKEN_FILE env above names,
+            # which config.py load_token() reads. The shelly_sync / ha_sensor_sync /
             # tempest_sync ingestor tasks (energy + hydro + weather telemetry)
             # fetch from Home Assistant with this token; without it they fail
             # every run ("[Errno 2] ... ha_token.txt") and the energy table +
@@ -212,7 +217,7 @@ spec:
             # SAME Secret the setpoint-server component mounts; local builds use
             # the placeholder file.
             - name: ha-token
-              mountPath: /mnt/agents/shared/credentials
+              mountPath: /var/run/secrets/verdify
               readOnly: true
             - name: slack-token
               mountPath: /etc/verdify/slack
