@@ -41,3 +41,21 @@ def test_portability_keeps_singleton_storage_and_recreate_boundaries(workloads):
     for name in ("verdify-grafana", "verdify-hermes-iris", "verdify-ingestor"):
         assert workloads["Deployment", name]["spec"]["replicas"] == 1
         assert workloads["Deployment", name]["spec"]["strategy"]["type"] == "Recreate"
+
+
+def test_lab_origin_recreates_without_losing_publisher_attachment_cohort(workloads):
+    origin = workloads["Deployment", "verdify-lab-cache-origin"]
+    assert origin["spec"]["replicas"] == 1
+    assert origin["spec"]["strategy"] == {"type": "Recreate"}
+    claim = next(v for v in origin["spec"]["template"]["spec"]["volumes"] if v["name"] == "origin")
+    assert claim["persistentVolumeClaim"] == {"claimName": "verdify-lab-site-cache", "readOnly": True}
+    publisher = workloads["CronJob", "verdify-lab-publisher"]["spec"]["jobTemplate"]["spec"]["template"]
+    for template in (origin["spec"]["template"], publisher):
+        assert template["metadata"]["labels"]["verdify.ai/lab-cache-cohort"] == "portable-rwo"
+        affinity = template["spec"]["affinity"]["podAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"]
+        assert affinity == [
+            {
+                "labelSelector": {"matchLabels": {"verdify.ai/lab-cache-cohort": "portable-rwo"}},
+                "topologyKey": "kubernetes.io/hostname",
+            }
+        ]
