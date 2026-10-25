@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-10-25T11:52:02.053007+00:00",
+  "origin_pod": "verdify-lab-cache-origin-765dfcdd5d-g2snk",
+  "origin_manifest_sha256": "b83ab7171457dd5361ae389b90777d2471af2bd344a39a9a2e63afb20844fe3a",
+  "serving_caches": [
+    {
+      "manifest_sha256": "b83ab7171457dd5361ae389b90777d2471af2bd344a39a9a2e63afb20844fe3a",
+      "manifest_updated_at": "2026-10-25T11:46:29.628431+00:00",
+      "receipt_updated_at": "2026-10-25T11:50:29.697138+00:00",
+      "served_public_sha256": "sha256:1f23d447fdee3b50b032b90a00d236215d1a00a818def73217b667cf4c58df62",
+      "schema_version": 1,
+      "pod": "verdify-lab-588bb94656-4vqfl",
+      "matches_origin": true
+    },
+    {
+      "manifest_sha256": "b83ab7171457dd5361ae389b90777d2471af2bd344a39a9a2e63afb20844fe3a",
+      "manifest_updated_at": "2026-10-25T11:47:19.866763+00:00",
+      "receipt_updated_at": "2026-10-25T11:51:19.972106+00:00",
+      "served_public_sha256": "sha256:1f23d447fdee3b50b032b90a00d236215d1a00a818def73217b667cf4c58df62",
+      "schema_version": 1,
+      "pod": "verdify-lab-588bb94656-pgp7n",
+      "matches_origin": true
+    }
+  ]
+}

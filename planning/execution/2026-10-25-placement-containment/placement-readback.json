@@ -1,0 +1,415 @@
+{
+  "captured_at": "2026-10-25T11:43:29.916342+00:00",
+  "scope": "Four named workload placement/storage outcomes; read-only, no host failure induced. Current admission/requests only, not peak-demand or complete product availability certification.",
+  "class_definitions": {
+    "OK": "Active workload and retained-data placement survive",
+    "B": "Surviving eligible placement/data; lost active RWO host needs operator fencing/release",
+    "C": "No surviving eligible placement or retained replica"
+  },
+  "class_c_outcomes": 0,
+  "workloads": [
+    {
+      "workload": "verdify-grafana",
+      "active_node": "vm-k3s-node4",
+      "eligible_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "all_container_images_observed_cached_nodes": [
+        "vm-k3s-node4"
+      ],
+      "claim_uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "volume": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "healthy_replica_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node8"
+      ]
+    },
+    {
+      "workload": "verdify-hermes-iris",
+      "active_node": "vm-k3s-node4",
+      "eligible_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "all_container_images_observed_cached_nodes": [
+        "vm-k3s-node4"
+      ],
+      "claim_uid": "6b6b2f30-c414-4325-a803-87b19010851f",
+      "volume": "pvc-6b6b2f30-c414-4325-a803-87b19010851f",
+      "healthy_replica_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ]
+    },
+    {
+      "workload": "verdify-lab-cache-origin",
+      "active_node": "vm-k3s-node7",
+      "eligible_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5",
+        "vm-k3s-node6",
+        "vm-k3s-node7"
+      ],
+      "all_container_images_observed_cached_nodes": [],
+      "claim_uid": "1bd6ffec-7246-4e15-b080-287a9cf37418",
+      "volume": "pvc-1bd6ffec-7246-4e15-b080-287a9cf37418",
+      "healthy_replica_nodes": [
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ]
+    },
+    {
+      "workload": "verdify-db",
+      "active_node": "vm-k3s-node4",
+      "eligible_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "all_container_images_observed_cached_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "claim_uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "volume": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "healthy_replica_nodes": [
+        "vm-k3s-node4",
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "lost_host": "opal",
+      "workload": "verdify-grafana",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "opal",
+      "workload": "verdify-hermes-iris",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "opal",
+      "workload": "verdify-lab-cache-origin",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node6",
+        "vm-k3s-node7"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node7"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "opal",
+      "workload": "verdify-db",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "oro",
+      "workload": "verdify-grafana",
+      "class": "B",
+      "eligible_survivors": [
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Power-off/fencing proof and storage-infra#714; no unplanned RTO claim"
+    },
+    {
+      "lost_host": "oro",
+      "workload": "verdify-hermes-iris",
+      "class": "B",
+      "eligible_survivors": [
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node5"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Power-off/fencing proof and storage-infra#714; no unplanned RTO claim"
+    },
+    {
+      "lost_host": "oro",
+      "workload": "verdify-lab-cache-origin",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node5",
+        "vm-k3s-node6",
+        "vm-k3s-node7"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "oro",
+      "workload": "verdify-db",
+      "class": "B",
+      "eligible_survivors": [
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node5"
+      ],
+      "recovery": "Power-off/fencing proof and storage-infra#714; no unplanned RTO claim"
+    },
+    {
+      "lost_host": "ore",
+      "workload": "verdify-grafana",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "ore",
+      "workload": "verdify-hermes-iris",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "ore",
+      "workload": "verdify-lab-cache-origin",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "ore",
+      "workload": "verdify-db",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "onyx",
+      "workload": "verdify-grafana",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "onyx",
+      "workload": "verdify-hermes-iris",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "onyx",
+      "workload": "verdify-lab-cache-origin",
+      "class": "B",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5",
+        "vm-k3s-node6"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node5"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Power-off/fencing proof and storage-infra#714; no unplanned RTO claim"
+    },
+    {
+      "lost_host": "onyx",
+      "workload": "verdify-db",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node8"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "olivine",
+      "workload": "verdify-grafana",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "olivine",
+      "workload": "verdify-hermes-iris",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4"
+      ],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "olivine",
+      "workload": "verdify-lab-cache-origin",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5",
+        "vm-k3s-node6",
+        "vm-k3s-node7"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ],
+      "observed_cached_image_survivors": [],
+      "recovery": "Current placement survives"
+    },
+    {
+      "lost_host": "olivine",
+      "workload": "verdify-db",
+      "class": "OK",
+      "eligible_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "healthy_data_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node7"
+      ],
+      "observed_cached_image_survivors": [
+        "vm-k3s-node4",
+        "vm-k3s-node5"
+      ],
+      "recovery": "Current placement survives"
+    }
+  ],
+  "limits": [
+    "The live lab affinity first replacement needed one UID-bound unscheduled-Pod retry; retain that failure and operator action.",
+    "The fencing actuator is not built; unplanned recovery is operator-bound, no 3-5 minute guarantee.",
+    "Node.status.images may be truncated: absent image references are UNKNOWN, not a cold-cache assertion. This report does not certify the registry-loss image path.",
+    "Node5 remains schedulable; no cordon or device connection performed by this analysis."
+  ]
+}

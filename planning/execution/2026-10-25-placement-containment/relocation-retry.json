@@ -1,0 +1,6 @@
+{
+  "at": "2026-10-25T11:32:52.299239+00:00",
+  "action": "one UID-bound retry of the unscheduled origin after old origin removal",
+  "pending_uid": "2b7958b4-8842-4867-95c1-16041c685564",
+  "reason": "required affinity still rejected all replacement workers despite no scheduled cohort member; no volume attachment or device connection"
+}

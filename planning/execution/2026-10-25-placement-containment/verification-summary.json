@@ -1,0 +1,41 @@
+{
+  "normal_rollout": {
+    "source": "bf86663eeba51a800386fea5d074698f1cf20ab3",
+    "sync_resources": 144,
+    "sync_phase": "Succeeded",
+    "sync": "Synced",
+    "health": "Healthy",
+    "old_node": "vm-k3s-node4",
+    "new_node": "vm-k3s-node5"
+  },
+  "public_http": [
+    {
+      "window": "normal-rollout",
+      "samples": 149,
+      "http200": 149,
+      "errors": 0
+    },
+    {
+      "window": "cordoned-relocation",
+      "samples": 89,
+      "http200": 89,
+      "errors": 0
+    }
+  ],
+  "live_smoke": {
+    "passed": 9,
+    "failed": 0,
+    "initial_system_python_attempt": "Failed to import canonical inventory/field models; rerun with existing project environment passed. Original failure retained."
+  },
+  "ingestor": {
+    "current_uid": "2d505c77-7614-4513-964b-894f296a11aa",
+    "created_at": "2026-10-25T11:17:44Z",
+    "sync_started_at": "2026-10-25T11:25:36Z",
+    "prior_baseline_uid": "8f56e670-2085-41c1-a1af-6f0dbd98c112",
+    "continuity_limit": "Earlier Pod replacement predates our sync. Actor unproven; descheduler reported zero evictions. Current Pod/socket unchanged during the relocation window.",
+    "socket_inode": "895872638",
+    "socket_source_port": 53682,
+    "task_issued_esp32_connections": 0
+  },
+  "remaining_1076_acceptance": "Exact Deployment template rollout while old host is cordoned; prior window used UID-bound Pod replacement. New cordon needs Jason approval."
+}

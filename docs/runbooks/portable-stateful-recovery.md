@@ -57,8 +57,8 @@ that still holds the attachment. Public serving caches retain their last
 validated generation during origin interruption; a new serving replica needs
 an origin refresh before becoming Ready.
 
-Qualify the normal template rollout first. For an attended relocation, wait
-for every active publisher to finish, record the origin/claim UID and current
+Qualify the normal template rollout first. Any further node cordon requires Jason's approval for that window. For an
+attended relocation, wait for every active publisher to finish, record the origin/claim UID and current
 node's schedulability, then cordon only that node and replace only the origin
 Pod with a UID precondition. Do not drain the node or touch another workload.
 Require a Ready origin on another eligible worker within ten minutes, no
@@ -81,3 +81,21 @@ Do not infer automatic PostgreSQL failover from Longhorn replicas, force a
 volume detach, or reuse a planned-move interval as an outage guarantee.
 Scheduling/rollout warning coverage and its loaded-rule receipt belong to
 monitoring-stack; link the deployed rule names in the #1076 acceptance receipt.
+
+### October 25 qualification scope
+
+The first Recreate template rollout completed at product revision `bf86663e`.
+The later node5 window replaced the origin Pod by UID; after one unscheduled
+replacement was retained and retried, the origin became Ready on node7 in
+186.7 seconds. Node5 was uncordoned at 11:33:09 UTC. Both serving caches stayed
+available, and the next natural publisher completed on node7. This proves
+operator-assisted Pod replacement; it is not a Deployment template rollout
+while the old host is cordoned. Keep that exact acceptance clause open until
+a separately approved window tests it.
+
+The `verdify.ai/placement-verification` Pod-template annotation provides the
+reviewable origin-only template change for that final window. Complete CI and
+review the full production diff before requesting the cordon, wait for an idle
+publisher, then perform the normal selector-free non-pruning sync. Preserve
+failed attempts and restore only the operation-owned cordon. Do not restart
+the ingestor, create a controller connection or force-detach a volume.

@@ -1,0 +1,23 @@
+{
+  "pod": "prometheus-5c89dfdd4d-2dnxl",
+  "rule_file_sha256": "c9a71c3a7bedf3930fac5f111fd951b7cb643a86255de9d66e4eb173af93a821",
+  "rules": 14,
+  "placement": [
+    {
+      "name": "VerdifyPodPendingTooLong",
+      "health": "ok",
+      "state": "pending",
+      "lastEvaluation": "2026-10-25T11:36:34.688896181Z",
+      "query": "max by (namespace, pod) (kube_pod_status_phase{namespace=\"verdify-prod\",phase=\"Pending\"} == 1)",
+      "duration": 600
+    },
+    {
+      "name": "VerdifyDeploymentProgressDeadlineExceeded",
+      "health": "ok",
+      "state": "inactive",
+      "lastEvaluation": "2026-10-25T11:36:34.689995813Z",
+      "query": "max by (namespace, deployment) (kube_deployment_status_condition{condition=\"Progressing\",namespace=\"verdify-prod\",status=\"false\"} == 1)",
+      "duration": 300
+    }
+  ]
+}
