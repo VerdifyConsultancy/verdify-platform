@@ -1,0 +1,602 @@
+[
+  {
+    "number": 218,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+    "latest_receipt": "## HA/DR audit 2026-10-23: independent readback after closure, follow-ups moved to VerdifyConsultancy/verdify-platform#1076\n\n**Disposition: completed, for the placement and planned-relocation scope of this issue.** The audit item PCR-06 (absorbing XC-17) asked for the same change: deploy #1066 and qualify relocation off node7. The audit re-checked live state after this issue closed:\n\n- **[V 2026-10-23T20:22:56Z]** `verdify-prod-dark` is Synced / Healthy at `3b2516fe`, and `0bcaddfe` (#1066) is an ancestor of that revision.\n- **[V 20:22:56Z]** verdify-db, verdify-grafana and verdify-hermes-iris select on `kubernetes.io/os=linux`, `agentfleet.vallery.net/node-class=general` and `storage.vallery.net/longhorn-attach=true` only. No Deployment or StatefulSet in `verdify-prod` has a `kubernetes.io/hostname` nodeSelector.\n- **[V 20:22:56Z]** All three workloads run on node5 (verdify-db-0 Ready, 0 restarts).\n- **[V 20:22:56Z]** The Longhorn volumes are attached and healthy:\n  - db-data: R3 on node4, node7 and node8\n  - grafana: R2 on node4 and node8\n  - hermes: R2 on node4 and node5\n- **[V 20:22:56Z]** Events show Multi-Attach and attach retries for the DB, Grafana and Hermes claims at 19:25-19:30Z. They cleared within the measured 43.9 s DB read-recovery interval in the receipt above, and Hermes recovered later after its cold image pull. That is consistent with an orderly RWO detach and reattach.\n\nThe audit confirms the residual boundaries this issue already lists:\n\n- Eligibility is exactly two workers, node4 and node5, on different physical hosts.\n- Unplanned loss of the active host still leaves the single RWO writer operator-bound. That is tracked in jvallery/storage-infra#714 (fenced release).\n- Automatic recovery within a tier target would need a replicated database design. That depends on the tier ratification in fleet control-plane fleet control-plane #5378. #245 stays closed as not planned.\n\nThe follow-ups that remain are tracked in VerdifyConsultancy/verdify-platform#1076. They are outside this issue's acceptance:\n\n- `verdify-lab-cache-origin` still rolls out with `maxSurge: 1` on its RWO claim. Its self-affinity prevents Multi-Attach in ordinary rollouts, but the rollout stalls when the origin's node is cordoned.\n- There is no stuck-scheduling or ProgressDeadlineExceeded alert for `verdify-prod`.\n- The placement analysis needs a rerun, and the host-loss boundaries need to go into the runbook and `OWNERSHIP.md`.\n\nNo reopen is needed.\n\nAudit references: HA/DR audit 2026-10-23, item PCR-06 (findings WP-03, WP-11, O-02), with a live re-check at 20:22-20:25Z.\n\n<!-- ha-dr-audit-2026-10-23:c:PCR-06.comment-218 -->\n",
+    "prior_plan": {
+      "key": "218",
+      "issue_number": 218,
+      "title": "Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "stage": "C5",
+      "kind": "epic",
+      "priority": "P1",
+      "effort": "L",
+      "owner_role": "Data/platform lead",
+      "parent": "775",
+      "depends_on": [],
+      "what": "Own current storage/backup/PITR and HA acceptance through #670/#672/#382/#396/#245 without repeating obsolete iSCSI or never-succeeded-backup claims.",
+      "why": "Recoverability must remain tied to accepted artifact, data and failure-boundary evidence. Completed role/ownership/spool/recovery work is reusable; storage replicas and rehearsal timing do not establish production database HA or its outage and post-write recovery bounds.",
+      "how": [
+        "Maintain the accepted three-replica policy and bounded #670/#672/#382/#396/#643 receipts, with measured recovery and residual failure domains separated from the conditional #245 cutover.",
+        "Reuse the accepted role-complete restore, compressed-ownership and restart-safe spool evidence. Record endpoint source changes separately from exact live adoption; do not repeat a full restore merely to refresh this roll-up.",
+        "When production HA is selected, use the retained cutover handoff to qualify fresh final parity, both rollback boundaries and the actual outage/bake. Preserve the old database and storage until that cutover contract is met."
+      ],
+      "acceptance": [
+        "Measured recovery objectives and residual failure domains remain explicit.",
+        "Each selected durability child has a receipt or linked scope decision.",
+        "Conditional production HA/cutover acceptance remains unclaimed until actually selected and completed."
+      ],
+      "paths": [
+        "deploy/k8s",
+        "db",
+        "docs/runbooks",
+        "scripts"
+      ],
+      "baseline": "Accepted #670/#672/#382/#396/#643 receipts cover their bounded backup-artifact, supported ownership restore, persistent spool, alongside recovery/PITR/failover and production-role scopes. #977 is accepted and closed: Jason selected three replicas, owner decision A6 was delivered at storage-infra 55973ba5, and exact readbacks verified three healthy RW copies on distinct eligible workers with no pending rebuild. This supersedes the temporary two-replica policy. The 07:07 UTC runtime receipt still shows the existing verdify-db StatefulSet at 1/1 ready; production database authority has not moved to CNPG. Argo was Synced/Healthy at comparison 83e148b6, while its last actual operation remains 55285aaf, finished at 02:47:03 UTC. PR #982 merged canonical s3.vallery.net endpoint source at 83e148b6; this is not evidence of current rehearsal ObjectStore adoption, a new backup/restore or production HA. Historical #396 recovery timings and data checks remain reusable within their stated boundaries, with physical-host/NAS dependencies and production cutover RPO/RTO still explicit. Evidence: planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md, the accepted #396 handoff at b97176ad, PR #982 and the October 18 full-status runtime receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Correct the roll-up to accepted #977 three-replica policy and completed bounded restore/spool/role evidence; refresh the residual failure-domain summary. Preserve PR #982 as merged endpoint source pending owner delivery verification, and keep #245 conditional without reopening accepted rehearsals or adding a new blanket gate.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-scoped. Refresh the single-StatefulSet failure-domain and restore/RTO plan after the no-CNPG decision. Prepare placement removal and a bounded reattach drill; coordinate node labels/capacity with proxmox-infrastructure. A cordon/pod deletion is a later attended operation, not an audit action. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
+      "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
+      "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
+      "status": "open"
+    }
+  },
+  {
+    "number": 981,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/981",
+    "latest_receipt": "Later natural acceptance is now complete, without changing clocks, loads, sampling cadence or tolerance.\n\nAt 23:23:43.067142Z the authentic source clocks were 23:23:43Z; at 23:28:43.412567Z both advanced to 23:28:43Z. Channel0 stayed exactly 0W. Both channels were `ok`; signed channel1/total were 10.194941520690918W and then 10.099270820617676W. The earlier two slightly future rows remain `future` with NULL totals. Source and observation clocks, identity, error/quality and revision remain separate; no prior row was reinterpreted.\n\nThis supplies the missing later natural zero-W source/DB proof in addition to the full 33ed324e deployment, migration279 real runner stamp/matching receipts, 327-second error-free ingestor window, 9/9 source-bound smoke and single ESP32 connection. Native negative qualification already preserved stale/future/unavailable/unknown/nonfinite denial; no synthetic energy row or physical fault was inserted for live acceptance.\n\nClosing this consumer issue with all criteria met. Home Assistant #932 retains the source-precision observation for owner diagnosis, now with the later valid samples linked; it is not a blocker to this verified consumer contract. Calibration, reversed CT/circuit scope and scientific eligibility remain separate under #785 and their existing owners. Sanitized runtime receipts are in PR #1041, with this later observation retained for the final evidence update.\n",
+    "prior_plan": {
+      "key": "981",
+      "issue_number": 981,
+      "title": "Restore truthful energy source freshness and trace stale meter input",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "S",
+      "owner_role": "Data/platform lead",
+      "parent": "75",
+      "depends_on": [],
+      "what": "Trace and recover the stale energy source while preserving honest channel quality.",
+      "why": "Recent database rows can carry old underlying source values, invalidating scientific/resource claims.",
+      "how": [
+        "Consume accepted Home Assistant #878 / PR #894 source-clock qualification: existing read-only Modbus provides authentic per-channel update time and power together, including advancing stable zero. Preserve its installed-version contract and original HA representation-clock evidence; no HA repair or new access is needed.",
+        "If owner qualification demonstrates a defect, repair it in the actual owning lane; otherwise retain the documented upstream constraint. Keep source and ingestion clocks distinct and preserve intended identities and reversed-CT semantics.",
+        "After owner qualification, verify one later natural intended source/DB advancement comparison and stale/missing negative cases. Do not replace source time with fetch time, synthesize freshness or infer scientific eligibility from green product smoke."
+      ],
+      "acceptance": [
+        "Source timestamp, ingest timestamp, identity and quality remain separate and truthful.",
+        "Actual intended source advancement is verified or upstream constraint stays open with named owner handoff.",
+        "Missing/stale inputs cannot become fresh/OK or silently gain scientific eligibility; #782/#787 remain separate."
+      ],
+      "paths": [
+        "ingestor",
+        "api",
+        "grafana"
+      ],
+      "baseline": "Consumer delivered at33ed324e with real runner migration279 and matching role receipts; smoke9/9, exactly one ESP32 socket, actual327-second stable ingestor observation/no validation errors. Two natural zero-W source clocks advance but slightly lead observation, so future quality and NULL aggregate correctly remain. Reopened for valid-freshness acceptance; source owner follow-up jvallery/homeassistant#932. No clock tolerance or scientific eligibility inferred. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
+      "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
+      "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation.",
+      "status": "open"
+    }
+  },
+  {
+    "number": 992,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/992",
+    "latest_receipt": "Retirement and final inventory corrections are complete. Product #1049/#1050, jvallery/agents#5242/#5250 and jvallery/storage-infra#1074/#1075 passed their required checks and merged. The last correction retires the two stale descriptive storage rows while preserving the adjacent Options custody exception.\n\nFresh final readback confirms the namespace and Applications absent, all eight original recovery PVs/Longhorn volumes preserved Released/Retain/detached, and the original production DB/claims healthy. Legacy Garage bucket/alias and both scoped keys are absent; eight independently verified native B2 backups and private encrypted logical custody remain. No additional data deletion was performed during inventory closeout. Initial temporary expiry/adoption/alert criteria are explicitly marked superseded by DR-49 retirement, not fabricated as completed. Closing as completed.",
+    "prior_plan": {
+      "key": "992",
+      "issue_number": 992,
+      "status": "open",
+      "accepted": false,
+      "title": "Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04)",
+      "stage": "C5",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04)",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion."
+      ],
+      "acceptance": [
+        "Namespace carries disposable/expiry labels; central record and lane table list it",
+        "verdify-db-rehearsal-cluster Synced/Healthy with both NetworkPolicies tracked",
+        "ObjectStore `verdify-cnpg-rehearsal-backup` either declared or removed with recorded reason",
+        "CNPG alert rule for the rehearsal cluster exists in monitoring-stack",
+        "Snapshot/backup IDs of both spool PVCs recorded",
+        "At S2 close: pg_dump + snapshot receipts recorded before any delete; deletions done only after Jason's go"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion."
+    }
+  },
+  {
+    "number": 995,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/995",
+    "latest_receipt": "Namespace adoption is accepted live. Product#1033 and central#5218/#5222 are merged; both parent roots were delivered sequentially to cfd185a8 with their original UIDs and non-pruning/self-healing policies preserved. Complete project/catalog render comparisons were limited to the reviewed descheduler changes and previously approved custody metadata.\n\nThe child Application now targets162e8fcbf51d0141cadb2517ba95d2ec7498a9f6. Its full non-pruning sync finished23:42:33Z, all8 tasks, no selector, Synced/Healthy. All8 original UIDs and complete functional payloads remain identical, including RBAC rules/bindings, ConfigMap policy and CronJob. NamespaceUIDf45e99c6-ddc7-4fa0-94d9-ff61d741e923 retains all4 labels/finalizers and now has Argo tracking plus Prune=false,Delete=false. CronJob suspend remains false; no forced Job or eviction was used for this adoption.\n\nAll #995 acceptance criteria are met. Sanitized acceptance receipt is retained in product#1042; the historical sync fixture/deferred source fingerprints are being refreshed in the central owner follow-up. #1004's separate source-owned pause change does not retroactively alter this unchanged-state proof.\n",
+    "prior_plan": {
+      "key": "995",
+      "issue_number": 995,
+      "status": "open",
+      "accepted": false,
+      "title": "Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics."
+      ],
+      "acceptance": [
+        "Namespace carries the Argo tracking-id with a zero-diff render",
+        "Central map lists all named cluster-scoped objects with this repo as owner",
+        "R18 check for verdify-traefik recorded"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics."
+    }
+  },
+  {
+    "number": 997,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/997",
+    "latest_receipt": "Accepted. Monitoring PR #1045 merged as `9c160ad289be4d9c5847b01cd3b0afc7b076bed9`; the observability App converged and the broader static workflow completed successfully. Exactly26 staged Verdify copies and8 legacy Greenhouse copies are removed. The other60 legacy provisioning files remain; their retirement is not claimed.\n\nFresh live readback at 2026-10-21 01:40:55Z confirms the four stale ConfigMaps remain absent in verdify-platform, all four original production ConfigMap UIDs and complete data hashes are unchanged, and all21 explicitly approved native public dashboard metadata endpoints return200 with the correct UID. No new sharing, credentials or dashboard changes were made by this cleanup.\n\nThe exact retired/residual ownership records and sanitized readback merged in central owner companion jvallery/agents#5229 (`0404b4d7339ed18b4b929f6e726577475ce1e2c0`). Recovery remains in private custody. This completes the single-source cleanup without conflating the remaining sixty unrelated legacy files with this issue.\n",
+    "prior_plan": {
+      "key": "997",
+      "issue_number": 997,
+      "status": "open",
+      "accepted": false,
+      "title": "Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here."
+      ],
+      "acceptance": [
+        "Four ConfigMaps deleted by exact name; verdify-prod dashboards still load in Grafana",
+        "monitoring-stack issue/PR removing the staged copy is linked here"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here."
+    }
+  },
+  {
+    "number": 998,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/998",
+    "latest_receipt": "Accepted: both collectors again load the exact healthy 60s writer and 180s DB rules, with the previously retained production-duration isolated firing/suppression/recovery proof. The two CronJobs and six dedicated SA/Role/Binding objects were removed with UID/RV/hash guards and NotFound readback after full sync f5214011. Argo is Synced/Healthy; completed Jobs/Pods were orphaned and credentials, SQL roles, historical rows and PVCs preserved. Final sanitized receipts merged in product #1048 (8b6e81e89647f8bc3e385916a2de03b9fe0a51a9) and central owner #5240 (082a62fc7). Private encrypted recovery was independently decrypted before deletion. No physical commissioning, credential revocation or historical-row purge is implied.",
+    "prior_plan": {
+      "key": "998",
+      "issue_number": 998,
+      "status": "open",
+      "accepted": false,
+      "title": "Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13)",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13)",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists."
+      ],
+      "acceptance": [
+        "Rules from monitoring-stack#834 are deployed and a test firing (or recorded synthetic) is observed",
+        "Both CronJobs removed from source; Argo Synced/Healthy; readback shows them absent"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-external. Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists."
+    }
+  },
+  {
+    "number": 999,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/999",
+    "latest_receipt": "Deployed and verified at `6444f37277c9e4030b6d2715ca8bce786f6aa5b4` (PRs #1041 and #1042). Full non-pruning, hook-bearing production sync completed 2026-10-21 00:29:44Z: 137 tasks, Synced + Healthy.\n\nThe separate attended DB restart followed a newly completed backup and independent checksum/TOC readback. The original DB PVC UID remains Bound and protected; the StatefulSet UID is unchanged. The replacement DB pod is Ready with zero restarts. PostgreSQL remains 16.11 / TimescaleDB 2.25.2, migration ledger 279 and ordinary-role seals match, and indexed climate/energy timestamps advanced after restart. All nine smoke checks passed; exactly one ESP32 connection remains with the single ingestor.\n\nThe DB source pins the actual linux/amd64 child `sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140`. CRI retains its canonical index `sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6`; immutable manifest lookup proves that index selects the same child/config. This is byte-equivalent pinning, not a version change. Earlier non-DB pins and their workload readbacks are recorded above.\n\nThe deployed backup command also matches the merged narrow role-setting guard, preserving only the two legitimate Grafana 15s timeout settings introduced by migration 278. The first failed backup was recorded; the corrected pair passed independent readback before the restart. This acceptance does not claim offsite restore proof.\n",
+    "prior_plan": {
+      "key": "999",
+      "issue_number": 999,
+      "status": "open",
+      "accepted": false,
+      "title": "Pin the remaining tag-only verdify-prod images by digest",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [
+        "994"
+      ],
+      "what": "Pin the remaining tag-only verdify-prod images by digest",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries."
+      ],
+      "acceptance": [
+        "Each pinned digest equals the currently running imageID",
+        "Non-DB pins show a zero-change rollout",
+        "verdify-db pin applied in an attended window after a fresh backup check; DB healthy after"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries."
+    }
+  },
+  {
+    "number": 1000,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1000",
+    "latest_receipt": "Accepted software health coverage and owner handoff. Product #1042 publishes exact keys; Home Assistant #933 publishes stable authority rows for the four existing controller/probe/meter IDs. Central #5224/#5229 preserve their product ownership while recording those authority links and monitoring's sole rule ownership; #5229 merged as `0404b4d7339ed18b4b929f6e726577475ce1e2c0`.\n\nMonitoring #1048 (`e511e75d3986c7a41ebd8939422bab1e6fc62be7`) is Synced/Healthy. Both collectors mount the exact qualified rule hash and evaluate all12 rules successfully:5 Deployments, DB,3 scheduled collectors and3 informational probe conditions. All33 native cases passed; the broader static workflow also completed green. The three known probe conditions naturally fired in both collectors and reached Alertmanager. Tests against its running configuration select the existing kepler/fleet machine fan-out and null notification route, with no Slack/email receiver selected. Physical #751/#298 commissioning remains unqualified.\n\nBoth exact Shelly endpoints have the existing source-guarded service/controller coverage. Their unchanged30-minute production rule passed a real isolated engine test: both fired after1810.5s, exporter outage suppressed them, then healthy input cleared them. Writer/DB actual isolated one-/three-minute firing and recovery also passed; monitoring#1016 is closed. No physical meter/controller fault or load change was induced.\n\nThis accepts software coverage and ownership, not calibration, physical placement, biological outcomes or the broader #75 program. Product #998 separately owns the now-unblocked watchdog retirement.\n",
+    "prior_plan": {
+      "key": "1000",
+      "issue_number": 1000,
+      "status": "open",
+      "accepted": false,
+      "title": "Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06)",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06)",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts."
+      ],
+      "acceptance": [
+        "Each listed item has a named metric/probe key in this repo's docs",
+        "monitoring-stack issue/PR adding the rules is linked",
+        "Shelly meter alert exists and has been seen in a test",
+        "OWNERSHIP.md device rows link to the homeassistant device-authority rows"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts."
+    }
+  },
+  {
+    "number": 1003,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1003",
+    "latest_receipt": "Closing as COMPLETED. Readback at 2026-10-24 00:44 UTC; all checks were read-only.\n\n**Disposition.** All substantive acceptance criteria are met live. The one remaining item is the 7-day sample window (2026-10-21 10:23:54 UTC to 2026-10-28 10:23:54 UTC). Jason's 2026-10-23 binding direction removes soak and date windows as closure blockers (wave-plan v2 SCOPE-V2 \"Relaxed constraints\"; ANSWERS EXE-8 rejected; SA-2). Enforcement already rules out the failure that window was watching for.\n\n**Evidence**\n- **Every main commit has a status and a PR.** `gh api repos/VerdifyConsultancy/verdify-platform/compare/55430b3e...main` shows ahead_by=14, behind_by=0. Counting 55430b3e itself, that is 15 main commits since the main-status producer went live (agents#5246). Each one has `Verdify Platform / Argo PR CI` = success (\"in-cluster main validation passed\") and a merged PR: #1050, #1053, #1051, #1054, #1056, #1059, #1060, #1064, #1067, #1069, #1066, #1070, #1072, #1073, #1074. Gaps: **0**. Main HEAD is `0fc5f8b8c94e4d9349090defcdebb265ecd2f418` (#1074).\n- **Release pins arrive by PR.** Since 10-21, `deploy/k8s/overlays/prod/release-pins.yaml` changed only through #1054 and #1069. Both PR head SHAs have Argo PR CI = success.\n- **main requires the check, with no standing bypass.** Branch protection readback:\n  - required check `Verdify Platform / Argo PR CI`, app_id 4428542, strict=false (D14);\n  - enforce_admins=true;\n  - PRs required with 0 approvals;\n  - linear history on; force pushes and deletion off;\n  - no rulesets and no bypass actors.\n\n  The direct-main negative probe on 10-21 was rejected (see the earlier comment).\n- **Deployed revision is tied to a green check.** Argo `verdify-prod-dark` has targetRevision main and is Synced at `0fc5f8b8` and Healthy. That SHA has a successful main validation status.\n\n**References:** agents#5246, agents#5253, agents#5258, agents#5281; proposal #1047; activation receipt in the 2026-10-21 10:24 UTC comment.\n\n**Remaining follow-up:** nothing substantive. The enforced branch protection and App-bound required status now keep this standard in place. Any later regression will show up as a blocked merge, not a silent gap. No disruptive test needs to move to a wave tracker.\n\nVerified by two independent read-only reviews (live evidence and acceptance criteria) during the 2026-10-23 v3 wave replan.\n\n<!-- infra-waves-2026-10-23:v3:closed:VerdifyConsultancy/verdify-platform#1003 -->\n",
+    "prior_plan": {
+      "key": "1003",
+      "issue_number": 1003,
+      "status": "open",
+      "accepted": false,
+      "title": "Route verdify-platform main changes, including prod release pins, through validated PRs",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Route verdify-platform main changes, including prod release pins, through validated PRs",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption."
+      ],
+      "acceptance": [
+        "Every commit on main after the change has a CI commit status (gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status shows a context).",
+        "Changes to deploy/k8s/overlays/prod/release-pins.yaml arrive by merged PR with a green 'Argo PR CI' (or successor) status on the head SHA.",
+        "A 7-day sample shows 0 main commits without an associated PR or a main-push validation status."
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-decision. Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption."
+    }
+  },
+  {
+    "number": 1004,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1004",
+    "latest_receipt": "**Completed and live-verified.** Central durable receipts and observed fixture/activation reconciliation are merged in jvallery/agents#5275 (`6ecdf4d3511de2bbb1c119f3d5fbaa1d7b3930cd`) after 14/14 native checks, retained-output verification and normal cleanup.\n\n[Live receipt bundle](https://github.com/jvallery/agents/tree/6ecdf4d3511de2bbb1c119f3d5fbaa1d7b3930cd/docs/evidence/verdify-1004-delivered-20261021): real Argo Apply ownership on all audited objects; 23 targets with no kubectl manager; 22 empty server-side source diffs; all functional payloads/nonlegacy owners preserved; manual source-owned production Application and descheduler suspend policy; full 139/eight-resource non-pruning syncs with fresh production hooks; live smoke 9/9 and exactly one unchanged ESP32 socket. Temporary annotations are absent and #998's retired watchdog remains absent. Source captures the intended scheduling/replicas/tolerations instead of relying on old manager history.\n\nThis completes every live acceptance criterion of #1004. Closing this issue. Product #1064 is the remaining #1001 source cleanup: removing the already-inactive Application copy after verified central parenting and updating local references. Its render is byte-identical, its storage regression checks are already accepted in the central owner, and it remains in the normal PR-CI queue. That documentation/inactive-source cleanup does not make the completed live field-ownership handoff unfinished. Other #1001/agents#4461 scopes remain OPEN.\n\nNo new ESP32 connection, writer restart/reschedule, OTA, image promotion, forced descheduler Job, Secret/RBAC change or CI policy change occurred.",
+    "prior_plan": {
+      "key": "1004",
+      "issue_number": 1004,
+      "status": "open",
+      "accepted": false,
+      "title": "Bring kubectl-patched verdify-prod workloads back under Git ownership",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Bring kubectl-patched verdify-prod workloads back under Git ownership",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof."
+      ],
+      "acceptance": [
+        "kubectl get on the listed objects with --show-managed-fields shows no kubectl-* manager",
+        "kubectl diff --server-side against the deployed overlay is empty for the listed objects",
+        "verdify-descheduler Application has no /spec/suspend ignoreDifferences and stays Synced",
+        "verdify-prod-dark Application spec has no kubectl-patch manager"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof."
+    }
+  },
+  {
+    "number": 1005,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1005",
+    "latest_receipt": "All three acceptance criteria are now complete. Product #1046 delivered the checked image/source; full sync f5214011 completed, both caches are Ready on distinct nodes with hard anti-affinity and no serving PVC/token. Both sequential public-edge recoveries passed all 188 uncached HTTP200 requests with minimum one Ready endpoint. The natural 03:05 publisher run completed and its 03:12:53 generation reached both caches and the public endpoint. Smoke 9/9 and passive exactly-one writer passed. Final metadata receipts merged in #1048 (8b6e81e89647f8bc3e385916a2de03b9fe0a51a9), matching central owner #5240 (082a62fc7). Original database/PVC identities are retained. Serving redundancy is qualified; the origin/publisher remains a refresh dependency.",
+    "prior_plan": {
+      "key": "1005",
+      "issue_number": 1005,
+      "status": "open",
+      "accepted": false,
+      "title": "Give verdify-lab real node redundancy instead of two replicas on one RWO volume",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Give verdify-lab real node redundancy instead of two replicas on one RWO volume",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing."
+      ],
+      "acceptance": [
+        "verdify-lab Running pods are on two distinct nodes (`kubectl get pods -n verdify-prod -l app.kubernetes.io/component=lab-site -o wide`)",
+        "No required podAffinity on kubernetes.io/hostname remains in the verdify-lab pod template",
+        "Deleting either pod leaves one Ready replica serving the lab site (HTTP 200 throughout)"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing."
+    }
+  },
+  {
+    "number": 1007,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1007",
+    "latest_receipt": "Accepted live. `mcp.verdify.ai` has the network-owned whole-host Cloudflare Access Block Everyone policy (application `5111f606-9fa7-4f7a-9cfc-5e132ec2d35b`, network PR #760). Fresh anonymous and Iris-only initialize POSTs both receive Access HTTP302 with CF-Ray; the Iris bearer alone cannot reach the MCP API.\n\nThe one-key Iris rotation is reconciled from central KSOPS. Fresh checks on Hermes and both current MCP replicas each returned 23 tools, successful read-only equipment_state and HTTP401 for the old token. No mutating tool was called. Jason confirmed Hermes is the only current client; future Mac clients remain an explicit onboarding step. No external client credentials were issued.\n\nMonitoring source PR #1045 merged as `9c160ad289be4d9c5847b01cd3b0afc7b076bed9`; the automatic observability App converged. Its accepted combined Worker source is version `8f10647c-c5de-44b6-9d3a-3ef9922f7dba` at 100%, preserving all fifteen existing binding names/types and routes. Both collectors report MCP success=1, expected302 and CF-Ray. A 150-second exact-version observation covered all fifty shards: 132 invocations, all `ok`, maximum CPU9ms, no exceededCpu. The temporary observer was removed. This is bounded live capacity evidence, not a future guarantee; the broader optional static workflow continues separately.\n\nReal client-IP attribution remains #1010/network-infra#743; provider-hostname-only MCP egress remains #1011. Neither is falsely claimed by this edge pre-auth acceptance.\n",
+    "prior_plan": {
+      "key": "1007",
+      "issue_number": 1007,
+      "status": "open",
+      "accepted": false,
+      "title": "Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P1",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready."
+      ],
+      "acceptance": [
+        "An unauthenticated request to https://mcp.verdify.ai/mcp is rejected by Cloudflare Access (or the hostname no longer resolves to a route)",
+        "The iris token presented without the Access credential is rejected at the edge",
+        "verdify-hermes-iris still lists its tools over the ClusterIP",
+        "Iris token rotated with readback of Secret metadata only"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Whole-host Cloudflare Access Block Everyone is live; future Mac clients retain hostname with no unused credentials issued. Public unauthenticated/Iris-only requests receive Access302. Rotated Iris generation is reconciled via central#5218; actual Hermes and both MCP replicas authenticate23 tools/read-only equipment_state, old Iris gets401. Monitoring#1045 source/check remains pending; deployed Worker returns success1/status302/ray1 on both collectors. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready."
+    }
+  },
+  {
+    "number": 1011,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1011",
+    "latest_receipt": "Completed product boundary: #1051/#1054/#1056 passed native CI, merged normally under active PR enforcement, and deployed through attended full non-pruning syncs. Final Argo revision `6cd14283a553925b7567510b06b43d1d60106b1b` is Synced + Healthy; all fresh hooks completed. Companion central inventory/clock receipt: jvallery/agents#5258.\n\nLive acceptance: 2/2 relay and MCP replicas; replicas=1/Recreate writer with fresh held Lease; API smoke 9/9; passive metric cluster sum exactly 1; five-minute schema watch clean. Actual embeddings returned 3072 dimensions; actual typed forecast client validated 384 hourly rows. Authenticated climate/forecast tools returned nonempty data through both internal and pod-exec-free operator HTTP transports. Direct public/private/metadata and unapproved relay ports denied; invalid paths/methods refused, Host override cannot choose another upstream, CONNECT rejected. No test device connection, Slack message, OTA or physical action.\n\nThe live forecast 502 was diagnosed and fixed through CI: depth 3 verifies its cross-signed TLS chain against the exact relay CA bundle; certificate/SNI verification remains enabled. Writer and MCP pod UIDs did not change during that relay-only correction. HA and both MQTT paths work; accepted Shelly Modbus samples and CPU cadence continue. Existing legacy GPU-table staleness/intermittent energy-quality flags predate this rollout and are not claimed repaired.\n\n[Consolidated metadata-only receipt](https://github.com/VerdifyConsultancy/verdify-platform/pull/1056#issuecomment-6314247131), [literal pod-exec-free receipt](https://github.com/VerdifyConsultancy/verdify-platform/pull/1056#issuecomment-6314354804), [exact placement/failover handoff](https://github.com/jvallery/network-infra/issues/42#issuecomment-6314131192). UDM rules and actual gateway SNAT/unrelated-source isolation remain network-infra#42; no whole-estate isolation claim. Closing this product-owned implementation as completed.",
+    "prior_plan": {
+      "key": "1011",
+      "issue_number": 1011,
+      "status": "open",
+      "accepted": false,
+      "title": "Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods",
+      "stage": "C4",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods",
+      "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
+      "how": [
+        "Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path."
+      ],
+      "acceptance": [
+        "kubectl get networkpolicy shows an Egress policy selecting component=mcp",
+        "A test pod-exec-free probe (e.g. tool call that hits DB and forecast) still succeeds",
+        "Pod spec shows automountServiceAccountToken=false"
+      ],
+      "paths": [
+        "deploy/k8s",
+        "OWNERSHIP.md"
+      ],
+      "baseline": "Dedicated non-automounting SA and MCP egress policy deployed at33ed324e. Both actual replicas have no token file; five private API/NAS/meter/MQTT targets denied, DNS/DB/public TLS work; Hermes and both replicas execute read-only equipment_state. Public IPv4 TLS is not OpenAI-only FQDN enforcement; forecast acceptance and explicit hostname restriction remain open. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
+      "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
+      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path."
+    }
+  },
+  {
+    "number": 1021,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1021",
+    "latest_receipt": "Completed and live-verified at production revision `44a519a125af135a33e0206de69c92d99f69a71b` (Argo Synced + Healthy, full non-pruning sync with fresh migration/bootstrap hooks). Source: #1053; release: #1054; dedicated encrypted identity: jvallery/agents#5255; provider receipts: jvallery/cortex-ai-compute#384/#386.\n\nThe normal `verdify-vision` CronJob uses Cortex `llm.primary.longctx.mm` and references `verdify-vision-cortex`; it has no Gemini key reference. Shared Gemini credentials were preserved. The dedicated inference-only identity is restricted to that route/current backend and expires 2027-01-19; renewal is recorded in the Cortex owner.\n\nReal acceptance Job `verdify-vision-1021-acceptance-20261021`, UID `a023c6c2-c186-4a5a-bfb0-abef4eb4f369`, ran **10:35:11\u201310:35:45 UTC** and succeeded on the reviewed `sha256:5198d6e3b556de6c8fc739833528643d13de4990161cb9e633f1d5e16e93d4d8` image. The snapshot wrapper reported \u201cAnalysis complete\u201d. Independent metadata-only DB readback found **two persisted analyses, both greenhouse cameras, both model `llm.primary.longctx.mm`**, timestamps 10:35:30 and 10:35:41 UTC, with nonempty responses and positive processing times. No images, analysis values or credentials are published.\n\nProduction smoke passed 9/9; passive device monitor found exactly one ESP32 connection. The required post-ingestor-rollout watch exceeded five minutes with zero `ValidationError` / `row failed schema validation` matches. Closing #1021 as completed. The separate forecast relay chain-depth correction remains tracked in #1056/#1022; it does not invalidate the real Cortex vision proof. Cortex#375's other consumer/capacity criteria are not claimed complete.",
+    "prior_plan": {
+      "key": "1021",
+      "issue_number": 1021,
+      "status": "open",
+      "accepted": false,
+      "title": "Switch verdify-vision from shared Gemini credentials to Cortex longctx.mm",
+      "stage": "C5",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Prepare the DR-29 verdify-vision provider switch without creating replacement Gemini keys.",
+      "why": "Remove the shared home/business provider credential dependency while preserving successful vision output.",
+      "how": [
+        "Confirm an accepted longctx.mm image-input probe on cortex-ai-compute#375, inspect actual gateway egress and existing credential custody, then prepare the minimal endpoint/client change.",
+        "Deliver in this owner lane and verify one real successful run plus no Gemini reference. Preserve the existing Secret and do not revoke the key without explicit authorization."
+      ],
+      "acceptance": [
+        "One successful verdify-vision run uses the approved Cortex route with unchanged output contract.",
+        "The CronJob references no Gemini key; Argo and running image/revision are verified.",
+        "Record the actual receipt on cortex-ai-compute#375; do not infer acceptance from source configuration."
+      ],
+      "paths": [
+        "ingestor",
+        "deploy/k8s"
+      ],
+      "baseline": "New during S6 execution. Source preparation is ready-scoped; the current Cortex owner issue still calls for the image probe and this audit did not establish its acceptance receipt. Runtime switch waits on that explicit prerequisite. Not added to S6.",
+      "delivery": "Use the supported owner CI/GitOps and a bounded successful production run after route proof.",
+      "rollback": "Retain the prior exact workload/image configuration; do not revoke or delete existing credentials.",
+      "decision": "DR-29 selects Cortex longctx.mm for this consumer; per-consumer Gemini keys are not the selected approach."
+    }
+  },
+  {
+    "number": 1022,
+    "state": "CLOSED",
+    "state_reason": "COMPLETED",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1022",
+    "latest_receipt": "Completed product boundary: #1051/#1054/#1056 passed native CI, merged normally under active PR enforcement, and deployed through attended full non-pruning syncs. Final Argo revision `6cd14283a553925b7567510b06b43d1d60106b1b` is Synced + Healthy; all fresh hooks completed. Companion central inventory/clock receipt: jvallery/agents#5258.\n\nLive acceptance: 2/2 relay and MCP replicas; replicas=1/Recreate writer with fresh held Lease; API smoke 9/9; passive metric cluster sum exactly 1; five-minute schema watch clean. Actual embeddings returned 3072 dimensions; actual typed forecast client validated 384 hourly rows. Authenticated climate/forecast tools returned nonempty data through both internal and pod-exec-free operator HTTP transports. Direct public/private/metadata and unapproved relay ports denied; invalid paths/methods refused, Host override cannot choose another upstream, CONNECT rejected. No test device connection, Slack message, OTA or physical action.\n\nThe live forecast 502 was diagnosed and fixed through CI: depth 3 verifies its cross-signed TLS chain against the exact relay CA bundle; certificate/SNI verification remains enabled. Writer and MCP pod UIDs did not change during that relay-only correction. HA and both MQTT paths work; accepted Shelly Modbus samples and CPU cadence continue. Existing legacy GPU-table staleness/intermittent energy-quality flags predate this rollout and are not claimed repaired.\n\n[Consolidated metadata-only receipt](https://github.com/VerdifyConsultancy/verdify-platform/pull/1056#issuecomment-6314247131), [literal pod-exec-free receipt](https://github.com/VerdifyConsultancy/verdify-platform/pull/1056#issuecomment-6314354804), [exact placement/failover handoff](https://github.com/jvallery/network-infra/issues/42#issuecomment-6314131192). UDM rules and actual gateway SNAT/unrelated-source isolation remain network-infra#42; no whole-estate isolation claim. Closing this product-owned implementation as completed.",
+    "prior_plan": {
+      "key": "1022",
+      "issue_number": 1022,
+      "status": "open",
+      "accepted": false,
+      "title": "Make the ESP32 writer identity and egress exact without losing safe failover",
+      "stage": "C5",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform/security lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Confirm the existing singleton/Lease fence, gather actual flows and define a bounded eligible-node set before narrowing writer egress.",
+      "why": "Replace broad writer egress with named dependencies and an exact greenhouse network identity while preserving the single-writer and failover contracts.",
+      "how": [
+        "Passively inventory actual dependencies and eligible nodes. Reuse #240 acceptance where applicable; never open a test device connection.",
+        "Confirm current HA placement tradeoffs before any affinity change. Narrow only proven destinations and keep the builder OTA policy separate.",
+        "Use an attended GitOps rollout, passive writer metric and fresh HA/MQTT/database/metrics inputs; hand off the exact source set to network-infra#42 through its owner."
+      ],
+      "acceptance": [
+        "One replica and the fail-closed Lease are confirmed in source and live.",
+        "Predictable eligible placement and failover tradeoff are recorded with network-infra#42.",
+        "Broad egress is replaced with observed named dependencies; the writer and other inputs remain healthy without opening a test device connection.",
+        "The intended revision is deployed and verified through Argo and live behavior."
+      ],
+      "paths": [
+        "ingestor",
+        "deploy/k8s"
+      ],
+      "baseline": "New during S6 execution. Passive readback at 18:06Z: one Ready Recreate writer replica, an existing freshly renewed Lease, soft node affinity and broad egress still present. Source/flow preparation is ready-scoped; narrowing waits on actual flow evidence and a recorded failover tradeoff. No workload or network mutation was performed. Not added to S6.",
+      "delivery": "Use this lane for workload policy and the network owner for UDM changes; verify passively after the attended rollout.",
+      "rollback": "Retain the exact prior Deployment and policy; restore only the owned scoped change if inputs or writer health regress.",
+      "decision": "Preserve #240 and the recorded HA policy; do not silently hard-pin the writer or merge the builder OTA path into writer egress."
+    }
+  }
+]

@@ -241,8 +241,22 @@ def test_own_login_locked_or_armed_readiness_denial(containment, status, record_
         ("terminal_experiment_capability_enabled", "critical", "status='aborted', component_enabled=true"),
         ("completed_with_incomplete_outcomes", "critical", "status='completed'"),
         ("open_admission_without_current_work", "critical", "admission_state='open'"),
+        ("confirmed_baseline_recovery_missing", "critical", "component_enabled=true"),
+        ("expired_work_not_terminal", "critical", "component_enabled=false"),
+        ("preexposure_state_mismatch", "critical", "component_enabled=false"),
+        ("runtime_fault_requires_recovery", "warning", "component_enabled=false"),
     ],
-    ids=["baseline_recovery", "baseline_missing", "terminal_enabled", "incomplete_outcomes", "open_without_work"],
+    ids=[
+        "baseline_recovery",
+        "baseline_missing",
+        "terminal_enabled",
+        "incomplete_outcomes",
+        "open_without_work",
+        "confirmed_baseline_missing",
+        "expired_work",
+        "preexposure_mismatch",
+        "runtime_fault",
+    ],
 )
 def test_additional_ops_alert_capture_lifecycle(containment, record_property, reason, severity, synthetic_state):
     # Privileged synthetic state setup deliberately does not claim an admitted
@@ -252,6 +266,125 @@ def test_additional_ops_alert_capture_lifecycle(containment, record_property, re
 
 def test_facility_hold_alert_native_projection_lifecycle(containment, record_property):
     _exercise_ops_alert(containment, record_property)
+
+
+async def _prepare_synthetic_ops_rows(conn, reason):
+    """Guard-preserving negative rows, never source/physical acceptance evidence.
+
+    These owner-written private ledger preconditions exercise the actual ops
+    projection and alert producer. They do not qualify the production recorder,
+    active executor, all-48 confirmation, baseline recovery or physiological
+    inputs. No approval, exposure, successful receipt or runtime generation is
+    fabricated. All normal table constraints and triggers remain enabled.
+    """
+    if reason not in {
+        "confirmed_baseline_recovery_missing",
+        "expired_work_not_terminal",
+        "preexposure_state_mismatch",
+        "runtime_fault_requires_recovery",
+    }:
+        return
+    if reason != "runtime_fault_requires_recovery":
+        # Deliberately artificial bytes with the real state-hash binding. This
+        # is a private draft/shadow artifact, not a qualified production vector.
+        await conn.execute(
+            """SELECT state_artifact_id FROM fn_experiment_v2_register_state(
+                $1::uuid,'baseline',2::smallint,decode(repeat('11',32),'hex'),
+                decode(repeat('01',178),'hex'),'synthetic-ci/no-physical-credit')""",
+            EXP,
+        )
+    if reason in {"expired_work_not_terminal", "preexposure_state_mismatch"}:
+        # Construct an immutable historical shadow row with exact current
+        # candidate bindings. No readiness/lifecycle gate or work recorder is
+        # claimed here. Expiry is relative to the private server's own time.
+        interval_end = "- interval '1 hour'" if reason == "expired_work_not_terminal" else "+ interval '1 hour'"
+        await conn.execute(
+            f"""INSERT INTO experiment_v2_work
+                (work_id,experiment_id,execution_phase,operation_kind,target_profile,
+                 target_state_content_sha256,revision_bundle_sha256,firmware_revision,
+                 config_revision,registry_revision,grid_revision,lease_generation,
+                 valid_range,expires_at,created_by,created_at)
+                SELECT '58763900-0000-4000-8000-000000000003',e.experiment_id,
+                    'shadow','shadow_preview','baseline',s.state_content_sha256,
+                    e.revision_bundle_sha256,e.firmware_revision,e.config_revision,
+                    e.registry_revision,e.grid_revision,e.lease_generation,
+                    tstzrange(now()-interval '2 hours',now(){interval_end},'[)'),
+                    now(){interval_end},'synthetic-ci/negative-ledger',now()-interval '2 hours'
+                FROM control_experiments e JOIN experiment_v2_state_artifacts s
+                USING (experiment_id,revision_bundle_sha256)
+                WHERE e.experiment_id=$1::uuid AND s.profile='baseline'""",
+            EXP,
+        )
+    if reason == "preexposure_state_mismatch":
+        await conn.execute(
+            """INSERT INTO experiment_v2_delivery_bundles
+                (bundle_id,experiment_id,work_id,device_id,purpose,started_by,started_at)
+                VALUES ('58763900-0000-4000-8000-000000000004',$1::uuid,
+                    '58763900-0000-4000-8000-000000000003','synthetic-no-device',
+                    'preview','synthetic-ci/negative-ledger',now()-interval '5 seconds');
+            """,
+            EXP,
+        )
+        # Only a negative ledger row: no synthetic successful confirmation or
+        # current-grid acceptance receipt is inserted to reach this branch.
+        await conn.execute(
+            """INSERT INTO experiment_v2_preexposure_mismatch_epochs
+                (source_epoch_id,experiment_id,work_id,bundle_id,device_id,
+                 expected_state_content_sha256,expected_wire_vector,
+                 observed_state_content_sha256,observed_wire_vector,observations,
+                 first_observed_at,last_observed_at,firmware_revision,config_revision,
+                 registry_revision,grid_revision,runtime_instance_id,lease_generation,
+                 writer_generation,connection_generation,source_epoch_sha256,recorded_by,recorded_at)
+                SELECT '58763900-0000-4000-8000-000000000005',e.experiment_id,
+                    '58763900-0000-4000-8000-000000000003',
+                    '58763900-0000-4000-8000-000000000004','synthetic-no-device',
+                    s.state_content_sha256,s.wire_vector,
+                    fn_experiment_v2_state_content_sha256(
+                        s.wire_schema_version,s.wire_manifest_digest,decode(repeat('02',178),'hex')),
+                    decode(repeat('02',178),'hex'),
+                    (SELECT jsonb_agg(jsonb_build_object('wire_id',i,'observed_at',
+                        fn_experiment_v2_timestamp_text(now()-interval '1 second')) ORDER BY i)
+                     FROM generate_series(1,49) i WHERE i<>6),
+                    now()-interval '1 second',now()-interval '1 second',
+                    e.firmware_revision,e.config_revision,e.registry_revision,e.grid_revision,
+                    '58763900-0000-4000-8000-000000000006',e.lease_generation,0,0,
+                    encode(digest('synthetic negative ledger only; not a source recorder receipt','sha256'),'hex'),
+                    'synthetic-ci/negative-ledger',now()
+                FROM control_experiments e JOIN experiment_v2_state_artifacts s
+                USING (experiment_id,revision_bundle_sha256)
+                WHERE e.experiment_id=$1::uuid AND s.profile='baseline'""",
+            EXP,
+        )
+    if reason == "runtime_fault_requires_recovery":
+        await conn.execute(
+            """INSERT INTO experiment_v2_runtime_faults
+                (fault_report_id,experiment_id,device_id,reported_fault_kind,reason,
+                 reported_lease_generation,current_lease_generation,reporter_runtime_instance_id,
+                 reporter_writer_generation,reporter_connection_generation,current_runtime_instance_id,
+                 current_writer_generation,current_connection_generation,lease_mismatch,runtime_mismatch,
+                 close_reason,admission_state_after,authority_hold_required,facility_authority_yielded,
+                 recorded_by,recorded_at)
+                SELECT '58763900-0000-4000-8000-000000000007',experiment_id,'synthetic-no-device',
+                    'device_lost','synthetic negative ledger; not runtime acceptance',
+                    lease_generation,lease_generation,'58763900-0000-4000-8000-000000000006',
+                    0,0,'58763900-0000-4000-8000-000000000006',0,0,false,false,
+                    'device_lost','closed',true,false,'synthetic-ci/negative-ledger',now()
+                FROM control_experiments WHERE experiment_id=$1::uuid""",
+            EXP,
+        )
+    assert await conn.fetchval("SHOW session_replication_role") == "origin"
+    assert await conn.fetchval(
+        """SELECT bool_and(t.tgenabled <> 'D') FROM pg_trigger t
+            JOIN pg_class c ON c.oid=t.tgrelid
+            WHERE c.relnamespace='public'::regnamespace"""
+    )
+    for table in (
+        "experiment_v2_approvals",
+        "experiment_v2_observation_receipts",
+        "experiment_v2_exposures",
+        "experiment_v2_runtime_generations",
+    ):
+        assert await conn.fetchval(f"SELECT count(*) FROM {table}") == 0
 
 
 def _exercise_ops_alert(containment, record_property, scenario=None):
@@ -332,11 +465,13 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
                 expected_reason, expected_severity = "facility_emergency_hold", "critical"
             else:
                 expected_reason, expected_severity, state_sql = scenario
+                await _prepare_synthetic_ops_rows(conn, expected_reason)
                 await conn.execute("SELECT set_config('verdify.experiment_v2_transition','on',true)")
                 await conn.execute(f"UPDATE control_experiments SET {state_sql} WHERE experiment_id='{EXP}'")
             row = await conn.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1::uuid", EXP)
             assert row["alert_reason"] == expected_reason and row["alert_severity"] == expected_severity
             record_property("ops_reason", expected_reason)
+            record_property("synthetic_precondition_only", "true")
 
             async def cycle():
                 return await component_experiment_alert_cycle(
@@ -353,6 +488,15 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
             if scenario is not None:
                 # Remove only the declared private precondition, then use the
                 # real yielded-authority closure. This is not physical recovery.
+                if expected_reason in {"expired_work_not_terminal", "preexposure_state_mismatch"}:
+                    await conn.execute(
+                        """INSERT INTO experiment_v2_work_events
+                            (experiment_id,work_id,event_kind,worker_ref,detail,recorded_at)
+                            VALUES ($1::uuid,'58763900-0000-4000-8000-000000000003','cancelled',
+                                'synthetic-ci/clear-negative-precondition',
+                                '{"synthetic_only":true,"physical_recovery":false}',clock_timestamp())""",
+                        EXP,
+                    )
                 await conn.execute("SELECT set_config('verdify.experiment_v2_transition','on',true)")
                 await conn.execute(
                     f"UPDATE control_experiments SET status='draft', component_enabled=false WHERE experiment_id='{EXP}'"
@@ -371,15 +515,33 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
                 hashlib.sha256(b"synthetic fixture; not physical evidence").hexdigest(),
             )
             await conn.execute("RESET ROLE")
-            assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
-            assert len(delivery.messages) == 2
-            assert delivery.messages[1]["thread_ts"] == delivery.receipts[0]
-            assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 0
-            resolution = await conn.fetchval("SELECT resolution FROM alert_log")
-            assert resolution == (
-                "facility-safe authority closure; historical runtime faults retained; "
-                "no confirmed baseline recovery claimed"
-            )
+            if expected_reason == "preexposure_state_mismatch":
+                # A safe ownership closure is deliberately not a recovered
+                # state receipt. Exact current SQL retains this critical
+                # mismatch until later confirmed recovery; do not invent a
+                # recovered event just to manufacture alert-clear coverage.
+                assert not any((await cycle()).values())
+                assert len(delivery.messages) == 1
+                assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 1
+                assert await conn.fetchval("SELECT resolution FROM alert_log") is None
+                after_closure = await conn.fetchrow(
+                    "SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1::uuid", EXP
+                )
+                assert after_closure["safety_state"] == "facility_safe_closed"
+                assert after_closure["alert_reason"] == expected_reason
+                assert after_closure["alert_severity"] == "critical"
+                record_property("alert_lifecycle_outcome", "retained_until_confirmed_recovery")
+            else:
+                assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
+                assert len(delivery.messages) == 2
+                assert delivery.messages[1]["thread_ts"] == delivery.receipts[0]
+                assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 0
+                resolution = await conn.fetchval("SELECT resolution FROM alert_log")
+                assert resolution == (
+                    "facility-safe authority closure; historical runtime faults retained; "
+                    "no confirmed baseline recovery claimed"
+                )
+                record_property("alert_lifecycle_outcome", "resolved_by_synthetic_facility_closure")
         finally:
             await tx.rollback()
             await conn.close(timeout=3)
@@ -393,10 +555,13 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     assert old_catalog == new_catalog
     assert old_sequences.keys() == new_sequences.keys()
     delta = {name: (new_sequences[name] or 0) - (old_sequences[name] or 0) for name in old_sequences}
-    assert {name: value for name, value in delta.items() if value} == {
+    expected_delta = {
         "experiment_events_event_id_seq": 2,
         "alert_log_id_seq": 1,
     }
+    if scenario is not None and scenario[0] in {"expired_work_not_terminal", "preexposure_state_mismatch"}:
+        expected_delta["experiment_v2_work_events_work_event_id_seq"] = 1
+    assert {name: value for name, value in delta.items() if value} == expected_delta
     # Rows/catalog are restored; consumed sequence values are recorded, never rewound.
     record_property("custody_before_sha256", hashlib.sha256(json.dumps(before).encode()).hexdigest())
     record_property("custody_after_sha256", hashlib.sha256(json.dumps(after).encode()).hexdigest())

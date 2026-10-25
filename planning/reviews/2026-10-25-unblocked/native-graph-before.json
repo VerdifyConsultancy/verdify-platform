@@ -1,0 +1,1927 @@
+[
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 751,
+          "state": "OPEN"
+        },
+        {
+          "number": 298,
+          "state": "OPEN"
+        },
+        {
+          "number": 398,
+          "state": "OPEN"
+        },
+        {
+          "number": 45,
+          "state": "OPEN"
+        },
+        {
+          "number": 51,
+          "state": "OPEN"
+        },
+        {
+          "number": 52,
+          "state": "OPEN"
+        },
+        {
+          "number": 412,
+          "state": "OPEN"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:25Z"
+        },
+        {
+          "body": "Umbrella priority follows its highest open child: after Jason's FD-08 (2026-10-20) lowered #45 to P2, no open child is P1 (#298, #398, #751 P2; #51, #52, #412 P3), so this umbrella goes to P2. #775 stays P1 through its other P1 members.",
+          "createdAt": "2026-10-20T17:38:27Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 31,
+    "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:31 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Generated consumer/oracle source does not establish live input coverage, meaningful nondefault divergence or current read-only twin output. Do not reuse the old absent-table claim as current evidence.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Every active consumer is covered or explicitly excluded from the oracle claim with a reason.\n\n**Acceptance retained:**\n- [ ] Every active consumer is covered or explicitly excluded from the oracle claim with a reason.\n- [ ] Missing required input and a known nondefault divergence fail loudly; identical-source self-diff passes.\n- [ ] No twin result can qualify full current 48-field physical exposure or new transport by default.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:51:44Z"
+        },
+        {
+          "body": "<!-- estate-consolidation:2026-10-20 -->\n\n## Carry-over from #14 (consolidated 2026-10-20)\n\nJason approved this consolidation on 2026-10-20. The #14 twin roll-up closes as not planned. Its only open child was this issue, and closed #606 was already consolidated into it. This issue now holds the whole twin option and moves under #775 as its direct child.\n\nThe following outstanding #14 clauses are added to this issue's acceptance. The `planning/backlog.yaml` update carries the same text.\n\n- [ ] Coverage limitations are explicit, and unsupported or default-only fields cannot produce a full-parity PASS.\n- [ ] Source, build, runtime and actual read-only output receipts exist, with no compiler or pip downloads at startup. verdify-twin is registered only through the owning jvallery/agents registry `ci_submission` profile (R14). The build is immutable and digest-pinned, and the runtime is device-denied. These are the consolidated #606 obligations.\n- [ ] Before any investment, one concrete oracle question is selected. The current pilot stays independent, and a future twin gate is adopted only after useful positive and negative evidence. Verify with a self-diff PASS receipt and an injected-divergence FAIL receipt from admitted native CI (k3s).\n\nThis issue's own three clauses are unchanged. The allocation stays FUTURE with zero hours. The history of #14 and #606, including the 2026-10-12 pause handoff, stays linked as evidence.\n",
+          "createdAt": "2026-10-20T05:57:50Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 45,
+    "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 398,
+          "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 296,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 297,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- estate-alert-triage-20261021 -->\n## Live all-severity alert triage \u2014 21 October 2026\n\n**Disposition: valid P2 uncommissioned/unavailable soil telemetry, not an alert to suppress.** VerdifySouth2SoilProbeUnavailable fp815f02d1d33b7ae8 ataddress08 and VerdifyWestSoilProbeUnavailable fpa9934dd38be6e41d at09 duplicate the exact hardware availability gaps below. Current hardware available0/HA scrape1; unknown channels must not enable fertilizer/drip feedback.\n\n**How:** preserve the actual survey\u2192threshold-map\u2192commission chain (#298\u2192#398\u2192#45) and #45\u2192#297 consumer gate. Native GitHub readback confirms #45 blocked_by #398. Survey identity/location/calibration first, then supported feedback check/finalizer on credible measurements. Do not remove requirements or invent a commissioned channel from nonzero rows. P2 matches JasonFD08, despite stale P1 prose in the old brief. No OTA, extra ESP32 connection or irrigation action.\n\n| Fingerprint | Asset | Bound entities |\n| --- | --- | --- |\n| `19dc2075b955e7df` | PROBE-GH-MODBUS-09 | `sensor.greenhouse_west_soil_moisture`, `sensor.greenhouse_west_soil_temp_degf` |\n| `9fddfd88db3fc5e4` | PROBE-GH-MODBUS-08 | `sensor.greenhouse_south_2_soil_moisture`, `sensor.greenhouse_south_2_soil_temp_degf` |\n\nThis is issue triage and next-sprint preparation. No device actuation, Core restart, credential change, network change or paused mitigation campaign was resumed. Existing Decision lines, physical/seasonal holds and acceptance remain intact.",
+          "createdAt": "2026-10-21T18:17:11Z"
+        },
+        {
+          "body": "2026-10-21 19:02\u201319:04 UTC \u2014 additional live alert review: `FleetHardwareNativeUnavailable`, fingerprint `0854904b99920e78`, started 18:55:10Z. Exact asset `hardware-983891e0d4b26d34` / `PROBE-GH-MODBUS-07` is the installed, expected **South 1 soil EC/moisture/temperature triplet**, not the separate south climate temperature/RH probe.\n\nAll three exact HA entities are UNKNOWN, last updated 18:24:56Z: `sensor.greenhouse_south_1_soil_ec_ms_cm`, `sensor.greenhouse_south_1_soil_moisture`, `sensor.greenhouse_south_1_soil_temp_degf`. Their `homeassistant_entity_available` metrics are 0 and the asset's `fleet:hardware_ha_available` is 0 while the HA scrape is 1. This is a valid native feedback/commissioning gap, not a monitoring outage or proof of failed soil hardware, wrong wiring, calibration, power or bus identity. Keep the warning; the declared installed/expected contract is current and has no supported retirement disposition.\n\nCanonical resolution remains #45, finite P2 under FD-08 and current P2 labels, with the existing #398 map/calibration prerequisite and #298 attended survey. Trace exact source/channel identity, raw producer publication and HA mapping/freshness; distinguish UNKNOWN input from a physically failed probe. Preserve unknown values and disabled feedback authority until fresh plausible calibrated readings and supported feedback checks pass. Do not substitute zeros/cached values or use this alert to actuate irrigation, reset devices or perform an unadmitted physical experiment. #751 remains related field-service context; this soil row does not turn the separate climate/hydro repair into an invented prerequisite or change the accepted analysis panel.\n\nThis is read-only diagnosis and an evidence update. Existing Decision lines, physical-window boundaries and graph edges remain in force; natural alert clear alone would not complete commissioning.\n",
+          "createdAt": "2026-10-21T19:05:26Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 51,
+    "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Jason revised DR-45 (2026-10-20): visits are possible, but there is **no reference CO2 sensor**. This issue stays open and blocked only on getting a reference NDIR meter; CO2 stays labelled uncalibrated until then. Priority is unchanged.",
+          "createdAt": "2026-10-20T15:18:43Z"
+        },
+        {
+          "body": "Jason confirmed on 2026-10-25: **he can visit the greenhouse as needed; he does not have a reference CO2 meter.** Field-survey availability is therefore not a blocker to the shared #298/#751/#398/#45/#52/#412 preparation. CO2 calibration #51 remains blocked on obtaining a genuine reference NDIR meter; preserve the uncalibrated label and current priority. No purchase, calendar appointment, fabricated reference, physical actuation or OTA is implied.\n\nShared field/release worksheet: https://github.com/VerdifyConsultancy/verdify-platform/blob/codex/writer-hold-safe-qualification-20261025/planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md (PR #1081; CI still pending). Use one bounded visit for actual crop/substrate/pot and sensor identities, endpoint/plumbing map, south climate vs separate south soil channels, hydro fault observation, and seasonal no-change/change evidence. The worksheet's initially unverified meter field is now explicitly resolved as unavailable by this comment.\n",
+          "createdAt": "2026-10-25T14:23:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 52,
+    "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:52 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Species/crop observations and a supported seasonal care decision are unavailable to this remote review. No change is made; keep seasonal decision deferred.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: A documented no-change or specific seasonal-care decision is supported by actual crop observations.\n\n**Acceptance retained:**\n- [ ] A documented no-change or specific seasonal-care decision is supported by actual crop observations.\n- [ ] Any new dormancy/light/dry-down setting is versioned, reversible and cannot silently alter a locked study.\n- [ ] No species-wide agronomic or yield claim is made from uncalibrated DLI or a house-average proxy.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:52:28Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged. No attended greenhouse visit is planned (Jason, 2026-10-20), so the shared #298 field-survey prerequisite still blocks this issue; it resumes when Jason schedules an attended visit.",
+          "createdAt": "2026-10-20T14:45:47Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 75,
+    "title": "[C4][P2] Observability program: prove actionable health from source through device",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 629,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "jvallery/monitoring-stack"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 563,
+          "state": "CLOSED"
+        },
+        {
+          "number": 394,
+          "state": "CLOSED"
+        },
+        {
+          "number": 89,
+          "state": "CLOSED"
+        },
+        {
+          "number": 671,
+          "state": "CLOSED"
+        },
+        {
+          "number": 49,
+          "state": "CLOSED"
+        },
+        {
+          "number": 950,
+          "state": "CLOSED"
+        },
+        {
+          "number": 951,
+          "state": "CLOSED"
+        },
+        {
+          "number": 952,
+          "state": "CLOSED"
+        },
+        {
+          "number": 953,
+          "state": "CLOSED"
+        },
+        {
+          "number": 835,
+          "state": "CLOSED"
+        },
+        {
+          "number": 862,
+          "state": "CLOSED"
+        },
+        {
+          "number": 963,
+          "state": "OPEN"
+        },
+        {
+          "number": 964,
+          "state": "CLOSED"
+        },
+        {
+          "number": 965,
+          "state": "CLOSED"
+        },
+        {
+          "number": 976,
+          "state": "CLOSED"
+        },
+        {
+          "number": 980,
+          "state": "CLOSED"
+        },
+        {
+          "number": 981,
+          "state": "CLOSED"
+        },
+        {
+          "number": 317,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:75 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** Umbrella remains open. Existing bounded child acceptances, including953/964, are retained; fresh b5 Argo health does not prove the whole fault/delivery/observability campaign. Missing broader fault/recovery acceptance remains explicit.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Each child has a failing and recovering real or isolated fault receipt and a clear owner/runbook.\n\n**Acceptance retained:**\n- [ ] Each child has a failing and recovering real or isolated fault receipt and a clear owner/runbook.\n- [ ] No inactive PrometheusRule or static-green worker is accepted as live monitoring.\n- [ ] Historical closed children remain history; current coverage and omissions are documented.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:52:38Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:52Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 297,
+    "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "parent": {
+      "number": 350
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 45,
+          "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 296,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "S6 evaluator foundation is deployed through the successful full sync `d3b34d1c51148b3963391f8fbb259204beada65b` (Argo Synced + Healthy). The selected frozen-base backport is source `1df311de` / digest `sha256:975100356d6899978c4b8145067fac920a67dc7d02db562b474e4e1c7142de32`; all 17 original live image layers remain identical, with only two copied source files added.\n\nActual verification: the same new ingestor pod stayed Ready with zero restarts for 300.829 seconds; 188 untruncated log lines contained zero ValidationError/schema-drop messages. Both running source-file hashes match the reviewed backport. The real scheduled status reports `available=False active=False reason=uncommissioned_targets actuation=disabled`. Source-bound smoke passed 9/9, and the separate device-monitor found exactly one ESP32 writer connection.\n\nThis completes the bounded S6 evaluator/fixture/unavailable-posture packet. It does **not** establish an operating saturation alarm, measured-target adapter, alert lifecycle or drip skip/shrink. Full #297 remains open; #45 still gates physical actuation. No OTA, dosing or irrigation action occurred.\n",
+          "createdAt": "2026-10-20T19:13:32Z"
+        },
+        {
+          "body": "Durable S6 execution checkpoint merged as #1029 (`e0750b80`). [Live receipts and remaining acceptance](https://github.com/VerdifyConsultancy/verdify-platform/blob/e0750b80fcf05d808b1381f83fbef7a307d6dc3b/planning/execution/2026-10-20-s6/README.md) include this issue. The bounded S6 packet is delivered; the whole issue remains open for the specific follow-through recorded there. The current audit accounts for all 61 open issues, including new #1021/#1022; no alternate scope was added.",
+          "createdAt": "2026-10-20T19:29:53Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 298,
+    "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 398,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Jason confirmed on 2026-10-25: **he can visit the greenhouse as needed; he does not have a reference CO2 meter.** Field-survey availability is therefore not a blocker to the shared #298/#751/#398/#45/#52/#412 preparation. CO2 calibration #51 remains blocked on obtaining a genuine reference NDIR meter; preserve the uncalibrated label and current priority. No purchase, calendar appointment, fabricated reference, physical actuation or OTA is implied.\n\nShared field/release worksheet: https://github.com/VerdifyConsultancy/verdify-platform/blob/codex/writer-hold-safe-qualification-20261025/planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md (PR #1081; CI still pending). Use one bounded visit for actual crop/substrate/pot and sensor identities, endpoint/plumbing map, south climate vs separate south soil channels, hydro fault observation, and seasonal no-change/change evidence. The worksheet's initially unverified meter field is now explicitly resolved as unavailable by this comment.\n",
+          "createdAt": "2026-10-25T14:22:59Z"
+        },
+        {
+          "body": "Shared survey preparation is merged in #1081 at `a01149a8`:\nhttps://github.com/VerdifyConsultancy/verdify-platform/blob/a01149a877ed96bfa1eb649ab1f66f1d9f03e079/planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md\n\nPrefill from that exact source, **not present-day physical truth**:\n\n| Position / channel | Source label to verify on the visit |\n|---|---|\n| SOUTH-FLOOR | Config still says Canna Lily / large pots / drip heads; verify actual crop, substrate, pot count and endpoint before correcting it |\n| EAST-SHELF-T1 | Config says unknown seedlings / heat mat; hydro system is described in east zone; record actual species and installed hydro identity/status |\n| WEST-SHELF | Config says Unknown pots; record actual crop/substrate and probe-to-pot placement |\n| CENTER-HANG | Config says Vanda orchids; no dedicated center air probe is declared; verify placement and climate-only mist topology, keep center drip disabled |\n| South climate | Native IDs `south_temp___f_` / `south_rh____` \u2192 `temp_south` / `rh_south`; identify this air probe separately from soil probes |\n| South1 soil | `soil_moisture_south_1`, `soil_temp_south_1`, `soil_ec_south_1`; identify one physical probe and all three channels |\n| South2 soil | `soil_moisture_south_2`, `soil_temp_south_2`; verify actual position/source and availability |\n| West soil | `soil_moisture_west`, `soil_temp_west`; verify actual position/source and availability |\n\nCapture observations without changing settings, moving probes, unplugging wiring or switching equipment as part of this first survey. Return unresolved facts as unknown; nonzero telemetry does not establish calibration. Commissioned target correction follows #298\u2192#398\u2192#45, then #297 feedback acceptance; physical dose/flush remains separate. The accepted three-probe readiness policy is not silently changed into a requirement to replace south before unrelated work.\n\nJason can visit as needed; no CO2 reference meter is available. No new device connection, actuation, OTA or calendar appointment is implied.\n",
+          "createdAt": "2026-10-25T14:45:05Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "parent": {
+      "number": 350
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 390,
+          "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 434,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:299 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Existing center re-fire protection is preserved; current routing/reset/re-fire preservation and release receipt are not proved by this telemetry scan. Historical live protection is not a current topology release qualification.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#390. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: No origin or restart can re-fire before the declared protection permits; hard safety remains dominant.\n\n**Acceptance retained:**\n- [ ] No origin or restart can re-fire before the declared protection permits; hard safety remains dominant.\n- [ ] Eligible re-fire resumes correctly rather than staying latched without reason.\n- [ ] Source/firmware/cycle evidence shows protection survived #434-related changes with a rollback canary.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:54:17Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:30Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 434,
+          "state": "OPEN"
+        },
+        {
+          "number": 299,
+          "state": "OPEN"
+        },
+        {
+          "number": 297,
+          "state": "OPEN"
+        },
+        {
+          "number": 296,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:350 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Irrigation physical/chemistry feedback remains uncommissioned. Center-only climate/wall-only fertilizer/source stop safety are distinct from physical delivery and accepted crop/substrate protection.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Software allows only the approved plumbing/origin combinations and fails closed without required calibration.\n\n**Acceptance retained:**\n- [ ] Software allows only the approved plumbing/origin combinations and fails closed without required calibration.\n- [ ] Overwatering-safe feedback is commissioned on actual crop/substrate sensors before actuation.\n- [ ] Physical feed, crop safety/yield and irrigation water claims require their own observed evidence.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:55:23Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:32Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 371,
+          "state": "CLOSED"
+        },
+        {
+          "number": 424,
+          "state": "CLOSED"
+        },
+        {
+          "number": 386,
+          "state": "OPEN"
+        },
+        {
+          "number": 430,
+          "state": "OPEN"
+        },
+        {
+          "number": 368,
+          "state": "OPEN"
+        },
+        {
+          "number": 324,
+          "state": "CLOSED"
+        },
+        {
+          "number": 410,
+          "state": "OPEN"
+        },
+        {
+          "number": 378,
+          "state": "OPEN"
+        },
+        {
+          "number": 361,
+          "state": "CLOSED"
+        },
+        {
+          "number": 379,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:359 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Current API separates legacy binary diagnostics from credit but physically qualified target evidence is unavailable. No tuning/AI safety delegation is justified by this audit.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Measurement and localized safety are trustworthy independently of AI credit.\n\n**Acceptance retained:**\n- [ ] Measurement and localized safety are trustworthy independently of AI credit.\n- [ ] Every tuning proposal cites fixed-panel realized climate/resource evidence and explicit guardrails/replay/rollback.\n- [ ] No PID arm, unvalidated response model, unmeasured efficiency claim or firmware safety delegation to AI enters the current pilot.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:55:34Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:33Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "parent": {
+      "number": 430
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 390,
+          "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 370,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:367 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No unified dwell release, observed parity/chatter/starvation receipt or current OTA acceptance exists. Prior comments deferred this broad consolidation; preserve existing safety floors.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#390. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Exactly one documented dwell authority governs ordinary transitions and all safety exceptions remain explicit.\n\n**Acceptance retained:**\n- [ ] Exactly one documented dwell authority governs ordinary transitions and all safety exceptions remain explicit.\n- [ ] Boundary/reboot/override tests and #299 center-mister re-fire invariants pass.\n- [ ] Measured starts/runtime and behavior parity show no new chatter or unsafe starvation; #390 release evidence is present.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:55:55Z"
+        },
+        {
+          "body": "<!-- verdify-367-relay-dwell-20261012 -->\nBounded source progress for #367, preserved for the next firmware cohort on `codex/native-replay-coverage-20261012@3ebba10e2890ad536fcdf99beeb52aa18d4ec983`. This does not close #367 or change its broader acceptance, priority, or dependency on #390.\n\nThe actual `controls.yaml` at reported deployed source `620a218a93cf24ca1e1b49dfed617cc97de7d258` / version `2026.10.2.0637.620a218a-wifi-bound` is byte-identical to the reproduced pre-fix source. Static `RelayMeta R` cached eight min-on/off limits on its first tick, so later snapshot/legacy values could read back correctly while relays retained the old dwell. Source fix `bc35137017b49deac04495c11ef88b48086c5802` refreshes eight duration fields each tick, preserving original transition stamps, runtime, force overrides and rollover arithmetic. A changed duration remains measured from the original relay edge.\n\nVerification:\n\n- The same 84 actual-YAML native cases on unchanged source: **72 fail / 12 force-override cases pass**; corrected source: **84 pass**, across snapshot-active and legacy-inactive modes. Related focused offline suite: **138 pass**, no failures/errors/skips.\n- Required `make test-firmware`, `make firmware-invariants`, precommit replay and committed-ref replay pass; both replays use **296,698 immutable rows, threshold 0, zero decision/diagnostic divergence**. `replay_emit` does not execute the changed outer relay wrapper, so the native boundary tests establish this behavioral delta.\n- Repo-pinned **ESPHome 2026.6.5** ESP32 compile passes. Consumer manifest and Ruff pass. Independent read-only review found no actionable findings and independently passed the 84 native cases.\n\n[Immutable source/evidence packet](https://github.com/VerdifyConsultancy/verdify-platform/blob/3ebba10e2890ad536fcdf99beeb52aa18d4ec983/planning/execution/2026-10-12/native-replay-coverage/README.md) retains source/corpus hashes, matching red/green evidence, lossless raw receipts and compile provenance. All 22 payload checksums, 15 raw archives and three source hashes were verified; provider readback equals the exact branch head above. This stays outside PR #973's frozen `3d9f31e8` source cohort.\n\n**No OTA or device/live-DB mutation occurred. No observed chatter reduction, physical acceptance, or full 48-field historical qualification is claimed.** The native historical harness remains **27/48, full_coverage=false, UNPROVEN**, with no qualified `ORDER_REVISION`. Actual downstream mister/pre-band state and authentic missing corpus dimensions remain necessary; defaults or synthetic output labels are not being counted as coverage.\n",
+          "createdAt": "2026-10-12T18:23:33Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "parent": {
+      "number": 359
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:368 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Fresh raw north/east/west have values while south is missing; diagnostics report4/OK. This contradiction remains real. Shared validity/jump/flatline semantics and firmware-qualified consumer behavior are incomplete.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#424. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Synthetic impossible jump/stuck cases are detected without suppressing legitimate steady values.\n\n**Acceptance retained:**\n- [ ] Synthetic impossible jump/stuck cases are detected without suppressing legitimate steady values.\n- [ ] Control consumes explicitly valid inputs; degraded quorum and true SENSOR_FAULT behavior are documented and tested, not conflated.\n- [ ] No silent sensor substitution changes trial endpoints; any firmware portion passes #390 before OTA.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:56:06Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:34Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 369,
+    "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+    "parent": {
+      "number": 430
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 390,
+          "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:369 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No verified complete live-consumer removal inventory or measured code/entity reduction is established. Defer removals until exact consumer and release evidence.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#433, VerdifyConsultancy/verdify-platform#390. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Each removed property has zero required live consumer or an explicit tested migration; no dangling generated IDs or docs remain.\n\n**Acceptance retained:**\n- [ ] Each removed property has zero required live consumer or an explicit tested migration; no dangling generated IDs or docs remain.\n- [ ] Net-negative unused code/entity counts are measured and behavior/safety replay is unchanged.\n- [ ] No active trial identity changes silently, no safety control is made AI-writable, and #390 release checks pass for firmware changes.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:56:17Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:36Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 370,
+    "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+    "parent": {
+      "number": 430
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 367,
+          "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:370 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Pure conflict/origin arbitration preparation is not exhaustive real relay/reset/partial-delivery and current firmware-release proof. No control rewrite was made.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#390, VerdifyConsultancy/verdify-platform#367. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Exhaustive conflict/origin fixtures produce one deterministic safe result and an auditable block reason.\n\n**Acceptance retained:**\n- [ ] Exhaustive conflict/origin fixtures produce one deterministic safe result and an auditable block reason.\n- [ ] Reverse conflicts, manual rescue, restart and partial delivery cannot energize incompatible relays.\n- [ ] Native/invariant/replay/compile and #390 physical release checks pass without unapproved control-policy changes.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:56:28Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:37Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 378,
+    "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+    "parent": {
+      "number": 359
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 785,
+          "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 361,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:378 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No completed pilot/readout exists and physical target evidence is unqualified. Keep corridor-width decisions dependent on fixed-target realized evidence, with no retrospective endpoint retune.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#785, VerdifyConsultancy/verdify-platform#371. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.\n\n**Acceptance retained:**\n- [ ] The decision distinguishes temperature versus VPD and cannot use attributable credit as physical compliance.\n- [ ] No retrospective redefinition rewrites the completed study endpoint.\n- [ ] Any live band change has bounded scope, exact rollback values and required operator/release authority.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:56:50Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:38Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 386,
+    "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "parent": {
+      "number": 359
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:40Z"
+        },
+        {
+          "body": "A bounded lighting-policy read timed out at 8 seconds; its read-only session ended with no result. Cheap direct telemetry reads then passed: both circuits OFF with lux_sufficient, min-on 120 seconds and fresh cfg/text readbacks. No eligible natural solar-cutoff/min-on event was captured, no light was toggled, and no physical acceptance is claimed.\n\nShutdown-preparation checkpoint (2026-10-21 17:15 UTC): paused pending Jason's explicit resumption. Durable [source and safe-resume instructions](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/README.md), [value-free live receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/shutdown-receipt.json), commit `2d806bb1f743ec537af4e12989c1a692640d3ef8` on `codex/containment-followthrough-587-639-20261021`.\n\nNo PR opened, CI admitted, job submitted, deployment started, provider/credential change made, message sent or new ESP32 connection opened by this packet. Both product and descheduler are Synced/Healthy with no active Argo operation. Original device socket remains ESTABLISHED, source port 47258 / inode 675859596. No active task-owned experimental process, continuation goal or heartbeat was created; normal production services and periodic backups/jobs remain running. This is a safe stopping point, not issue completion.\n",
+          "createdAt": "2026-10-21T17:16:50Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 963,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 586,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 299,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 369,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 367,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 419,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "2026-10-25 follow-through: read-only writer inspection and safe qualification are in PR #1081: https://github.com/VerdifyConsultancy/verdify-platform/pull/1081 . Native CI `verdify-platform-pr-ci-w7q5b` is admitted for head `ad3fc71a` (not yet accepted).\n\nWriter findings: original October19 run halted for `unapproved candidate appeared` after twelve completed values. All twelve exact original native request rows remain `confirmed` with non-null confirmation/no expiry; the current writer's own equivalence predicate accepts all twelve current readbacks. Old approval expired October19 and binds another Pod/source/session/generation. Current preview has fourteen proposed values; handoff remains unsettled. No state/approval/recovery file changed, no writer restart, new ESP32 client, node cordon or device command was issued. Do not infer recovery or safe blind rollback from telemetry or the generic hold message. The confirmed-halt archive path requires retained original writer/approval custody plus fresh identity/plan/readback and native-history checks.\n\nSafe private work: five further current SQL ops reasons now exercise the actual monitor's fire/dedupe/closure with capture-only delivery, exact transactional custody and no live sender. Mandatory native cases increase8\u219213; CI still pending. This does not replace authentic active lifecycle/exposure/analyst/freezer/recovery proof, create a new analyst identity, or fill the21 causal gaps. No new Slack message is authorized; the previous approved pair remains consumed.\n\nField/release preparation: the same PR contains one shared #298/#390 worksheet for crop/probe/plumbing truth, south climate/hydro diagnosis, commissioning/reference evidence, and exact release/binary/rollback custody. Jason's visit availability/reference CO2 meter status is requested; actual observations, physical actions and OTA remain unperformed. No production workload render changes or deployment required by this packet.\n",
+          "createdAt": "2026-10-25T14:12:56Z"
+        },
+        {
+          "body": "Shared survey preparation is merged in #1081 at `a01149a8`:\nhttps://github.com/VerdifyConsultancy/verdify-platform/blob/a01149a877ed96bfa1eb649ab1f66f1d9f03e079/planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md\n\nPrefill from that exact source, **not present-day physical truth**:\n\n| Position / channel | Source label to verify on the visit |\n|---|---|\n| SOUTH-FLOOR | Config still says Canna Lily / large pots / drip heads; verify actual crop, substrate, pot count and endpoint before correcting it |\n| EAST-SHELF-T1 | Config says unknown seedlings / heat mat; hydro system is described in east zone; record actual species and installed hydro identity/status |\n| WEST-SHELF | Config says Unknown pots; record actual crop/substrate and probe-to-pot placement |\n| CENTER-HANG | Config says Vanda orchids; no dedicated center air probe is declared; verify placement and climate-only mist topology, keep center drip disabled |\n| South climate | Native IDs `south_temp___f_` / `south_rh____` \u2192 `temp_south` / `rh_south`; identify this air probe separately from soil probes |\n| South1 soil | `soil_moisture_south_1`, `soil_temp_south_1`, `soil_ec_south_1`; identify one physical probe and all three channels |\n| South2 soil | `soil_moisture_south_2`, `soil_temp_south_2`; verify actual position/source and availability |\n| West soil | `soil_moisture_west`, `soil_temp_west`; verify actual position/source and availability |\n\nCapture observations without changing settings, moving probes, unplugging wiring or switching equipment as part of this first survey. Return unresolved facts as unknown; nonzero telemetry does not establish calibration. Commissioned target correction follows #298\u2192#398\u2192#45, then #297 feedback acceptance; physical dose/flush remains separate. The accepted three-probe readiness policy is not silently changed into a requirement to replace south before unrelated work.\n\nJason can visit as needed; no CO2 reference meter is available. No new device connection, actuation, OTA or calendar appointment is implied.\n",
+          "createdAt": "2026-10-25T14:45:07Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 398,
+    "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 298,
+          "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 45,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:398 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Fresh database retains original three target seeds80/80/75 and Canna Lily/Canna Lily/Unknown. No commissioned crop/substrate replacement, before/after/reversal receipt exists; never activate seeds as calibration truth.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#298. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Current map, seed and DB rows agree without overwriting valid operator-specific values.\n\n**Acceptance retained:**\n- [ ] Current map, seed and DB rows agree without overwriting valid operator-specific values.\n- [ ] No saturation/drip-skip consumer uses an uncommissioned or mismatched target as valid.\n- [ ] Before/after row receipt and exact rollback data exist; #45 can validate the resulting feedback contract.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:57:44Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged. No attended greenhouse visit is planned (Jason, 2026-10-20), so the shared #298 field-survey prerequisite still blocks this issue; it resumes when Jason schedules an attended visit.",
+          "createdAt": "2026-10-20T14:45:41Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 410,
+    "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+    "parent": {
+      "number": 359
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 361,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Completed the selected #410/#775 delivery and qualification packet. [Execution report](https://github.com/VerdifyConsultancy/verdify-platform/blob/af46d263352d6403201a4642378197e9ca00303c/planning/reviews/2026-10-18-daytime-consumer/README.md) \u00b7 [Full immutable custody](https://github.com/VerdifyConsultancy/verdify-platform/blob/84f5013d322b192ff3e54c9977e483d05bcfd819/planning/reviews/2026-10-18-daytime-consumer/CUSTODY.md) \u00b7 [Remote byte-verification receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/84f5013d322b192ff3e54c9977e483d05bcfd819/planning/reviews/2026-10-18-daytime-consumer/custody/remote-publication.json).\n\n- Live Iris and the bounded qualification now use **GPT-6 Luna / xhigh**. Qualified API source 56b316f3, exact four-resource release 1f132f20 completed 21:07:33UTC. Actual mounted profile/API source and label passed;9 smoke checks and exactly 1 device writer passed. Final Argo read was Healthy/Synced at report source af46d263. Both winter archive objects, database/getter277 and ingestor remained unchanged.\n- Two genuine Iris-authenticated scorecard/model cases passed: October 4 preserves all 46 fields across 4 rows (2 ineffective,2 insufficient_evidence,0 effective); October 16 remains empty/pending with NULL daytime counts. Exactly 4 provider requests, 2 scorecard reads, 818 output tokens, 0 other tools/retries. Independent Science review passed. This proves bounded ordinary read/model consumption; natural-cycle use, full gateway execution, physical efficacy and crop safety remain unproved.\n- Complete stored daytime assessment found 25/23 missing minute buckets October 16/17. Complete recorded zero remains NULL; the 48 gaps were not backfilled or doubled. Next: supported freshness/observation semantics, a prospective complete recorded daytime window and naturally scheduled ordinary-consumer observation. Reuse accepted delivery and preserve original estimates.\n- Native model source CI 87whm succeeded 21:02:34UTC after one supported failed-build-only recovery; original successful source gate/custody retained. Model release CI 6l8w9 succeeded 21:17:35; final report CI hp5dw succeeded 21:22:00. All actual declared containers exited 0 with 0 restarts, complete logs/UID/source bindings retained. Prior test/admission/preflight failures remain explicit.\n- Canonical plan and both native issue bodies are updated. Final native graph at 21:30:10 UTC matched **47 open issues, 143 acceptance clauses, 27 active edges**; all states/acceptance/parents/dependencies/effort values preserved. #410 and #775 remain OPEN.\n- Full evidence is pushed on codex/daytime-consumer-evidence-20261018 at 84f5013d, with main unchanged. Two archives retain 1,972 selected files across packets, including shared provenance, actual logs/results and failure history. Exact member readback, independent credential scan and remote bytes passed: 68 source/report/custody/archive files plus 3 final proof files. Scan hits were only exact reviewed public source placeholders/file-path/OAuth references; no credential values found.\n\nSeparate bounded ingress context is retained with strict scope: supplied incident a527cc469654b07dcf09c29648d3d27762ac71499985a0838a1b239712556a36 source interval 20:52:52\u201320:59:52UTC and later 6.580278392% backend 5xx ratio at 21:13 were not independently remeasured. The existing Prometheus proxy returned 502 before the first query. Public API health returned 200 and anonymous public MCP returned 403 at 21:15:35; no authenticated public-MCP or sustained-ingress recovery/causation claim follows. These public-path limits do not replace the proved internal-service/consumer acceptance. No infrastructure/security change, new observer or alert acknowledgement was made.\n\nNo user decision is pending for this completed bounded packet.",
+          "createdAt": "2026-10-18T19:37:12Z"
+        },
+        {
+          "body": "The separate tier-1 ingress incident is now tracked in **#988**, which remains OPEN. Search/adoption was completed before creation; #410 contained context but its dry-out acceptance does not own this multi-host ingress incident.\n\n#988 retains the exact backend/incident and the newer **parent independently measured** five-minute windows: extrapolated total increase **279.609934 at 21:19:46.389 UTC**, and five-minute 5xx increase **0 at 21:19:46.713 UTC**, on 2026-10-18. They remain distinct from the older **6.580278392% at 21:13:26.576 UTC**, anonymous public MCP403/public API200 observations, and the implementation metrics-proxy502 blocker. No raw integer request count, durable recovery or rollout cause is inferred.\n\nRemaining ForwardAuth/authentication linkage, authenticated public acceptance, and cause/recurrence criteria are explicit and unchecked in #988. Exact task/source/Workflow/rollout/report/custody references are included there. #410/#775 acceptance and open states are preserved; no new probe, model call, repair, deployment, access or alert acknowledgement was performed.",
+          "createdAt": "2026-10-18T21:38:29Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 412,
+    "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:412 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No measured seasonal door-screen trigger or physical closure observation is available. Reminder/calendar prose is not completion; keep operator seasonal decision deferred.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: The trigger and physical completion are recorded from observation, not a reminder date alone.\n\n**Acceptance retained:**\n- [ ] The trigger and physical completion are recorded from observation, not a reminder date alone.\n- [ ] Temperature/moisture/ventilation remain within the declared safety envelope after closure.\n- [ ] Any study receives a visible intervention/deviation record rather than an unexplained seasonal covariate change.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:58:17Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged. No attended greenhouse visit is planned (Jason, 2026-10-20), so the shared #298 field-survey prerequisite still blocks this issue; it resumes when Jason schedules an attended visit.",
+          "createdAt": "2026-10-20T14:45:42Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 430,
+    "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+    "parent": {
+      "number": 359
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 433,
+          "state": "CLOSED"
+        },
+        {
+          "number": 428,
+          "state": "CLOSED"
+        },
+        {
+          "number": 367,
+          "state": "OPEN"
+        },
+        {
+          "number": 370,
+          "state": "OPEN"
+        },
+        {
+          "number": 369,
+          "state": "OPEN"
+        },
+        {
+          "number": 949,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:430 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Closed #433 and #949 keep their scoped acceptance. Current bounded ingestor log has zero broad-restore holds; this does not prove broad firmware simplification savings or all tier reductions.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Each tier has measured before/after heap/traffic and zero unintended native/replay behavior divergence.\n\n**Acceptance retained:**\n- [ ] Each tier has measured before/after heap/traffic and zero unintended native/replay behavior divergence.\n- [ ] Network-isolation autonomy, reset/water-budget conservatism and current full-state evidence survive.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:59:12Z"
+        },
+        {
+          "body": "Umbrella convention approved by Jason on 2026-10-20 (jvallery/agents docs/estate/README.md \u00a74.3, \"Umbrella and epic convention\"): an umbrella tracks members only as native sub-issues, never through blocked_by, and carries the priority of its highest open child.\n\nPriority set to `P1`: C6 simplification roll-up whose open child #367 is P1. Raised from P2. It has no blocked_by edges, and parent #359 is P1.",
+          "createdAt": "2026-10-20T05:57:42Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 434,
+    "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "parent": {
+      "number": 350
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 299,
+          "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 296,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:434 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No current all-origin reverse-conflict/plumbing/calibration/duplicate-dose physical release acceptance exists. Missing chemistry/soil calibration blocks feed; no center non-climate or non-wall fertilization is authorized.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#390, VerdifyConsultancy/verdify-platform#299. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: All command origins and reverse conflicts prove zero south/west climate demand, zero center non-climate mist and zero non-wall fertilizer actuation.\n\n**Acceptance retained:**\n- [ ] All command origins and reverse conflicts prove zero south/west climate demand, zero center non-climate mist and zero non-wall fertilizer actuation.\n- [ ] Missing/stale/nonfinite/zero/out-of-bounds calibration prevents feed; restart/duplicate/missed-window cases cannot double-dose.\n- [ ] Native/invariant/replay/band/compile and make irrigation-stack-software-check pass; #390 release ties actual routing/readbacks/sequence to exact binary with rollback.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:59:34Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:44Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 581,
+    "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+    "parent": {
+      "number": 775
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 642,
+          "state": "OPEN"
+        },
+        {
+          "number": 639,
+          "state": "OPEN"
+        },
+        {
+          "number": 587,
+          "state": "OPEN"
+        },
+        {
+          "number": 782,
+          "state": "OPEN"
+        },
+        {
+          "number": 783,
+          "state": "OPEN"
+        },
+        {
+          "number": 588,
+          "state": "OPEN"
+        },
+        {
+          "number": 640,
+          "state": "OPEN"
+        },
+        {
+          "number": 784,
+          "state": "OPEN"
+        },
+        {
+          "number": 785,
+          "state": "OPEN"
+        },
+        {
+          "number": 749,
+          "state": "OPEN"
+        },
+        {
+          "number": 641,
+          "state": "OPEN"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:581 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Live experiment counts:0 draws,0 assignment outcomes,0 freezes,0 exports,0 proof receipts,0 open exposures. Full physical qualification/design/readout program remains unfinished.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: No launch before exact physical proof, tested outcome path, frozen design/no-redraw and separate launch authority.\n\n**Acceptance retained:**\n- [ ] No launch before exact physical proof, tested outcome path, frozen design/no-redraw and separate launch authority.\n- [ ] All assigned days, including failed delivery, fallback, rescue and null outcomes, survive into ITT.\n- [ ] Final report states whether the result is feasible, promising, adverse or inconclusive and distinguishes climate noninferiority from improvement and runtime from resource savings.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T16:59:56Z"
+        },
+        {
+          "body": "<!-- estate-consolidation:2026-10-20 -->\n\n## Carry-over from #750 (consolidated 2026-10-20)\n\nJason approved this consolidation on 2026-10-20. The #750 C1 roll-up closes as not planned, which removes one tracker layer. #749 was already a direct native sub-issue of this roll-up, and #641 now joins it. #747 stays closed history under #750.\n\nThe following clause is added to this roll-up's acceptance, and `planning/backlog.yaml` carries the same text:\n\n- [ ] Fresh source, Argo, runtime and backup receipts identify any remaining mismatch before #749/#641 acceptance is credited. The October 18 packet partly satisfies this.\n\n#750's other clauses are covered here or in its children. #749 and #641 each need their own acceptance receipt, which this issue's first clause already requires. #641 now carries the final safe-state and recovery-receipt clause. After the move, this roll-up's highest open child is P1 (#749 and #641 are both labeled P1), so the roll-up stays P1.\n",
+          "createdAt": "2026-10-20T05:57:56Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 587,
+    "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 783,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 641,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "2026-10-25 follow-through: read-only writer inspection and safe qualification are in PR #1081: https://github.com/VerdifyConsultancy/verdify-platform/pull/1081 . Native CI `verdify-platform-pr-ci-w7q5b` is admitted for head `ad3fc71a` (not yet accepted).\n\nWriter findings: original October19 run halted for `unapproved candidate appeared` after twelve completed values. All twelve exact original native request rows remain `confirmed` with non-null confirmation/no expiry; the current writer's own equivalence predicate accepts all twelve current readbacks. Old approval expired October19 and binds another Pod/source/session/generation. Current preview has fourteen proposed values; handoff remains unsettled. No state/approval/recovery file changed, no writer restart, new ESP32 client, node cordon or device command was issued. Do not infer recovery or safe blind rollback from telemetry or the generic hold message. The confirmed-halt archive path requires retained original writer/approval custody plus fresh identity/plan/readback and native-history checks.\n\nSafe private work: five further current SQL ops reasons now exercise the actual monitor's fire/dedupe/closure with capture-only delivery, exact transactional custody and no live sender. Mandatory native cases increase8\u219213; CI still pending. This does not replace authentic active lifecycle/exposure/analyst/freezer/recovery proof, create a new analyst identity, or fill the21 causal gaps. No new Slack message is authorized; the previous approved pair remains consumed.\n\nField/release preparation: the same PR contains one shared #298/#390 worksheet for crop/probe/plumbing truth, south climate/hydro diagnosis, commissioning/reference evidence, and exact release/binary/rollback custody. Jason's visit availability/reference CO2 meter status is requested; actual observations, physical actions and OTA remain unperformed. No production workload render changes or deployment required by this packet.\n",
+          "createdAt": "2026-10-25T14:12:52Z"
+        },
+        {
+          "body": "## Final accepted safe packet \u2014 October 25, 2026\n\nPR #1081 merged at `a01149a8`. Full required PR **and independent main CI passed**, validation exit0, all 13 mandatory private cases passed at the actual merge SHA. The merge tree exactly matches tested head `9a81452b`. Five additional current SQL alert conditions pass fire/dedupe/closure with capture-only delivery and exact row/catalog/role rollback plus declared events +2 / alert IDs +1 sequence consumption. Zero new real messages; no active/physical/historical-prefix acceptance is inferred.\n\n**Live:** Argo Synced/Healthy at the merge. Production render is byte-identical (SHA256810d787e1e7449e335cb05667ece2220f4fbde9bcafdc050ac4842a2f0b6e25e), so no application rollout/sync/image promotion was required. Public API health is ok with climate/action proof 46s old, no missing proof fields, active-alert count 0; this does not prove crop compliance (reported compliance_pct 0) or policy recovery. Same ingestor UID6d7cdb04..., Ready/zero restarts on node5; exactly one existing established socket, inode956402325/sourceport32996. Node5/node7 Ready and schedulable. SQL/module source parity is current and exact.\n\n**Writer diagnosis:** original October 19 run stopped for `unapproved candidate appeared`. All 12 exact original requests are durably confirmed, all 12 completed readbacks pass the deployed predicate, all 39 untouched baseline fields match, and no later non-device request exists on those 12 parameters through the read-only census. Original halted-state bytes remain exactly unchanged (SHA2565fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663). Approval is expired and bound to another identity; current preview has 14 candidates. **Handoff remains unsettled and hold preserved.** No state reset, archival/recovery activation or setter was issued. PVC-backed custody/runbook correction is merged; a restart cannot settle it.\n\n**Field/release preparation:** shared worksheet is merged and source-prefilled inventory is on #298: https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6399053551 . Jason can visit as needed; no reference CO2 meter exists, so CO2 stays uncalibrated. Survey observations and commissioning are not performed remotely. #1009's network prerequisite follows open network-infra#555; #77 closed by consolidation, not acceptance. No OTA, password rotation, new credential/grant, node cordon or task-created ESP32 connection.\n\n**Remaining:** #587/#639 stay open for the analyst own-LOGIN gap, remaining condition/active lifecycle and populated freezer boundaries, authentic 21 causal gaps, full-prefix/exposure/exclusivity/lease-reconnect-failure/recovery and #641 physical acceptance. Private cases do not authorize production activation or replace those facts. Existing scientific/draw gates and prior consumed send authority remain unchanged.\n\nRetained failures: initial head `ad3fc71a` failed five cases at the existing synthetic-prefix guard before delivery (existing 8 passed); fixture-only label correction `7d76178a` passed full CI, final `9a81452b` repeated full CI. Initial API localhost port 8000 probe was refused; actual declared port 8080 and public edge probes pass. No production guard was weakened or credential changed.\n\n<details><summary>Terminal source/CI/live receipt (metadata only)</summary>\n\n```json\n{\n  \"schema\": \"verdify.safe-followthrough-completion/v1\",\n  \"merge\": \"a01149a877ed96bfa1eb649ab1f66f1d9f03e079\",\n  \"tested_head\": \"9a81452b73617b72ad8c9efa8e15c2f99afe5a93\",\n  \"merge_tree_equals_tested_tree\": true,\n  \"pr_workflow\": {\n    \"name\": \"verdify-platform-pr-ci-wnd44\",\n    \"uid\": \"f129645f-8fb8-47b5-b653-ab18db41128c\",\n    \"phase\": \"Succeeded\",\n    \"validation_exit_code\": 0,\n    \"finished_at\": \"2026-10-25T14:41:46Z\",\n    \"log_sha256\": \"de1c6bf5858c12f03bf3faa08d71eeea4fc5f4becbbcf0a133aee9eea85d7842\"\n  },\n  \"main_workflow\": {\n    \"name\": \"verdify-platform-pr-ci-597g9\",\n    \"uid\": \"d4c1f66e-4872-42a2-9d61-1a08963ddc17\",\n    \"phase\": \"Succeeded\",\n    \"finished_at\": \"2026-10-25T15:04:35Z\",\n    \"validation_exit_code\": \"0\",\n    \"log_sha256\": \"89d9d1df2d98b17ea06dda51ec3956c42a1bce68a635ae5e17a90e77b3508957\"\n  },\n  \"mandatory_private_cases\": 13,\n  \"private_case_report_sha256\": \"1d8649840dbcb3117bafbc305e1676f7e3e2477b637422590ce3ebb28c3a3a6e\",\n  \"capture_only\": true,\n  \"new_real_messages\": 0,\n  \"render_unchanged_sha256\": \"810d787e1e7449e335cb05667ece2220f4fbde9bcafdc050ac4842a2f0b6e25e\",\n  \"production_rollout_required\": false,\n  \"argo\": {\n    \"sync\": \"Synced\",\n    \"health\": \"Healthy\",\n    \"revision\": \"a01149a877ed96bfa1eb649ab1f66f1d9f03e079\"\n  },\n  \"ingestor\": {\n    \"name\": \"verdify-ingestor-65489d58fc-wbg2j\",\n    \"uid\": \"6d7cdb04-8eb9-4630-abcb-34c9a580fd4e\",\n    \"node\": \"vm-k3s-node5\",\n    \"containers\": [\n      {\n        \"name\": \"ingestor\",\n        \"ready\": true,\n        \"restarts\": 0\n      }\n    ]\n  },\n  \"socket\": {\n    \"observed_at\": \"2026-10-25T15:03:33.767190+00:00\",\n    \"existing_connection\": {\n      \"source_ip\": \"10.42.6.186\",\n      \"source_port\": 32996,\n      \"destination_ip\": \"192.168.10.111\",\n      \"destination_port\": 6053,\n      \"inode\": \"956402325\",\n      \"state\": \"ESTABLISHED\"\n    },\n    \"new_connection_opened\": false\n  },\n  \"writer_hold\": {\n    \"status\": \"halted\",\n    \"halt_reason\": \"unapproved candidate appeared\",\n    \"run_id\": \"0ae45182806445649458568603c32fdb\",\n    \"completed_count\": 12,\n    \"pending_count\": 0,\n    \"state_sha256\": \"5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663\",\n    \"preview_at\": \"2026-10-25T15:01:45.153589+00:00\",\n    \"current_candidate_count\": 14,\n    \"generation\": 5\n  },\n  \"writer_state_bytes_unchanged\": true,\n  \"original_requests_confirmed\": 12,\n  \"untouched_baseline_fields_unchanged\": 39,\n  \"later_non_device_requests\": 0,\n  \"public_api\": {\n    \"status\": \"ok\",\n    \"checks\": {\n      \"climate_age_seconds\": 46,\n      \"climate_action_log_age_seconds\": 46,\n      \"climate_action_log_proof_missing\": \"\",\n      \"compliance_pct\": 0,\n      \"planner_score\": 72.3,\n      \"active_alerts_1h\": 0,\n      \"last_setpoint_change_seconds\": 7235,\n      \"greenhouse_mode\": \"IDLE\",\n      \"service_ingestor\": \"ok\",\n      \"service_climate_action_log\": \"ok\"\n    }\n  },\n  \"nodes\": [\n    {\n      \"name\": \"vm-k3s-node5\",\n      \"schedulable\": true,\n      \"ready\": \"True\"\n    },\n    {\n      \"name\": \"vm-k3s-node7\",\n      \"schedulable\": true,\n      \"ready\": \"True\"\n    }\n  ],\n  \"source_parity\": {\n    \"functions\": {\n      \"fn_experiment_v2_ops_status\": {\n        \"body_sha256\": \"1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_record_facility_safe_closure\": {\n        \"body_sha256\": \"75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_set_admission\": {\n        \"body_sha256\": \"86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_stamp_facility_safe_lease\": {\n        \"body_sha256\": \"56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d\",\n        \"security_definer\": true\n      }\n    },\n    \"all_expected_bodies_match\": true,\n    \"deployed_alerts_sha256\": \"e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510\",\n    \"expected_functions\": {\n      \"fn_experiment_v2_ops_status\": \"1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f\",\n      \"fn_experiment_v2_stamp_facility_safe_lease\": \"56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d\",\n      \"fn_experiment_v2_record_facility_safe_closure\": \"75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14\",\n      \"fn_experiment_v2_set_admission\": \"86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419\"\n    },\n    \"expected_alerts_sha256\": \"e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510\",\n    \"deployed_alerts_match\": true\n  },\n  \"field_visit_available\": true,\n  \"reference_co2_meter_available\": false,\n  \"physical_observations_completed\": false,\n  \"node_cordons\": 0,\n  \"new_task_esp32_connections\": 0,\n  \"ingestor_restarts_issued\": 0,\n  \"production_experiment_mutations\": 0,\n  \"main_validation_pods\": [],\n  \"pr_validation_pods\": []\n}\n```\n</details>\n",
+          "createdAt": "2026-10-25T15:06:18Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 588,
+    "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 783,
+          "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 782,
+          "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 641,
+          "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 642,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:588 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Live randomization count0. No current scientific lock/draw is complete;#782/#783/#641 remain open. Do not finalize or recreate a draw from preparation.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#783, VerdifyConsultancy/verdify-platform#782, VerdifyConsultancy/verdify-platform#641. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Current model/context/request limits, full source identity and #782 scientific choice match the lock byte-for-byte.\n\n**Acceptance retained:**\n- [ ] Current model/context/request limits, full source identity and #782 scientific choice match the lock byte-for-byte.\n- [ ] Exactly one draw exists; duplicate/replacement/caller-time/secret attempts fail without leaking mapping or randomization material.\n- [ ] Future first assignment boundary and schedule commitment reproduce; no physical randomized work occurs before the separate #642 authority.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:00:30Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the pilot v2 design lock uses **GPT-6 Luna/xhigh**, the identity the live Iris planner has run since 2026-10-18; gpt-5.6-luna/medium is retired from the lock. Next action: re-run the cost/latency model at xhigh, then bind the exact model identifier, reasoning setting and runtime version in the frozen manifest. Acceptance: the manifest identity matches live planner readback, and the cost model at xhigh is recorded before the freeze. Native blockers #641, #782 and #783 are unchanged.\n\nDecision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:46:24Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 639,
+    "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 783,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 641,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "2026-10-25 follow-through: read-only writer inspection and safe qualification are in PR #1081: https://github.com/VerdifyConsultancy/verdify-platform/pull/1081 . Native CI `verdify-platform-pr-ci-w7q5b` is admitted for head `ad3fc71a` (not yet accepted).\n\nWriter findings: original October19 run halted for `unapproved candidate appeared` after twelve completed values. All twelve exact original native request rows remain `confirmed` with non-null confirmation/no expiry; the current writer's own equivalence predicate accepts all twelve current readbacks. Old approval expired October19 and binds another Pod/source/session/generation. Current preview has fourteen proposed values; handoff remains unsettled. No state/approval/recovery file changed, no writer restart, new ESP32 client, node cordon or device command was issued. Do not infer recovery or safe blind rollback from telemetry or the generic hold message. The confirmed-halt archive path requires retained original writer/approval custody plus fresh identity/plan/readback and native-history checks.\n\nSafe private work: five further current SQL ops reasons now exercise the actual monitor's fire/dedupe/closure with capture-only delivery, exact transactional custody and no live sender. Mandatory native cases increase8\u219213; CI still pending. This does not replace authentic active lifecycle/exposure/analyst/freezer/recovery proof, create a new analyst identity, or fill the21 causal gaps. No new Slack message is authorized; the previous approved pair remains consumed.\n\nField/release preparation: the same PR contains one shared #298/#390 worksheet for crop/probe/plumbing truth, south climate/hydro diagnosis, commissioning/reference evidence, and exact release/binary/rollback custody. Jason's visit availability/reference CO2 meter status is requested; actual observations, physical actions and OTA remain unperformed. No production workload render changes or deployment required by this packet.\n",
+          "createdAt": "2026-10-25T14:12:54Z"
+        },
+        {
+          "body": "## Final accepted safe packet \u2014 October 25, 2026\n\nPR #1081 merged at `a01149a8`. Full required PR **and independent main CI passed**, validation exit0, all 13 mandatory private cases passed at the actual merge SHA. The merge tree exactly matches tested head `9a81452b`. Five additional current SQL alert conditions pass fire/dedupe/closure with capture-only delivery and exact row/catalog/role rollback plus declared events +2 / alert IDs +1 sequence consumption. Zero new real messages; no active/physical/historical-prefix acceptance is inferred.\n\n**Live:** Argo Synced/Healthy at the merge. Production render is byte-identical (SHA256810d787e1e7449e335cb05667ece2220f4fbde9bcafdc050ac4842a2f0b6e25e), so no application rollout/sync/image promotion was required. Public API health is ok with climate/action proof 46s old, no missing proof fields, active-alert count 0; this does not prove crop compliance (reported compliance_pct 0) or policy recovery. Same ingestor UID6d7cdb04..., Ready/zero restarts on node5; exactly one existing established socket, inode956402325/sourceport32996. Node5/node7 Ready and schedulable. SQL/module source parity is current and exact.\n\n**Writer diagnosis:** original October 19 run stopped for `unapproved candidate appeared`. All 12 exact original requests are durably confirmed, all 12 completed readbacks pass the deployed predicate, all 39 untouched baseline fields match, and no later non-device request exists on those 12 parameters through the read-only census. Original halted-state bytes remain exactly unchanged (SHA2565fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663). Approval is expired and bound to another identity; current preview has 14 candidates. **Handoff remains unsettled and hold preserved.** No state reset, archival/recovery activation or setter was issued. PVC-backed custody/runbook correction is merged; a restart cannot settle it.\n\n**Field/release preparation:** shared worksheet is merged and source-prefilled inventory is on #298: https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6399053551 . Jason can visit as needed; no reference CO2 meter exists, so CO2 stays uncalibrated. Survey observations and commissioning are not performed remotely. #1009's network prerequisite follows open network-infra#555; #77 closed by consolidation, not acceptance. No OTA, password rotation, new credential/grant, node cordon or task-created ESP32 connection.\n\n**Remaining:** #587/#639 stay open for the analyst own-LOGIN gap, remaining condition/active lifecycle and populated freezer boundaries, authentic 21 causal gaps, full-prefix/exposure/exclusivity/lease-reconnect-failure/recovery and #641 physical acceptance. Private cases do not authorize production activation or replace those facts. Existing scientific/draw gates and prior consumed send authority remain unchanged.\n\nRetained failures: initial head `ad3fc71a` failed five cases at the existing synthetic-prefix guard before delivery (existing 8 passed); fixture-only label correction `7d76178a` passed full CI, final `9a81452b` repeated full CI. Initial API localhost port 8000 probe was refused; actual declared port 8080 and public edge probes pass. No production guard was weakened or credential changed.\n\n<details><summary>Terminal source/CI/live receipt (metadata only)</summary>\n\n```json\n{\n  \"schema\": \"verdify.safe-followthrough-completion/v1\",\n  \"merge\": \"a01149a877ed96bfa1eb649ab1f66f1d9f03e079\",\n  \"tested_head\": \"9a81452b73617b72ad8c9efa8e15c2f99afe5a93\",\n  \"merge_tree_equals_tested_tree\": true,\n  \"pr_workflow\": {\n    \"name\": \"verdify-platform-pr-ci-wnd44\",\n    \"uid\": \"f129645f-8fb8-47b5-b653-ab18db41128c\",\n    \"phase\": \"Succeeded\",\n    \"validation_exit_code\": 0,\n    \"finished_at\": \"2026-10-25T14:41:46Z\",\n    \"log_sha256\": \"de1c6bf5858c12f03bf3faa08d71eeea4fc5f4becbbcf0a133aee9eea85d7842\"\n  },\n  \"main_workflow\": {\n    \"name\": \"verdify-platform-pr-ci-597g9\",\n    \"uid\": \"d4c1f66e-4872-42a2-9d61-1a08963ddc17\",\n    \"phase\": \"Succeeded\",\n    \"finished_at\": \"2026-10-25T15:04:35Z\",\n    \"validation_exit_code\": \"0\",\n    \"log_sha256\": \"89d9d1df2d98b17ea06dda51ec3956c42a1bce68a635ae5e17a90e77b3508957\"\n  },\n  \"mandatory_private_cases\": 13,\n  \"private_case_report_sha256\": \"1d8649840dbcb3117bafbc305e1676f7e3e2477b637422590ce3ebb28c3a3a6e\",\n  \"capture_only\": true,\n  \"new_real_messages\": 0,\n  \"render_unchanged_sha256\": \"810d787e1e7449e335cb05667ece2220f4fbde9bcafdc050ac4842a2f0b6e25e\",\n  \"production_rollout_required\": false,\n  \"argo\": {\n    \"sync\": \"Synced\",\n    \"health\": \"Healthy\",\n    \"revision\": \"a01149a877ed96bfa1eb649ab1f66f1d9f03e079\"\n  },\n  \"ingestor\": {\n    \"name\": \"verdify-ingestor-65489d58fc-wbg2j\",\n    \"uid\": \"6d7cdb04-8eb9-4630-abcb-34c9a580fd4e\",\n    \"node\": \"vm-k3s-node5\",\n    \"containers\": [\n      {\n        \"name\": \"ingestor\",\n        \"ready\": true,\n        \"restarts\": 0\n      }\n    ]\n  },\n  \"socket\": {\n    \"observed_at\": \"2026-10-25T15:03:33.767190+00:00\",\n    \"existing_connection\": {\n      \"source_ip\": \"10.42.6.186\",\n      \"source_port\": 32996,\n      \"destination_ip\": \"192.168.10.111\",\n      \"destination_port\": 6053,\n      \"inode\": \"956402325\",\n      \"state\": \"ESTABLISHED\"\n    },\n    \"new_connection_opened\": false\n  },\n  \"writer_hold\": {\n    \"status\": \"halted\",\n    \"halt_reason\": \"unapproved candidate appeared\",\n    \"run_id\": \"0ae45182806445649458568603c32fdb\",\n    \"completed_count\": 12,\n    \"pending_count\": 0,\n    \"state_sha256\": \"5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663\",\n    \"preview_at\": \"2026-10-25T15:01:45.153589+00:00\",\n    \"current_candidate_count\": 14,\n    \"generation\": 5\n  },\n  \"writer_state_bytes_unchanged\": true,\n  \"original_requests_confirmed\": 12,\n  \"untouched_baseline_fields_unchanged\": 39,\n  \"later_non_device_requests\": 0,\n  \"public_api\": {\n    \"status\": \"ok\",\n    \"checks\": {\n      \"climate_age_seconds\": 46,\n      \"climate_action_log_age_seconds\": 46,\n      \"climate_action_log_proof_missing\": \"\",\n      \"compliance_pct\": 0,\n      \"planner_score\": 72.3,\n      \"active_alerts_1h\": 0,\n      \"last_setpoint_change_seconds\": 7235,\n      \"greenhouse_mode\": \"IDLE\",\n      \"service_ingestor\": \"ok\",\n      \"service_climate_action_log\": \"ok\"\n    }\n  },\n  \"nodes\": [\n    {\n      \"name\": \"vm-k3s-node5\",\n      \"schedulable\": true,\n      \"ready\": \"True\"\n    },\n    {\n      \"name\": \"vm-k3s-node7\",\n      \"schedulable\": true,\n      \"ready\": \"True\"\n    }\n  ],\n  \"source_parity\": {\n    \"functions\": {\n      \"fn_experiment_v2_ops_status\": {\n        \"body_sha256\": \"1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_record_facility_safe_closure\": {\n        \"body_sha256\": \"75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_set_admission\": {\n        \"body_sha256\": \"86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419\",\n        \"security_definer\": true\n      },\n      \"fn_experiment_v2_stamp_facility_safe_lease\": {\n        \"body_sha256\": \"56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d\",\n        \"security_definer\": true\n      }\n    },\n    \"all_expected_bodies_match\": true,\n    \"deployed_alerts_sha256\": \"e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510\",\n    \"expected_functions\": {\n      \"fn_experiment_v2_ops_status\": \"1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f\",\n      \"fn_experiment_v2_stamp_facility_safe_lease\": \"56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d\",\n      \"fn_experiment_v2_record_facility_safe_closure\": \"75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14\",\n      \"fn_experiment_v2_set_admission\": \"86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419\"\n    },\n    \"expected_alerts_sha256\": \"e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510\",\n    \"deployed_alerts_match\": true\n  },\n  \"field_visit_available\": true,\n  \"reference_co2_meter_available\": false,\n  \"physical_observations_completed\": false,\n  \"node_cordons\": 0,\n  \"new_task_esp32_connections\": 0,\n  \"ingestor_restarts_issued\": 0,\n  \"production_experiment_mutations\": 0,\n  \"main_validation_pods\": [],\n  \"pr_validation_pods\": []\n}\n```\n</details>\n",
+          "createdAt": "2026-10-25T15:06:19Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 640,
+    "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 642,
+          "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 784,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:640 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Live assigned outcomes/freezes/exports are0. No first randomized assigned day exists to freeze; synthetic source fixtures are not observed ITT outcomes.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#642. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: The first full assigned window is frozen twice to identical canonical rows/hashes and consumed by the analyzer without reshaping or reveal.\n\n**Acceptance retained:**\n- [ ] The first full assigned window is frozen twice to identical canonical rows/hashes and consumed by the analyzer without reshaping or reveal.\n- [ ] A ledger reconciliation proves every assignment has exactly one row irrespective of exposure or outcome availability.\n- [ ] Freezer cannot mutate assignments/read mapping; analyst sees frozen X/Y only. Missing center/DLI/gas and unselected resource fields remain truthfully unavailable.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:01:14Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:49Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 641,
+    "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 749,
+          "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 639,
+          "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 587,
+          "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 588,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:641 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** Live proof receipt count0. Retained controller recovery/C1 restoration is not a sealed baseline\u2192aggressive\u2192baseline GateP proof. Draft#855 remains unmerged; physical readiness and separate exact authority stay unfulfilled.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#749, VerdifyConsultancy/verdify-platform#747, VerdifyConsultancy/verdify-platform#639, VerdifyConsultancy/verdify-platform#587. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Recovery retains predecessor failures, creates no nonbaseline exposure and earns no proof credit.\n\n**Acceptance retained:**\n- [ ] Recovery retains predecessor failures, creates no nonbaseline exposure and earns no proof credit.\n- [ ] Exactly one successor-attempt receipt binds baseline-before/aggressive/baseline-after to actual current source and observations.\n- [ ] Mismatch closes exposure/revokes nonbaseline before facility-compatible recovery; final baseline-confirmed draft/shadow/closed, feature off, empty ID, vector off and zero exposure are evidenced.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:01:25Z"
+        },
+        {
+          "body": "<!-- estate-consolidation:2026-10-20 -->\n\n## Carry-over from #750 (consolidated 2026-10-20)\n\nJason approved this consolidation on 2026-10-20. The #750 C1 roll-up closes as not planned. This issue moves to be a direct child of #581, next to #749. #750's physical-safety clause had no other home, so it is added to this issue's acceptance. `planning/backlog.yaml` carries the same text.\n\n- [ ] The final safe state (baseline confirmed, component off) and the recovery receipt are verified. No randomized design, draw or launch authority is granted.\n\nThe rest of this issue's acceptance and its predecessors (#749, #639, #587, #747) are unchanged. #750's history stays linked as evidence, including the closed #747 recovery receipt and the 2026-08-31 M8.1 rebaseline.\n",
+          "createdAt": "2026-10-20T05:57:54Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 642,
+    "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 588,
+          "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 640,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 676,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:642 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No locked draw or live randomized assignment. Exact launch/observed physical target/exposure/freezer/rollback acceptance remains downstream; no launch performed.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#588. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Exact launch authority, unique assignment, frozen identity, observed physical target, two epochs and exposure lineage exist.\n\n**Acceptance retained:**\n- [ ] Exact launch authority, unique assignment, frozen identity, observed physical target, two epochs and exposure lineage exist.\n- [ ] Freezer can progress, singleton writer/public health hold and exact-source Argo is Synced + Healthy.\n- [ ] Rollback evidence is current and first-day/export ownership hands to #640; closure does not claim experiment success.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:01:36Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:51Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 749,
+    "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 641,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "S3 execution update, October 17 (02:10 UTC October 18): the interrupted prior fixed boundary is recorded NOT ATTEMPTED, and its exact owned log stream is now sealed (zero schema-validation errors). A fresh current-release read-only packet passes 55+ minutes of the unchanged quiet rule, 48-field attestation, current preview, 9/9 smoke and two authenticated 23-tool MCP registries; the separate monitor sees exactly one ESP32 socket. Current scoped experiment state is draft/shadow/closed, component disabled, zero open exposures.\n\nThe original-clause result is **BLOCKED**, not accepted: measured north/east/west temperature spreads were 4.86 and 5.04 F against the unchanged 4 F maximum; six south_1 soil alert identities did not match reviewed recovery-only identities. The saved Argo observer also rejects the later exporter-only selective operation even though the Application is Synced/Healthy; that provenance distinction is under source review. The first observer attempt failed on UUID serialization; its failure is retained, the narrow serializer correction passed offline negatives, and unchanged SQL ran successfully in the corrected attempt. Existing scheduled backup completion and exact published dump metadata/header were verified separately. No device operation, threshold relaxation, timer reset, alert resolution or new policy approval was used. This issue remains open; no repeat validation loop is started.\n\nDelivery provenance update: the unrelated exporter repair now completed a fresh full129-resource, selector-free nonpruning sync at55285aaf (02:47:03UTC), Synced/Healthy; the ingestor pod/image/restart count did not change. This resolves the observer distinction caused by the former exporter-only selective operation. It does not alter or supersede the sealed BLOCKED readiness attempt: the two4F spread violations and six unmatched soil-alert identities remain evidenced. No repeated readiness pass, timer reset, threshold/catalog waiver, alert resolution or physical action was performed.",
+          "createdAt": "2026-10-18T02:17:02Z"
+        },
+        {
+          "body": "One passive current sample had north/east/west temperatures 71.24/71.42/70.70 F (spread 0.72 F) and south NULL. This is neither spread-lineage qualification nor wetting proof; the old sealed FAIL remains unchanged. No full readiness rerun, receipt parser change, threshold relaxation, alert resolution or physical action occurred.\n\nShutdown-preparation checkpoint (2026-10-21 17:15 UTC): paused pending Jason's explicit resumption. Durable [source and safe-resume instructions](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/README.md), [value-free live receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/shutdown-receipt.json), commit `2d806bb1f743ec537af4e12989c1a692640d3ef8` on `codex/containment-followthrough-587-639-20261021`.\n\nNo PR opened, CI admitted, job submitted, deployment started, provider/credential change made, message sent or new ESP32 connection opened by this packet. Both product and descheduler are Synced/Healthy with no active Argo operation. Original device socket remains ESTABLISHED, source port 47258 / inode 675859596. No active task-owned experimental process, continuation goal or heartbeat was created; normal production services and periodic backups/jobs remain running. This is a safe stopping point, not issue completion.\n",
+          "createdAt": "2026-10-21T17:16:52Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "parent": {
+      "number": 16
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "2026-10-21 19:02\u201319:04 UTC \u2014 additional live alert review: `FleetHardwareNativeUnavailable`, fingerprint `0854904b99920e78`, started 18:55:10Z. Exact asset `hardware-983891e0d4b26d34` / `PROBE-GH-MODBUS-07` is the installed, expected **South 1 soil EC/moisture/temperature triplet**, not the separate south climate temperature/RH probe.\n\nAll three exact HA entities are UNKNOWN, last updated 18:24:56Z: `sensor.greenhouse_south_1_soil_ec_ms_cm`, `sensor.greenhouse_south_1_soil_moisture`, `sensor.greenhouse_south_1_soil_temp_degf`. Their `homeassistant_entity_available` metrics are 0 and the asset's `fleet:hardware_ha_available` is 0 while the HA scrape is 1. This is a valid native feedback/commissioning gap, not a monitoring outage or proof of failed soil hardware, wrong wiring, calibration, power or bus identity. Keep the warning; the declared installed/expected contract is current and has no supported retirement disposition.\n\nCanonical resolution remains #45, finite P2 under FD-08 and current P2 labels, with the existing #398 map/calibration prerequisite and #298 attended survey. Trace exact source/channel identity, raw producer publication and HA mapping/freshness; distinguish UNKNOWN input from a physically failed probe. Preserve unknown values and disabled feedback authority until fresh plausible calibrated readings and supported feedback checks pass. Do not substitute zeros/cached values or use this alert to actuate irrigation, reset devices or perform an unadmitted physical experiment. #751 remains related field-service context; this soil row does not turn the separate climate/hydro repair into an invented prerequisite or change the accepted analysis panel.\n\nThis is read-only diagnosis and an evidence update. Existing Decision lines, physical-window boundaries and graph edges remain in force; natural alert clear alone would not complete commissioning.\n",
+          "createdAt": "2026-10-21T19:05:31Z"
+        },
+        {
+          "body": "Jason confirmed on 2026-10-25: **he can visit the greenhouse as needed; he does not have a reference CO2 meter.** Field-survey availability is therefore not a blocker to the shared #298/#751/#398/#45/#52/#412 preparation. CO2 calibration #51 remains blocked on obtaining a genuine reference NDIR meter; preserve the uncalibrated label and current priority. No purchase, calendar appointment, fabricated reference, physical actuation or OTA is implied.\n\nShared field/release worksheet: https://github.com/VerdifyConsultancy/verdify-platform/blob/codex/writer-hold-safe-qualification-20261025/planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md (PR #1081; CI still pending). Use one bounded visit for actual crop/substrate/pot and sensor identities, endpoint/plumbing map, south climate vs separate south soil channels, hydro fault observation, and seasonal no-change/change evidence. The worksheet's initially unverified meter field is now explicitly resolved as unavailable by this comment.\n",
+          "createdAt": "2026-10-25T14:23:01Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 775,
+    "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+    "parent": null,
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": [
+        {
+          "number": 778,
+          "state": "CLOSED"
+        },
+        {
+          "number": 779,
+          "state": "CLOSED"
+        },
+        {
+          "number": 780,
+          "state": "CLOSED"
+        },
+        {
+          "number": 781,
+          "state": "CLOSED"
+        },
+        {
+          "number": 581,
+          "state": "OPEN"
+        },
+        {
+          "number": 644,
+          "state": "CLOSED"
+        },
+        {
+          "number": 427,
+          "state": "CLOSED"
+        },
+        {
+          "number": 75,
+          "state": "OPEN"
+        },
+        {
+          "number": 218,
+          "state": "CLOSED"
+        },
+        {
+          "number": 359,
+          "state": "OPEN"
+        },
+        {
+          "number": 214,
+          "state": "CLOSED"
+        },
+        {
+          "number": 350,
+          "state": "OPEN"
+        },
+        {
+          "number": 16,
+          "state": "OPEN"
+        },
+        {
+          "number": 174,
+          "state": "CLOSED"
+        },
+        {
+          "number": 14,
+          "state": "CLOSED"
+        },
+        {
+          "number": 638,
+          "state": "CLOSED"
+        },
+        {
+          "number": 586,
+          "state": "CLOSED"
+        },
+        {
+          "number": 390,
+          "state": "OPEN"
+        },
+        {
+          "number": 31,
+          "state": "OPEN"
+        }
+      ]
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "Decision (Jason, 2026-10-20): the campaign is formally resumed. Every 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff on C-campaign issues is historical and is not a live hold. Agents may work campaign issues normally from each issue's planning-status block and native dependencies. Unchanged: the pilot draw stays gated on #749 qualification, and physical work stays behind its hardware gates (no attended greenhouse visit is planned, so the #298 survey chain stays blocked). Epic priority is P1 (title updated to match the label).",
+          "createdAt": "2026-10-20T14:45:24Z"
+        },
+        {
+          "body": "This follow-through stops at the shutdown checkpoint. #587/#639 were reclassified against the actual retired target, not silently recreated. The next independent #218 placement draft is pushed but unreviewed/unvalidated by full CI and undeployed. All original issue acceptance remains open. Do not auto-resume or schedule a wakeup.\n\nShutdown-preparation checkpoint (2026-10-21 17:15 UTC): paused pending Jason's explicit resumption. Durable [source and safe-resume instructions](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/README.md), [value-free live receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/2d806bb1f743ec537af4e12989c1a692640d3ef8/planning/execution/2026-10-21-followthrough/shutdown-receipt.json), commit `2d806bb1f743ec537af4e12989c1a692640d3ef8` on `codex/containment-followthrough-587-639-20261021`.\n\nNo PR opened, CI admitted, job submitted, deployment started, provider/credential change made, message sent or new ESP32 connection opened by this packet. Both product and descheduler are Synced/Healthy with no active Argo operation. Original device socket remains ESTABLISHED, source port 47258 / inode 675859596. No active task-owned experimental process, continuation goal or heartbeat was created; normal production services and periodic backups/jobs remain running. This is a safe stopping point, not issue completion.\n",
+          "createdAt": "2026-10-21T17:16:53Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 782,
+    "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": []
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 588,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:782 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** INCOMPLETE: data-truth predecessors have historical accepted receipts, but qualified physical targets/contributors, empirical covariance/joint power, exact endpoint window and prospective seasonal choice remain unaccepted. No draw/assignment exists; choose the justified season/question before lock.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#781, VerdifyConsultancy/verdify-platform#780, VerdifyConsultancy/verdify-platform#779, VerdifyConsultancy/verdify-platform#371. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: An explicit decision document chooses pilot versus confirmatory scope and states exactly which claim can be tested with current meters.\n\n**Acceptance retained:**\n- [ ] An explicit decision document chooses pilot versus confirmatory scope and states exactly which claim can be tested with current meters.\n- [ ] Power replay is reproducible; include .99^30 \u2248 .740 and .95^30 \u2248 .215 all-pairs retention sensitivities rather than assuming .9995 reliability.\n- [ ] Calendar is future and seasonally justified; 06:00\u201324:00 remains 18 elapsed hours on the fall clock-change day, with any full-day scheduler implications tested separately.\n- [ ] No draw has occurred before design approval/qualification; model is current source-pinned Luna/medium, not stale Sol issue prose.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:04:00Z"
+        },
+        {
+          "body": "S3 input/decision packet completed from current source and authentic retained evidence. The original Oct2 corpus passes its owning validator and hashes unchanged, but contains zero target/contributor rows; it is excluded from the preregistered replay rather than relabeled. Current bounded source observations found zero selector contexts/choices, nine route-only contributor declarations, a September29 full72-bin native day and an October5 partial28-bin declaration. Those do not prove the selected 60-day/18-hour empirical contract.\n\nExisting winter and native passive paths are active; natural jobs correctly report no-due/not-declared. No duplicate collector, synthetic historical declaration or runtime change is justified. The durable inclusion/exclusion/prospective-data decision is prepared in source commit fe09fe99 (composition pending publication). June1\u2013July30,2027 remains the candidate. This bounded packet is complete; **#782 remains open** for authentic scientific inputs and complete qualification, and grants no draw authority.\n\nPublication update: the authentic input/prospective-data decision packet is now on accepted main in b523a9b1, under docs/research/782-input-decision-2026-10-17.md and its availability SQL/JSON. Native source validation passed. The scientific criteria and missing authentic inputs remain unchanged; #782 stays open.",
+          "createdAt": "2026-10-18T02:17:06Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 783,
+    "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 639,
+          "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 587,
+          "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 588,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:783 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** INCOMPLETE: real current restored-DB selector\u2192setter schema\u2192receipt\u2192freezer\u2192export\u2192analyzer qualification still lacks an accepted whole-path receipt. Fixtures and separate reseals do not substitute; retain #782/#639/#587 native predecessors.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#782, VerdifyConsultancy/verdify-platform#639, VerdifyConsultancy/verdify-platform#587. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: One command/artifact index reproduces the whole path twice with byte-identical canonical hashes and no data reshaping between freezer and analyzer.\n\n**Acceptance retained:**\n- [ ] One command/artifact index reproduces the whole path twice with byte-identical canonical hashes and no data reshaping between freezer and analyzer.\n- [ ] First-day, missing-day, zero-exposure, reset and failed-delivery rows exist by assignment, never filtered by exposure.\n- [ ] Device-denied restore contains no production credentials in logs/artifacts; minimum randomizer/lifecycle/executor/freezer/blinded-analyst boundaries pass. Current source and failure matrix are recorded before #588.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:04:11Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:55Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 784,
+    "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 640,
+          "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 785,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:784 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** 0 live assignment outcomes/freezes/exports. No genuine blinded60-day pilot can be operated/accounted for yet; every eventual failed/null/fallback day must remain assigned.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#640. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: All locked assignments are accounted for, including incomplete/no-exposure/aborted days; no replacement pair, redraw or post-hoc endpoint change occurs.\n\n**Acceptance retained:**\n- [ ] All locked assignments are accounted for, including incomplete/no-exposure/aborted days; no replacement pair, redraw or post-hoc endpoint change occurs.\n- [ ] Blinded integrity and safety reviews have receipts at the cadence declared before launch; departures are preserved.\n- [ ] Study ends safe with stopped admission, closed exposure, frozen outcome/deviation/fidelity/environment hashes ready for #785.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:04:23Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:56Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 785,
+    "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+    "parent": {
+      "number": 581
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 784,
+          "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": [
+        {
+          "number": 586,
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        },
+        {
+          "number": 378,
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:785 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** OPEN and PAUSED; no later acceptance receipt was established by this shutdown capture. The October11 clause assessment remains the prior boundary; any dated runtime/telemetry facts in it require refresh on resume.\n\n**Prior clause assessment (October11, not a new runtime probe):** No genuine pilot export/reveal/readout exists. A reproducible final adverse/no-benefit/inconclusive decision remains downstream; source fixtures are not efficacy.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. Native blocking dependencies: VerdifyConsultancy/verdify-platform#784. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, refresh exact source/live and predecessor evidence, then satisfy: Independent rerun from frozen artifacts produces identical tables and decision; reveal occurs once with audited authority.\n\n**Acceptance retained:**\n- [ ] Independent rerun from frozen artifacts produces identical tables and decision; reveal occurs once with audited authority.\n- [ ] Report permits adverse/no-benefit/inconclusive conclusions and gives no yield/profit/whole-resource/other-season claim beyond measurements.\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:04:34Z"
+        },
+        {
+          "body": "<!-- estate-consolidation:2026-10-20 -->\n\n## Carry-over from #786, #787 and #379 (consolidated 2026-10-20)\n\nJason approved this consolidation on 2026-10-20. Three follow-on decisions closed as not planned, because each one was only a go/no-go to record at this readout. This issue already requires an explicit stop, repair, retest or follow-on decision. The following clauses are added to its acceptance, and `planning/backlog.yaml` carries the same text.\n\n- [ ] **Comparator (from #786):** record an explicit go/no-go. If go, use a fixed numeric rule and a genuine chronological held-out corpus. Offline command replay supports no revealed-schedule tuning and no physical claim. Any new trial gets its own identity, lock, draw and measured claim. The PR #932 preparation (efaa4b67, artifact SHA256 `dedaecdc\u2026`) stays the reference.\n- [ ] **Resource study (from #787):** record an explicit go/no-go on a measured heating, overnight or resource study.\n  - #410 (overnight evidence) and #981 (electricity) are inputs to this decision, not blockers. Their native edges to #787 are removed.\n  - Every claimed resource needs independent, eligible, calibrated coverage and uncertainty. Stale or modeled values stay labeled.\n  - If go, the study is a prospective season or overnight design with a bounded measured claim that can test climate improvement and resource benefit as stated, or the claim is explicitly narrowed.\n  - No yield, profit or whole-resource claim, hardware purchase, gas tuning or seasonal controller expansion follows automatically from the current pilot or without a separate decision.\n  - Specification e52284cf stays the reference.\n- [ ] **Response model or MPC (from #379):** a grey-box or MPC path is proposed only after held-out calibration and response gates pass against persistence and simpler baselines.\n  - No PID treatment arm or new outer-loop control enters the current experiment.\n  - Any justified controller change gets a separately reviewed, bounded implementation and release plan.\n  - The history of two failed closed-loop models and the open-loop PID result (64\u2013138% more runtime on the factual trajectory) stays linked as evidence.\n\nThe #379\u2192#786\u2192#785 blocking chain is removed, and these decisions now end here. #378's edge from this issue is unchanged.\n",
+          "createdAt": "2026-10-20T05:57:51Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 963,
+    "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+    "parent": {
+      "number": 75
+    },
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 390,
+          "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "<!-- verdify-paused-handoff-20261012:963 -->\nJason's shutdown handoff: **implementation and delivery PAUSED; do not auto-resume.**\n\n**Current state:** Source fix and bounded native formatter/compile/replay evidence are in PR971 and combined PR973; both exact heads have native success. Compatible ingestor delivery remains unperformed. Firmware OTA, actual HA short-state/detail and device/DB readbacks remain separate acceptance; no OTA occurred.\n\n**Blockers:** Jason explicitly paused all implementation/delivery. The listed acceptance boundary remains unproved beyond linked historical receipts.\n\n**Next step on explicit resume:** After explicit Jason resume, execute the exact remaining acceptance/Verify conditions in the preserved issue body with its native predecessors; publish source/live/recovery evidence before closure.\n\n**In-progress source/custody:**\n- https://github.com/VerdifyConsultancy/verdify-platform/pull/973 (37fd6e4a3030471c4e2f397f50b7d6a3278e4276)\n\n[Full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/README.md) \u00b7 [Every-item review](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/ITEMS.md) \u00b7 [Branch/worktree/WIP preservation](https://github.com/VerdifyConsultancy/verdify-platform/blob/in-progress/paused-20261012/handoff/docs/handoffs/775-2026-10-12/source-ref-verification.json). Original worktrees/indexes and historical failure/rollback receipts are retained; no merge, deployment, OTA, DB cutover or physical launch is performed by this handoff.",
+          "createdAt": "2026-10-12T17:06:45Z"
+        },
+        {
+          "body": "Decision (Jason, 2026-10-20): the Verdify greenhouse campaign is formally resumed. The 2026-10-12 'implementation and delivery PAUSED; do not auto-resume' handoff above is historical and is no longer a hold; work this issue from its current planning-status block and native dependencies. Existing launch gates (pilot draw gated on #749 qualification) are unchanged.",
+          "createdAt": "2026-10-20T14:45:58Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 1001,
+    "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+    "parent": null,
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 602,
+          "title": "[NET-07] Retire dead-backend routes and retired hosts across routes, DNS, probes and certs",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "jvallery/network-infra"
+          }
+        },
+        {
+          "number": 4468,
+          "title": "[CERT] Remove only the remaining unused certificate residue",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "jvallery/agents"
+          }
+        },
+        {
+          "number": 4470,
+          "title": "[SECRETS] Give each retained Secret one encrypted rendering lane",
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "jvallery/agents"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "2026-10-21 16:53 UTC follow-through: the Verdify catalog adoption slice is accepted under #1004, and the obsolete product-local Application copy is now removed by merged #1064 (`dc07643b87bcf3495af1be5c665eeff741b2f48c`). Genuine PR and main CI passed. AGENTS.md, ARGOCD.md, OWNERSHIP.md and related owner references were updated for this completed slice. Production remains Synced/Healthy; cleanup render equals the deployed render.\n\nWhole issue remains open: live verdify-edge still contains Certificate wildcard-verdify-ai, its CertificateRequest and Order, so its Namespace is not eligible for deletion. Six-Secret central custody work remains tracked in agents#4470. Specific D-16 owner issue network-infra#602 was rechecked, including its Verdify hostname checklist and later comments: no completed per-host retirement receipt was found for analytics/logs/botauth/traefik.verdify.ai. DNS retirement already has DR-23 authorization; no new decision is being requested. HostRegexp cleanup awaits that bounded owner proof, not closure of unrelated hosts in the whole network issue. agents#4461's other tenants do not block the already-completed Verdify adoption slice.\n",
+          "createdAt": "2026-10-21T16:54:35Z"
+        },
+        {
+          "body": "### Deferred out of the infrastructure waves (replan v3, 2026-10-23)\n\nJason directed that anything not directly aligned with core security, HA or DR be deferred, to keep waves 1-4 small. This issue is labelled `deferred` and sits outside the wave trackers. It stays open as backlog; pick it up after Wave 4 or when Jason asks.\n\n- **Why:** Ownership and GitOps hygiene tracking: retire an orphaned namespace, drop retired hosts from a HostRegexp, and update the AGENTS/OWNERSHIP records (SCOPE-V2 Defer: inventory and records). The secrets custody slices are tracked in their own issues (agents#4468, #4470).\n- **Note for later:** The gate:jason label is stale. DR-23 covers DNS retirement, and SA-6/W2-X5 give standing approval for D-03 revocation of credentials proven unconsumed. Remove the label.\n- Plan: the fleet control-plane plan docs (`docs/planning/infra-waves-2026-10-23/`)\n\n<!-- infra-waves-2026-10-23:v3:deferred:VerdifyConsultancy/verdify-platform#1001 -->\n",
+          "createdAt": "2026-10-24T03:18:39Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 1009,
+    "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+    "parent": null,
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 77,
+          "title": "[P1] Rebase the Phase A firewall matrix on current identities and flow evidence",
+          "state": "CLOSED",
+          "repository": {
+            "nameWithOwner": "jvallery/network-infra"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "### Deferred out of the infrastructure waves (replan v3, 2026-10-23)\n\nJason directed that anything not directly aligned with core security, HA or DR be deferred, to keep waves 1-4 small. This issue is labelled `deferred` and sits outside the wave trackers. It stays open as backlog; pick it up after Wave 4 or when Jason asks.\n\n- **Why:** The software slice is done and live-verified at 0fc5f8b8 (signed build, tamper rejection, narrowed egress). What remains is the device-side UniFi ACL readback (tracked in network-infra#77) and an attended physical OTA password cutover. That is IoT device and on-site work (SCOPE-V2 Defer: home/IoT and physical) and goes to backlog.\n- **Note for later:** The 'Decision needed from Jason' text is stale (DR-48 resolved it). Remove it.\n- Plan: the fleet control-plane plan docs (`docs/planning/infra-waves-2026-10-23/`)\n\n<!-- infra-waves-2026-10-23:v3:deferred:VerdifyConsultancy/verdify-platform#1009 -->\n",
+          "createdAt": "2026-10-24T03:18:53Z"
+        },
+        {
+          "body": "2026-10-25 release preparation correction: network-infra#77 is CLOSED **by consolidation/not planned**, not by effective gateway/ACL acceptance. Its October24 transfer comment points to open https://github.com/jvallery/network-infra/issues/555 . The successor retains current flow-matrix and effective routed/same-L2/hostNetwork/node-SNAT boundary work. Do not interpret #77's closed state as this issue's passive TCP3232/6053 gateway criterion passing.\n\nPR #1081 combines the field survey and release preparation: https://github.com/VerdifyConsultancy/verdify-platform/pull/1081 . Signed-artifact software proof remains accepted at its existing boundary. Actual passive device ACL acceptance, qualified recovery/candidate custody and attended physical cutover remain separate; no new device connection, OTA, password rotation or node cordon was performed. Current writer reconciliation is also still held, independently of this release checklist.\n",
+          "createdAt": "2026-10-25T14:18:58Z"
+        }
+      ]
+    }
+  },
+  {
+    "number": 1010,
+    "title": "[AUD] Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+    "parent": null,
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 743,
+          "title": "[AUD] Make Traefik see the real client IP on tunnel traffic so rate limits work per client, and delete the 10.0.0.0/8 admin-ip allowlist",
+          "state": "OPEN",
+          "repository": {
+            "nameWithOwner": "jvallery/network-infra"
+          }
+        }
+      ]
+    },
+    "blocking": {
+      "nodes": []
+    },
+    "subIssues": {
+      "nodes": []
+    },
+    "comments": {
+      "nodes": [
+        {
+          "body": "The credential-free MCP tool audit implementation (#1035) is live in both replicas after the full successful 33ed324e production sync. Ten actual tool events were observed in pod logs and the existing Loki pipeline at 23:18:59Z, including natural Hermes climate/plan_status/get_setpoints/knowledge calls and our read-only equipment_state acceptance calls. Each event records audience, registered tool, capability, dispatch result, duration and transport peer; no arguments, bearer values or result payloads are logged.\n\nThis is dispatch evidence, not proof a write-capable business action succeeded. Client identity remains the actual transport peer; arbitrary forwarded headers are not trusted. Real external client-IP proof still depends on jvallery/network-infra#743, so this issue stays open.\n",
+          "createdAt": "2026-10-20T23:21:31Z"
+        },
+        {
+          "body": "### Deferred out of the infrastructure waves (replan v3, 2026-10-23)\n\nJason directed that anything not directly aligned with core security, HA or DR be deferred, to keep waves 1-4 small. This issue is labelled `deferred` and sits outside the wave trackers. It stays open as backlog; pick it up after Wave 4 or when Jason asks.\n\n- **Why:** Low-severity audit-log enrichment (real client IP) for an app endpoint. That is observability beyond the minimum (SCOPE-V2 Defer). Criterion 1 (audience and tool attribution in Loki) is already met, and the remainder waits on network-infra#743.\n- Plan: the fleet control-plane plan docs (`docs/planning/infra-waves-2026-10-23/`)\n\n<!-- infra-waves-2026-10-23:v3:deferred:VerdifyConsultancy/verdify-platform#1010 -->\n",
+          "createdAt": "2026-10-24T03:19:06Z"
+        }
+      ]
+    }
+  }
+]

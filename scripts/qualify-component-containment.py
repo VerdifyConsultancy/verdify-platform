@@ -8,21 +8,39 @@ No ambient database credential/address is passed to pytest. No live device calls
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-ADDITIONAL_ALERT_CASES = {
-    f"test_additional_ops_alert_capture_lifecycle[{name}]"
-    for name in (
-        "baseline_recovery",
-        "baseline_missing",
-        "terminal_enabled",
-        "incomplete_outcomes",
-        "open_without_work",
-    )
+ADDITIONAL_ALERT_REASON_BY_CASE = {
+    f"test_additional_ops_alert_capture_lifecycle[{name}]": reason
+    for name, reason in {
+        "baseline_recovery": "baseline_recovery_in_progress",
+        "baseline_missing": "baseline_artifact_missing",
+        "terminal_enabled": "terminal_experiment_capability_enabled",
+        "incomplete_outcomes": "completed_with_incomplete_outcomes",
+        "open_without_work": "open_admission_without_current_work",
+        "confirmed_baseline_missing": "confirmed_baseline_recovery_missing",
+        "expired_work": "expired_work_not_terminal",
+        "preexposure_mismatch": "preexposure_state_mismatch",
+        "runtime_fault": "runtime_fault_requires_recovery",
+    }.items()
+}
+ADDITIONAL_ALERT_CASES = set(ADDITIONAL_ALERT_REASON_BY_CASE)
+WORK_LEDGER_ALERT_CASES = {
+    "test_additional_ops_alert_capture_lifecycle[expired_work]",
+    "test_additional_ops_alert_capture_lifecycle[preexposure_mismatch]",
+}
+UNEXERCISED_OPS_REASONS = {
+    "multiple_open_exposures",
+    "open_exposure_work_expired",
+    "runtime_generation_missing",
+    "open_exposure_observation_missing",
+    "open_exposure_observation_stale",
+    "open_exposure_state_mismatch",
 }
 EXPECTED_CASES = ADDITIONAL_ALERT_CASES | {
     "test_own_login_locked_or_armed_readiness_denial[locked]",
@@ -34,6 +52,13 @@ EXPECTED_CASES = ADDITIONAL_ALERT_CASES | {
     "test_emergency_hold_revokes_runtime_authority",
     "test_populated_blinded_view_retains_outcome_without_mapping_access",
 }
+
+
+def expected_sequence_deltas(case_name):
+    result = {"experiment_events_event_id_seq": 2, "alert_log_id_seq": 1}
+    if case_name in WORK_LEDGER_ALERT_CASES:
+        result["experiment_v2_work_events_work_event_id_seq"] = 1
+    return result
 
 
 def postgres_bin(workspace: Path, installed=Path("/usr/lib/postgresql/16/bin")) -> Path:
@@ -109,9 +134,25 @@ def main():
         "historical_prefix_credit": False,
         "qualified": False,
         "required_cases": sorted(EXPECTED_CASES),
+        "synthetic_ops_reason_coverage": {
+            "exercised": sorted(set(ADDITIONAL_ALERT_REASON_BY_CASE.values()) | {"facility_emergency_hold"}),
+            "retained_after_facility_closure": ["preexposure_state_mismatch"],
+            "not_exercised": sorted(UNEXERCISED_OPS_REASONS),
+            "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+            "active_runtime_or_physical_acceptance": False,
+            "additional_real_delivery_credit": False,
+        },
     }
     selected = "tests/test_component_containment_postgres.py"
     report["fixture_sha256"] = hashlib.sha256(Path(selected).read_bytes()).hexdigest()
+    ops_source = Path("db/migrations/270-facility-safe-ops-projection.sql").read_text()
+    reason_start = ops_source.index("THEN 'multiple_open_exposures'")
+    reason_end = ops_source.index("\n        END,", reason_start)
+    source_reasons = set(re.findall(r"THEN '([a-z_]+)'", ops_source[reason_start:reason_end]))
+    if source_reasons != (
+        set(ADDITIONAL_ALERT_REASON_BY_CASE.values()) | {"facility_emergency_hold"} | UNEXERCISED_OPS_REASONS
+    ):
+        raise RuntimeError("current ops reasons differ from the explicitly qualified/unexercised manifest")
     report["migrations"] = {
         name: hashlib.sha256(Path(name).read_bytes()).hexdigest()
         for name in (
@@ -179,7 +220,21 @@ def main():
                             in ADDITIONAL_ALERT_CASES | {"test_facility_hold_alert_native_projection_lifecycle"}
                             and c["custody"].get("custody_rows_catalog_unchanged") == "true"
                             and {k: v for k, v in json.loads(c["custody"]["sequence_deltas"]).items() if v}
-                            == {"experiment_events_event_id_seq": 2, "alert_log_id_seq": 1}
+                            == expected_sequence_deltas(c["name"])
+                        )
+                    )
+                    and (
+                        c["name"] not in ADDITIONAL_ALERT_CASES
+                        or (
+                            c["custody"].get("ops_reason") == ADDITIONAL_ALERT_REASON_BY_CASE[c["name"]]
+                            and c["custody"].get("synthetic_precondition_only") == "true"
+                            and json.loads(c["custody"]["delivery"])["live"] is False
+                            and c["custody"].get("alert_lifecycle_outcome")
+                            == (
+                                "retained_until_confirmed_recovery"
+                                if c["name"] == "test_additional_ops_alert_capture_lifecycle[preexposure_mismatch]"
+                                else "resolved_by_synthetic_facility_closure"
+                            )
                         )
                     )
                     and int(c["custody"].get("public_rowsets", "0")) > 0

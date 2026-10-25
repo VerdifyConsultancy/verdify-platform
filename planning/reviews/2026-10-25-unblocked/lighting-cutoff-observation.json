@@ -1,0 +1,514 @@
+{
+  "schema": "verdify.passive-lighting-cutoff/v1",
+  "source_revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+  "read_only": true,
+  "query_timeout_seconds": 5,
+  "state_reason_change_rows": 70,
+  "all_state_reason_changes": [
+    {
+      "ts": "2026-10-24T03:15:02.186097+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": null
+    },
+    {
+      "ts": "2026-10-24T03:15:02.202967+00:00",
+      "entity": "gl_main_reason",
+      "value": "outside_window",
+      "previous": null
+    },
+    {
+      "ts": "2026-10-24T03:15:02.216913+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": null
+    },
+    {
+      "ts": "2026-10-24T03:15:02.231963+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": null
+    },
+    {
+      "ts": "2026-10-24T04:00:00.285105+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T04:00:00.30215+00:00",
+      "entity": "gl_grow_reason",
+      "value": "outside_window",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T13:00:00.228304+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T13:00:00.242588+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "outside_window"
+    },
+    {
+      "ts": "2026-10-24T13:00:00.261013+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T13:00:00.274723+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "outside_window"
+    },
+    {
+      "ts": "2026-10-24T13:00:01.141473+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T13:00:01.185853+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T16:25:05.738117+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T16:25:05.774297+00:00",
+      "entity": "gl_main_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T16:25:05.809588+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T16:25:05.844852+00:00",
+      "entity": "gl_grow_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T16:47:05.665021+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T16:47:05.678718+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T16:47:05.69368+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T16:47:05.707793+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T16:47:06.71426+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T16:47:06.740382+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T16:51:05.848778+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T16:51:05.86336+00:00",
+      "entity": "gl_main_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T16:51:05.879949+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T16:51:05.89687+00:00",
+      "entity": "gl_grow_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T19:46:02.52106+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T19:46:02.534911+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T19:46:02.566016+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T19:46:02.580925+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T19:46:03.56418+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T19:46:03.591068+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T19:50:02.679965+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T19:50:02.698762+00:00",
+      "entity": "gl_main_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T19:50:02.730663+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T19:50:02.758738+00:00",
+      "entity": "gl_grow_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T20:21:02.554096+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:21:02.574435+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:21:02.593599+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:21:02.610398+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:21:03.540645+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T20:21:03.579062+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T20:31:01.78612+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T20:31:01.799962+00:00",
+      "entity": "gl_main_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T20:31:01.813807+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T20:31:01.828271+00:00",
+      "entity": "gl_grow_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T20:46:02.097714+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:46:02.112376+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:46:02.127001+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:46:02.142375+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:46:03.075128+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T20:46:03.10103+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T20:51:02.205427+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T20:51:02.221264+00:00",
+      "entity": "gl_main_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T20:51:02.233438+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-24T20:51:02.247612+00:00",
+      "entity": "gl_grow_reason",
+      "value": "lux_sufficient",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-24T20:58:01.402405+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:58:01.433043+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:58:01.454929+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-24T20:58:01.473607+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_lux_low",
+      "previous": "lux_sufficient"
+    },
+    {
+      "ts": "2026-10-24T20:58:02.388052+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-24T20:58:02.421314+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "plant_lux_low"
+    },
+    {
+      "ts": "2026-10-25T02:00:00.482181+00:00",
+      "entity": "gl_main_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-25T02:00:00.504476+00:00",
+      "entity": "gl_main_reason",
+      "value": "outside_window",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-25T04:00:00.127676+00:00",
+      "entity": "gl_grow_state",
+      "value": "OFF",
+      "previous": "ON"
+    },
+    {
+      "ts": "2026-10-25T04:00:00.147619+00:00",
+      "entity": "gl_grow_reason",
+      "value": "outside_window",
+      "previous": "plant_hysteresis_hold"
+    },
+    {
+      "ts": "2026-10-25T13:01:03.613222+00:00",
+      "entity": "gl_main_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-25T13:01:03.635987+00:00",
+      "entity": "gl_main_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "outside_window"
+    },
+    {
+      "ts": "2026-10-25T13:01:03.659494+00:00",
+      "entity": "gl_grow_state",
+      "value": "ON",
+      "previous": "OFF"
+    },
+    {
+      "ts": "2026-10-25T13:01:03.686532+00:00",
+      "entity": "gl_grow_reason",
+      "value": "plant_hysteresis_hold",
+      "previous": "outside_window"
+    }
+  ],
+  "latest_equipment": [
+    {
+      "equipment": "grow_light_grow",
+      "ts": "2026-10-25T15:11:44.525942+00:00",
+      "state": true
+    },
+    {
+      "equipment": "grow_light_main",
+      "ts": "2026-10-25T15:11:44.525942+00:00",
+      "state": true
+    }
+  ],
+  "reported_firmware": [
+    {
+      "ts": "2026-10-25T15:14:25.050093+00:00",
+      "firmware_version": "2026.10.2.0637.620a218a-wifi-bound"
+    }
+  ],
+  "cutoff_equipment_rows": [
+    {
+      "ts": "2026-10-25T01:59:16.914229+00:00",
+      "equipment": "grow_light_grow",
+      "state": true
+    },
+    {
+      "ts": "2026-10-25T01:59:16.914229+00:00",
+      "equipment": "grow_light_main",
+      "state": true
+    },
+    {
+      "ts": "2026-10-25T02:00:00.457739+00:00",
+      "equipment": "grow_light_main",
+      "state": false
+    },
+    {
+      "ts": "2026-10-25T04:00:00.078108+00:00",
+      "equipment": "grow_light_grow",
+      "state": false
+    },
+    {
+      "ts": "2026-10-25T04:01:31.926691+00:00",
+      "equipment": "grow_light_grow",
+      "state": false
+    },
+    {
+      "ts": "2026-10-25T04:01:31.926691+00:00",
+      "equipment": "grow_light_main",
+      "state": false
+    }
+  ],
+  "cutoff_decision_epochs": [
+    {
+      "ts": "2026-10-25T02:00:00.561169+00:00",
+      "entity": "gl_main_decision_epoch",
+      "value": "1792893600"
+    },
+    {
+      "ts": "2026-10-25T02:00:00.576946+00:00",
+      "entity": "gl_grow_decision_epoch",
+      "value": "1792893600"
+    },
+    {
+      "ts": "2026-10-25T04:00:00.164249+00:00",
+      "entity": "gl_main_decision_epoch",
+      "value": "1792900800"
+    },
+    {
+      "ts": "2026-10-25T04:00:00.182398+00:00",
+      "entity": "gl_grow_decision_epoch",
+      "value": "1792900800"
+    }
+  ],
+  "main_cutoff_utc": "2026-10-25T02:00:00Z",
+  "grow_cutoff_utc": "2026-10-25T04:00:00Z",
+  "main_cutoff_local": "2026-10-24T20:00:00-06:00",
+  "grow_cutoff_local": "2026-10-24T22:00:00-06:00",
+  "reported_source_contains_905_fix": true,
+  "active_minimum_on_overlap_exercised": false,
+  "physical_light_output_or_dli_claim": false,
+  "full_issue_acceptance": false,
+  "limitations": [
+    "Both circuits had been ON over five hours before their ordinary cutoff; active min-on hold was not exercised.",
+    "Controller state/reason and relay reports are observations, not cryptographic flashed-binary proof or measured light output.",
+    "Initial JSON line parser failed on PostgreSQL multiline formatting; raw query output parsed locally without a second history query."
+  ]
+}
