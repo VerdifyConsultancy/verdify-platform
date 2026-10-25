@@ -15,6 +15,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 EXPECTED_CASES = {
+    "test_own_login_locked_or_armed_readiness_denial[locked]",
+    "test_own_login_locked_or_armed_readiness_denial[armed]",
+    "test_facility_hold_alert_native_projection_lifecycle",
     "test_feature_off_precedes_all_store_and_transport_access",
     "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
     "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
@@ -106,6 +109,10 @@ def main():
             "db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
             "db/migrations/207-controlled-policy-experiment.sql",
             "db/migrations/214-confirmed-component-experiment-v2.sql",
+            "db/migrations/270-facility-safe-ops-projection.sql",
+            "db/migrations/256-experiment-v2-end-study-recovery-completion.sql",
+            "tests/component_alert_delivery_bridge.py",
+            "ingestor/tasks/alerts.py",
         )
     }
     with tempfile.TemporaryDirectory(prefix="component-ci-") as temporary:
@@ -155,7 +162,15 @@ def main():
                 and all(
                     c["passed"]
                     and c["custody"].get("custody_before_sha256")
-                    and c["custody"].get("custody_before_sha256") == c["custody"].get("custody_after_sha256")
+                    and (
+                        c["custody"].get("custody_before_sha256") == c["custody"].get("custody_after_sha256")
+                        or (
+                            c["name"] == "test_facility_hold_alert_native_projection_lifecycle"
+                            and c["custody"].get("custody_rows_catalog_unchanged") == "true"
+                            and {k: v for k, v in json.loads(c["custody"]["sequence_deltas"]).items() if v}
+                            == {"experiment_events_event_id_seq": 2, "alert_log_id_seq": 1}
+                        )
+                    )
                     and int(c["custody"].get("public_rowsets", "0")) > 0
                     for c in report["cases"]
                 )
