@@ -1,6 +1,6 @@
 """Attended operator IPC only: invoke only after Jason approves this exact pair.
 
-Usage: python attended-relay.py <40-char-source> <native-ci-pod-name>
+Usage: python attended-relay.py <40-char-source> <native-ci-pod-name> <verified-sender-uid>
 No credentials leave the existing ingestor. Never rerun an uncertain send.
 """
 
@@ -16,8 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
-SOURCE, POD = sys.argv[1:]
+SOURCE, POD, SENDER_UID = sys.argv[1:]
 assert re.fullmatch("[0-9a-f]{40}", SOURCE)
+assert re.fullmatch(r"[0-9a-f-]{36}", SENDER_UID)
 K = ["kubectl", "--context", "vallery", "--request-timeout=15s"]
 CHANNEL = "C0ANVVAPLD6"
 EXPECTED = json.loads((OUT / "reviewable-alert-messages.json").read_text())["messages"]
@@ -54,7 +55,7 @@ pods = json.loads(
 )["items"]
 assert len(pods) == 1
 writer = pods[0]
-assert writer["metadata"]["uid"] == "2d505c77-7614-4513-964b-894f296a11aa"
+assert writer["metadata"]["uid"] == SENDER_UID
 STATE["sender_pod"] = writer["metadata"]["name"]
 STATE["sender_uid"] = writer["metadata"]["uid"]
 save()

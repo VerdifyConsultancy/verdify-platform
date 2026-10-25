@@ -1,0 +1,18 @@
+{
+  "phase": "preflight_before_authorization_or_send",
+  "result": "failed_closed_uid_mismatch",
+  "prior_ingestor_uid": "2d505c77-7614-4513-964b-894f296a11aa",
+  "current_ingestor_uid": "6d7cdb04-8eb9-4630-abcb-34c9a580fd4e",
+  "current_pod": "verdify-ingestor-65489d58fc-wbg2j",
+  "current_created_at": "2026-10-25T13:00:44Z",
+  "image_unchanged": true,
+  "observed_kubernetes_event": "TaintManagerEviction on intermediate replacement; actor/root cause not established",
+  "task_issued_restart_cordon_device_connection": false,
+  "messages_attempted": 0,
+  "replacement_ready": true,
+  "replacement_restarts": 0,
+  "node5_schedulable_no_taint": true,
+  "climate_action_age_seconds": 9,
+  "new_baseline_socket": {"source_ip": "10.42.6.186", "source_port": 53792, "inode": "939119042", "state": "ESTABLISHED"},
+  "operator_action": "Rebound the unused approved relay to the exact verified current UID; no send retry occurred."
+}

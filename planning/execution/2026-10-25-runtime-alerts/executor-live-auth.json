@@ -31,14 +31,14 @@
     "transaction_read_only": "on"
   },
   "invalid_password_rejected": true,
-  "observed_at": "2026-10-25T12:47:10.976975+00:00",
+  "observed_at": "2026-10-25T13:10:24.963396+00:00",
   "probe_sha256": "1250664514fa07d2325ce206e549d68afe9c68b880bd236305d6bc03b2f217f5",
   "qualified": true,
   "role": "executor",
   "schema": "verdify.runtime-login-readonly/1",
-  "source_revision": "0fc7567dd17131ca608e119669b924758c646457",
-  "pod_name": "verdify-ingestor-65489d58fc-6j9xr",
-  "pod_uid": "2d505c77-7614-4513-964b-894f296a11aa",
+  "source_revision": "610d8037d76eaf4783cf086208e0ca7048eb0297",
+  "pod_name": "verdify-ingestor-65489d58fc-wbg2j",
+  "pod_uid": "6d7cdb04-8eb9-4630-abcb-34c9a580fd4e",
   "container_image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf",
   "exit_code": 0,
   "function_count": 21

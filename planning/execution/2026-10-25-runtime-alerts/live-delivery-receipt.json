@@ -1,0 +1,44 @@
+{
+  "source": "610d8037d76eaf4783cf086208e0ca7048eb0297",
+  "ci_pod": "verdify-platform-pr-ci-9tf87-validate-730059651",
+  "started_at": "2026-10-25T13:04:58.995519+00:00",
+  "events": [
+    {
+      "ordinal": 1,
+      "payload": {
+        "channel": "C0ANVVAPLD6",
+        "text": "[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \ud83d\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: facility emergency hold\nRunbook: no specific mapping found. Check the operator view and record the action taken.",
+        "thread_ts": null
+      },
+      "payload_sha256": "43ab0bded5d72b53c0c3bf64c85637a8d53c9fd3d1c69b8cfc8469b4d3f2a80b",
+      "outcome": "confirmed",
+      "confirmed": true,
+      "slack_ts": "1792933607.854899",
+      "reply_delivered_at": "2026-10-25T13:06:48.635023+00:00"
+    },
+    {
+      "ordinal": 2,
+      "payload": {
+        "channel": "C0ANVVAPLD6",
+        "text": "[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`",
+        "thread_ts": "1792933607.854899"
+      },
+      "payload_sha256": "92a54147aaa58b8cccd681e0306a6c153a96321f44ad3a998743b16ab087db13",
+      "outcome": "confirmed",
+      "confirmed": true,
+      "slack_ts": "1792933613.111109",
+      "reply_delivered_at": "2026-10-25T13:06:54.270951+00:00"
+    }
+  ],
+  "ci_pod_uid": "9d32ccd6-e6ba-4c19-9327-2cb77f56c160",
+  "sender_pod": "verdify-ingestor-65489d58fc-wbg2j",
+  "sender_uid": "6d7cdb04-8eb9-4630-abcb-34c9a580fd4e",
+  "bridge_complete": true,
+  "finished_at": "2026-10-25T13:06:54.271653+00:00",
+  "workflow": "verdify-platform-pr-ci-9tf87",
+  "workflow_uid": "2d43efc8-03e6-44d5-a074-fdc0e636c113",
+  "native_fixture_qualified": true,
+  "native_case_count": 8,
+  "independent_slack_readback": true,
+  "scope": "Synthetic private native condition/monitor, real existing sender; no production DB mutation or physical acceptance"
+}

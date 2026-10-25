@@ -313,6 +313,11 @@ def test_facility_hold_alert_native_projection_lifecycle(containment, record_pro
             assert len(delivery.messages) == 2
             assert delivery.messages[1]["thread_ts"] == delivery.receipts[0]
             assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 0
+            resolution = await conn.fetchval("SELECT resolution FROM alert_log")
+            assert resolution == (
+                "facility-safe authority closure; historical runtime faults retained; "
+                "no confirmed baseline recovery claimed"
+            )
         finally:
             await tx.rollback()
             await conn.close(timeout=3)
