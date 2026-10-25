@@ -4,19 +4,20 @@
 
 # ── API Keys ─────────────────────────────────────────────────────
 # Keys are stored in external files (never in this config).
-# Paths can be overridden via environment variables.
+# Paths can be overridden via environment variables. Keys without a default
+# (openai, gemini, anthropic) have no mounted file and need their env var set.
 keys:
   cortex:
     file: ${CORTEX_API_KEY_FILE:-/vcortex/api_key.txt}
     provider: cortex
   openai:
-    file: ${OPENAI_API_KEY_FILE:-/mnt/agents/shared/credentials/openai_api_key.txt}
+    file: ${OPENAI_API_KEY_FILE}
     provider: openai
   gemini:
-    file: ${GEMINI_API_KEY_FILE:-/mnt/agents/shared/credentials/gemini_api_key.txt}
+    file: ${GEMINI_API_KEY_FILE}
     provider: google-ai-studio
   anthropic:
-    file: ${ANTHROPIC_API_KEY_FILE:-/mnt/agents/shared/credentials/anthropic_api_key.txt}
+    file: ${ANTHROPIC_API_KEY_FILE}
     provider: anthropic
 
 # ── Models ───────────────────────────────────────────────────────

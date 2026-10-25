@@ -64,7 +64,7 @@ from verdify_schemas.setpoint import SetpointSnapshot  # noqa: E402
 LOG = logging.getLogger("ha-gap-backfill")
 GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 DEFAULT_HA_URL = "http://192.168.30.107:8123"
-DEFAULT_HA_TOKEN_FILE = "/mnt/agents/shared/credentials/ha_token.txt"
+DEFAULT_HA_TOKEN_FILE = "/var/run/secrets/verdify/ha_token.txt"
 ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
 HA_READ_ATTEMPTS = 3
 HA_RETRY_DELAY_SECONDS = 2

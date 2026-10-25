@@ -46,7 +46,7 @@ from verdify_schemas.tunable_registry import BAND_OWNED_REG, CROP_BAND_REG, SETP
 
 # --- Configuration ---
 HA_URL = "http://192.168.30.107:8123"
-HA_TOKEN_FILE = "/mnt/agents/shared/credentials/ha_token.txt"
+HA_TOKEN_FILE = os.environ.get("HA_TOKEN_FILE", "/var/run/secrets/verdify/ha_token.txt")
 LISTEN_HOST = "0.0.0.0"
 LISTEN_PORT = 8200
 
