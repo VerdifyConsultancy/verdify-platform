@@ -109,17 +109,12 @@ def main():
         env["SCORECARD_TEST_PG_BIN"] = str(binaries)
         output = work / "results"
         output.mkdir()
-        identity = {}
-        if os.geteuid() == 0:
-            os.chown(output, 65534, 65534)
-            identity = {"user": 65534, "group": 65534, "extra_groups": []}
         junit = output / "junit.xml"
         try:
             result = subprocess.run(
                 [".venv/bin/python", "-m", "pytest", "-q", "-p", "no:cacheprovider", selected, f"--junitxml={junit}"],
                 env=env,
                 timeout=600,
-                **identity,
             )
             cases = list(ET.parse(junit).iter("testcase")) if junit.is_file() else []  # noqa: S314 - private pytest output
             report["cases"] = [

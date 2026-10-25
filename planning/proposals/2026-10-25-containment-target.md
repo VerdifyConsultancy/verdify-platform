@@ -106,8 +106,9 @@ It predates the generic registry campaign helper and does not contain that
 helper. Therefore this first implementation adds an explicit cluster-only
 private-fixture step to the owning product gate and reuses the helper's signed
 PostgreSQL resolver in a product harness. No fleet runtime rollout, generated
-registry command change or additional admission authority is necessary. A root
-validation container drops to uid/gid65534 for private PostgreSQL/pytest.
+registry command change or additional admission authority is necessary. The private PostgreSQL
+server drops to uid/gid65534; pytest keeps the validation container identity
+to read its existing private checkout. No checkout permissions are widened.
 
 The first fixture selects five bounded cases: actual worker feature-off before
 store/transport access, locked and armed readiness reopening denials, emergency
@@ -116,3 +117,9 @@ loads unmodified migrations207/214 with explicit greenhouse/climate/forecast
 column stand-ins. It does not claim later physical-proof/recovery migration
 coverage. Active exposure, exclusivity and lease/reconnect recovery still need
 their own source-qualified fixture expansion; none is marked accepted here.
+
+The first native attempt (`42a9baff`, Workflow `verdify-platform-pr-ci-2r9rj`)
+resolved PostgreSQL16.15 successfully but failed before pytest because the
+root-private checkout was unreadable after dropping the whole test process to
+nobody. That attempt is failed and retained. The correction drops only the
+private server, retaining the original checkout access boundary.

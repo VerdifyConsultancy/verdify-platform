@@ -7,6 +7,8 @@ Later physical-proof/recovery migrations are outside this first fixture phase.
 
 import asyncio
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -17,8 +19,26 @@ EXP = "58763900-0000-4000-8000-000000000001"
 
 
 @pytest.fixture
-def containment(isolated_pg):
-    query = isolated_pg
+def socket_pg(tmp_path, monkeypatch):
+    # Native CI's checkout is private to root. Keep pytest in that existing
+    # context; drop only the private PostgreSQL server to nobody, without
+    # changing checkout permissions or adding any cluster identity.
+    original_run = subprocess.run
+
+    def run(args, **kwargs):
+        if os.geteuid() == 0 and Path(args[0]).name in {"initdb", "pg_ctl"}:
+            cluster = Path(args[args.index("-D") + 1]).parent
+            os.chown(cluster, 65534, 65534)
+            kwargs.update(user=65534, group=65534, extra_groups=[])
+        return original_run(args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    yield from isolated_pg.__wrapped__(tmp_path)
+
+
+@pytest.fixture
+def containment(socket_pg):
+    query = socket_pg
     assert query("SELECT inet_server_addr() IS NULL AND current_setting('listen_addresses') = ''") == "t"
     # The original SQL fixture is the authoritative exact-column facade contract;
     # take only its explicit source-table setup, never its behavioral scenarios.
