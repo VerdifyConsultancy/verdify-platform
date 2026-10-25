@@ -29,7 +29,7 @@ def socket_pg(tmp_path, monkeypatch):
         if os.geteuid() == 0 and Path(args[0]).name in {"initdb", "pg_ctl"}:
             cluster = Path(args[args.index("-D") + 1]).parent
             os.chown(cluster, 65534, 65534)
-            kwargs.update(user=65534, group=65534, extra_groups=[])
+            kwargs.update(user=65534, group=65534, extra_groups=[], cwd=cluster)
         return original_run(args, **kwargs)
 
     monkeypatch.setattr(subprocess, "run", run)
