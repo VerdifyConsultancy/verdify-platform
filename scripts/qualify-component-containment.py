@@ -93,6 +93,8 @@ def main():
     report["migrations"] = {
         name: hashlib.sha256(Path(name).read_bytes()).hexdigest()
         for name in (
+            "db/schema.sql",
+            "db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
             "db/migrations/207-controlled-policy-experiment.sql",
             "db/migrations/214-confirmed-component-experiment-v2.sql",
         )

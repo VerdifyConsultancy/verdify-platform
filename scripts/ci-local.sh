@@ -47,6 +47,12 @@ $RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py t
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_*.py
 
+# The private PostgreSQL proof is cluster-only; no local fallback or ambient DB.
+if [ -n "${KUBERNETES_SERVICE_HOST:-}" ]; then
+  step "private component containment (synthetic only)"
+  $PY scripts/qualify-component-containment.py
+fi
+
 step "tokenless Verdify file routing and least-privilege regression"
 $PY scripts/generate-verdify-traefik-file.py --check
 $PY -m pytest -q tests/test_verdify_traefik_file.py tests/test_public_camera_cache.py tests/test_api_authenticated_camera_snapshots.py
@@ -69,12 +75,6 @@ $PY research/planner-efficacy/generate_v2_artifacts.py --check
 
 step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py
-
-# The private PostgreSQL proof is cluster-only; no local fallback or ambient DB.
-if [ -n "${KUBERNETES_SERVICE_HOST:-}" ]; then
-  step "private component containment (synthetic only)"
-  $PY scripts/qualify-component-containment.py
-fi
 
 step "pure-logic / contract tests"
 $PY -m pytest -q -rs \

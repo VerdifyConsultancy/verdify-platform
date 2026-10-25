@@ -48,6 +48,10 @@ def containment(socket_pg):
     ]
     query("CREATE EXTENSION pgcrypto; CREATE TABLE greenhouses (id text PRIMARY KEY, name text);")
     query("INSERT INTO greenhouses VALUES ('synthetic-containment', 'synthetic only');")
+    schema = (ROOT / "db/schema.sql").read_text()
+    declaration = "CREATE FUNCTION public.update_updated_at_column() RETURNS trigger"
+    assert schema.count(declaration) == 1
+    query(declaration + schema.split(declaration)[1].split("$$;", 1)[0] + "$$;")
     query((ROOT / "db/migrations/207-controlled-policy-experiment.sql").read_text())
     query(source_tables)
     query((ROOT / "db/migrations/214-confirmed-component-experiment-v2.sql").read_text())
@@ -133,11 +137,11 @@ def test_populated_blinded_view_retains_outcome_without_mapping_access(containme
         INSERT INTO control_assignments
         (assignment_id,experiment_id,greenhouse_id,arm_label,operation_kind,valid_range)
         VALUES ('{assignment}','{EXP}','synthetic-containment','X','randomized_day',
-        tstzrange('2026-01-01Z','2026-01-02Z','[)'));
+        tstzrange('2026-01-01 00:00:00+00','2026-01-02 00:00:00+00','[)'));
         INSERT INTO experiment_v2_outcomes
         (assignment_id,experiment_id,pair_index,day_index,blinded_arm,assigned_local_date,itt_range,created_at)
         VALUES ('{assignment}','{EXP}',0,0,'X','2026-01-01',
-        tstzrange('2026-01-01Z','2026-01-02Z','[)'),now());
+        tstzrange('2026-01-01 00:00:00+00','2026-01-02 00:00:00+00','[)'),now());
         INSERT INTO experiment_v2_outcome_freezes
         (assignment_id,outcome_payload,delivery_failed,fallback_used,facility_rescue,
         zero_value_retained,null_value_retained,exposure_seconds,expected_seconds,

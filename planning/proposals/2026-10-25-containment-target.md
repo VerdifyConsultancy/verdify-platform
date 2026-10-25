@@ -123,3 +123,12 @@ resolved PostgreSQL16.15 successfully but failed before pytest because the
 root-private checkout was unreadable after dropping the whole test process to
 nobody. That attempt is failed and retained. The correction drops only the
 private server, retaining the original checkout access boundary.
+
+The corrected server-only attempt (`febfa422`) reached the real private DB,
+then all five cases failed closed during setup because migration207's
+`update_updated_at_column` prerequisite was missing. The fixture now loads that
+exact function from `db/schema.sql`, without a stand-in implementation, and
+binds the schema/source-table fixture hashes in its report. The private step
+runs immediately after lint/format so missing prerequisites fail early rather
+than waiting through the unrelated full test suite. The failed attempt remains
+failed; no behavioral case was accepted from it.
