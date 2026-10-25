@@ -3935,7 +3935,7 @@
       "issue_number": 1001,
       "status": "open",
       "accepted": false,
-      "title": "Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16)",
+      "title": "Finish retired Verdify namespace and hostname cleanup after owner handoffs",
       "stage": "C4",
       "kind": "task",
       "priority": "P3",
@@ -4013,7 +4013,9 @@
       "what": "Route verdify-platform main changes, including prod release pins, through validated PRs",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption."
+        "Retain the accepted branch-protection and App-bound PR/main-status enforcement receipts; the authority choice is settled and enforcement is active.",
+        "Preserve the original October21\u201328 sampling window and the later recorded waiver separately; do not claim seven elapsed observed days.",
+        "Continue normal source changes through the existing enforced PR and exact native status path. This closed issue does not request a new policy or observation gate."
       ],
       "acceptance": [
         "Every commit on main after the change has a CI commit status (gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status shows a context).",
@@ -4024,7 +4026,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. PR/main-status enforcement accepted. Original optional seven-day window was October21\u201328; recorded October23 direction waived that window as a closure blocker. Closing did not claim seven elapsed observed days.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1003 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. PR/main-status enforcement accepted. Original seven-day window was October21\u201328; recorded October23 direction waived that window as a closure blocker. Closing did not claim seven elapsed observed days.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1003 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
@@ -4235,7 +4237,7 @@
       "issue_number": 1010,
       "status": "open",
       "accepted": false,
-      "title": "Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "title": "Finish trusted client IP attribution for successful verdify-mcp calls",
       "stage": "C4",
       "kind": "task",
       "priority": "P2",
@@ -4243,7 +4245,7 @@
       "owner_role": "Platform/security lead",
       "parent": null,
       "depends_on": [],
-      "what": "Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "what": "Complete trusted-proxy client IP attribution while retaining the delivered value-free successful-call audit events.",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
         "Reuse existing successful audience/tool/capability/result events in both MCP replicas and Loki; do not rebuild accepted logging.",

@@ -104,7 +104,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#998](https://github.com/VerdifyConsultancy/verdify-platform/issues/998) (closed) | Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13) | None; see concrete issue conditions | M |
 | [#999](https://github.com/VerdifyConsultancy/verdify-platform/issues/999) (closed) | Pin the remaining tag-only verdify-prod images by digest | [#994](https://github.com/VerdifyConsultancy/verdify-platform/issues/994) (closed) | M |
 | [#1000](https://github.com/VerdifyConsultancy/verdify-platform/issues/1000) (closed) | Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06) | None; see concrete issue conditions | M |
-| [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001) (open) | Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16) | None; see concrete issue conditions | M |
+| [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001) (open) | Finish retired Verdify namespace and hostname cleanup after owner handoffs | None; see concrete issue conditions | M |
 | [#1002](https://github.com/VerdifyConsultancy/verdify-platform/issues/1002) (closed) | Stop anonymous internet users running ad-hoc SQL via graphs.verdify.ai Grafana | None; see concrete issue conditions | M |
 | [#1003](https://github.com/VerdifyConsultancy/verdify-platform/issues/1003) (closed) | Route verdify-platform main changes, including prod release pins, through validated PRs | None; see concrete issue conditions | M |
 | [#1004](https://github.com/VerdifyConsultancy/verdify-platform/issues/1004) (closed) | Bring kubectl-patched verdify-prod workloads back under Git ownership | None; see concrete issue conditions | M |
@@ -113,7 +113,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#1007](https://github.com/VerdifyConsultancy/verdify-platform/issues/1007) (closed) | Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops | None; see concrete issue conditions | M |
 | [#1008](https://github.com/VerdifyConsultancy/verdify-platform/issues/1008) (closed) | Add rate limits and request bounds to anonymous api.verdify.ai: the public camera route triggers a fresh home-Frigate snapshot on every request | None; see concrete issue conditions | M |
 | [#1009](https://github.com/VerdifyConsultancy/verdify-platform/issues/1009) (open) | Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password | None; see concrete issue conditions | M |
-| [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010) (open) | Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed | None; see concrete issue conditions | M |
+| [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010) (open) | Finish trusted client IP attribution for successful verdify-mcp calls | None; see concrete issue conditions | M |
 | [#1011](https://github.com/VerdifyConsultancy/verdify-platform/issues/1011) (closed) | Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods | None; see concrete issue conditions | M |
 
 ## C5 — Data/platform lead

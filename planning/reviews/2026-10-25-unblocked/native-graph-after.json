@@ -1403,7 +1403,7 @@
   },
   {
     "number": 1010,
-    "title": "[AUD] Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+    "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
     "parent": null,
     "blockedBy": {
       "nodes": [

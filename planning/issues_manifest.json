@@ -1272,13 +1272,13 @@
     {
       "key": "1001",
       "number": 1001,
-      "title": "[C4][P3] Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16)",
+      "title": "[C4][P3] Finish retired Verdify namespace and hostname cleanup after owner handoffs",
       "stage": "C4",
       "status": "open",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "f850933886abd005936b0a4257875294fe38fc3abce63933f466a01b41501ad7"
+      "body_sha256": "373389bde32ca16ad2c55349b48a6f6e3a171e51850ceb757bc8a7413d78efb7"
     },
     {
       "key": "1002",
@@ -1300,7 +1300,7 @@
       "accepted": true,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "134344fe2dfc868380e218b8323f7eb3a459e0b4f282f76c1517c6884df41d2d"
+      "body_sha256": "080c4f8d6af63ebdf8dd25e86dabe1e69492162608bed9aae874bb1afb9ea3a6"
     },
     {
       "key": "1004",
@@ -1371,13 +1371,13 @@
     {
       "key": "1010",
       "number": 1010,
-      "title": "[C4][P2] Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "title": "[C4][P2] Finish trusted client IP attribution for successful verdify-mcp calls",
       "stage": "C4",
       "status": "open",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "68549edd3740bcf890400333b9f33cbfe4d31d01e5df946040d479a194eb4593"
+      "body_sha256": "7fc431cd25eb8d5b002387fb05f47f5cbf7a9780e7e40f3e4e81f1b39aef3632"
     },
     {
       "key": "1011",

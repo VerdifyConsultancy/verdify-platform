@@ -74,7 +74,7 @@ flowchart TD
     i998["#998 (closed) Retire writer/DB watchdog CronJobs after monitoring-stack "]
     i999["#999 (closed) Pin the remaining tag-only verdify-prod images by digest"]
     i1000["#1000 (closed) Close health coverage gaps for Verdify items and alert the"]
-    i1001["#1001 (open) Track Verdify transitions owned elsewhere (agents#4461, #4"]
+    i1001["#1001 (open) Finish retired Verdify namespace and hostname cleanup afte"]
     i1002["#1002 (closed) Stop anonymous internet users running ad-hoc SQL via graph"]
     i1003["#1003 (closed) Route verdify-platform main changes, including prod releas"]
     i1004["#1004 (closed) Bring kubectl-patched verdify-prod workloads back under Gi"]
@@ -83,7 +83,7 @@ flowchart TD
     i1007["#1007 (closed) Put edge pre-auth in front of mcp.verdify.ai: one static I"]
     i1008["#1008 (closed) Add rate limits and request bounds to anonymous api.verdif"]
     i1009["#1009 (open) Sign greenhouse ESP32 firmware and flash only reviewed arc"]
-    i1010["#1010 (open) Log the audience and real client IP of every successful ve"]
+    i1010["#1010 (open) Finish trusted client IP attribution for successful verdif"]
     i1011["#1011 (closed) Bound verdify-mcp egress and stop mounting the default Ser"]
   end
   subgraph C5["C5: Durability and least privilege"]

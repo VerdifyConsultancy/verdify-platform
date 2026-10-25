@@ -122,3 +122,8 @@ without changing the device. Earlier failed broad policy reads are not relabelle
 Run the generated-view/schema checks and the required native PR/main CI. Candidate
 fixture coverage is accepted only after its exact source-bound native result. This
 review does not close an open issue on preparation, synthetic tests or healthy Pods.
+
+Independent source reviews checked the negative fixture/sequence boundaries and
+all41 register/allocation memberships. They do not substitute for native CI. The
+review corrected stale closed-#1003 instructions that still called its authority
+choice unresolved, preserving the original required window and later waiver.
