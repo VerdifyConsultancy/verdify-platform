@@ -1,0 +1,30 @@
+{
+  "functions": {
+    "fn_experiment_v2_ops_status": {
+      "body_sha256": "1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f",
+      "security_definer": true
+    },
+    "fn_experiment_v2_record_facility_safe_closure": {
+      "body_sha256": "75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14",
+      "security_definer": true
+    },
+    "fn_experiment_v2_set_admission": {
+      "body_sha256": "86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419",
+      "security_definer": true
+    },
+    "fn_experiment_v2_stamp_facility_safe_lease": {
+      "body_sha256": "56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d",
+      "security_definer": true
+    }
+  },
+  "all_expected_bodies_match": true,
+  "deployed_alerts_sha256": "e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510",
+  "expected_functions": {
+    "fn_experiment_v2_ops_status": "1bb0e81cda13b7cade16104fe9456a5c9dbeb45fc0398a81e767f308c75ce73f",
+    "fn_experiment_v2_stamp_facility_safe_lease": "56fbf1286f51dd4a0735cd25758ba2087b2d527c34e7e33df00e2ad10931b96d",
+    "fn_experiment_v2_record_facility_safe_closure": "75f2a72d2c5ebe38d365dc4d2a53d28f45cdfbd33f577a12984c0c4b5d331b14",
+    "fn_experiment_v2_set_admission": "86cb9be9592af7f05c187d87792c3b8a364d1106dfd37bb9aa7fd3bd93644419"
+  },
+  "expected_alerts_sha256": "e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510",
+  "deployed_alerts_match": true
+}

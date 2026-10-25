@@ -1,0 +1,114 @@
+{
+  "schema": "verdify.private-component-containment/1",
+  "source": "ef145563daa2f2850b5dd62f5428466b324de512",
+  "synthetic_only": true,
+  "production_acceptance": false,
+  "historical_prefix_credit": false,
+  "qualified": true,
+  "required_cases": [
+    "test_emergency_hold_revokes_runtime_authority",
+    "test_facility_hold_alert_native_projection_lifecycle",
+    "test_feature_off_precedes_all_store_and_transport_access",
+    "test_own_login_locked_or_armed_readiness_denial[armed]",
+    "test_own_login_locked_or_armed_readiness_denial[locked]",
+    "test_populated_blinded_view_retains_outcome_without_mapping_access",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[locked]"
+  ],
+  "fixture_sha256": "5ef0c08f91da32c7f0e07e697d8ea3520381f318c78f56d6cdca7d0b1bb5b1ff",
+  "migrations": {
+    "db/schema.sql": "7b98718747f24ea355eb685939209c05f0744015fa7d0e52a68e13d0e4135bca",
+    "db/migrations/tests/test-214-confirmed-component-experiment-v2.sql": "f5e145fefef3760624a58ff26a72419136d9203ad49824457b07e6cd595c6c6c",
+    "db/migrations/207-controlled-policy-experiment.sql": "d6ea14eb833358e65f5e894fc56e39d15fefad6872065d3542cc30539db53d2e",
+    "db/migrations/214-confirmed-component-experiment-v2.sql": "ac155aa5d6c02218e755e4ca7386e4477cf4b5791d9e1efef49c0dc427c12bda",
+    "db/migrations/270-facility-safe-ops-projection.sql": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+    "db/migrations/256-experiment-v2-end-study-recovery-completion.sql": "b35ed01468ef505dc46b035b6b3c15ee57ba96d6600183ffd98b9975d4fffe0f",
+    "tests/component_alert_delivery_bridge.py": "e6f95bbaa95e093da8f18e1ce6aae2c7e6541aeb1cb5bdf4ceb442f199bfaa04",
+    "ingestor/tasks/alerts.py": "e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510"
+  },
+  "cases": [
+    {
+      "name": "test_feature_off_precedes_all_store_and_transport_access",
+      "custody": {
+        "custody_before_sha256": "1b0703922baaf7ff8e53e0a201bed977624e76b2a2472174aae4011a5d8a9741",
+        "custody_after_sha256": "1b0703922baaf7ff8e53e0a201bed977624e76b2a2472174aae4011a5d8a9741",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
+      "custody": {
+        "custody_before_sha256": "115855004ccf99892b77d329affe70986b9f6b93b6d156f7fa4647a9a0aaaed8",
+        "custody_after_sha256": "115855004ccf99892b77d329affe70986b9f6b93b6d156f7fa4647a9a0aaaed8",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+      "custody": {
+        "custody_before_sha256": "64e5443b31d56c82a0048095581b5f6dcc8c5c236acce8e60473be02fa20d6f7",
+        "custody_after_sha256": "64e5443b31d56c82a0048095581b5f6dcc8c5c236acce8e60473be02fa20d6f7",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_emergency_hold_revokes_runtime_authority",
+      "custody": {
+        "custody_before_sha256": "c3681acfd100fc522b34fdbd2562adc826b304d30c31115298225d58dc262fd8",
+        "custody_after_sha256": "c3681acfd100fc522b34fdbd2562adc826b304d30c31115298225d58dc262fd8",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_blinded_view_retains_outcome_without_mapping_access",
+      "custody": {
+        "custody_before_sha256": "b57b44b2c4e5b5a22d32540279c8cc213dc16ee3aa123bae3c29b61faace9363",
+        "custody_after_sha256": "b57b44b2c4e5b5a22d32540279c8cc213dc16ee3aa123bae3c29b61faace9363",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_own_login_locked_or_armed_readiness_denial[locked]",
+      "custody": {
+        "custody_before_sha256": "1ff9ab157c738d3a4914256513d7eeb43834faf9660ebca910d5e7157401ab33",
+        "custody_after_sha256": "1ff9ab157c738d3a4914256513d7eeb43834faf9660ebca910d5e7157401ab33",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_own_login_locked_or_armed_readiness_denial[armed]",
+      "custody": {
+        "custody_before_sha256": "0d52e67b5c7cbcb1e6a248f3ee8b2337cbb399738954aafd45b012d51da6a5e9",
+        "custody_after_sha256": "0d52e67b5c7cbcb1e6a248f3ee8b2337cbb399738954aafd45b012d51da6a5e9",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_facility_hold_alert_native_projection_lifecycle",
+      "custody": {
+        "custody_before_sha256": "b1f9529ce053d1a692ba395fc3a1aa3d63ff61addf0c33a3936e92206b738c6c",
+        "custody_after_sha256": "640094de44e578b5f69a0c8bd48dd8b4949f3ff6b0a70550c4ce9a5597cb4a99",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: facility emergency hold\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    }
+  ]
+}

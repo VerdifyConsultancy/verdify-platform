@@ -1,0 +1,19 @@
+{
+  "live": false,
+  "messages": [
+    {
+      "channel": "C0ANVVAPLD6",
+      "text": "[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \ud83d\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: facility emergency hold\nRunbook: no specific mapping found. Check the operator view and record the action taken.",
+      "thread_ts": null
+    },
+    {
+      "channel": "C0ANVVAPLD6",
+      "text": "[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`",
+      "thread_ts": "0.587639"
+    }
+  ],
+  "receipts": [
+    "0.587639",
+    "0.587639"
+  ]
+}

@@ -197,3 +197,149 @@ def test_populated_blinded_view_retains_outcome_without_mapping_access(containme
         == "denied"
     )
     assert_custody_unchanged(query, before, record_property)
+
+
+@pytest.mark.parametrize("status", ["locked", "armed"])
+def test_own_login_locked_or_armed_readiness_denial(containment, status, record_property):
+    import asyncpg
+
+    query = containment
+    query(f"""SELECT set_config('verdify.experiment_v2_transition','on',false);
+        UPDATE control_experiments SET status='{status}', execution_phase='commissioning',
+        component_enabled=true WHERE experiment_id='{EXP}';""")
+    before = snapshot(query)
+    socket_dir = query("SHOW unix_socket_directories")
+
+    async def exercise():
+        connection = await asyncpg.connect(
+            host=socket_dir,
+            port=55472,
+            database="postgres",
+            user="verdify_experiment_v2_lifecycle_login",
+            timeout=5,
+            command_timeout=3,
+        )
+        try:
+            identity = await connection.fetchrow("SELECT current_user::text u, session_user::text s")
+            assert identity["u"] == identity["s"] == "verdify_experiment_v2_lifecycle_login"
+            with pytest.raises(asyncpg.RaiseError, match="admission opens only"):
+                await connection.fetchval(
+                    "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'open','private-own-login')", EXP
+                )
+        finally:
+            await connection.close(timeout=3)
+
+    asyncio.run(exercise())
+    assert_custody_unchanged(query, before, record_property)
+
+
+def test_facility_hold_alert_native_projection_lifecycle(containment, record_property):
+    """Current ops projection; synthetic core-schema condition and safe closure.
+
+    Alert storage is an explicit column facade. The synthetic authorization
+    artifact is never a physical proof or production approval. No message is
+    sent unless an attended external bridge was independently authorized.
+    """
+    import asyncpg
+    from component_alert_delivery_bridge import FixtureDelivery
+    from tasks.alerts import component_experiment_alert_cycle
+
+    query = containment
+    migration = (ROOT / "db/migrations/270-facility-safe-ops-projection.sql").read_text()
+    start = migration.index("CREATE OR REPLACE FUNCTION public.fn_experiment_v2_ops_status()")
+    # Exact current function projection only: no fake migration ledger or
+    # skipped/claimed production predecessor/postflight acceptance.
+    function = migration[start : migration.index("$body$;", start) + len("$body$;")]
+    lease_source = (ROOT / "db/migrations/256-experiment-v2-end-study-recovery-completion.sql").read_text()
+    lease_start = lease_source.index("ALTER TABLE public.experiment_v2_facility_safe_closures")
+    lease_end = lease_source.index("CREATE FUNCTION public.fn_experiment_v2_require_end_recovery_completion()")
+    query(lease_source[lease_start:lease_end])
+    query(function)
+    query("ALTER FUNCTION fn_experiment_v2_ops_status() OWNER TO verdify_experiment_v2_owner")
+    query("""CREATE TABLE alert_log (
+        id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        alert_type text, severity text, category text, sensor_id text, zone text,
+        message text, details jsonb, source text, slack_ts text, metric_value double precision,
+        threshold_value double precision, greenhouse_id text, disposition text DEFAULT 'open',
+        resolved_at timestamptz, resolved_by text, resolution text)""")
+    query("""CREATE TABLE slack_alert_runbooks (
+        id bigint PRIMARY KEY, greenhouse_id text, alert_type text, severity text,
+        title text, summary text, runbook_url text, steps text[], is_active boolean)""")
+    before = snapshot(query)
+    socket_dir = query("SHOW unix_socket_directories")
+    delivery = FixtureDelivery(ROOT)
+
+    async def exercise():
+        conn = await asyncpg.connect(
+            host=socket_dir,
+            port=55472,
+            database="postgres",
+            user="scorecard_fixture",
+            timeout=5,
+            command_timeout=3,
+        )
+        tx = conn.transaction()
+        await tx.start()
+        try:
+            await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
+            await conn.fetchval(
+                "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'emergency_hold','synthetic-ci','not-physical')",
+                EXP,
+            )
+            await conn.execute("RESET ROLE")
+            row = await conn.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1::uuid", EXP)
+            assert row["alert_reason"] == "facility_emergency_hold" and row["alert_severity"] == "critical"
+
+            async def cycle():
+                return await component_experiment_alert_cycle(
+                    conn,
+                    EXP,
+                    greenhouse_id="synthetic-containment",
+                    post_message=delivery,
+                    message_prefix=delivery.prefix,
+                )
+
+            assert await cycle() == {"new": 1, "escalated": 0, "resolved": 0, "suppressed": 0}
+            assert not any((await cycle()).values()) and len(delivery.messages) == 1
+            await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
+            await conn.fetchval(
+                "SELECT experiment_id FROM fn_experiment_v2_record_facility_safe_closure($1::uuid,$2,$3,'synthetic-ci')",
+                EXP,
+                "synthetic-ci-only/no-facility-authority",
+                hashlib.sha256(b"synthetic fixture; not physical evidence").hexdigest(),
+            )
+            await conn.execute("RESET ROLE")
+            assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
+            assert len(delivery.messages) == 2
+            assert delivery.messages[1]["thread_ts"] == delivery.receipts[0]
+            assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 0
+            resolution = await conn.fetchval("SELECT resolution FROM alert_log")
+            assert resolution == (
+                "facility-safe authority closure; historical runtime faults retained; "
+                "no confirmed baseline recovery claimed"
+            )
+        finally:
+            await tx.rollback()
+            await conn.close(timeout=3)
+
+    asyncio.run(exercise())
+    after = snapshot(query)
+    assert before[0] == after[0]
+    old_catalog, new_catalog = json.loads(before[1]), json.loads(after[1])
+    old_sequences = {r[1]: r[2] for r in old_catalog.pop("sequences")}
+    new_sequences = {r[1]: r[2] for r in new_catalog.pop("sequences")}
+    assert old_catalog == new_catalog
+    assert old_sequences.keys() == new_sequences.keys()
+    delta = {name: (new_sequences[name] or 0) - (old_sequences[name] or 0) for name in old_sequences}
+    assert {name: value for name, value in delta.items() if value} == {
+        "experiment_events_event_id_seq": 2,
+        "alert_log_id_seq": 1,
+    }
+    # Rows/catalog are restored; consumed sequence values are recorded, never rewound.
+    record_property("custody_before_sha256", hashlib.sha256(json.dumps(before).encode()).hexdigest())
+    record_property("custody_after_sha256", hashlib.sha256(json.dumps(after).encode()).hexdigest())
+    record_property("custody_rows_catalog_unchanged", "true")
+    record_property("sequence_deltas", json.dumps(delta, sort_keys=True))
+    record_property("public_rowsets", len(json.loads(before[0])))
+    record_property("sequences", len(old_sequences))
+    record_property("delivery", json.dumps(delivery.report(), sort_keys=True))

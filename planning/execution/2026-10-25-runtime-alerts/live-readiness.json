@@ -1,0 +1,35 @@
+{
+  "captured_at": "2026-10-25T12:53:33.156534+00:00",
+  "workers": [
+    {
+      "mode": "lifecycle",
+      "ready": true,
+      "reason": "capability_off",
+      "consecutive_failures": 0,
+      "fresh": true,
+      "capability_enabled": false,
+      "active_experiment_configured": false,
+      "deployment": "experiment-v2-lifecycle"
+    },
+    {
+      "mode": "selector",
+      "ready": true,
+      "reason": "capability_off",
+      "consecutive_failures": 0,
+      "fresh": true,
+      "capability_enabled": false,
+      "active_experiment_configured": false,
+      "deployment": "experiment-v2-selector"
+    },
+    {
+      "mode": "freezer",
+      "ready": true,
+      "reason": "capability_off",
+      "consecutive_failures": 0,
+      "fresh": true,
+      "capability_enabled": false,
+      "active_experiment_configured": false,
+      "deployment": "experiment-v2-freezer"
+    }
+  ]
+}

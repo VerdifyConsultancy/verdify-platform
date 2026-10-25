@@ -1,0 +1,26 @@
+{
+  "method": "Slack connector slack_read_thread",
+  "captured_at": "2026-10-25T13:09:38.324120+00:00",
+  "channel": "C0ANVVAPLD6",
+  "thread_ts": "1792933607.854899",
+  "parent": {
+    "author": "Iris",
+    "bot_id": "B0ANY7P8PR6",
+    "message_ts": "1792933607.854899",
+    "condition": "facility_emergency_hold",
+    "synthetic_label_verified": true
+  },
+  "replies": [
+    {
+      "author": "Iris",
+      "bot_id": "B0ANY7P8PR6",
+      "message_ts": "1792933613.111109",
+      "resolution_verified": true,
+      "synthetic_label_verified": true
+    }
+  ],
+  "reply_count": 1,
+  "pagination_complete": true,
+  "independently_read_back": true,
+  "prior_sender_history_route": "HTTPError preserved separately; connector readback succeeds"
+}
