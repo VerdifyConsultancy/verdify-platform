@@ -16,6 +16,7 @@ historical audits and original membership remain intact.
 - Correct native #1009's closed network#77 predecessor to open#555. Only its exact
   passive OTA/API path output is required; unrelated #555 work is not imported.
   Remove completed agents#4470 from #1001's blocker list; retain its custody history.
+  Match #390's live parent #775, replacing closed historical parent #644.
 - Execute the next **four private negative SQL/alert cases** for #587/#639 through
   the existing admitted native CI path. Candidate manifest: **17 mandatory cases,
   10 of16 SQL reasons**. Six reasons remain explicitly unexercised. No real Slack
