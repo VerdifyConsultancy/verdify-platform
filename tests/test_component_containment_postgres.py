@@ -233,7 +233,28 @@ def test_own_login_locked_or_armed_readiness_denial(containment, status, record_
     assert_custody_unchanged(query, before, record_property)
 
 
+@pytest.mark.parametrize(
+    "reason,severity,synthetic_state",
+    [
+        ("baseline_recovery_in_progress", "warning", "admission_state='baseline_recovery'"),
+        ("baseline_artifact_missing", "critical", "component_enabled=true"),
+        ("terminal_experiment_capability_enabled", "critical", "status='aborted', component_enabled=true"),
+        ("completed_with_incomplete_outcomes", "critical", "status='completed'"),
+        ("open_admission_without_current_work", "critical", "admission_state='open'"),
+    ],
+    ids=["baseline_recovery", "baseline_missing", "terminal_enabled", "incomplete_outcomes", "open_without_work"],
+)
+def test_additional_ops_alert_capture_lifecycle(containment, record_property, reason, severity, synthetic_state):
+    # Privileged synthetic state setup deliberately does not claim an admitted
+    # runtime transition, actual exposure or real sender receipt.
+    _exercise_ops_alert(containment, record_property, (reason, severity, synthetic_state))
+
+
 def test_facility_hold_alert_native_projection_lifecycle(containment, record_property):
+    _exercise_ops_alert(containment, record_property)
+
+
+def _exercise_ops_alert(containment, record_property, scenario=None):
     """Current ops projection; synthetic core-schema condition and safe closure.
 
     Alert storage is an explicit column facade. The synthetic authorization
@@ -267,7 +288,27 @@ def test_facility_hold_alert_native_projection_lifecycle(containment, record_pro
         title text, summary text, runbook_url text, steps text[], is_active boolean)""")
     before = snapshot(query)
     socket_dir = query("SHOW unix_socket_directories")
-    delivery = FixtureDelivery(ROOT)
+    if scenario is None:
+        delivery = FixtureDelivery(ROOT)
+    else:
+        # This lane cannot read relay authorization or invoke the real sender.
+        class CaptureOnly:
+            prefix = "[NONPRODUCTION SYNTHETIC CAPTURE ONLY] "
+
+            def __init__(self):
+                self.messages = []
+                self.receipts = []
+
+            def __call__(self, channel, text, *, thread_ts=None):
+                assert len(self.messages) < 2
+                self.messages.append({"channel": channel, "text": text, "thread_ts": thread_ts})
+                self.receipts.append("0.587639")
+                return self.receipts[-1]
+
+            def report(self):
+                return {"live": False, "messages": self.messages, "receipts": self.receipts}
+
+        delivery = CaptureOnly()
 
     async def exercise():
         conn = await asyncpg.connect(
@@ -281,14 +322,21 @@ def test_facility_hold_alert_native_projection_lifecycle(containment, record_pro
         tx = conn.transaction()
         await tx.start()
         try:
-            await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
-            await conn.fetchval(
-                "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'emergency_hold','synthetic-ci','not-physical')",
-                EXP,
-            )
-            await conn.execute("RESET ROLE")
+            if scenario is None:
+                await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
+                await conn.fetchval(
+                    "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'emergency_hold','synthetic-ci','not-physical')",
+                    EXP,
+                )
+                await conn.execute("RESET ROLE")
+                expected_reason, expected_severity = "facility_emergency_hold", "critical"
+            else:
+                expected_reason, expected_severity, state_sql = scenario
+                await conn.execute("SELECT set_config('verdify.experiment_v2_transition','on',true)")
+                await conn.execute(f"UPDATE control_experiments SET {state_sql} WHERE experiment_id='{EXP}'")
             row = await conn.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1::uuid", EXP)
-            assert row["alert_reason"] == "facility_emergency_hold" and row["alert_severity"] == "critical"
+            assert row["alert_reason"] == expected_reason and row["alert_severity"] == expected_severity
+            record_property("ops_reason", expected_reason)
 
             async def cycle():
                 return await component_experiment_alert_cycle(
@@ -301,6 +349,20 @@ def test_facility_hold_alert_native_projection_lifecycle(containment, record_pro
 
             assert await cycle() == {"new": 1, "escalated": 0, "resolved": 0, "suppressed": 0}
             assert not any((await cycle()).values()) and len(delivery.messages) == 1
+            assert expected_reason.replace("_", " ") in delivery.messages[0]["text"]
+            if scenario is not None:
+                # Remove only the declared private precondition, then use the
+                # real yielded-authority closure. This is not physical recovery.
+                await conn.execute("SELECT set_config('verdify.experiment_v2_transition','on',true)")
+                await conn.execute(
+                    f"UPDATE control_experiments SET status='draft', component_enabled=false WHERE experiment_id='{EXP}'"
+                )
+                await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
+                await conn.fetchval(
+                    "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'emergency_hold','synthetic-ci','not-physical')",
+                    EXP,
+                )
+                await conn.execute("RESET ROLE")
             await conn.execute("SET LOCAL ROLE verdify_experiment_v2_lifecycle_login")
             await conn.fetchval(
                 "SELECT experiment_id FROM fn_experiment_v2_record_facility_safe_closure($1::uuid,$2,$3,'synthetic-ci')",

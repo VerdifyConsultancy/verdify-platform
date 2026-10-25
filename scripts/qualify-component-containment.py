@@ -14,7 +14,17 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-EXPECTED_CASES = {
+ADDITIONAL_ALERT_CASES = {
+    f"test_additional_ops_alert_capture_lifecycle[{name}]"
+    for name in (
+        "baseline_recovery",
+        "baseline_missing",
+        "terminal_enabled",
+        "incomplete_outcomes",
+        "open_without_work",
+    )
+}
+EXPECTED_CASES = ADDITIONAL_ALERT_CASES | {
     "test_own_login_locked_or_armed_readiness_denial[locked]",
     "test_own_login_locked_or_armed_readiness_denial[armed]",
     "test_facility_hold_alert_native_projection_lifecycle",
@@ -165,7 +175,8 @@ def main():
                     and (
                         c["custody"].get("custody_before_sha256") == c["custody"].get("custody_after_sha256")
                         or (
-                            c["name"] == "test_facility_hold_alert_native_projection_lifecycle"
+                            c["name"]
+                            in ADDITIONAL_ALERT_CASES | {"test_facility_hold_alert_native_projection_lifecycle"}
                             and c["custody"].get("custody_rows_catalog_unchanged") == "true"
                             and {k: v for k, v in json.loads(c["custody"]["sequence_deltas"]).items() if v}
                             == {"experiment_events_event_id_seq": 2, "alert_log_id_seq": 1}
