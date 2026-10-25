@@ -6,6 +6,7 @@ Later physical-proof/recovery migrations are outside this first fixture phase.
 """
 
 import asyncio
+import hashlib
 import json
 import os
 import subprocess
@@ -93,7 +94,17 @@ def snapshot(query):
     return rows, catalog
 
 
-def test_feature_off_precedes_all_store_and_transport_access(containment, monkeypatch):
+def assert_custody_unchanged(query, before, record_property):
+    after = snapshot(query)
+    for label, value in (("before", before), ("after", after)):
+        raw = json.dumps(value, separators=(",", ":")).encode()
+        record_property(f"custody_{label}_sha256", hashlib.sha256(raw).hexdigest())
+    record_property("public_rowsets", len(json.loads(before[0])))
+    record_property("sequences", len(json.loads(before[1])["sequences"]))
+    assert after == before
+
+
+def test_feature_off_precedes_all_store_and_transport_access(containment, monkeypatch, record_property):
     import tasks.component_experiment as component
 
     for name in ("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "VERDIFY_ACTIVE_EXPERIMENT_ID", "VERDIFY_POLICY_VECTOR_MODE"):
@@ -110,11 +121,11 @@ def test_feature_off_precedes_all_store_and_transport_access(containment, monkey
     assert result.disposition == "idle"
     assert result.setter_calls == 0
     assert result.reason == "component_capability_off"
-    assert snapshot(containment) == before
+    assert_custody_unchanged(containment, before, record_property)
 
 
 @pytest.mark.parametrize("status", ["locked", "armed"])
-def test_populated_locked_or_armed_cannot_reopen_readiness(containment, status):
+def test_populated_locked_or_armed_cannot_reopen_readiness(containment, status, record_property):
     query = containment
     # Privileged synthetic precondition only: no fabricated production approval,
     # design lock or accepted runtime-authentication evidence.
@@ -132,10 +143,10 @@ def test_populated_locked_or_armed_cannot_reopen_readiness(containment, status):
         IF NOT blocked THEN RAISE EXCEPTION 'locked/armed readiness reopened'; END IF;
         END $case$; SELECT 'denied';""")
     assert result == "denied"
-    assert snapshot(query) == before
+    assert_custody_unchanged(query, before, record_property)
 
 
-def test_emergency_hold_revokes_runtime_authority(containment):
+def test_emergency_hold_revokes_runtime_authority(containment, record_property):
     query = containment
     query(f"SELECT experiment_id FROM fn_experiment_v2_set_admission('{EXP}','emergency_hold','fixture','synthetic');")
     before = snapshot(query)
@@ -145,10 +156,10 @@ def test_emergency_hold_revokes_runtime_authority(containment):
     assert row["admission_state"] == "emergency_hold"
     assert row["authority_hold_required"] is False
     assert row["rescue_authorized"] is False
-    assert snapshot(query) == before
+    assert_custody_unchanged(query, before, record_property)
 
 
-def test_populated_blinded_view_retains_outcome_without_mapping_access(containment):
+def test_populated_blinded_view_retains_outcome_without_mapping_access(containment, record_property):
     query = containment
     assignment = "58763900-0000-4000-8000-000000000002"
     query(f"""INSERT INTO control_arm_resolutions
@@ -185,4 +196,4 @@ def test_populated_blinded_view_retains_outcome_without_mapping_access(containme
         END $case$; SELECT 'denied';""")
         == "denied"
     )
-    assert snapshot(query) == before
+    assert_custody_unchanged(query, before, record_property)

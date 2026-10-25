@@ -31,6 +31,7 @@ spec:
     metadata:
       annotations:
         verdify.ai/storage-contract: portable-rwo-recreate-v1
+        verdify.ai/placement-verification: issue-1076-20261025
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: lab-cache-origin

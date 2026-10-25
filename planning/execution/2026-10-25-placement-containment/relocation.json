@@ -1,0 +1,45 @@
+{
+  "operation": "verdify-1076-20261025",
+  "started_at": "2026-10-25T11:30:00.939322+00:00",
+  "success": true,
+  "writer_before": {
+    "uid": "2d505c77-7614-4513-964b-894f296a11aa",
+    "name": "verdify-ingestor-65489d58fc-6j9xr",
+    "restarts": [
+      [
+        "ingestor",
+        0
+      ]
+    ]
+  },
+  "claim_uid": "1bd6ffec-7246-4e15-b080-287a9cf37418",
+  "old_pod": {
+    "name": "verdify-lab-cache-origin-765dfcdd5d-jmw5v",
+    "uid": "6e3c7d38-00e7-45f3-bab4-b382665420f9",
+    "node": "vm-k3s-node5"
+  },
+  "cordoned_at": "2026-10-25T11:30:02.873430+00:00",
+  "delete_submitted_at": "2026-10-25T11:30:03.068315+00:00",
+  "new_pod": {
+    "name": "verdify-lab-cache-origin-765dfcdd5d-g2snk",
+    "uid": "b76584c3-cff7-474c-b0ad-db22c7fb33aa",
+    "node": "vm-k3s-node7",
+    "phase": "Running",
+    "deleting": false,
+    "ready": true
+  },
+  "ready_at": "2026-10-25T11:33:09.191829+00:00",
+  "relocation_seconds": 186.701,
+  "uncordoned_at": "2026-10-25T11:33:09.605691+00:00",
+  "writer_after": {
+    "uid": "2d505c77-7614-4513-964b-894f296a11aa",
+    "name": "verdify-ingestor-65489d58fc-6j9xr",
+    "restarts": [
+      [
+        "ingestor",
+        0
+      ]
+    ]
+  },
+  "finished_at": "2026-10-25T11:33:09.880275+00:00"
+}

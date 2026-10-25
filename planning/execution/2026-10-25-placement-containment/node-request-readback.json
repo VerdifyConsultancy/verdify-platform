@@ -1,0 +1,22 @@
+[
+  {
+    "node": "vm-k3s-node4",
+    "requested_cpu": "39035m",
+    "requested_memory": "68377Mi"
+  },
+  {
+    "node": "vm-k3s-node5",
+    "requested_cpu": "31",
+    "requested_memory": "56733Mi"
+  },
+  {
+    "node": "vm-k3s-node6",
+    "requested_cpu": "28540m",
+    "requested_memory": "71952Mi"
+  },
+  {
+    "node": "vm-k3s-node7",
+    "requested_cpu": "27280m",
+    "requested_memory": "68846Mi"
+  }
+]

@@ -124,7 +124,18 @@ def main():
         junit = output / "junit.xml"
         try:
             result = subprocess.run(
-                [".venv/bin/python", "-m", "pytest", "-q", "-p", "no:cacheprovider", selected, f"--junitxml={junit}"],
+                [
+                    ".venv/bin/python",
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "-p",
+                    "no:cacheprovider",
+                    "-o",
+                    "junit_family=xunit1",
+                    selected,
+                    f"--junitxml={junit}",
+                ],
                 env=env,
                 timeout=600,
             )
@@ -132,6 +143,7 @@ def main():
             report["cases"] = [
                 {
                     "name": case.attrib["name"],
+                    "custody": {p.attrib["name"]: p.attrib["value"] for p in case.findall("properties/property")},
                     "passed": not any(case.find(tag) is not None for tag in ("failure", "error", "skipped")),
                 }
                 for case in cases
@@ -140,7 +152,13 @@ def main():
                 result.returncode == 0
                 and len(cases) == len(EXPECTED_CASES)
                 and {c["name"] for c in report["cases"]} == EXPECTED_CASES
-                and all(c["passed"] for c in report["cases"])
+                and all(
+                    c["passed"]
+                    and c["custody"].get("custody_before_sha256")
+                    and c["custody"].get("custody_before_sha256") == c["custody"].get("custody_after_sha256")
+                    and int(c["custody"].get("public_rowsets", "0")) > 0
+                    for c in report["cases"]
+                )
             )
         finally:
             Path("component-containment-ci-report.json").write_text(json.dumps(report, indent=2) + "\n")
