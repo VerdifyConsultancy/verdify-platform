@@ -7,9 +7,16 @@ precondition. It keeps one device writer and the 12-command batch limit.
 ## Delivery boundary
 
 Merge and deploy the source and ingestor digest through the normal Verdify
-full-sync path. The new code is inert until an approval file is placed in the
-**running ingestor pod**. The state volume is `emptyDir`; a replacement pod
-loses its approval and stops. Never open another ESPHome session.
+full-sync path. Production mounts `/srv/verdify/state` from PVC
+`verdify-ingestor-state` (`overlays/prod/ingestor-state-volume.yaml`), so old
+approvals and halted-run receipts survive Pod replacement. A surviving file is
+not current authority: its source, Pod, session, generation and expiry bindings
+still apply. Never delete/reset a halted run or restart the writer to bypass it.
+
+Production's `VERDIFY_AUTONOMOUS_POLICY_STAGING=1` permits source-owned admission
+of a fresh ordinary policy when no active state or approval exists; it does not
+resume a halted run. The explicit approval/recovery procedures below retain
+separate custody and current-identity checks. Never open another ESPHome session.
 
 The dispatcher writes `/srv/verdify/state/writer-stage-preview.json` when any
 desired candidate exceeds 12 commands, whether it follows a reconnect, cfg

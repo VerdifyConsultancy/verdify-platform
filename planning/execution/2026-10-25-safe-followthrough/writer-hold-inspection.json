@@ -1,0 +1,198 @@
+{
+  "schema": "verdify.writer-hold-inspection/v1",
+  "observed_preview_at": "2026-10-25T14:01:39.326553+00:00",
+  "read_only": true,
+  "status": "halted",
+  "halt_reason": "unapproved candidate appeared",
+  "run_id": "0ae45182806445649458568603c32fdb",
+  "original_identity": {
+    "captured_at": "2026-10-19T13:31:12.207636+00:00",
+    "session_id": "798db793991340e8a9ac8b3e4c0344bd",
+    "pod": "verdify-ingestor-654648cdf6-94bwz",
+    "source_revision": "c386f834de7a1acbd1ad74300218ab7922cf6d4b",
+    "generation": 1
+  },
+  "current_identity": {
+    "captured_at": "2026-10-25T14:01:39.326553+00:00",
+    "session_id": "fa4ca7db72c541088e6be9c1331d888f",
+    "pod": "verdify-ingestor-65489d58fc-wbg2j",
+    "source_revision": "7a2b6a76adb86ee749ebaa1a70dc36f31acaff8d",
+    "generation": 5
+  },
+  "approval_expired_at": "2026-10-19T14:01:12.216346+00:00",
+  "completed_count": 12,
+  "staged_pending_count": 0,
+  "current_candidate_count": 14,
+  "current_candidate": [
+    [
+      "vpd_target_south",
+      0.89
+    ],
+    [
+      "vpd_target_west",
+      0.65
+    ],
+    [
+      "vpd_target_east",
+      0.85
+    ],
+    [
+      "vpd_target_center",
+      0.94
+    ],
+    [
+      "cool_stage2_over_high_f",
+      1.92
+    ],
+    [
+      "direct_wet_stress_vpd_margin_kpa",
+      0.05
+    ],
+    [
+      "min_fog_off_s",
+      78.0
+    ],
+    [
+      "min_fog_on_s",
+      57.0
+    ],
+    [
+      "mister_all_delay_s",
+      93.0
+    ],
+    [
+      "mister_all_kpa",
+      1.157
+    ],
+    [
+      "mister_engage_delay_s",
+      46.5
+    ],
+    [
+      "mister_engage_kpa",
+      0.9570000000000001
+    ],
+    [
+      "mister_pulse_gap_s",
+      45.0
+    ],
+    [
+      "mister_vpd_weight",
+      1.5
+    ]
+  ],
+  "all_completed_readbacks_equivalent_using_deployed_predicate": true,
+  "native_confirmed_requests": [
+    {
+      "parameter": "cold_vent_guard_delta_f",
+      "ts": "2026-10-19T13:31:12.257488+00:00",
+      "value": 8,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "cool_exit_hysteresis_f",
+      "ts": "2026-10-19T13:31:12.265546+00:00",
+      "value": 1.96,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "cool_stage2_over_high_f",
+      "ts": "2026-10-19T13:31:12.269475+00:00",
+      "value": 1.8975,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "direct_wet_stress_vpd_margin_kpa",
+      "ts": "2026-10-19T13:31:12.272852+00:00",
+      "value": 0.12,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "dwell_gate_ms",
+      "ts": "2026-10-19T13:31:12.278614+00:00",
+      "value": 270000,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "min_fog_on_s",
+      "ts": "2026-10-19T13:31:12.282744+00:00",
+      "value": 52.5,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "mister_vpd_weight",
+      "ts": "2026-10-19T13:31:12.288396+00:00",
+      "value": 1.3866666666666667,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "temp_hysteresis",
+      "ts": "2026-10-19T13:31:12.293632+00:00",
+      "value": 1.96,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "vent_prefer_dp_delta_f",
+      "ts": "2026-10-19T13:31:12.310779+00:00",
+      "value": 3,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "vent_prefer_temp_delta_f",
+      "ts": "2026-10-19T13:31:12.350127+00:00",
+      "value": 4,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "vpd_hysteresis",
+      "ts": "2026-10-19T13:31:12.354362+00:00",
+      "value": 0.20750000000000002,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    },
+    {
+      "parameter": "vpd_watch_dwell_s",
+      "ts": "2026-10-19T13:31:12.35769+00:00",
+      "value": 67.5,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-19T13:32:08.504903+00:00",
+      "expired_at": null
+    }
+  ],
+  "handoff_settled": false,
+  "physical_recovery_claim": false,
+  "mutations": []
+}
