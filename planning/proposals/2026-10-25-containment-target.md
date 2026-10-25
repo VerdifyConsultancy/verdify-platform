@@ -143,3 +143,10 @@ feature-off test then failed on a harness assertion using `.status` instead
 of ExecutorResult's actual `.disposition`. That assertion is corrected and
 explicitly checks zero setter calls. The suite still requires a complete
 successful native run.
+
+The five-case native private proof passed at `2c77dc20`. Final review then
+expanded custody from selected operational rows to every synthetic public
+rowset, catalog/ACL definitions, non-secret role attributes/memberships and
+sequence state, matching the approved proposal. The harness now requires the
+exact five-case manifest, rather than a minimum count. These additional
+custody assertions must pass in native CI before merging.

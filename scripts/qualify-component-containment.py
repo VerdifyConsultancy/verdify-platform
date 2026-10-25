@@ -14,6 +14,14 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+EXPECTED_CASES = {
+    "test_feature_off_precedes_all_store_and_transport_access",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+    "test_emergency_hold_revokes_runtime_authority",
+    "test_populated_blinded_view_retains_outcome_without_mapping_access",
+}
+
 
 def postgres_bin(workspace: Path, installed=Path("/usr/lib/postgresql/16/bin")) -> Path:
     if (installed / "initdb").is_file() and Path("/usr/share/postgresql/16/extension/pgcrypto.control").is_file():
@@ -87,6 +95,7 @@ def main():
         "production_acceptance": False,
         "historical_prefix_credit": False,
         "qualified": False,
+        "required_cases": sorted(EXPECTED_CASES),
     }
     selected = "tests/test_component_containment_postgres.py"
     report["fixture_sha256"] = hashlib.sha256(Path(selected).read_bytes()).hexdigest()
@@ -128,7 +137,10 @@ def main():
                 for case in cases
             ]
             report["qualified"] = (
-                result.returncode == 0 and len(cases) >= 4 and all(c["passed"] for c in report["cases"])
+                result.returncode == 0
+                and len(cases) == len(EXPECTED_CASES)
+                and {c["name"] for c in report["cases"]} == EXPECTED_CASES
+                and all(c["passed"] for c in report["cases"])
             )
         finally:
             Path("component-containment-ci-report.json").write_text(json.dumps(report, indent=2) + "\n")

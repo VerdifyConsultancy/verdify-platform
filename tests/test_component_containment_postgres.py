@@ -65,13 +65,32 @@ def containment(socket_pg):
 
 
 def snapshot(query):
-    return query("""SELECT jsonb_build_object(
-        'experiments',(SELECT jsonb_agg(to_jsonb(e)) FROM control_experiments e),
-        'work',(SELECT jsonb_agg(to_jsonb(w)) FROM experiment_v2_work w),
-        'events',(SELECT jsonb_agg(to_jsonb(e)) FROM experiment_events e),
-        'work_events',(SELECT jsonb_agg(to_jsonb(e)) FROM experiment_v2_work_events e),
-        'outbox',(SELECT jsonb_agg(to_jsonb(o)) FROM policy_delivery_outbox o),
-        'exposures',(SELECT jsonb_agg(to_jsonb(x)) FROM experiment_v2_exposures x))""")
+    """Every synthetic public rowset plus catalog, ACL, role and sequence custody."""
+    row_query = query("""SELECT 'SELECT jsonb_object_agg(name, digest) FROM (' ||
+        string_agg(format(
+        'SELECT %L AS name, encode(digest(coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), ''[]''::jsonb)::text, ''sha256''), ''hex'') AS digest FROM %I.%I r',
+        c.relname, n.nspname, c.relname), ' UNION ALL ' ORDER BY c.relname)
+        || ') rowsets' FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','p','m')""")
+    rows = query(row_query)
+    catalog = query("""SELECT jsonb_build_object(
+        'relations', (SELECT jsonb_agg(jsonb_build_array(c.oid,c.relname,c.relkind,c.relowner,c.relacl)
+            ORDER BY c.oid) FROM pg_class c WHERE c.relnamespace='public'::regnamespace),
+        'columns', (SELECT jsonb_agg(to_jsonb(a) ORDER BY a.attrelid,a.attnum)
+            FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid
+            WHERE c.relnamespace='public'::regnamespace),
+        'constraints', (SELECT jsonb_agg(jsonb_build_array(oid,pg_get_constraintdef(oid)) ORDER BY oid)
+            FROM pg_constraint WHERE connamespace='public'::regnamespace),
+        'functions', (SELECT jsonb_agg(jsonb_build_array(oid,proowner,proacl,
+            encode(digest(pg_get_functiondef(oid),'sha256'),'hex')) ORDER BY oid)
+            FROM pg_proc WHERE pronamespace='public'::regnamespace AND prokind<>'a'),
+        'roles', (SELECT jsonb_agg(jsonb_build_array(oid,rolname,rolsuper,rolinherit,
+            rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls) ORDER BY oid)
+            FROM pg_roles),
+        'memberships', (SELECT jsonb_agg(to_jsonb(m) ORDER BY m.roleid,m.member) FROM pg_auth_members m),
+        'sequences', (SELECT jsonb_agg(jsonb_build_array(c.oid,c.relname,pg_sequence_last_value(c.oid))
+            ORDER BY c.oid) FROM pg_class c WHERE c.relkind='S' AND c.relnamespace='public'::regnamespace))""")
+    return rows, catalog
 
 
 def test_feature_off_precedes_all_store_and_transport_access(containment, monkeypatch):
