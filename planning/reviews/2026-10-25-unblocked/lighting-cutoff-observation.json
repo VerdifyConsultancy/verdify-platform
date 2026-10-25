@@ -507,7 +507,7 @@
   "physical_light_output_or_dli_claim": false,
   "full_issue_acceptance": false,
   "limitations": [
-    "Both circuits had been ON over five hours before their ordinary cutoff; active min-on hold was not exercised.",
+    "Last recorded ON-to-OFF spans exceed five hours; physical continuity and history completeness are not independently established. No active min-on overlap is proved.",
     "Controller state/reason and relay reports are observations, not cryptographic flashed-binary proof or measured light output.",
     "Initial JSON line parser failed on PostgreSQL multiline formatting; raw query output parsed locally without a second history query."
   ]

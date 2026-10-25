@@ -23,7 +23,8 @@ historical audits and original membership remain intact.
   remain critical after synthetic facility closure; do not invent recovery to clear it.
 - #386 now has a genuine passive ordinary-cutoff receipt: main at October24
   **20:00 MDT**, grow at **22:00 MDT**, matching reasons, firmware decision epochs
-  and device-reported relay OFF. Both had been on over five hours. This does
+  and device-reported relay OFF. The last recorded ON transitions were over five hours earlier; physical continuity
+  and gap-free history are not independently established. This does
   **not** exercise an active minimum-on overlap or justify closing #386.
 - Reuse delivered #297 evaluator, #368 finite-probe correction, #410 consumer and
   #1081 field/release worksheet. Do not repeat their accepted software packets.
