@@ -35,5 +35,6 @@ not count as a present-day survey. Never fabricate a value to complete this shee
 - Writer hold remains a distinct recovery item. Do not release it to make a survey
   or release checklist appear green.
 
-Visit date: UNSCHEDULED. Operator: Jason. Reference meter: NOT YET VERIFIED.
+Visit date: DEFERRED — Jason answered "survey later" on 2026-10-25. Operator: Jason.
+Reference CO2 meter: NONE AVAILABLE, confirmed by Jason; #51 calibration remains blocked.
 Binary/recovery selection: PENDING. OTA window: NOT AUTHORIZED BY THIS PACKET.
