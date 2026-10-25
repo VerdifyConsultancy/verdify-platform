@@ -233,6 +233,184 @@ def test_own_login_locked_or_armed_readiness_denial(containment, status, record_
     assert_custody_unchanged(query, before, record_property)
 
 
+def _prepare_native_guard_work(query, *, phase):
+    """Prepare private inputs, never successful receipts or exposure authority."""
+    assert phase in {"shadow", "commissioning"}
+    work_id = "58763900-0000-4000-8000-000000000003"
+    bundle_id = "58763900-0000-4000-8000-000000000004"
+    query(f"""SELECT state_artifact_id FROM fn_experiment_v2_register_state(
+        '{EXP}','baseline',2::smallint,decode(repeat('11',32),'hex'),
+        decode(repeat('01',178),'hex'),'synthetic-ci/native-refusal');""")
+    if phase == "commissioning":
+        # This existing privileged-fixture pattern only selects which native
+        # guard is reached. It is not an approved production phase transition.
+        query(f"""SELECT set_config('verdify.experiment_v2_transition','on',false);
+            UPDATE control_experiments SET execution_phase='commissioning',
+                admission_state='open',component_enabled=true
+            WHERE experiment_id='{EXP}';""")
+    operation = "shadow_preview" if phase == "shadow" else "baseline_recovery"
+    purpose = "preview" if phase == "shadow" else "recovery"
+    query(f"""INSERT INTO experiment_v2_work
+        (work_id,experiment_id,execution_phase,operation_kind,target_profile,
+         target_state_content_sha256,revision_bundle_sha256,firmware_revision,
+         config_revision,registry_revision,grid_revision,lease_generation,
+         valid_range,expires_at,created_by,created_at)
+        SELECT '{work_id}',e.experiment_id,'{phase}','{operation}','baseline',
+            s.state_content_sha256,e.revision_bundle_sha256,e.firmware_revision,
+            e.config_revision,e.registry_revision,e.grid_revision,e.lease_generation,
+            tstzrange(now()-interval '2 minutes',now()+interval '1 hour','[)'),
+            now()+interval '1 hour','synthetic-ci/native-refusal',now()-interval '2 minutes'
+        FROM control_experiments e JOIN experiment_v2_state_artifacts s
+        USING(experiment_id,revision_bundle_sha256)
+        WHERE e.experiment_id='{EXP}' AND s.profile='baseline';
+        INSERT INTO experiment_v2_delivery_bundles
+            (bundle_id,experiment_id,work_id,device_id,purpose,started_by,started_at)
+        VALUES ('{bundle_id}','{EXP}','{work_id}','synthetic-no-device','{purpose}',
+            'synthetic-ci/native-refusal',now()-interval '2 minutes');
+        INSERT INTO experiment_v2_delivery_bundle_completions
+            (bundle_id,bundle_finished_at,completed_by,recorded_at)
+        VALUES ('{bundle_id}',now()-interval '110 seconds',
+            'synthetic-ci/native-refusal',now()-interval '100 seconds');""")
+    return work_id, bundle_id
+
+
+def _assert_no_positive_authority(query, record_property):
+    count = query("""SELECT
+        (SELECT count(*) FROM experiment_v2_approvals) +
+        (SELECT count(*) FROM experiment_v2_observation_epochs) +
+        (SELECT count(*) FROM experiment_v2_observation_receipts) +
+        (SELECT count(*) FROM experiment_v2_exposures) +
+        (SELECT count(*) FROM experiment_v2_runtime_generations)""")
+    assert count == "0"
+    record_property("positive_authority_rows", count)
+    assert query("SHOW session_replication_role") == "origin"
+    trigger_state = json.loads(
+        query("""SELECT jsonb_build_object(
+            'all_enabled',bool_and(t.tgenabled IN ('O','A')),
+            'sha256',encode(digest(jsonb_agg(jsonb_build_array(
+                t.oid,t.tgname,t.tgenabled,t.tgfoid,pg_get_triggerdef(t.oid))
+                ORDER BY t.oid)::text,'sha256'),'hex'))
+            FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+            WHERE c.relnamespace='public'::regnamespace""")
+    )
+    assert trigger_state["all_enabled"] is True
+    record_property("native_guards_enabled", "true")
+    return trigger_state["sha256"]
+
+
+async def _native_guard_connection(query, record_property):
+    import asyncpg
+
+    conn = await asyncpg.connect(
+        host=query("SHOW unix_socket_directories"),
+        port=55472,
+        database="postgres",
+        user="verdify_experiment_v2_component_executor_login",
+        timeout=5,
+        command_timeout=3,
+    )
+    try:
+        identity = await conn.fetchrow("SELECT current_user::text u,session_user::text s")
+        assert identity["u"] == identity["s"] == "verdify_experiment_v2_component_executor_login"
+        record_property("effective_login", identity["u"])
+        record_property("session_login", identity["s"])
+        replication_role = await conn.fetchval("SHOW session_replication_role")
+        assert replication_role == "origin"
+        record_property("executor_replication_role", replication_role)
+    except BaseException:
+        await conn.close(timeout=3)
+        raise
+    return conn
+
+
+def test_native_epoch_refuses_missing_runtime_generation(containment, record_property):
+    import asyncpg
+
+    query = containment
+    work_id, bundle_id = _prepare_native_guard_work(query, phase="shadow")
+    trigger_before = _assert_no_positive_authority(query, record_property)
+    before = snapshot(query)
+
+    async def exercise():
+        conn = await _native_guard_connection(query, record_property)
+        try:
+            observed_at = await conn.fetchval("SELECT (clock_timestamp()-interval '1 second') AT TIME ZONE 'UTC'")
+            observations = json.dumps(
+                [
+                    {"wire_id": i, "observed_at": observed_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
+                    for i in range(1, 50)
+                    if i != 6
+                ]
+            )
+            # Complete synthetic inputs reach the generation guard; none is
+            # accepted as a successful current-grid or physical observation.
+            with pytest.raises(asyncpg.RaiseError) as refused:
+                await conn.fetchval(
+                    """SELECT receipt_id FROM fn_experiment_v2_record_observation_epoch(
+                        $1::uuid,$2::uuid,$3::uuid,
+                        '58763900-0000-4000-8000-000000000005'::uuid,
+                        decode(repeat('01',178),'hex'),$4::jsonb,
+                        'synthetic-fw','synthetic-cfg','synthetic-registry','synthetic-grid',
+                        0::bigint,0::bigint,'synthetic-ci/native-refusal')""",
+                    EXP,
+                    work_id,
+                    bundle_id,
+                    observations,
+                )
+            assert refused.value.sqlstate == "P0001"
+            assert refused.value.message == "epoch writer/connection generations are not current"
+            record_property("native_guard_refusal", refused.value.message)
+            record_property("native_refusal_sqlstate", refused.value.sqlstate)
+        finally:
+            await conn.close(timeout=3)
+
+    asyncio.run(exercise())
+    record_property("synthetic_precondition_only", "true")
+    record_property("owner_set_negative_control_precondition", "false")
+    trigger_after = _assert_no_positive_authority(query, record_property)
+    record_property("trigger_custody_before_sha256", trigger_before)
+    record_property("trigger_custody_after_sha256", trigger_after)
+    assert trigger_after == trigger_before
+    assert_custody_unchanged(query, before, record_property)
+
+
+def test_native_exposure_refuses_missing_observation_receipts(containment, record_property):
+    import asyncpg
+
+    query = containment
+    work_id, _bundle_id = _prepare_native_guard_work(query, phase="commissioning")
+    trigger_before = _assert_no_positive_authority(query, record_property)
+    before = snapshot(query)
+
+    async def exercise():
+        conn = await _native_guard_connection(query, record_property)
+        try:
+            with pytest.raises(asyncpg.RaiseError) as refused:
+                await conn.fetchval(
+                    """SELECT fn_experiment_v2_open_exposure(
+                        $1::uuid,$2::uuid,'synthetic-no-device','synthetic-ci/native-refusal')""",
+                    EXP,
+                    work_id,
+                )
+            assert refused.value.sqlstate == "P0001"
+            assert (
+                refused.value.message == "exposure requires two exact complete source epochs at least 30 seconds apart"
+            )
+            record_property("native_guard_refusal", refused.value.message)
+            record_property("native_refusal_sqlstate", refused.value.sqlstate)
+        finally:
+            await conn.close(timeout=3)
+
+    asyncio.run(exercise())
+    record_property("synthetic_precondition_only", "true")
+    record_property("owner_set_negative_control_precondition", "true")
+    trigger_after = _assert_no_positive_authority(query, record_property)
+    record_property("trigger_custody_before_sha256", trigger_before)
+    record_property("trigger_custody_after_sha256", trigger_after)
+    assert trigger_after == trigger_before
+    assert_custody_unchanged(query, before, record_property)
+
+
 @pytest.mark.parametrize(
     "reason,severity,synthetic_state",
     [

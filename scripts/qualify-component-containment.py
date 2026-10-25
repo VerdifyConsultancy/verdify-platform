@@ -42,16 +42,26 @@ UNEXERCISED_OPS_REASONS = {
     "open_exposure_observation_stale",
     "open_exposure_state_mismatch",
 }
-EXPECTED_CASES = ADDITIONAL_ALERT_CASES | {
-    "test_own_login_locked_or_armed_readiness_denial[locked]",
-    "test_own_login_locked_or_armed_readiness_denial[armed]",
-    "test_facility_hold_alert_native_projection_lifecycle",
-    "test_feature_off_precedes_all_store_and_transport_access",
-    "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
-    "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
-    "test_emergency_hold_revokes_runtime_authority",
-    "test_populated_blinded_view_retains_outcome_without_mapping_access",
+NATIVE_GUARD_REFUSALS = {
+    "test_native_epoch_refuses_missing_runtime_generation": "epoch writer/connection generations are not current",
+    "test_native_exposure_refuses_missing_observation_receipts": (
+        "exposure requires two exact complete source epochs at least 30 seconds apart"
+    ),
 }
+EXPECTED_CASES = (
+    ADDITIONAL_ALERT_CASES
+    | {
+        "test_own_login_locked_or_armed_readiness_denial[locked]",
+        "test_own_login_locked_or_armed_readiness_denial[armed]",
+        "test_facility_hold_alert_native_projection_lifecycle",
+        "test_feature_off_precedes_all_store_and_transport_access",
+        "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
+        "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+        "test_emergency_hold_revokes_runtime_authority",
+        "test_populated_blinded_view_retains_outcome_without_mapping_access",
+    }
+    | set(NATIVE_GUARD_REFUSALS)
+)
 
 
 def expected_sequence_deltas(case_name):
@@ -134,6 +144,7 @@ def main():
         "historical_prefix_credit": False,
         "qualified": False,
         "required_cases": sorted(EXPECTED_CASES),
+        "native_guard_refusals": NATIVE_GUARD_REFUSALS,
         "synthetic_ops_reason_coverage": {
             "exercised": sorted(set(ADDITIONAL_ALERT_REASON_BY_CASE.values()) | {"facility_emergency_hold"}),
             "retained_after_facility_closure": ["preexposure_state_mismatch"],
@@ -235,6 +246,30 @@ def main():
                                 if c["name"] == "test_additional_ops_alert_capture_lifecycle[preexposure_mismatch]"
                                 else "resolved_by_synthetic_facility_closure"
                             )
+                        )
+                    )
+                    and (
+                        c["name"] not in NATIVE_GUARD_REFUSALS
+                        or (
+                            c["custody"].get("native_guard_refusal") == NATIVE_GUARD_REFUSALS[c["name"]]
+                            and c["custody"].get("native_refusal_sqlstate") == "P0001"
+                            and c["custody"].get("synthetic_precondition_only") == "true"
+                            and c["custody"].get("positive_authority_rows") == "0"
+                            and c["custody"].get("native_guards_enabled") == "true"
+                            and c["custody"].get("executor_replication_role") == "origin"
+                            and c["custody"].get("owner_set_negative_control_precondition")
+                            == (
+                                "true"
+                                if c["name"] == "test_native_exposure_refuses_missing_observation_receipts"
+                                else "false"
+                            )
+                            and re.fullmatch(r"[0-9a-f]{64}", c["custody"].get("trigger_custody_before_sha256", ""))
+                            and c["custody"].get("trigger_custody_before_sha256")
+                            == c["custody"].get("trigger_custody_after_sha256")
+                            and c["custody"].get("effective_login")
+                            == c["custody"].get("session_login")
+                            == "verdify_experiment_v2_component_executor_login"
+                            and c["custody"].get("custody_before_sha256") == c["custody"].get("custody_after_sha256")
                         )
                     )
                     and int(c["custody"].get("public_rowsets", "0")) > 0
