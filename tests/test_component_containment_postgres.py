@@ -293,7 +293,7 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     else:
         # This lane cannot read relay authorization or invoke the real sender.
         class CaptureOnly:
-            prefix = "[NONPRODUCTION SYNTHETIC CAPTURE ONLY] "
+            prefix = "[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: "
 
             def __init__(self):
                 self.messages = []
