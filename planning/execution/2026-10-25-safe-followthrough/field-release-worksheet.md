@@ -17,7 +17,8 @@ not count as a present-day survey. Never fabricate a value to complete this shee
 
 - Select exact reviewed firmware source and signed archived output; bind source,
   configuration, toolchain, binary hashes and signature. Reuse #1009 software/tamper
-  receipts at their stated scope, and recheck network-infra#77's closed receipt.
+  receipts at their stated scope. Network-infra#77 closed by consolidation into
+  open #555; this is not a passive device ACL acceptance receipt.
 - Identify independently available recovery artifact and its actual prior recovery
   evidence. A matching filename, copied metadata or dummy-credential build is not
   qualified last-good. Preserve current operational binaries and rollback coordinates.

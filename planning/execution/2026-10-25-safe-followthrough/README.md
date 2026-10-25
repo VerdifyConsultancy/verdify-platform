@@ -10,7 +10,9 @@ writer's own tolerance predicate accepts all twelve current readbacks, including
 integer-second quantization of 52.5→52 and 67.5→67. No unknown pending stage was found.
 
 This is historical delivery and current readback evidence, not a completed handoff.
-The old approval expired October 19 at 08:01 MDT. It binds another source, Pod,
+Production state is PVC-backed, explaining survival across Pod replacement; the
+runbook has been corrected to match source and live mount evidence. The old
+approval expired October 19 at 08:01 MDT. It binds another source, Pod,
 session and generation. The current preview contains fourteen candidates, exceeding
 the twelve-command cap; no blind restore, state deletion, approval replacement,
 archive activation or setter was issued. Hold remains in place. Existing source
@@ -57,3 +59,8 @@ preparation/evidence only: no production manifest, application image, migration,
 credential, node scheduling or device connection change is needed. No production
 sync or ingestor replacement is required. Keep #587/#639 and physical/release issues
 open for their original remaining acceptance.
+
+The first native head ad3fc71a failed the five new cases at the qualification
+prefix guard before any delivery (eight existing cases passed). Head 7d76178a
+corrects only the synthetic label and preserves the production guard. Native
+validation of the corrected source must pass before acceptance.
