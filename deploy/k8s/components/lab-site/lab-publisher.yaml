@@ -73,16 +73,16 @@ spec:
           labels:
             app.kubernetes.io/part-of: verdify
             app.kubernetes.io/component: lab-publisher
+            verdify.ai/lab-cache-cohort: portable-rwo
         spec:
           restartPolicy: Never
           imagePullSecrets:
             - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
             - name: ghcr-jvallery-readonly
-          # STORAGE CO-LOCATION (load-bearing). The publisher and serving Lab
-          # pods co-mount one ReadWriteOnce cache, so a publisher Job must run
-          # in the serving Lab pod's hostname topology. If no Lab pod is
-          # available, leave the Job Pending instead of guessing a node or
-          # risking a cross-node multi-attach.
+          # The publisher and origin share one RWO attachment cohort. Each
+          # carries the matching label, so an origin replacement remains with
+          # an active publisher; the first cohort pod can bootstrap on an
+          # eligible worker when the previous cohort has fully stopped.
           affinity:
             podAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
