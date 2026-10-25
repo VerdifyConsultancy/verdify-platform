@@ -1,0 +1,376 @@
+[
+  {
+    "number": 16,
+    "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+    "category": "roll-up",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 31,
+    "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+    "category": "deferred refactor/oracle",
+    "priority": "P3",
+    "open_native_predecessors": [],
+    "next_action": "No concrete twin oracle question is selected. Retain absorbed #14/#606 immutable image/runtime/registry and consumer-matrix obligations. Pull only a selected useful oracle with self-diff PASS and injected-divergence FAIL; not a current pilot prerequisite."
+  },
+  {
+    "number": 45,
+    "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+    "category": "commissioned field inputs required",
+    "priority": "P1",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#398"
+    ],
+    "next_action": "After #398, commission every required soil/runoff channel against actual identity/calibration, then run supported feedback checks with before/after warning evidence. Unknown inputs cannot enable drip feedback or fertilizer."
+  },
+  {
+    "number": 51,
+    "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+    "category": "reference meter required",
+    "priority": "P3",
+    "open_native_predecessors": [],
+    "next_action": "Obtain a real reference NDIR meter before calibration; field-visit availability is not the blocker. Keep uncalibrated state."
+  },
+  {
+    "number": 52,
+    "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+    "category": "field observation available",
+    "priority": "P3",
+    "open_native_predecessors": [],
+    "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation."
+  },
+  {
+    "number": 75,
+    "title": "[C4][P2] Observability program: prove actionable health from source through device",
+    "category": "roll-up",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 297,
+    "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+    "category": "commissioned field inputs required",
+    "priority": "P1",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#45"
+    ],
+    "next_action": "S6 evaluator foundation delivered. Prepare the actual measured-target/source and alert-lifecycle adapter; keep unavailable without commissioned evidence. #45 gates drip skip/shrink and full physical acceptance."
+  },
+  {
+    "number": 298,
+    "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+    "category": "field observation available",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Use merged #1081 worksheet and source-prefilled IDs for one Jason-attended field survey; visit possible as needed. This shared estimate covers #751/#52/#412 observations; no CO2 meter currently available."
+  },
+  {
+    "number": 299,
+    "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+    "category": "qualified release/physical outcome required",
+    "priority": "P1",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#390"
+    ],
+    "next_action": "Reuse existing pulse logic and add only missing exact-boundary/manual-origin/restart min-off proof. Full re-fire/topology validation waits for #390 candidate/recovery evidence; retain requested pulse duration."
+  },
+  {
+    "number": 350,
+    "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+    "category": "roll-up",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 359,
+    "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+    "category": "roll-up",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 367,
+    "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+    "category": "qualified release/physical outcome required",
+    "priority": "P1",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#390"
+    ],
+    "next_action": "Document remaining single dwell authority/safety exceptions and include the merged eight-limit per-tick correction in #390. Reuse 84 actual-wrapper tests; whole-issue chatter/starvation/start-runtime acceptance waits for the actual release and observations."
+  },
+  {
+    "number": 368,
+    "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+    "category": "source preparation possible; release pending",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Prepare a focused shared jump/stuck semantic contract from actual histories, preserving delivered finite-probe correction; device delivery remains in a selected #390 release."
+  },
+  {
+    "number": 369,
+    "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+    "category": "deferred refactor/oracle",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#390"
+    ],
+    "next_action": "Inventory named #300/#326 end-to-end consumers only; removal waits for correctness delivery through #390. Record no-removal when evidence cannot prove a property dead."
+  },
+  {
+    "number": 370,
+    "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+    "category": "deferred refactor/oracle",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#367"
+    ],
+    "next_action": "After #367 authority semantics, capture current origin/reverse-conflict/restart/partial-delivery behavior before moving one duplicated decision into the pure resolver. No speculative policy refactor."
+  },
+  {
+    "number": 378,
+    "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+    "category": "predecessor/pilot required",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#785"
+    ],
+    "next_action": "Hold corridor widths stable until #785 fixed-target readout; later record no change, insufficient evidence or one bounded proposal with exact inverse. #410 night-anchor evidence alone does not authorize retuning."
+  },
+  {
+    "number": 386,
+    "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+    "category": "ready bounded observation",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Reuse October25 ordinary natural-cutoff receipt; wait for an eligible actual active-minimum-on boundary or separately scoped test. Do not toggle lights or repeat the broad policy query."
+  },
+  {
+    "number": 390,
+    "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+    "category": "qualified release/physical outcome required",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Assemble one exact candidate/topology/config/rollback packet containing delivered #985 and #973 source. Reuse native receipts; bind archived provenance, real recovery and predeclared heap/fragmentation/timing/reset/soak criteria absorbed from #428. Actual OTA and bake wait for a bounded attended safe window; compile/replay alone never qualifies last-good."
+  },
+  {
+    "number": 398,
+    "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+    "category": "commissioned field inputs required",
+    "priority": "P1",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#298"
+    ],
+    "next_action": "After #298, bind actual crop/substrate targets and source revision; append a supported ledgered correction with inverse, preserve valid operator values and verify config/DB agreement. Never edit applied migration 064 or enable irrigation from seed labels."
+  },
+  {
+    "number": 410,
+    "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+    "category": "ready bounded observation",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Read one genuinely new complete-day/natural scheduled-consumer receipt when present. Do not repeat accepted model cases, fill missing buckets or change control policy."
+  },
+  {
+    "number": 412,
+    "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+    "category": "field observation available",
+    "priority": "P3",
+    "open_native_predecessors": [],
+    "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation."
+  },
+  {
+    "number": 430,
+    "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+    "category": "roll-up",
+    "priority": "P1",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 434,
+    "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+    "category": "qualified release/physical outcome required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#299"
+    ],
+    "next_action": "After #299, qualify missing origin/reverse-conflict/calibration-negative cases. Actual wall feed also needs #298 field mapping and calibrated dose/flush/chemistry; automatic feed stays disabled."
+  },
+  {
+    "number": 581,
+    "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+    "category": "roll-up",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 587,
+    "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+    "category": "ready private qualification",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Qualify four additional capture-only SQL alert branches in the existing private CI lane; preserve guards, no new messages, and exact custody. This estimate covers the shared #639 fixture packet."
+  },
+  {
+    "number": 588,
+    "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+    "category": "predecessor/pilot required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#783",
+      "VerdifyConsultancy/verdify-platform#782",
+      "VerdifyConsultancy/verdify-platform#641"
+    ],
+    "next_action": "Wait on #641/#782/#783; use Jason's settled DR-47 GPT-6 Luna/xhigh identity in final compatibility/manifest preparation. Do not ask the model question again, silently inherit stale v2 defaults, freeze or draw before qualification."
+  },
+  {
+    "number": 639,
+    "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+    "category": "ready private qualification",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Share the #587 private fixture packet; retain21 authentic causal gaps, active executor/analyst/recovery and physical boundaries. Do not duplicate test hours or restore retired targets."
+  },
+  {
+    "number": 640,
+    "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+    "category": "predecessor/pilot required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#642"
+    ],
+    "next_action": "After #642, reconcile the first genuine assigned day, retain failed/null/reset/no-exposure outcomes and freeze export/backup custody with exact runtime identities."
+  },
+  {
+    "number": 641,
+    "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+    "category": "authentic inputs/physical safety required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#749",
+      "VerdifyConsultancy/verdify-platform#639",
+      "VerdifyConsultancy/verdify-platform#587"
+    ],
+    "next_action": "Keep draft #855 parked and nonmergeable. After #749/#587/#639, prepare current dormant successor diff/rollback and bind a fresh attended baseline-target-baseline proof, ending baseline-confirmed/component-off. No draw or launch follows from the proof."
+  },
+  {
+    "number": 642,
+    "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+    "category": "predecessor/pilot required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#588"
+    ],
+    "next_action": "After #588 and the separately selected launch boundary, bind exact lock identity and rollback packet for randomized day 1. No activation, lock or schedule is authorized by this audit."
+  },
+  {
+    "number": 749,
+    "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+    "category": "authentic inputs/physical safety required",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Preserve the sealed BLOCKED packet (4.86/5.04 F spreads over unchanged 4 F; six unmatched soil identities). Resolve real spread/identity lineage and obtain missing wetting measurements before one fresh source-bound readiness packet. The old selective-operation provenance issue was resolved; do not repeat that repair or waive physical criteria."
+  },
+  {
+    "number": 751,
+    "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+    "category": "field observation available",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation."
+  },
+  {
+    "number": 775,
+    "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+    "category": "roll-up",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete."
+  },
+  {
+    "number": 782,
+    "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+    "category": "authentic inputs/physical safety required",
+    "priority": "P2",
+    "open_native_predecessors": [],
+    "next_action": "Maintain authentic-input readiness; first winter window is Nov2 with Nov3 collection. Verify actual archived bytes/manifests then; do not synthesize a clock, target cohort or study day."
+  },
+  {
+    "number": 783,
+    "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+    "category": "authentic inputs/physical safety required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#639",
+      "VerdifyConsultancy/verdify-platform#587"
+    ],
+    "next_action": "After #587/#639, bind actual five-role LOGIN identities and authentic reachable stages; run the complete selector/freezer/analyst path twice and compare canonical hashes. Do not use owner scaffolding, SET ROLE or synthetic fixture output as authentic vertical acceptance."
+  },
+  {
+    "number": 784,
+    "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+    "category": "predecessor/pilot required",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#640"
+    ],
+    "next_action": "After #640, operate all locked assigned days with blinded exception/backup custody and final stopped admission. The 60-day seasonal pilot is not a five-day sprint deliverable."
+  },
+  {
+    "number": 785,
+    "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+    "category": "predecessor/pilot required",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#784"
+    ],
+    "next_action": "After #784, reveal once, independently reproduce and publish a bounded result. Preserve consolidated #786/#787/#379 comparator/resource/MPC decisions and genuine held-out evidence requirements, including no-benefit/inconclusive outcomes."
+  },
+  {
+    "number": 963,
+    "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+    "category": "qualified release/physical outcome required",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "VerdifyConsultancy/verdify-platform#390"
+    ],
+    "next_action": "The formatter/detail fix is merged in #973. Bind actual firmware/ingestor/HA-consumer compatibility, length-error recovery observation, exact deployed binary and qualified rollback into #390. Do not close from native string-length tests."
+  },
+  {
+    "number": 1001,
+    "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+    "category": "deferred external owner output",
+    "priority": "P3",
+    "open_native_predecessors": [
+      "jvallery/network-infra#602",
+      "jvallery/agents#4468"
+    ],
+    "next_action": "Deferred exact-owner follow-through: agents#4468 and network#602/#600 outputs; completed central Secret custody is no longer an active blocker."
+  },
+  {
+    "number": 1009,
+    "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+    "category": "deferred external owner output",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "jvallery/network-infra#555 (exact passive output)"
+    ],
+    "next_action": "Deferred physical cutover; consume passive matrix/ACL output from network#555, preserve existing signing receipts and select a #390 recovery packet. No new ESP32 connection."
+  },
+  {
+    "number": 1010,
+    "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
+    "category": "deferred external owner output",
+    "priority": "P2",
+    "open_native_predecessors": [
+      "jvallery/network-infra#743"
+    ],
+    "next_action": "Deferred real-client-IP proof after network#743 trusted-proxy output; successful tool logging already delivered."
+  }
+]

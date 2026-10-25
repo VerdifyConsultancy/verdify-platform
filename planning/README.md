@@ -1,3 +1,5 @@
+[Current October25 execution map](reviews/2026-10-25-unblocked/README.md): **41 open issues**, a canonical plan/queue reconciled with GitHub, the next private qualification packet, actual passive lighting evidence and exact remaining owner/physical/input gates. Earlier audits below are dated history.
+
 [The October20 full open-issue audit and next sprint](reviews/2026-10-20-sprint-audit/README.md) supersedes the earlier execution allocations: **62 open issues**, all individually assessed; **S6 October21–27** selects six bounded packets totaling **25–34h** in a 40h budget. It incorporates the current security/ownership intake, settled Jason decisions and #245 no-cutover closure. See the full register and native dependency snapshot; earlier reviews below remain dated evidence.
 
 [The October20 consolidation](reviews/2026-10-20-consolidation/README.md) closes six roll-up or decision layers as not planned: #14→#31, #786/#787/#379→#785, #428→#390 and #750→#581/#641. Their outstanding acceptance clauses move to the canonical issues. The canonical graph is now **94 records,41 open in the execution plan,68 blocking edges**. Earlier counts below remain dated baselines.

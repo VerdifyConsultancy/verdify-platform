@@ -1,8 +1,8 @@
 {
   "version": 2,
   "campaign": "greenhouse-evidence-2026-09-05",
-  "source_revision": "01735457467fa1fd8918641dfa48cd583e092896",
-  "snapshot_date": "2026-10-20",
+  "source_revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+  "snapshot_date": "2026-10-25",
   "original_open_issues": [
     14,
     16,
@@ -145,7 +145,7 @@
       "title": "Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
       "stage": "C0",
       "kind": "epic",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Evidence/data lead",
       "parent": null,
@@ -398,7 +398,7 @@
       "title": "Complete the bounded AI-admission pilot and publish a decision",
       "stage": "C2",
       "kind": "epic",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Research/release lead",
       "parent": "775",
@@ -504,7 +504,7 @@
       "title": "Qualify current three-probe readiness and explicit safety dependencies",
       "stage": "C1",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "M",
       "owner_role": "Runtime/release lead",
       "parent": "581",
@@ -543,7 +543,7 @@
       "title": "Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
       "stage": "C1",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Runtime/release lead",
       "parent": "581",
@@ -585,7 +585,7 @@
       "title": "Qualify the component executor, exclusivity and recovery behavior in containment",
       "stage": "C1",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Runtime/release lead",
       "parent": "581",
@@ -595,7 +595,7 @@
       "how": [
         "Reuse the accepted actual fog/vent native matrix:3 compiles,56 positives and8 completed causal negatives with full output/source custody. Reuse completed P2 fragment-bound input/state refusal and remaining-consumer report; do not repeat accepted synthetic proof as historical qualification.",
         "Extend real row-wise consumer coverage only with authentic upstream/persistent-state inputs and complete recovery/negative cases; then bind any legitimately qualified order/grid. Preserve historical accepted-risk bytes and 27/48 UNPROVEN until that proof exists.",
-        "Reuse accepted role/bundle/lifecycle/alert evidence. Qualify remaining native writer and failure cases only where authentic preconditions exist; keep source, contained and physical scopes distinct."
+        "Use the existing private CI fixture for negative SQL/alert cases and retain explicit unexercised reasons. Active full-prefix/exclusivity/recovery requires genuine source/role/preconditions; do not synthesize the21 causal gaps or resurrect the retired rehearsal namespace."
       ],
       "acceptance": [
         "No partial-prefix exposure; generation, freshness and full-48 confirmation enforced by actual executor/state path.",
@@ -610,7 +610,7 @@
         "tests",
         "research/planner-efficacy"
       ],
-      "baseline": "P1 native qualification passed at exact sourcee844a409:3 compiles,56 positives and8 completed deleted/inverted-consumer behavior failures; all74 process records and complete outputs match hashes. Workflow3c602c25-3934-485c-9039-3d0517a61c74 and all4 Pods/containers completed successfully without retries/restarts. P2 source/input admission is complete. This is a named synthetic actual-source consumer proof; historical prefix remains27/48 UNPROVEN and all21 missing field propagation/recovery gaps remain.\n\nCurrent execution allocation: S3B. Next action: P1 native packet and P2 source/input admission are complete within scope. Reuse3 compiles/56 positives/8 completed causal negatives and strict refusal report; obtain a legitimate causal pre-tick state producer/reconstruction and prove row-wise propagation/recovery before prefix credit. Historical prefix stays27/48 UNPROVEN; do not repeat the accepted synthetic matrix.\n\nEvidence: planning/reviews/2026-10-18-s3b-execution/README.md. Original acceptance, state and completion edges remain unchanged.\n\nOctober 20 full audit: blocked-input. Source/synthetic packets #985/#986 are delivered; historical prefix remains 27/48 UNPROVEN. Obtain an authentic causal pre-tick state producer and row-wise propagation/counterfactual recovery proof for 21 gaps via admitted k3s execution. Do not rerun synthetic matrices or recreate a retired rehearsal namespace by default. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25: #1080/#1081 authentication, private containment and source/live parity are accepted within scope. Historical prefix remains27/48 UNPROVEN with21 authentic causal-input gaps; no private negative fixture or captured alert grants active exposure, exclusivity, lease-loss/reconnect/recovery or physical credit. The next bounded packet expands capture-only native alert cases to17; it retains six explicit unexercised SQL reasons and all existing active/physical boundaries. The ordinary writer hold remains unchanged; no new device connection or node cordon is part of this work.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "No decision needed for bounded source diagnosis. If true full-coverage/HIL needs physical equipment, present that concrete scope later; do not silently renew the historical accepted-risk exception.",
@@ -622,7 +622,7 @@
       "title": "Qualify lifecycle authority and blinded monitoring in containment",
       "stage": "C1",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "M",
       "owner_role": "Runtime/release lead",
       "parent": "581",
@@ -630,9 +630,9 @@
       "what": "Qualify lifecycle authority and blinded monitoring in containment",
       "why": "Lifecycle and monitoring safety require exact actual-role boundaries and native condition/delivery/custody evidence. The expired-work alert and named lifecycle subset are now proven; remaining nonactuation, blinding and authority cases must stay explicit without repeating completed messages.",
       "how": [
-        "Reuse the published lifecycle and final named-alert receipts as accepted bounded scope; retain original failed/timeout attempts and consumed credential/message approvals.",
-        "Reuse the delivered six-clause residual map and update it only from new actual nonactuation, locked/armed, populated-blinding or named-condition proof. Admit genuine source/role/preconditions; avoid duplicate weak tests of the exhausted subset.",
-        "Prepare only an identified source repair or legitimately reachable missing case; physical full 48-field recovery/handoff stays in #641 and the completed two-message pair is not repeated."
+        "Reuse accepted #1080/#1081 and earlier actual-role/message receipts without repeating consumed sends.",
+        "Run the finite seventeen-case manifest in the existing private native CI lane, with exact current SQL and row/catalog/role/sequence custody; retain mismatches until genuine recovery.",
+        "Keep analyst own-LOGIN, authentic active authority and #641 physical proof as separate unfulfilled acceptance. Do not create experiment credentials, production surrogate targets or new Slack messages."
       ],
       "acceptance": [
         "Feature-off emits no experiment call; illegal readiness/phase transitions and emergency hold cannot actuate.",
@@ -646,7 +646,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "October 18 next-ready source cohort published an unchanged-acceptance per-clause map and actual source/role/precondition boundaries. Native prefix pilot remains27/48 UNPROVEN; no additional stateful lifecycle or message experiment was run. The prior ordinary-role installation/authentication and exactly two approved Slack messages remain complete, with original failures and same-attempt reconciliation retained. Feature-off/active emergency nonactuation, locked/armed no-reopen, populated blinding and other named-condition behavior remain unaccepted.\n\nPrior reviewed context: Actual lifecycle/executor authentication and bounded capability denials passed. The named lifecycle packet passed six denials and two admission transitions, then rolled back with all 29 genuine/synthetic rowsets and source/catalog custody unchanged and exactly events +2 across 77 sequences. Ordinary clone password installation and read-only LOGIN are now complete after explicit approval. The separately approved two-message component_experiment_integrity / expired_work_not_terminal route completed on f16a8604/image 53111f35 at 06:51:39 UTC: fire and same-thread resolution, deduplication, alert rollback and one retained cancellation event. Final f46ffe6d reconciliation proves both real sender confirmations, candidate completion and complete typed custody; all 7,950 genuine rows/29 relations and 12,425 alert rows are preserved, with only work events +1 and alert IDs +1 for this phase. Original bridge/release/collector failures remain failed after the second-reply timeout; no retry or resend occurred. The accepted unchanged-source subset is exhausted. Residual feature-off/nonactuation, locked/armed no-reopen, blinding and other named-condition criteria remain open. #641 owns physical recovery/handoff. The newer image is unpromoted; no full issue or full-database/restore acceptance is claimed. Evidence: planning/reviews/2026-10-17-s3-execution/587-lifecycle-authority-proof.md and 587-alert-delivery-proof.md.\n\nCurrent execution allocation: S3. Next action: Reuse the completed actual-LOGIN lifecycle and one delivered alert pair. Continue the per-clause nonactuation/blinding/named-condition map, joining #783 actual identities and authentic populated data only when legitimately reachable. Do not repeat exhausted denials, create another password route or send another message under the consumed approval.\n\nExecution review: planning/reviews/2026-10-18-execution/README.md. All original acceptance clauses and completion edges remain unchanged.\n\nOctober 20 full audit: blocked-input. Map only residual feature-off nonactuation, locked/armed no-reopen, blinding and named-alert clauses to actual supported LOGIN routes and populated preconditions. Reuse accepted lifecycle/executor denials and one alert receipt. With #992 ending rehearsal, resolve a supported retained target before new stateful qualification; do not fake authority or send messages from this audit. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25 accepted baseline: #1080/#1081 passed required PR and independent main CI. Thirteen mandatory private cases and five deployed duty LOGIN boundaries are qualified at their stated synthetic/read-only scope; the separately approved facility-hold fire/resolution was delivered once and consumed. Latest writer inspection proves twelve original requests confirmed, no later requests, preserved completed/untouched readbacks, and unchanged halted bytes; current fourteen-value policy still requires a fresh custody/admission handoff. This packet adds four candidate private negative branches (seventeen mandatory cases, ten of sixteen current SQL reasons) without new sends; accept them only with their exact PR/main CI receipt. Preexposure mismatch must remain critical after facility-safe closure, not be cleared by fabricated recovery. Analyst own-LOGIN, remaining stateful/physical acceptance and other real-message boundaries remain open. See planning/reviews/2026-10-25-unblocked/README.md.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None remains for the completed password installation or consumed two-message pair. Only request a new communication decision if a different concrete message test is necessary; current acceptance does not authorize extra sends.",
@@ -703,7 +703,7 @@
       "title": "Qualify the complete current-login selector-to-frozen-analysis path",
       "stage": "C1",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Runtime/release lead",
       "parent": "581",
@@ -1084,7 +1084,7 @@
       "priority": "P1",
       "effort": "L",
       "owner_role": "Platform lead",
-      "parent": "644",
+      "parent": "775",
       "depends_on": [
         "303",
         "419"
@@ -1196,7 +1196,7 @@
       "title": "Observability program: prove actionable health from source through device",
       "stage": "C4",
       "kind": "epic",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Platform lead",
       "parent": "775",
@@ -1286,12 +1286,12 @@
         "Exact source/config revision and rule reload are recorded; no inert CR or live split-brain experiment is used."
       ],
       "paths": [
-        "deploy/k8s/overlays/prod/writer-watchdog.yaml",
+        "planning/execution/2026-10-20-followthrough/evidence/998-replacement-rules-live-acceptance.json",
         "scripts",
         "tests",
         "docs"
       ],
-      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026: CLOSED \u2014 preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.\n\nOctober25 graph refresh: historical writer-watchdog manifest was retired under accepted #998. The source path now points to retained replacement-rule acceptance; the old filename remains historical, not a current deployment input.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1471,7 +1471,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "Reviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. PR905/ebef855 makes auto_enabled=false override min-on while ordinary solar cutoff completes min-on. Current main retains that condition and three causal lighting boundary regressions. October2 deployed-source/outside-window OFF agreement was recorded; it did not contain an eligible actual boundary/min-on event. The intended precedence is already defined. Climate replay is not lighting-toggle evidence, and closed #965 disabled API-route acceptance does not authenticate prior light-history durations. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: RELEASE. Next action: Reuse the existing source policy/tests, prepare a passive per-circuit boundary observation with exact timestamps and expected stop reasons, then record an eligible natural event. Reopen code work only if current evidence contradicts the implemented contract.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-observation. Prepare a passive per-circuit solar-boundary query and observe an eligible natural min-on/cutoff event with timestamps and stop reasons. Source and causal regressions are delivered; do not force relay changes merely to close the issue. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25 bounded passive lookup found ordinary natural cutoff transitions at October24 20:00 MDT (main) and22:00 MDT (grow), with matching firmware reason, decision epoch and device-reported relay OFF. The last recorded ON transitions precede those cutoffs by more than five hours; continuous physical ON/history completeness is not independently qualified, and an active minimum-on overlap is NOT established. Reported firmware620a218a contains the #905 fix; reported version/source history is not a flash-byte hash. Reuse this partial natural receipt; do not claim issue completion or force a toggle. See planning/reviews/2026-10-25-unblocked/lighting-cutoff-observation.json.\n\nReviewed October 18, 2026 against 83e148b60948d0c2328f8a22d819d481ff2c4ca6. PR905/ebef855 makes auto_enabled=false override min-on while ordinary solar cutoff completes min-on. Current main retains that condition and three causal lighting boundary regressions. October2 deployed-source/outside-window OFF agreement was recorded; it did not contain an eligible actual boundary/min-on event. The intended precedence is already defined. Climate replay is not lighting-toggle evidence, and closed #965 disabled API-route acceptance does not authenticate prior light-history durations. This review inspected source and retained evidence; it performed no fresh physical qualification.\n\nCurrent execution allocation: RELEASE. Next action: Reuse the existing source policy/tests, prepare a passive per-circuit boundary observation with exact timestamps and expected stop reasons, then record an eligible natural event. Reopen code work only if current evidence contradicts the implemented contract.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-observation. Prepare a passive per-circuit solar-boundary query and observe an eligible natural min-on/cutoff event with timestamps and stop reasons. Source and causal regressions are delivered; do not force relay changes merely to close the issue. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1506,11 +1506,12 @@
         "docs/runbooks",
         "scripts"
       ],
-      "baseline": "Accepted #670/#672/#382/#396/#643 receipts cover their bounded backup-artifact, supported ownership restore, persistent spool, alongside recovery/PITR/failover and production-role scopes. #977 is accepted and closed: Jason selected three replicas, owner decision A6 was delivered at storage-infra 55973ba5, and exact readbacks verified three healthy RW copies on distinct eligible workers with no pending rebuild. This supersedes the temporary two-replica policy. The 07:07 UTC runtime receipt still shows the existing verdify-db StatefulSet at 1/1 ready; production database authority has not moved to CNPG. Argo was Synced/Healthy at comparison 83e148b6, while its last actual operation remains 55285aaf, finished at 02:47:03 UTC. PR #982 merged canonical s3.vallery.net endpoint source at 83e148b6; this is not evidence of current rehearsal ObjectStore adoption, a new backup/restore or production HA. Historical #396 recovery timings and data checks remain reusable within their stated boundaries, with physical-host/NAS dependencies and production cutover RPO/RTO still explicit. Evidence: planning/reviews/2026-10-17-s3-execution/977-three-replicas-20261017.md, the accepted #396 handoff at b97176ad, PR #982 and the October 18 full-status runtime receipt.\n\nCurrent execution allocation: ROLLUP. Next action: Correct the roll-up to accepted #977 three-replica policy and completed bounded restore/spool/role evidence; refresh the residual failure-domain summary. Preserve PR #982 as merged endpoint source pending owner delivery verification, and keep #245 conditional without reopening accepted rehearsals or adding a new blanket gate.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-scoped. Refresh the single-StatefulSet failure-domain and restore/RTO plan after the no-CNPG decision. Prepare placement removal and a bounded reattach drill; coordinate node labels/capacity with proxmox-infrastructure. A cordon/pod deletion is a later attended operation, not an audit action. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Scoped placement/planned relocation and DB listener recovery accepted; subsequent rollout/failover scope is retained under #1076, not inferred as every failure mode.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/218 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
-      "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
-      "status": "open"
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation.",
+      "status": "closed",
+      "accepted": true
     },
     {
       "key": "670",
@@ -2069,7 +2070,7 @@
       "title": "Measure realized solar-night dry-out before changing the controller",
       "stage": "C6",
       "kind": "task",
-      "priority": "P1",
+      "priority": "P2",
       "effort": "L",
       "owner_role": "Control lead",
       "parent": "359",
@@ -2346,7 +2347,7 @@
       "what": "Provide the cheapest conservative soil-feedback loop: visible sustained saturation and bounded skip/shrink of an eligible scheduled drip.",
       "why": "Existing saturation_pct seeds were not evaluated and daily schedules can overwater pots already receiving incidental mist. This does not justify tuning thresholds from stale crop rows.",
       "how": [
-        "Implement or review the typed alert-only evaluator against the existing null-input contract and missing/stale/persistence/recovery cases once measured configuration is supplied. Actual dispatcher skip/shrink remains conditional on #45.",
+        "Reuse the already deployed evaluator, nineteen accepted cases and truthful uncommissioned/unavailable scheduler status; do not rebuild the same foundation. Measured-target adapter and operating alert lifecycle follow commissioned #398/#45 evidence.",
         "After #45/#398 pass, implement auditable dispatcher skip/shrink through the existing schedule path with sole-writer authority, expiry and reason.",
         "Measure before/after soil response and actual scheduled-job disposition; do not use an uncalibrated or failed probe to suppress essential watering silently."
       ],
@@ -2482,7 +2483,7 @@
       "title": "Rebaseline actual crop, pot and probe topology before feedback control",
       "stage": "C7",
       "kind": "task",
-      "priority": "P2",
+      "priority": "P1",
       "effort": "M",
       "owner_role": "Operator with data/control lead",
       "parent": "16",
@@ -2505,7 +2506,7 @@
         "db/migrations",
         "docs"
       ],
-      "baseline": "Full issue review, October 18, 2026. Delivery state: PHYSICAL TOPOLOGY TRUTH BLOCKED.\n\nCompleted or retained scope: Existing location/source inventory provides identifiers to prefill a field worksheet. Current config and migration064 still name Canna Lily/Unknown pots and unknown east seedlings. Those values are not evidence of the current crop or installed probe/plumbing map.\n\nRemaining actual acceptance: Repo and DB map agree with observed physical positions and crop/substrate identities; no Canna-Lily residue is carried as current fact.; Each sensor has source ID, location, validity/calibration state and explicit unassigned/disabled status when appropriate.; No automatic irrigation is enabled by a topology import alone; #398/#45 own threshold and feedback commissioning.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/298 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Complete one field worksheet with assigned and explicitly unassigned positions, then reconcile config and DB from that evidence without enabling irrigation or overwriting valid operator settings.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-attended. Schedule one shared greenhouse field worksheet with Jason: actual crop/pot/substrate/probe/relay/plumbing mapping, including explicitly unassigned positions. DR-45 revision makes visits possible; it supersedes the earlier no-visit comment. No reference CO2 sensor is needed for this survey; no irrigation enablement. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25 field preparation is merged in #1081, with source-prefilled crop/probe/plumbing identifiers on issue#298. Jason can visit as needed; visit availability is not a hold. Actual survey observations remain unperformed and source crop labels are unverified. No reference CO2 meter exists; that blocks #51 calibration only. Reuse one shared worksheet for #298/#751/#398/#45/#52/#412 and selected #390 release evidence. No actuation, OTA or new device connection is implied.\n\nFull issue review, October 18, 2026. Delivery state: PHYSICAL TOPOLOGY TRUTH BLOCKED.\n\nCompleted or retained scope: Existing location/source inventory provides identifiers to prefill a field worksheet. Current config and migration064 still name Canna Lily/Unknown pots and unknown east seedlings. Those values are not evidence of the current crop or installed probe/plumbing map.\n\nRemaining actual acceptance: Repo and DB map agree with observed physical positions and crop/substrate identities; no Canna-Lily residue is carried as current fact.; Each sensor has source ID, location, validity/calibration state and explicit unassigned/disabled status when appropriate.; No automatic irrigation is enabled by a topology import alone; #398/#45 own threshold and feedback commissioning.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/298 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/config/zones.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/db/migrations/064-soil-observability.sql\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Complete one field worksheet with assigned and explicitly unassigned positions, then reconcile config and DB from that evidence without enabling irrigation or overwriting valid operator settings.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: ready-attended. Schedule one shared greenhouse field worksheet with Jason: actual crop/pot/substrate/probe/relay/plumbing mapping, including explicitly unassigned positions. DR-45 revision makes visits possible; it supersedes the earlier no-visit comment. No reference CO2 sensor is needed for this survey; no irrigation enablement. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2517,7 +2518,7 @@
       "title": "Replace stale soil threshold seeds with commissioned crop/substrate truth",
       "stage": "C7",
       "kind": "task",
-      "priority": "P2",
+      "priority": "P1",
       "effort": "M",
       "owner_role": "Operator with data/control lead",
       "parent": "16",
@@ -2614,7 +2615,7 @@
         "firmware/greenhouse/globals.yaml",
         "docs"
       ],
-      "baseline": "Full issue review, October 18, 2026. Delivery state: REFERENCE CALIBRATION BLOCKED.\n\nCompleted or retained scope: The inverted-linear CO2 transform and plausibility guards are implemented. Current globals retain explicitly placeholder 2.7V/1.2V anchors. Source presence does not establish an absolute ppm calibration or uncertainty.\n\nRemaining actual acceptance: New coefficients derive from recorded field pairs and pass the predeclared independent tolerance.; Plausibility guards and units remain correct, with uncertainty visible to consumers.; If the reference/window is unavailable, retain uncalibrated status without guessing anchors or buying equipment implicitly.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/51 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/globals.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-4594571817\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Prepare paired observations and a predeclared independent tolerance; obtain reference samples before calculating coefficients. Publish the measurement uncertainty and keep uncalibrated status until accepted.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: blocked-input. Obtain a real reference NDIR meter, then paired and held-out samples under a predeclared tolerance. Visits are possible; only the missing reference sensor blocks calibration. Retain uncalibrated status and do not fabricate coefficients. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25 Jason confirmed no reference CO2 meter. Calibration remains blocked on obtaining a genuine reference; keep CO2 uncalibrated. His ability to visit the greenhouse is confirmed, so do not describe visit availability as the missing prerequisite.\n\nFull issue review, October 18, 2026. Delivery state: REFERENCE CALIBRATION BLOCKED.\n\nCompleted or retained scope: The inverted-linear CO2 transform and plausibility guards are implemented. Current globals retain explicitly placeholder 2.7V/1.2V anchors. Source presence does not establish an absolute ppm calibration or uncertainty.\n\nRemaining actual acceptance: New coefficients derive from recorded field pairs and pass the predeclared independent tolerance.; Plausibility guards and units remain correct, with uncertainty visible to consumers.; If the reference/window is unavailable, retain uncalibrated status without guessing anchors or buying equipment implicitly.\n\nEvidence and limits: https://github.com/VerdifyConsultancy/verdify-platform/issues/51 \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/globals.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/blob/83e148b60948d0c2328f8a22d819d481ff2c4ca6/firmware/greenhouse/sensors.yaml \u00b7 https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-4594571817\n\nSee planning/reviews/2026-10-18-status/README.md and issue-status.json for current ownership, bounded preparation, dependencies and dated evidence. No full-issue acceptance is inferred from a partial receipt.\n\nCurrent execution allocation: PHYSICAL. Next action: Prepare paired observations and a predeclared independent tolerance; obtain reference samples before calculating coefficients. Publish the measurement uncertainty and keep uncalibrated status until accepted.\n\nFull review: planning/reviews/2026-10-18-status/README.md. Existing acceptance clauses and actual completion edges are unchanged.\n\nOctober 20 full audit: blocked-input. Obtain a real reference NDIR meter, then paired and held-out samples under a predeclared tolerance. Visits are possible; only the missing reference sensor blocks calibration. Retain uncalibrated status and do not fabricate coefficients. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -3492,11 +3493,12 @@
         "api",
         "grafana"
       ],
-      "baseline": "Consumer delivered at33ed324e with real runner migration279 and matching role receipts; smoke9/9, exactly one ESP32 socket, actual327-second stable ingestor observation/no validation errors. Two natural zero-W source clocks advance but slightly lead observation, so future quality and NULL aggregate correctly remain. Reopened for valid-freshness acceptance; source owner follow-up jvallery/homeassistant#932. No clock tolerance or scientific eligibility inferred. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Exact source-clock handling deployed; later natural zero-W and advancing channel source/DB observations supplied the remaining acceptance. Earlier future/stale rows retain their classifications.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/981 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Preserve prior source/configuration and exact evidence. No custody deletion; use a scoped inverse with fresh identities rather than restoring a stale whole object.",
-      "decision": "No hardware change, meter reinterpretation, new treatment, randomized activation or credential rotation.",
-      "status": "open"
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation.",
+      "status": "closed",
+      "accepted": true
     },
     {
       "key": "802",
@@ -3641,8 +3643,8 @@
     {
       "key": "992",
       "issue_number": 992,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Retire the verdify-db-rehearsal experiment namespace now that no CNPG cutover is planned (D-04)",
       "stage": "C5",
       "kind": "task",
@@ -3657,21 +3659,19 @@
         "The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion."
       ],
       "acceptance": [
-        "Namespace carries disposable/expiry labels; central record and lane table list it",
-        "verdify-db-rehearsal-cluster Synced/Healthy with both NetworkPolicies tracked",
-        "ObjectStore `verdify-cnpg-rehearsal-backup` either declared or removed with recorded reason",
-        "CNPG alert rule for the rehearsal cluster exists in monitoring-stack",
-        "Snapshot/backup IDs of both spool PVCs recorded",
-        "At S2 close: pg_dump + snapshot receipts recorded before any delete; deletions done only after Jason's go"
+        "Retired rehearsal namespace and Applications are absent after verified recovery custody and guarded deletion.",
+        "All eight original recovery PVs/Longhorn volumes remain preserved Released/Retain/detached; production DB and claims remain healthy.",
+        "Legacy rehearsal Garage identity/bucket aliases are absent; independently verified B2 and encrypted logical recovery custody remains available.",
+        "Final inventory rows agree across owners. Superseded temporary expiry/adoption/alert clauses remain historical, not credited as performed."
       ],
       "paths": [
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Retirement and inventory correction accepted: namespace/Applications absent; eight recovery PVs/volumes retained Released/Retain/detached; native B2 and encrypted logical custody preserved. Temporary adoption/expiry criteria were superseded, not performed.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/992 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "993",
@@ -3740,8 +3740,8 @@
     {
       "key": "995",
       "issue_number": 995,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Adopt Namespace verdify-descheduler in place and record Verdify cluster-scoped objects",
       "stage": "C4",
       "kind": "task",
@@ -3764,10 +3764,10 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Namespace adoption accepted with all eight object UIDs and functional payloads unchanged, non-pruning Argo ownership and original CronJob suspend state preserved.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/995 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "996",
@@ -3804,8 +3804,8 @@
     {
       "key": "997",
       "issue_number": 997,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Keep Verdify dashboards single-sourced: delete stale ConfigMaps in ns verdify-platform and retire the monitoring-stack staged copy",
       "stage": "C4",
       "kind": "task",
@@ -3827,16 +3827,16 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready. Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Exact stale dashboard copies removed in both owners; production ConfigMap identities/data and the 21 previously approved native public dashboards verified unchanged.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/997 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "998",
       "issue_number": 998,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Retire writer/DB watchdog CronJobs after monitoring-stack alerts are verified (R13)",
       "stage": "C4",
       "kind": "task",
@@ -3858,16 +3858,16 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-external. Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Monitoring-owned writer/DB fault rules qualified; exactly two watchdog CronJobs and six dedicated RBAC objects retired with guarded readback and recovery custody.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/998 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "999",
       "issue_number": 999,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Pin the remaining tag-only verdify-prod images by digest",
       "stage": "C4",
       "kind": "task",
@@ -3892,16 +3892,16 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Actual running image digests pinned, including separately attended database restart with fresh independently checked backup. Version, PVC, ledger and ordinary-role seals preserved.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/999 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1000",
       "issue_number": 1000,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Close health coverage gaps for Verdify items and alert the greenhouse Shelly meters (D-06)",
       "stage": "C4",
       "kind": "task",
@@ -3925,17 +3925,17 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Software health coverage and owner handoff accepted: both collectors evaluate all twelve rules; three known probe conditions reached Alertmanager. This does not commission or repair those physical probes.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1000 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1001",
       "issue_number": 1001,
       "status": "open",
       "accepted": false,
-      "title": "Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16)",
+      "title": "Finish retired Verdify namespace and hostname cleanup after owner handoffs",
       "stage": "C4",
       "kind": "task",
       "priority": "P3",
@@ -3946,7 +3946,8 @@
       "what": "Track Verdify transitions owned elsewhere (agents#4461, #4470, #4468; D-03, D-16)",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Track agents#4461/#4470/#4468 and the network owner's D-16 retirement. Perform only the corresponding local Namespace/HostRegexp cleanup after owner receipts. Do not treat missing native D-16 edge as readiness or modify shared wildcard TLS/DNS here."
+        "Reuse accepted catalog and Secret-custody receipts; keep remaining namespace/certificate and hostname work with agents#4468 and network-infra#602/#600 until their exact outputs exist.",
+        "After those scoped owner receipts, perform only the relevant product Namespace/HostRegexp cleanup and verify it; do not wait on unrelated tenant work or erase accepted custody."
       ],
       "acceptance": [
         "verdify-prod-dark listed in the agents catalog (#4461 closed)",
@@ -3959,7 +3960,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-external. Track agents#4461/#4470/#4468 and the network owner's D-16 retirement. Perform only the corresponding local Namespace/HostRegexp cleanup after owner receipts. Do not treat missing native D-16 edge as readiness or modify shared wildcard TLS/DNS here. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25: catalog adoption and central Secret custody are complete. The native closed#4470 blocker was removed with its provenance preserved. Remaining exact owner outputs are agents#4468 certificate/namespace retirement and network-infra#602 D-16 hostname retirement; namespace deletion also waits on the applicable network#600 adoption output. No orphan namespace, TLS or route deletion is performed by this graph update. Existing deferred status is preserved.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Track agents#4461/#4470/#4468 and the network owner's D-16 retirement. Perform only the corresponding local Namespace/HostRegexp cleanup after owner receipts. Do not treat missing native D-16 edge as readiness or modify shared wildcard TLS/DNS here."
@@ -3999,8 +4000,8 @@
     {
       "key": "1003",
       "issue_number": 1003,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Route verdify-platform main changes, including prod release pins, through validated PRs",
       "stage": "C4",
       "kind": "task",
@@ -4012,27 +4013,29 @@
       "what": "Route verdify-platform main changes, including prod release pins, through validated PRs",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption."
+        "Retain the accepted branch-protection and App-bound PR/main-status enforcement receipts; the authority choice is settled and enforcement is active.",
+        "Preserve the original October21\u201328 sampling window and the later recorded waiver separately; do not claim seven elapsed observed days.",
+        "Continue normal source changes through the existing enforced PR and exact native status path. This closed issue does not request a new policy or observation gate."
       ],
       "acceptance": [
         "Every commit on main after the change has a CI commit status (gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status shows a context).",
         "Changes to deploy/k8s/overlays/prod/release-pins.yaml arrive by merged PR with a green 'Argo PR CI' (or successor) status on the head SHA.",
-        "A 7-day sample shows 0 main commits without an associated PR or a main-push validation status."
+        "PR and exact native main-validation enforcement is verified. The seven-day sample remains dated observational history; its closure-gating requirement was explicitly waived in the recorded October23 decision, not reported as observed."
       ],
       "paths": [
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: blocked-decision. Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. PR/main-status enforcement accepted. Original seven-day window was October21\u201328; recorded October23 direction waived that window as a closure blocker. Closing did not claim seven elapsed observed days.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1003 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1004",
       "issue_number": 1004,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Bring kubectl-patched verdify-prod workloads back under Git ownership",
       "stage": "C4",
       "kind": "task",
@@ -4056,16 +4059,16 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Source/Argo ownership accepted with 23 audited targets free of kubectl management, preserved payloads and explicit manual sync/suspend policy; source/live checks and hooks passed.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1004 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1005",
       "issue_number": 1005,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Give verdify-lab real node redundancy instead of two replicas on one RWO volume",
       "stage": "C4",
       "kind": "task",
@@ -4088,10 +4091,10 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Two independent serving caches and sequential public-edge recovery accepted; origin/publisher remains a documented refresh dependency.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1005 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1006",
@@ -4129,8 +4132,8 @@
     {
       "key": "1007",
       "issue_number": 1007,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Put edge pre-auth in front of mcp.verdify.ai: one static Iris bearer token lets anyone on the internet call set_plan, set_tunable and slack_ops",
       "stage": "C4",
       "kind": "task",
@@ -4154,10 +4157,10 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Whole-host Cloudflare Access Block Everyone is live; future Mac clients retain hostname with no unused credentials issued. Public unauthenticated/Iris-only requests receive Access302. Rotated Iris generation is reconciled via central#5218; actual Hermes and both MCP replicas authenticate23 tools/read-only equipment_state, old Iris gets401. Monitoring#1045 source/check remains pending; deployed Worker returns success1/status302/ray1 on both collectors. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Whole-host Cloudflare Access denial accepted; Hermes remains internal and authenticated. No future Mac-client identity or external client credential is provisioned or implied.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1007 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "One-hour sprint packet: inspect existing access logs for the external client and record a supported identity or an explicit attribution gap. Full cutover waits on network-infra#752 and Jason confirming the identified client before service-token issuance. Keep the route and ClusterIP; use separate client audience, approved Iris rotation and updated probe expectations after the edge is ready."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1008",
@@ -4210,40 +4213,43 @@
       "what": "Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Implement full-SHA builder admission, pinned toolchain inputs and bounded egress now. Device-side signing is explicitly deferred by DR-48. Complete the approved OTA credential compensation only with network-infra#77 passive ACL readback, value-blind custody and a safe verified flash/recovery packet through #390; no fresh signing or rotation decision is needed."
+        "Reuse the deployed signed-artifact build/verification and private tamper-negative receipts; do not repeat build or signing-key creation.",
+        "Consume the exact passive OTA/API ACL output from network-infra#555 (successor to#77), then prepare a selected #390 cutover/recovery packet. The dependency names this scoped output, not closure of all unrelated #555 work.",
+        "Do not flash, rotate credentials or open another ESP32 connection under this graph/private-test packet."
       ],
       "acceptance": [
         "Current compensating phase: builder rejects non-full-SHA revisions, pins toolchain inputs, and its egress no longer grants unrestricted access to the LAN.",
-        "Passive network owner readback proves tcp/3232 and tcp/6053 reachability is confined to the named builder/ingestor sources under network-infra#77/#42.",
+        "Passive network-owner readback proves tcp/3232 and tcp/6053 confinement to the named builder/ingestor sources; the current matrix owner is network-infra#555, successor to consolidated#77, with#42 history retained.",
         "Approved OTA password rotation has value-blind custody/readback and a safe verified builder flash/recovery receipt; no password is logged or copied into source.",
-        "DR-48 defers signed-app verification/signing and Secure Boot; the original signing proposal remains archived, not silently reported as implemented."
+        "Operator-side artifact signing/verification is delivered. Device-side signed-app verification and Secure Boot remain explicitly deferred; no device enforcement is claimed."
       ],
       "paths": [
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Open, not accepted. Original issue body and checklist are preserved in planning/reviews/2026-10-20-sprint-audit/before-open-issues.json. Later Jason decisions override conflicting original proposed approaches; see decisions.json.\n\nOctober 20 full audit: ready-scoped. Implement full-SHA builder admission, pinned toolchain inputs and bounded egress now. Device-side signing is explicitly deferred by DR-48. Complete the approved OTA credential compensation only with network-infra#77 passive ACL readback, value-blind custody and a safe verified flash/recovery packet through #390; no fresh signing or rotation decision is needed. Evidence: planning/reviews/2026-10-20-sprint-audit/README.md.",
+      "baseline": "October25: signed-artifact builder/verifier, pinned inputs and bounded egress are deployed and qualified by #1073/#1074 and central signing custody. Native blocker network-infra#77 closed by consolidation, not acceptance; its exact passive gateway/flow-matrix output now belongs to open#555. The dependency is corrected accordingly. Actual gateway ACL acceptance and attended OTA/password cutover through selected #390 release remain incomplete. Device-side signed-app verification/Secure Boot remains deferred. Existing deferred status and no-new-ESP32-connection hold remain.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Implement full-SHA builder admission, pinned toolchain inputs and bounded egress now. Device-side signing is explicitly deferred by DR-48. Complete the approved OTA credential compensation only with network-infra#77 passive ACL readback, value-blind custody and a safe verified flash/recovery packet through #390; no fresh signing or rotation decision is needed."
+      "decision": "Signing key/custody and final software sync were explicitly approved and completed. Remaining device/cutover work retains exact network and #390 recovery evidence plus the standing no-new-device-connection restriction; no new credential or physical action is authorized by this packet."
     },
     {
       "key": "1010",
       "issue_number": 1010,
       "status": "open",
       "accepted": false,
-      "title": "Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "title": "Finish trusted client IP attribution for successful verdify-mcp calls",
       "stage": "C4",
       "kind": "task",
-      "priority": "P3",
+      "priority": "P2",
       "effort": "M",
       "owner_role": "Platform/security lead",
       "parent": null,
       "depends_on": [],
-      "what": "Log the audience and real client IP of every successful verdify-mcp call; today only denials are attributed",
+      "what": "Complete trusted-proxy client IP attribution while retaining the delivered value-free successful-call audit events.",
       "why": "Close the current estate ownership or security gap while preserving the product contract and the owning-lane boundary.",
       "how": [
-        "Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP."
+        "Reuse existing successful audience/tool/capability/result events in both MCP replicas and Loki; do not rebuild accepted logging.",
+        "Real external-client IP attribution waits on the exact trusted-proxy output from network-infra#743; preserve value-free logs and reject forged forwarding headers. Existing deferred status is unchanged."
       ],
       "acceptance": [
         "Loki {namespace=\"verdify-prod\",app component mcp} shows mcp_tool_call events with audience and tool for Hermes calls",
@@ -4261,8 +4267,8 @@
     {
       "key": "1011",
       "issue_number": 1011,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Bound verdify-mcp egress and stop mounting the default ServiceAccount token into the internet-facing MCP pods",
       "stage": "C4",
       "kind": "task",
@@ -4285,16 +4291,16 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Dedicated non-automounting SA and MCP egress policy deployed at33ed324e. Both actual replicas have no token file; five private API/NAS/meter/MQTT targets denied, DNS/DB/public TLS work; Hermes and both replicas execute read-only equipment_state. Public IPv4 TLS is not OpenAI-only FQDN enforcement; forecast acceptance and explicit hostname restriction remain open. Evidence: planning/execution/2026-10-20-followthrough/evidence/.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. MCP exact egress/relay and non-automounting identity accepted; actual embeddings, typed forecasts and tool paths passed while unapproved direct/relay routes were denied.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1011 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
-      "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1021",
       "issue_number": 1021,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Switch verdify-vision from shared Gemini credentials to Cortex longctx.mm",
       "stage": "C5",
       "kind": "task",
@@ -4318,16 +4324,16 @@
         "ingestor",
         "deploy/k8s"
       ],
-      "baseline": "New during S6 execution. Source preparation is ready-scoped; the current Cortex owner issue still calls for the image probe and this audit did not establish its acceptance receipt. Runtime switch waits on that explicit prerequisite. Not added to S6.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Normal vision CronJob moved to the dedicated restricted Cortex route; real reviewed acceptance Job and owning provider/secret receipts passed. Shared Gemini credential preserved.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1021 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Use the supported owner CI/GitOps and a bounded successful production run after route proof.",
       "rollback": "Retain the prior exact workload/image configuration; do not revoke or delete existing credentials.",
-      "decision": "DR-29 selects Cortex longctx.mm for this consumer; per-consumer Gemini keys are not the selected approach."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     },
     {
       "key": "1022",
       "issue_number": 1022,
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "title": "Make the ESP32 writer identity and egress exact without losing safe failover",
       "stage": "C5",
       "kind": "task",
@@ -4353,17 +4359,17 @@
         "ingestor",
         "deploy/k8s"
       ],
-      "baseline": "New during S6 execution. Passive readback at 18:06Z: one Ready Recreate writer replica, an existing freshly renewed Lease, soft node affinity and broad egress still present. Source/flow preparation is ready-scoped; narrowing waits on actual flow evidence and a recorded failover tradeoff. No workload or network mutation was performed. Not added to S6.",
+      "baseline": "GitHub CLOSED / COMPLETED, refreshed October25,2026. Product single-writer/Lease/placement and exact egress boundary accepted, preserving the approved Shelly endpoint. No broad gateway/physical isolation claim is imported.\n\nAuthoritative issue and final dated receipts: https://github.com/VerdifyConsultancy/verdify-platform/issues/1022 . This replaces the stale open execution state; historical acceptance evidence is retained in planning/reviews/2026-10-25-unblocked/closed-status-evidence.json.",
       "delivery": "Use this lane for workload policy and the network owner for UDM changes; verify passively after the attended rollout.",
       "rollback": "Retain the exact prior Deployment and policy; restore only the owned scoped change if inputs or writer health regress.",
-      "decision": "Preserve #240 and the recorded HA policy; do not silently hard-pin the writer or merge the builder OTA path into writer egress."
+      "decision": "Closed in GitHub with the scoped receipt and any recorded scope decision; no new action is authorized or required by this status reconciliation."
     }
   ],
   "execution_plan": {
-    "reviewed_at": "2026-10-20T19:26:53.769719+00:00",
-    "source_revision": "01735457467fa1fd8918641dfa48cd583e092896",
+    "reviewed_at": "2026-10-25",
+    "source_revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-10-20-sprint-audit/README.md",
+    "review_path": "planning/reviews/2026-10-25-unblocked/README.md",
     "open_issues": [
       16,
       31,
@@ -4371,7 +4377,6 @@
       51,
       52,
       75,
-      218,
       297,
       298,
       299,
@@ -4404,51 +4409,33 @@
       784,
       785,
       963,
-      981,
-      990,
-      991,
-      992,
-      993,
-      995,
-      996,
-      997,
-      998,
-      999,
-      1000,
       1001,
-      1003,
-      1004,
-      1005,
-      1007,
       1009,
-      1010,
-      1011,
-      1021,
-      1022
+      1010
     ],
     "sprints": [
       {
         "id": "NEXT",
-        "title": "S6 \u2014 Public exposure and safe control preparation (October 21\u201327, 2026)",
+        "title": "Immediate safe qualification and dependency convergence (October25)",
         "kind": "sprint",
         "capacity_hours": 40,
-        "goal": "All six original S6 bounded packets are delivered with issue-specific evidence in planning/execution/2026-10-20-s6. Four issues are closed; #297 and #1007 retain explicit whole-issue follow-through in backlog. No alternate was automatically added. The original 25\u201334h planning estimate remains in the dated audit.",
-        "exit": "Completed packet receipts are distinct from full issue acceptance; remaining work requires its named evidence/owner boundary and a fresh capacity allocation."
+        "goal": "Complete the shared #587/#639 capture-only negative fixture packet and reconcile the full41-issue graph. Earlier S6 deliveries are historical completed scope, not fresh implementation.",
+        "exit": "Required PR/main CI and scoped live/source receipts are green; all41 current issues remain honestly allocated and physical/credential gates preserved."
       },
       {
         "id": "ALTERNATE",
-        "title": "Ready replacements and natural observations",
+        "title": "Bounded observations and shared field survey",
         "kind": "conditional",
         "capacity_hours": null,
-        "goal": "Substitute a ready bounded packet when committed scope is genuinely blocked; do not add it on top of 40 hours. Meter adoption leads the replacement queue. Field work requires a real scheduled visit.",
-        "exit": "A replacement has a bounded estimate and actual input/owner path; no repeated accepted proof or invented physical evidence."
+        "goal": "Use genuine new natural receipts and a single attended survey; do not repeat accepted software foundations or manufacture missing physical data.",
+        "exit": "Each selected unit has its own bounded evidence; visit availability is confirmed, CO2 calibration still needs a reference meter."
       },
       {
         "id": "BACKLOG",
         "title": "Sequenced follow-through and eligible backlog",
         "kind": "conditional",
         "capacity_hours": null,
-        "goal": "Retain every nonselected issue with its explicit native, physical, input, owner or decision boundary; source-ready does not mean fully closable.",
+        "goal": "Retain exact native, external-owner, physical, identity and authentic-data dependencies. Deferred owner work stays deferred; preparation is not whole-issue completion.",
         "exit": "Pull when named prerequisites and capacity exist. No OTA, retirement, launch or owner-lane mutation is performed by this audit."
       },
       {
@@ -4466,7 +4453,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -4490,15 +4477,15 @@
         "sprint": "BACKLOG",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Obtain a real reference NDIR meter, then paired and held-out samples under a predeclared tolerance. Visits are possible; only the missing reference sensor blocks calibration. Retain uncalibrated status and do not fabricate coefficients.",
+        "next_action": "Obtain a real reference NDIR meter before calibration; field-visit availability is not the blocker. Keep uncalibrated state.",
         "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 52,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Use authentic species/maturity observations from the #298 visit to record no change or one reversible justified dormancy-care decision. DR-45 supersedes the old no-visit hold; actual observations remain missing.",
+        "sprint": "ALTERNATE",
+        "hours_min": 0,
+        "hours_max": 0,
+        "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -4506,16 +4493,8 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 218,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Refresh the single-StatefulSet failure-domain and restore/RTO plan after the no-CNPG decision. Prepare placement removal and a bounded reattach drill; coordinate node labels/capacity with proxmox-infrastructure. A cordon/pod deletion is a later attended operation, not an audit action.",
-        "owner_role": "Data/platform lead"
       },
       {
         "issue_number": 297,
@@ -4528,9 +4507,9 @@
       {
         "issue_number": 298,
         "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Schedule one shared greenhouse field worksheet with Jason: actual crop/pot/substrate/probe/relay/plumbing mapping, including explicitly unassigned positions. DR-45 revision makes visits possible; it supersedes the earlier no-visit comment. No reference CO2 sensor is needed for this survey; no irrigation enablement.",
+        "hours_min": 2,
+        "hours_max": 3,
+        "next_action": "Use merged #1081 worksheet and source-prefilled IDs for one Jason-attended field survey; visit possible as needed. This shared estimate covers #751/#52/#412 observations; no CO2 meter currently available.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -4546,7 +4525,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Control lead"
       },
       {
@@ -4554,7 +4533,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Control lead"
       },
       {
@@ -4567,10 +4546,10 @@
       },
       {
         "issue_number": 368,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Separate merged finite-probe correction from still missing jump/flatline/shared-health semantics. Define the latter from real sensor evidence and causal cases in admitted k3s CI. Live diagnostic correction and recovery proof ride #390; do not repeat accepted 70-case/replay receipts as new physical proof.",
+        "sprint": "ALTERNATE",
+        "hours_min": 3,
+        "hours_max": 5,
+        "next_action": "Prepare a focused shared jump/stuck semantic contract from actual histories, preserving delivered finite-probe correction; device delivery remains in a selected #390 release.",
         "owner_role": "Control lead"
       },
       {
@@ -4602,7 +4581,7 @@
         "sprint": "ALTERNATE",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Prepare a passive per-circuit solar-boundary query and observe an eligible natural min-on/cutoff event with timestamps and stop reasons. Source and causal regressions are delivered; do not force relay changes merely to close the issue.",
+        "next_action": "Reuse October25 ordinary natural-cutoff receipt; wait for an eligible actual active-minimum-on boundary or separately scoped test. Do not toggle lights or repeat the broad policy query.",
         "owner_role": "Platform lead"
       },
       {
@@ -4624,17 +4603,17 @@
       {
         "issue_number": 410,
         "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Record one prospective complete daytime window and natural ordinary planner consumption/cost with the existing installed getter and scheduled paths. Preserve missing-minute NULLs, ineffective/insufficient outcomes and original gaps; no historical interpolation, forced provider call or controller change.",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Read one genuinely new complete-day/natural scheduled-consumer receipt when present. Do not repeat accepted model cases, fill missing buckets or change control policy.",
         "owner_role": "Control lead"
       },
       {
         "issue_number": 412,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "At the #298 visit record actual screen position and measured night context; decide no change or bounded reversible closure with a safety readback and intervention record. DR-45 supersedes the old no-visit hold.",
+        "sprint": "ALTERNATE",
+        "hours_min": 0,
+        "hours_max": 0,
+        "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -4642,7 +4621,7 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Control lead"
       },
       {
@@ -4658,15 +4637,15 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Research/release lead"
       },
       {
         "issue_number": 587,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Map only residual feature-off nonactuation, locked/armed no-reopen, blinding and named-alert clauses to actual supported LOGIN routes and populated preconditions. Reuse accepted lifecycle/executor denials and one alert receipt. With #992 ending rehearsal, resolve a supported retained target before new stateful qualification; do not fake authority or send messages from this audit.",
+        "sprint": "NEXT",
+        "hours_min": 2,
+        "hours_max": 4,
+        "next_action": "Qualify four additional capture-only SQL alert branches in the existing private CI lane; preserve guards, no new messages, and exact custody. This estimate covers the shared #639 fixture packet.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -4679,10 +4658,10 @@
       },
       {
         "issue_number": 639,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Source/synthetic packets #985/#986 are delivered; historical prefix remains 27/48 UNPROVEN. Obtain an authentic causal pre-tick state producer and row-wise propagation/counterfactual recovery proof for 21 gaps via admitted k3s execution. Do not rerun synthetic matrices or recreate a retired rehearsal namespace by default.",
+        "sprint": "NEXT",
+        "hours_min": 0,
+        "hours_max": 0,
+        "next_action": "Share the #587 private fixture packet; retain21 authentic causal gaps, active executor/analyst/recovery and physical boundaries. Do not duplicate test hours or restore retired targets.",
         "owner_role": "Runtime/release lead"
       },
       {
@@ -4719,10 +4698,10 @@
       },
       {
         "issue_number": 751,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Diagnose south climate probe and hydro separately in the same bounded visit. Repair only the evidenced component, preserve panel history and record calibrated before/after contributor truth; do not silently replace the analysis panel or make replacement a new pilot gate.",
+        "sprint": "ALTERNATE",
+        "hours_min": 0,
+        "hours_max": 0,
+        "next_action": "Collect observations during the shared #298 visit; no duplicate visit hours, physical outcome, seasonal change or device action is inferred from preparation.",
         "owner_role": "Operator with data/control lead"
       },
       {
@@ -4730,15 +4709,15 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track child acceptance and dated scope decisions; allocate no duplicate engineering hours to the umbrella.",
+        "next_action": "Track child receipts without duplicate implementation hours; whole program remains incomplete.",
         "owner_role": "Evidence/data lead"
       },
       {
         "issue_number": 782,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Reuse published input-decision/availability packet. Authentic selected inputs and facility-owner crop/contributor identity are missing; verify the existing November 2\u20133, 2026 winter collection and custody rather than inventing a corpus. June\u2013July 2027 remains a candidate calendar, not a launch promise.",
+        "sprint": "ALTERNATE",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Maintain authentic-input readiness; first winter window is Nov2 with Nov3 collection. Verify actual archived bytes/manifests then; do not synthesize a clock, target cohort or study day.",
         "owner_role": "Evidence/data lead"
       },
       {
@@ -4774,131 +4753,11 @@
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 981,
-        "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Merge checked #1034 and promote only exact279 migrator plus frozen control-preserving ingestor backport; full sync/hooks, five-minute clean-schema and natural source advancement acceptance remain.",
-        "owner_role": "Data/platform lead"
-      },
-      {
-        "issue_number": 990,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Add restore-renderer TTL; retain cited logs, recount exact inactive Jobs/ConfigMaps/Policies and recheck zero matching pods before exact-name cleanup. Exclude allow-db-from-restore and all data. Reconcile the conflicting historical counts in the execution receipt.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 991,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Live non-data cleanup complete; merge sanitized receipts and corresponding owner records, then close. Data retirement stays under #992 verified dump/snapshot custody.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 992,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "The experiment ends now; no CNPG cutover is planned (#245 closed). Prepare and verify dump/snapshot custody for all six CNPG and two spool PVCs, settle actual consumers, then perform the already approved retirement with storage-infra/agents in their lanes. DR-49 deletion go is conditional on posted, verified dump/snapshot receipts; do not ask again after that condition is met. Bind the exact receipt scope before deletion.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 993,
-        "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Adopt allow-db-from-restore with identical live spec into db-backup; verify Argo tracking, no widened access and supported restore connectivity. Preserve the policy during #990 cleanup.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 995,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Adopt the descheduler Namespace in place with prune off and unchanged UID/spec. Update central ownership with surviving objects; #1006 removes obsolete Traefik ClusterRole entries. Preserve the separately pinned descheduler Application and operator pause semantics.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 996,
-        "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Inspect binding subjects and live consumers before removing exactly the four obsolete RBAC objects; preserve a metadata-only inverse/readback. Stop for any active consumer; token revocation is not implied.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 997,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Verify consumers, delete only the four stale dashboard ConfigMaps in verdify-platform, and prove production dashboards still load. Link monitoring-stack#832 for its staged-copy work; do not edit its namespace/source here.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 998,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Wait for monitoring-stack#1016 writer/DB-death firing-and-clear receipts. Existing writer rules alone are insufficient. Then retire exactly the two watchdog CronJobs and verify absence; keep today's alert path until replacement proof exists.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 999,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Resolve running immutable imageIDs and stage third-party digest pins. Whole-issue DB pin waits on #994 and an attended fresh-backup/restart window; pinning pod specs can still roll workloads even when image bytes match. Preserve actuator-owned first-party candidate entries.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1000,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Create the exact per-item metric/probe coverage table and owner handoff, with probe plus tested alert for Shelly meters and a single referenced rehearsal obligation. Alert rules and firing proof belong to monitoring-stack; full closure waits on those receipts.",
-        "owner_role": "Platform/security lead"
-      },
-      {
         "issue_number": 1001,
         "sprint": "BACKLOG",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Track agents#4461/#4470/#4468 and the network owner's D-16 retirement. Perform only the corresponding local Namespace/HostRegexp cleanup after owner receipts. Do not treat missing native D-16 edge as readiness or modify shared wildcard TLS/DNS here.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1003,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Prepare PR-only release-pin delivery and main validation proposal. Jason's choice of bot-authored release-pin PRs/required-check policy remains unanswered; no enforced branch-policy or generated fleet-CI change is implied. Seven-day zero-unvalidated-commit acceptance starts after actual adoption.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1004,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Inventory desired-vs-live workload drift and decide each longhorn-recovery toleration from its owner rationale. Prepare the smallest wanted-field source changes. Application-spec ownership follows agents#4461; do not blanket force ownership or erase every kubectl manager as a substitute for behavior/field ownership proof.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1005,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Design genuine lab node redundancy while retaining validated content publication, or present the allowed single-replica exception for decision. Existing two replicas share RWO and required co-location; never claim node HA from replica count. Storage choice/capacity precedes rollout and failure testing.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1007,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "S6 discovery packet finished with an attribution gap; retain whole-issue follow-through behind #1010 and network-infra#752. No additional discovery hour is committed.",
+        "next_action": "Deferred exact-owner follow-through: agents#4468 and network#602/#600 outputs; completed central Secret custody is no longer an active blocker.",
         "owner_role": "Platform/security lead"
       },
       {
@@ -4906,39 +4765,15 @@
         "sprint": "BACKLOG",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Implement full-SHA builder admission, pinned toolchain inputs and bounded egress now. Device-side signing is explicitly deferred by DR-48. Complete the approved OTA credential compensation only with network-infra#77 passive ACL readback, value-blind custody and a safe verified flash/recovery packet through #390; no fresh signing or rotation decision is needed.",
+        "next_action": "Deferred physical cutover; consume passive matrix/ACL output from network#555, preserve existing signing receipts and select a #390 recovery packet. No new ESP32 connection.",
         "owner_role": "Platform/security lead"
       },
       {
         "issue_number": 1010,
-        "sprint": "ALTERNATE",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Merge/deploy checked #1035 audit image and verify natural Hermes events in Pod logs/Loki. Keep external-client attribution open until the network-owned trusted-origin path is accepted.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1011,
         "sprint": "BACKLOG",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "Inventory actual MCP destinations, use a dedicated non-automounting ServiceAccount and least-privilege egress, then prove required tools still work. A generic public-443 rule cannot claim OpenAI-only hostname restriction under ordinary Kubernetes NetworkPolicy; name that limitation or use an approved existing enforcement path.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1021,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Confirm an accepted longctx.mm image-input probe on cortex-ai-compute#375, inspect actual gateway egress and existing credential custody, then prepare the minimal endpoint/client change.",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1022,
-        "sprint": "BACKLOG",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "Passively inventory actual dependencies and eligible nodes. Reuse #240 acceptance where applicable; never open a test device connection.",
+        "next_action": "Deferred real-client-IP proof after network#743 trusted-proxy output; successful tool logging already delivered.",
         "owner_role": "Platform/security lead"
       }
     ]
