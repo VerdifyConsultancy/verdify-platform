@@ -15,7 +15,7 @@
 # a safety-checked cutover (handoff §6); this manifest is the reviewable target shape.
 #
 # DB + HA TOKEN (migration doc §A1 code gate): the running script today resolves
-# localhost:5432 and reads HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt.
+# localhost:5432 and reads HA_TOKEN_FILE (default /var/run/secrets/verdify/ha_token.txt).
 # Here we supply DB via verdify-config (DB_HOST=verdify-db) + the verdify-app-secrets
 # password, and mount the HA token Secret (verdify-ha-token) at the SAME path so
 # load_token() keeps working unchanged. The env-first DSN refactor (setpoint-server.py
@@ -94,6 +94,8 @@ spec:
             - configMapRef:
                 name: verdify-config   # DB_HOST/DB_PORT/DB_NAME/DB_USER + HA_URL
           env:
+            - name: HA_TOKEN_FILE
+              value: /var/run/secrets/verdify/ha_token.txt
             - name: DB_USER
               value: "verdify_setpoint_server_runtime_login"
             - name: POSTGRES_PASSWORD
@@ -121,12 +123,12 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            # HA token mounted at the SAME path the script reads
-            # (HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt) so
-            # load_token() works unchanged. Real token via the verdify-ha-token
-            # Secret (out-of-band SOPS); local builds use the placeholder file.
+            # HA token at the path HA_TOKEN_FILE names (storage-infra#1198 moved it
+            # off the retired agents-share path name). Real token via the
+            # verdify-ha-token Secret (out-of-band SOPS); local builds use the
+            # placeholder file.
             - name: ha-token
-              mountPath: /mnt/agents/shared/credentials
+              mountPath: /var/run/secrets/verdify
               readOnly: true
           livenessProbe:
             httpGet:
