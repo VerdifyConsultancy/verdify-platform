@@ -96,3 +96,23 @@ Deliver the fixture and agents selection changes through their owning repos'
 required CI, verify terminal cluster execution and retained receipt integrity,
 then update #587/#639 clause by clause. There is no production deployment in this
 phase. Keep both issues open for remaining runtime/causal/physical criteria.
+
+## Approved implementation update
+
+Jason approved the private-fixture phase on 2026-10-25. The active Verdify
+native PR gate runs `scripts/ci-local.sh` in a credential-free Python validation
+container (500m CPU/768Mi requests, 2 CPU/4Gi limits, 10Gi ephemeral storage).
+It predates the generic registry campaign helper and does not contain that
+helper. Therefore this first implementation adds an explicit cluster-only
+private-fixture step to the owning product gate and reuses the helper's signed
+PostgreSQL resolver in a product harness. No fleet runtime rollout, generated
+registry command change or additional admission authority is necessary. A root
+validation container drops to uid/gid65534 for private PostgreSQL/pytest.
+
+The first fixture selects five bounded cases: actual worker feature-off before
+store/transport access, locked and armed readiness reopening denials, emergency
+runtime-authority readback and a populated blinded outcome/mapping denial. It
+loads unmodified migrations207/214 with explicit greenhouse/climate/forecast
+column stand-ins. It does not claim later physical-proof/recovery migration
+coverage. Active exposure, exclusivity and lease/reconnect recovery still need
+their own source-qualified fixture expansion; none is marked accepted here.

@@ -70,6 +70,12 @@ $PY research/planner-efficacy/generate_v2_artifacts.py --check
 step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py
 
+# The private PostgreSQL proof is cluster-only; no local fallback or ambient DB.
+if [ -n "${KUBERNETES_SERVICE_HOST:-}" ]; then
+  step "private component containment (synthetic only)"
+  $PY scripts/qualify-component-containment.py
+fi
+
 step "pure-logic / contract tests"
 $PY -m pytest -q -rs \
   tests/test_setpoint_listener_reconnect.py \
