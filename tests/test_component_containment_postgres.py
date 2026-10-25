@@ -75,7 +75,7 @@ def snapshot(query):
 
 
 def test_feature_off_precedes_all_store_and_transport_access(containment, monkeypatch):
-    from ingestor.tasks import component_experiment as component
+    import tasks.component_experiment as component
 
     for name in ("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "VERDIFY_ACTIVE_EXPERIMENT_ID", "VERDIFY_POLICY_VECTOR_MODE"):
         monkeypatch.delenv(name, raising=False)

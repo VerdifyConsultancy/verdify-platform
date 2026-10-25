@@ -109,6 +109,7 @@ def main():
             if not k.startswith(("PG", "DB_", "POSTGRES_", "VERDIFY_")) and k != "DATABASE_URL"
         }
         env["SCORECARD_TEST_PG_BIN"] = str(binaries)
+        env["PYTHONPATH"] = os.pathsep.join((str(Path.cwd()), str(Path.cwd() / "ingestor")))
         output = work / "results"
         output.mkdir()
         junit = output / "junit.xml"

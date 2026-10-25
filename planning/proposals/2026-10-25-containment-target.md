@@ -132,3 +132,8 @@ binds the schema/source-table fixture hashes in its report. The private step
 runs immediately after lint/format so missing prerequisites fail early rather
 than waiting through the unrelated full test suite. The failed attempt remains
 failed; no behavioral case was accepted from it.
+
+At `35c05826`, four SQL cases passed; feature-off failed on an isolated-worker
+import-path omission (`shared`), before executing the worker. The harness now
+sets the explicit repository/ingestor import paths used by the existing worker
+tests. This failed suite remains failed; the next run must pass every case.
