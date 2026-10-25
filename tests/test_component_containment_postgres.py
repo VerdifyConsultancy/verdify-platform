@@ -88,7 +88,8 @@ def test_feature_off_precedes_all_store_and_transport_access(containment, monkey
     result = asyncio.run(
         component.component_experiment_worker(RefuseAccess(), store=RefuseAccess(), transport=RefuseAccess())
     )
-    assert result.status == "idle"
+    assert result.disposition == "idle"
+    assert result.setter_calls == 0
     assert result.reason == "component_capability_off"
     assert snapshot(containment) == before
 

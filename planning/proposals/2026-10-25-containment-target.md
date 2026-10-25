@@ -137,3 +137,9 @@ At `35c05826`, four SQL cases passed; feature-off failed on an isolated-worker
 import-path omission (`shared`), before executing the worker. The harness now
 sets the explicit repository/ingestor import paths used by the existing worker
 tests. This failed suite remains failed; the next run must pass every case.
+
+At `49f2da33`, the worker ran without crossing the refusal boundary; the
+feature-off test then failed on a harness assertion using `.status` instead
+of ExecutorResult's actual `.disposition`. That assertion is corrected and
+explicitly checks zero setter calls. The suite still requires a complete
+successful native run.
