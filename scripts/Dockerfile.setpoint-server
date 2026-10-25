@@ -19,7 +19,7 @@
 #
 # CODE-CHANGE GATE (migration doc §A1, NOT yet landed): scripts/setpoint-server.py
 # today hardcodes get_db_url() -> localhost:5432 (reading /srv/verdify/.env for the
-# password) and HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt. The k3s
+# password) and HA_TOKEN_FILE (env; default /var/run/secrets/verdify/ha_token.txt). The k3s
 # Deployment supplies the DB via verdify-config (DB_HOST=verdify-db) + the
 # verdify-app-secrets password and mounts the HA token Secret at the SAME path. The
 # env-first DSN refactor (§A1: setpoint-server.py:241 -> VERDIFY_DB_DSN/PGHOST) is a
