@@ -1,0 +1,67 @@
+{
+  "captured_at": "2026-10-26T15:27:24.140791+00:00",
+  "read_only": true,
+  "jobs_unchanged": true,
+  "workflows": [
+    {
+      "name": "verdify-control-compile-96464472-20261026-01",
+      "uid": "3d86b16a-f485-4d9f-9660-0fcf6f320214",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T15:05:26Z",
+      "finishedAt": "2026-10-26T15:23:44Z",
+      "parameters": {
+        "revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+        "base_revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea"
+      },
+      "running_nodes": []
+    },
+    {
+      "name": "verdify-platform-ci-m8tzv",
+      "uid": "b7537691-898e-43a5-ae1e-3ff403447343",
+      "phase": "Running",
+      "startedAt": "2026-10-26T14:59:46Z",
+      "finishedAt": null,
+      "parameters": {
+        "revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+      },
+      "running_nodes": [
+        {
+          "displayName": "verdify-platform-ci-m8tzv",
+          "phase": "Running"
+        },
+        {
+          "displayName": "build-lab-publisher",
+          "phase": "Running"
+        },
+        {
+          "displayName": "[8]",
+          "phase": "Running"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-62cgw",
+      "uid": "2218dcee-2dac-4ce1-8c5e-f50ec11d5caf",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:59:44Z",
+      "finishedAt": "2026-10-26T15:21:55Z",
+      "parameters": {
+        "base-revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea",
+        "head-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+      },
+      "running_nodes": []
+    },
+    {
+      "name": "verdify-platform-pr-ci-qkprq",
+      "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T15:03:36Z",
+      "finishedAt": "2026-10-26T15:23:08Z",
+      "parameters": {
+        "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+        "head-revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+      },
+      "running_nodes": []
+    }
+  ]
+}

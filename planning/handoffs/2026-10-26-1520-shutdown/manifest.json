@@ -56,8 +56,8 @@
     "sha256": "97abe7201b5dacbd51a9698fbcc7d00ac924c022c85ab65245ab597c34e55cc0"
   },
   "README.md": {
-    "bytes": 6905,
-    "sha256": "2b80b8c08408e47997fc37831c8288762e44358bd98ec61f7744a3c1122c3241"
+    "bytes": 8129,
+    "sha256": "086dc06dd7a83ebc2bcf62e92d0e3fae8101e4f124ad9b521cc093d923ada12a"
   },
   "all-open-issue-review.json": {
     "bytes": 52791,
@@ -96,12 +96,12 @@
     "sha256": "f5aa1b12f0eba9076267cc2238e8ad69e5014491b56ce97ff8d7af50f477dcaa"
   },
   "issue-status-current.json": {
-    "bytes": 67179,
-    "sha256": "c4fcaee022f1c87441ac4213fece904387cf7f2b6ffbc67c2fef29ddf4a99b5d"
+    "bytes": 70889,
+    "sha256": "abf38be3e2c461be7d731ca62a6c03faf6b3d2765af89123571940edcdf385dd"
   },
   "issue-status-current.md": {
-    "bytes": 19997,
-    "sha256": "b4c4fb8c7194c584b6376f3a4e54a4a500d654ab40f23c9fab7e52dac07f53e1"
+    "bytes": 23477,
+    "sha256": "519a16392144fcee1a518b88e2777fe75570bd9eecd3d130dfef2c3532960fb3"
   },
   "live-writer.json": {
     "bytes": 1662,
@@ -120,8 +120,8 @@
     "sha256": "1621e81abb296878f1172f8ca18e68411c36116ddc37afdcc644374846becba1"
   },
   "session-state.json": {
-    "bytes": 3484,
-    "sha256": "dc3b7a7cfe358b24774025f0c759c38620e4d6fcefc928f5352a2ea4d2540225"
+    "bytes": 3829,
+    "sha256": "d7be861098e13d05783fb35f1c95b0abe674d18d6d6d8c68179feb937e14853c"
   },
   "shutdown-api-health.json": {
     "bytes": 579,
@@ -162,5 +162,45 @@
   "source-custody.json": {
     "bytes": 3581,
     "sha256": "c2beb70a4e76a6b0c94b7f20a6b1a76aee60e89434e4932599872be6319d0931"
+  },
+  "terminal-at-shutdown/1095-pods-terminal.json": {
+    "bytes": 105,
+    "sha256": "90fc342f098745bb50dfae4c6eda65e986fd5a807cf01abdf668d8dd03bca0d6"
+  },
+  "terminal-at-shutdown/1095-private-report.json": {
+    "bytes": 27138,
+    "sha256": "83eebfd96a5dea5cd790fe9b5b15c4067036d9ead549c5cd6ae0973844cf4379"
+  },
+  "terminal-at-shutdown/1095-summary-current.json": {
+    "bytes": 9414,
+    "sha256": "197405fe30a964693f0ba1268a5bdc99fd935c49d80c4e625a25d8b8027964a3"
+  },
+  "terminal-at-shutdown/1095-workflow-terminal.json": {
+    "bytes": 58263,
+    "sha256": "2e6e7be43621aa50a8adb82335c5bbd36a05a18d9ffc29166e137eddf686257c"
+  },
+  "terminal-at-shutdown/control-secretless-command-provenance.json": {
+    "bytes": 966,
+    "sha256": "f7169f0523dfba6408c533dad5bc45596e37d80acc5d6b39f6346f79a9bf5fa0"
+  },
+  "terminal-at-shutdown/control-secretless-pods-terminal.json": {
+    "bytes": 229037,
+    "sha256": "df5eb8dbff89eaac8efdc9618fe6af36492bda427636cef94680e135651a9f19"
+  },
+  "terminal-at-shutdown/control-secretless-receipt.json": {
+    "bytes": 7468,
+    "sha256": "e589e5b4cd1ffb6ad1ad2a692a352cf4b3c69792fb01382fcb73d5de1a13e3b3"
+  },
+  "terminal-at-shutdown/control-secretless-summary.json": {
+    "bytes": 15762,
+    "sha256": "c3544aad3ee38a07495e6b4fa5689c05843e31283f7db619eb708384d80cc6af"
+  },
+  "terminal-at-shutdown/control-secretless-workflow-terminal.json": {
+    "bytes": 215536,
+    "sha256": "77413dd0b145f8a00f9dfe5722f6631812e59959221c4f946c2d228690f23384"
+  },
+  "terminal-at-shutdown/shutdown-closure-observation.json": {
+    "bytes": 2012,
+    "sha256": "71d19b690b1d78f017b0d08598971a9da780e9747a94e447cc7ad054b35d83d3"
   }
 }

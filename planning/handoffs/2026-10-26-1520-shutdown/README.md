@@ -5,6 +5,25 @@ paused. Leave existing cluster jobs active and processing; do not cancel, restar
 replace or suspend them. Existing automatic deadlines/cleanup remain unchanged.
 No further merge, deployment, device call or maintenance is part of this handoff.
 
+## Final terminal readback — 15:27–15:28 UTC
+
+The earlier15:17 snapshots below are retained as history. **Three existing jobs
+finished naturally during handoff preparation:** #1095 required CI succeeded
+15:23:08Z (GitHub required status success15:22:59Z), its compiler succeeded
+15:23:44Z, and main validation62cgw succeeded15:21:55Z. Both greenhouse and
+recovery targets compiled; the expected generated-C++ negative returned1, all16
+compiler byte hashes are present, pinned ESPHome2026.6.5 matches, and all11
+terminal receipt checks pass. Outputs remain dummy/nondeployable/no physical credit.
+Exact receipts are in `terminal-at-shutdown/` and covered by this manifest.
+
+**#1095 remains OPEN and unmerged, auto-merge disabled.** Strict219-case proof,
+full required CI and both-target compiler proof are now complete for exacthead
+96464472. Resume with independent source review; no new job/rebase or flash is
+needed merely because the observer ended. Main's22-case fixture must be retained.
+The main image build `verdify-platform-ci-m8tzv` UIDb7537691 remained **Running**
+at15:27:24UTC, in build-lab-publisher. It stays active and may complete normally.
+No cluster job was cancelled, retried, replaced or suspended.
+
 ## Current live evidence
 
 Read at **15:17 UTC** in context `vallery`. Argo `verdify-prod-dark` is

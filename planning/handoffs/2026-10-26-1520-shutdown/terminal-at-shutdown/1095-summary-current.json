@@ -1,0 +1,296 @@
+{
+  "observedAt": "2026-10-26T15:28:07.288583+00:00",
+  "name": "verdify-platform-pr-ci-qkprq",
+  "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19",
+  "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+  "parameters": {
+    "event-action": "opened",
+    "repository": "VerdifyConsultancy/verdify-platform",
+    "base-repository": "VerdifyConsultancy/verdify-platform",
+    "head-repository": "VerdifyConsultancy/verdify-platform",
+    "base-ref": "main",
+    "head-ref": "codex/control-timing-qualification-20261026",
+    "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+    "head-revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+  },
+  "phase": "Succeeded",
+  "startedAt": "2026-10-26T15:03:36Z",
+  "finishedAt": "2026-10-26T15:23:08Z",
+  "requiredStatuses": [
+    {
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "success",
+      "description": "Verdify Platform in-cluster PR validation passed",
+      "updated_at": "2026-10-26T15:22:59Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "verdify-platform-pr-ci-qkprq",
+      "displayName": "verdify-platform-pr-ci-qkprq",
+      "type": "Steps",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1123460752",
+      "displayName": "validate(0)",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "mode",
+            "value": "build",
+            "valueFrom": {
+              "path": "/impact/mode"
+            }
+          },
+          {
+            "globalName": "verdify-path-impact",
+            "name": "path-impact-receipt",
+            "value": "{\"base_revision\": \"0ed369fde08ee7d45bda8f6ad03a69f169c98e79\", \"mode\": \"build\", \"paths_sha256\": \"ee687d58a2a5a0672edd469e1633bafd5bbaf6a8484aef179570cd5ab3caf3e7\", \"profiles\": [\"api\", \"mcp\", \"ingestor\", \"setpoint-server\", \"lab-publisher\"], \"reasons\": {\"api\": [\"verdify_schemas/control_band_wire.py\"], \"ingestor\": [\"docs/firmware-fsm-spec.md\", \"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"lab-publisher\": [\"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"mcp\": [\"verdify_schemas/control_band_wire.py\"], \"setpoint-server\": [\"verdify_schemas/control_band_wire.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"96464472f58ccb7bb1f62aa19af1421fa601a56c\"}",
+            "valueFrom": {
+              "path": "/impact/receipt.json"
+            }
+          },
+          {
+            "name": "api",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/api"
+            }
+          },
+          {
+            "name": "mcp",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/mcp"
+            }
+          },
+          {
+            "name": "ingestor",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/ingestor"
+            }
+          },
+          {
+            "name": "planner",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/planner"
+            }
+          },
+          {
+            "name": "migrate",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/migrate"
+            }
+          },
+          {
+            "name": "orchestrator",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/orchestrator"
+            }
+          },
+          {
+            "name": "setpoint-server",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/setpoint-server"
+            }
+          },
+          {
+            "name": "lab-publisher",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/lab-publisher"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1134851731",
+      "displayName": "[1]",
+      "type": "StepGroup",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1303565864",
+      "displayName": "report(0)",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1985391017",
+      "displayName": "validate",
+      "type": "Retry",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "mode",
+            "value": "build",
+            "valueFrom": {
+              "path": "/impact/mode"
+            }
+          },
+          {
+            "globalName": "verdify-path-impact",
+            "name": "path-impact-receipt",
+            "value": "{\"base_revision\": \"0ed369fde08ee7d45bda8f6ad03a69f169c98e79\", \"mode\": \"build\", \"paths_sha256\": \"ee687d58a2a5a0672edd469e1633bafd5bbaf6a8484aef179570cd5ab3caf3e7\", \"profiles\": [\"api\", \"mcp\", \"ingestor\", \"setpoint-server\", \"lab-publisher\"], \"reasons\": {\"api\": [\"verdify_schemas/control_band_wire.py\"], \"ingestor\": [\"docs/firmware-fsm-spec.md\", \"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"lab-publisher\": [\"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"mcp\": [\"verdify_schemas/control_band_wire.py\"], \"setpoint-server\": [\"verdify_schemas/control_band_wire.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"96464472f58ccb7bb1f62aa19af1421fa601a56c\"}",
+            "valueFrom": {
+              "path": "/impact/receipt.json"
+            }
+          },
+          {
+            "name": "api",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/api"
+            }
+          },
+          {
+            "name": "mcp",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/mcp"
+            }
+          },
+          {
+            "name": "ingestor",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/ingestor"
+            }
+          },
+          {
+            "name": "planner",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/planner"
+            }
+          },
+          {
+            "name": "migrate",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/migrate"
+            }
+          },
+          {
+            "name": "orchestrator",
+            "value": "false",
+            "valueFrom": {
+              "path": "/impact/orchestrator"
+            }
+          },
+          {
+            "name": "setpoint-server",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/setpoint-server"
+            }
+          },
+          {
+            "name": "lab-publisher",
+            "value": "true",
+            "valueFrom": {
+              "path": "/impact/lab-publisher"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-2275876918",
+      "displayName": "[0]",
+      "type": "StepGroup",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-2462952017",
+      "displayName": "report",
+      "type": "Retry",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-2682983163",
+      "displayName": "[0]",
+      "type": "StepGroup",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-2846104911",
+      "displayName": "verdify-platform-pr-ci-qkprq.onExit",
+      "type": "Steps",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-3580149807",
+      "displayName": "report-pending(0)",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-3899366677",
+      "displayName": "trusted-precheck",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "validation-mode",
+            "value": "full",
+            "valueFrom": {
+              "path": "/tmp/validation-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-640390340",
+      "displayName": "report-pending",
+      "type": "Retry",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    }
+  ],
+  "pods": [],
+  "terminal": true
+}

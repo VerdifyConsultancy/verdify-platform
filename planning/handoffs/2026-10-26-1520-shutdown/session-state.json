@@ -1,6 +1,6 @@
 {
   "schema": "verdify.shutdown/2026-10-26-v2",
-  "prepared_at": "2026-10-26T15:22:29.211885+00:00",
+  "prepared_at": "2026-10-26T15:29:19.780523+00:00",
   "execution": "paused by Jason; no new work",
   "cluster_processing": "leave existing Jobs, Workflows, CronJobs and serving workloads unchanged; normal existing lifecycle continues",
   "context": "vallery",
@@ -35,9 +35,10 @@
     "native_cases": 219,
     "baseline_expected_failures": 76,
     "baseline_passes": 143,
-    "full_ci": "running at last read",
-    "compiler": "greenhouse compiled; recovery/terminal custody pending at last read",
-    "merge_authorized_during_shutdown": false
+    "full_ci": "Succeeded15:23:08Z; required status success15:22:59Z",
+    "compiler": "Succeeded15:23:44Z; both targets, negative1,16compiler hashes,11/11 checks",
+    "merge_authorized_during_shutdown": false,
+    "source_merge": "not performed; PR remains open"
   },
   "writer": {
     "status": "halted",
@@ -76,9 +77,15 @@
   ],
   "next_resume": [
     "Read current issue775 handoff and current steer/inflight; verify all exact existing job UIDs/source before observing results.",
-    "Harvest final1095 ordinary CI and compiler receipts; no duplicate submission because observation ended.",
+    "Read retained final1095 full required CI and both-target compiler receipts; perform independent source review and preserve main22-case fixture. No duplicate jobs.",
     "Independent review and source merge only after full required CI and both compiler targets pass; keep main22-case fixture. Do not rebase solely for moved main.",
     "Continue1010 normal source CI and owner coordination; coordinator owns agents merge/pins.",
     "Retain safety/readiness/writer/physical gates. No issue closure from merged software or healthy telemetry."
-  ]
+  ],
+  "terminal_jobs_observed": {
+    "1095_ci": "Succeeded",
+    "1095_compiler": "Succeeded",
+    "main_validation": "Succeeded",
+    "main_image_build": "Running at15:27:24Z; leave active"
+  }
 }

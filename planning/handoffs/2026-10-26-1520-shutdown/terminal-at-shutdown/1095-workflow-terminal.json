@@ -1,0 +1,1456 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Workflow",
+  "metadata": {
+    "annotations": {
+      "workflows.argoproj.io/pod-name-format": "v2"
+    },
+    "creationTimestamp": "2026-10-26T15:03:36Z",
+    "generateName": "verdify-platform-pr-ci-",
+    "generation": 10,
+    "labels": {
+      "agent-fleet.vallery.net/ci-system": "argo-workflows",
+      "agent-fleet.vallery.net/repo": "verdifyconsultancy-verdify-platform",
+      "app.kubernetes.io/part-of": "agent-fleet-ci",
+      "events.argoproj.io/action-timestamp": "1793027015626",
+      "events.argoproj.io/sensor": "verdify-platform-pr-ci",
+      "events.argoproj.io/trigger": "verdify-platform-pr-ci",
+      "workflows.argoproj.io/completed": "true",
+      "workflows.argoproj.io/creator": "system-serviceaccount-agent-fleet-ci-argo-ci-events",
+      "workflows.argoproj.io/phase": "Succeeded"
+    },
+    "name": "verdify-platform-pr-ci-qkprq",
+    "namespace": "agent-fleet-ci",
+    "resourceVersion": "312695885",
+    "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19"
+  },
+  "spec": {
+    "arguments": {
+      "parameters": [
+        {
+          "name": "event-action",
+          "value": "opened"
+        },
+        {
+          "name": "repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "head-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-ref",
+          "value": "main"
+        },
+        {
+          "name": "head-ref",
+          "value": "codex/control-timing-qualification-20261026"
+        },
+        {
+          "name": "base-revision",
+          "value": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+        },
+        {
+          "name": "head-revision",
+          "value": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+        }
+      ]
+    },
+    "priority": 10,
+    "workflowTemplateRef": {
+      "name": "verdify-platform-pr-ci"
+    }
+  },
+  "status": {
+    "artifactGCStatus": {
+      "notSpecified": true
+    },
+    "artifactRepositoryRef": {
+      "artifactRepository": {},
+      "default": true
+    },
+    "conditions": [
+      {
+        "status": "False",
+        "type": "PodRunning"
+      },
+      {
+        "status": "True",
+        "type": "Completed"
+      }
+    ],
+    "finishedAt": "2026-10-26T15:23:08Z",
+    "nodes": {
+      "verdify-platform-pr-ci-qkprq": {
+        "children": [
+          "verdify-platform-pr-ci-qkprq-2275876918"
+        ],
+        "displayName": "verdify-platform-pr-ci-qkprq",
+        "finishedAt": "2026-10-26T15:22:48Z",
+        "id": "verdify-platform-pr-ci-qkprq",
+        "name": "verdify-platform-pr-ci-qkprq",
+        "outboundNodes": [
+          "verdify-platform-pr-ci-qkprq-1123460752"
+        ],
+        "phase": "Succeeded",
+        "progress": "3/3",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9667
+        },
+        "startedAt": "2026-10-26T15:03:36Z",
+        "templateName": "pr-ci",
+        "templateScope": "local/",
+        "type": "Steps"
+      },
+      "verdify-platform-pr-ci-qkprq-1123460752": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "displayName": "validate(0)",
+        "finishedAt": "2026-10-26T15:22:41Z",
+        "hostNodeName": "vm-k3s-node6",
+        "id": "verdify-platform-pr-ci-qkprq-1123460752",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "revision",
+              "value": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+            },
+            {
+              "name": "base-revision",
+              "value": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+            },
+            {
+              "name": "classify-push",
+              "value": "false"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq[1].validate(0)",
+        "nodeFlag": {
+          "retried": true
+        },
+        "outputs": {
+          "exitCode": "0",
+          "parameters": [
+            {
+              "name": "mode",
+              "value": "build",
+              "valueFrom": {
+                "path": "/impact/mode"
+              }
+            },
+            {
+              "globalName": "verdify-path-impact",
+              "name": "path-impact-receipt",
+              "value": "{\"base_revision\": \"0ed369fde08ee7d45bda8f6ad03a69f169c98e79\", \"mode\": \"build\", \"paths_sha256\": \"ee687d58a2a5a0672edd469e1633bafd5bbaf6a8484aef179570cd5ab3caf3e7\", \"profiles\": [\"api\", \"mcp\", \"ingestor\", \"setpoint-server\", \"lab-publisher\"], \"reasons\": {\"api\": [\"verdify_schemas/control_band_wire.py\"], \"ingestor\": [\"docs/firmware-fsm-spec.md\", \"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"lab-publisher\": [\"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"mcp\": [\"verdify_schemas/control_band_wire.py\"], \"setpoint-server\": [\"verdify_schemas/control_band_wire.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"96464472f58ccb7bb1f62aa19af1421fa601a56c\"}",
+              "valueFrom": {
+                "path": "/impact/receipt.json"
+              }
+            },
+            {
+              "name": "api",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/api"
+              }
+            },
+            {
+              "name": "mcp",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/mcp"
+              }
+            },
+            {
+              "name": "ingestor",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/ingestor"
+              }
+            },
+            {
+              "name": "planner",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/planner"
+              }
+            },
+            {
+              "name": "migrate",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/migrate"
+              }
+            },
+            {
+              "name": "orchestrator",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/orchestrator"
+              }
+            },
+            {
+              "name": "setpoint-server",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/setpoint-server"
+              }
+            },
+            {
+              "name": "lab-publisher",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/lab-publisher"
+              }
+            }
+          ]
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9652
+        },
+        "startedAt": "2026-10-26T15:03:56Z",
+        "taskResultSynced": true,
+        "templateRef": {
+          "name": "verdify-platform-ci",
+          "template": "validate"
+        },
+        "templateScope": "local/",
+        "type": "Pod"
+      },
+      "verdify-platform-pr-ci-qkprq-1134851731": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-1985391017"
+        ],
+        "displayName": "[1]",
+        "finishedAt": "2026-10-26T15:22:48Z",
+        "id": "verdify-platform-pr-ci-qkprq-1134851731",
+        "name": "verdify-platform-pr-ci-qkprq[1]",
+        "nodeFlag": {},
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9652
+        },
+        "startedAt": "2026-10-26T15:03:56Z",
+        "templateScope": "local/",
+        "type": "StepGroup"
+      },
+      "verdify-platform-pr-ci-qkprq-1303565864": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq-2846104911",
+        "displayName": "report(0)",
+        "finishedAt": "2026-10-26T15:23:01Z",
+        "hostNodeName": "vm-k3s-node7",
+        "id": "verdify-platform-pr-ci-qkprq-1303565864",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "Succeeded"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq.onExit[0].report(0)",
+        "nodeFlag": {
+          "retried": true
+        },
+        "outputs": {
+          "exitCode": "0"
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 18
+        },
+        "startedAt": "2026-10-26T15:22:48Z",
+        "taskResultSynced": true,
+        "templateName": "report-status",
+        "templateScope": "local/",
+        "type": "Pod"
+      },
+      "verdify-platform-pr-ci-qkprq-1985391017": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-1123460752"
+        ],
+        "displayName": "validate",
+        "finishedAt": "2026-10-26T15:22:48Z",
+        "id": "verdify-platform-pr-ci-qkprq-1985391017",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "revision",
+              "value": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+            },
+            {
+              "name": "base-revision",
+              "value": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+            },
+            {
+              "name": "classify-push",
+              "value": "false"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq[1].validate",
+        "outputs": {
+          "exitCode": "0",
+          "parameters": [
+            {
+              "name": "mode",
+              "value": "build",
+              "valueFrom": {
+                "path": "/impact/mode"
+              }
+            },
+            {
+              "globalName": "verdify-path-impact",
+              "name": "path-impact-receipt",
+              "value": "{\"base_revision\": \"0ed369fde08ee7d45bda8f6ad03a69f169c98e79\", \"mode\": \"build\", \"paths_sha256\": \"ee687d58a2a5a0672edd469e1633bafd5bbaf6a8484aef179570cd5ab3caf3e7\", \"profiles\": [\"api\", \"mcp\", \"ingestor\", \"setpoint-server\", \"lab-publisher\"], \"reasons\": {\"api\": [\"verdify_schemas/control_band_wire.py\"], \"ingestor\": [\"docs/firmware-fsm-spec.md\", \"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"lab-publisher\": [\"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"mcp\": [\"verdify_schemas/control_band_wire.py\"], \"setpoint-server\": [\"verdify_schemas/control_band_wire.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"96464472f58ccb7bb1f62aa19af1421fa601a56c\"}",
+              "valueFrom": {
+                "path": "/impact/receipt.json"
+              }
+            },
+            {
+              "name": "api",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/api"
+              }
+            },
+            {
+              "name": "mcp",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/mcp"
+              }
+            },
+            {
+              "name": "ingestor",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/ingestor"
+              }
+            },
+            {
+              "name": "planner",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/planner"
+              }
+            },
+            {
+              "name": "migrate",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/migrate"
+              }
+            },
+            {
+              "name": "orchestrator",
+              "value": "false",
+              "valueFrom": {
+                "path": "/impact/orchestrator"
+              }
+            },
+            {
+              "name": "setpoint-server",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/setpoint-server"
+              }
+            },
+            {
+              "name": "lab-publisher",
+              "value": "true",
+              "valueFrom": {
+                "path": "/impact/lab-publisher"
+              }
+            }
+          ]
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9652
+        },
+        "startedAt": "2026-10-26T15:03:56Z",
+        "templateRef": {
+          "name": "verdify-platform-ci",
+          "template": "validate"
+        },
+        "templateScope": "local/",
+        "type": "Retry"
+      },
+      "verdify-platform-pr-ci-qkprq-2275876918": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-640390340",
+          "verdify-platform-pr-ci-qkprq-3899366677"
+        ],
+        "displayName": "[0]",
+        "finishedAt": "2026-10-26T15:03:56Z",
+        "id": "verdify-platform-pr-ci-qkprq-2275876918",
+        "name": "verdify-platform-pr-ci-qkprq[0]",
+        "nodeFlag": {},
+        "phase": "Succeeded",
+        "progress": "3/3",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9667
+        },
+        "startedAt": "2026-10-26T15:03:36Z",
+        "templateScope": "local/",
+        "type": "StepGroup"
+      },
+      "verdify-platform-pr-ci-qkprq-2462952017": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq-2846104911",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-1303565864"
+        ],
+        "displayName": "report",
+        "finishedAt": "2026-10-26T15:23:08Z",
+        "id": "verdify-platform-pr-ci-qkprq-2462952017",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "Succeeded"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq.onExit[0].report",
+        "outputs": {
+          "exitCode": "0"
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 18
+        },
+        "startedAt": "2026-10-26T15:22:48Z",
+        "templateName": "report-status",
+        "templateScope": "local/",
+        "type": "Retry"
+      },
+      "verdify-platform-pr-ci-qkprq-2682983163": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq-2846104911",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-2462952017"
+        ],
+        "displayName": "[0]",
+        "finishedAt": "2026-10-26T15:23:08Z",
+        "id": "verdify-platform-pr-ci-qkprq-2682983163",
+        "name": "verdify-platform-pr-ci-qkprq.onExit[0]",
+        "nodeFlag": {},
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 18
+        },
+        "startedAt": "2026-10-26T15:22:48Z",
+        "templateScope": "local/",
+        "type": "StepGroup"
+      },
+      "verdify-platform-pr-ci-qkprq-2846104911": {
+        "children": [
+          "verdify-platform-pr-ci-qkprq-2682983163"
+        ],
+        "displayName": "verdify-platform-pr-ci-qkprq.onExit",
+        "finishedAt": "2026-10-26T15:23:08Z",
+        "id": "verdify-platform-pr-ci-qkprq-2846104911",
+        "name": "verdify-platform-pr-ci-qkprq.onExit",
+        "nodeFlag": {
+          "hooked": true
+        },
+        "outboundNodes": [
+          "verdify-platform-pr-ci-qkprq-1303565864"
+        ],
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 18
+        },
+        "startedAt": "2026-10-26T15:22:48Z",
+        "templateName": "report-final-status",
+        "templateScope": "local/",
+        "type": "Steps"
+      },
+      "verdify-platform-pr-ci-qkprq-3580149807": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-1134851731"
+        ],
+        "displayName": "report-pending(0)",
+        "finishedAt": "2026-10-26T15:03:47Z",
+        "hostNodeName": "vm-k3s-node5",
+        "id": "verdify-platform-pr-ci-qkprq-3580149807",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "pending"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq[0].report-pending(0)",
+        "nodeFlag": {
+          "retried": true
+        },
+        "outputs": {
+          "exitCode": "0"
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 11
+        },
+        "startedAt": "2026-10-26T15:03:36Z",
+        "taskResultSynced": true,
+        "templateName": "report-status",
+        "templateScope": "local/",
+        "type": "Pod"
+      },
+      "verdify-platform-pr-ci-qkprq-3899366677": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-1134851731"
+        ],
+        "displayName": "trusted-precheck",
+        "finishedAt": "2026-10-26T15:03:41Z",
+        "hostNodeName": "vm-k3s-node5",
+        "id": "verdify-platform-pr-ci-qkprq-3899366677",
+        "name": "verdify-platform-pr-ci-qkprq[0].trusted-precheck",
+        "outputs": {
+          "exitCode": "0",
+          "parameters": [
+            {
+              "name": "validation-mode",
+              "value": "full",
+              "valueFrom": {
+                "path": "/tmp/validation-mode"
+              }
+            }
+          ]
+        },
+        "phase": "Succeeded",
+        "progress": "1/1",
+        "resourcesDuration": {
+          "cpu": 0,
+          "memory": 4
+        },
+        "startedAt": "2026-10-26T15:03:36Z",
+        "taskResultSynced": true,
+        "templateName": "trusted-precheck",
+        "templateScope": "local/",
+        "type": "Pod"
+      },
+      "verdify-platform-pr-ci-qkprq-640390340": {
+        "boundaryID": "verdify-platform-pr-ci-qkprq",
+        "children": [
+          "verdify-platform-pr-ci-qkprq-3580149807"
+        ],
+        "displayName": "report-pending",
+        "finishedAt": "2026-10-26T15:03:56Z",
+        "id": "verdify-platform-pr-ci-qkprq-640390340",
+        "inputs": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "pending"
+            }
+          ]
+        },
+        "name": "verdify-platform-pr-ci-qkprq[0].report-pending",
+        "outputs": {
+          "exitCode": "0"
+        },
+        "phase": "Succeeded",
+        "progress": "2/2",
+        "resourcesDuration": {
+          "cpu": 646,
+          "ephemeral-storage": 1070,
+          "memory": 9663
+        },
+        "startedAt": "2026-10-26T15:03:36Z",
+        "templateName": "report-status",
+        "templateScope": "local/",
+        "type": "Retry"
+      }
+    },
+    "outputs": {
+      "parameters": [
+        {
+          "name": "verdify-path-impact",
+          "value": "{\"base_revision\": \"0ed369fde08ee7d45bda8f6ad03a69f169c98e79\", \"mode\": \"build\", \"paths_sha256\": \"ee687d58a2a5a0672edd469e1633bafd5bbaf6a8484aef179570cd5ab3caf3e7\", \"profiles\": [\"api\", \"mcp\", \"ingestor\", \"setpoint-server\", \"lab-publisher\"], \"reasons\": {\"api\": [\"verdify_schemas/control_band_wire.py\"], \"ingestor\": [\"docs/firmware-fsm-spec.md\", \"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"lab-publisher\": [\"firmware/greenhouse/controls.yaml\", \"scripts/ci-local.sh\", \"scripts/fog_vent_consumer.py\", \"scripts/qualify-component-containment.py\", \"verdify_schemas/control_band_wire.py\"], \"mcp\": [\"verdify_schemas/control_band_wire.py\"], \"setpoint-server\": [\"verdify_schemas/control_band_wire.py\"]}, \"schema\": \"verdify.path-impact/v1\", \"source_revision\": \"96464472f58ccb7bb1f62aa19af1421fa601a56c\"}"
+        }
+      ]
+    },
+    "phase": "Succeeded",
+    "progress": "4/4",
+    "resourcesDuration": {
+      "cpu": 646,
+      "ephemeral-storage": 1070,
+      "memory": 9685
+    },
+    "startedAt": "2026-10-26T15:03:36Z",
+    "storedTemplates": {
+      "namespaced/verdify-platform-ci/validate": {
+        "activeDeadlineSeconds": 1500,
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchExpressions": [
+                    {
+                      "key": "kubernetes.io/hostname",
+                      "operator": "In",
+                      "values": [
+                        "vm-k3s-node6"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "automountServiceAccountToken": false,
+        "container": {
+          "args": [
+            "# python:3.13-bookworm already ships g++, git, curl and tar (probed\n# 2026-07-28 against this exact image). Re-installing them cost ~6s of\n# apt work on EVERY validate run. Assert instead of install: ci-local.sh\n# SKIPS the twin g++ compile when the compiler is absent, so a missing\n# toolchain must fail loudly here rather than silently drop a gate.\nfor tool in g++ git curl tar; do\n  command -v \"$tool\" >/dev/null || { echo \"CI image is missing $tool\" >&2; exit 1; }\ndone\ncurl -sSLo /usr/local/bin/kustomize.tgz \"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz\" \\\n  && tar -xzf /usr/local/bin/kustomize.tgz -C /usr/local/bin kustomize && rm /usr/local/bin/kustomize.tgz\ncd /workspace/repo\ntest \"$(git rev-parse HEAD)\" = \"${REVISION}\"\nif [ \"$(cat /impact/mode)\" = skip ]; then exit 0; fi\nif [ \"$CLASSIFY_PUSH\" = true ] && ! git cat-file -e \"${CI_BASE_REF}^{commit}\" 2>/dev/null; then\n  unset CI_BASE_REF\nfi\n# No editable install (pyproject has no build-system); pull the dep\n# lists straight from pyproject like the retired GH job did.\npython - <<'PY' > /tmp/reqs.txt\nimport tomllib\nd = tomllib.load(open(\"pyproject.toml\", \"rb\"))\nreqs = list(d[\"project\"][\"dependencies\"])\nopt = d[\"project\"].get(\"optional-dependencies\", {})\nfor grp in (\"dev\", \"planner\", \"api\"):\n    reqs += opt.get(grp, [])\nprint(\"\\n\".join(reqs))\nPY\npython -m venv .venv\n.venv/bin/pip -q install -r /tmp/reqs.txt paho-mqtt 'mcp[cli]' pydantic-settings pytest pytest-asyncio\nbash scripts/ci-local.sh\n"
+          ],
+          "command": [
+            "bash",
+            "-euc"
+          ],
+          "env": [
+            {
+              "name": "REVISION",
+              "value": "{{inputs.parameters.revision}}"
+            },
+            {
+              "name": "CI_BASE_REF",
+              "value": "{{inputs.parameters.base-revision}}"
+            },
+            {
+              "name": "CLASSIFY_PUSH",
+              "value": "{{inputs.parameters.classify-push}}"
+            }
+          ],
+          "image": "mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779",
+          "name": "",
+          "resources": {
+            "limits": {
+              "cpu": "2",
+              "ephemeral-storage": "10Gi",
+              "memory": "4Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "ephemeral-storage": "10Gi",
+              "memory": "768Mi"
+            }
+          },
+          "volumeMounts": [
+            {
+              "mountPath": "/impact",
+              "name": "impact-state",
+              "readOnly": true
+            },
+            {
+              "mountPath": "/workspace",
+              "name": "validate-workspace"
+            }
+          ]
+        },
+        "executor": {
+          "serviceAccountName": "native-ci-executor"
+        },
+        "initContainers": [
+          {
+            "args": [
+              "# ruby:3.3-alpine ships Ruby (for the App-token mint) but not Git or CA roots.\napk add --no-cache ca-certificates git python3 >/dev/null\n\ncase \"$REVISION\" in\n  *[!0-9a-f]*|'') echo \"revision must be a lowercase hex sha\" >&2; exit 1 ;;\nesac\ntest \"${#REVISION}\" -eq 40\nif [ -n \"$BASE_REVISION\" ]; then\n  case \"$BASE_REVISION\" in\n    *[!0-9a-f]*) echo \"base revision must be a lowercase hex sha\" >&2; exit 1 ;;\n  esac\n  test \"${#BASE_REVISION}\" -eq 40\nfi\numask 077\ngit_auth_dir=\"$(mktemp -d /tmp/git-auth.XXXXXX)\"\ngit_token_file=\"${git_auth_dir}/token\"\ngit_credential_file=\"${git_auth_dir}/credential-helper.sh\"\ncleanup_git_auth() {\n  rm -f \"${git_token_file}\" \"${git_credential_file}\"\n  rmdir \"${git_auth_dir}\" 2>/dev/null || true\n}\ntrap cleanup_git_auth EXIT\n# #3263: mint the short-lived, repository-restricted, read-only installation\n# token instead of reading the caller-selected Secret (agent-github-token \u2014\n# DELETED by #3208, and the #3209 exfiltration vector). Owner-resolved\n# installation: this is a VerdifyConsultancy repository while the committed\n# Secret's installation_id is jvallery's. GitHub's repositories[] field wants\n# the BARE repo name \u2014 a \".git\" suffix 422s (#3267).\nexport REPO_OWNER=VerdifyConsultancy\nexport REPO_NAME=verdify-platform\nruby -rbase64 -rjson -rnet/http -ropenssl -ruri <<'RUBY' > \"$git_token_file\"\ndef b64url(value)\n  Base64.urlsafe_encode64(value).delete(\"=\")\nend\n\ndef request_json(uri, request)\n  response = Net::HTTP.start(\n    uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 20\n  ) { |http| http.request(request) }\n  abort \"GitHub App request failed: #{response.code}\" unless response.is_a?(Net::HTTPSuccess)\n  JSON.parse(response.body)\nend\n\ndef github_request(klass, uri, jwt)\n  request = klass.new(uri)\n  request[\"Accept\"] = \"application/vnd.github+json\"\n  request[\"Authorization\"] = \"Bearer #{jwt}\"\n  request[\"User-Agent\"] = \"agent-fleet-ci-verdify-platform-validate\"\n  request[\"X-GitHub-Api-Version\"] = \"2022-11-28\"\n  request\nend\n\napp_id = File.read(\"/var/run/secrets/github-app/app_id\").strip\nprivate_key = OpenSSL::PKey::RSA.new(\n  File.read(\"/var/run/secrets/github-app/private_key\")\n)\nowner = ENV.fetch(\"REPO_OWNER\")\nrepository = ENV.fetch(\"REPO_NAME\")\nnow = Time.now.to_i\nheader = { alg: \"RS256\", typ: \"JWT\" }\npayload = { iat: now - 60, exp: now + 540, iss: app_id }\nsigning_input = [header, payload].map { |part| b64url(JSON.generate(part)) }.join(\".\")\nsignature = private_key.sign(OpenSSL::Digest.new(\"SHA256\"), signing_input)\njwt = \"#{signing_input}.#{b64url(signature)}\"\n\ninstallations = request_json(\n  URI(\"https://api.github.com/app/installations?per_page=100\"),\n  github_request(Net::HTTP::Get, URI(\"https://api.github.com/app/installations?per_page=100\"), jwt)\n)\ninstallation = installations.find { |row| row.dig(\"account\", \"login\").to_s.casecmp?(owner) }\nabort \"no CI App installation for owner #{owner}\" unless installation\n\ntoken_uri = URI(\"https://api.github.com/app/installations/#{installation.fetch('id')}/access_tokens\")\ntoken_request = github_request(Net::HTTP::Post, token_uri, jwt)\ntoken_request[\"Content-Type\"] = \"application/json\"\ntoken_request.body = JSON.generate(\n  repositories: [repository],\n  permissions: { contents: \"read\", metadata: \"read\" }\n)\ntoken = request_json(token_uri, token_request).fetch(\"token\")\nabort \"GitHub App returned an empty installation token\" if token.empty?\nputs token\nRUBY\ncat > \"$git_credential_file\" <<'GIT_CREDENTIAL_HELPER_EOF'\n#!/bin/sh\n[ \"${1:-}\" = get ] || exit 0\nprotocol=\nhost=\nprotocol_seen=0\nhost_seen=0\nwhile IFS= read -r line; do\n  case \"$line\" in\n    protocol=*)\n      [ \"$protocol_seen\" -eq 0 ] || exit 0\n      protocol=\"${line#protocol=}\"\n      protocol_seen=1\n      ;;\n    host=*)\n      [ \"$host_seen\" -eq 0 ] || exit 0\n      host=\"${line#host=}\"\n      host_seen=1\n      ;;\n    '') break ;;\n  esac\ndone\n[ \"$protocol_seen\" -eq 1 ] && [ \"$protocol\" = https ] || exit 0\n[ \"$host_seen\" -eq 1 ] && [ \"$host\" = github.com ] || exit 0\nIFS= read -r credential < \"$GIT_TOKEN_FILE\" || exit 1\nprintf 'username=x-access-token\\n'\nprintf 'password=%s\\n\\n' \"$credential\"\nGIT_CREDENTIAL_HELPER_EOF\nchmod 0600 \"$git_token_file\"\nchmod 0700 \"$git_credential_file\"\nexport GIT_TOKEN_FILE=\"$git_token_file\"\nexport GIT_TERMINAL_PROMPT=0\nunset GIT_ASKPASS SSH_ASKPASS\ngit_with_github_auth() {\n  git -c credential.helper= \\\n    -c \"credential.helper=${git_credential_file}\" \"$@\"\n}\nrm -rf /workspace/repo\n# No partial-clone filter: the secret-free validation container\n# must never need a lazy authenticated fetch while inspecting\n# the base or head revision.\ngit_with_github_auth clone --quiet --no-tags \\\n  \"https://github.com/VerdifyConsultancy/verdify-platform.git\" /workspace/repo\ngit_with_github_auth -C /workspace/repo fetch --quiet --no-tags \\\n  origin \"$REVISION\"\nif [ -n \"$BASE_REVISION\" ]; then\n  if ! git_with_github_auth -C /workspace/repo fetch --quiet --no-tags origin \"$BASE_REVISION\"; then\n    # A deleted/initial push base cannot justify skipping builds.\n    # PR callers still fail closed rather than drop diff gates.\n    [ \"$CLASSIFY_PUSH\" = true ] || exit 1\n    BASE_REVISION=\"\"\n  fi\nfi\ngit_with_github_auth -C /workspace/repo checkout --quiet --detach \"$REVISION\"\ntest \"$(git_with_github_auth -C /workspace/repo rev-parse HEAD)\" = \"$REVISION\"\ncleanup_git_auth\ntrap - EXIT\nunset GIT_TOKEN_FILE GIT_TERMINAL_PROMPT REPO_OWNER REPO_NAME\nunset -f git_with_github_auth cleanup_git_auth\n# Trusted init interprets source only as data. The result volume\n# is read-only in the subsequent repository-code container.\nif [ \"$CLASSIFY_PUSH\" = true ]; then\n  python3 /opt/verdify-ci/impact.py --root /workspace/repo \\\n    --head \"$REVISION\" --base \"$BASE_REVISION\" --output /impact --push\nelse\n  python3 /opt/verdify-ci/impact.py --root /workspace/repo \\\n    --head \"$REVISION\" --base \"$BASE_REVISION\" --output /impact\nfi\n"
+            ],
+            "command": [
+              "sh",
+              "-euc"
+            ],
+            "env": [
+              {
+                "name": "REVISION",
+                "value": "{{inputs.parameters.revision}}"
+              },
+              {
+                "name": "BASE_REVISION",
+                "value": "{{inputs.parameters.base-revision}}"
+              },
+              {
+                "name": "CLASSIFY_PUSH",
+                "value": "{{inputs.parameters.classify-push}}"
+              }
+            ],
+            "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+            "name": "fetch-validate-context",
+            "resources": {},
+            "volumeMounts": [
+              {
+                "mountPath": "/opt/verdify-ci",
+                "name": "verdify-path-impact",
+                "readOnly": true
+              },
+              {
+                "mountPath": "/impact",
+                "name": "impact-state"
+              },
+              {
+                "mountPath": "/workspace",
+                "name": "validate-workspace"
+              },
+              {
+                "mountPath": "/var/run/secrets/github-app",
+                "name": "github-app",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "inputs": {
+          "parameters": [
+            {
+              "name": "revision"
+            },
+            {
+              "name": "base-revision",
+              "value": ""
+            },
+            {
+              "name": "classify-push",
+              "value": "false"
+            }
+          ]
+        },
+        "metadata": {
+          "labels": {
+            "agent-fleet.vallery.net/repo-auth-publisher": "true",
+            "verdify-ci.vallery.net/validation": "true"
+          }
+        },
+        "name": "validate",
+        "outputs": {
+          "parameters": [
+            {
+              "name": "mode",
+              "valueFrom": {
+                "path": "/impact/mode"
+              }
+            },
+            {
+              "globalName": "verdify-path-impact",
+              "name": "path-impact-receipt",
+              "valueFrom": {
+                "path": "/impact/receipt.json"
+              }
+            },
+            {
+              "name": "api",
+              "valueFrom": {
+                "path": "/impact/api"
+              }
+            },
+            {
+              "name": "mcp",
+              "valueFrom": {
+                "path": "/impact/mcp"
+              }
+            },
+            {
+              "name": "ingestor",
+              "valueFrom": {
+                "path": "/impact/ingestor"
+              }
+            },
+            {
+              "name": "planner",
+              "valueFrom": {
+                "path": "/impact/planner"
+              }
+            },
+            {
+              "name": "migrate",
+              "valueFrom": {
+                "path": "/impact/migrate"
+              }
+            },
+            {
+              "name": "orchestrator",
+              "valueFrom": {
+                "path": "/impact/orchestrator"
+              }
+            },
+            {
+              "name": "setpoint-server",
+              "valueFrom": {
+                "path": "/impact/setpoint-server"
+              }
+            },
+            {
+              "name": "lab-publisher",
+              "valueFrom": {
+                "path": "/impact/lab-publisher"
+              }
+            }
+          ]
+        },
+        "retryStrategy": {
+          "expression": "lastRetry.message matches '(?i)(deadline|image ?pull)'",
+          "limit": "1",
+          "retryPolicy": "Always"
+        },
+        "serviceAccountName": "native-ci-candidate",
+        "synchronization": {
+          "semaphores": [
+            {
+              "configMapKeyRef": {
+                "key": "repo-validate",
+                "name": "agent-fleet-ci-concurrency"
+              }
+            }
+          ]
+        },
+        "volumes": [
+          {
+            "emptyDir": {
+              "sizeLimit": "1Mi"
+            },
+            "name": "impact-state"
+          },
+          {
+            "configMap": {
+              "defaultMode": 292,
+              "name": "agent-fleet-verdify-path-impact-v3"
+            },
+            "name": "verdify-path-impact"
+          },
+          {
+            "emptyDir": {
+              "sizeLimit": "8Gi"
+            },
+            "name": "validate-workspace"
+          },
+          {
+            "name": "github-app",
+            "secret": {
+              "defaultMode": 256,
+              "secretName": "agent-fleet-ci-github-app"
+            }
+          }
+        ]
+      },
+      "namespaced/verdify-platform-pr-ci/pr-ci": {
+        "inputs": {},
+        "metadata": {
+          "labels": {
+            "agent-fleet.vallery.net/repo-auth-publisher": "true"
+          }
+        },
+        "name": "pr-ci",
+        "outputs": {},
+        "steps": [
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "value": "pending"
+                  }
+                ]
+              },
+              "name": "report-pending",
+              "template": "report-status"
+            },
+            {
+              "arguments": {},
+              "name": "trusted-precheck",
+              "template": "trusted-precheck"
+            }
+          ],
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "revision",
+                    "value": "{{workflow.parameters.head-revision}}"
+                  },
+                  {
+                    "name": "base-revision",
+                    "value": "{{workflow.parameters.base-revision}}"
+                  }
+                ]
+              },
+              "name": "validate",
+              "templateRef": {
+                "name": "verdify-platform-ci",
+                "template": "validate"
+              },
+              "when": "'{{steps.trusted-precheck.outputs.parameters.validation-mode}}' == 'full'"
+            }
+          ]
+        ]
+      },
+      "namespaced/verdify-platform-pr-ci/report-final-status": {
+        "inputs": {},
+        "metadata": {
+          "labels": {
+            "agent-fleet.vallery.net/repo-auth-publisher": "true"
+          }
+        },
+        "name": "report-final-status",
+        "outputs": {},
+        "steps": [
+          [
+            {
+              "arguments": {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "value": "{{workflow.status}}"
+                  }
+                ]
+              },
+              "name": "report",
+              "template": "report-status"
+            }
+          ]
+        ]
+      },
+      "namespaced/verdify-platform-pr-ci/report-status": {
+        "activeDeadlineSeconds": 300,
+        "container": {
+          "args": [
+            "# ruby:3.3-alpine ships Ruby (for the App-token mint) but not curl or CA roots.\napk add --no-cache ca-certificates curl >/dev/null\ncase \"$REVISION\" in *[!0-9a-f]*|'') exit 1 ;; esac\n[ \"${#REVISION}\" -eq 40 ]\nvalidation_event=PR\n[ \"$EVENT_ACTION\" != push ] || validation_event=main\ncase \"$STATUS_STATE\" in\n  pending)\n    api_state=pending\n    description=\"Verdify Platform in-cluster ${validation_event} validation started\"\n    ;;\n  Succeeded)\n    api_state=success\n    description=\"Verdify Platform in-cluster ${validation_event} validation passed\"\n    ;;\n  *)\n    # Failed, Error, or an unexpected terminal state must never false-green.\n    api_state=failure\n    description=\"Verdify Platform in-cluster ${validation_event} validation failed\"\n    ;;\nesac\numask 077\ngithub_auth_dir=\"$(mktemp -d /tmp/github-auth.XXXXXX)\"\ngithub_token_file=\"${github_auth_dir}/token\"\ngithub_header_file=\"${github_auth_dir}/github-header\"\ncleanup_github_auth() {\n  rm -f \"${github_token_file}\" \"${github_header_file}\"\n  rmdir \"${github_auth_dir}\" 2>/dev/null || true\n}\ntrap cleanup_github_auth EXIT\ncp /var/run/secrets/repo-auth/token \"$github_token_file\"\ntest -s \"$github_token_file\"\n# The API header file is derived from the private token file without the\n# token ever entering an environment variable or process argv.\n{ printf 'Authorization: Bearer '; cat \"$github_token_file\"; } > \"$github_header_file\"\nchmod 0600 \"$github_token_file\" \"$github_header_file\"\npayload=\"$(printf '{\"state\":\"%s\",\"context\":\"Verdify Platform / Argo PR CI\",\"description\":\"%s\"}' \\\n  \"$api_state\" \"$description\")\"\ncurl --fail-with-body --silent --show-error \\\n  --request POST \\\n  --header \"Accept: application/vnd.github+json\" \\\n  --header \"@${github_header_file}\" \\\n  --header \"X-GitHub-Api-Version: 2022-11-28\" \\\n  --header \"Content-Type: application/json\" \\\n  --data \"$payload\" \\\n  --output /tmp/github-status-response.json \\\n  \"https://api.github.com/repos/VerdifyConsultancy/verdify-platform/statuses/${REVISION}\"\necho \"Verdify Platform PR commit status recorded.\"\n"
+          ],
+          "command": [
+            "sh",
+            "-euc"
+          ],
+          "env": [
+            {
+              "name": "REVISION",
+              "value": "{{workflow.parameters.head-revision}}"
+            },
+            {
+              "name": "EVENT_ACTION",
+              "value": "{{workflow.parameters.event-action}}"
+            },
+            {
+              "name": "STATUS_STATE",
+              "value": "{{inputs.parameters.state}}"
+            }
+          ],
+          "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+          "name": "",
+          "resources": {},
+          "volumeMounts": [
+            {
+              "mountPath": "/var/run/secrets/repo-auth",
+              "name": "publisher-auth",
+              "readOnly": true
+            }
+          ]
+        },
+        "initContainers": [
+          {
+            "args": [
+              "--expected-repository",
+              "VerdifyConsultancy/verdify-platform",
+              "--expected-profile",
+              "ci-publisher-statuses",
+              "--output",
+              "/var/run/publisher-auth/token"
+            ],
+            "command": [
+              "python3",
+              "/opt/repo-auth/mint.py"
+            ],
+            "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "name": "mint-publisher-token",
+            "resources": {},
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/opt/repo-auth",
+                "name": "repo-auth-client",
+                "readOnly": true
+              },
+              {
+                "mountPath": "/var/run/repo-auth-jwt",
+                "name": "repo-auth-jwt",
+                "readOnly": true
+              },
+              {
+                "mountPath": "/var/run/publisher-auth",
+                "name": "publisher-auth"
+              }
+            ]
+          }
+        ],
+        "inputs": {
+          "parameters": [
+            {
+              "name": "state"
+            }
+          ]
+        },
+        "metadata": {
+          "labels": {
+            "agent-fleet.vallery.net/repo-auth-publisher": "true"
+          }
+        },
+        "name": "report-status",
+        "outputs": {},
+        "retryStrategy": {
+          "expression": "lastRetry.message matches '(?i)(deadline|image ?pull)'",
+          "limit": "2",
+          "retryPolicy": "Always"
+        },
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 365,
+              "name": "agent-fleet-repo-auth-publisher-client"
+            },
+            "name": "repo-auth-client"
+          },
+          {
+            "name": "repo-auth-jwt",
+            "projected": {
+              "defaultMode": 256,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "audience": "agent-fleet-repo-github-auth",
+                    "expirationSeconds": 3600,
+                    "path": "token"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "emptyDir": {
+              "sizeLimit": "1Mi"
+            },
+            "name": "publisher-auth"
+          }
+        ]
+      },
+      "namespaced/verdify-platform-pr-ci/trusted-precheck": {
+        "inputs": {},
+        "metadata": {
+          "labels": {
+            "agent-fleet.vallery.net/repo-auth-publisher": "true"
+          }
+        },
+        "name": "trusted-precheck",
+        "outputs": {
+          "parameters": [
+            {
+              "name": "validation-mode",
+              "valueFrom": {
+                "path": "/tmp/validation-mode"
+              }
+            }
+          ]
+        },
+        "script": {
+          "command": [
+            "sh"
+          ],
+          "env": [
+            {
+              "name": "EVENT_ACTION",
+              "value": "{{workflow.parameters.event-action}}"
+            },
+            {
+              "name": "REPOSITORY",
+              "value": "{{workflow.parameters.repository}}"
+            },
+            {
+              "name": "BASE_REPOSITORY",
+              "value": "{{workflow.parameters.base-repository}}"
+            },
+            {
+              "name": "HEAD_REPOSITORY",
+              "value": "{{workflow.parameters.head-repository}}"
+            },
+            {
+              "name": "BASE_REF",
+              "value": "{{workflow.parameters.base-ref}}"
+            },
+            {
+              "name": "HEAD_REF",
+              "value": "{{workflow.parameters.head-ref}}"
+            },
+            {
+              "name": "BASE_REVISION",
+              "value": "{{workflow.parameters.base-revision}}"
+            },
+            {
+              "name": "HEAD_REVISION",
+              "value": "{{workflow.parameters.head-revision}}"
+            }
+          ],
+          "image": "mirror.gcr.io/library/alpine@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d",
+          "name": "",
+          "resources": {},
+          "source": "set -eu\nfail() {\n  echo \"Verdify Platform validation precheck rejected the event or revision.\" >&2\n  exit 1\n}\nis_sha() {\n  value=\"$1\"\n  [ \"${#value}\" -eq 40 ] || return 1\n  case \"$value\" in *[!0-9a-f]*|\"\") return 1 ;; esac\n}\ncase \"$EVENT_ACTION\" in\n  opened|reopened|synchronize) ;;\n  push) [ \"$HEAD_REF\" = main ] || fail ;;\n  *) fail ;;\nesac\n[ \"$REPOSITORY\" = \"VerdifyConsultancy/verdify-platform\" ] || fail\n[ \"$BASE_REPOSITORY\" = \"$REPOSITORY\" ] || fail\n[ \"$HEAD_REPOSITORY\" = \"$REPOSITORY\" ] || fail\n[ \"$BASE_REF\" = main ] || fail\n[ -n \"$HEAD_REF\" ] || fail\ncase \"$HEAD_REF\" in *[!A-Za-z0-9._/-]*|\"\"|/*|*/|*..*) fail ;; esac\nis_sha \"$BASE_REVISION\" || fail\nis_sha \"$HEAD_REVISION\" || fail\nprintf full > /tmp/validation-mode\n"
+        }
+      }
+    },
+    "storedWorkflowTemplateSpec": {
+      "activeDeadlineSeconds": 3600,
+      "arguments": {
+        "parameters": [
+          {
+            "name": "event-action",
+            "value": "opened"
+          },
+          {
+            "name": "repository",
+            "value": "VerdifyConsultancy/verdify-platform"
+          },
+          {
+            "name": "base-repository",
+            "value": "VerdifyConsultancy/verdify-platform"
+          },
+          {
+            "name": "head-repository",
+            "value": "VerdifyConsultancy/verdify-platform"
+          },
+          {
+            "name": "base-ref",
+            "value": "main"
+          },
+          {
+            "name": "head-ref",
+            "value": "codex/control-timing-qualification-20261026"
+          },
+          {
+            "name": "base-revision",
+            "value": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+          },
+          {
+            "name": "head-revision",
+            "value": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+          }
+        ]
+      },
+      "entrypoint": "pr-ci",
+      "onExit": "report-final-status",
+      "podGC": {
+        "strategy": "OnPodSuccess"
+      },
+      "podMetadata": {
+        "labels": {
+          "agent-fleet.vallery.net/repo-auth-publisher": "true"
+        }
+      },
+      "podPriorityClassName": "agent-fleet-ci-foreign",
+      "priority": 10,
+      "serviceAccountName": "verdify-platform-pr-ci-publisher",
+      "templates": [
+        {
+          "inputs": {},
+          "metadata": {},
+          "name": "pr-ci",
+          "outputs": {},
+          "steps": [
+            [
+              {
+                "arguments": {
+                  "parameters": [
+                    {
+                      "name": "state",
+                      "value": "pending"
+                    }
+                  ]
+                },
+                "name": "report-pending",
+                "template": "report-status"
+              },
+              {
+                "arguments": {},
+                "name": "trusted-precheck",
+                "template": "trusted-precheck"
+              }
+            ],
+            [
+              {
+                "arguments": {
+                  "parameters": [
+                    {
+                      "name": "revision",
+                      "value": "{{workflow.parameters.head-revision}}"
+                    },
+                    {
+                      "name": "base-revision",
+                      "value": "{{workflow.parameters.base-revision}}"
+                    }
+                  ]
+                },
+                "name": "validate",
+                "templateRef": {
+                  "name": "verdify-platform-ci",
+                  "template": "validate"
+                },
+                "when": "'{{steps.trusted-precheck.outputs.parameters.validation-mode}}' == 'full'"
+              }
+            ]
+          ]
+        },
+        {
+          "inputs": {},
+          "metadata": {},
+          "name": "trusted-precheck",
+          "outputs": {
+            "parameters": [
+              {
+                "name": "validation-mode",
+                "valueFrom": {
+                  "path": "/tmp/validation-mode"
+                }
+              }
+            ]
+          },
+          "script": {
+            "command": [
+              "sh"
+            ],
+            "env": [
+              {
+                "name": "EVENT_ACTION",
+                "value": "{{workflow.parameters.event-action}}"
+              },
+              {
+                "name": "REPOSITORY",
+                "value": "{{workflow.parameters.repository}}"
+              },
+              {
+                "name": "BASE_REPOSITORY",
+                "value": "{{workflow.parameters.base-repository}}"
+              },
+              {
+                "name": "HEAD_REPOSITORY",
+                "value": "{{workflow.parameters.head-repository}}"
+              },
+              {
+                "name": "BASE_REF",
+                "value": "{{workflow.parameters.base-ref}}"
+              },
+              {
+                "name": "HEAD_REF",
+                "value": "{{workflow.parameters.head-ref}}"
+              },
+              {
+                "name": "BASE_REVISION",
+                "value": "{{workflow.parameters.base-revision}}"
+              },
+              {
+                "name": "HEAD_REVISION",
+                "value": "{{workflow.parameters.head-revision}}"
+              }
+            ],
+            "image": "mirror.gcr.io/library/alpine@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d",
+            "name": "",
+            "resources": {},
+            "source": "set -eu\nfail() {\n  echo \"Verdify Platform validation precheck rejected the event or revision.\" >&2\n  exit 1\n}\nis_sha() {\n  value=\"$1\"\n  [ \"${#value}\" -eq 40 ] || return 1\n  case \"$value\" in *[!0-9a-f]*|\"\") return 1 ;; esac\n}\ncase \"$EVENT_ACTION\" in\n  opened|reopened|synchronize) ;;\n  push) [ \"$HEAD_REF\" = main ] || fail ;;\n  *) fail ;;\nesac\n[ \"$REPOSITORY\" = \"VerdifyConsultancy/verdify-platform\" ] || fail\n[ \"$BASE_REPOSITORY\" = \"$REPOSITORY\" ] || fail\n[ \"$HEAD_REPOSITORY\" = \"$REPOSITORY\" ] || fail\n[ \"$BASE_REF\" = main ] || fail\n[ -n \"$HEAD_REF\" ] || fail\ncase \"$HEAD_REF\" in *[!A-Za-z0-9._/-]*|\"\"|/*|*/|*..*) fail ;; esac\nis_sha \"$BASE_REVISION\" || fail\nis_sha \"$HEAD_REVISION\" || fail\nprintf full > /tmp/validation-mode\n"
+          }
+        },
+        {
+          "inputs": {},
+          "metadata": {},
+          "name": "report-final-status",
+          "outputs": {},
+          "steps": [
+            [
+              {
+                "arguments": {
+                  "parameters": [
+                    {
+                      "name": "state",
+                      "value": "{{workflow.status}}"
+                    }
+                  ]
+                },
+                "name": "report",
+                "template": "report-status"
+              }
+            ]
+          ]
+        },
+        {
+          "activeDeadlineSeconds": 300,
+          "container": {
+            "args": [
+              "# ruby:3.3-alpine ships Ruby (for the App-token mint) but not curl or CA roots.\napk add --no-cache ca-certificates curl >/dev/null\ncase \"$REVISION\" in *[!0-9a-f]*|'') exit 1 ;; esac\n[ \"${#REVISION}\" -eq 40 ]\nvalidation_event=PR\n[ \"$EVENT_ACTION\" != push ] || validation_event=main\ncase \"$STATUS_STATE\" in\n  pending)\n    api_state=pending\n    description=\"Verdify Platform in-cluster ${validation_event} validation started\"\n    ;;\n  Succeeded)\n    api_state=success\n    description=\"Verdify Platform in-cluster ${validation_event} validation passed\"\n    ;;\n  *)\n    # Failed, Error, or an unexpected terminal state must never false-green.\n    api_state=failure\n    description=\"Verdify Platform in-cluster ${validation_event} validation failed\"\n    ;;\nesac\numask 077\ngithub_auth_dir=\"$(mktemp -d /tmp/github-auth.XXXXXX)\"\ngithub_token_file=\"${github_auth_dir}/token\"\ngithub_header_file=\"${github_auth_dir}/github-header\"\ncleanup_github_auth() {\n  rm -f \"${github_token_file}\" \"${github_header_file}\"\n  rmdir \"${github_auth_dir}\" 2>/dev/null || true\n}\ntrap cleanup_github_auth EXIT\ncp /var/run/secrets/repo-auth/token \"$github_token_file\"\ntest -s \"$github_token_file\"\n# The API header file is derived from the private token file without the\n# token ever entering an environment variable or process argv.\n{ printf 'Authorization: Bearer '; cat \"$github_token_file\"; } > \"$github_header_file\"\nchmod 0600 \"$github_token_file\" \"$github_header_file\"\npayload=\"$(printf '{\"state\":\"%s\",\"context\":\"Verdify Platform / Argo PR CI\",\"description\":\"%s\"}' \\\n  \"$api_state\" \"$description\")\"\ncurl --fail-with-body --silent --show-error \\\n  --request POST \\\n  --header \"Accept: application/vnd.github+json\" \\\n  --header \"@${github_header_file}\" \\\n  --header \"X-GitHub-Api-Version: 2022-11-28\" \\\n  --header \"Content-Type: application/json\" \\\n  --data \"$payload\" \\\n  --output /tmp/github-status-response.json \\\n  \"https://api.github.com/repos/VerdifyConsultancy/verdify-platform/statuses/${REVISION}\"\necho \"Verdify Platform PR commit status recorded.\"\n"
+            ],
+            "command": [
+              "sh",
+              "-euc"
+            ],
+            "env": [
+              {
+                "name": "REVISION",
+                "value": "{{workflow.parameters.head-revision}}"
+              },
+              {
+                "name": "EVENT_ACTION",
+                "value": "{{workflow.parameters.event-action}}"
+              },
+              {
+                "name": "STATUS_STATE",
+                "value": "{{inputs.parameters.state}}"
+              }
+            ],
+            "image": "ruby@sha256:2f763b37070564bb00b736f1d4dba6e8f8d203b5f93b94463879fd8d79966f28",
+            "name": "",
+            "resources": {},
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/repo-auth",
+                "name": "publisher-auth",
+                "readOnly": true
+              }
+            ]
+          },
+          "initContainers": [
+            {
+              "args": [
+                "--expected-repository",
+                "VerdifyConsultancy/verdify-platform",
+                "--expected-profile",
+                "ci-publisher-statuses",
+                "--output",
+                "/var/run/publisher-auth/token"
+              ],
+              "command": [
+                "python3",
+                "/opt/repo-auth/mint.py"
+              ],
+              "image": "mirror.gcr.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+              "name": "mint-publisher-token",
+              "resources": {},
+              "securityContext": {
+                "allowPrivilegeEscalation": false,
+                "capabilities": {
+                  "drop": [
+                    "ALL"
+                  ]
+                }
+              },
+              "volumeMounts": [
+                {
+                  "mountPath": "/opt/repo-auth",
+                  "name": "repo-auth-client",
+                  "readOnly": true
+                },
+                {
+                  "mountPath": "/var/run/repo-auth-jwt",
+                  "name": "repo-auth-jwt",
+                  "readOnly": true
+                },
+                {
+                  "mountPath": "/var/run/publisher-auth",
+                  "name": "publisher-auth"
+                }
+              ]
+            }
+          ],
+          "inputs": {
+            "parameters": [
+              {
+                "name": "state"
+              }
+            ]
+          },
+          "metadata": {},
+          "name": "report-status",
+          "outputs": {},
+          "retryStrategy": {
+            "expression": "lastRetry.message matches '(?i)(deadline|image ?pull)'",
+            "limit": "2",
+            "retryPolicy": "Always"
+          },
+          "volumes": [
+            {
+              "configMap": {
+                "defaultMode": 365,
+                "name": "agent-fleet-repo-auth-publisher-client"
+              },
+              "name": "repo-auth-client"
+            },
+            {
+              "name": "repo-auth-jwt",
+              "projected": {
+                "defaultMode": 256,
+                "sources": [
+                  {
+                    "serviceAccountToken": {
+                      "audience": "agent-fleet-repo-github-auth",
+                      "expirationSeconds": 3600,
+                      "path": "token"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "emptyDir": {
+                "sizeLimit": "1Mi"
+              },
+              "name": "publisher-auth"
+            }
+          ]
+        }
+      ],
+      "ttlStrategy": {
+        "secondsAfterCompletion": 86400,
+        "secondsAfterFailure": 172800
+      },
+      "workflowTemplateRef": {
+        "name": "verdify-platform-pr-ci"
+      }
+    }
+  }
+}

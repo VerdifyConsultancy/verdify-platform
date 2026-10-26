@@ -161,7 +161,7 @@
       "prior_next_action": "Add only missing native actual-wrapper min-off boundary/restart/manual-origin cases, then carry into #390.",
       "preserve_original_acceptance": true,
       "status_delta": "PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.",
-      "next_action": "Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.",
+      "next_action": "Read the retained successful219-case/fullCI/two-target compiler receipts for exacthead96464472, perform independent source review after explicit resume and preserve main22-case fixture; carry only selected qualified source into #390. No duplicate execution or flash.",
       "acceptance_limit": "No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests.",
       "evidence_files": [
         "control-native-results.json",
@@ -169,7 +169,8 @@
         "control-timing-pr-body.md"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.\n\nNext action after explicit resume: Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.\n\nAcceptance limits: No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.\n\nNext action after explicit resume: Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.\n\nAcceptance limits: No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 350,
@@ -187,7 +188,8 @@
         "all-open-issue-review.json"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared irrigation/control source PR1095 is native-qualified219/219 but its full PR CI/compiler remain active. Field topology, calibrated wall-feed and release proof remain separate.\n\nNext action after explicit resume: Track #299/#434/#390 source qualification separately from #298\u2192#398\u2192#45 physical commissioning.\n\nAcceptance limits: No center-drip connection, wall-feed calibration, dosing action or physical qualification occurred."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared irrigation/control source PR1095 is native-qualified219/219 but its full PR CI/compiler remain active. Field topology, calibrated wall-feed and release proof remain separate.\n\nNext action after explicit resume: Track #299/#434/#390 source qualification separately from #298\u2192#398\u2192#45 physical commissioning.\n\nAcceptance limits: No center-drip connection, wall-feed calibration, dosing action or physical qualification occurred.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 359,
@@ -206,7 +208,8 @@
         "1095-shutdown-final-observation.json"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. Finite aggregate contributors are corrected in merged1091/18570b0f; control timing/accepted relay-cycle PR1095 is native-qualified but pending full CI/compiler.\n\nNext action after explicit resume: Reuse current source receipts; keep jump/flatline, field inputs, actual cycling and post-study corridor decisions separate.\n\nAcceptance limits: Source/native success does not establish deployed cycling, sensor recovery or scientific efficacy."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Finite aggregate contributors are corrected in merged1091/18570b0f; control timing/accepted relay-cycle PR1095 is native-qualified but pending full CI/compiler.\n\nNext action after explicit resume: Reuse current source receipts; keep jump/flatline, field inputs, actual cycling and post-study corridor decisions separate.\n\nAcceptance limits: Source/native success does not establish deployed cycling, sensor recovery or scientific efficacy.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 367,
@@ -216,7 +219,7 @@
       "prior_next_action": "Reuse #985 eight-limit correction and 84 wrapper cases; finish single-authority semantics and missing causal boundary proof.",
       "preserve_original_acceptance": true,
       "status_delta": "PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.",
-      "next_action": "Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.",
+      "next_action": "Read the retained successful219-case/fullCI/two-target compiler receipts for exacthead96464472, perform independent source review after explicit resume and preserve main22-case fixture; carry only selected qualified source into #390. No duplicate execution or flash.",
       "acceptance_limit": "No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source.",
       "evidence_files": [
         "control-timing-pr-body.md",
@@ -226,7 +229,8 @@
       "stale_wording": [
         "Current action to finish source authority semantics should distinguish the prepared1095 owner/force documentation from remaining deployed/physical proof."
       ],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.\n\nNext action after explicit resume: Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.\n\nAcceptance limits: No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.\n\nNext action after explicit resume: Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.\n\nAcceptance limits: No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 368,
@@ -322,7 +326,7 @@
       "prior_next_action": "Finish current-path docs PR1086 after its existing checks; select exact candidate/recovery provenance and canaries before any attended release.",
       "preserve_original_acceptance": true,
       "status_delta": "Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.",
-      "next_action": "Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.",
+      "next_action": "Read the retained successful219-case/fullCI/two-target compiler receipts for exacthead96464472, perform independent source review after explicit resume and preserve main22-case fixture; carry only selected qualified source into #390. No duplicate execution or flash.",
       "acceptance_limit": "No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed.",
       "evidence_files": [
         "resume-ci-receipts.json",
@@ -334,7 +338,8 @@
       "stale_wording": [
         "The old review action to finish docs1086 is completed. Never present a secretless compiler output as deployable or last-good."
       ],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.\n\nNext action after explicit resume: Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.\n\nAcceptance limits: No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.\n\nNext action after explicit resume: Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.\n\nAcceptance limits: No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 398,
@@ -401,7 +406,8 @@
         "1095-shutdown-final-observation.json"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared control PR1095 is native-qualified219/219 but not yet full-CI/compiler accepted or deployed. No new broad cleanup/refactor was done.\n\nNext action after explicit resume: Reuse #367 owner/force semantics and finish exact pending qualification before justified #369/#370 work.\n\nAcceptance limits: Do not add blanket dependencies or infer physical anti-chatter acceptance."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared control PR1095 is native-qualified219/219 but not yet full-CI/compiler accepted or deployed. No new broad cleanup/refactor was done.\n\nNext action after explicit resume: Reuse #367 owner/force semantics and finish exact pending qualification before justified #369/#370 work.\n\nAcceptance limits: Do not add blanket dependencies or infer physical anti-chatter acceptance.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 434,
@@ -411,7 +417,7 @@
       "prior_next_action": "Prepare missing all-origin/reverse-conflict/calibration-negative/no-double-dose cases against approved topology.",
       "preserve_original_acceptance": true,
       "status_delta": "PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.",
-      "next_action": "After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.",
+      "next_action": "Read the retained successful219-case/fullCI/two-target compiler receipts for exacthead96464472, perform independent source review after explicit resume and preserve main22-case fixture; carry only selected qualified source into #390. No duplicate execution or flash.",
       "acceptance_limit": "No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred.",
       "evidence_files": [
         "control-timing-pr-body.md",
@@ -419,7 +425,8 @@
         "1095-shutdown-final-observation.json"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.\n\nNext action after explicit resume: After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.\n\nAcceptance limits: No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.\n\nNext action after explicit resume: After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.\n\nAcceptance limits: No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 581,
@@ -608,7 +615,8 @@
         "1010-adjacent-source-preparation.md"
       ],
       "stale_wording": [],
-      "draft_status_comment": "Shutdown evidence review, October26,2026. Shutdown requested after source progress:1091 merged/native+compiler qualified;1092 candidate merged and9 older candidates superseded;1094 merged22/13;1095 strict native219 passed with full PR CI/compiler still running.1010 source companions are prepared across owners.15:17 runtime remains healthy at comparison0ed369fd, but writer remains halted12completed/0staged/handoff unsettled.\n\nNext action after explicit resume: Publish exact source/evidence and issue status, preserve active cluster jobs, then stop local work. On explicit resume inspect the same exact handles and source/UID before interpreting outcomes or taking another write.\n\nAcceptance limits: No new ESP32 connection, node cordon, credentials, Slack pair, OTA, experiment activation or hold clearance occurred. Fresh health is not writer recovery."
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shutdown requested after source progress:1091 merged/native+compiler qualified;1092 candidate merged and9 older candidates superseded;1094 merged22/13;1095 strict native219 passed with full PR CI/compiler still running.1010 source companions are prepared across owners.15:17 runtime remains healthy at comparison0ed369fd, but writer remains halted12completed/0staged/handoff unsettled.\n\nNext action after explicit resume: Publish exact source/evidence and issue status, preserve active cluster jobs, then stop local work. On explicit resume inspect the same exact handles and source/UID before interpreting outcomes or taking another write.\n\nAcceptance limits: No new ESP32 connection, node cordon, credentials, Slack pair, OTA, experiment activation or hold clearance occurred. Fresh health is not writer recovery.",
+      "terminal_addendum": "At15:27\u201315:28UTC the same #1095 requiredCI and both-target compiler workflows are Succeeded; all11 compiler receipt checks pass (both targets, negative exit1,16hashes,pinned toolchain). Exacthead96464472 remains open/unmerged, no firmware/device change. Main validation succeeded; main imagebuild remainsRunning at15:27:24Z. Use retained receipts after explicit resume."
     },
     {
       "number": 782,
