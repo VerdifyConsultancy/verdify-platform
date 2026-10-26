@@ -1,0 +1,94 @@
+{
+  "name": "verdify-platform-pr-ci-g7vr4",
+  "uid": "b476b9ca-715e-4e3f-9ea2-6f693449668b",
+  "phase": "Succeeded",
+  "startedAt": "2026-10-26T14:33:24Z",
+  "finishedAt": "2026-10-26T14:55:14Z",
+  "source": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+  "nodes": [
+    {
+      "displayName": "verdify-platform-pr-ci-g7vr4",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:24Z",
+      "finishedAt": "2026-10-26T14:54:53Z",
+      "message": null
+    },
+    {
+      "displayName": "validate",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:44Z",
+      "finishedAt": "2026-10-26T14:54:53Z",
+      "message": null
+    },
+    {
+      "displayName": "trusted-precheck",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:24Z",
+      "finishedAt": "2026-10-26T14:33:30Z",
+      "message": null
+    },
+    {
+      "displayName": "report-pending(0)",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:24Z",
+      "finishedAt": "2026-10-26T14:33:36Z",
+      "message": null
+    },
+    {
+      "displayName": "validate(0)",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:44Z",
+      "finishedAt": "2026-10-26T14:54:43Z",
+      "message": null
+    },
+    {
+      "displayName": "[0]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:24Z",
+      "finishedAt": "2026-10-26T14:33:44Z",
+      "message": null
+    },
+    {
+      "displayName": "report",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:54:53Z",
+      "finishedAt": "2026-10-26T14:55:14Z",
+      "message": null
+    },
+    {
+      "displayName": "[1]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:44Z",
+      "finishedAt": "2026-10-26T14:54:53Z",
+      "message": null
+    },
+    {
+      "displayName": "[0]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:54:53Z",
+      "finishedAt": "2026-10-26T14:55:14Z",
+      "message": null
+    },
+    {
+      "displayName": "report(0)",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:54:53Z",
+      "finishedAt": "2026-10-26T14:55:07Z",
+      "message": null
+    },
+    {
+      "displayName": "report-pending",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:33:24Z",
+      "finishedAt": "2026-10-26T14:33:44Z",
+      "message": null
+    },
+    {
+      "displayName": "verdify-platform-pr-ci-g7vr4.onExit",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-26T14:54:53Z",
+      "finishedAt": "2026-10-26T14:55:14Z",
+      "message": null
+    }
+  ]
+}

@@ -1,0 +1,374 @@
+{
+  "schema": "verdify.private-component-containment/1",
+  "source": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+  "synthetic_only": true,
+  "production_acceptance": false,
+  "historical_prefix_credit": false,
+  "qualified": true,
+  "required_cases": [
+    "test_additional_ops_alert_capture_lifecycle[baseline_missing]",
+    "test_additional_ops_alert_capture_lifecycle[baseline_recovery]",
+    "test_additional_ops_alert_capture_lifecycle[confirmed_baseline_missing]",
+    "test_additional_ops_alert_capture_lifecycle[expired_work]",
+    "test_additional_ops_alert_capture_lifecycle[incomplete_outcomes]",
+    "test_additional_ops_alert_capture_lifecycle[open_without_work]",
+    "test_additional_ops_alert_capture_lifecycle[preexposure_mismatch]",
+    "test_additional_ops_alert_capture_lifecycle[runtime_fault]",
+    "test_additional_ops_alert_capture_lifecycle[terminal_enabled]",
+    "test_emergency_hold_revokes_runtime_authority",
+    "test_facility_hold_alert_native_projection_lifecycle",
+    "test_feature_off_precedes_all_store_and_transport_access",
+    "test_native_epoch_refuses_missing_runtime_generation",
+    "test_native_exposure_refuses_missing_observation_receipts",
+    "test_native_positive_exposure_alert[expired]",
+    "test_native_positive_exposure_alert[multiple]",
+    "test_native_positive_exposure_alert[stale]",
+    "test_own_login_locked_or_armed_readiness_denial[armed]",
+    "test_own_login_locked_or_armed_readiness_denial[locked]",
+    "test_populated_blinded_view_retains_outcome_without_mapping_access",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+    "test_populated_locked_or_armed_cannot_reopen_readiness[locked]"
+  ],
+  "native_guard_refusals": {
+    "test_native_epoch_refuses_missing_runtime_generation": "epoch writer/connection generations are not current",
+    "test_native_exposure_refuses_missing_observation_receipts": "exposure requires two exact complete source epochs at least 30 seconds apart"
+  },
+  "synthetic_ops_reason_coverage": {
+    "exercised": [
+      "baseline_artifact_missing",
+      "baseline_recovery_in_progress",
+      "completed_with_incomplete_outcomes",
+      "confirmed_baseline_recovery_missing",
+      "expired_work_not_terminal",
+      "facility_emergency_hold",
+      "multiple_open_exposures",
+      "open_admission_without_current_work",
+      "open_exposure_observation_stale",
+      "open_exposure_work_expired",
+      "preexposure_state_mismatch",
+      "runtime_fault_requires_recovery",
+      "terminal_experiment_capability_enabled"
+    ],
+    "retained_after_facility_closure": [
+      "preexposure_state_mismatch"
+    ],
+    "not_exercised": [
+      "open_exposure_observation_missing",
+      "open_exposure_state_mismatch",
+      "runtime_generation_missing"
+    ],
+    "scope": "private negative guards and committed native positive exposure, current SQL and capture-only alerts",
+    "active_runtime_or_physical_acceptance": false,
+    "additional_real_delivery_credit": false
+  },
+  "fixture_sha256": "c7b0bcb58ac29fc361f3275756f3fc008814abf694841e37745ca55c1ed18de1",
+  "migrations": {
+    "db/schema.sql": "7b98718747f24ea355eb685939209c05f0744015fa7d0e52a68e13d0e4135bca",
+    "db/migrations/tests/test-214-confirmed-component-experiment-v2.sql": "f5e145fefef3760624a58ff26a72419136d9203ad49824457b07e6cd595c6c6c",
+    "db/migrations/207-controlled-policy-experiment.sql": "d6ea14eb833358e65f5e894fc56e39d15fefad6872065d3542cc30539db53d2e",
+    "db/migrations/214-confirmed-component-experiment-v2.sql": "ac155aa5d6c02218e755e4ca7386e4477cf4b5791d9e1efef49c0dc427c12bda",
+    "db/migrations/270-facility-safe-ops-projection.sql": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+    "db/migrations/256-experiment-v2-end-study-recovery-completion.sql": "b35ed01468ef505dc46b035b6b3c15ee57ba96d6600183ffd98b9975d4fffe0f",
+    "tests/component_alert_delivery_bridge.py": "e6f95bbaa95e093da8f18e1ce6aae2c7e6541aeb1cb5bdf4ceb442f199bfaa04",
+    "tests/test_scorecard_semantics.py": "78668ad3a386a3dc8ec93a94505c7b87b49666ab4c68482bb96b4baa482dbd87",
+    "ingestor/tasks/alerts.py": "e5450cbbb6909bafbfbed0e65f6183352371313b847bc93bfbd97b3733b9e510"
+  },
+  "cases": [
+    {
+      "name": "test_feature_off_precedes_all_store_and_transport_access",
+      "custody": {
+        "custody_before_sha256": "431fa8994d0de899c272820e83edf506dd091e961047860130f8ff729c0b3a29",
+        "custody_after_sha256": "431fa8994d0de899c272820e83edf506dd091e961047860130f8ff729c0b3a29",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_locked_or_armed_cannot_reopen_readiness[locked]",
+      "custody": {
+        "custody_before_sha256": "b6d071913ffa4aae3e146db2b85123f27f4fe1646050493495d9d9fd545b1584",
+        "custody_after_sha256": "b6d071913ffa4aae3e146db2b85123f27f4fe1646050493495d9d9fd545b1584",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_locked_or_armed_cannot_reopen_readiness[armed]",
+      "custody": {
+        "custody_before_sha256": "ffe3b0101f61671d005e72bf35510bc33c1792e69d1599cfbb64140d2d3410a6",
+        "custody_after_sha256": "ffe3b0101f61671d005e72bf35510bc33c1792e69d1599cfbb64140d2d3410a6",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_emergency_hold_revokes_runtime_authority",
+      "custody": {
+        "custody_before_sha256": "50611457a848a5b86fc6e449a29ca8bdacaab97599e73ba2e63cdd768670ab29",
+        "custody_after_sha256": "50611457a848a5b86fc6e449a29ca8bdacaab97599e73ba2e63cdd768670ab29",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_populated_blinded_view_retains_outcome_without_mapping_access",
+      "custody": {
+        "custody_before_sha256": "18907617fc775015bc1e8a4a89a95d409d65fe52f63f1338deed07a6bd67c689",
+        "custody_after_sha256": "18907617fc775015bc1e8a4a89a95d409d65fe52f63f1338deed07a6bd67c689",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_own_login_locked_or_armed_readiness_denial[locked]",
+      "custody": {
+        "custody_before_sha256": "5d95ba7fa91ee3bf02cb1abeae32df680d2e90560aa4a28a1292c0ac3762ccad",
+        "custody_after_sha256": "5d95ba7fa91ee3bf02cb1abeae32df680d2e90560aa4a28a1292c0ac3762ccad",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_own_login_locked_or_armed_readiness_denial[armed]",
+      "custody": {
+        "custody_before_sha256": "dfcb8b1566eed32107e0e5916bfbb6526ff2fb8fcf717987eba0089984fb0902",
+        "custody_after_sha256": "dfcb8b1566eed32107e0e5916bfbb6526ff2fb8fcf717987eba0089984fb0902",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_native_epoch_refuses_missing_runtime_generation",
+      "custody": {
+        "positive_authority_rows": "0",
+        "native_guards_enabled": "true",
+        "effective_login": "verdify_experiment_v2_component_executor_login",
+        "session_login": "verdify_experiment_v2_component_executor_login",
+        "executor_replication_role": "origin",
+        "native_guard_refusal": "epoch writer/connection generations are not current",
+        "native_refusal_sqlstate": "P0001",
+        "synthetic_precondition_only": "true",
+        "owner_set_negative_control_precondition": "false",
+        "trigger_custody_before_sha256": "dcf50bba3162ca3c763d11cd65f17a79cd9318b1cefeab25949c7c862e6add52",
+        "trigger_custody_after_sha256": "dcf50bba3162ca3c763d11cd65f17a79cd9318b1cefeab25949c7c862e6add52",
+        "custody_before_sha256": "8c19492880e572d5c39214e5cdb4e807ebd7e8a112e934abcc87e99398821239",
+        "custody_after_sha256": "8c19492880e572d5c39214e5cdb4e807ebd7e8a112e934abcc87e99398821239",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_native_exposure_refuses_missing_observation_receipts",
+      "custody": {
+        "positive_authority_rows": "0",
+        "native_guards_enabled": "true",
+        "effective_login": "verdify_experiment_v2_component_executor_login",
+        "session_login": "verdify_experiment_v2_component_executor_login",
+        "executor_replication_role": "origin",
+        "native_guard_refusal": "exposure requires two exact complete source epochs at least 30 seconds apart",
+        "native_refusal_sqlstate": "P0001",
+        "synthetic_precondition_only": "true",
+        "owner_set_negative_control_precondition": "true",
+        "trigger_custody_before_sha256": "dcf50bba3162ca3c763d11cd65f17a79cd9318b1cefeab25949c7c862e6add52",
+        "trigger_custody_after_sha256": "dcf50bba3162ca3c763d11cd65f17a79cd9318b1cefeab25949c7c862e6add52",
+        "custody_before_sha256": "2a964fdabc6e349de4b4dda728bd312c767e32045705ff6e60e23a450cadbb5f",
+        "custody_after_sha256": "2a964fdabc6e349de4b4dda728bd312c767e32045705ff6e60e23a450cadbb5f",
+        "public_rowsets": "54",
+        "sequences": "8"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[baseline_recovery]",
+      "custody": {
+        "ops_reason": "baseline_recovery_in_progress",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "b785116fa57b541548ba5454fb77ba20e3b6534543cdffb81395b2795073347b",
+        "custody_after_sha256": "8c669ad863804361b8c3a765f69c3b9be082bca2d8d9d602b11d3ec751af3cf0",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udfe1 *[WARNING]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: baseline recovery in progress\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[baseline_missing]",
+      "custody": {
+        "ops_reason": "baseline_artifact_missing",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "b20af9a8dd52a498798f95d4f422aae7b35d409dc64c14cfa4db884732c615fc",
+        "custody_after_sha256": "86fd2c55ffad8c189d7b46ba0fe2fed7ce264290592f63fdd2bfbb8e777fa50c",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: baseline artifact missing\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[terminal_enabled]",
+      "custody": {
+        "ops_reason": "terminal_experiment_capability_enabled",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "3a946209d01f7005b16faaa6d048a6ec3c1edda19026982df31df0621e695e22",
+        "custody_after_sha256": "9ac172e15a828157743e1bbdfc232995ea24aec7005b53d2f899756aff158808",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: terminal experiment capability enabled\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[incomplete_outcomes]",
+      "custody": {
+        "ops_reason": "completed_with_incomplete_outcomes",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "36cc1bdbdd02c612f5a08a44b502d89483aaa1e09d07c5617a525665ea93d88a",
+        "custody_after_sha256": "267609b09bdcd35a766ac83f34be7281f897e022467f170095bffb9274e549eb",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: completed with incomplete outcomes\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[open_without_work]",
+      "custody": {
+        "ops_reason": "open_admission_without_current_work",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "01949def6dba5ce6d18b169f8e7e18b27b72cf9dba95b2a8cbaf26b2a04b41b6",
+        "custody_after_sha256": "1a481d1286a527c6bfca1f164400c0afa8fe94f2ebe0729e3bdebef423e52713",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: open admission without current work\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[confirmed_baseline_missing]",
+      "custody": {
+        "ops_reason": "confirmed_baseline_recovery_missing",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "b5a7348985e531a9045dc219b75aea48733b86de312f4090dd30377a4c108f6b",
+        "custody_after_sha256": "e2b1976ab5098c5285e2a06a09d09eb162ccc11c47c34d4f887ad7d1b694738f",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: confirmed baseline recovery missing\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[expired_work]",
+      "custody": {
+        "ops_reason": "expired_work_not_terminal",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "3cd400fbc8c45248bffafa7b25913632c0df1a9feed0c884b9f0e94fc489cdaf",
+        "custody_after_sha256": "0dc3e719eec3fa5013b02fdfc9605b0c3f2e465373563a37a71d032a26f6ea35",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 1, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: expired work not terminal\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[preexposure_mismatch]",
+      "custody": {
+        "ops_reason": "preexposure_state_mismatch",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "retained_until_confirmed_recovery",
+        "custody_before_sha256": "218a8d3fabf196818feda28c5ea9df98201e14869ce2d1d4b3bb4fe64a45f571",
+        "custody_after_sha256": "5cfe1e8a92d87eee773ae9d47e30d045af048fda86c3d649c874f23a94c262a0",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 1, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: preexposure state mismatch\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}], \"receipts\": [\"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_additional_ops_alert_capture_lifecycle[runtime_fault]",
+      "custody": {
+        "ops_reason": "runtime_fault_requires_recovery",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "e3f58336ce608ff9044f8c50bb444ecfae1f22abb5772f32438f37566dda46ed",
+        "custody_after_sha256": "6fd9b05bd05aafc9730f7f2f1c358adf05f1a27ade27f4b4ffe7c9d478a91179",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udfe1 *[WARNING]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: runtime fault requires recovery\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_facility_hold_alert_native_projection_lifecycle",
+      "custody": {
+        "ops_reason": "facility_emergency_hold",
+        "synthetic_precondition_only": "true",
+        "alert_lifecycle_outcome": "resolved_by_synthetic_facility_closure",
+        "custody_before_sha256": "88f289bd24448a878ea8b7f62f68901105f48a0d1c538c88266fc9aea3e8fa1f",
+        "custody_after_sha256": "d068a470c29a9d3514d87f4d7bbfe620eed4f5f7a475a583cf945d7b34f6f161",
+        "custody_rows_catalog_unchanged": "true",
+        "sequence_deltas": "{\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 2, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 0, \"experiment_v2_runtime_generations_generation_event_id_seq\": 0, \"experiment_v2_work_events_work_event_id_seq\": 0, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}",
+        "public_rowsets": "56",
+        "sequences": "9",
+        "delivery": "{\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: facility emergency hold\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] #587 private fixture 2026-10-25: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}], \"receipts\": [\"0.587639\", \"0.587639\"]}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_native_positive_exposure_alert[multiple]",
+      "custody": {
+        "positive_exposure": "{\"alert_lifecycle\": \"fire_dedupe_native_close_resolve_silent\", \"delivery\": {\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: multiple open exposures\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}]}, \"device_count\": 2, \"effects\": {\"admission_close_event\": {\"control_updated_at\": \"2026-10-26T14:41:41.912776+00:00\", \"event\": {\"actor\": \"synthetic-ci/native-positive\", \"assignment_id\": null, \"detail\": {\"reason\": null, \"v2_admission\": \"closed\"}, \"event_id\": 6, \"event_kind\": \"state_transition\", \"experiment_id\": \"58763900-0000-4000-8000-000000000001\", \"recorded_at\": \"2026-10-26T14:41:41.912776+00:00\", \"severity\": \"info\"}, \"opened_events_sha256\": \"e5879963f4edc311d0e4b896c62904b6e1da18422066519284316fed2c14cc67\", \"preserved_event_ids\": [1, 2, 3, 4, 5], \"preserved_events_sha256\": \"e5879963f4edc311d0e4b896c62904b6e1da18422066519284316fed2c14cc67\", \"server_finished_at\": \"2026-10-26T14:41:41.919735+00:00\", \"server_started_at\": \"2026-10-26T14:41:41.912338+00:00\", \"transaction_started_at\": \"2026-10-26T14:41:41.912776+00:00\"}, \"append_only_rows_sha256\": {\"experiment_events\": \"aa7a96e15818f7cd7000a5664303f4f150efab9469ff63abcac63b1d5063ba0e\", \"experiment_v2_component_outcomes\": \"613dbe852d4b8d95b14d04aa5aec7a4d461cfba866cebef31f7a02d58aa6e5f8\", \"experiment_v2_delivery_bundle_completions\": \"93bc5af8d78ce7747d861c2f522ddddeba5bdc5afd0ed65c27661e3752d325ea\", \"experiment_v2_delivery_bundles\": \"e8bbb59c308c6a1bdac7cb10bda90b73514c3dbf9a66ae74728e652aea4f99a5\", \"experiment_v2_exposure_closures\": \"248a1bd0d3de429f937184f78176477fc312c95e2562fca6210a684600c45444\", \"experiment_v2_exposures\": \"a3dc823d30f0abea15117b37f2078b43a6aaaa6f9837ec1a07c1193639024eec\", \"experiment_v2_observation_epochs\": \"f10dcf6dc9f9b2743cf2723e1db8003c3575b91a135d5d97e2c8384b363689c3\", \"experiment_v2_observation_receipts\": \"8ca676ce6675a0ad5255116ef67c9cd52014ad1fdb2c7e561c099656b54b5fd5\", \"experiment_v2_runtime_generations\": \"e6161ef420d010592ec7bfafa91d3a5312407f7493a546361aad3b8699c60f8d\", \"experiment_v2_shadow_choices\": \"06156edf62f85fbbb66b0028e9aec563e68e6f397a9e17c7d7dacf6d2f4e4f79\", \"experiment_v2_shadow_contexts\": \"a3f79f511aef64df91db4146e89d505c149c8467b0716e138d9815258dac9f48\", \"experiment_v2_shadow_cycles\": \"2884544d3be3e390d6130cf1755cfc99c30bed5d822c413ca7fcf5f75cce30c2\", \"experiment_v2_shadow_outcome_previews\": \"07fe118f7a113ec477d492dcbdcb6f58beb2117a2701d08135a5c5c47b298473\", \"experiment_v2_state_artifacts\": \"402481b59cee495114cfcc753c7bbe47bac6c38caa916cd98260c59c1656f8b9\", \"experiment_v2_work\": \"7597a1d14ee0151da93a41a2cdf1a039c9f7edf0eca51a3202a7b44dd51bf66b\", \"experiment_v2_work_events\": \"eec423844e9d7b97701f16aed8641c3449691efe76078cf5d81c4610a4d6e4cb\"}, \"catalog_after_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"catalog_before_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"mode\": \"committed_private_cluster_disposed\", \"opened_immutable_rows_preserved\": true, \"preexisting_rows_preserved_except_native_control\": true, \"public_rowsets\": 56, \"row_deltas\": {\"alert_log\": 1, \"climate\": 0, \"control_arm_resolutions\": 0, \"control_assignments\": 0, \"control_experiment_arms\": 0, \"control_experiments\": 0, \"control_transition_ledger\": 0, \"effective_policy_vector_components\": 0, \"effective_policy_vectors\": 0, \"experiment_context_snapshots\": 0, \"experiment_events\": 5, \"experiment_v2_approvals\": 0, \"experiment_v2_bundle_attempts\": 0, \"experiment_v2_candidate_revisions\": 0, \"experiment_v2_component_outcomes\": 8, \"experiment_v2_contract_constants\": 0, \"experiment_v2_day_evidence\": 0, \"experiment_v2_delivery_bundle_completions\": 2, \"experiment_v2_delivery_bundles\": 2, \"experiment_v2_exports\": 0, \"experiment_v2_exposure_closures\": 2, \"experiment_v2_exposures\": 2, \"experiment_v2_facility_safe_closures\": 0, \"experiment_v2_observation_epochs\": 4, \"experiment_v2_observation_receipts\": 4, \"experiment_v2_outcome_freezes\": 0, \"experiment_v2_outcomes\": 0, \"experiment_v2_preexposure_mismatch_epochs\": 0, \"experiment_v2_randomization\": 0, \"experiment_v2_reveals\": 0, \"experiment_v2_runtime_faults\": 0, \"experiment_v2_runtime_generations\": 2, \"experiment_v2_runtime_snapshots\": 0, \"experiment_v2_selector_choices\": 0, \"experiment_v2_selector_contexts\": 0, \"experiment_v2_shadow_choices\": 1, \"experiment_v2_shadow_contexts\": 1, \"experiment_v2_shadow_cycles\": 1, \"experiment_v2_shadow_outcome_previews\": 1, \"experiment_v2_state_artifacts\": 1, \"experiment_v2_work\": 3, \"experiment_v2_work_events\": 5, \"greenhouses\": 0, \"planner_inference_runs\": 0, \"policy_delivery_attempts\": 0, \"policy_delivery_outbox\": 0, \"policy_device_snapshots\": 0, \"policy_exposures\": 0, \"policy_proposal_components\": 0, \"policy_proposals\": 0, \"policy_template_components\": 0, \"policy_template_edges\": 0, \"policy_templates\": 0, \"qualification_transition_slots\": 0, \"slack_alert_runbooks\": 0, \"weather_forecast\": 0}, \"rows_after_sha256\": \"948d950f4d0bb9d8badb7de3efa4d97218f7e44db6a61123ab1b8a59902336dd\", \"rows_before_sha256\": \"8601b259481fc92cf5e105cb669638dd7af2d20350099e61c7b947b439114ca3\", \"sequence_deltas\": {\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 5, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 8, \"experiment_v2_runtime_generations_generation_event_id_seq\": 2, \"experiment_v2_work_events_work_event_id_seq\": 5, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}, \"trigger_after_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\", \"trigger_before_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\"}, \"final_current_work\": null, \"final_open_exposures\": 0, \"guard_refusals\": [{\"custody_unchanged\": true, \"message\": \"epoch requires one complete 178-byte vector and exactly 48 observations\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure requires two exact complete source epochs at least 30 seconds apart\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure waits for confirmation of every changed component\", \"sqlstate\": \"P0001\"}], \"live_delivery\": false, \"native_logins\": {\"scorecard_fixture\": {\"effective\": \"scorecard_fixture\", \"session\": \"scorecard_fixture\"}, \"verdify_experiment_v2_component_executor_login\": {\"effective\": \"verdify_experiment_v2_component_executor_login\", \"session\": \"verdify_experiment_v2_component_executor_login\"}, \"verdify_experiment_v2_lifecycle_login\": {\"effective\": \"verdify_experiment_v2_lifecycle_login\", \"session\": \"verdify_experiment_v2_lifecycle_login\"}}, \"ops_reason\": \"multiple_open_exposures\", \"ops_severity\": \"critical\", \"physical_acceptance\": false, \"receipt_bindings\": [{\"all_wire_times_advance\": true, \"assignment_id\": null, \"bundle_id\": \"4a78d2a7-524b-45ee-b54d-92ab94054aab\", \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"e0acf59b-1b4b-410c-9fe9-86f5834c3568\", \"observation_count_per_epoch\": [48, 48], \"observed_separation_seconds\": 31.368432, \"post_delivery_and_fresh_at_insertion\": true, \"receipt_ids\": [\"673fb20f-7685-48c5-abae-cf87c9f1d19d\", \"b36d48fa-e2c2-45c7-aa42-b099112acdf9\"], \"receipt_sha256\": [\"8b5df47a4dbf9111e7b2691b95bb0d4fd8a158819d970a8888d1b2d82a1d3597\", \"302dab922e1686491c9ec7fe7c77cdd5466fd3e9ffde48f7cf46a99eac3b94e2\"], \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"2a374f61-43b8-48af-9120-49957c4c4f0f\", \"source_epoch_ids\": [\"5ab66b80-5500-4b1c-a450-3d7aeebdc80d\", \"f4da0fa0-bcb5-4c45-9334-955ce87aea28\"], \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"19118a10-e795-4f83-989a-d8dec2037dd9\"}, {\"all_wire_times_advance\": true, \"assignment_id\": null, \"bundle_id\": \"9b76140f-edc8-4afb-bf54-42e56f122665\", \"device_id\": \"synthetic-no-device-1\", \"exposure_id\": \"294fc14b-7417-4830-84dc-0df6a5da7ec3\", \"observation_count_per_epoch\": [48, 48], \"observed_separation_seconds\": 32.026759, \"post_delivery_and_fresh_at_insertion\": true, \"receipt_ids\": [\"92f64a2b-b1c6-484e-8662-7ec3eb7b0d44\", \"fe942fd0-bbd9-45df-a603-ce0aaee41831\"], \"receipt_sha256\": [\"55ea1ebeda237375538e65c157e02855be6c8e73b6a55e4bc749f8ba3fc66e42\", \"9926c17706e4afa8d0b9a5c425639afc8cf5444b34cd3aced90d76d5e93a8e2e\"], \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"cfccc357-a0c8-4418-b764-d06748e65953\", \"source_epoch_ids\": [\"b7e217f9-8643-49ce-b8df-3e0eeefd25e2\", \"f385f325-df4a-4fa5-8efb-d3077d7f0208\"], \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"80631bc1-f120-4899-a81c-f6944b17ee46\"}], \"shadow\": {\"context_status\": \"unavailable\", \"cycle_id\": \"ea549734-8a95-5ce3-b485-b79459b2419d\", \"source\": \"synthetic_unavailable\"}, \"synthetic_only\": true, \"work\": [{\"bundle_id\": \"4a78d2a7-524b-45ee-b54d-92ab94054aab\", \"connection_generation\": 0, \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"e0acf59b-1b4b-410c-9fe9-86f5834c3568\", \"first\": {\"observed_at\": \"2026-10-26T14:41:09.374040Z\", \"receipt_id\": \"673fb20f-7685-48c5-abae-cf87c9f1d19d\", \"source_epoch_id\": \"5ab66b80-5500-4b1c-a450-3d7aeebdc80d\"}, \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"2a374f61-43b8-48af-9120-49957c4c4f0f\", \"second\": {\"observed_at\": \"2026-10-26T14:41:40.742472Z\", \"receipt_id\": \"b36d48fa-e2c2-45c7-aa42-b099112acdf9\", \"source_epoch_id\": \"f4da0fa0-bcb5-4c45-9334-955ce87aea28\"}, \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"19118a10-e795-4f83-989a-d8dec2037dd9\", \"worker\": \"synthetic-ci/worker-0\", \"writer_generation\": 0}, {\"bundle_id\": \"9b76140f-edc8-4afb-bf54-42e56f122665\", \"connection_generation\": 0, \"device_id\": \"synthetic-no-device-1\", \"exposure_id\": \"294fc14b-7417-4830-84dc-0df6a5da7ec3\", \"first\": {\"observed_at\": \"2026-10-26T14:41:09.392629Z\", \"receipt_id\": \"92f64a2b-b1c6-484e-8662-7ec3eb7b0d44\", \"source_epoch_id\": \"b7e217f9-8643-49ce-b8df-3e0eeefd25e2\"}, \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"cfccc357-a0c8-4418-b764-d06748e65953\", \"second\": {\"observed_at\": \"2026-10-26T14:41:41.419388Z\", \"receipt_id\": \"fe942fd0-bbd9-45df-a603-ce0aaee41831\", \"source_epoch_id\": \"f385f325-df4a-4fa5-8efb-d3077d7f0208\"}, \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"80631bc1-f120-4899-a81c-f6944b17ee46\", \"worker\": \"synthetic-ci/worker-1\", \"writer_generation\": 0}]}",
+        "private_cluster_disposal": "{\"generated_cluster\": \"/tmp/scorecard-pg-umzq401o\", \"generated_directory_absent\": true, \"host_auth_reject\": true, \"mode\": \"committed_private_cluster_disposed\", \"network_listeners_disabled\": true, \"original_process_gone\": true, \"postmaster_pid\": 1486, \"postmaster_start_ticks\": \"20989376\", \"process_disappearance\": {\"elapsed_seconds\": 0.35352824500296265, \"final_start_ticks\": null, \"final_state\": null, \"original_process_gone\": true, \"outcome\": \"absent\", \"read_error\": null, \"sample_count\": 8, \"sample_interval_seconds\": 0.05, \"timeout_seconds\": 5.0}, \"socket_absent\": true, \"stop_returncode\": 0}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_native_positive_exposure_alert[expired]",
+      "custody": {
+        "positive_exposure": "{\"alert_lifecycle\": \"fire_dedupe_native_close_resolve_silent\", \"delivery\": {\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: open exposure work expired\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}]}, \"device_count\": 1, \"effects\": {\"admission_close_event\": {\"control_updated_at\": \"2026-10-26T14:42:53.098866+00:00\", \"event\": {\"actor\": \"synthetic-ci/native-positive\", \"assignment_id\": null, \"detail\": {\"reason\": null, \"v2_admission\": \"closed\"}, \"event_id\": 5, \"event_kind\": \"state_transition\", \"experiment_id\": \"58763900-0000-4000-8000-000000000001\", \"recorded_at\": \"2026-10-26T14:42:53.098866+00:00\", \"severity\": \"info\"}, \"opened_events_sha256\": \"363d2fe61aab9321cb30bd048817fd04e7beb71c384e774dad48140ce0eb7cf7\", \"preserved_event_ids\": [1, 2, 3, 4], \"preserved_events_sha256\": \"363d2fe61aab9321cb30bd048817fd04e7beb71c384e774dad48140ce0eb7cf7\", \"server_finished_at\": \"2026-10-26T14:42:53.104649+00:00\", \"server_started_at\": \"2026-10-26T14:42:53.098668+00:00\", \"transaction_started_at\": \"2026-10-26T14:42:53.098866+00:00\"}, \"append_only_rows_sha256\": {\"experiment_events\": \"8f2353f5cad139a2a770671f5e6d4624ec585aa1be67bbf56f59948b7005301d\", \"experiment_v2_component_outcomes\": \"c006a5f7ddba3e8120bb88544d745316a6261b686a90e723ea6ad28e4f15c9ca\", \"experiment_v2_delivery_bundle_completions\": \"de94f26c041739fcbe9300403609e39b2a3e95ed5d27f0d2b1c0e4b9784590f7\", \"experiment_v2_delivery_bundles\": \"1dcdac69066fee3758f710cf3c3ef520058153927a79303d67cbeac735ab3536\", \"experiment_v2_exposure_closures\": \"55bc9e922c29beaee1c5a8364b6328533cfd5c2d005a82b40d0ba65be0bb352d\", \"experiment_v2_exposures\": \"93279c791d3ec399d7ead8a6984ee6283b27bf09fcc817045e3e04fe16551da1\", \"experiment_v2_observation_epochs\": \"8c2a90accb089dce4bb7cf8f6cf05c98f834e36708f26d3d105b9c77a44d29ce\", \"experiment_v2_observation_receipts\": \"98989c3e965c560f5264fe7272a2f94f477c5697329c2cb3c3217ed74e84caab\", \"experiment_v2_runtime_generations\": \"a9d7f1d2cd39f9bca3f93e5a2da6d09e884ba014facd2d805a1905e7fecb8126\", \"experiment_v2_shadow_choices\": \"06156edf62f85fbbb66b0028e9aec563e68e6f397a9e17c7d7dacf6d2f4e4f79\", \"experiment_v2_shadow_contexts\": \"a3f79f511aef64df91db4146e89d505c149c8467b0716e138d9815258dac9f48\", \"experiment_v2_shadow_cycles\": \"2884544d3be3e390d6130cf1755cfc99c30bed5d822c413ca7fcf5f75cce30c2\", \"experiment_v2_shadow_outcome_previews\": \"07fe118f7a113ec477d492dcbdcb6f58beb2117a2701d08135a5c5c47b298473\", \"experiment_v2_state_artifacts\": \"1e977cf2bc941329bf9785ae4f75b2f9bbfdd4f6022c335cd5d8d23c5d289a5d\", \"experiment_v2_work\": \"59a5a16339763db657a022b94f4ecbd48f4b199bb3afe40d48d79356235d2bf9\", \"experiment_v2_work_events\": \"21b19386fa5b30ee4e16cf3c1b7f12bca7c43003513ce31b8ec92981cb176677\"}, \"catalog_after_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"catalog_before_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"mode\": \"committed_private_cluster_disposed\", \"opened_immutable_rows_preserved\": true, \"preexisting_rows_preserved_except_native_control\": true, \"public_rowsets\": 56, \"row_deltas\": {\"alert_log\": 1, \"climate\": 0, \"control_arm_resolutions\": 0, \"control_assignments\": 0, \"control_experiment_arms\": 0, \"control_experiments\": 0, \"control_transition_ledger\": 0, \"effective_policy_vector_components\": 0, \"effective_policy_vectors\": 0, \"experiment_context_snapshots\": 0, \"experiment_events\": 4, \"experiment_v2_approvals\": 0, \"experiment_v2_bundle_attempts\": 0, \"experiment_v2_candidate_revisions\": 0, \"experiment_v2_component_outcomes\": 4, \"experiment_v2_contract_constants\": 0, \"experiment_v2_day_evidence\": 0, \"experiment_v2_delivery_bundle_completions\": 1, \"experiment_v2_delivery_bundles\": 1, \"experiment_v2_exports\": 0, \"experiment_v2_exposure_closures\": 1, \"experiment_v2_exposures\": 1, \"experiment_v2_facility_safe_closures\": 0, \"experiment_v2_observation_epochs\": 2, \"experiment_v2_observation_receipts\": 2, \"experiment_v2_outcome_freezes\": 0, \"experiment_v2_outcomes\": 0, \"experiment_v2_preexposure_mismatch_epochs\": 0, \"experiment_v2_randomization\": 0, \"experiment_v2_reveals\": 0, \"experiment_v2_runtime_faults\": 0, \"experiment_v2_runtime_generations\": 1, \"experiment_v2_runtime_snapshots\": 0, \"experiment_v2_selector_choices\": 0, \"experiment_v2_selector_contexts\": 0, \"experiment_v2_shadow_choices\": 1, \"experiment_v2_shadow_contexts\": 1, \"experiment_v2_shadow_cycles\": 1, \"experiment_v2_shadow_outcome_previews\": 1, \"experiment_v2_state_artifacts\": 1, \"experiment_v2_work\": 2, \"experiment_v2_work_events\": 3, \"greenhouses\": 0, \"planner_inference_runs\": 0, \"policy_delivery_attempts\": 0, \"policy_delivery_outbox\": 0, \"policy_device_snapshots\": 0, \"policy_exposures\": 0, \"policy_proposal_components\": 0, \"policy_proposals\": 0, \"policy_template_components\": 0, \"policy_template_edges\": 0, \"policy_templates\": 0, \"qualification_transition_slots\": 0, \"slack_alert_runbooks\": 0, \"weather_forecast\": 0}, \"rows_after_sha256\": \"64b6878273bb6b1e3f0c998fb99f7c6b037166662f403bec4be22353e5b6f868\", \"rows_before_sha256\": \"30c432972637853ae64f2b9d3dd860d37736bc461262c2cf899f25468a4432f0\", \"sequence_deltas\": {\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 4, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 4, \"experiment_v2_runtime_generations_generation_event_id_seq\": 1, \"experiment_v2_work_events_work_event_id_seq\": 3, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}, \"trigger_after_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\", \"trigger_before_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\"}, \"final_current_work\": null, \"final_open_exposures\": 0, \"guard_refusals\": [{\"custody_unchanged\": true, \"message\": \"epoch requires one complete 178-byte vector and exactly 48 observations\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure requires two exact complete source epochs at least 30 seconds apart\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure waits for confirmation of every changed component\", \"sqlstate\": \"P0001\"}], \"live_delivery\": false, \"native_logins\": {\"scorecard_fixture\": {\"effective\": \"scorecard_fixture\", \"session\": \"scorecard_fixture\"}, \"verdify_experiment_v2_component_executor_login\": {\"effective\": \"verdify_experiment_v2_component_executor_login\", \"session\": \"verdify_experiment_v2_component_executor_login\"}, \"verdify_experiment_v2_lifecycle_login\": {\"effective\": \"verdify_experiment_v2_lifecycle_login\", \"session\": \"verdify_experiment_v2_lifecycle_login\"}}, \"ops_reason\": \"open_exposure_work_expired\", \"ops_severity\": \"critical\", \"physical_acceptance\": false, \"receipt_bindings\": [{\"all_wire_times_advance\": true, \"assignment_id\": null, \"bundle_id\": \"753289d9-5380-417c-9081-8184b04f8276\", \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"3325276d-494f-4e53-9b67-c93d761fd4ba\", \"observation_count_per_epoch\": [48, 48], \"observed_separation_seconds\": 31.397445, \"post_delivery_and_fresh_at_insertion\": true, \"receipt_ids\": [\"d12a3cff-a7b7-4f35-81ad-25f0d4563b96\", \"abaf48fe-4b2a-4aab-b14c-40e5582a70a6\"], \"receipt_sha256\": [\"2eddc5120c41ca6566c77e6eb3ffb04fedd4f81f723a3baa6e94215b54327b0a\", \"5726eeae57878822edbc405afae3f55e01b2f72a9934839394b13b288564c108\"], \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"9ec15038-25e6-4566-9166-4343485a451e\", \"source_epoch_ids\": [\"8d803b7c-8a5c-42b4-97b9-348d96c62869\", \"a944b7b0-89cf-4bcf-b5db-99e8d5da7d66\"], \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"f9f09f44-71a8-46ff-b782-1a8447181c8d\"}], \"shadow\": {\"context_status\": \"unavailable\", \"cycle_id\": \"ea549734-8a95-5ce3-b485-b79459b2419d\", \"source\": \"synthetic_unavailable\"}, \"synthetic_only\": true, \"work\": [{\"bundle_id\": \"753289d9-5380-417c-9081-8184b04f8276\", \"connection_generation\": 0, \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"3325276d-494f-4e53-9b67-c93d761fd4ba\", \"first\": {\"observed_at\": \"2026-10-26T14:41:53.270491Z\", \"receipt_id\": \"d12a3cff-a7b7-4f35-81ad-25f0d4563b96\", \"source_epoch_id\": \"8d803b7c-8a5c-42b4-97b9-348d96c62869\"}, \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"9ec15038-25e6-4566-9166-4343485a451e\", \"second\": {\"observed_at\": \"2026-10-26T14:42:24.667936Z\", \"receipt_id\": \"abaf48fe-4b2a-4aab-b14c-40e5582a70a6\", \"source_epoch_id\": \"a944b7b0-89cf-4bcf-b5db-99e8d5da7d66\"}, \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"f9f09f44-71a8-46ff-b782-1a8447181c8d\", \"worker\": \"synthetic-ci/worker-0\", \"writer_generation\": 0}]}",
+        "private_cluster_disposal": "{\"generated_cluster\": \"/tmp/scorecard-pg-a95sna5m\", \"generated_directory_absent\": true, \"host_auth_reject\": true, \"mode\": \"committed_private_cluster_disposed\", \"network_listeners_disabled\": true, \"original_process_gone\": true, \"postmaster_pid\": 1647, \"postmaster_start_ticks\": \"20993884\", \"process_disappearance\": {\"elapsed_seconds\": 0.5040160630014725, \"final_start_ticks\": null, \"final_state\": null, \"original_process_gone\": true, \"outcome\": \"absent\", \"read_error\": null, \"sample_count\": 11, \"sample_interval_seconds\": 0.05, \"timeout_seconds\": 5.0}, \"socket_absent\": true, \"stop_returncode\": 0}"
+      },
+      "passed": true
+    },
+    {
+      "name": "test_native_positive_exposure_alert[stale]",
+      "custody": {
+        "positive_exposure": "{\"alert_lifecycle\": \"fire_dedupe_native_close_resolve_silent\", \"delivery\": {\"live\": false, \"messages\": [{\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\ud83d\\udd34 *[CRITICAL]* `component_experiment_integrity` - Confirmed-component experiment `58763900-0000-4000-8000-000000000001` requires action: open exposure observation stale\\nRunbook: no specific mapping found. Check the operator view and record the action taken.\", \"thread_ts\": null}, {\"channel\": \"C0ANVVAPLD6\", \"text\": \"[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: \\u2705 Resolved: `component_experiment_integrity` for `experiment.v2.58763900-0000-4000-8000-000000000001`\", \"thread_ts\": \"0.587639\"}]}, \"device_count\": 1, \"effects\": {\"admission_close_event\": {\"control_updated_at\": \"2026-10-26T14:45:12.183520+00:00\", \"event\": {\"actor\": \"synthetic-ci/native-positive\", \"assignment_id\": null, \"detail\": {\"reason\": null, \"v2_admission\": \"closed\"}, \"event_id\": 5, \"event_kind\": \"state_transition\", \"experiment_id\": \"58763900-0000-4000-8000-000000000001\", \"recorded_at\": \"2026-10-26T14:45:12.18352+00:00\", \"severity\": \"info\"}, \"opened_events_sha256\": \"47ac9f2830659457e24bcb81eb340498ba032ae1113a01c3043a64b8c2cf06da\", \"preserved_event_ids\": [1, 2, 3, 4], \"preserved_events_sha256\": \"47ac9f2830659457e24bcb81eb340498ba032ae1113a01c3043a64b8c2cf06da\", \"server_finished_at\": \"2026-10-26T14:45:12.190439+00:00\", \"server_started_at\": \"2026-10-26T14:45:12.183335+00:00\", \"transaction_started_at\": \"2026-10-26T14:45:12.183520+00:00\"}, \"append_only_rows_sha256\": {\"experiment_events\": \"e05a6abe0bd3ae5f024c7a7c03781798c46a6f3cfc5e6e2dcee1569518dfa5f2\", \"experiment_v2_component_outcomes\": \"2e3e7521b9d3277e6a2ad823ac407ea9cf673dbe31bd776e1d16825f1d1023c3\", \"experiment_v2_delivery_bundle_completions\": \"ad2c9aaa3dd2da9c5c55700eb2ed0cbfbaebac4faffa417938c7f5ac47c0a19c\", \"experiment_v2_delivery_bundles\": \"491594fd8bb92c2bd342b8152456cf80c88315fb8188e4fe23e1a904b545d978\", \"experiment_v2_exposure_closures\": \"06d9c60f4c8dffe88ed7eaf6f7b50f8d6354c70349f7cadb0f10b48a834b9126\", \"experiment_v2_exposures\": \"ea2ef84d70d18f2f97cdd64b0e8308f7e916e9814b763f5f87660d3b7ba65680\", \"experiment_v2_observation_epochs\": \"e5a1978e90a77e5b8b981287bd4fc42d9f056fb544b0723dbd7fb059a8eeaac0\", \"experiment_v2_observation_receipts\": \"b9c7c859846b2158ea94ec47d9d0a43ea6d23371d6581221b0a2e561230a5bb9\", \"experiment_v2_runtime_generations\": \"d1f44f9a055cb5a41db735d65d96cf9b27a67c23a5fa562952131558763a45cc\", \"experiment_v2_shadow_choices\": \"06156edf62f85fbbb66b0028e9aec563e68e6f397a9e17c7d7dacf6d2f4e4f79\", \"experiment_v2_shadow_contexts\": \"a3f79f511aef64df91db4146e89d505c149c8467b0716e138d9815258dac9f48\", \"experiment_v2_shadow_cycles\": \"2884544d3be3e390d6130cf1755cfc99c30bed5d822c413ca7fcf5f75cce30c2\", \"experiment_v2_shadow_outcome_previews\": \"07fe118f7a113ec477d492dcbdcb6f58beb2117a2701d08135a5c5c47b298473\", \"experiment_v2_state_artifacts\": \"2397871f0ce0f90dd12ff4efac8f9ea2475e064ba3bbe2f28a6f31de5d7b8456\", \"experiment_v2_work\": \"60a3de5b091e11e3d58a4439184b99fbae034191d45b00796308eb4d1c0c5cac\", \"experiment_v2_work_events\": \"da0a16d6bf7ad778c37aafb73e8962dfceee48ba06c45c74215fc587fd50d1a3\"}, \"catalog_after_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"catalog_before_sha256\": \"dac853b302a180341600608399f2b1ed86749c2ef2d3c29c628f7dc2d3510c65\", \"mode\": \"committed_private_cluster_disposed\", \"opened_immutable_rows_preserved\": true, \"preexisting_rows_preserved_except_native_control\": true, \"public_rowsets\": 56, \"row_deltas\": {\"alert_log\": 1, \"climate\": 0, \"control_arm_resolutions\": 0, \"control_assignments\": 0, \"control_experiment_arms\": 0, \"control_experiments\": 0, \"control_transition_ledger\": 0, \"effective_policy_vector_components\": 0, \"effective_policy_vectors\": 0, \"experiment_context_snapshots\": 0, \"experiment_events\": 4, \"experiment_v2_approvals\": 0, \"experiment_v2_bundle_attempts\": 0, \"experiment_v2_candidate_revisions\": 0, \"experiment_v2_component_outcomes\": 4, \"experiment_v2_contract_constants\": 0, \"experiment_v2_day_evidence\": 0, \"experiment_v2_delivery_bundle_completions\": 1, \"experiment_v2_delivery_bundles\": 1, \"experiment_v2_exports\": 0, \"experiment_v2_exposure_closures\": 1, \"experiment_v2_exposures\": 1, \"experiment_v2_facility_safe_closures\": 0, \"experiment_v2_observation_epochs\": 2, \"experiment_v2_observation_receipts\": 2, \"experiment_v2_outcome_freezes\": 0, \"experiment_v2_outcomes\": 0, \"experiment_v2_preexposure_mismatch_epochs\": 0, \"experiment_v2_randomization\": 0, \"experiment_v2_reveals\": 0, \"experiment_v2_runtime_faults\": 0, \"experiment_v2_runtime_generations\": 1, \"experiment_v2_runtime_snapshots\": 0, \"experiment_v2_selector_choices\": 0, \"experiment_v2_selector_contexts\": 0, \"experiment_v2_shadow_choices\": 1, \"experiment_v2_shadow_contexts\": 1, \"experiment_v2_shadow_cycles\": 1, \"experiment_v2_shadow_outcome_previews\": 1, \"experiment_v2_state_artifacts\": 1, \"experiment_v2_work\": 2, \"experiment_v2_work_events\": 3, \"greenhouses\": 0, \"planner_inference_runs\": 0, \"policy_delivery_attempts\": 0, \"policy_delivery_outbox\": 0, \"policy_device_snapshots\": 0, \"policy_exposures\": 0, \"policy_proposal_components\": 0, \"policy_proposals\": 0, \"policy_template_components\": 0, \"policy_template_edges\": 0, \"policy_templates\": 0, \"qualification_transition_slots\": 0, \"slack_alert_runbooks\": 0, \"weather_forecast\": 0}, \"rows_after_sha256\": \"df20c675ccd76ec0bde8a02e4f7fc01c6adf2be2bea4799109706f718e157de7\", \"rows_before_sha256\": \"88ec56316b112e079cdf01045aa7b3eab61f8022de6c92df5cc26174625c5a90\", \"sequence_deltas\": {\"alert_log_id_seq\": 1, \"control_transition_ledger_ledger_id_seq\": 0, \"experiment_events_event_id_seq\": 4, \"experiment_v2_bundle_attempts_attempt_id_seq\": 0, \"experiment_v2_component_outcomes_component_outcome_id_seq\": 4, \"experiment_v2_runtime_generations_generation_event_id_seq\": 1, \"experiment_v2_work_events_work_event_id_seq\": 3, \"policy_delivery_attempts_attempt_id_seq\": 0, \"policy_device_snapshots_snapshot_id_seq\": 0}, \"trigger_after_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\", \"trigger_before_sha256\": \"f1029ca11c606b995744d276f6c4a11764e1b42b05ceb31138d0f2e9b5cfa054\"}, \"final_current_work\": null, \"final_open_exposures\": 0, \"guard_refusals\": [{\"custody_unchanged\": true, \"message\": \"epoch requires one complete 178-byte vector and exactly 48 observations\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure requires two exact complete source epochs at least 30 seconds apart\", \"sqlstate\": \"P0001\"}, {\"custody_unchanged\": true, \"message\": \"exposure waits for confirmation of every changed component\", \"sqlstate\": \"P0001\"}], \"live_delivery\": false, \"native_logins\": {\"scorecard_fixture\": {\"effective\": \"scorecard_fixture\", \"session\": \"scorecard_fixture\"}, \"verdify_experiment_v2_component_executor_login\": {\"effective\": \"verdify_experiment_v2_component_executor_login\", \"session\": \"verdify_experiment_v2_component_executor_login\"}, \"verdify_experiment_v2_lifecycle_login\": {\"effective\": \"verdify_experiment_v2_lifecycle_login\", \"session\": \"verdify_experiment_v2_lifecycle_login\"}}, \"ops_reason\": \"open_exposure_observation_stale\", \"ops_severity\": \"critical\", \"physical_acceptance\": false, \"receipt_bindings\": [{\"all_wire_times_advance\": true, \"assignment_id\": null, \"bundle_id\": \"300525b8-8d8a-4fb5-82ba-74e188052d36\", \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"16859df8-76b6-4a9c-9a08-922fc51c51f9\", \"observation_count_per_epoch\": [48, 48], \"observed_separation_seconds\": 31.354158, \"post_delivery_and_fresh_at_insertion\": true, \"receipt_ids\": [\"b6793038-3c54-43cd-af05-c8c999a65943\", \"babfc03f-349b-4946-9460-e2c1ca3fea02\"], \"receipt_sha256\": [\"7567fb8188e938c90dfc9ffe3d4d5aa94a16e52aeb4c31e5ac502b503b05af25\", \"cff670287cbca04a46cf8867be493ecacfb5e442bc9cf7d1f787e53f39110bf4\"], \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"1f9cc80d-6b65-4460-9547-ad8294bd6910\", \"source_epoch_ids\": [\"1ce4bf8d-3ef4-4981-84aa-868c32ded6a5\", \"16fb4a90-f2f2-4d12-909a-2f30a4f361be\"], \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"685819a3-aa94-43ad-b847-513f07777900\"}], \"shadow\": {\"context_status\": \"unavailable\", \"cycle_id\": \"ea549734-8a95-5ce3-b485-b79459b2419d\", \"source\": \"synthetic_unavailable\"}, \"synthetic_only\": true, \"work\": [{\"bundle_id\": \"300525b8-8d8a-4fb5-82ba-74e188052d36\", \"connection_generation\": 0, \"device_id\": \"synthetic-no-device-0\", \"exposure_id\": \"16859df8-76b6-4a9c-9a08-922fc51c51f9\", \"first\": {\"observed_at\": \"2026-10-26T14:43:09.753309Z\", \"receipt_id\": \"b6793038-3c54-43cd-af05-c8c999a65943\", \"source_epoch_id\": \"1ce4bf8d-3ef4-4981-84aa-868c32ded6a5\"}, \"revision_bundle_sha256\": \"72af30d7d273bc56ea4a337f0724257cdb13e38f1c597f7391a00d32892341b8\", \"runtime_instance_id\": \"1f9cc80d-6b65-4460-9547-ad8294bd6910\", \"second\": {\"observed_at\": \"2026-10-26T14:43:41.107467Z\", \"receipt_id\": \"babfc03f-349b-4946-9460-e2c1ca3fea02\", \"source_epoch_id\": \"16fb4a90-f2f2-4d12-909a-2f30a4f361be\"}, \"target_state_content_sha256\": \"05a201a87cdd114ebfc29529c1e5b82b40aba24fed99135ddc938278b27dde45\", \"work_id\": \"685819a3-aa94-43ad-b847-513f07777900\", \"worker\": \"synthetic-ci/worker-0\", \"writer_generation\": 0}]}",
+        "private_cluster_disposal": "{\"generated_cluster\": \"/tmp/scorecard-pg-yos8o444\", \"generated_directory_absent\": true, \"host_auth_reject\": true, \"mode\": \"committed_private_cluster_disposed\", \"network_listeners_disabled\": true, \"original_process_gone\": true, \"postmaster_pid\": 1797, \"postmaster_start_ticks\": \"21001546\", \"process_disappearance\": {\"elapsed_seconds\": 0.10106535299564712, \"final_start_ticks\": null, \"final_state\": null, \"original_process_gone\": true, \"outcome\": \"absent\", \"read_error\": null, \"sample_count\": 3, \"sample_interval_seconds\": 0.05, \"timeout_seconds\": 5.0}, \"socket_absent\": true, \"stop_returncode\": 0}"
+      },
+      "passed": true
+    }
+  ]
+}
