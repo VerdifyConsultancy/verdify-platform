@@ -1,147 +1,195 @@
 # Verdify Release Checklist
 
-Last updated: 2026-07-03 (#413: §B pinch-decision + bake-record steps). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
-`docs/reviews/lane1-architecture-audit-2026-06-16.md` (the why). Single-env-prod model: `main`
-is the only branch; prod is ArgoCD app `verdify-prod-dark` (ns `verdify-prod`), manual-sync
-behind the device-write gate.
+Updated 2026-10-25. Production is the single `verdify-prod` environment, delivered
+by the manual-sync Argo application `verdify-prod-dark` from `main`. Use this
+checklist with [the operating contract](../AGENTS.md),
+[service delivery](runbooks/laptop-operator.md#2-cicd-merge-publishes-promotion-pins-the-gated-sync-deploys-single-env)
+and [signed firmware operations](runbooks/firmware-signed-artifacts.md).
 
-Use the section(s) matching what you changed. **Firmware safeguards are the preflight and rollback contract** for firmware OTA, the
-prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outward-facing edge/DNS.
+Apply only the sections relevant to the requested change and honor the active
+device, scheduling and writer-reconciliation holds. Release preparation or fresh
+telemetry does not settle a writer handoff or expand the requested device,
+credential or physical-action scope. The linked field/release worksheet records
+the current sprint's survey and release status.
 
----
+## A. Services and production configuration
 
-## A. Services (api / mcp / ingestor / migrate / planner)
+**Source and CI**
 
-**Pre-merge (on a topic branch or direct to `main`):**
-- [ ] `make lint` and `make test` green (the 1 known-flaky `test_dew_point_risk_computes`
-      timeout is tolerated; nothing else).
-- [ ] **Schema-first ordering:** if this touches `verdify_schemas/**`, the schema change lands
-      *before* its consumers; `verdify_schemas/tests/test_drift_guards.py` green.
-- [ ] If schema touched (`verdify_schemas/**`, `ingestor/entity_map.py`, `mcp/server.py`): the
-      PR body / commit message states **which services must bounce** post-merge
-      (e.g. `Post-merge restart: verdify-mcp, verdify-ingestor`). `service-restart-drift-guard`
-      will check for it.
-- [ ] CI green: `ci.yml` (lint, schemas+drift, device-write-gate, migration-rollback-safety),
-      `container-publish.yml` (smoke-import), `k8s-manifests.yml` (kustomize+kubeconform).
+- [ ] Preserve unrelated work; prepare the smallest owner change from current
+      `origin/main` in an isolated checkout when needed.
+- [ ] Run the relevant checks through the supported in-cluster CI path. Full
+      suites, image builds and other intensive work run in `vallery`, not on the
+      Mac. `make test` and `make check` can touch production; they are not generic
+      offline checks. Use the existing private fixtures for isolated qualification.
+- [ ] Require the exact PR head's `Verdify Platform / Argo PR CI` commit status
+      to pass, plus any other enforced branch checks. Read commit statuses with
+      `gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status`;
+      this repository has no hosted Actions workflows or check-runs. Retain the
+      selected test results and their limits; a skipped case is not acceptance.
+- [ ] Land schema contracts and numbered migrations before or with their
+      consumers. Run the relevant drift guards. For `verdify_schemas/**`,
+      `ingestor/entity_map.py` or `mcp/server.py`, name affected service rollouts
+      or a justified `Restart: none` in the PR/commit as required by rule 7.
+      This records the delivery need; it does not call for an extra blind restart.
 
-**Publish → promote → sync:**
-- [ ] Merge to `main` → `container-publish` publishes digest-pinned images to GHCR
-      (`sha-<sha>` + `branch-main`).
-- [ ] Run `prod-promote` (dry-run first; review the digest delta) → `mode=pull-request`. The
-      **Device-Write-Safety-Gate** must PASS (render-equality, digests-only, interlock/egress
-      assertions).
-- [ ] On the `prod-promote` PR: `promote-diff-guard` PASS (only digest/comment/component-ref
-      lines changed). Required checks + merge — git only, cluster untouched.
-- [ ] **[execution safeguard]** Operator runs `argocd app sync verdify-prod-dark`.
-- [ ] Post-sync verify: app Synced/Healthy; single-writer intact (`replicas:1`, exactly one
-      ingestor pod, `sum(verdify_esp32_writer_estab)==1`); restart the services named above; tail
-      ingestor logs for clean ESP32 connect.
+**Build, promote and sync**
 
----
+- [ ] Match the successful exact-main build to its published image digests.
+      The registered merge pipeline builds with Kaniko and publishes to the
+      zot origin `registry.vallery.net`. Its five actuator-managed entries in
+      `deploy/k8s/overlays/prod/kustomization.yaml` are build candidates; the
+      later `release-pins.yaml` transformer determines their production images.
+      Do not hand-edit those candidate entries or treat their update as deployment.
+- [ ] When the change requires promotion, use
+      `scripts/promote-release-pins.py` and preserve its source/digest receipt.
+      Its default promotes all five related images, including the migration
+      hook; review that complete change. Planner, setpoint-server and
+      lab-publisher pins use their exact successful build outputs in the
+      overlay's separate `images:` entries. Follow the current owner runbook
+      for an image outside the registered build set.
+- [ ] Before a requested production sync, render and inspect the complete
+      pending diff with `kustomize build deploy/k8s/overlays/prod` and
+      `kubectl diff`. Check every pending resource, the single ingestor's
+      `Recreate` strategy, release digests, hooks and zero rendered Secrets.
+      A full sync applies other pending drift too. A render-identical source or
+      candidate-only change needs no sync or workload restart.
+- [ ] For an authorized sync, use the exact revision and the atomic operation
+      procedure in [laptop-operator §2](runbooks/laptop-operator.md#2-cicd-merge-publishes-promotion-pins-the-gated-sync-deploys-single-env):
+      clear the prior terminal operation state and submit a full sync with
+      `prune: false` and no resource selector. Immediately confirm the new
+      operation's `sync.resources` is absent or empty. Stop and preserve the
+      result if a selector, stale hook result or unexpectedly short resource
+      set appears. Do not prune the database StatefulSet or either retained PVC.
+- [ ] Verify Argo `Synced` + `Healthy` at the intended revision, newly executed
+      migration/bootstrap/readiness hooks when applicable, and actual running
+      imageIDs/source identities against the release receipt. Run the
+      authenticated API/MCP and freshness checks with the expected API SHA and
+      digest. Use passive socket/readback evidence for the sole existing writer;
+      do not open a device client. Observe schema-validation logs after any
+      authorized ingestor rollout for five minutes. Do not restart healthy
+      services merely to complete the checklist.
 
-## B. Firmware OTA (safety-checked, ≤1/week, 48 h bake)
+## B. Firmware release and recovery
 
-**Pre-deploy validation (local — CI does not gate firmware fully):**
-- [ ] On `main`, clean tree (`git status --short`). `make lint && make test`.
-- [ ] `make test-firmware` (native C++ unit + replay) — green.
-- [ ] Corpus fresh: if `firmware/test/data/replay_overrides.csv.gz` max-ts is > ~3 weeks old,
-      `make replay-corpus-refresh` first.
-- [ ] `make firmware-invariants` — 0 breaches.
-- [ ] `make firmware-replay OLD=<last-deployed-sha> NEW=HEAD` — 0 divergence, or documented +
-      justified with a `THRESHOLD_PCT` override.
-- [ ] **If a band-CURVE changed** (`greenhouse_solar.h` `band_value_at_phase`, anchor resolution,
-      diurnal-band shape): also `make firmware-replay-band OLD=<base>` and **read the %** — the
-      stock corpus-fed replay shows 0 here by construction; this is the check that catches the
-      wet-night-curve class.
-- [ ] `make firmware-check` — real ESPHome compile passes (CI only `esphome config`-validates).
-- [ ] Every new tunable has a `cfg_*` readback (`no-new-fire-and-forget`).
+**Candidate and nonphysical qualification**
 
-**Deploy preflight checks (enforced by `make firmware-deploy`):**
-- [ ] No open `critical` (or legacy `high`) alerts.
-- [ ] Climate ≤300 s fresh; `climate_action_log` fresh + complete.
-- [ ] 48 h bake since `last-good.ota.bin` (override needs a ≥12-char logged reason).
-- [ ] ≤1 OTA this calendar week (resets Mon 00:00 MDT).
-- [ ] `last-good.ota.bin` present and `OTA_PW` / rollback secret reachable (auto-rollback depends
-      on it — do not deploy if rollback can't run).
-- [ ] Outdoor-temp >85°F forecast is a warning, not a blocker — note it.
+- [ ] Select an exact reviewed source revision and intended configuration.
+      Identify affected relay/topology, dwell, sensor validity and irrigation
+      contracts. Reuse prior receipts only within their original source and
+      test coverage; the shared [field/release worksheet](../planning/execution/2026-10-25-safe-followthrough/field-release-worksheet.md)
+      does not itself select or qualify a binary.
+- [ ] Run the required native unit/invariant, causal and replay checks in the
+      supported cluster lane. Bind the old and new source revisions and the
+      corpus identity. For band-curve changes also retain the dedicated band
+      replay result; ordinary corpus parity alone does not exercise that change.
+      Every new tunable needs its `cfg_*` readback. Secretless dummy-credential
+      compiler outputs remain nondeployable.
+- [ ] Build/archive/sign the selected full SHA with the suspended
+      `verdify-firmware-builder` path described in
+      [signed firmware operations](runbooks/firmware-signed-artifacts.md).
+      Record `release.json`, its reviewed SHA256, source/configuration/toolchain
+      identities, binary hashes and signature. Preserve partial/failed archives;
+      do not overwrite them or rebuild during the flash step.
+- [ ] Use the independent verification-only Job to check the archived bytes,
+      pinned public key, signature and exact reviewed manifest hash without
+      device contact. Build, signature and verification success establish
+      artifact custody, not physical compatibility, bake or recovery acceptance.
 
-**Deploy + post:**
-- [ ] `make firmware-deploy` → confirm post-OTA `sensor-health` PASS; expected-firmware pin bumped.
-      (Fail → auto-rollback to last-good; investigate before retry.)
-- [ ] **Pinch state — execute the g-377 decision (#377, execution safeguard; mechanics per #413).**
-      `band_track_fraction` is `restore_value: no` with `initial_value: '0.0'`
-      (`firmware/greenhouse/globals.yaml`), so the flash just **cold-started the pinch to 0.0**
-      regardless of what was live (as of 2026-07-03 the live pre-#385 binary boots 0.25 and runs
-      planner-pushed 0.25). The `crop_band_anchors`→NVS reconcile does **NOT** re-assert it — that
-      path only protects `restore_value: yes` band globals (`docs/CONTROL-ARCHITECTURE.md` §7).
-      Execute ONE of the two g-377 outcomes:
-      - **Accept float 0.0** (the ADR-0004 planner default): nothing to push — confirm the readback:
-        `scripts/verdify-db.sh prod -c "SELECT ts, value FROM setpoint_snapshot WHERE parameter='band_track_fraction' ORDER BY ts DESC LIMIT 1;"`
-      - **Re-pin 0.25:** there is **no push-only command on current `main`** — ADR-0004 pinned the
-        registry bounds to `[0.0, 0.0]` (`verdify_schemas/tunable_registry.py`), so MCP
-        `set_tunable` rejects 0.25, the dispatcher clamps a direct `setpoint_plan` row back to 0.0
-        (`ingestor/tasks/dispatcher.py::_coerce_registry_value`), and the RT listener rejects it
-        (`ingestor/ingestor.py::_accept_outbound_setpoint`). Re-pinning therefore means:
-        (1) widen the `band_track_fraction` registry `min`/`max` (schema change; bounce
-        `verdify-mcp` + `verdify-ingestor` per freeze rule 7); (2) push
-        `set_tunable('band_track_fraction', 0.25, reason=…, trigger_id=<audited MANUAL trigger>,
-        planner_instance=…)` via MCP (or insert one `setpoint_plan` row) — dispatcher applies
-        within ~5 min; (3) confirm the readback query above returns 0.25. **Never** push a raw
-        ESPHome `number_command` from an operator host — that is a second device writer.
-- [ ] **Bake report records the config** (required for every bake/KPI comparison window): the
-      executed `band_track_fraction` state (+ readback proof), `dehum_vent_hold_enabled` state
-      (`cfg_*` readback; OFF-default flag from #410), and the **envelope config** — door
-      screen-window OPEN/CLOSED (open ~2026-06-19 → fall per #412; ~3× passive night air exchange
-      while open). **Never change the window state mid-bake.**
-- [ ] PR body / commit carries the **required artifacts**: replay-diff output, invariant-suite
-      output, unit-test delta.
-- [ ] **Bake 48 h** with no critical alert, then `make firmware-promote-last-good FW_VERSION=<v>`.
+**Recovery, preflight and runtime contract**
 
----
+- [ ] Identify the independently available recovery binary and its full hash,
+      provenance, configuration compatibility and actual recovery evidence.
+      A filename, matching version, copied metadata or successful compile does
+      not qualify last-good. A provisional recovery artifact stays explicitly
+      unbaked and follows the existing reason-logged provisional path; it does
+      not become accepted last-good by being selected.
+- [ ] Before a release, declare its heap/free-block and fragmentation bounds,
+      loop timing, software-reset and watchdog-reset reporting, representative
+      load, canary/soak duration, relay/cfg checks and rollback triggers. Carry
+      the applicable #390/#428 requirements and affected control contracts into
+      that exact candidate's packet. Missing physical topology or recovery
+      evidence remains missing; it is not replaced with a green software test.
+- [ ] Run the unchanged `scripts/firmware-deploy-preflight.sh` with the kube DB
+      backend in the attended release window: no unresolved critical/legacy-high
+      alerts, fresh climate/action telemetry and complete action proof, existing
+      weekly OTA limit, and verified available rollback bytes. Forecast heat is
+      context, not a new blocker. Follow the existing reason-logged override
+      semantics only when the requested scope covers the relevant exception.
+- [ ] Distinguish the preflight's last-good file-age check from actual bake
+      evidence. Passing its 48-hour mtime check proves neither 48 hours of clean
+      device runtime nor recovery. Preserve the real observed bake interval and
+      its reset, heap, timing, fault and configuration records separately.
+
+**Attended flash and acceptance**
+
+- [ ] Flash only when the requested scope covers the attended firmware change
+      and the preceding candidate/recovery checks are satisfied. Use the
+      independent flasher's exact archived artifact and reviewed manifest hash;
+      never substitute an unreviewed compile-and-upload command. Its upload
+      alone does not execute the operator's post-flash health or recovery checks.
+- [ ] Keep `VERDIFY_DB_BACKEND=kube` for the database-backed version wait and
+      sensor-health checks. Verify `diagnostics.firmware_version`, not
+      `last-good.version`, then capture the required relay/cfg, safety and
+      single-writer evidence without an additional native API client. Execute
+      the predeclared recovery path if a failure requires it and the release
+      scope covers that action; retain the failed candidate's evidence.
+- [ ] Verify the intended candidate's `band_track_fraction`,
+      `dehum_vent_hold_enabled` and related config through current readbacks.
+      Record actual door/screen state and other envelope conditions. Do not
+      infer them from July firmware defaults, widen tunable bounds, or inject a
+      setpoint merely to match an old checklist. Preserve stable bake conditions;
+      record any intervention and its effect on the observation window.
+- [ ] Retain exact pre/post firmware, configuration and raw-transition evidence,
+      including starts/dwell, separate software/watchdog reset counts and the
+      declared runtime canaries. Incomplete coverage is not a pass. Promote
+      last-good only after the actual required bake (at least 48 hours), runtime
+      criteria and recovery qualification are met; no ordinary CI or signature
+      result promotes it automatically.
 
 ## C. Dashboards (Grafana)
 
-- [ ] Edit the **source-of-truth** copy under `grafana/dashboards/` (NOT
-      `grafana/provisioning/dashboards/json/` — those are dead shadows; see audit §4.5).
-- [ ] Regenerate the ConfigMaps: `scripts/gen-grafana-dashboard-cms.py` →
-      `deploy/k8s/components/grafana/generated/dashboards-cm-*.yaml`.
-- [ ] `make grafana-brand-check` (and `-live` when appropriate) for embed styling.
-- [ ] Separate reconstructed/desired bands from database snapshots and actual
-      consumed observations. `setpoint_snapshot` alone is not raw device truth;
-      require fresh source/runtime/connection lineage for any consumed-band claim
-      ([current contract](band-traceability-contract.md), #424).
-- [ ] Verify render locally / on `graphs.verdify.ai` after the prod sync — type-checks don't catch
-      visual regressions.
-
----
+- [ ] Edit `grafana/dashboards/`, then regenerate with
+      `scripts/gen-grafana-dashboard-cms.py` and check the generated ConfigMaps.
+- [ ] Run relevant branding/render checks, then verify live labels, units,
+      ranges and data after a deployment that actually changes them.
+- [ ] Keep reconstructed/desired bands distinct from consumed observations.
+      `setpoint_snapshot` alone is not raw device truth; use the source/runtime/
+      connection lineage in [the band contract](band-traceability-contract.md).
+- [ ] Shared alert rules and probes belong in `jvallery/monitoring-stack`;
+      a local `PrometheusRule` is not loaded by production Prometheus.
 
 ## D. Lab site (lab.verdify.ai)
 
-- [ ] If a generator changed (`scripts/*-page.py`, `render-*.py`): `make site-doctor`,
-      `make site-lint`, and verify a local Quartz render.
-- [ ] `make site-publish-status` to confirm the publish pipeline state.
-- [ ] Note: lab content is generated from S3 + DB by the `verdify-lab-publisher` CronJob, not
-      committed to git (`site/content/` is empty in-repo). Embeds depend on fixed Grafana UIDs —
-      if you retire a dashboard, check `generate-forecast-page.py` embed UIDs first.
+- [ ] Apply [the web lane's checks](agents/web.md) for changed generators,
+      content, theme, plugins or routes. Run intensive Quartz builds and broad
+      suites in the supported cluster lane, not on the Mac.
+- [ ] Verify the actual S3 content → publisher → validated PVC generation →
+      nginx path with [the publication runbook](runbooks/lab-content-pipeline.md),
+      including the live generation and affected pages/embeds. Merging an image
+      or source change alone does not prove publication.
 
----
+## E. Schema and migrations
 
-## E. Schema / migrations
+- [ ] Add a numbered migration; never edit an applied migration. Classify it
+      with the existing rollback-safety check before any execution.
+- [ ] Do not wrap a self-committing migration in an outer rollback transaction.
+      Qualify rollback/forward recovery using the supported isolated fixture;
+      a live `irrigation-migration-check` is not a generic test invocation.
+- [ ] Keep schema contracts/snapshots aligned through the supported development
+      path. Do not run a production `db-dump` that overwrites `db/schema.sql`
+      simply to complete this checklist.
+- [ ] Bind migration and consumer image digests, ledger outcomes and runtime
+      adoption to the same release. Declare the required service rollouts as
+      above; do not add an unconditional post-migration bounce.
 
-- [ ] One migration change at a time, classified by `make migration-rollback-safety`.
-- [ ] **Never wrap a self-committing migration** (own `COMMIT;` or `CREATE INDEX CONCURRENTLY`
-      etc.) in an outer `BEGIN; … ROLLBACK;` — use `make irrigation-migration-check` / the
-      `--rollback-wrap` preflight, which refuses to wrap a self-committing file.
-- [ ] Run the targeted rollback proof the migration describes.
-- [ ] `service-restart-drift-guard`: document which services bounce post-migrate.
-- [ ] After a schema change, **regenerate `db/schema.sql`** so it stays a faithful snapshot
-      (it is currently stale — audit D5).
+## F. Documentation and evidence
 
----
-
-## F. Docs (always)
-
-- [ ] Durable decisions, invariants, and runbook changes go into `docs/` — not chat only.
-- [ ] If the board / ArgoCD ownership / access boundaries changed, update the root lane docs
-      (`AGENT_LANE.md`, `ARGOCD.md`, `ACCESS_MATRIX.md`, `PROJECT_BOARD.md`).
-- [ ] `git status --short` validated so unrelated changes aren't bundled in.
+- [ ] Update the owning runbook and relevant issue with delivered behavior,
+      exact source/build/runtime evidence and remaining limitations.
+- [ ] Edit `planning/backlog.yaml` and regenerate its board/dependency views;
+      do not hand-edit generated planning files. Update actual ownership records
+      when ownership changes.
+- [ ] Review the final diff and preserve unrelated files and recovery evidence.
+      A documentation correction does not itself deploy, release a hold or
+      satisfy physical acceptance.
