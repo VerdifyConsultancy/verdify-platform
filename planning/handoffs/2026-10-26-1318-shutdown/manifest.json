@@ -4,8 +4,8 @@
     "sha256": "be7135d82eb19e18e66a7c8c6e34c276b7088eb17c271d194594dfec6771cd16"
   },
   "README.md": {
-    "bytes": 7725,
-    "sha256": "0b134180069b7c24e999923091f03510b84d184b5b8a393a7d53448d75201e28"
+    "bytes": 8505,
+    "sha256": "47db2d5f5ac4ce5f81d8d9d4721a83f384573d875ac2ec92e18b842cc88059e1"
   },
   "firmware-admission-preflight.json": {
     "bytes": 24440,
@@ -34,6 +34,10 @@
   "firmware1091-workflow-preparation.json": {
     "bytes": 788,
     "sha256": "1d467154a70d4c99462ae7ccfc11dc5e6c79a221fe52e77aa2326f16ae3a2e2b"
+  },
+  "github-publication.json": {
+    "bytes": 22298,
+    "sha256": "2ba2c8da58e642c0484342156a9973a9cf9eafa7e68970e36bb971baa841d945"
   },
   "graph-shutdown.md": {
     "bytes": 5160,
@@ -135,9 +139,17 @@
     "bytes": 1621,
     "sha256": "abf7673b413313910d2d45cd56aedf6598e0126dd43966c0b3b16adb55188fc4"
   },
+  "remote-custody-verification.json": {
+    "bytes": 321,
+    "sha256": "1bea936eee861a89f561d6039a303c0ce71af6c66f8e2a98437246dfee41d41f"
+  },
   "shutdown-api-health.json": {
     "bytes": 577,
     "sha256": "56dea5ed756fa96ff0f18f08d0e4d5263da168282658567845818c213145a0b8"
+  },
+  "shutdown-final-ci-status.json": {
+    "bytes": 1619,
+    "sha256": "3704c0340be7982a42f83eaf150b28f23161daf2f3387ff53808ff2d0fc73bd1"
   },
   "shutdown-nodes.json": {
     "bytes": 4934,
@@ -158,6 +170,14 @@
   "source-custody.json": {
     "bytes": 2014,
     "sha256": "4917ed5bffdff3154fbe2181e5324bdd245e816fbb2328868f9fb4047fe8d5d1"
+  },
+  "submitted/firmware1091-native-command.sh": {
+    "bytes": 9795,
+    "sha256": "e3a794179504d1d1fc2e628d8ed73cb43320c31d07a5762938836f3b20b9ecb4"
+  },
+  "submitted/firmware1091-native-workflow.json": {
+    "bytes": 12761,
+    "sha256": "7a34bac665c6f2b72b32bc9952064919fa62a5d36fea9aa269b6ca5a38660668"
   },
   "tools/capture-shutdown.py": {
     "bytes": 5150,

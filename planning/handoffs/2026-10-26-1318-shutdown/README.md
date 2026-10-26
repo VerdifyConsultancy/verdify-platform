@@ -117,3 +117,15 @@ The Mac may stop; existing cluster execution continues independently.
 `manifest.json` binds this sanitized evidence. Native runtime receipts and the
 source branches are retained independently of `/private/tmp`; no Secret values,
 raw production rows or credentials are part of this packet.
+
+## Publication readback
+
+All41current open issues and PRs1086/1091 have verified GitHub updates.
+Each of the43comment bodies was read back exactly; IDs and links are in
+`github-publication.json`. The central handoff is https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6417031000.
+At13:20:33UTC the three named PR/main workflows were still Running and both
+required commit statuses were pending; `shutdown-final-ci-status.json` preserves
+that final read. The strict native workflow remained Succeeded. No follow-on
+work was submitted. Remote Git tree verification matched all52initial manifest
+files and the positive-fixture source commit. This final addition records only
+publication and readback; it does not change the source or acceptance state.

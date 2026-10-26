@@ -1,0 +1,8 @@
+{
+  "captured_at": "2026-10-26T13:20:19.560664+00:00",
+  "evidence_branch": "codex/resume-review-inventory-20261026",
+  "evidence_commit": "8a0896bf1bfe6755e4c62fb2703e7844ef108892",
+  "manifest_files_remote_verified": 52,
+  "positive_commit": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+  "github_tree_complete": true
+}

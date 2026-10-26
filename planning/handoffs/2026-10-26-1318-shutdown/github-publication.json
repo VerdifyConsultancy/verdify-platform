@@ -1,0 +1,603 @@
+{
+  "verified_at": "2026-10-26T13:21:19.071105+00:00",
+  "open_issues": [
+    {
+      "number": 1010,
+      "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
+      "updatedAt": "2026-10-26T13:20:31Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010"
+    },
+    {
+      "number": 1009,
+      "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+      "updatedAt": "2026-10-26T13:20:30Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009"
+    },
+    {
+      "number": 1001,
+      "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+      "updatedAt": "2026-10-26T13:20:30Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001"
+    },
+    {
+      "number": 963,
+      "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+      "updatedAt": "2026-10-26T13:20:29Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963"
+    },
+    {
+      "number": 785,
+      "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+      "updatedAt": "2026-10-26T13:20:28Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785"
+    },
+    {
+      "number": 784,
+      "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+      "updatedAt": "2026-10-26T13:20:28Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784"
+    },
+    {
+      "number": 783,
+      "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+      "updatedAt": "2026-10-26T13:20:28Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783"
+    },
+    {
+      "number": 782,
+      "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+      "updatedAt": "2026-10-26T13:20:26Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782"
+    },
+    {
+      "number": 775,
+      "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "updatedAt": "2026-10-26T13:20:49Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775"
+    },
+    {
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "updatedAt": "2026-10-26T13:20:26Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+    },
+    {
+      "number": 749,
+      "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+      "updatedAt": "2026-10-26T13:20:26Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749"
+    },
+    {
+      "number": 642,
+      "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+      "updatedAt": "2026-10-26T13:20:24Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642"
+    },
+    {
+      "number": 641,
+      "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+      "updatedAt": "2026-10-26T13:20:24Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+    },
+    {
+      "number": 640,
+      "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+      "updatedAt": "2026-10-26T13:20:24Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640"
+    },
+    {
+      "number": 639,
+      "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+      "updatedAt": "2026-10-26T13:20:22Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639"
+    },
+    {
+      "number": 588,
+      "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+      "updatedAt": "2026-10-26T13:20:22Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588"
+    },
+    {
+      "number": 587,
+      "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+      "updatedAt": "2026-10-26T13:20:21Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587"
+    },
+    {
+      "number": 581,
+      "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+      "updatedAt": "2026-10-26T13:20:20Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581"
+    },
+    {
+      "number": 434,
+      "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "updatedAt": "2026-10-26T13:20:20Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434"
+    },
+    {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "updatedAt": "2026-10-26T13:20:19Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430"
+    },
+    {
+      "number": 412,
+      "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+      "updatedAt": "2026-10-26T13:20:18Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412"
+    },
+    {
+      "number": 410,
+      "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+      "updatedAt": "2026-10-26T13:20:18Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410"
+    },
+    {
+      "number": 398,
+      "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "updatedAt": "2026-10-26T13:20:18Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398"
+    },
+    {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "updatedAt": "2026-10-26T13:20:17Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390"
+    },
+    {
+      "number": 386,
+      "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "updatedAt": "2026-10-26T13:20:16Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386"
+    },
+    {
+      "number": 378,
+      "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+      "updatedAt": "2026-10-26T13:20:16Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378"
+    },
+    {
+      "number": 370,
+      "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+      "updatedAt": "2026-10-26T13:20:15Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370"
+    },
+    {
+      "number": 369,
+      "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+      "updatedAt": "2026-10-26T13:20:15Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369"
+    },
+    {
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "updatedAt": "2026-10-26T13:20:15Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368"
+    },
+    {
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "updatedAt": "2026-10-26T13:20:13Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367"
+    },
+    {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "updatedAt": "2026-10-26T13:20:13Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359"
+    },
+    {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "updatedAt": "2026-10-26T13:20:13Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350"
+    },
+    {
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "updatedAt": "2026-10-26T13:20:12Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299"
+    },
+    {
+      "number": 298,
+      "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+      "updatedAt": "2026-10-26T13:20:12Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298"
+    },
+    {
+      "number": 297,
+      "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "updatedAt": "2026-10-26T13:20:11Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297"
+    },
+    {
+      "number": 75,
+      "title": "[C4][P2] Observability program: prove actionable health from source through device",
+      "updatedAt": "2026-10-26T13:20:10Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75"
+    },
+    {
+      "number": 52,
+      "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+      "updatedAt": "2026-10-26T13:20:09Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52"
+    },
+    {
+      "number": 51,
+      "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "updatedAt": "2026-10-26T13:20:10Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51"
+    },
+    {
+      "number": 45,
+      "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+      "updatedAt": "2026-10-26T13:20:08Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45"
+    },
+    {
+      "number": 31,
+      "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "updatedAt": "2026-10-26T13:20:08Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31"
+    },
+    {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "updatedAt": "2026-10-26T13:20:43Z",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16"
+    }
+  ],
+  "comment_receipts": [
+    {
+      "number": 31,
+      "kind": "issue",
+      "id": 6417016486,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6417016486",
+      "updated_at": "2026-10-26T13:20:08Z",
+      "readback_verified": true
+    },
+    {
+      "number": 45,
+      "kind": "issue",
+      "id": 6417016530,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6417016530",
+      "updated_at": "2026-10-26T13:20:08Z",
+      "readback_verified": true
+    },
+    {
+      "number": 52,
+      "kind": "issue",
+      "id": 6417017045,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6417017045",
+      "updated_at": "2026-10-26T13:20:09Z",
+      "readback_verified": true
+    },
+    {
+      "number": 75,
+      "kind": "issue",
+      "id": 6417017157,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6417017157",
+      "updated_at": "2026-10-26T13:20:10Z",
+      "readback_verified": true
+    },
+    {
+      "number": 51,
+      "kind": "issue",
+      "id": 6417017287,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6417017287",
+      "updated_at": "2026-10-26T13:20:10Z",
+      "readback_verified": true
+    },
+    {
+      "number": 297,
+      "kind": "issue",
+      "id": 6417017594,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6417017594",
+      "updated_at": "2026-10-26T13:20:11Z",
+      "readback_verified": true
+    },
+    {
+      "number": 299,
+      "kind": "issue",
+      "id": 6417017836,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6417017836",
+      "updated_at": "2026-10-26T13:20:11Z",
+      "readback_verified": true
+    },
+    {
+      "number": 298,
+      "kind": "issue",
+      "id": 6417017818,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6417017818",
+      "updated_at": "2026-10-26T13:20:11Z",
+      "readback_verified": true
+    },
+    {
+      "number": 350,
+      "kind": "issue",
+      "id": 6417018182,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6417018182",
+      "updated_at": "2026-10-26T13:20:12Z",
+      "readback_verified": true
+    },
+    {
+      "number": 359,
+      "kind": "issue",
+      "id": 6417018381,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6417018381",
+      "updated_at": "2026-10-26T13:20:13Z",
+      "readback_verified": true
+    },
+    {
+      "number": 367,
+      "kind": "issue",
+      "id": 6417018403,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6417018403",
+      "updated_at": "2026-10-26T13:20:13Z",
+      "readback_verified": true
+    },
+    {
+      "number": 368,
+      "kind": "issue",
+      "id": 6417018870,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6417018870",
+      "updated_at": "2026-10-26T13:20:14Z",
+      "readback_verified": true
+    },
+    {
+      "number": 369,
+      "kind": "issue",
+      "id": 6417018988,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6417018988",
+      "updated_at": "2026-10-26T13:20:15Z",
+      "readback_verified": true
+    },
+    {
+      "number": 370,
+      "kind": "issue",
+      "id": 6417019054,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6417019054",
+      "updated_at": "2026-10-26T13:20:15Z",
+      "readback_verified": true
+    },
+    {
+      "number": 378,
+      "kind": "issue",
+      "id": 6417019502,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6417019502",
+      "updated_at": "2026-10-26T13:20:16Z",
+      "readback_verified": true
+    },
+    {
+      "number": 386,
+      "kind": "issue",
+      "id": 6417019562,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6417019562",
+      "updated_at": "2026-10-26T13:20:16Z",
+      "readback_verified": true
+    },
+    {
+      "number": 390,
+      "kind": "issue",
+      "id": 6417019620,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6417019620",
+      "updated_at": "2026-10-26T13:20:16Z",
+      "readback_verified": true
+    },
+    {
+      "number": 398,
+      "kind": "issue",
+      "id": 6417020090,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6417020090",
+      "updated_at": "2026-10-26T13:20:18Z",
+      "readback_verified": true
+    },
+    {
+      "number": 410,
+      "kind": "issue",
+      "id": 6417020235,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6417020235",
+      "updated_at": "2026-10-26T13:20:18Z",
+      "readback_verified": true
+    },
+    {
+      "number": 412,
+      "kind": "issue",
+      "id": 6417020290,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6417020290",
+      "updated_at": "2026-10-26T13:20:18Z",
+      "readback_verified": true
+    },
+    {
+      "number": 430,
+      "kind": "issue",
+      "id": 6417020631,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6417020631",
+      "updated_at": "2026-10-26T13:20:19Z",
+      "readback_verified": true
+    },
+    {
+      "number": 434,
+      "kind": "issue",
+      "id": 6417020806,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6417020806",
+      "updated_at": "2026-10-26T13:20:20Z",
+      "readback_verified": true
+    },
+    {
+      "number": 581,
+      "kind": "issue",
+      "id": 6417020857,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6417020857",
+      "updated_at": "2026-10-26T13:20:20Z",
+      "readback_verified": true
+    },
+    {
+      "number": 587,
+      "kind": "issue",
+      "id": 6417021241,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6417021241",
+      "updated_at": "2026-10-26T13:20:21Z",
+      "readback_verified": true
+    },
+    {
+      "number": 588,
+      "kind": "issue",
+      "id": 6417021534,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6417021534",
+      "updated_at": "2026-10-26T13:20:22Z",
+      "readback_verified": true
+    },
+    {
+      "number": 639,
+      "kind": "issue",
+      "id": 6417021595,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6417021595",
+      "updated_at": "2026-10-26T13:20:22Z",
+      "readback_verified": true
+    },
+    {
+      "number": 640,
+      "kind": "issue",
+      "id": 6417022083,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6417022083",
+      "updated_at": "2026-10-26T13:20:23Z",
+      "readback_verified": true
+    },
+    {
+      "number": 642,
+      "kind": "issue",
+      "id": 6417022340,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6417022340",
+      "updated_at": "2026-10-26T13:20:24Z",
+      "readback_verified": true
+    },
+    {
+      "number": 641,
+      "kind": "issue",
+      "id": 6417022331,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6417022331",
+      "updated_at": "2026-10-26T13:20:24Z",
+      "readback_verified": true
+    },
+    {
+      "number": 749,
+      "kind": "issue",
+      "id": 6417022862,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6417022862",
+      "updated_at": "2026-10-26T13:20:26Z",
+      "readback_verified": true
+    },
+    {
+      "number": 751,
+      "kind": "issue",
+      "id": 6417022978,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6417022978",
+      "updated_at": "2026-10-26T13:20:26Z",
+      "readback_verified": true
+    },
+    {
+      "number": 782,
+      "kind": "issue",
+      "id": 6417023061,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6417023061",
+      "updated_at": "2026-10-26T13:20:26Z",
+      "readback_verified": true
+    },
+    {
+      "number": 783,
+      "kind": "issue",
+      "id": 6417023572,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6417023572",
+      "updated_at": "2026-10-26T13:20:28Z",
+      "readback_verified": true
+    },
+    {
+      "number": 785,
+      "kind": "issue",
+      "id": 6417023622,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6417023622",
+      "updated_at": "2026-10-26T13:20:28Z",
+      "readback_verified": true
+    },
+    {
+      "number": 784,
+      "kind": "issue",
+      "id": 6417023575,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6417023575",
+      "updated_at": "2026-10-26T13:20:28Z",
+      "readback_verified": true
+    },
+    {
+      "number": 963,
+      "kind": "issue",
+      "id": 6417024150,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6417024150",
+      "updated_at": "2026-10-26T13:20:29Z",
+      "readback_verified": true
+    },
+    {
+      "number": 1001,
+      "kind": "issue",
+      "id": 6417024233,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6417024233",
+      "updated_at": "2026-10-26T13:20:30Z",
+      "readback_verified": true
+    },
+    {
+      "number": 1009,
+      "kind": "issue",
+      "id": 6417024308,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6417024308",
+      "updated_at": "2026-10-26T13:20:30Z",
+      "readback_verified": true
+    },
+    {
+      "number": 1010,
+      "kind": "issue",
+      "id": 6417024822,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6417024822",
+      "updated_at": "2026-10-26T13:20:31Z",
+      "readback_verified": true
+    },
+    {
+      "number": 16,
+      "kind": "issue",
+      "id": 6417016516,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6417016516",
+      "updated_at": "2026-10-26T13:20:43Z",
+      "readback_verified": true
+    },
+    {
+      "number": 1091,
+      "kind": "pull_request",
+      "id": 6417029480,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1091#issuecomment-6417029480",
+      "updated_at": "2026-10-26T13:20:44Z",
+      "readback_verified": true
+    },
+    {
+      "number": 1086,
+      "kind": "pull_request",
+      "id": 6417030198,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1086#issuecomment-6417030198",
+      "updated_at": "2026-10-26T13:20:46Z",
+      "readback_verified": true
+    },
+    {
+      "number": 775,
+      "kind": "issue",
+      "id": 6417031000,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6417031000",
+      "updated_at": "2026-10-26T13:20:49Z",
+      "readback_verified": true
+    }
+  ],
+  "counts": {
+    "issues": 41,
+    "pull_requests": 2
+  },
+  "all_published_comment_bodies_read_back_exactly": true,
+  "handoff_comment": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6417031000"
+}

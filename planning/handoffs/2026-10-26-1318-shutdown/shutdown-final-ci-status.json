@@ -1,0 +1,59 @@
+{
+  "captured_at": "2026-10-26T13:20:33.727903+00:00",
+  "commit_status": {
+    "d7c25b0c620d537d56f938302d8be236a4d46fbb": {
+      "state": "pending",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "pending",
+          "description": "Verdify Platform in-cluster PR validation started",
+          "updated_at": "2026-10-26T13:12:19Z",
+          "target_url": null
+        }
+      ]
+    },
+    "ca9120fa308c77b2c71054758d0ca143428bdea6": {
+      "state": "pending",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "pending",
+          "description": "Verdify Platform in-cluster main validation started",
+          "updated_at": "2026-10-26T13:08:43Z",
+          "target_url": null
+        }
+      ]
+    }
+  },
+  "workflows": [
+    {
+      "name": "verdify-platform-pr-ci-q9rzq",
+      "uid": "68b41140-3e11-4abe-a961-d4b4102665d8",
+      "phase": "Running",
+      "message": null,
+      "finishedAt": null
+    },
+    {
+      "name": "verdify-platform-pr-ci-lv49z",
+      "uid": "b49b9cf6-a7d5-48a5-9602-650daf6cdf80",
+      "phase": "Running",
+      "message": null,
+      "finishedAt": null
+    },
+    {
+      "name": "verdify-platform-ci-sl7bh",
+      "uid": "92632257-9351-4b7e-852e-6d0318351185",
+      "phase": "Running",
+      "message": null,
+      "finishedAt": null
+    },
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01",
+      "uid": "88700998-b28a-4303-8363-3cb053dfbd00",
+      "phase": "Succeeded",
+      "message": null,
+      "finishedAt": "2026-10-26T13:17:56Z"
+    }
+  ]
+}
