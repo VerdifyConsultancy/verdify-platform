@@ -1,0 +1,303 @@
+Preparing worktree (detached HEAD d7c25b0c)
+HEAD is now at d7c25b0c fix: reject nonfinite climate aggregate contributors
+............FFFFFFFFFFFFFFFFFFFFFFFF...FFFFFFF......................F.   [100%]
+=================================== FAILURES ===================================
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-temperature-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (inf, 70.0, 1.25) == approx([90.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     0     | inf      | 90.0 ± 9.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-temperature-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (inf, 70.0, 1.25) == approx([86.66...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     0     | inf      | 86.66666666666667 ± 8.7e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-temperature-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (inf, 70.0, 1.25) == approx([83.33...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     0     | inf      | 83.33333333333333 ± 8.3e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-temperature-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (inf, 70.0, 1.25) == approx([80.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     0     | inf      | 80.0 ± 8.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-humidity-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     1     | inf      | 80.0 ± 8.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-humidity-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     1     | inf      | 73.33333333333333 ± 7.3e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-humidity-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     1     | inf      | 66.66666666666667 ± 6.7e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-humidity-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     1     | inf      | 60.0 ± 6.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-vpd-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, inf) == approx([85.0 ....5 ± 1.5e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected     
+E     2     | inf      | 1.5 ± 1.5e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-vpd-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, inf) == approx([85.0 ...33 ± 1.3e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                    
+E     2     | inf      | 1.3333333333333333 ± 1.3e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-vpd-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, inf) == approx([85.0 ...67 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                    
+E     2     | inf      | 1.1666666666666667 ± 1.2e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[inf-vpd-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, inf) == approx([85.0 ....0 ± 1.0e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected     
+E     2     | inf      | 1.0 ± 1.0e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-temperature-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (-inf, 70.0, 1.25) == approx([90.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     0     | -inf     | 90.0 ± 9.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-temperature-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (-inf, 70.0, 1.25) == approx([86.66...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     0     | -inf     | 86.66666666666667 ± 8.7e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-temperature-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (-inf, 70.0, 1.25) == approx([83.33...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     0     | -inf     | 83.33333333333333 ± 8.3e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-temperature-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (-inf, 70.0, 1.25) == approx([80.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     0     | -inf     | 80.0 ± 8.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-humidity-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, -inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     1     | -inf     | 80.0 ± 8.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-humidity-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, -inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     1     | -inf     | 73.33333333333333 ± 7.3e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-humidity-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, -inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     1     | -inf     | 66.66666666666667 ± 6.7e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-humidity-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, -inf, 1.25) == approx([85.0 ...25 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected      
+E     1     | -inf     | 60.0 ± 6.0e-05
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-vpd-North] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, -inf) == approx([85.0 ....5 ± 1.5e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected     
+E     2     | -inf     | 1.5 ± 1.5e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-vpd-West] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, -inf) == approx([85.0 ...33 ± 1.3e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                    
+E     2     | -inf     | 1.3333333333333333 ± 1.3e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-vpd-South] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, -inf) == approx([85.0 ...67 ± 1.2e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                    
+E     2     | -inf     | 1.1666666666666667 ± 1.2e-06
+_ test_nonfinite_contributor_does_not_contaminate_healthy_field_peers[-inf-vpd-East] _
+tests/test_probe_diagnostics_native.py:210: in test_nonfinite_contributor_does_not_contaminate_healthy_field_peers
+    assert observe_averages(native_diagnostics, overrides={probe: {field: invalid}}) == pytest.approx(expected)
+E   assert (85.0, 70.0, -inf) == approx([85.0 ....0 ± 1.0e-06])
+E     
+E     comparison failed. Mismatched elements: 1 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected     
+E     2     | -inf     | 1.0 ± 1.0e-06
+_ test_no_finite_contributor_returns_nan_only_for_that_field[inf-temperature] __
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(inf)
+E    +    where <built-in function isnan> = math.isnan
+___ test_no_finite_contributor_returns_nan_only_for_that_field[inf-humidity] ___
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(inf)
+E    +    where <built-in function isnan> = math.isnan
+_____ test_no_finite_contributor_returns_nan_only_for_that_field[inf-vpd] ______
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(inf)
+E    +    where <built-in function isnan> = math.isnan
+_ test_no_finite_contributor_returns_nan_only_for_that_field[-inf-temperature] _
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(-inf)
+E    +    where <built-in function isnan> = math.isnan
+__ test_no_finite_contributor_returns_nan_only_for_that_field[-inf-humidity] ___
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(-inf)
+E    +    where <built-in function isnan> = math.isnan
+_____ test_no_finite_contributor_returns_nan_only_for_that_field[-inf-vpd] _____
+tests/test_probe_diagnostics_native.py:217: in test_no_finite_contributor_returns_nan_only_for_that_field
+    assert math.isnan(actual[field - 1])
+E   assert False
+E    +  where False = <built-in function isnan>(-inf)
+E    +    where <built-in function isnan> = math.isnan
+_____ test_partial_probes_keep_their_other_valid_fields_in_each_aggregate ______
+tests/test_probe_diagnostics_native.py:228: in test_partial_probes_keep_their_other_valid_fields_in_each_aggregate
+    assert actual == pytest.approx((90.0, 220.0 / 3.0, 1.0))
+E   assert (90.0, inf, -inf) == approx((90.0 ....0 ± 1.0e-06))
+E     
+E     comparison failed. Mismatched elements: 2 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     1     | inf      | 73.33333333333333 ± 7.3e-05
+E     2     | -inf     | 1.0 ± 1.0e-06
+___________ test_finite_recovery_rejoins_each_independent_aggregate ____________
+tests/test_probe_diagnostics_native.py:266: in test_finite_recovery_rejoins_each_independent_aggregate
+    assert observe_averages(native_diagnostics, overrides=invalid) == pytest.approx(expected)
+E   assert (inf, -inf, 1.16666663) == approx((83.33...67 ± 1.2e-06))
+E     
+E     comparison failed. Mismatched elements: 2 / 3:
+E     Max absolute difference: inf
+E     Max relative difference: -inf
+E     Index | Obtained | Expected                   
+E     0     | inf      | 83.33333333333333 ± 8.3e-05
+E     1     | -inf     | 66.66666666666667 ± 6.7e-05
+CAUSAL_BASELINE_RESULT={"counts": {"errors": 0, "failed": 32, "passed": 38, "skipped": 0, "tests": 70}, "head_sensor_sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d", "historical_pytest_exit_code": 1, "historical_sensor_sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563", "historical_sensor_source": "ccc4274cb790308685110a154831480f700e95d7", "primary_checkout_sensor_unchanged": true, "private_worktree_restored_to_head": true, "private_worktree_sensor_diff_exit_code": 0, "selected_test_functions": ["test_nonfinite_contributor_does_not_contaminate_healthy_field_peers", "test_no_finite_contributor_returns_nan_only_for_that_field", "test_partial_probes_keep_their_other_valid_fields_in_each_aggregate", "test_aggregate_preserves_300_second_boundary_independent_of_health_warning", "test_missing_timestamp_excludes_all_fields_from_that_probe", "test_aggregate_freshness_boundary_survives_uint32_rollover", "test_finite_recovery_rejoins_each_independent_aggregate", "test_fresh_steady_and_saturated_zero_vpd_inputs_remain_eligible"], "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb"}

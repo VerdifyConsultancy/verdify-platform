@@ -1,0 +1,35 @@
+bash scripts/firmware-replay-diff.sh "ccc4274cb790308685110a154831480f700e95d7" "d7c25b0c620d537d56f938302d8be236a4d46fbb"
+[1/4] Building OLD (ccc4274cb790308685110a154831480f700e95d7)...
+Preparing worktree (detached HEAD ccc4274c)
+HEAD is now at ccc4274c setpoint-server: pin the HA_TOKEN_FILE image and move its token mount (storage-infra#1198) (#1090)
+[2/4] Building NEW (d7c25b0c620d537d56f938302d8be236a4d46fbb)...
+Preparing worktree (detached HEAD d7c25b0c)
+HEAD is now at d7c25b0c fix: reject nonfinite climate aggregate contributors
+[3/4] Running both against /tmp/verdify-finite-native-d7c25b0c-20261026-01/committed-replay/replay_overrides.csv...
+[replay_emit] WARNING: 6 sp_* column(s) the Setpoints struct expects are absent from the CSV header (TWIN-3 setpoint-coverage). These fields will fall back to default_setpoints() and can manufacture false divergence:
+    - sp_sw_wet_taper_enabled
+    - sp_wet_taper_before_sunset_min
+    - sp_sw_night_stress_wet_enabled
+    - sp_night_stress_min_dew_margin_f
+    - sp_dawn_boost_offset_min
+    - sp_midday_boost_offset_min
+replay_emit: 296698 rows emitted
+[replay_emit] WARNING: 6 sp_* column(s) the Setpoints struct expects are absent from the CSV header (TWIN-3 setpoint-coverage). These fields will fall back to default_setpoints() and can manufacture false divergence:
+    - sp_sw_wet_taper_enabled
+    - sp_wet_taper_before_sunset_min
+    - sp_sw_night_stress_wet_enabled
+    - sp_night_stress_min_dew_margin_f
+    - sp_dawn_boost_offset_min
+    - sp_midday_boost_offset_min
+replay_emit: 296698 rows emitted
+[4/4] Diffing...
+0 divergent rows
+
+═══ Replay diff summary ═══
+  OLD ref: ccc4274cb790308685110a154831480f700e95d7
+  NEW ref: d7c25b0c620d537d56f938302d8be236a4d46fbb
+  CSV:     /tmp/verdify-finite-native-d7c25b0c-20261026-01/committed-replay/replay_overrides.csv (296698 rows)
+  Divergent rows: 0
+  Diagnostic-only rows: 0 (ignored: mode/relay/mist unchanged)
+  Full diff:      /tmp/replay_diff.tsv
+  ✓ No divergence. Behavior preserved.
