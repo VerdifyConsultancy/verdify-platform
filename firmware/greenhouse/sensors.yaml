@@ -647,10 +647,10 @@ sensor:
       const uint32_t STALE = 300000; // 5 min, matches watchdog
       auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
       float s = 0; int n = 0;
-      if(ok(id(last_north_ms)) && !isnan(id(north_wall_temperature).state)){ s += id(north_wall_temperature).state; n++; }
-      if(ok(id(last_west_ms))  && !isnan(id(west_wall_temperature).state)) { s += id(west_wall_temperature).state;  n++; }
-      if(ok(id(last_south_ms)) && !isnan(id(south_wall_temperature).state)){ s += id(south_wall_temperature).state; n++; }
-      if(ok(id(last_east_ms))  && !isnan(id(east_wall_temperature).state)) { s += id(east_wall_temperature).state;  n++; }
+      if(ok(id(last_north_ms)) && std::isfinite(id(north_wall_temperature).state)){ s += id(north_wall_temperature).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(west_wall_temperature).state)) { s += id(west_wall_temperature).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(south_wall_temperature).state)){ s += id(south_wall_temperature).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(east_wall_temperature).state)) { s += id(east_wall_temperature).state;  n++; }
       return n ? s/n : NAN;
 
   - platform: template
@@ -666,10 +666,10 @@ sensor:
       const uint32_t STALE = 300000;
       auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
       float s = 0; int n = 0;
-      if(ok(id(last_north_ms)) && !isnan(id(north_wall_humidity).state)){ s += id(north_wall_humidity).state; n++; }
-      if(ok(id(last_west_ms))  && !isnan(id(west_wall_humidity).state)) { s += id(west_wall_humidity).state;  n++; }
-      if(ok(id(last_south_ms)) && !isnan(id(south_wall_humidity).state)){ s += id(south_wall_humidity).state; n++; }
-      if(ok(id(last_east_ms))  && !isnan(id(east_wall_humidity).state)) { s += id(east_wall_humidity).state;  n++; }
+      if(ok(id(last_north_ms)) && std::isfinite(id(north_wall_humidity).state)){ s += id(north_wall_humidity).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(west_wall_humidity).state)) { s += id(west_wall_humidity).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(south_wall_humidity).state)){ s += id(south_wall_humidity).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(east_wall_humidity).state)) { s += id(east_wall_humidity).state;  n++; }
       return n ? s/n : NAN;
 
   - platform: template
@@ -684,10 +684,10 @@ sensor:
       const uint32_t STALE = 300000;
       auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
       float s = 0; int n = 0;
-      if(ok(id(last_north_ms)) && !isnan(id(vpd_north).state)){ s += id(vpd_north).state; n++; }
-      if(ok(id(last_west_ms))  && !isnan(id(vpd_west).state)) { s += id(vpd_west).state;  n++; }
-      if(ok(id(last_south_ms)) && !isnan(id(vpd_south).state)){ s += id(vpd_south).state; n++; }
-      if(ok(id(last_east_ms))  && !isnan(id(vpd_east).state)) { s += id(vpd_east).state;  n++; }
+      if(ok(id(last_north_ms)) && std::isfinite(id(vpd_north).state)){ s += id(vpd_north).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(vpd_west).state)) { s += id(vpd_west).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(vpd_south).state)){ s += id(vpd_south).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(vpd_east).state)) { s += id(vpd_east).state;  n++; }
       return n ? s/n : NAN;
 
   # Complete wall probes eligible to contribute all three climate fields.
