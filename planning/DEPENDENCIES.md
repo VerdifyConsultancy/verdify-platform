@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-10-25-unblocked/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 118-issue/70-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-10-26-resume/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 118-issue/70-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 

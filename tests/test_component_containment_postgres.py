@@ -6,10 +6,12 @@ Later physical-proof/recovery migrations are outside this first fixture phase.
 """
 
 import asyncio
+import datetime as dt
 import hashlib
 import json
 import os
 import subprocess
+import uuid
 from pathlib import Path
 
 import pytest
@@ -39,7 +41,10 @@ def socket_pg(tmp_path, monkeypatch):
 
 @pytest.fixture
 def containment(socket_pg):
-    query = socket_pg
+    return _install_containment(socket_pg)
+
+
+def _install_containment(query):
     assert query("SELECT inet_server_addr() IS NULL AND current_setting('listen_addresses') = ''") == "t"
     # The original SQL fixture is the authoritative exact-column facade contract;
     # take only its explicit source-table setup, never its behavioral scenarios.
@@ -565,18 +570,7 @@ async def _prepare_synthetic_ops_rows(conn, reason):
         assert await conn.fetchval(f"SELECT count(*) FROM {table}") == 0
 
 
-def _exercise_ops_alert(containment, record_property, scenario=None):
-    """Current ops projection; synthetic core-schema condition and safe closure.
-
-    Alert storage is an explicit column facade. The synthetic authorization
-    artifact is never a physical proof or production approval. No message is
-    sent unless an attended external bridge was independently authorized.
-    """
-    import asyncpg
-    from component_alert_delivery_bridge import FixtureDelivery
-    from tasks.alerts import component_experiment_alert_cycle
-
-    query = containment
+def _install_ops_facade(query):
     migration = (ROOT / "db/migrations/270-facility-safe-ops-projection.sql").read_text()
     start = migration.index("CREATE OR REPLACE FUNCTION public.fn_experiment_v2_ops_status()")
     # Exact current function projection only: no fake migration ledger or
@@ -597,6 +591,21 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     query("""CREATE TABLE slack_alert_runbooks (
         id bigint PRIMARY KEY, greenhouse_id text, alert_type text, severity text,
         title text, summary text, runbook_url text, steps text[], is_active boolean)""")
+
+
+def _exercise_ops_alert(containment, record_property, scenario=None):
+    """Current ops projection; synthetic core-schema condition and safe closure.
+
+    Alert storage is an explicit column facade. The synthetic authorization
+    artifact is never a physical proof or production approval. No message is
+    sent unless an attended external bridge was independently authorized.
+    """
+    import asyncpg
+    from component_alert_delivery_bridge import FixtureDelivery
+    from tasks.alerts import component_experiment_alert_cycle
+
+    query = containment
+    _install_ops_facade(query)
     before = snapshot(query)
     socket_dir = query("SHOW unix_socket_directories")
     if scenario is None:
@@ -748,3 +757,660 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     record_property("public_rowsets", len(json.loads(before[0])))
     record_property("sequences", len(old_sequences))
     record_property("delivery", json.dumps(delivery.report(), sort_keys=True))
+
+
+POSITIVE_REASONS = {
+    "multiple": "multiple_open_exposures",
+    "expired": "open_exposure_work_expired",
+    "stale": "open_exposure_observation_stale",
+}
+LIFECYCLE_LOGIN = "verdify_experiment_v2_lifecycle_login"
+EXECUTOR_LOGIN = "verdify_experiment_v2_component_executor_login"
+
+
+def _process_start(pid):
+    """Exact Linux process identity; never enumerate or signal other processes."""
+    try:
+        # comm can contain spaces/parentheses; fields after its final ')' start
+        # at field 3, and starttime is field 22.
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()[19]
+    except FileNotFoundError:
+        return None
+
+
+@pytest.fixture
+def committed_containment(tmp_path, monkeypatch, record_property):
+    """Positive cases commit, then dispose their entire own private cluster.
+
+    Wrap the existing generator instead of teaching its nineteen rollback
+    cases a different custody contract. The finalizer runs before pytest emits
+    the testcase's teardown report, so its properties are included in JUnit.
+    """
+    original_run = subprocess.run
+    owned = {}
+
+    def tracked_run(args, **kwargs):
+        tool = Path(args[0]).name
+        if tool in {"initdb", "pg_ctl"}:
+            cluster = Path(args[args.index("-D") + 1]).parent
+            assert cluster.is_absolute() and cluster.name.startswith("scorecard-pg-")
+            if "path" in owned:
+                assert cluster == owned["path"]
+            else:
+                owned["path"] = cluster
+        result = original_run(args, **kwargs)
+        if tool == "pg_ctl" and args[-1] == "start" and result.returncode == 0:
+            owned["pid"] = int((owned["path"] / "data/postmaster.pid").read_text().splitlines()[0])
+            owned["process_start"] = _process_start(owned["pid"])
+            assert owned["process_start"] is not None
+        if tool == "pg_ctl" and args[-1] == "stop":
+            assert args[-4:] == ["-m", "fast", "-w", "stop"]
+            owned["stop_returncode"] = result.returncode
+        return result
+
+    monkeypatch.setattr(subprocess, "run", tracked_run)
+    generator = socket_pg.__wrapped__(tmp_path, monkeypatch)
+    try:
+        query = next(generator)
+        _install_containment(query)
+        _install_ops_facade(query)
+        assert query("SELECT bool_and(auth_method='reject') FROM pg_hba_file_rules WHERE type LIKE 'host%'") == "t"
+        owned["host_auth_reject"] = True
+        owned["network_listeners_disabled"] = query("SHOW listen_addresses") == ""
+        assert owned["network_listeners_disabled"]
+        yield query
+    finally:
+        try:
+            generator.close()
+        finally:
+            cluster = owned.get("path")
+            original_gone = bool(owned.get("process_start")) and (
+                _process_start(owned["pid"]) != owned["process_start"]
+            )
+            disposal = {
+                "mode": "committed_private_cluster_disposed",
+                "generated_cluster": str(cluster) if cluster else None,
+                "postmaster_pid": owned.get("pid"),
+                "postmaster_start_ticks": owned.get("process_start"),
+                "stop_returncode": owned.get("stop_returncode"),
+                "host_auth_reject": owned.get("host_auth_reject", False),
+                "network_listeners_disabled": owned.get("network_listeners_disabled", False),
+                "original_process_gone": original_gone,
+                "socket_absent": bool(cluster) and not (cluster / ".s.PGSQL.55472").exists(),
+                "generated_directory_absent": bool(cluster) and not cluster.exists(),
+            }
+            record_property("private_cluster_disposal", json.dumps(disposal, sort_keys=True))
+            # Generic CI collects this module without the private PG toolchain;
+            # retain its deliberate skip. Native qualification rejects skipped
+            # cases and therefore cannot accept this missing-disposal branch.
+            if cluster is not None:
+                assert disposal["stop_returncode"] == 0
+                assert original_gone and disposal["socket_absent"] and disposal["generated_directory_absent"]
+
+
+def _public_rows(query):
+    statement = query("""SELECT 'SELECT jsonb_object_agg(name, rows) FROM (' ||
+        string_agg(format(
+        'SELECT %L AS name, coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), ''[]''::jsonb) AS rows FROM %I.%I r',
+        c.relname,n.nspname,c.relname), ' UNION ALL ' ORDER BY c.relname) || ') rowsets'
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','p','m')""")
+    return json.loads(query(statement))
+
+
+def _hash_json(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _trigger_custody(query):
+    value = json.loads(
+        query("""SELECT jsonb_build_object(
+            'all_enabled',bool_and(t.tgenabled IN ('O','A')),
+            'sha256',encode(digest(jsonb_agg(jsonb_build_array(
+                t.oid,t.tgname,t.tgenabled,t.tgfoid,pg_get_triggerdef(t.oid))
+                ORDER BY t.oid)::text,'sha256'),'hex'))
+            FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+            WHERE c.relnamespace='public'::regnamespace""")
+    )
+    assert value["all_enabled"] is True
+    return value["sha256"]
+
+
+def _prepare_positive_shadow(query):
+    """Existing native explicit-unavailable fixture, never invented science.
+
+    Only the private owner uses these ungranted deterministic fixture helpers.
+    Positive exposure/expiry/observation clocks below always use real DB time.
+    """
+    cycle = json.loads(
+        query(f"""SELECT row_to_json(s) FROM fn_experiment_v2_schedule_shadow_cycle_at(
+            '{EXP}','2026-01-15'::date,'2026-01-14 07:00:00+00'::timestamptz,
+            repeat('e',64),repeat('c',64),repeat('d',64),repeat('f',64),repeat('1',64),
+            '2026-01-14 06:00:00+00'::timestamptz,'synthetic-ci/unavailable-shadow') s""")
+    )
+    context = json.loads(
+        query(f"""SELECT row_to_json(s) FROM fn_experiment_v2_selector_cycle_at(
+            '{EXP}','2026-01-14 07:00:01+00'::timestamptz) s""")
+    )
+    assert context["subject_id"] == cycle["cycle_id"]
+    assert context["context_status"] == "unavailable"
+    assert context["failure_reason"] == "no_usable_precutoff_climate_source"
+    query(f"""SELECT choice_id FROM fn_experiment_v2_record_shadow_choice_at(
+        '{EXP}','{cycle["cycle_id"]}','{cycle["cycle_id"]}','{cycle["cycle_id"]}',
+        'baseline','no_usable_precutoff_climate_source','{context["context_sha256"]}',
+        NULL,ARRAY[repeat('7',64)],repeat('d',64),
+        '2026-01-14 07:00:02+00'::timestamptz,'synthetic-ci/unavailable-shadow')""")
+    source_hash = hashlib.sha256(b"private synthetic unavailable shadow; no physiological measurements").hexdigest()
+    query(f"""SELECT cycle_id FROM fn_experiment_v2_record_shadow_outcome_preview_at(
+        '{EXP}','{cycle["cycle_id"]}',jsonb_build_object(
+            'schema','verdify-assigned-day-outcome-v2',
+            'temperature_corridor_distance_f',NULL,'vpd_corridor_distance_kpa',NULL,
+            'nine_control_state_minutes',NULL,'climate_missing_reason','source_unavailable',
+            'equipment_missing_reason','source_unavailable','source_bundle_sha256','{source_hash}'),
+        '2026-01-16 07:00:01+00'::timestamptz,'synthetic-ci/unavailable-shadow')""")
+    return {
+        "cycle_id": cycle["cycle_id"],
+        "context_status": context["context_status"],
+        "source": "synthetic_unavailable",
+    }
+
+
+class _PositiveCaptureOnly:
+    """No bridge import, relay authorization read, client or real send path."""
+
+    prefix = "[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: "
+
+    def __init__(self):
+        self.messages = []
+
+    def __call__(self, channel, text, *, thread_ts=None):
+        assert len(self.messages) < 2
+        self.messages.append({"channel": channel, "text": text, "thread_ts": thread_ts})
+        return "0.587639"
+
+
+async def _positive_login(query, login, identities):
+    import asyncpg
+
+    conn = await asyncpg.connect(
+        host=query("SHOW unix_socket_directories"),
+        port=55472,
+        database="postgres",
+        user=login,
+        timeout=5,
+        command_timeout=3,
+    )
+    try:
+        identity = dict(await conn.fetchrow("SELECT current_user::text AS effective,session_user::text AS session"))
+        assert identity == {"effective": login, "session": login}
+        assert await conn.fetchval("SHOW session_replication_role") == "origin"
+        assert await conn.fetchval("SHOW listen_addresses") == ""
+        identities[login] = identity
+    except BaseException:
+        await conn.close(timeout=3)
+        raise
+    return conn
+
+
+async def _positive_epoch(conn, work, *, incomplete=False):
+    # Timestamp captured after actual bundle completion; never backdate a
+    # successful epoch or substitute snapshot/physiological source evidence.
+    observed = await conn.fetchval("SELECT clock_timestamp()")
+    text_time = observed.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    observations = [{"wire_id": i, "observed_at": text_time} for i in range(1, 50) if i != 6]
+    if incomplete:
+        observations.pop()
+    epoch_id = uuid.uuid4()
+    row = await conn.fetchrow(
+        """SELECT * FROM fn_experiment_v2_record_observation_epoch(
+            $1::uuid,$2::uuid,$3::uuid,$4::uuid,decode(repeat('01',178),'hex'),$5::jsonb,
+            'synthetic-fw','synthetic-cfg','synthetic-registry','synthetic-grid',
+            $6::bigint,$7::bigint,'synthetic-ci/native-positive')""",
+        EXP,
+        work["work_id"],
+        work["bundle_id"],
+        epoch_id,
+        json.dumps(observations),
+        work["writer_generation"],
+        work["connection_generation"],
+    )
+    return {"source_epoch_id": str(epoch_id), "receipt_id": str(row["receipt_id"]), "observed_at": text_time}
+
+
+async def _positive_open(conn, work):
+    return await conn.fetchval(
+        "SELECT fn_experiment_v2_open_exposure($1::uuid,$2::uuid,$3,'synthetic-ci/native-positive')",
+        EXP,
+        work["work_id"],
+        work["device_id"],
+    )
+
+
+async def _positive_refusal(query, operation, expected, refusals):
+    import asyncpg
+
+    before = snapshot(query)
+    with pytest.raises(asyncpg.RaiseError) as refused:
+        await operation()
+    assert refused.value.sqlstate == "P0001" and refused.value.message == expected
+    assert snapshot(query) == before
+    refusals.append({"message": expected, "sqlstate": "P0001", "custody_unchanged": True})
+
+
+def _positive_effect_custody(query, before, before_rows, opened_rows, trigger_before, count):
+    """Explicit committed deltas, never a false before==after rollback claim."""
+    after = snapshot(query)
+    after_rows = _public_rows(query)
+    expected_rows = {
+        "experiment_v2_state_artifacts": 1,
+        "experiment_v2_shadow_cycles": 1,
+        "experiment_v2_shadow_contexts": 1,
+        "experiment_v2_shadow_choices": 1,
+        "experiment_v2_shadow_outcome_previews": 1,
+        "experiment_v2_work": 1 + count,
+        "experiment_v2_work_events": 1 + 2 * count,
+        "experiment_v2_runtime_generations": count,
+        "experiment_v2_delivery_bundles": count,
+        "experiment_v2_delivery_bundle_completions": count,
+        "experiment_v2_component_outcomes": 4 * count,
+        "experiment_v2_observation_epochs": 2 * count,
+        "experiment_v2_observation_receipts": 2 * count,
+        "experiment_v2_exposures": count,
+        "experiment_v2_exposure_closures": count,
+        "experiment_events": 3 + count,
+        "alert_log": 1,
+    }
+    assert before_rows.keys() == after_rows.keys() == opened_rows.keys()
+    deltas = {name: len(after_rows[name]) - len(rows) for name, rows in before_rows.items()}
+    assert {name: delta for name, delta in deltas.items() if delta} == expected_rows
+    for name, rows in before_rows.items():
+        if name == "control_experiments":
+            assert len(rows) == len(after_rows[name]) == 1
+            expected = dict(rows[0])
+            expected.update(
+                execution_phase="commissioning",
+                component_enabled=True,
+                lease_generation=rows[0]["lease_generation"] + 1,
+                updated_at=after_rows[name][0]["updated_at"],
+            )
+            assert after_rows[name] == [expected]
+        else:
+            # Every preexisting row is byte-semantically unchanged; only the
+            # listed immutable inserts and the declared alert row may be new.
+            assert all(row in after_rows[name] for row in rows)
+            if name not in expected_rows:
+                assert after_rows[name] == rows
+        if name not in {"control_experiments", "alert_log", "experiment_v2_exposure_closures"}:
+            assert opened_rows[name] == after_rows[name]
+    old_catalog, new_catalog = json.loads(before[1]), json.loads(after[1])
+    old_sequences = {r[1]: r[2] for r in old_catalog.pop("sequences")}
+    new_sequences = {r[1]: r[2] for r in new_catalog.pop("sequences")}
+    assert old_catalog == new_catalog and old_sequences.keys() == new_sequences.keys()
+    sequence_deltas = {name: (new_sequences[name] or 0) - (old_sequences[name] or 0) for name in old_sequences}
+    expected_sequences = {
+        "experiment_events_event_id_seq": 3 + count,
+        "experiment_v2_work_events_work_event_id_seq": 1 + 2 * count,
+        "experiment_v2_runtime_generations_generation_event_id_seq": count,
+        "experiment_v2_component_outcomes_component_outcome_id_seq": 4 * count,
+        "alert_log_id_seq": 1,
+    }
+    assert {name: delta for name, delta in sequence_deltas.items() if delta} == expected_sequences
+    trigger_after = _trigger_custody(query)
+    assert trigger_after == trigger_before
+    return {
+        "mode": "committed_private_cluster_disposed",
+        "rows_before_sha256": _hash_json(before_rows),
+        "rows_after_sha256": _hash_json(after_rows),
+        "catalog_before_sha256": _hash_json(old_catalog),
+        "catalog_after_sha256": _hash_json(new_catalog),
+        "trigger_before_sha256": trigger_before,
+        "trigger_after_sha256": trigger_after,
+        "row_deltas": deltas,
+        "sequence_deltas": sequence_deltas,
+        "preexisting_rows_preserved_except_native_control": True,
+        "opened_immutable_rows_preserved": True,
+        "append_only_rows_sha256": {
+            name: _hash_json(after_rows[name]) for name in expected_rows if name != "alert_log"
+        },
+        "public_rowsets": len(before_rows),
+    }
+
+
+def _positive_bindings(rows, works):
+    """Independently read back native joins and hashes, not just return IDs."""
+    epochs = {r["source_epoch_id"]: r for r in rows["experiment_v2_observation_epochs"]}
+    receipts = {r["receipt_id"]: r for r in rows["experiment_v2_observation_receipts"]}
+    exposures = {r["exposure_id"]: r for r in rows["experiment_v2_exposures"]}
+    completions = {r["bundle_id"]: r for r in rows["experiment_v2_delivery_bundle_completions"]}
+    bindings = []
+    for work in works:
+        timestamps = []
+        hashes = []
+        for label in ("first", "second"):
+            epoch = epochs[work[label]["source_epoch_id"]]
+            receipt = receipts[work[label]["receipt_id"]]
+            for row in (epoch, receipt):
+                assert row["experiment_id"] == EXP
+                assert row["work_id"] == str(work["work_id"])
+                assert row["bundle_id"] == str(work["bundle_id"])
+            assert receipt["source_epoch_id"] == epoch["source_epoch_id"]
+            assert receipt["policy_state_content_sha256"] == work["target_state_content_sha256"]
+            assert epoch["runtime_instance_id"] == str(work["runtime_instance_id"])
+            assert epoch["writer_generation"] == work["writer_generation"]
+            assert epoch["connection_generation"] == work["connection_generation"]
+            for key, value in {
+                "firmware_revision": "synthetic-fw",
+                "config_revision": "synthetic-cfg",
+                "registry_revision": "synthetic-registry",
+                "grid_revision": "synthetic-grid",
+            }.items():
+                assert epoch[key] == value
+            assert epoch["wire_vector"] == "\\x" + "01" * 178
+            observations = epoch["observations"]
+            assert [o["wire_id"] for o in observations] == [i for i in range(1, 50) if i != 6]
+            assert all(set(o) == {"wire_id", "observed_at"} for o in observations)
+            observed = [dt.datetime.fromisoformat(o["observed_at"].replace("Z", "+00:00")) for o in observations]
+            persisted = dt.datetime.fromisoformat(epoch["persisted_at"])
+            finished = dt.datetime.fromisoformat(completions[epoch["bundle_id"]]["bundle_finished_at"])
+            assert finished < min(observed) <= max(observed) <= persisted
+            assert (max(observed) - min(observed)).total_seconds() <= 60
+            assert (persisted - max(observed)).total_seconds() <= 90
+            assert (
+                hashlib.sha256(receipt["canonical_payload"].encode()).hexdigest() == receipt["canonical_payload_sha256"]
+            )
+            assert (
+                hashlib.sha256(
+                    b"verdify-policy-observation-receipt-v1\0" + receipt["canonical_payload"].encode()
+                ).hexdigest()
+                == receipt["observation_receipt_sha256"]
+            )
+            timestamps.append(observed)
+            hashes.append(receipt["observation_receipt_sha256"])
+        assert all(new > old for old, new in zip(timestamps[0], timestamps[1], strict=True))
+        elapsed = (max(timestamps[1]) - max(timestamps[0])).total_seconds()
+        assert elapsed >= 30
+        exposure = exposures[str(work["exposure_id"])]
+        assert exposure["first_receipt_id"] == work["first"]["receipt_id"]
+        assert exposure["second_receipt_id"] == work["second"]["receipt_id"]
+        assert exposure["assignment_id"] is None and exposure["device_id"] == work["device_id"]
+        assert exposure["state_content_sha256"] == work["target_state_content_sha256"]
+        bindings.append(
+            {
+                "work_id": str(work["work_id"]),
+                "bundle_id": str(work["bundle_id"]),
+                "exposure_id": str(work["exposure_id"]),
+                "device_id": work["device_id"],
+                "runtime_instance_id": str(work["runtime_instance_id"]),
+                "revision_bundle_sha256": work["revision_bundle_sha256"],
+                "target_state_content_sha256": work["target_state_content_sha256"],
+                "receipt_ids": [work[label]["receipt_id"] for label in ("first", "second")],
+                "source_epoch_ids": [work[label]["source_epoch_id"] for label in ("first", "second")],
+                "receipt_sha256": hashes,
+                "observation_count_per_epoch": [48, 48],
+                "all_wire_times_advance": True,
+                "observed_separation_seconds": elapsed,
+                "post_delivery_and_fresh_at_insertion": True,
+                "assignment_id": None,
+            }
+        )
+    return bindings
+
+
+@pytest.mark.parametrize("scenario", POSITIVE_REASONS)
+def test_native_positive_exposure_alert(committed_containment, record_property, scenario):
+    """Actual private LOGIN/function path; no authentic grid/physical credit."""
+    from tasks.alerts import component_experiment_alert_cycle
+
+    query = committed_containment
+    before, before_rows = snapshot(query), _public_rows(query)
+    trigger_before = _trigger_custody(query)
+    identities, refusals, works = {}, [], []
+    delivery = _PositiveCaptureOnly()
+    device_count = 2 if scenario == "multiple" else 1
+
+    async def exercise():
+        lifecycle = executor = owner = None
+        try:
+            lifecycle = await _positive_login(query, LIFECYCLE_LOGIN, identities)
+            executor = await _positive_login(query, EXECUTOR_LOGIN, identities)
+            owner = await _positive_login(query, "scorecard_fixture", identities)
+            await lifecycle.fetchval(
+                """SELECT state_artifact_id FROM fn_experiment_v2_register_state(
+                    $1::uuid,'baseline',2::smallint,decode(repeat('11',32),'hex'),
+                    decode(repeat('01',178),'hex'),'synthetic-ci/native-positive')""",
+                EXP,
+            )
+            shadow = _prepare_positive_shadow(query)
+            await lifecycle.fetchval(
+                "SELECT experiment_id FROM fn_experiment_v2_transition($1::uuid,NULL,'commissioning',$2)",
+                EXP,
+                "synthetic-ci/native-positive",
+            )
+            await lifecycle.fetchval(
+                "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'baseline_recovery',$2)",
+                EXP,
+                "synthetic-ci/native-positive",
+            )
+            lease = int(query(f"SELECT lease_generation FROM control_experiments WHERE experiment_id='{EXP}'"))
+            # Register both device identities, create/claim both works before
+            # recording terminal evidence, preserving the actual claim fence.
+            for index in range(device_count):
+                device = f"synthetic-no-device-{index}"
+                generation = dict(
+                    await executor.fetchrow(
+                        "SELECT * FROM fn_experiment_v2_register_runtime_instance($1::uuid,$2,$3::uuid,0,$4)",
+                        EXP,
+                        device,
+                        uuid.uuid4(),
+                        "synthetic-ci/native-positive",
+                    )
+                )
+                assert generation["restart_detected"] is False and generation["reconnect_detected"] is False
+                assert generation["recovery_work_id"] is None
+                # Distinct lower bounds avoid the function's exact-range retry
+                # identity. All bounds come from the real private server clock.
+                duration = 60 if scenario == "expired" else 300
+                requested = await executor.fetchrow(
+                    """SELECT w,lo,hi FROM (
+                        SELECT clock_timestamp() AS lo) t CROSS JOIN LATERAL (
+                        SELECT t.lo + make_interval(secs=>$2::int) AS hi) e CROSS JOIN LATERAL (
+                        SELECT fn_experiment_v2_request_recovery($1::uuid,NULL,
+                            tstzrange(lo,hi,'[)'),hi,'synthetic-private-positive',$3) AS w) work""",
+                    EXP,
+                    duration,
+                    f"synthetic-ci/worker-{index}",
+                )
+                claimed = dict(
+                    await executor.fetchrow(
+                        "SELECT * FROM fn_experiment_v2_claim_executor_candidate($1::uuid,$2,$3::bigint,$4)",
+                        EXP,
+                        device,
+                        lease,
+                        f"synthetic-ci/worker-{index}",
+                    )
+                )
+                assert claimed["work_id"] == requested["w"] and claimed["assignment_id"] is None
+                assert claimed["operation_kind"] == "baseline_recovery" and claimed["target_profile"] == "baseline"
+                assert claimed["device_id"] == device and claimed["lease_generation"] == lease
+                assert claimed["writer_generation"] == generation["writer_generation"]
+                assert claimed["connection_generation"] == generation["connection_generation"]
+                work = {
+                    "work_id": claimed["work_id"],
+                    "bundle_id": uuid.uuid4(),
+                    "device_id": device,
+                    "runtime_instance_id": generation["runtime_instance_id"],
+                    "revision_bundle_sha256": claimed["revision_bundle_sha256"],
+                    "target_state_content_sha256": claimed["target_state_content_sha256"],
+                    "writer_generation": generation["writer_generation"],
+                    "connection_generation": generation["connection_generation"],
+                    "expires_at": requested["hi"],
+                    "worker": f"synthetic-ci/worker-{index}",
+                }
+                bundle = await executor.fetchrow(
+                    "SELECT * FROM fn_experiment_v2_begin_delivery_bundle($1::uuid,$2::uuid,$3::uuid,$4,'recovery',$5)",
+                    EXP,
+                    work["work_id"],
+                    work["bundle_id"],
+                    device,
+                    work["worker"],
+                )
+                assert bundle["bundle_id"] == work["bundle_id"]
+                for status in ("requested", "queued", "sent"):
+                    await executor.fetchval(
+                        """SELECT fn_experiment_v2_record_component_outcome(
+                            $1::uuid,$2::uuid,$3::uuid,1,$4,NULL,$5::bigint,$6::bigint,$7)""",
+                        EXP,
+                        work["work_id"],
+                        work["bundle_id"],
+                        status,
+                        work["writer_generation"],
+                        work["connection_generation"],
+                        work["worker"],
+                    )
+                await executor.fetchval(
+                    """SELECT bundle_id FROM fn_experiment_v2_record_delivery_bundle(
+                        $1::uuid,$2::uuid,$3::uuid,clock_timestamp(),$4)""",
+                    EXP,
+                    work["work_id"],
+                    work["bundle_id"],
+                    work["worker"],
+                )
+                works.append(work)
+            await _positive_refusal(
+                query,
+                lambda: _positive_epoch(executor, works[0], incomplete=True),
+                "epoch requires one complete 178-byte vector and exactly 48 observations",
+                refusals,
+            )
+            for work in works:
+                work["first"] = await _positive_epoch(executor, work)
+            await _positive_refusal(
+                query,
+                lambda: _positive_open(executor, works[0]),
+                "exposure requires two exact complete source epochs at least 30 seconds apart",
+                refusals,
+            )
+            await asyncio.sleep(31)
+            for index, work in enumerate(works):
+                work["second"] = await _positive_epoch(executor, work)
+                if index == 0:
+                    await _positive_refusal(
+                        query,
+                        lambda: _positive_open(executor, work),
+                        "exposure waits for confirmation of every changed component",
+                        refusals,
+                    )
+                await executor.fetchval(
+                    """SELECT fn_experiment_v2_record_component_outcome(
+                        $1::uuid,$2::uuid,$3::uuid,1,'confirmed',NULL,$4::bigint,$5::bigint,$6)""",
+                    EXP,
+                    work["work_id"],
+                    work["bundle_id"],
+                    work["writer_generation"],
+                    work["connection_generation"],
+                    work["worker"],
+                )
+                work["exposure_id"] = await _positive_open(executor, work)
+                retry_before = snapshot(query)
+                assert await _positive_open(executor, work) == work["exposure_id"]
+                assert snapshot(query) == retry_before
+                await executor.fetchval(
+                    """SELECT fn_experiment_v2_record_work_event(
+                        $1::uuid,$2::uuid,'recovered','{"synthetic_only":true,"physical_recovery":false}'::jsonb,$3)""",
+                    EXP,
+                    work["work_id"],
+                    work["worker"],
+                )
+            opened_rows = _public_rows(query)
+            assert len(opened_rows["experiment_v2_exposures"]) == device_count
+            assert opened_rows["experiment_v2_exposure_closures"] == []
+            bindings = _positive_bindings(opened_rows, works)
+            # Native successes remain exposed after terminal recovery evidence;
+            # let the real clock select expiry/staleness without timestamp edits.
+            if scenario == "expired":
+                wait = (works[0]["expires_at"] - await executor.fetchval("SELECT clock_timestamp()")).total_seconds()
+                assert 0 < wait < 60
+                await asyncio.sleep(wait + 0.2)
+            elif scenario == "stale":
+                wait = float(
+                    query("""SELECT greatest(0,extract(epoch FROM (
+                    max(persisted_at)+interval '91 seconds'-clock_timestamp())))
+                    FROM experiment_v2_observation_receipts""")
+                )
+                assert 0 < wait < 92
+                await asyncio.sleep(wait)
+            state = dict(
+                await owner.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1", EXP)
+            )
+            assert state["alert_reason"] == POSITIVE_REASONS[scenario] and state["alert_severity"] == "critical"
+            assert state["open_exposure_count"] == device_count and state["rollback_ready"] is True
+
+            async def cycle():
+                return await component_experiment_alert_cycle(
+                    owner,
+                    EXP,
+                    greenhouse_id="synthetic-containment",
+                    post_message=delivery,
+                    message_prefix=delivery.prefix,
+                )
+
+            assert await cycle() == {"new": 1, "escalated": 0, "resolved": 0, "suppressed": 0}
+            assert not any((await cycle()).values()) and len(delivery.messages) == 1
+            fired = json.loads(await owner.fetchval("SELECT to_jsonb(a)::text FROM alert_log a"))
+            assert POSITIVE_REASONS[scenario].replace("_", " ") in delivery.messages[0]["text"]
+            for work in works:
+                await executor.fetchval(
+                    "SELECT exposure_id FROM fn_experiment_v2_close_exposure($1::uuid,'manual',$2)",
+                    work["exposure_id"],
+                    "synthetic-ci/native-positive",
+                )
+            await lifecycle.fetchval(
+                "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'closed',$2)",
+                EXP,
+                "synthetic-ci/native-positive",
+            )
+            final = dict(
+                await owner.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1", EXP)
+            )
+            assert final["alert_reason"] is None and final["alert_severity"] is None
+            assert final["work_id"] is None and final["open_exposure_count"] == 0
+            assert final["admission_state"] == "closed" and final["rollback_ready"] is True
+            assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
+            assert not any((await cycle()).values()) and len(delivery.messages) == 2
+            assert delivery.messages[1]["thread_ts"] == "0.587639"
+            resolved = json.loads(await owner.fetchval("SELECT to_jsonb(a)::text FROM alert_log a"))
+            mutable_alert = {"disposition", "resolved_at", "resolved_by", "resolution"}
+            assert {k: v for k, v in fired.items() if k not in mutable_alert} == {
+                k: v for k, v in resolved.items() if k not in mutable_alert
+            }
+            assert resolved["disposition"] == "resolved" and resolved["resolved_by"] == "system"
+            assert resolved["resolved_at"] is not None and resolved["resolution"] is not None
+            effects = _positive_effect_custody(query, before, before_rows, opened_rows, trigger_before, device_count)
+            proof = {
+                "synthetic_only": True,
+                "physical_acceptance": False,
+                "live_delivery": False,
+                "native_logins": identities,
+                "shadow": shadow,
+                "guard_refusals": refusals,
+                "ops_reason": POSITIVE_REASONS[scenario],
+                "ops_severity": "critical",
+                "device_count": device_count,
+                "receipt_bindings": bindings,
+                "effects": effects,
+                "delivery": {"live": False, "messages": delivery.messages},
+                "alert_lifecycle": "fire_dedupe_native_close_resolve_silent",
+                "final_open_exposures": 0,
+                "final_current_work": None,
+                "work": [
+                    {k: str(v) if isinstance(v, uuid.UUID) else v for k, v in w.items() if k != "expires_at"}
+                    for w in works
+                ],
+            }
+            record_property("positive_exposure", json.dumps(proof, sort_keys=True))
+        finally:
+            for conn in (owner, executor, lifecycle):
+                if conn is not None:
+                    await conn.close(timeout=3)
+
+    asyncio.run(exercise())

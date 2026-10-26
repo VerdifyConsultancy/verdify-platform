@@ -1,0 +1,1048 @@
+{
+  "schema": "verdify.open-issue-resume-review/1",
+  "reviewed_at": "2026-10-26T13:07:48.893743+00:00",
+  "source": "GitHub issue bodies/recent comments plus independently read native graph; operator runtime snapshots retain their own timestamps.",
+  "open_count": 41,
+  "authority_boundaries": [
+    "No extra ESP32 connection or unapproved cordon",
+    "No production sync/image promotion or writer-hold release for source/docs completion",
+    "Survey later; no CO2 reference meter",
+    "No new credential or additional real Slack sends",
+    "No physical/scientific credit from private synthetic fixtures"
+  ],
+  "issues": [
+    {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Track shared field-survey children without duplicate implementation or visit hours.",
+      "acceptance_limits": "Crop/probe/commissioning and seasonal child acceptance remain incomplete.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6008883061",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6128696320",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6293603179",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6297189315"
+      ],
+      "latest_comment_at": "2026-10-20T17:38:27Z"
+    },
+    {
+      "number": 31,
+      "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "deferred-option",
+      "next_bounded_action": "Select a concrete twin oracle question before adding implementation; preserve consolidated coverage obligations.",
+      "acceptance_limits": "No selected oracle; unsupported/default-only fields cannot claim full parity.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6008883479",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6109897138",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6128699006",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6284465991"
+      ],
+      "latest_comment_at": "2026-10-20T05:57:50Z"
+    },
+    {
+      "number": 45,
+      "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#398",
+          "state": "OPEN"
+        }
+      ],
+      "category": "field-input-blocked",
+      "next_bounded_action": "After #398, commission each required soil/runoff channel with identity, calibration and actual feedback receipts.",
+      "acceptance_limits": "South1 soil unavailable evidence is not proof of hardware failure; no fertilizer or drip authority from seeds.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6293610799",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6297186653",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6323258008",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6324209462"
+      ],
+      "latest_comment_at": "2026-10-21T19:05:26Z"
+    },
+    {
+      "number": 51,
+      "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "reference-meter-blocked",
+      "next_bounded_action": "Obtain an actual reference NDIR meter before calibration; retain uncalibrated label.",
+      "acceptance_limits": "No reference meter is available; field visit availability does not solve this.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6128707158",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6293611349",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6294323831",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6398820487"
+      ],
+      "latest_comment_at": "2026-10-25T14:23:00Z"
+    },
+    {
+      "number": 52,
+      "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "field-observation-deferred",
+      "next_bounded_action": "Use the later shared survey for species-specific observations and reversible seasonal decision.",
+      "acceptance_limits": "No generic orchid-wide dormancy rule or inferred plant identity.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6001472866",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6008885332",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6128709750",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6293611826"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:47Z"
+    },
+    {
+      "number": 75,
+      "title": "[C4][P2] Observability program: prove actionable health from source through device",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Track remaining #963 plus owner observability receipts; do not repeat delivered exporter/watchdog work.",
+      "acceptance_limits": "Source metrics and healthy Pods do not complete whole observability acceptance.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6008885698",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6109897518",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6128712391",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6293613516"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:52Z"
+    },
+    {
+      "number": 297,
+      "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 350,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#45",
+          "state": "OPEN"
+        }
+      ],
+      "category": "commissioned-input-blocked",
+      "next_bounded_action": "Reuse delivered evaluator and 19 fixtures; prepare measured-target/source and alert adapter only with genuine #398/#45 input.",
+      "acceptance_limits": "No operating saturation alarm or drip skip/shrink acceptance; no redeployment just to repeat S6.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6298129858",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6299110386",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6299492942",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6399424161"
+      ],
+      "latest_comment_at": "2026-10-25T15:19:34Z"
+    },
+    {
+      "number": 298,
+      "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "field-survey-deferred",
+      "next_bounded_action": "Reuse merged #1081 worksheet when Jason resumes the survey; record actual crop/pot/substrate/probe/plumbing identities.",
+      "acceptance_limits": "Latest operator answer is survey later; no fabricated topology or automatic appointment.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6398711489",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6398820299",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6399053551",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6399704855"
+      ],
+      "latest_comment_at": "2026-10-25T15:45:26Z"
+    },
+    {
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 350,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#390",
+          "state": "OPEN"
+        }
+      ],
+      "category": "source-preparation-release-blocked",
+      "next_bounded_action": "Add only missing native actual-wrapper min-off boundary/restart/manual-origin cases, then carry into #390.",
+      "acceptance_limits": "Current protection remains; full routing/reset/re-fire behavior awaits selected release and physical proof.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6001476200",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6008888087",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6128736636",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6293605089"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:30Z"
+    },
+    {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Track release/re-fire/topology and field-input/commissioning chains separately.",
+      "acceptance_limits": "Center drip remains disconnected; center-only climate and wall-only fertilizer are retained constraints.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6001478648",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6008889996",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6128753628",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6293605702"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:32Z"
+    },
+    {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Track contributor truth, dwell simplification, dry-out, lighting and post-study corridor evidence.",
+      "acceptance_limits": "No PID/MPC or AI safety delegation is activated by planning.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6001479149",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6008890390",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6128756313",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6293606302"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:33Z"
+    },
+    {
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 430,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#390",
+          "state": "OPEN"
+        }
+      ],
+      "category": "source-preparation-release-blocked",
+      "next_bounded_action": "Reuse #985 eight-limit correction and 84 wrapper cases; finish single-authority semantics and missing causal boundary proof.",
+      "acceptance_limits": "Actual firmware release/chatter/reboot observations are not replaced by source test success.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6001480066",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6008891217",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6128761953",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6130117468"
+      ],
+      "latest_comment_at": "2026-10-12T18:23:33Z"
+    },
+    {
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 359,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "safe-software-next",
+      "next_bounded_action": "Review the finite-contributor source correction proposed in #1091 and its pending native verification separately from later jump/flatline semantics.",
+      "acceptance_limits": "The finite fix is pending at this snapshot, not delivered. Equal-valued callbacks do not establish a faulty sensor; host timestamps are not physical slew limits.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6008891618",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6128764687",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6293606825",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6399626349"
+      ],
+      "latest_comment_at": "2026-10-25T15:38:03Z"
+    },
+    {
+      "number": 369,
+      "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 430,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#390",
+          "state": "OPEN"
+        }
+      ],
+      "category": "deferred-refactor",
+      "next_bounded_action": "Inventory only named surviving consumers; remove nothing absent zero-consumer proof and a justified #390 cohort.",
+      "acceptance_limits": "No fan-burst removal, safety-writability change or silent full48 identity change.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6001480965",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6008892050",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6128767504",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6293607306"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:36Z"
+    },
+    {
+      "number": 370,
+      "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 430,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#367",
+          "state": "OPEN"
+        }
+      ],
+      "category": "deferred-refactor",
+      "next_bounded_action": "After #367 authority semantics, capture current reverse-conflict/origin/restart/partial-delivery behavior before minimal consolidation.",
+      "acceptance_limits": "No speculative policy rewrite; native #367 dependency remains.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6001481446",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6008892404",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6128770176",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6293607810"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:37Z"
+    },
+    {
+      "number": 378,
+      "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 359,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#785",
+          "state": "OPEN"
+        }
+      ],
+      "category": "scientific-blocked",
+      "next_bounded_action": "Wait for #785 fixed-target study readout before corridor-width decisions.",
+      "acceptance_limits": "No retrospective endpoint change or physical-compliance inference from controller credit.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6001482405",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6008892775",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6128775579",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6293608327"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:38Z"
+    },
+    {
+      "number": 386,
+      "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 359,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "passive-natural-event",
+      "next_bounded_action": "Reuse accepted ordinary main/grow cutoff receipts; await one naturally eligible minimum-on overlap with exact decision and relay evidence.",
+      "acceptance_limits": "October24 OFF observations did not prove continuous ON or active minimum-on overlap; do not force a toggle.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6128781072",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6293608824",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6322056807",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6399423929"
+      ],
+      "latest_comment_at": "2026-10-25T15:19:33Z"
+    },
+    {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "safe-documentation-and-release-preparation",
+      "next_bounded_action": "Reuse merged #1086 release-path documentation (ca9120fa), then select exact candidate/recovery custody before any attended release.",
+      "acceptance_limits": "No operational candidate, qualified recovery/bake/physical proof or OTA action is supplied by documentation.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6284466492",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6398711734",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6399054036",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6400404140"
+      ],
+      "latest_comment_at": "2026-10-25T16:50:06Z"
+    },
+    {
+      "number": 398,
+      "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#298",
+          "state": "OPEN"
+        }
+      ],
+      "category": "field-input-blocked",
+      "next_bounded_action": "After #298, replace seed assumptions using a new ledgered version of actual crop/substrate targets.",
+      "acceptance_limits": "Migration064 remains immutable; seed80/80/75 and source labels are not calibration.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6001485374",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6008895696",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6128789542",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6293609371"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:41Z"
+    },
+    {
+      "number": 410,
+      "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 359,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "passive-prospective-evidence",
+      "next_bounded_action": "Retain two accepted criteria and seek complete prospective daylight/solar-night evidence using existing collectors and bounded getter.",
+      "acceptance_limits": "October24 has614/648 minute buckets,34missing; complete-day zero remainsNULL. Natural Hermes consumption is already accepted.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6254249246",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6255462321",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6399466445",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6400035057"
+      ],
+      "latest_comment_at": "2026-10-25T16:15:57Z"
+    },
+    {
+      "number": 412,
+      "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "field-observation-deferred",
+      "next_bounded_action": "At later shared visit record screen position, measured trigger and explicit no-change/change decision.",
+      "acceptance_limits": "No calendar-only closure or unobserved ventilation/moisture safety claim.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6001486335",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6008896567",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6128798501",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6293609844"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:42Z"
+    },
+    {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "priority": "priority:p1",
+      "deferred_label": false,
+      "parent": {
+        "number": 359,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Sequence #367, then justified #369/#370 work without adding blanket dependencies.",
+      "acceptance_limits": "No speculative heap recovery or replacement of raw48 confirmation by one hash.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6001488314",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6008897817",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6128814554",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6284464399"
+      ],
+      "latest_comment_at": "2026-10-20T05:57:42Z"
+    },
+    {
+      "number": 434,
+      "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 350,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#299",
+          "state": "OPEN"
+        }
+      ],
+      "category": "source-preparation-field-release-blocked",
+      "next_bounded_action": "Prepare missing all-origin/reverse-conflict/calibration-negative/no-double-dose cases against approved topology.",
+      "acceptance_limits": "Wall feed needs actual #298 mapping/calibrated dose-flush plus #299/#390; no fertilizer actuation now.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6001488932",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6008898240",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6128820781",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6293610285"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:44Z"
+    },
+    {
+      "number": 581,
+      "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 775,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Keep pre-draw critical path explicit through readiness, containment, physical proof, input lock and real pilot.",
+      "acceptance_limits": "June1-July30 2027 is a60-local-day candidate, not a launch promise or accepted experiment.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6001489433",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6008898661",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6128826555",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6284467100"
+      ],
+      "latest_comment_at": "2026-10-20T05:57:56Z"
+    },
+    {
+      "number": 587,
+      "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "safe-private-qualification-next",
+      "next_bounded_action": "Reuse 19 accepted private cases, then finish the proposed 22-case positive private exposure fixture under unchanged guards.",
+      "acceptance_limits": "The 22-case extension is prepared/pending, not accepted; 19-case source and main CI passed. No additional Slack delivery or physical/runtime acceptance.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6398711068",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6399282331",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6399402992",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6400192382"
+      ],
+      "latest_comment_at": "2026-10-25T16:30:21Z"
+    },
+    {
+      "number": 588,
+      "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#783",
+          "state": "OPEN"
+        },
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#782",
+          "state": "OPEN"
+        },
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#641",
+          "state": "OPEN"
+        }
+      ],
+      "category": "scientific-and-runtime-blocked",
+      "next_bounded_action": "Prepare exact GPT-6 Luna/xhigh identity and compatibility manifest, then wait for #641/#782/#783 before lock/draw.",
+      "acceptance_limits": "No random draw or activation from preparation or missing-data/no-go disposition.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6001491094",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6008899855",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6128835342",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6293625606"
+      ],
+      "latest_comment_at": "2026-10-20T14:46:24Z"
+    },
+    {
+      "number": 639,
+      "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "safe-private-qualification-next",
+      "next_bounded_action": "Share #587 positive private exposure qualification and native close-first/idempotency proof; retain genuine causal-input gaps.",
+      "acceptance_limits": "The 22-case extension is prepared/pending, not accepted; 19 accepted private cases and 10/16 SQL reason coverage do not establish full-prefix or physical recovery.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6398711252",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6399282577",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6399403259",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6400192594"
+      ],
+      "latest_comment_at": "2026-10-25T16:30:22Z"
+    },
+    {
+      "number": 640,
+      "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#642",
+          "state": "OPEN"
+        }
+      ],
+      "category": "assigned-day-blocked",
+      "next_bounded_action": "Prepare exact freeze/reconciliation/export failure-day commands; execute only after genuine #642 assigned window.",
+      "acceptance_limits": "Synthetic fixtures are not intention-to-treat observations.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6001493152",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6008901686",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6128847310",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6293612340"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:49Z"
+    },
+    {
+      "number": 641,
+      "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#749",
+          "state": "OPEN"
+        },
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#639",
+          "state": "OPEN"
+        },
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#587",
+          "state": "OPEN"
+        }
+      ],
+      "category": "physical-and-predecessor-blocked",
+      "next_bounded_action": "Keep draft855 parked; only prepare current dormant successor/rollback until #749/#587/#639 pass.",
+      "acceptance_limits": "One attended baseline-target-baseline proof must finish baseline-confirmed/component-off; no draw/launch authority.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6001493573",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6008902162",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6128850120",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6284466754"
+      ],
+      "latest_comment_at": "2026-10-20T05:57:54Z"
+    },
+    {
+      "number": 642,
+      "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#588",
+          "state": "OPEN"
+        }
+      ],
+      "category": "locked-design-blocked",
+      "next_bounded_action": "Prepare identity and rollback checks, but activation requires qualified #588 lock/draw and separate physical scope.",
+      "acceptance_limits": "No real day1 exists; no inherited GateR/GateP efficacy authority.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6001494019",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6008902646",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6128853154",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6293612983"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:51Z"
+    },
+    {
+      "number": 749,
+      "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "safety-evidence-blocked",
+      "next_bounded_action": "Prepare criterion-specific parser and spread/alert-lineage evidence from real inputs; preserve sealed failed packet.",
+      "acceptance_limits": "Four physical wetting criteria plus exact spread/catalog proof missing; no threshold relaxation or boolean true substitute, no #751 blanket gate.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6008904363",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6128868006",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6244638304",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6322057312"
+      ],
+      "latest_comment_at": "2026-10-21T17:16:52Z"
+    },
+    {
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 16,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "field-service-deferred",
+      "next_bounded_action": "Use shared survey to distinguish south climate, south1 soil and hydro publication faults before repair.",
+      "acceptance_limits": "UNKNOWN telemetry alone does not establish wiring/hardware cause; no surprise analysis-panel change.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6293614059",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6323257149",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6324210957",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6398820704"
+      ],
+      "latest_comment_at": "2026-10-25T14:23:01Z"
+    },
+    {
+      "number": 775,
+      "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": null,
+      "native_blockers": [],
+      "category": "rollup",
+      "next_bounded_action": "Resume handoff by reading existing CI/PR outcomes, completing safe pending source, then shared #587/#639 and #368 packets.",
+      "acceptance_limits": "41open is not41runnable implementations; preserve unsettled writer, survey-later and no-extra-connection boundaries.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6293602438",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6322057795",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6399403467",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6400478943"
+      ],
+      "latest_comment_at": "2026-10-25T16:57:13Z"
+    },
+    {
+      "number": 782,
+      "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [],
+      "category": "scientific-input-blocked",
+      "next_bounded_action": "Use existing November2-3 winter collection and custody path when due; obtain genuine selected crop/contributor/target inputs before empirical power.",
+      "acceptance_limits": "No duplicate collector, invented clock/grid/covariance, winter-to-warm substitution or prequalification draw.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6001497757",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6008906153",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6128890358",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6244638796"
+      ],
+      "latest_comment_at": "2026-10-18T02:17:06Z"
+    },
+    {
+      "number": 783,
+      "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#639",
+          "state": "OPEN"
+        },
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#587",
+          "state": "OPEN"
+        }
+      ],
+      "category": "runtime-identity-and-predecessor-blocked",
+      "next_bounded_action": "After shared containment qualify full selector-to-freezer/analyzer path with real component LOGINs and a legitimate analyst identity.",
+      "acceptance_limits": "Five runtime identities have bounded proof; analyst remainsNOLOGIN/noordinarymember; generic composition is not blocked wholesale on #782.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6001498211",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6008906669",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6128893168",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6293614540"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:55Z"
+    },
+    {
+      "number": 784,
+      "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#640",
+          "state": "OPEN"
+        }
+      ],
+      "category": "real-pilot-blocked",
+      "next_bounded_action": "Prepare light blinded daily custody/deviation ownership; actual60-day operation follows #640.",
+      "acceptance_limits": "No substitute days, replacement pairs or redraw.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6001498641",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6008907083",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6128895966",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6293615147"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:56Z"
+    },
+    {
+      "number": 785,
+      "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "priority": "priority:p3",
+      "deferred_label": false,
+      "parent": {
+        "number": 581,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#784",
+          "state": "OPEN"
+        }
+      ],
+      "category": "completed-pilot-blocked",
+      "next_bounded_action": "Prepare outcome report skeleton and independent unchanged-byte reproduction; reveal once after #784.",
+      "acceptance_limits": "Record explicit comparator/resource/MPC follow-on decisions; no yield/profit extrapolation or automatic control change.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6001499143",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6008907491",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6128898751",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6284466261"
+      ],
+      "latest_comment_at": "2026-10-20T05:57:51Z"
+    },
+    {
+      "number": 963,
+      "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963",
+      "priority": "priority:p2",
+      "deferred_label": false,
+      "parent": {
+        "number": 75,
+        "state": "OPEN"
+      },
+      "native_blockers": [
+        {
+          "ref": "VerdifyConsultancy/verdify-platform#390",
+          "state": "OPEN"
+        }
+      ],
+      "category": "qualified-release-blocked",
+      "next_bounded_action": "Bind delivered formatter/compact-detail source to actual firmware/ingestor/HA consumers and qualified rollback in #390.",
+      "acceptance_limits": "Native string-length tests and source delivery do not prove live new firmware or length-error recovery.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6110861883",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6128931165",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6293615657"
+      ],
+      "latest_comment_at": "2026-10-20T14:45:58Z"
+    },
+    {
+      "number": 1001,
+      "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001",
+      "priority": "priority:p3",
+      "deferred_label": true,
+      "parent": null,
+      "native_blockers": [
+        {
+          "ref": "jvallery/network-infra#602",
+          "state": "OPEN"
+        },
+        {
+          "ref": "jvallery/agents#4468",
+          "state": "OPEN"
+        }
+      ],
+      "category": "external-owner-deferred",
+      "next_bounded_action": "Keep exact D16 hostname and unused certificate/namespace residue mapped to network602 and agents4468.",
+      "acceptance_limits": "Both owners defer this hygiene work; do not delete certificates/namespaces without exact current no-consumer evidence.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6318784437",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6321597369",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6379222183"
+      ],
+      "latest_comment_at": "2026-10-24T03:18:39Z"
+    },
+    {
+      "number": 1009,
+      "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009",
+      "priority": "priority:p2",
+      "deferred_label": true,
+      "parent": null,
+      "native_blockers": [
+        {
+          "ref": "jvallery/network-infra#839",
+          "state": "OPEN"
+        }
+      ],
+      "category": "external-passive-and-physical-blocked",
+      "next_bounded_action": "Consume network-infra#839 exact carried passive device ACL/current-flow output, then prepare selected #390 recovery/cutover custody.",
+      "acceptance_limits": "Closed #555 carried this output; it did not accept device TCP3232/6053 confinement. No OTA, rotation or extra device connection.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6374935990",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6374981648",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6379224339",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6398777765"
+      ],
+      "latest_comment_at": "2026-10-25T14:18:58Z"
+    },
+    {
+      "number": 1010,
+      "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010",
+      "priority": "priority:p2",
+      "deferred_label": true,
+      "parent": null,
+      "native_blockers": [],
+      "category": "safe-attribution-trace-next",
+      "next_bounded_action": "Trace the actual Verdify tunnel/tier1/tier2/header chain and verify relevant trusted-client provenance; retain value-free successful tool logs.",
+      "acceptance_limits": "Closed #743 removed as a stale blocker. Options-only #846 is not a Verdify dependency and closure does not prove Verdify client attribution.",
+      "recent_comment_urls": [
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6302052831",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6304008722",
+        "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6379226536"
+      ],
+      "latest_comment_at": "2026-10-24T03:19:06Z"
+    }
+  ],
+  "native_blocking_edges": 25,
+  "active_open_blocking_edges": 25,
+  "source_revision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+  "review_date": "2026-10-26",
+  "graph_captured_at": "2026-10-26T13:15:54.320449+00:00",
+  "resolved_dependency_corrections": [
+    {
+      "issue": 1009,
+      "current": "jvallery/network-infra#555",
+      "proposed": "jvallery/network-infra#839",
+      "scope": "exact carried UniFi/passive device ACL output",
+      "closure_evidence": "https://github.com/jvallery/network-infra/issues/555#issuecomment-6403162422"
+    },
+    {
+      "issue": 1010,
+      "current": "jvallery/network-infra#743",
+      "proposed": null,
+      "scope": "first trace exact Verdify trusted-client output; do not substitute options-only846",
+      "closure_evidence": "https://github.com/jvallery/network-infra/issues/743#issuecomment-6404514111"
+    }
+  ],
+  "snapshot_limits": [
+    "Runtime facts captured at13:07-13:14UTC; no continuous health or unchanged socket claim after those reads.",
+    "Docs1086 merged ca9120fa; source1091 and22-case private proposal pending at this snapshot.",
+    "The new ingestor Pod differs from Oct25 shutdown; digest is unchanged and current read shows one socket.",
+    "Local documentation edits are uncommitted at shutdown; no CI was submitted for this packet."
+  ]
+}

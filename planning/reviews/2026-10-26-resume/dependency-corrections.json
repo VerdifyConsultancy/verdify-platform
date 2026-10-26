@@ -1,0 +1,457 @@
+{
+  "before": [
+    {
+      "number": 16,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 31,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 45,
+      "parent": 16,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 398,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 51,
+      "parent": 16,
+      "blocked_by": []
+    },
+    {
+      "number": 52,
+      "parent": 16,
+      "blocked_by": []
+    },
+    {
+      "number": 75,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 297,
+      "parent": 350,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 45,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 298,
+      "parent": 16,
+      "blocked_by": []
+    },
+    {
+      "number": 299,
+      "parent": 350,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 390,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 350,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 359,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 367,
+      "parent": 430,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 390,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 368,
+      "parent": 359,
+      "blocked_by": []
+    },
+    {
+      "number": 369,
+      "parent": 430,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 390,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 370,
+      "parent": 430,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 367,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 378,
+      "parent": 359,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 785,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 386,
+      "parent": 359,
+      "blocked_by": []
+    },
+    {
+      "number": 390,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 398,
+      "parent": 16,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 298,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 410,
+      "parent": 359,
+      "blocked_by": []
+    },
+    {
+      "number": 412,
+      "parent": 16,
+      "blocked_by": []
+    },
+    {
+      "number": 430,
+      "parent": 359,
+      "blocked_by": []
+    },
+    {
+      "number": 434,
+      "parent": 350,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 299,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 581,
+      "parent": 775,
+      "blocked_by": []
+    },
+    {
+      "number": 587,
+      "parent": 581,
+      "blocked_by": []
+    },
+    {
+      "number": 588,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 783,
+          "state": "OPEN"
+        },
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 782,
+          "state": "OPEN"
+        },
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 641,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 639,
+      "parent": 581,
+      "blocked_by": []
+    },
+    {
+      "number": 640,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 642,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 641,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 749,
+          "state": "OPEN"
+        },
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 639,
+          "state": "OPEN"
+        },
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 587,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 642,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 588,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 749,
+      "parent": 581,
+      "blocked_by": []
+    },
+    {
+      "number": 751,
+      "parent": 16,
+      "blocked_by": []
+    },
+    {
+      "number": 775,
+      "parent": null,
+      "blocked_by": []
+    },
+    {
+      "number": 782,
+      "parent": 581,
+      "blocked_by": []
+    },
+    {
+      "number": 783,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 639,
+          "state": "OPEN"
+        },
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 587,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 784,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 640,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 785,
+      "parent": 581,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 784,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 963,
+      "parent": 75,
+      "blocked_by": [
+        {
+          "repository": "VerdifyConsultancy/verdify-platform",
+          "number": 390,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 1001,
+      "parent": null,
+      "blocked_by": [
+        {
+          "repository": "jvallery/network-infra",
+          "number": 602,
+          "state": "OPEN"
+        },
+        {
+          "repository": "jvallery/agents",
+          "number": 4468,
+          "state": "OPEN"
+        }
+      ]
+    },
+    {
+      "number": 1009,
+      "parent": null,
+      "blocked_by": [
+        {
+          "repository": "jvallery/network-infra",
+          "number": 555,
+          "state": "CLOSED"
+        }
+      ]
+    },
+    {
+      "number": 1010,
+      "parent": null,
+      "blocked_by": [
+        {
+          "repository": "jvallery/network-infra",
+          "number": 743,
+          "state": "CLOSED"
+        }
+      ]
+    }
+  ],
+  "after_verified": {
+    "data": {
+      "a": {
+        "number": 1009,
+        "state": "OPEN",
+        "blockedBy": {
+          "nodes": [
+            {
+              "id": "I_kwDOSskZtM8AAAABZ1Mz9Q",
+              "number": 839,
+              "state": "OPEN",
+              "url": "https://github.com/jvallery/network-infra/issues/839"
+            }
+          ]
+        }
+      },
+      "b": {
+        "number": 1010,
+        "state": "OPEN",
+        "blockedBy": {
+          "nodes": []
+        }
+      },
+      "c": {
+        "number": 839,
+        "state": "OPEN",
+        "url": "https://github.com/jvallery/network-infra/issues/839"
+      }
+    }
+  },
+  "evidence": {
+    "read_only_proposal": true,
+    "before_edge_count": 26,
+    "after_edge_count": 25,
+    "before_closed_blockers": 2,
+    "after_closed_blockers": 0,
+    "mutations": [
+      {
+        "operation": "removeBlockedBy",
+        "input": {
+          "issueId": "I_kwDOSlarUc8AAAABYZx7DQ",
+          "blockingIssueId": "I_kwDOSskZtM8AAAABO6Ov1g"
+        },
+        "label": "Remove1009<-closednetwork555",
+        "evidence": "https://github.com/jvallery/network-infra/issues/555#issuecomment-6403162422"
+      },
+      {
+        "operation": "addBlockedBy",
+        "input": {
+          "issueId": "I_kwDOSlarUc8AAAABYZx7DQ",
+          "blockingIssueId": "I_kwDOSskZtM8AAAABZ1Mz9Q"
+        },
+        "label": "Add1009<-opennetwork839",
+        "scope": "Exact carried UniFi/current-flow and passive TCP3232/6053 evidence only; no blanket remaining-namespace gate",
+        "evidence": "https://github.com/jvallery/network-infra/issues/839"
+      },
+      {
+        "operation": "removeBlockedBy",
+        "input": {
+          "issueId": "I_kwDOSlarUc8AAAABYZyClw",
+          "blockingIssueId": "I_kwDOSskZtM8AAAABYZyBQQ"
+        },
+        "label": "Remove1010<-closednetwork743",
+        "evidence": "https://github.com/jvallery/network-infra/issues/743#issuecomment-6404514111",
+        "no_successor_edge": "network846 is options-tracker only, not a Verdify requirement"
+      }
+    ],
+    "preconditions": [
+      "1009 still has exactly closed555 and839 remainsOPEN",
+      "1010 still has exactly closed743",
+      "No new accepted Verdify header-provenance receipt is inferred from743closure",
+      "Preserve all other parents,edges,acceptance anddeferredlabels"
+    ]
+  },
+  "applied_receipts": [
+    {
+      "data": {
+        "addBlockedBy": {
+          "clientMutationId": "verdify-resume-20261026-0-addBlockedBy"
+        }
+      }
+    },
+    {
+      "data": {
+        "removeBlockedBy": {
+          "clientMutationId": "verdify-resume-20261026-1-removeBlockedBy"
+        }
+      }
+    },
+    {
+      "data": {
+        "removeBlockedBy": {
+          "clientMutationId": "verdify-resume-20261026-2-removeBlockedBy"
+        }
+      }
+    }
+  ],
+  "note": "The evidence proposal was prepared before the root applied these changes; applied_receipts and the complete native graph confirm the final state."
+}
