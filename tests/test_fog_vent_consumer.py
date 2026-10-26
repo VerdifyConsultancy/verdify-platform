@@ -81,6 +81,15 @@ def test_generated_original_and_mutants_change_only_consumer():
     assert len({fog.sha256(value.encode()) for value in (original, deleted, inverted)}) == 3
 
 
+def test_fog_call_excludes_unrelated_following_counters():
+    text = (ROOT / fog.CONTROLS).read_text()
+    application = fog.extract_fragments()["fragments"]["fog_apply"]["text"]
+    assert application.rstrip().endswith("|| fert_master_on);")
+    assert "recently; force_off" in application
+    changed = text.replace(application, application + "\n unrelated_counter += 1;", 1)
+    assert fog.extract_fragments(controls_text=changed)["fragments"]["fog_apply"]["text"] == application
+
+
 def test_scenario_inventory_is_bounded_and_matches_native_template():
     source, _ = fog.generate_cpp()
     assert len(fog.SCENARIOS) == len(set(fog.SCENARIOS)) == 28

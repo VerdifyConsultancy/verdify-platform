@@ -382,6 +382,43 @@ tests + `make firmware-replay-band` (11.6% behavioral diff vs the old misters-fi
 Mode-transition rate is additionally bounded by invariant #6 (≤30 transitions/hr in
 stable conditions).
 
+### 7.4 Final relay dwell authority and cycle evidence
+
+The mode, engage and optional Phase-2 gates above decide intent; they do not
+directly switch a relay. In `controls.yaml`, `RelayMeta` and `set_relay` are the
+final ordinary transition authority for heat1/2, fan1/2, fog and vent. A turn-on
+waits for `now_ms - last_off_ms >= min_off_ms`; a turn-off waits for
+`now_ms - last_on_ms >= min_on_ms`. Eight snapshot/legacy durations refresh each
+tick while the original edge timestamps and accumulated runtime remain intact.
+At reboot the metadata starts at zero, so ordinary ON requests wait the full
+minimum-off duration from boot. Unsigned elapsed arithmetic preserves rollover.
+
+Only the explicit caller flags bypass those physical dwell waits:
+
+| Relay | Force ON | Force OFF |
+|---|---|---|
+| Heat1 | none | sensor fault or heat/air-exchange interlock |
+| Heat2 | none | heat1 force-OFF conditions, or retiring heat2 when heat1 will no longer run |
+| Fans | accepted manual FANS / VENT-BYPASS force | sensor fault |
+| Vent | fan/open-vent interlock | sensor fault |
+| Fog | accepted manual HUMID force | sensor fault, leak, occupancy, irrigation conflict, invalid clock, water budget, hard volume cap or active fertilizer master |
+
+These flags retain the safety and manual precedence in §4 and §8. Daily relay
+cycles count observed OFF-to-ON edges **after** this application, including forced
+starts. A request refused by minimum-off dwell adds no cycle; sustained ON adds
+no further cycle. This is firmware switch-state evidence, not independent proof
+that a physical contact or water valve moved.
+
+Center mist has a separate final owner because it is a pulse train: its existing
+per-zone `mister_min_off_s` fence reads the GPIO falling-edge stamp, including
+cancellation and watchdog stops. Repeated OFF requests do not restart that
+fence. Manual/legacy direct center-mister requests are rejected by the relay
+callback; they do not gain a force-on exception. A newly armed pulse or irrigation
+phase receives its complete requested duration; an interval elapsed before
+admission is not charged to it. Hard safety cancellation still closes water
+immediately. Physical re-fire, starts/runtime, no-chatter/no-starvation and
+rollback observations remain candidate-specific #390 acceptance.
+
 ## 8. Mechanical transitions, energy-waste avoidance, outdoor air (L3 #345 AC3/AC4)
 
 ### 8.1 No contradictory actuator combinations by default
