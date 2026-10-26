@@ -20,9 +20,9 @@ from zoneinfo import ZoneInfo
 
 FIRMWARE_SOURCES = {
     "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
-    # #367 refreshes relay dwell limits each tick; solar/band expressions are
-    # unchanged. New captures bind this source; historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+    # #299/#367/#434 correct admission timing and accepted relay-cycle counts;
+    # solar/band expressions are unchanged. Historical receipts stay frozen.
+    "firmware/greenhouse/controls.yaml": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")
