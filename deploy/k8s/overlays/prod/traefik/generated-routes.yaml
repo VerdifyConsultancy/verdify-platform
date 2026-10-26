@@ -18,6 +18,11 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 0
+    verdify-strip-client-headers:
+      headers:
+        customRequestHeaders:
+          Cf-Connecting-Ip: ''
+          Cf-Ray: ''
     verdify-strip-identity-headers:
       headers:
         customRequestHeaders:
@@ -35,7 +40,7 @@ http:
       rule: Path(`/ping`)
       service: ping@internal
     verdify-t2-api-0:
-      entryPoints:
+      entryPoints: &id001
       - verdify-web
       middlewares:
       - verdify-strip-identity-headers
@@ -45,8 +50,7 @@ http:
       rule: Host(`api.verdify.ai`) && PathPrefix(`/api/v1/public/cameras/`)
       service: verdify-t2-api-0
     verdify-t2-api-1:
-      entryPoints:
-      - verdify-web
+      entryPoints: *id001
       middlewares:
       - verdify-strip-identity-headers
       - verdify-api-rate-limit
@@ -54,7 +58,7 @@ http:
       rule: Host(`api.verdify.ai`)
       service: verdify-t2-api-1
     verdify-t2-graphs-0:
-      entryPoints:
+      entryPoints: &id002
       - verdify-web
       middlewares:
       - verdify-strip-identity-headers
@@ -62,16 +66,14 @@ http:
       rule: Host(`graphs.verdify.ai`) && Method(`GET`) && PathRegexp(`^/api/public/dashboards/[a-f0-9]{32}$`)
       service: verdify-t2-graphs-0
     verdify-t2-graphs-1:
-      entryPoints:
-      - verdify-web
+      entryPoints: *id002
       middlewares:
       - verdify-strip-identity-headers
       priority: 100
       rule: Host(`graphs.verdify.ai`) && PathPrefix(`/render/`)
       service: verdify-t2-graphs-1
     verdify-t2-graphs-2:
-      entryPoints:
-      - verdify-web
+      entryPoints: *id002
       middlewares:
       - verdify-strip-identity-headers
       rule: Host(`graphs.verdify.ai`)
@@ -88,8 +90,16 @@ http:
       - verdify-web
       middlewares:
       - verdify-strip-identity-headers
+      - verdify-strip-client-headers
       rule: Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)
       service: verdify-t2-mcp-0
+    verdify-t2-mcp-tunnel-0:
+      entryPoints:
+      - verdify-tunnel
+      middlewares:
+      - verdify-strip-identity-headers
+      rule: Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)
+      service: verdify-t2-mcp-tunnel-0
   services:
     verdify-t2-api-0:
       loadBalancer:
@@ -130,6 +140,11 @@ http:
         servers:
         - url: http://verdify-lab.verdify-prod.svc.cluster.local:8080
     verdify-t2-mcp-0:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+        - url: http://verdify-mcp.verdify-prod.svc.cluster.local:8000
+    verdify-t2-mcp-tunnel-0:
       loadBalancer:
         passHostHeader: true
         servers:

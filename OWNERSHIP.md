@@ -44,6 +44,25 @@ Live Kubernetes objects attributed to this repo: 474 declared, 252 residue-delet
 
 Adjacent: Namespace `verdify-platform` (agent-sessions namesake, `ci-dbg-*` residue) is owned by [jvallery/agents](https://github.com/jvallery/agents/blob/main/docs/fleet-inventory/estate/jvallery__agents.md) in the final record; this repo only removes its own four dashboard ConfigMaps there (row `contribution:verdify-platform/configmap/verdifyconsultancy/verdify-platform` below, A9). In `verdify-edge` the Certificate `wildcard-verdify-ai`, its CertificateRequest/Order children and Secret `wildcard-verdify-ai-tls` are jvallery/agents' and retire under agents#4468; this repo owns only the Namespace object (retire).
 
+## MCP trusted-ingress source packet (#1010)
+
+Prepared source only; no deployment or external-client acceptance is claimed.
+The namespace owner remains `VerdifyConsultancy/verdify-platform`. The central
+ownership companion must register these additions in the same delivery packet.
+The ordinary routes, authentication and single ingestor are preserved.
+
+| ID | Item | Source | State and dependencies |
+|---|---|---|---|
+| `route:verdify-prod/verdify-mcp-tunnel-forward` | MCP-only tier-1 twin on the existing cloudflared-only `tunnelclient` entrypoint, forwarding to tier-2 Service port81 | `deploy/k8s/overlays/prod/traefik/verdify-tier1-apps-forward.yaml` | declared-not-deployed; network-infra owns the matching exact MCP tunnel row, fleet control-plane owns its catalog pin |
+| `route:verdify-prod/verdify-t2-mcp-tunnel` | Exact MCP-only tokenless file router on isolated `verdify-tunnel:8001`; structured canonical-header access receipt | `deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml` and registered file renderer | declared-not-deployed; requires the tier-1 twin and strict receiver policy |
+| `cluster-object:verdify-prod/mcp-client-attribution-boundary` | Existing tier-2 Service gains ClusterIP port81, Deployment gains8001, and `allow-verdify-mcp-tunnel-from-apps-ingress` admits only the tier-1 namespace AND workload labels; ordinary MCP strips untrusted CF claims | `deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml`, `verdify-traefik-netpol.yaml`, `verdify-traefik-routes.yaml` | declared-not-deployed; no credential, RBAC, Kubernetes provider or device access |
+
+Health and exact receipt criteria are in
+[`docs/runbooks/mcp-client-attribution.md`](docs/runbooks/mcp-client-attribution.md).
+Canonical client attribution requires the named edge router/entrypoint, a
+bounded correlation join and MCP's actual tier-2 transport peer; ordinary
+headers and an internal caller's copied CF-Ray never establish identity.
+
 ## Argo CD Applications
 
 The Application declarations and AppProjects are jvallery/agents' (R6); this repo owns the source paths they sync and what renders from them. The production declaration was adopted live on 2026-10-21 by agents#5263/#5272, preserving its UID and full spec. The rows below are adjacent-owner references; the October 19 summary remains a dated inventory snapshot.

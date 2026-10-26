@@ -802,6 +802,29 @@ def _tool_transport_peer(server):
         return None
 
 
+def _tool_edge_request_id_claim(server):
+    """Bounded opaque correlation only; a CF-Ray claim never supplies identity.
+
+    A trusted join also needs the isolated edge router/entrypoint and this
+    event's actual transport peer matching that proxy. Internal clients can
+    supply this header, so neither its presence nor its shape proves provenance.
+    """
+    try:
+        headers = server._mcp_server.request_context.request.headers
+    except (AttributeError, LookupError):
+        return None
+    if not callable(getattr(headers, "get", None)):
+        return None
+    getlist = getattr(headers, "getlist", None)
+    values = getlist("cf-ray") if callable(getlist) else [headers.get("cf-ray")]
+    if len(values) != 1:
+        return None
+    value = values[0]
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-fA-F]{16,32}-[A-Z]{3}", value) is None:
+        return None
+    return value
+
+
 class AudienceAuthorizedFastMCP(FastMCP):
     """FastMCP with server-side audience authorization at the dispatch choke point.
 
@@ -844,6 +867,7 @@ class AudienceAuthorizedFastMCP(FastMCP):
                         "duration_ms": round((time.monotonic() - started) * 1000, 3),
                         "peer_ip": peer,
                         "client_ip_source": "transport_peer" if peer else "unavailable",
+                        "edge_request_id_claim": _tool_edge_request_id_claim(self),
                         "auth_mode": auth_mode(),
                     }
                 ),

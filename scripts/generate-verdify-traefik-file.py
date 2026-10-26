@@ -12,6 +12,18 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "deploy/k8s/overlays/prod/traefik/generated-routes.yaml"
 NAMESPACE = "verdify-prod"
+TRUSTED_MCP_ROUTE = "verdify-t2-mcp-tunnel"
+TRUSTED_MCP_SPEC = {
+    "entryPoints": ["verdify-tunnel"],
+    "routes": [
+        {
+            "kind": "Rule",
+            "match": "Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)",
+            "middlewares": [{"name": "verdify-strip-identity-headers"}],
+            "services": [{"name": "verdify-mcp", "port": 8000}],
+        }
+    ],
+}
 
 
 def compile_routes(documents: list[dict]) -> dict:
@@ -37,7 +49,14 @@ def compile_routes(documents: list[dict]) -> dict:
         if document["kind"] != "IngressRoute":
             continue
         metadata, spec = document["metadata"], document["spec"]
-        if metadata.get("namespace") != NAMESPACE or spec.get("entryPoints") != ["verdify-web"]:
+        if metadata.get("namespace") != NAMESPACE:
+            raise ValueError("route outside the Verdify HTTP boundary")
+        # The isolated listener carries canonical Cloudflare provenance. Never
+        # expand it to another host, path, backend or middleware implicitly.
+        if metadata["name"] == TRUSTED_MCP_ROUTE:
+            if spec != TRUSTED_MCP_SPEC:
+                raise ValueError("trusted MCP route contract changed")
+        elif spec.get("entryPoints") != ["verdify-web"]:
             raise ValueError("route outside the Verdify HTTP boundary")
         if set(spec) - {"entryPoints", "routes"}:
             raise ValueError("unsupported route-level semantics")
@@ -63,7 +82,12 @@ def compile_routes(documents: list[dict]) -> dict:
                 if middleware["name"] not in middlewares:
                     raise ValueError("unknown middleware reference")
                 references.append(middleware["name"])
-            router = {"entryPoints": ["verdify-web"], "rule": route["match"], "service": key, "middlewares": references}
+            router = {
+                "entryPoints": spec["entryPoints"],
+                "rule": route["match"],
+                "service": key,
+                "middlewares": references,
+            }
             if "priority" in route:
                 router["priority"] = route["priority"]
             routers[key] = router

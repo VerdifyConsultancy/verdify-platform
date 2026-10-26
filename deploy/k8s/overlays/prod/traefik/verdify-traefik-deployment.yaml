@@ -84,6 +84,11 @@ spec:
             - "--global.checknewversion=false"
             - "--global.sendanonymoususage=false"
             - "--entryPoints.verdify-web.address=:8000/tcp"
+            - "--entryPoints.verdify-web.asDefault=true"
+            # #1010: only the MCP tunnel twin reaches this isolated port. The
+            # ordinary listener and internal MCP callers retain peer attribution.
+            - "--entryPoints.verdify-tunnel.address=:8001/tcp"
+            - "--entryPoints.verdify-tunnel.asDefault=false"
             - "--entryPoints.traefik.address=:8080/tcp"
             - "--ping=true"
             - "--ping.entrypoint=traefik"
@@ -94,6 +99,22 @@ spec:
             - "--providers.file.watch=false"
             - "--log.level=INFO"
             - "--accesslog=true"
+            - "--accesslog.format=json"
+            # RequestPath includes query strings in Traefik 3.7.1; retain neither.
+            # Canonical client attribution requires the named tunnel router AND
+            # entrypoint, not merely a CF header on an ordinary request.
+            - "--accesslog.fields.defaultmode=drop"
+            - "--accesslog.fields.names.StartUTC=keep"
+            - "--accesslog.fields.names.Duration=keep"
+            - "--accesslog.fields.names.ClientHost=keep"
+            - "--accesslog.fields.names.RequestHost=keep"
+            - "--accesslog.fields.names.RequestMethod=keep"
+            - "--accesslog.fields.names.RouterName=keep"
+            - "--accesslog.fields.names.entryPointName=keep"
+            - "--accesslog.fields.names.DownstreamStatus=keep"
+            - "--accesslog.fields.headers.defaultmode=drop"
+            - "--accesslog.fields.headers.names.Cf-Connecting-Ip=keep"
+            - "--accesslog.fields.headers.names.Cf-Ray=keep"
           volumeMounts:
             - name: file-routing
               mountPath: /etc/traefik/dynamic
@@ -104,6 +125,9 @@ spec:
               protocol: TCP
             - name: traefik
               containerPort: 8080
+              protocol: TCP
+            - name: mcp-tunnel
+              containerPort: 8001
               protocol: TCP
           readinessProbe:
             httpGet:
@@ -151,4 +175,8 @@ spec:
     - name: web
       port: 80
       targetPort: verdify-web
+      protocol: TCP
+    - name: mcp-tunnel
+      port: 81
+      targetPort: mcp-tunnel
       protocol: TCP

@@ -40,6 +40,34 @@ spec:
         - port: 8000
           protocol: TCP
 ---
+# #1010: provenance is granted by the isolated edge listener, never a pod CIDR.
+# A namespace AND the exact tier-1 workload labels must match in this one peer.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-verdify-mcp-tunnel-from-apps-ingress
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-traefik
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+              app.kubernetes.io/instance: traefik-apps-traefik-apps
+      ports:
+        - port: 8001
+          protocol: TCP
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

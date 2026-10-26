@@ -64,3 +64,23 @@ spec:
         - name: verdify-traefik
           port: 80
   tls: {}
+---
+# #1010: tunnelclient is already Cloudflare-connector-only in the shared edge.
+# Do not attach this route to web/websecure or the trusted HA hatunnel listener.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-mcp-tunnel-forward
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-forward
+spec:
+  entryPoints: [tunnelclient]
+  routes:
+    - kind: Rule
+      match: Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)
+      services:
+        - name: verdify-traefik
+          port: 81
+  tls: {}

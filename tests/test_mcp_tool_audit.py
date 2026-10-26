@@ -87,3 +87,56 @@ def test_denied_dispatch_has_no_allowed_call_event(mcp_server, monkeypatch, capl
 def test_absent_context_has_no_guessed_peer(mcp_server, monkeypatch):
     monkeypatch.setattr(mcp_server.mcp, "_mcp_server", None, raising=False)
     assert mcp_server._tool_transport_peer(mcp_server.mcp) is None
+    assert mcp_server._tool_edge_request_id_claim(mcp_server.mcp) is None
+
+
+def test_bounded_ray_claim_never_changes_transport_identity(mcp_server, monkeypatch, caplog):
+    setup(monkeypatch, mcp_server)
+    request = mcp_server.mcp._mcp_server.request_context.request
+    request.headers["cf-ray"] = "0123456789abcdef-DEN"
+    caplog.set_level("INFO", logger="verdify.mcp.audit")
+    asyncio.run(mcp_server.mcp.call_tool("climate", {}))
+    row = events(caplog)[0]
+    assert row["edge_request_id_claim"] == "0123456789abcdef-DEN"
+    assert row["peer_ip"] == "10.42.1.2"
+    assert row["client_ip_source"] == "transport_peer"
+    assert "203.0.113.99" not in json.dumps(row)
+    assert "198.51.100.1" not in json.dumps(row)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "",
+        "0123456789abcdef-DEN\n",
+        " 0123456789abcdef-DEN",
+        "0123456789abcdef-DEN,0123456789abcdef-DEN",
+        "f" * 33 + "-DEN",
+        "f" * 10000 + "-DEN",
+        "0123456789abcdef-\u00c9EN",
+        "0123456789abcdef-DEN\x00",
+        12,
+    ],
+)
+def test_invalid_ray_is_omitted(mcp_server, monkeypatch, value):
+    setup(monkeypatch, mcp_server)
+    mcp_server.mcp._mcp_server.request_context.request.headers["cf-ray"] = value
+    assert mcp_server._tool_edge_request_id_claim(mcp_server.mcp) is None
+
+
+def test_duplicate_ray_is_omitted(mcp_server, monkeypatch):
+    setup(monkeypatch, mcp_server)
+
+    class DuplicateHeaders(dict):
+        def getlist(self, name):
+            return ["0123456789abcdef-DEN", "0123456789abcdef-DEN"]
+
+    mcp_server.mcp._mcp_server.request_context.request.headers = DuplicateHeaders()
+    assert mcp_server._tool_edge_request_id_claim(mcp_server.mcp) is None
+
+
+def test_missing_headers_have_no_ray_claim(mcp_server, monkeypatch):
+    setup(monkeypatch, mcp_server)
+    mcp_server.mcp._mcp_server.request_context.request.headers = None
+    assert mcp_server._tool_edge_request_id_claim(mcp_server.mcp) is None
