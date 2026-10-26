@@ -1,0 +1,460 @@
+[
+  {
+    "number": 16,
+    "kind": "issue",
+    "id": 6419904741,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6419904741",
+    "updated_at": "2026-10-26T15:26:27Z",
+    "readback_verified": true,
+    "body_sha256": "a98eacc6d8768def8cccb3d0f3b1380d5095b8e0d53b39953a39c73a323e37c2",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No new field commissioning occurred; shared crop/probe/plumbing survey remains deferred by the operator.\n\nNext action after explicit resume: Keep one shared visit/worksheet for the hardware children; record observed identity and enabled/disabled/uncommissioned state.\n\nAcceptance limits: Crop identity, hardware cause and calibration remain unproved.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 31,
+    "kind": "issue",
+    "id": 6419906268,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6419906268",
+    "updated_at": "2026-10-26T15:26:31Z",
+    "readback_verified": true,
+    "body_sha256": "fa5b37ad22aafc6f2b44e14afd0009cd7746a1a4f8415196d82e53e0fcabaf34",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No selected twin oracle or broader twin runtime qualification was completed.\n\nNext action after explicit resume: Select one concrete consumer/export/action question before adding bounded qualification.\n\nAcceptance limits: Private containment alert fixtures do not fill the 21 historical prefix gaps or prove twin parity.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 45,
+    "kind": "issue",
+    "id": 6419907757,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6419907757",
+    "updated_at": "2026-10-26T15:26:35Z",
+    "readback_verified": true,
+    "body_sha256": "4ee723764bf00b47ba16f10859bfb8709f54d17bc0f77a970dbf55367189a901",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No new commissioned soil/runoff readings or calibration evidence were collected.\n\nNext action after explicit resume: After observed topology #298 and target correction #398, commission each required channel and use the existing actual feedback check.\n\nAcceptance limits: Fresh climate telemetry is not soil/runoff commissioning; no fertilizer/irrigation authority from seed data.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 51,
+    "kind": "issue",
+    "id": 6419909379,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6419909379",
+    "updated_at": "2026-10-26T15:26:39Z",
+    "readback_verified": true,
+    "body_sha256": "6e96f766876a55e219b61c323686d489f18758e3ddc828cc4782f06c4b36b1be",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. The operator still has no reference NDIR CO2 meter; no paired calibration was performed.\n\nNext action after explicit resume: Wait for actual reference pairs and predeclared tolerance; keep the explicit uncalibrated state.\n\nAcceptance limits: Visit availability does not create a reference measurement or justify guessed coefficients.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 52,
+    "kind": "issue",
+    "id": 6419910778,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6419910778",
+    "updated_at": "2026-10-26T15:26:43Z",
+    "readback_verified": true,
+    "body_sha256": "2cd29bce8c5f5ce4316e37aded4f8ff0fdda01e122b83cae91bd04258871679a",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Species-specific observations remain deferred with the shared survey.\n\nNext action after explicit resume: Record a supported no-change or reversible species-specific decision from actual crop observations.\n\nAcceptance limits: No generic orchid-wide dormancy rule or inferred species.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 75,
+    "kind": "issue",
+    "id": 6419912243,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6419912243",
+    "updated_at": "2026-10-26T15:26:47Z",
+    "readback_verified": true,
+    "body_sha256": "a4ec5aec1c4dfb9d24079ecfe3babfa5623c20171243169783a5c46d65efa64f",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. 15:17 UTC live readback: all17 Deployments and the single DB StatefulSet have desired replicas ready; API health endpoints200; climate/action source rows15:16:30. New firmware corrections are source-only.\n\nNext action after explicit resume: Keep #963/#749 and remaining child acceptance explicit; do not repeat delivered exporter/watchdog work.\n\nAcceptance limits: Replica/API health and active_alerts_1h=0 are bounded availability evidence, not sensor recovery, writer reconciliation, efficacy or complete observability acceptance.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 297,
+    "kind": "issue",
+    "id": 6419913756,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6419913756",
+    "updated_at": "2026-10-26T15:26:51Z",
+    "readback_verified": true,
+    "body_sha256": "935c6af9e71f132e37f532be61660ba93e38d36ff15b172be622a4a4c394fb60",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. The existing source evaluator/19 saturation fixtures remain delivered; no new commissioned target or actual saturation/skip event was accepted.\n\nNext action after explicit resume: Reuse the delivered evaluator and bind only genuine #398/#45 targets/source before alert/actuation enablement.\n\nAcceptance limits: The separate22-case containment fixture is not saturation commissioning or drip-skip acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 298,
+    "kind": "issue",
+    "id": 6419915193,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6419915193",
+    "updated_at": "2026-10-26T15:26:55Z",
+    "readback_verified": true,
+    "body_sha256": "9ca44e00090bd655d04fdbc200f5eda844090946fb90d4c12a747c297d0fede0",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Survey remains later. Release-checklist/field worksheet documentation PR1086 is merged, not an observed crop inventory.\n\nNext action after explicit resume: Use the shared worksheet when the operator supplies actual position/crop/pot/substrate/probe/plumbing evidence.\n\nAcceptance limits: No fabricated topology, automatic appointment, DB import or control enablement.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 299,
+    "kind": "issue",
+    "id": 6419916650,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6419916650",
+    "updated_at": "2026-10-26T15:31:11Z",
+    "readback_verified": true,
+    "body_sha256": "b63491c45fdfc3573a3c60f3de9be63fb8f10ccb32ca1e6b6a17a2e894b62020",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.\n\nNext action after explicit resume: Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.\n\nAcceptance limits: No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual219-case native receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/execution/2026-10-26-native-qualification/control-native-results.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 350,
+    "kind": "issue",
+    "id": 6419917988,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6419917988",
+    "updated_at": "2026-10-26T15:31:14Z",
+    "readback_verified": true,
+    "body_sha256": "2246bf888363ed2235cd5c3b596102a9325094b83e3447306c616c193ce45e32",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. Shared irrigation/control source PR1095 is native-qualified219/219 but its full PR CI/compiler remain active. Field topology, calibrated wall-feed and release proof remain separate.\n\nNext action after explicit resume: Track #299/#434/#390 source qualification separately from #298\u2192#398\u2192#45 physical commissioning.\n\nAcceptance limits: No center-drip connection, wall-feed calibration, dosing action or physical qualification occurred.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 359,
+    "kind": "issue",
+    "id": 6419919512,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6419919512",
+    "updated_at": "2026-10-26T15:31:18Z",
+    "readback_verified": true,
+    "body_sha256": "45c270fe9b91a32f6d4c5df21da5f24b56d050a48acb95d0e1dc082003301021",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. Finite aggregate contributors are corrected in merged1091/18570b0f; control timing/accepted relay-cycle PR1095 is native-qualified but pending full CI/compiler.\n\nNext action after explicit resume: Reuse current source receipts; keep jump/flatline, field inputs, actual cycling and post-study corridor decisions separate.\n\nAcceptance limits: Source/native success does not establish deployed cycling, sensor recovery or scientific efficacy.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 367,
+    "kind": "issue",
+    "id": 6419921028,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6419921028",
+    "updated_at": "2026-10-26T15:31:22Z",
+    "readback_verified": true,
+    "body_sha256": "6ab50f6f30b815c5cf56a7c55ef739a40d87108d5d7ec00ef9467850659895cb",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.\n\nNext action after explicit resume: Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.\n\nAcceptance limits: No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual219-case native receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/execution/2026-10-26-native-qualification/control-native-results.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 368,
+    "kind": "issue",
+    "id": 6419922514,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6419922514",
+    "updated_at": "2026-10-26T15:27:14Z",
+    "readback_verified": true,
+    "body_sha256": "935b4fd1e172a0116854c111c0be7cf4e8fafe88fe4013ba85e719b747d3773e",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. PR1091 merged as18570b0f: all12 aggregate contributor guards now reject NaN and\u00b1Inf. Exact-source140/140 causal YAML tests, strict firmware/invariant/replay and both secretless compiler targets passed; expected historical32 failures/38 passes retained.\n\nNext action after explicit resume: Reuse this source qualification in #390; finish separately justified jump/flatline/shared-health semantics from actual accepted inputs.\n\nAcceptance limits: Reported live firmware remains2026.10.2.0637.620a218a-wifi-bound; dummy compiler outputs are nondeployable. No hardware recovery or full issue closure.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 369,
+    "kind": "issue",
+    "id": 6419924018,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6419924018",
+    "updated_at": "2026-10-26T15:27:18Z",
+    "readback_verified": true,
+    "body_sha256": "4af95bb3b24e15cc1d4a68a4da20fc22976532d73eeb40b398acb0aac849dbc1",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No new zero-consumer removal was made. Source/source-qualification progress does not justify a broad refactor.\n\nNext action after explicit resume: Inventory named surviving consumers only; remove nothing without zero-consumer proof and an explicit release cohort.\n\nAcceptance limits: No fan-burst removal, safety-writability change or silent full48 identity change.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 370,
+    "kind": "issue",
+    "id": 6419925590,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6419925590",
+    "updated_at": "2026-10-26T15:27:22Z",
+    "readback_verified": true,
+    "body_sha256": "30560aee2aeb1f3556650537335f1a7516ff151ca0a817897e6e9422f18b5d67",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No new arbitration refactor was made; PR1095 retains current cancellation/topology/journal/dwell/force rules while qualifying timing and cycle semantics.\n\nNext action after explicit resume: Reuse #367 source authority documentation, then capture actual reverse-conflict/origin/restart/partial-delivery behavior before justified consolidation.\n\nAcceptance limits: Do not substitute the timing regression suite for arbitration or physical conflict acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 378,
+    "kind": "issue",
+    "id": 6419927181,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6419927181",
+    "updated_at": "2026-10-26T15:27:26Z",
+    "readback_verified": true,
+    "body_sha256": "6adbd0c14a2593fb8a03acf668f4a77c409af606ea0f71ee678135efc47cf6e9",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No completed fixed-target pilot readout exists.\n\nNext action after explicit resume: Wait for #785 unchanged-design results before corridor-width decisions.\n\nAcceptance limits: No retrospective endpoint change or controller-credit inference.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 386,
+    "kind": "issue",
+    "id": 6419928817,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6419928817",
+    "updated_at": "2026-10-26T15:27:30Z",
+    "readback_verified": true,
+    "body_sha256": "14135c6ed9a91403736499ca2c8b4af8f466244c15705eb08db1747369651b0b",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. New October25 ordinary cutoff receipts: main OFF02:00:00.175863Z and grow OFF04:00:00.761588Z October26, both outside_window with corresponding state/reason epochs.\n\nNext action after explicit resume: Wait for a naturally eligible original ON transition shortly before cutoff and retain exact relay/decision evidence through actual minimum-on expiry.\n\nAcceptance limits: No active minimum-on overlap, original ON transition, continuous physical ON or override boundary was established; no forced toggle or OTA.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 390,
+    "kind": "issue",
+    "id": 6419930317,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6419930317",
+    "updated_at": "2026-10-26T15:31:25Z",
+    "readback_verified": true,
+    "body_sha256": "4e31a7bfcfb45528fb9c31eb4f2904b0326d667339e69130276c5560d8cc26ed",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.\n\nNext action after explicit resume: Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.\n\nAcceptance limits: No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual219-case native receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/execution/2026-10-26-native-qualification/control-native-results.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 398,
+    "kind": "issue",
+    "id": 6419931853,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6419931853",
+    "updated_at": "2026-10-26T15:27:38Z",
+    "readback_verified": true,
+    "body_sha256": "af73c1bb0b369e470450d5448f4c0d392611e70b9d4ed145d4b0b710b70ba0de",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No actual crop/substrate topology or threshold correction was imported.\n\nNext action after explicit resume: After #298 evidence, append a new ledgered target correction with inverse and preserve valid operator values.\n\nAcceptance limits: Do not edit applied migration064 or enable feedback from seed labels.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 410,
+    "kind": "issue",
+    "id": 6419933439,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6419933439",
+    "updated_at": "2026-10-26T15:27:42Z",
+    "readback_verified": true,
+    "body_sha256": "34990e3170130b3d707990d10605d8ae45acf06af207a62b98af1d6a5405aeb2",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Accepted criteria1 and3 retained. October25 installed getter returned no_episodes in3.718s. Daylight610/646 represented minutes leaves36 gaps and4 observed ordinary drying minutes; complete-day measured-zero staysNULL.\n\nNext action after explicit resume: Keep existing collectors/getter and seek a genuinely complete prospective observation with explicit continuity/freshness.\n\nAcceptance limits: No new model/consumer invocation; scheduled plan metadata alone is not a consumer trace. Missing minutes were not interpolated.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 412,
+    "kind": "issue",
+    "id": 6419934941,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6419934941",
+    "updated_at": "2026-10-26T15:27:46Z",
+    "readback_verified": true,
+    "body_sha256": "7129fcd4a43dbd92da7b06e8dd0d30538443a6c383279dc08100a0d7d46b594a",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No new screen-position/night-context observation or equipment actuation occurred.\n\nNext action after explicit resume: At the deferred shared visit record actual position and measured trigger, then a bounded no-change/change decision.\n\nAcceptance limits: No guessed maintenance date or inferred energy/compliance benefit.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 430,
+    "kind": "issue",
+    "id": 6419936604,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6419936604",
+    "updated_at": "2026-10-26T15:31:29Z",
+    "readback_verified": true,
+    "body_sha256": "c1d0c3fdbb5a189e195c0388d24e7008baadc7e84e535ee7024bcb863d6a03c7",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. Shared control PR1095 is native-qualified219/219 but not yet full-CI/compiler accepted or deployed. No new broad cleanup/refactor was done.\n\nNext action after explicit resume: Reuse #367 owner/force semantics and finish exact pending qualification before justified #369/#370 work.\n\nAcceptance limits: Do not add blanket dependencies or infer physical anti-chatter acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 434,
+    "kind": "issue",
+    "id": 6419938251,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6419938251",
+    "updated_at": "2026-10-26T15:31:32Z",
+    "readback_verified": true,
+    "body_sha256": "3f468b0ec25c5deef904a0bf2a806a475da7dda8bf1831ed2ba74f9d4201b73c",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nExecution is paused at Jason\u2019s request. PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.\n\nNext action after explicit resume: After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.\n\nAcceptance limits: No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual219-case native receipt](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/execution/2026-10-26-native-qualification/control-native-results.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 581,
+    "kind": "issue",
+    "id": 6419939727,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6419939727",
+    "updated_at": "2026-10-26T15:27:59Z",
+    "readback_verified": true,
+    "body_sha256": "69cb3dfcc8db7eeff77a8de1425bc52b880ee81135b8e3c723ec573bc39b38ad",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Shared containment PR1094 is merged0ed369fd with22/22 private cases and13/16 native reason coverage. The runtime writer stage remains halted12completed/0records and handoff unsettled.\n\nNext action after explicit resume: Carry the residual readiness/containment/physical/input-lock chain explicitly; no draw, launch or active executor follows.\n\nAcceptance limits: Private synthetic source qualification is not live experiment exclusivity/recovery or physical/scientific acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 587,
+    "kind": "issue",
+    "id": 6419941325,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6419941325",
+    "updated_at": "2026-10-26T15:28:03Z",
+    "readback_verified": true,
+    "body_sha256": "2c5f715f0198279350a6230558abcf12ae58db8f92dd232993cd421f07b0baf1",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.\n\nNext action after explicit resume: Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.\n\nAcceptance limits: Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual merged22-case report](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/execution/2026-10-26-native-qualification/1094-corrected-private-report.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 588,
+    "kind": "issue",
+    "id": 6419942900,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6419942900",
+    "updated_at": "2026-10-26T15:28:07Z",
+    "readback_verified": true,
+    "body_sha256": "9e516da7f7a5dd8c85cc8af909dfa7c1ea4a3780953fe8310ba0a1bd3b25ca26",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No scientific lock, random draw or new runtime identity was activated. Shared containment source improved through1094, but #641/#782/#783 remain incomplete.\n\nNext action after explicit resume: Prepare exact model/runtime/scientific identity and compatibility manifest; consume genuinely accepted predecessors before lock/draw.\n\nAcceptance limits: No missing-data or no-go disposition is a randomization authority.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 639,
+    "kind": "issue",
+    "id": 6419944488,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6419944488",
+    "updated_at": "2026-10-26T15:28:11Z",
+    "readback_verified": true,
+    "body_sha256": "2c5f715f0198279350a6230558abcf12ae58db8f92dd232993cd421f07b0baf1",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.\n\nNext action after explicit resume: Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.\n\nAcceptance limits: Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Actual merged22-case report](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/execution/2026-10-26-native-qualification/1094-corrected-private-report.json) \u00b7 [Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 640,
+    "kind": "issue",
+    "id": 6419946196,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6419946196",
+    "updated_at": "2026-10-26T15:28:15Z",
+    "readback_verified": true,
+    "body_sha256": "88a43323441c9c2820561eb318570a5dce92f930c123be731a9f0ef69b12928a",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No real randomized assigned day was frozen or exported.\n\nNext action after explicit resume: Prepare exact freeze/reconciliation/export/failure-day commands and execute only after genuine #642 assignment.\n\nAcceptance limits: Private synthetic fixtures are not intention-to-treat observations.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 641,
+    "kind": "issue",
+    "id": 6419947931,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6419947931",
+    "updated_at": "2026-10-26T15:28:19Z",
+    "readback_verified": true,
+    "body_sha256": "e3cd3052b99ad02a3bff33da27ada8b4a5176e3557980b50354a72a9a0a7cf9a",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Draft855 stays parked. Private22-case containment progress does not satisfy remaining predecessor or physical proof. Writer hold is unchanged/handoff unsettled.\n\nNext action after explicit resume: Keep dormant successor/rollback preparation separate; a fresh attended baseline-target-baseline proof follows accepted #749/#587/#639 only.\n\nAcceptance limits: Must end baseline-confirmed/component-off; no activation, draw, launch or hold release from current source receipts.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 642,
+    "kind": "issue",
+    "id": 6419949539,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6419949539",
+    "updated_at": "2026-10-26T15:28:23Z",
+    "readback_verified": true,
+    "body_sha256": "92dc3202e3ab03a0ba5860cc62a5154f586c54a50e49199a82a09dd94b006f11",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No randomized day1 exists or was activated.\n\nNext action after explicit resume: After #588 qualified lock/draw, use separately authorized bounded physical activation and rollback checks.\n\nAcceptance limits: No inherited efficacy authority from a technical readiness gate or private CI.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 749,
+    "kind": "issue",
+    "id": 6419951040,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6419951040",
+    "updated_at": "2026-10-26T15:28:27Z",
+    "readback_verified": true,
+    "body_sha256": "8da8b649393a63a23799e8c68593242ab061c99ff17d30ed40baf5770e674137",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. The sealed spread/catalog failure and four unsupported physical wetting criteria remain unresolved. No new physical source receipt was collected.\n\nNext action after explicit resume: Implement/use criterion-specific real equipment/binary/rails/counter proof with preserved failed packet and exact unchanged limits.\n\nAcceptance limits: No hash, bare true, source correction or healthy telemetry releases the safety hold; no #751 blanket gate.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 751,
+    "kind": "issue",
+    "id": 6419952757,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6419952757",
+    "updated_at": "2026-10-26T15:28:31Z",
+    "readback_verified": true,
+    "body_sha256": "058b0aeb2972e4ebd733b1ea3945de38bc059e7561dfc8e9a4328aaae9eb3d70",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No south-climate/hydro field repair was performed. Finite aggregate contributor fix1091 is source-qualified and merged, with installed firmware still620a218a.\n\nNext action after explicit resume: Use the deferred shared survey to distinguish climate, south1 soil and hydro faults before a bounded identified repair.\n\nAcceptance limits: UNKNOWN telemetry alone does not prove hardware cause; no silent locked-panel change or recovery claim.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 782,
+    "kind": "issue",
+    "id": 6419954378,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6419954378",
+    "updated_at": "2026-10-26T15:28:35Z",
+    "readback_verified": true,
+    "body_sha256": "9a3bfce6f88fd395270b66b3de0c2b4a0b6362ec4affd3b3f7608eb1ecd2992b",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Existing winter collector remains active; October26 last successful scheduled job06:30:28Z is before the Nov2 first declared observation window. No authentic selected crop/contributor/target interval or original draw was supplied.\n\nNext action after explicit resume: Retain existing Nov2/Nov3 observation/custody path; obtain genuine inputs before empirical joint power or lock.\n\nAcceptance limits: A scheduled successful no-due collector is not a study day or qualified endpoint; no duplicate collector or fabricated clocks.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 783,
+    "kind": "issue",
+    "id": 6419955969,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6419955969",
+    "updated_at": "2026-10-26T15:28:39Z",
+    "readback_verified": true,
+    "body_sha256": "aed7bbc22135fceaaccbaf451dec543b60236700d195a349994a8c0a3285b813",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. The22-case1094 fixture adds real existing lifecycle/executor LOGIN committed native transitions; it does not complete the selector-to-freezer/analyst vertical route. Analyst remains unresolved in retained evidence.\n\nNext action after explicit resume: Reuse the actual scoped LOGIN receipts, retain #587/#639 completion edges and qualify legitimate remaining stages/analyst with authentic inputs.\n\nAcceptance limits: Owner catalog/SET ROLE/synthetic output cannot qualify the full authentic vertical path; no credential issuance.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 784,
+    "kind": "issue",
+    "id": 6419957790,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6419957790",
+    "updated_at": "2026-10-26T15:28:44Z",
+    "readback_verified": true,
+    "body_sha256": "79ce13677ba29a37b74993398a05e4789bb852d03b50aae0ab1a3559b0a6e44a",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No actual full60-day assigned pilot was operated.\n\nNext action after explicit resume: Prepare blinded custody/deviation ownership; actual operation follows genuine #640 acceptance.\n\nAcceptance limits: No substitute days, redraw or synthetic assignments.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 785,
+    "kind": "issue",
+    "id": 6419959346,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6419959346",
+    "updated_at": "2026-10-26T15:28:48Z",
+    "readback_verified": true,
+    "body_sha256": "164e732c418af146a2bf19c3fd6c54297c0d94ba7d3e1cdbee9c510aa57cbcfe",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No completed authentic pilot or audited reveal exists.\n\nNext action after explicit resume: Retain outcome-report and independent unchanged-byte reproduction preparation until #784 completes.\n\nAcceptance limits: No yield/profit extrapolation or automatic control change.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 963,
+    "kind": "issue",
+    "id": 6419960999,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6419960999",
+    "updated_at": "2026-10-26T15:28:52Z",
+    "readback_verified": true,
+    "body_sha256": "ef8f992cc6545a00dcd3152454453d6566019b98695fdf03074eb0d925a0b856",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Live reported firmware remains620a218a. Delivered formatter/consumer source and newer source compiler qualification do not provide HA length-error recovery or rollback proof.\n\nNext action after explicit resume: Bind exact selected firmware/ingestor/HA consumers and qualified recovery in #390; retain current unknowns.\n\nAcceptance limits: No fresh flash-byte hash, real HA recovery canary or newly accepted last-good.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 1001,
+    "kind": "issue",
+    "id": 6419962591,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6419962591",
+    "updated_at": "2026-10-26T15:28:56Z",
+    "readback_verified": true,
+    "body_sha256": "d5b290f3adb09b9a207f4ad6888eb395d2697473344e941cc2ab5141254107c7",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. No namespace/certificate/HostRegexp cleanup occurred in this session.\n\nNext action after explicit resume: Keep exact owner outputs mapped to network602 and agents4468 and refresh those owner states before a future cleanup.\n\nAcceptance limits: No deletion or TLS/DNS change without exact no-consumer evidence; retained deferred scope remains.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 1009,
+    "kind": "issue",
+    "id": 6419964242,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6419964242",
+    "updated_at": "2026-10-26T15:29:00Z",
+    "readback_verified": true,
+    "body_sha256": "4f33164445ed7bff99a337e49cfcf34660fddd8e3892ca06a948e9b1aa9a4784",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Signed-artifact software remains delivered; native dependency correction already follows network839 for the exact carried passive device ACL/current-flow output. New source-only firmware qualification does not flash the controller.\n\nNext action after explicit resume: Consume exact effective TCP3232/6053 boundary output plus reviewed candidate/recovery custody before any separately scoped attended cutover.\n\nAcceptance limits: No new ESP32 connection, password rotation, OTA, device signing enforcement or writer-hold release.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 1010,
+    "kind": "issue",
+    "id": 6419965903,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6419965903",
+    "updated_at": "2026-10-26T15:29:05Z",
+    "readback_verified": true,
+    "body_sha256": "d542e6596c85ca6dc2a0644bb4042a5d21e18844818c3942990deae715e840e1",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 October 26, 2026\n\nExecution is paused at Jason\u2019s request. Current chain diagnosis is complete and source receivers/log correlation are prepared in Verdify; exact MCP tunnel-row/checksum contract in network-infra and3 declared ownership rows in Agents are also prepared/reviewed. None is deployed. Existing successful secret-free per-tool audit remains delivered.\n\nNext action after explicit resume: On resume continue normal serialized source CI/review, coordinator-owned pin train and receiver-first locked delivery. Preserve declared MCP Access deny/everyone until an explicitly approved usable public identity/path exists; genuine external DB-read/spoof/Loki join remains required.\n\nAcceptance limits: CF-Ray is only bounded correlation; exact trusted router/entrypoint plus emitting proxy Pod UID/IP and actual MCP transport peer are mandatory. No broad CIDR trust, Access relaxation, new credentials or synthetic-header substitution.\n\nLive readback **15:17 UTC**: Argo Synced/Healthy at `0ed369fd`, node5 Ready/schedulable, same ingestor UID with zero restarts and one existing TCP6053 socket, API health200, climate/action age50\u201351s. **Writer remains halted,12completed,0staged, handoff unsettled.** No new device connection was opened; health does not clear acceptance.\n\n[Full shutdown handoff/live snapshots](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issue actions and limits](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Existing cluster jobs and scheduled processing are left unchanged and active; their outcomes may advance after these timestamped reads. This issue remains open."
+  },
+  {
+    "number": 1010,
+    "kind": "body_correction",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010",
+    "readback_verified": true,
+    "before_sha256": "78db5e4b59b5f9ce48ff1368df00c452b6538419b5ba729abc0ac3e3deebb122",
+    "after_sha256": "9a2f2d2040e28beff06b3ba193f45af2d494622cfca9556f806c9b4bcab2ac19",
+    "acceptance_unchanged": true
+  },
+  {
+    "number": 1095,
+    "kind": "pull_request",
+    "id": 6419968557,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1095#issuecomment-6419968557",
+    "updated_at": "2026-10-26T15:31:37Z",
+    "readback_verified": true,
+    "body_sha256": "a3f4386799659b5939fd88d540db962cf654f9612109539a854d15769f2ba9ab",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown checkpoint \u2014 leave existing qualification running\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nJason requested shutdown. Exact head `96464472f58ccb7bb1f62aa19af1421fa601a56c` and all source are pushed. Native actual-YAML qualification passed **219/219**; identical baseline controls produce76 expected failures/143passes. Full required CI `verdify-platform-pr-ci-qkprq` (UID `63665964-8b9a-46f7-839e-6f2ce0af2f19`) was Running/pending at15:16:47UTC. Compiler `verdify-control-compile-96464472-20261026-01` (UID `3d86b16a-f485-4d9f-9660-0fcf6f320214`) was Running: greenhouse compiled, recovery/terminal16-hash/negative receipt pending. Both stay active; no cancel/retry/replacement or auto-merge.\n\nThis exact source privately qualified19/19; main's separately merged22-case fixture must remain after ordinary merge. Do not rebase merely because main moved. Collect authoritative terminal results from these exact handles on explicit resume. No source merge, production sync, firmware upload, new ESP32 connection or node action before stopping. [Durable source/live evidence and resume handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 855,
+    "kind": "pull_request",
+    "id": 6419969886,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855#issuecomment-6419969886",
+    "updated_at": "2026-10-26T15:29:15Z",
+    "readback_verified": true,
+    "body_sha256": "b6da91fd8479771ca90c54b7fb2ffa3e620f93f18a913dca417788491b93dc6c",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\nShutdown checkpoint: this activation draft remains parked. No production experiment or physical activation, device connection or node action occurred. #749/#587/#639 and genuine physical/safety/scientific acceptance remain incomplete; newer private22-case qualification does not authorize this draft. Existing independent cluster jobs remain processing. [Current full handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/b4e894a2dd88ea8671b38c56b0bcd5b818d3ca3e/planning/handoffs/2026-10-26-1520-shutdown/README.md)."
+  },
+  {
+    "number": 775,
+    "kind": "issue",
+    "id": 6419971356,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6419971356",
+    "updated_at": "2026-10-26T15:33:37Z",
+    "readback_verified": true,
+    "body_sha256": "66877b164f9651d28aecb646ac01e54c8f48dc9e29ca4f224e097e1a6db75197",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\n### Shutdown handoff \u2014 execution paused; cluster processing continues\n\n<!-- verdify-shutdown-terminal-20261026 -->\n**Final readback at15:27\u201315:28UTC supersedes the pending snapshot below:** exacthead `96464472` required CI succeeded15:23:08Z (GitHub status success15:22:59Z); its existing compiler succeeded15:23:44Z. Both greenhouse/recovery targets compiled, expected negative exit1 and all16 compiler hashes are present, all11 receipt checks passed. Together with219/219 actual-YAML cases, source qualification is complete. **PR#1095 remains OPEN/unmerged, auto-merge disabled; no firmware or production change.** Main validation62cgw also succeeded. Main image buildm8tzv was stillRunning at15:27:24Z and is left active. Use retained receipts on explicit resume; no duplicate jobs or rebase just because main moved.\n[Final exact job/compiler receipts](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/terminal-at-shutdown/) \u00b7 [Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md).\n\n\nJason requested updated current issues, durable context and shutdown. **All41 open issues now have an issue-specific current status/action/acceptance-limit update, read back from GitHub.** All remain open. All three open PRs (#1095, parked draft#855, and automatically created candidate#1096) also have verified shutdown updates.\n\n- [Canonical handoff: live snapshots, exact job handles, branches and resume order](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/README.md) \u00b7 [All41 issues: evidence, blockers and next actions](https://github.com/VerdifyConsultancy/verdify-platform/blob/1a714d621e9ede91d77982d3928010863afbf7e3/planning/handoffs/2026-10-26-1520-shutdown/issue-status-current.md). Custody commit **`1a714d621e9ede91d77982d3928010863afbf7e3`** is pushed; files were hash-verified and secret-scanned.\n- **15:17UTC live:** Argo Synced/Healthy at `0ed369fd`, no operation; all18 workload controllers at desired Ready replicas, node5 Ready/schedulable, same ingestor UID955fec0b with zero restarts and the same existing TCP6053 socket. API200/ready/DBreachable; climate/action age50\u201351s. Firmware unchanged `2026.10.2.0637.620a218a-wifi-bound`.\n- **Writer remains halted,12completed,0staged, handoff unsettled**, unchanged stageSHA `5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663`. Fresh telemetry and healthy services do not establish recovery.\n- **Source delivered:** #1092 candidate-only cleanup merged;9 superseded candidate PRs closed with exact comparison and no promotion. #1091 merged after140 actual-YAML cases plus strict native and both secretless compiler targets. #1094 merged after full requiredCI and **22/22 private cases /13of16nativeSQL reasons**. None grants physical/production-experiment or writer recovery credit.\n- **Still running at15:17UTC:** `verdify-platform-pr-ci-qkprq` (#1095 fullCI), `verdify-control-compile-96464472-20261026-01` (greenhouse compiled; recovery/finalreceipt pending), `verdify-platform-pr-ci-62cgw` (mainvalidation), `verdify-platform-ci-m8tzv` (mainbuild). #1095's separate strict native proof already passed219/219 with76 causal baseline failures. **No shutdown merge or deployment; observe existing exactUID/source handles on resume.** They may finish normally after this snapshot.\n- **Prepared, not delivered:** #1010's product receiver, exact Network tunnel row and Agents ownership companions are all committed/pushed; owner merge/pin coordination, CI and live boundary/external proof remain. Existing public Access Block Everyone stays. Its stale pod-CIDR trust suggestion was corrected without changing acceptance.\n- **Remaining gates:** survey later; no CO2 reference meter; genuine scientific inputs and analyst identity; unsettled readiness/writer hold; attended physical#641; selected signed release/recovery#390; authentic pilot and time gates. Passive#410 remains610/646 represented minutes/36missing, complete-day zeroNULL;#386 ordinary cutoffs do not prove natural min-on overlap.\n\nExisting collectors, backups, winter/native freezer and publishing schedules stay enabled; already-suspended firmware builder/flasher are unchanged. No cluster job was cancelled/restarted/replaced/suspended during shutdown. No new ESP32 connection, cordon, OTA, Slack send, credential/RBAC change, experiment activation or hold release. Local agents stop after publication/custody; cluster processing continues independently. Resume by reading the existing outcomes before submitting new work.\n\n\n**Final background read at 2026-10-26T15:33:33.101622+00:00:** `verdify-platform-pr-ci-qnkj5` UID`c5fbb49a-3418-4b8d-bef9-da4a0aabbe7f` Running. Existing workflows completed or progressed naturally; none was cancelled, restarted, replaced or suspended. Candidate PR#1096 appeared automatically and is left open/unpromoted with its own shutdown update. Existing scheduled collectors, backups and serving workloads remain unchanged.",
+    "terminal_addendum_verified": true
+  },
+  {
+    "number": 1096,
+    "kind": "pull_request",
+    "id": 6420069207,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1096#issuecomment-6420069207",
+    "updated_at": "2026-10-26T15:33:34Z",
+    "readback_verified": true,
+    "body_sha256": "f35568aae5dff2a8db4c84efd6fd498d156ca7a9731fb14cb47bb24e43c90449",
+    "body": "<!-- verdify-shutdown-20261026-1520 -->\nShutdown checkpoint: this candidate PR was created automatically by the existing main image build during handoff preparation. Exact candidate head9b9d7c28436ebbe57942ac6563a94f85a857cf3d, source0ed369fd. It remains OPEN and unmerged; no promotion, production sync or new ingestor/device connection is part of shutdown. Its automatic CI and all existing cluster processing remain active and may finish normally. Resume by inspecting the exact existing CI/build results and source/release-pin distinction; do not recreate jobs.\n\n[Canonical shutdown handoff](https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6419971356)."
+  }
+]

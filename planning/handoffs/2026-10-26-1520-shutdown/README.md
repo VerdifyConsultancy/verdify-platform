@@ -5,6 +5,16 @@ paused. Leave existing cluster jobs active and processing; do not cancel, restar
 replace or suspend them. Existing automatic deadlines/cleanup remain unchanged.
 No further merge, deployment, device call or maintenance is part of this handoff.
 
+## Final background and publication closure
+
+Read at 2026-10-26T15:33:33.101622+00:00. All41 open issue comments and all3 open PRs (#855,#1095,#1096) are updated and GET-readback verified. Publication receipts are retained alongside this handoff. No issue was closed.
+
+The prior main build completed naturally and created candidate#1096 at head `9b9d7c28436ebbe57942ac6563a94f85a857cf3d`. It remains unmerged/unpromoted. Its normal CI is active:
+
+- `verdify-platform-pr-ci-qnkj5`, UID `c5fbb49a-3418-4b8d-bef9-da4a0aabbe7f`, Running, source `9b9d7c28436ebbe57942ac6563a94f85a857cf3d`.
+
+Leave this existing CI and all scheduled collectors/backups/publishing active. Earlier four-job running snapshots are historical; jobs completed through their normal lifecycle. No job was cancelled/retried/replaced/suspended, no further source merge or deployment occurred. Execution in this chat is stopped after custody publication.
+
 ## Final terminal readback — 15:27–15:28 UTC
 
 The earlier15:17 snapshots below are retained as history. **Three existing jobs

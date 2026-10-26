@@ -1,7 +1,7 @@
 {
   "schema": "verdify.shutdown/2026-10-26-v2",
-  "prepared_at": "2026-10-26T15:29:19.780523+00:00",
-  "execution": "paused by Jason; no new work",
+  "prepared_at": "2026-10-26T15:34:32.585505+00:00",
+  "execution": "paused by Jason; shutdown complete; no local continuation",
   "cluster_processing": "leave existing Jobs, Workflows, CronJobs and serving workloads unchanged; normal existing lifecycle continues",
   "context": "vallery",
   "namespace": "verdify-prod",
@@ -9,6 +9,7 @@
   "latest_main": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
   "open_issues": 41,
   "open_prs": [
+    1096,
     1095,
     855
   ],
@@ -76,7 +77,7 @@
     "attended physical baseline-target-baseline and selected release/recovery proof"
   ],
   "next_resume": [
-    "Read current issue775 handoff and current steer/inflight; verify all exact existing job UIDs/source before observing results.",
+    "Read canonical issue775 comment, this final handoff and current steer/inflight; inspect existing candidate1096 CI handle/source/UID without duplication. Read already-successful1095 terminal receipts before source review.",
     "Read retained final1095 full required CI and both-target compiler receipts; perform independent source review and preserve main22-case fixture. No duplicate jobs.",
     "Independent review and source merge only after full required CI and both compiler targets pass; keep main22-case fixture. Do not rebase solely for moved main.",
     "Continue1010 normal source CI and owner coordination; coordinator owns agents merge/pins.",
@@ -87,5 +88,24 @@
     "1095_compiler": "Succeeded",
     "main_validation": "Succeeded",
     "main_image_build": "Running at15:27:24Z; leave active"
-  }
+  },
+  "github_publication": {
+    "open_issues": 41,
+    "open_prs": 3,
+    "verified_comments": 44,
+    "canonical_comment": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6419971356"
+  },
+  "active_workflows_at_last_read": [
+    {
+      "name": "verdify-platform-pr-ci-qnkj5",
+      "uid": "c5fbb49a-3418-4b8d-bef9-da4a0aabbe7f",
+      "phase": "Running",
+      "startedAt": "2026-10-26T15:27:59Z",
+      "finishedAt": null,
+      "parameters": {
+        "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+        "head-revision": "9b9d7c28436ebbe57942ac6563a94f85a857cf3d"
+      }
+    }
+  ]
 }

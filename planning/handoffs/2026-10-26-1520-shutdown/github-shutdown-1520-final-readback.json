@@ -1,0 +1,1036 @@
+{
+  "verified_at": "2026-10-26T15:33:38.294094+00:00",
+  "issue_count": 41,
+  "pull_request_count": 3,
+  "evidence_commit": "1a714d621e9ede91d77982d3928010863afbf7e3",
+  "handoff_comment": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6419971356",
+  "all_current_issues_covered": true,
+  "no_issue_closure": true,
+  "verified_comments": [
+    {
+      "number": 16,
+      "kind": "issue",
+      "id": 6419904741,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16#issuecomment-6419904741",
+      "body_sha256": "a98eacc6d8768def8cccb3d0f3b1380d5095b8e0d53b39953a39c73a323e37c2",
+      "updated_at": "2026-10-26T15:26:27Z",
+      "verified": true
+    },
+    {
+      "number": 31,
+      "kind": "issue",
+      "id": 6419906268,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31#issuecomment-6419906268",
+      "body_sha256": "fa5b37ad22aafc6f2b44e14afd0009cd7746a1a4f8415196d82e53e0fcabaf34",
+      "updated_at": "2026-10-26T15:26:31Z",
+      "verified": true
+    },
+    {
+      "number": 45,
+      "kind": "issue",
+      "id": 6419907757,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45#issuecomment-6419907757",
+      "body_sha256": "4ee723764bf00b47ba16f10859bfb8709f54d17bc0f77a970dbf55367189a901",
+      "updated_at": "2026-10-26T15:26:35Z",
+      "verified": true
+    },
+    {
+      "number": 51,
+      "kind": "issue",
+      "id": 6419909379,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51#issuecomment-6419909379",
+      "body_sha256": "6e96f766876a55e219b61c323686d489f18758e3ddc828cc4782f06c4b36b1be",
+      "updated_at": "2026-10-26T15:26:39Z",
+      "verified": true
+    },
+    {
+      "number": 52,
+      "kind": "issue",
+      "id": 6419910778,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52#issuecomment-6419910778",
+      "body_sha256": "2cd29bce8c5f5ce4316e37aded4f8ff0fdda01e122b83cae91bd04258871679a",
+      "updated_at": "2026-10-26T15:26:43Z",
+      "verified": true
+    },
+    {
+      "number": 75,
+      "kind": "issue",
+      "id": 6419912243,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75#issuecomment-6419912243",
+      "body_sha256": "a4ec5aec1c4dfb9d24079ecfe3babfa5623c20171243169783a5c46d65efa64f",
+      "updated_at": "2026-10-26T15:26:47Z",
+      "verified": true
+    },
+    {
+      "number": 297,
+      "kind": "issue",
+      "id": 6419913756,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297#issuecomment-6419913756",
+      "body_sha256": "935c6af9e71f132e37f532be61660ba93e38d36ff15b172be622a4a4c394fb60",
+      "updated_at": "2026-10-26T15:26:51Z",
+      "verified": true
+    },
+    {
+      "number": 298,
+      "kind": "issue",
+      "id": 6419915193,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298#issuecomment-6419915193",
+      "body_sha256": "9ca44e00090bd655d04fdbc200f5eda844090946fb90d4c12a747c297d0fede0",
+      "updated_at": "2026-10-26T15:26:55Z",
+      "verified": true
+    },
+    {
+      "number": 299,
+      "kind": "issue",
+      "id": 6419916650,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299#issuecomment-6419916650",
+      "body_sha256": "b63491c45fdfc3573a3c60f3de9be63fb8f10ccb32ca1e6b6a17a2e894b62020",
+      "updated_at": "2026-10-26T15:31:11Z",
+      "verified": true
+    },
+    {
+      "number": 350,
+      "kind": "issue",
+      "id": 6419917988,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350#issuecomment-6419917988",
+      "body_sha256": "2246bf888363ed2235cd5c3b596102a9325094b83e3447306c616c193ce45e32",
+      "updated_at": "2026-10-26T15:31:14Z",
+      "verified": true
+    },
+    {
+      "number": 359,
+      "kind": "issue",
+      "id": 6419919512,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359#issuecomment-6419919512",
+      "body_sha256": "45c270fe9b91a32f6d4c5df21da5f24b56d050a48acb95d0e1dc082003301021",
+      "updated_at": "2026-10-26T15:31:18Z",
+      "verified": true
+    },
+    {
+      "number": 367,
+      "kind": "issue",
+      "id": 6419921028,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367#issuecomment-6419921028",
+      "body_sha256": "6ab50f6f30b815c5cf56a7c55ef739a40d87108d5d7ec00ef9467850659895cb",
+      "updated_at": "2026-10-26T15:31:22Z",
+      "verified": true
+    },
+    {
+      "number": 368,
+      "kind": "issue",
+      "id": 6419922514,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368#issuecomment-6419922514",
+      "body_sha256": "935b4fd1e172a0116854c111c0be7cf4e8fafe88fe4013ba85e719b747d3773e",
+      "updated_at": "2026-10-26T15:27:14Z",
+      "verified": true
+    },
+    {
+      "number": 369,
+      "kind": "issue",
+      "id": 6419924018,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369#issuecomment-6419924018",
+      "body_sha256": "4af95bb3b24e15cc1d4a68a4da20fc22976532d73eeb40b398acb0aac849dbc1",
+      "updated_at": "2026-10-26T15:27:18Z",
+      "verified": true
+    },
+    {
+      "number": 370,
+      "kind": "issue",
+      "id": 6419925590,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370#issuecomment-6419925590",
+      "body_sha256": "30560aee2aeb1f3556650537335f1a7516ff151ca0a817897e6e9422f18b5d67",
+      "updated_at": "2026-10-26T15:27:22Z",
+      "verified": true
+    },
+    {
+      "number": 378,
+      "kind": "issue",
+      "id": 6419927181,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378#issuecomment-6419927181",
+      "body_sha256": "6adbd0c14a2593fb8a03acf668f4a77c409af606ea0f71ee678135efc47cf6e9",
+      "updated_at": "2026-10-26T15:27:26Z",
+      "verified": true
+    },
+    {
+      "number": 386,
+      "kind": "issue",
+      "id": 6419928817,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386#issuecomment-6419928817",
+      "body_sha256": "14135c6ed9a91403736499ca2c8b4af8f466244c15705eb08db1747369651b0b",
+      "updated_at": "2026-10-26T15:27:30Z",
+      "verified": true
+    },
+    {
+      "number": 390,
+      "kind": "issue",
+      "id": 6419930317,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390#issuecomment-6419930317",
+      "body_sha256": "4e31a7bfcfb45528fb9c31eb4f2904b0326d667339e69130276c5560d8cc26ed",
+      "updated_at": "2026-10-26T15:31:25Z",
+      "verified": true
+    },
+    {
+      "number": 398,
+      "kind": "issue",
+      "id": 6419931853,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398#issuecomment-6419931853",
+      "body_sha256": "af73c1bb0b369e470450d5448f4c0d392611e70b9d4ed145d4b0b710b70ba0de",
+      "updated_at": "2026-10-26T15:27:38Z",
+      "verified": true
+    },
+    {
+      "number": 410,
+      "kind": "issue",
+      "id": 6419933439,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6419933439",
+      "body_sha256": "34990e3170130b3d707990d10605d8ae45acf06af207a62b98af1d6a5405aeb2",
+      "updated_at": "2026-10-26T15:27:42Z",
+      "verified": true
+    },
+    {
+      "number": 412,
+      "kind": "issue",
+      "id": 6419934941,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412#issuecomment-6419934941",
+      "body_sha256": "7129fcd4a43dbd92da7b06e8dd0d30538443a6c383279dc08100a0d7d46b594a",
+      "updated_at": "2026-10-26T15:27:46Z",
+      "verified": true
+    },
+    {
+      "number": 430,
+      "kind": "issue",
+      "id": 6419936604,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430#issuecomment-6419936604",
+      "body_sha256": "c1d0c3fdbb5a189e195c0388d24e7008baadc7e84e535ee7024bcb863d6a03c7",
+      "updated_at": "2026-10-26T15:31:29Z",
+      "verified": true
+    },
+    {
+      "number": 434,
+      "kind": "issue",
+      "id": 6419938251,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434#issuecomment-6419938251",
+      "body_sha256": "3f468b0ec25c5deef904a0bf2a806a475da7dda8bf1831ed2ba74f9d4201b73c",
+      "updated_at": "2026-10-26T15:31:32Z",
+      "verified": true
+    },
+    {
+      "number": 581,
+      "kind": "issue",
+      "id": 6419939727,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581#issuecomment-6419939727",
+      "body_sha256": "69cb3dfcc8db7eeff77a8de1425bc52b880ee81135b8e3c723ec573bc39b38ad",
+      "updated_at": "2026-10-26T15:27:59Z",
+      "verified": true
+    },
+    {
+      "number": 587,
+      "kind": "issue",
+      "id": 6419941325,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587#issuecomment-6419941325",
+      "body_sha256": "2c5f715f0198279350a6230558abcf12ae58db8f92dd232993cd421f07b0baf1",
+      "updated_at": "2026-10-26T15:28:03Z",
+      "verified": true
+    },
+    {
+      "number": 588,
+      "kind": "issue",
+      "id": 6419942900,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588#issuecomment-6419942900",
+      "body_sha256": "9e516da7f7a5dd8c85cc8af909dfa7c1ea4a3780953fe8310ba0a1bd3b25ca26",
+      "updated_at": "2026-10-26T15:28:07Z",
+      "verified": true
+    },
+    {
+      "number": 639,
+      "kind": "issue",
+      "id": 6419944488,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639#issuecomment-6419944488",
+      "body_sha256": "2c5f715f0198279350a6230558abcf12ae58db8f92dd232993cd421f07b0baf1",
+      "updated_at": "2026-10-26T15:28:11Z",
+      "verified": true
+    },
+    {
+      "number": 640,
+      "kind": "issue",
+      "id": 6419946196,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640#issuecomment-6419946196",
+      "body_sha256": "88a43323441c9c2820561eb318570a5dce92f930c123be731a9f0ef69b12928a",
+      "updated_at": "2026-10-26T15:28:15Z",
+      "verified": true
+    },
+    {
+      "number": 641,
+      "kind": "issue",
+      "id": 6419947931,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-6419947931",
+      "body_sha256": "e3cd3052b99ad02a3bff33da27ada8b4a5176e3557980b50354a72a9a0a7cf9a",
+      "updated_at": "2026-10-26T15:28:19Z",
+      "verified": true
+    },
+    {
+      "number": 642,
+      "kind": "issue",
+      "id": 6419949539,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642#issuecomment-6419949539",
+      "body_sha256": "92dc3202e3ab03a0ba5860cc62a5154f586c54a50e49199a82a09dd94b006f11",
+      "updated_at": "2026-10-26T15:28:23Z",
+      "verified": true
+    },
+    {
+      "number": 749,
+      "kind": "issue",
+      "id": 6419951040,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749#issuecomment-6419951040",
+      "body_sha256": "8da8b649393a63a23799e8c68593242ab061c99ff17d30ed40baf5770e674137",
+      "updated_at": "2026-10-26T15:28:27Z",
+      "verified": true
+    },
+    {
+      "number": 751,
+      "kind": "issue",
+      "id": 6419952757,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751#issuecomment-6419952757",
+      "body_sha256": "058b0aeb2972e4ebd733b1ea3945de38bc059e7561dfc8e9a4328aaae9eb3d70",
+      "updated_at": "2026-10-26T15:28:31Z",
+      "verified": true
+    },
+    {
+      "number": 782,
+      "kind": "issue",
+      "id": 6419954378,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782#issuecomment-6419954378",
+      "body_sha256": "9a3bfce6f88fd395270b66b3de0c2b4a0b6362ec4affd3b3f7608eb1ecd2992b",
+      "updated_at": "2026-10-26T15:28:35Z",
+      "verified": true
+    },
+    {
+      "number": 783,
+      "kind": "issue",
+      "id": 6419955969,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783#issuecomment-6419955969",
+      "body_sha256": "aed7bbc22135fceaaccbaf451dec543b60236700d195a349994a8c0a3285b813",
+      "updated_at": "2026-10-26T15:28:39Z",
+      "verified": true
+    },
+    {
+      "number": 784,
+      "kind": "issue",
+      "id": 6419957790,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784#issuecomment-6419957790",
+      "body_sha256": "79ce13677ba29a37b74993398a05e4789bb852d03b50aae0ab1a3559b0a6e44a",
+      "updated_at": "2026-10-26T15:28:44Z",
+      "verified": true
+    },
+    {
+      "number": 785,
+      "kind": "issue",
+      "id": 6419959346,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785#issuecomment-6419959346",
+      "body_sha256": "164e732c418af146a2bf19c3fd6c54297c0d94ba7d3e1cdbee9c510aa57cbcfe",
+      "updated_at": "2026-10-26T15:28:48Z",
+      "verified": true
+    },
+    {
+      "number": 963,
+      "kind": "issue",
+      "id": 6419960999,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/963#issuecomment-6419960999",
+      "body_sha256": "ef8f992cc6545a00dcd3152454453d6566019b98695fdf03074eb0d925a0b856",
+      "updated_at": "2026-10-26T15:28:52Z",
+      "verified": true
+    },
+    {
+      "number": 1001,
+      "kind": "issue",
+      "id": 6419962591,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1001#issuecomment-6419962591",
+      "body_sha256": "d5b290f3adb09b9a207f4ad6888eb395d2697473344e941cc2ab5141254107c7",
+      "updated_at": "2026-10-26T15:28:56Z",
+      "verified": true
+    },
+    {
+      "number": 1009,
+      "kind": "issue",
+      "id": 6419964242,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1009#issuecomment-6419964242",
+      "body_sha256": "4f33164445ed7bff99a337e49cfcf34660fddd8e3892ca06a948e9b1aa9a4784",
+      "updated_at": "2026-10-26T15:29:00Z",
+      "verified": true
+    },
+    {
+      "number": 1010,
+      "kind": "issue",
+      "id": 6419965903,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/1010#issuecomment-6419965903",
+      "body_sha256": "d542e6596c85ca6dc2a0644bb4042a5d21e18844818c3942990deae715e840e1",
+      "updated_at": "2026-10-26T15:29:05Z",
+      "verified": true
+    },
+    {
+      "number": 1095,
+      "kind": "pull_request",
+      "id": 6419968557,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1095#issuecomment-6419968557",
+      "body_sha256": "a3f4386799659b5939fd88d540db962cf654f9612109539a854d15769f2ba9ab",
+      "updated_at": "2026-10-26T15:31:37Z",
+      "verified": true
+    },
+    {
+      "number": 855,
+      "kind": "pull_request",
+      "id": 6419969886,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855#issuecomment-6419969886",
+      "body_sha256": "b6da91fd8479771ca90c54b7fb2ffa3e620f93f18a913dca417788491b93dc6c",
+      "updated_at": "2026-10-26T15:29:15Z",
+      "verified": true
+    },
+    {
+      "number": 775,
+      "kind": "issue",
+      "id": 6419971356,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775#issuecomment-6419971356",
+      "body_sha256": "66877b164f9651d28aecb646ac01e54c8f48dc9e29ca4f224e097e1a6db75197",
+      "updated_at": "2026-10-26T15:33:37Z",
+      "verified": true
+    },
+    {
+      "number": 1096,
+      "kind": "pull_request",
+      "id": 6420069207,
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1096#issuecomment-6420069207",
+      "body_sha256": "f35568aae5dff2a8db4c84efd6fd498d156ca7a9731fb14cb47bb24e43c90449",
+      "updated_at": "2026-10-26T15:33:34Z",
+      "verified": true
+    }
+  ],
+  "open_pull_requests_at_readback": [
+    {
+      "headRefOid": "9b9d7c28436ebbe57942ac6563a94f85a857cf3d",
+      "number": 1096,
+      "title": "gitops: candidate image pins for 0ed369fde08e",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1096"
+    },
+    {
+      "headRefOid": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+      "number": 1095,
+      "title": "Preserve admitted phase durations and count accepted relay cycles",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1095"
+    },
+    {
+      "headRefOid": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+      "number": 855,
+      "title": "Stage one-shot Gate P direct-proof activation for #641",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855"
+    }
+  ],
+  "final_job_state": "Existing main build/CI progressed naturally; all remaining Running/Pending workflows explicitly left active. Candidate1096 unmerged/unpromoted.",
+  "last_background_observation": {
+    "captured_at": "2026-10-26T15:33:33.101622+00:00",
+    "read_only": true,
+    "workflows": [
+      {
+        "name": "verdify-control-compile-96464472-20261026-01",
+        "uid": "3d86b16a-f485-4d9f-9660-0fcf6f320214",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T15:05:26Z",
+        "finishedAt": "2026-10-26T15:23:44Z",
+        "parameters": {
+          "revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+          "base_revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea"
+        }
+      },
+      {
+        "name": "verdify-control-native-96464472-20261026-01",
+        "uid": "45fe5053-6668-4c90-bf81-29d6d53193ad",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:53:44Z",
+        "finishedAt": "2026-10-26T14:56:30Z",
+        "parameters": {
+          "revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+          "base_revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea"
+        }
+      },
+      {
+        "name": "verdify-finite-compile-d7c25b0c-20261026-01",
+        "uid": "c60d2160-f296-4dec-8cf3-68fbaba5d78b",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:59:55Z",
+        "finishedAt": "2026-10-26T14:20:44Z",
+        "parameters": {
+          "revision": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+          "base_revision": "ccc4274cb790308685110a154831480f700e95d7"
+        }
+      },
+      {
+        "name": "verdify-finite-native-d7c25b0c-20261026-01",
+        "uid": "88700998-b28a-4303-8363-3cb053dfbd00",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:14:57Z",
+        "finishedAt": "2026-10-26T13:17:56Z",
+        "parameters": {
+          "revision": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+          "base_revision": "ccc4274cb790308685110a154831480f700e95d7"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-2c487",
+        "uid": "60033ac8-fb0a-4f46-9b0d-5b76afe3b7a1",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:25:09Z",
+        "finishedAt": "2026-10-26T14:47:37Z",
+        "parameters": {
+          "revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-6gn6p",
+        "uid": "55158486-86e6-4a46-9505-847ad2d3cf1c",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:49:38Z",
+        "finishedAt": "2026-10-25T17:15:00Z",
+        "parameters": {
+          "revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-7lmbr",
+        "uid": "8ef38573-b599-4989-838e-7db1aabecaa1",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T13:31:35Z",
+        "finishedAt": "2026-10-25T13:59:03Z",
+        "parameters": {
+          "revision": "522f77a2d1222dd2d0e3518b755f93355da90f53"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-7mhb4",
+        "uid": "c589aa8e-98ad-4e45-b08b-99bbc5d5f7f7",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:09:54Z",
+        "finishedAt": "2026-10-26T14:10:51Z",
+        "parameters": {
+          "revision": "119b85290ded94730abc03f45c332606d67431f4"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-hb2b9",
+        "uid": "ff499feb-c98a-474a-b3ac-c9a7426f25aa",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T15:43:40Z",
+        "finishedAt": "2026-10-25T16:11:18Z",
+        "parameters": {
+          "revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-m8tzv",
+        "uid": "b7537691-898e-43a5-ae1e-3ff403447343",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:59:46Z",
+        "finishedAt": "2026-10-26T15:28:06Z",
+        "parameters": {
+          "revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-pgdvp",
+        "uid": "7498715c-1faa-4fc2-b8d7-4d6b4dfa7cb8",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:31:55Z",
+        "finishedAt": "2026-10-25T16:32:47Z",
+        "parameters": {
+          "revision": "b4f78b4012e6ae578517bcc049dba69c585ec9a6"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-phrt4",
+        "uid": "1b2cae0a-7516-4aba-9937-0c0e23f36da6",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:52:12Z",
+        "finishedAt": "2026-10-25T23:11:35Z",
+        "parameters": {
+          "revision": "ccc4274cb790308685110a154831480f700e95d7"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-sl7bh",
+        "uid": "92632257-9351-4b7e-852e-6d0318351185",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:08:35Z",
+        "finishedAt": "2026-10-26T13:29:06Z",
+        "parameters": {
+          "revision": "ca9120fa308c77b2c71054758d0ca143428bdea6"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-tlpsc",
+        "uid": "33fb69b9-a530-488c-be11-1cc807602827",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:01:03Z",
+        "finishedAt": "2026-10-25T22:29:47Z",
+        "parameters": {
+          "revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-vh5cc",
+        "uid": "18c94c77-bae8-4bde-9b7e-f943276de27c",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T12:13:14Z",
+        "finishedAt": "2026-10-25T13:25:08Z",
+        "parameters": {
+          "revision": "0fc7567dd17131ca608e119669b924758c646457"
+        }
+      },
+      {
+        "name": "verdify-platform-ci-wpbkt",
+        "uid": "710ab1e5-9c6e-48f0-988f-8579fae6613e",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:57:08Z",
+        "finishedAt": "2026-10-26T14:16:10Z",
+        "parameters": {
+          "revision": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-2r9rj",
+        "uid": "b3a00711-173b-4eeb-8591-b4dff94c8d25",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:05:48Z",
+        "finishedAt": "2026-10-25T11:11:22Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "42a9baff8a2a7372ea8fee3e10dbf80fe0e81957"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-4p5bn",
+        "uid": "23201bf1-da96-4cf6-a09a-072acf85bdd8",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:29:42Z",
+        "finishedAt": "2026-10-25T22:50:09Z",
+        "parameters": {
+          "base-revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96",
+          "head-revision": "c97b5196b9f2a20d65dfdb9398f88e1015dd4c6f"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-62cgw",
+        "uid": "2218dcee-2dac-4ce1-8c5e-f50ec11d5caf",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:59:44Z",
+        "finishedAt": "2026-10-26T15:21:55Z",
+        "parameters": {
+          "base-revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea",
+          "head-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-72qq6",
+        "uid": "7bc9ba17-63c4-45c7-9f1f-b0e2f8f3990f",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T15:14:38Z",
+        "finishedAt": "2026-10-25T15:35:25Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "3748d4c4fe11b427d2805831cb46efdb197687dd"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-7ddcx",
+        "uid": "7d508198-a639-468a-bdab-a6c5bbf68eec",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:28:58Z",
+        "finishedAt": "2026-10-26T13:46:36Z",
+        "parameters": {
+          "base-revision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "head-revision": "5a6f50bd7b819d55621ad9f5f8d87582ecb5ea53"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-8qckf",
+        "uid": "2d30dc88-513a-45bc-81e8-0ec2480a1ed9",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:00:57Z",
+        "finishedAt": "2026-10-25T22:20:51Z",
+        "parameters": {
+          "base-revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f",
+          "head-revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-946tx",
+        "uid": "cc139a9e-dcb7-4705-b0b7-12bf6ebdd9ee",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:31:37Z",
+        "finishedAt": "2026-10-25T22:51:35Z",
+        "parameters": {
+          "base-revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96",
+          "head-revision": "f2ce60f29886907625f76a3d433e8b383b5bf065"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-9tf87",
+        "uid": "2d43efc8-03e6-44d5-a074-fdc0e636c113",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T12:59:20Z",
+        "finishedAt": "2026-10-25T13:16:00Z",
+        "parameters": {
+          "base-revision": "0fc7567dd17131ca608e119669b924758c646457",
+          "head-revision": "610d8037d76eaf4783cf086208e0ca7048eb0297"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-b6b7v",
+        "uid": "35926e0e-18f2-4e54-b091-189d7034cd7b",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T22:52:06Z",
+        "finishedAt": "2026-10-25T23:12:24Z",
+        "parameters": {
+          "base-revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96",
+          "head-revision": "ccc4274cb790308685110a154831480f700e95d7"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-crr7d",
+        "uid": "0004bfb5-6922-4195-ab7a-e42285673a16",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:11:10Z",
+        "finishedAt": "2026-10-25T16:31:17Z",
+        "parameters": {
+          "base-revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042",
+          "head-revision": "c64c706da3b50d6f8e9d8d9435e96785a3758092"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-fk4n5",
+        "uid": "724326b5-b0b0-46e0-a44c-a4fa33e62838",
+        "phase": "Failed",
+        "startedAt": "2026-10-26T14:04:11Z",
+        "finishedAt": "2026-10-26T14:15:47Z",
+        "parameters": {
+          "base-revision": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+          "head-revision": "e7bd3ba0f35911e52f3bcc3bb33c46e31a588a40"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-g7vr4",
+        "uid": "b476b9ca-715e-4e3f-9ea2-6f693449668b",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:33:24Z",
+        "finishedAt": "2026-10-26T14:55:14Z",
+        "parameters": {
+          "base-revision": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+          "head-revision": "6d2dccca89200b60eba916f22f8ef9169490f4f6"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-gps29",
+        "uid": "68dc76bc-0135-4872-9218-67a465ba4973",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T17:09:16Z",
+        "parameters": {
+          "base-revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f",
+          "head-revision": "b0a1020a8e74736f681281196c28b9e5f3b5b547"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-l8prt",
+        "uid": "b21ae5df-2d91-4f98-846d-f41076bf6d13",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:38:14Z",
+        "finishedAt": "2026-10-26T13:56:24Z",
+        "parameters": {
+          "base-revision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "head-revision": "bffc30954274c6bfbeba7a11acba6ed7b127347c"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-l9lhx",
+        "uid": "5afeae9f-7962-4b9d-97b2-35d96536b710",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T17:14:55Z",
+        "finishedAt": "2026-10-25T17:33:11Z",
+        "parameters": {
+          "base-revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f",
+          "head-revision": "53dad33539bc4685a8cc3286b937811e47d9cd63"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-lv49z",
+        "uid": "b49b9cf6-a7d5-48a5-9602-650daf6cdf80",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:08:32Z",
+        "finishedAt": "2026-10-26T13:26:40Z",
+        "parameters": {
+          "base-revision": "ccc4274cb790308685110a154831480f700e95d7",
+          "head-revision": "ca9120fa308c77b2c71054758d0ca143428bdea6"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-mbzsw",
+        "uid": "210db88b-c4a7-4130-9036-e5bae248bede",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T21:40:50Z",
+        "finishedAt": "2026-10-25T22:00:07Z",
+        "parameters": {
+          "base-revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f",
+          "head-revision": "59a8204c8a14d638758299e2aa355681e396ff31"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-n7pvb",
+        "uid": "5079349f-1a72-4c3d-804b-4d16e981e00e",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:25:06Z",
+        "finishedAt": "2026-10-26T14:44:15Z",
+        "parameters": {
+          "base-revision": "119b85290ded94730abc03f45c332606d67431f4",
+          "head-revision": "18570b0fc1b2cb34dea9a3b81899090fe6676aea"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-nl6gt",
+        "uid": "015a138d-f749-40ab-ae85-c8705267d19f",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T15:17:26Z",
+        "finishedAt": "2026-10-25T15:20:47Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "2a62f6cf59727c969b33979d01705c6215775070"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-p7vn7",
+        "uid": "c53207aa-90cc-4d25-b08c-3bffb3ed8b38",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:57:05Z",
+        "finishedAt": "2026-10-26T14:16:32Z",
+        "parameters": {
+          "base-revision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "head-revision": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-pq229",
+        "uid": "4a3bce3e-6d1e-4a55-9c01-199bb18ea278",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:21:07Z",
+        "finishedAt": "2026-10-25T11:27:13Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "35c0582611a42c9bc984f4b2b049c9e91046b3fd"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-q5x4l",
+        "uid": "9f55fce1-82b1-430d-9b54-ced907f2b446",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T12:49:46Z",
+        "finishedAt": "2026-10-25T13:02:38Z",
+        "parameters": {
+          "base-revision": "0fc7567dd17131ca608e119669b924758c646457",
+          "head-revision": "ef145563daa2f2850b5dd62f5428466b324de512"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-q9rzq",
+        "uid": "68b41140-3e11-4abe-a961-d4b4102665d8",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": "2026-10-26T13:30:05Z",
+        "parameters": {
+          "base-revision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "head-revision": "d7c25b0c620d537d56f938302d8be236a4d46fbb"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-qkprq",
+        "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T15:03:36Z",
+        "finishedAt": "2026-10-26T15:23:08Z",
+        "parameters": {
+          "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+          "head-revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-qlfgm",
+        "uid": "338e7e08-7443-4e2f-ab75-0c186ce4c611",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T17:09:21Z",
+        "parameters": {
+          "base-revision": "b4f78b4012e6ae578517bcc049dba69c585ec9a6",
+          "head-revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-qnkj5",
+        "uid": "c5fbb49a-3418-4b8d-bef9-da4a0aabbe7f",
+        "phase": "Running",
+        "startedAt": "2026-10-26T15:27:59Z",
+        "finishedAt": null,
+        "parameters": {
+          "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+          "head-revision": "9b9d7c28436ebbe57942ac6563a94f85a857cf3d"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-qpzhx",
+        "uid": "48c66e64-6942-4d8a-a123-4bdab540a631",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:12:04Z",
+        "finishedAt": "2026-10-25T11:20:40Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "febfa4229abf78b575fad490e102cd94fa935f5f"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-qq7kg",
+        "uid": "044771ad-a9a0-4b63-b3e5-437dc176544e",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:27:41Z",
+        "finishedAt": "2026-10-25T11:32:29Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "49f2da336b5b84a05ccea50d215e89c01f49d107"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-r7p8w",
+        "uid": "478b2f8d-5cbf-4c6b-af28-0db21df8f725",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T15:20:09Z",
+        "finishedAt": "2026-10-25T15:23:38Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "64023810badbcc7efbc6f02bdf38572467812bf9"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-rfmp8",
+        "uid": "d9353e0a-9836-4ba7-98e3-fb8c4091697f",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T15:20:07Z",
+        "finishedAt": "2026-10-25T15:21:49Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "746925e49c691bf7d20b3a0b332938d0ee4f93ad"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-szthq",
+        "uid": "c5bb43cf-d5eb-4f24-9723-73ef2e875dfd",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T15:43:37Z",
+        "finishedAt": "2026-10-25T16:04:50Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-thplh",
+        "uid": "8c76d0ff-cec6-4f5d-ae50-efa13d65a3e9",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T14:09:49Z",
+        "finishedAt": "2026-10-26T14:27:19Z",
+        "parameters": {
+          "base-revision": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+          "head-revision": "119b85290ded94730abc03f45c332606d67431f4"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-tz4wb",
+        "uid": "b05e363a-3525-49b5-87e7-662e180aa29d",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:31:51Z",
+        "finishedAt": "2026-10-25T16:49:05Z",
+        "parameters": {
+          "base-revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042",
+          "head-revision": "b4f78b4012e6ae578517bcc049dba69c585ec9a6"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-w7q5b",
+        "uid": "9cdbb387-2fee-423a-8162-d1548a596d2c",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T14:11:30Z",
+        "finishedAt": "2026-10-25T14:17:19Z",
+        "parameters": {
+          "base-revision": "522f77a2d1222dd2d0e3518b755f93355da90f53",
+          "head-revision": "ad3fc71aececf2778ae1cebf509e7af7a76b176a"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-xgsvk",
+        "uid": "5bee295a-3419-4d79-8035-0e4452ddd8cd",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T15:22:14Z",
+        "finishedAt": "2026-10-25T15:43:19Z",
+        "parameters": {
+          "base-revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079",
+          "head-revision": "eda5daedfc01d4106047c5b801fa42cd5afb1f1e"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-xngl4",
+        "uid": "23fe9b92-3524-4a31-8dbe-fe553b2ed1ca",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-25T16:30:21Z",
+        "finishedAt": "2026-10-25T16:48:29Z",
+        "parameters": {
+          "base-revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042",
+          "head-revision": "80c01fc08030afbf53522280afd1e9cc43fe2dbd"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-xpxnk",
+        "uid": "013e4af9-ab1c-4af4-b14e-2219000b9571",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:11:43Z",
+        "finishedAt": "2026-10-25T11:14:15Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "d11a857dbbb9264af926bd2940fa0bca23442de3"
+        }
+      },
+      {
+        "name": "verdify-platform-pr-ci-xt5jr",
+        "uid": "80cf5422-a540-4f4a-b0f8-e5d7609f4e14",
+        "phase": "Failed",
+        "startedAt": "2026-10-25T11:45:51Z",
+        "finishedAt": "2026-10-25T11:55:31Z",
+        "parameters": {
+          "base-revision": "624856f3524195c09fa884f4b8bda08801a23e7d",
+          "head-revision": "6b512b7245d815f4ea49c94158cc31cdd66af600"
+        }
+      },
+      {
+        "name": "verdify-www-ci-2bwvp",
+        "uid": "84a184e2-eba0-4495-9518-fc9b8e0dbdf8",
+        "phase": "Failed",
+        "startedAt": "2026-10-24T16:35:08Z",
+        "finishedAt": "2026-10-24T16:36:29Z",
+        "parameters": {
+          "revision": "69075d8354c8d8be6e66cc53a20303b4028ea34f"
+        }
+      },
+      {
+        "name": "verdify-www-ci-kwhf7",
+        "uid": "524ece81-ec75-43a0-b49b-e9ffd48a9667",
+        "phase": "Failed",
+        "startedAt": "2026-10-26T13:40:41Z",
+        "finishedAt": "2026-10-26T13:43:12Z",
+        "parameters": {
+          "revision": "0cdc0354ee5587c3a396687ea33d20b3a54260dd"
+        }
+      }
+    ]
+  }
+}
