@@ -1,0 +1,10 @@
+........................................................................ [ 32%]
+........................................................................ [ 65%]
+........................................................................ [ 98%]
+...                                                                      [100%]
+=============================== warnings summary ===============================
+tests/test_irrigation_admission_timing.py: 11 warnings
+  tests/test_irrigation_admission_timing.py:315: PytestWarning: record_property is incompatible with junit_family 'xunit2' (use 'legacy' or 'xunit1')
+    @pytest.mark.parametrize(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

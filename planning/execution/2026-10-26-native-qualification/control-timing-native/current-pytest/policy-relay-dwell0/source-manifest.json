@@ -1,0 +1,33 @@
+{
+  "source": "firmware/greenhouse/controls.yaml",
+  "source_sha256": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f",
+  "duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0",
+  "test_durations_s": [
+    60,
+    120,
+    240
+  ],
+  "duration_validation": "Native cases check generated wire min/max/scale before each change",
+  "fragments": {
+    "snapshot_or_legacy_policy_selection": {
+      "first_line": 64,
+      "last_line": 67,
+      "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"
+    },
+    "policy_constants": {
+      "first_line": 77,
+      "last_line": 86,
+      "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"
+    },
+    "relay_initialization_refresh_and_lambdas": {
+      "first_line": 132,
+      "last_line": 188,
+      "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"
+    },
+    "cycle_counters_and_actual_relay_application": {
+      "first_line": 934,
+      "last_line": 982,
+      "sha256": "255094b93c987ef323596a37710d3560abbffc8197fb7bd0bd857974fd7a5420"
+    }
+  }
+}

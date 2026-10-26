@@ -1,0 +1,23 @@
+{
+  "controls_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+  "hardware_sha256": "ccfc661da28cb59e73302b531d888b20bbb5ff6cfe464cace8c03a09ecaa196b",
+  "wire_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0",
+  "fragments": {
+    "policy_selection": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693",
+    "phase_constants": "0f0d5bf360b9faa33a86c6ee1b1d924bf831331de80f9277f03f4c10f15cd4f2",
+    "watchdog_and_topology": "8044f1349c2c51aa965166626ab9b62c0fe20006a83a36a5c348e5405dfec8a8",
+    "vent_cancellation": "fa8ed27385dabcc39e255c58de49c39b29a991457460622b3c2362ab4eda46b6",
+    "blocked_predicate": "901690162fc39ec0632fad2ffc636a71f840a5fbe90403c689fd32341fa27c0b",
+    "blocked_cancellation": "2dc312620aad8ad64475d0acd57c75efb4d1f347e5fc39ae608c477ef14eb491",
+    "cadence_constants": "98a933da8c8a76407d96036122252cb4cf167f0a8b9b215513b9d976560d4412",
+    "dwell_fence": "6f5d97c657bc20aabd40a71bcb5cb3184561bdae7c195cbf78cbc06e96037bc5",
+    "hysteresis": "8760804c113e267fdc2a79fabe746e07222864315c98cfa2e4ddff81392465ea",
+    "relay_application": "29cfbf06a4a8003430b1fbaf3ebf45cc704b103b4ea8fa6aa3579ec16c091f72",
+    "fallback": "c52268598e158a6a2ed6133e367a6ee7154b659bd6e968fb225ae9e1ae9a06ad",
+    "admission_and_timer": "bf22e43be95e800f72783dca107d9001770375c13f52cc48ae074630b36a491f",
+    "center_on_callback": "d2816e7f2b40777ef0f3b87b55afdc4dc3be6346f739ab77361234fc4bb267f1",
+    "center_off_callback": "e8a37d35431af7a210f605dc7163712fbd3e56955152bd308501c619156fc635"
+  },
+  "scope": "Actual phase/relay/cancellation source; synthetic clock, storage, selector inputs and switch dispatch",
+  "limits": "No complete upstream safety-controller or physical GPIO qualification"
+}

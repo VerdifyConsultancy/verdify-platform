@@ -1,0 +1,638 @@
+Preparing worktree (detached HEAD 96464472)
+HEAD is now at 96464472 Preserve admitted control durations and count accepted relay starts
+........................................................................ [ 32%]
+............FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.....FF..FFFFF [ 65%]
+FFFFFFF................FFFFFFFFFFFFFFFF................................. [ 98%]
+...                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-fan1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-fan2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-fog] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-snapshot-vent] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/snapshot/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-fan1] __
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-fan2] __
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+__ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-fog] __
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_boot-legacy-vent] __
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/legacy/count_boot: failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 255: !r.on && r.transitions == 0U && r.cycles == 0 && r.all_cycles == 0\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-fan1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-fan2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-fog] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-snapshot-vent] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/snapshot/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-fan1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-fan2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-fog] __
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_dwell-legacy-vent] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/legacy/count_dwell: failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 272: !r.on && r.cycles == 1 && r.all_cycles == 1 && r.transitions == 2U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-fan1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-fan2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-fog] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-snapshot-vent] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/snapshot/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-heat1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat1/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-heat2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: heat2/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-fan1] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan1/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-fan2] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fan2/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-fog] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: fog/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+_ test_actual_caller_counts_only_accepted_relay_edges[count_rejected-legacy-vent] _
+tests/test_policy_relay_dwell_refresh.py:415: in test_actual_caller_counts_only_accepted_relay_edges
+    assert result.returncode == 0, (
+E   AssertionError: vent/legacy/count_rejected: failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...eturncode=1, stdout='', stderr='failed line 287: !r.on && r.cycles == 0 && r.all_cycles == 0 && r.transitions == 0U\n').returncode
+__________ test_actual_caller_counts_forced_start_once[snapshot-fan1] __________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fan1/snapshot/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con..._force', 'snapshot'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+__________ test_actual_caller_counts_forced_start_once[snapshot-fan2] __________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fan2/snapshot/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con..._force', 'snapshot'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+__________ test_actual_caller_counts_forced_start_once[snapshot-fog] ___________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fog/snapshot/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con..._force', 'snapshot'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+__________ test_actual_caller_counts_forced_start_once[snapshot-vent] __________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: vent/snapshot/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con..._force', 'snapshot'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+___________ test_actual_caller_counts_forced_start_once[legacy-fan1] ___________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fan1/legacy/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...nt_force', 'legacy'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+___________ test_actual_caller_counts_forced_start_once[legacy-fan2] ___________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fan2/legacy/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...nt_force', 'legacy'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+___________ test_actual_caller_counts_forced_start_once[legacy-fog] ____________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: fog/legacy/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...nt_force', 'legacy'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+___________ test_actual_caller_counts_forced_start_once[legacy-vent] ___________
+tests/test_policy_relay_dwell_refresh.py:431: in test_actual_caller_counts_forced_start_once
+    assert result.returncode == 0, (
+E   AssertionError: vent/legacy/count_force: failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1
+E     
+E     Actual firmware extraction: {"duration_contract_sha256": "388b824f1218d6fa6844e19621dd7f8df1c0cd23d161f12e12014f4cf13478f0", "duration_validation": "Native cases check generated wire min/max/scale before each change", "fragments": {"cycle_counters_and_actual_relay_application": {"first_line": 934, "last_line": 975, "sha256": "affee1f65ceb14234ef77303c87b86bfe9b6e1b60c92168b55fdf0ae83a2f100"}, "policy_constants": {"first_line": 77, "last_line": 86, "sha256": "178dbd41d7b3619b33e229312e53a3f2db796dee11546426d9698fbe3f8e1827"}, "relay_initialization_refresh_and_lambdas": {"first_line": 132, "last_line": 188, "sha256": "d0469a5bea54f00ec4b76150528e116d54e96a85090b7c9a388fabf89d381caf"}, "snapshot_or_legacy_policy_selection": {"first_line": 64, "last_line": 67, "sha256": "1cfb6e4c3144cbf214e4f9af0874f93aae9c3c386b59e660a743647d33dff693"}}, "source": "firmware/greenhouse/controls.yaml", "source_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "test_durations_s": [60, 120, 240]}
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/policy-relay-dwell0/relay_con...nt_force', 'legacy'], returncode=1, stdout='', stderr='failed line 307: !r.on && r.cycles == 1 && r.all_cycles == 1\n').returncode
+_________ test_actual_yaml_irrigation_admission_timing[minimum_prewet] _________
+tests/test_irrigation_admission_timing.py:336: in test_actual_yaml_irrigation_admission_timing
+    subprocess.run([str(irrigation_binary), scenario], check=True, timeout=10)
+/workspace/home/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation', 'minimum_prewet']' died with <Signals.SIGABRT: 6>.
+----------------------------- Captured stderr call -----------------------------
+actual-irrigation: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation.cpp:258: void minimum_prewet(): Assertion `f.irrig_state == 5 && f.weekly_state.stage == WallFeedStage::PREWET' failed.
+_________ test_actual_yaml_irrigation_admission_timing[longer_prewet] __________
+tests/test_irrigation_admission_timing.py:336: in test_actual_yaml_irrigation_admission_timing
+    subprocess.run([str(irrigation_binary), scenario], check=True, timeout=10)
+/workspace/home/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation', 'longer_prewet']' died with <Signals.SIGABRT: 6>.
+----------------------------- Captured stderr call -----------------------------
+actual-irrigation: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation.cpp:290: void longer_prewet(): Assertion `f.irrig_state == 5 && f.irrig_timer_ms == 12000u' failed.
+_________ test_actual_yaml_irrigation_admission_timing[explicit_wall] __________
+tests/test_irrigation_admission_timing.py:336: in test_actual_yaml_irrigation_admission_timing
+    subprocess.run([str(irrigation_binary), scenario], check=True, timeout=10)
+/workspace/home/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation', 'explicit_wall']' died with <Signals.SIGABRT: 6>.
+----------------------------- Captured stderr call -----------------------------
+actual-irrigation: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation.cpp:347: void explicit_clean(bool): Assertion `f.irrig_state == expected_state && f.irrig_timer_ms == 60000u' failed.
+________ test_actual_yaml_irrigation_admission_timing[explicit_center] _________
+tests/test_irrigation_admission_timing.py:336: in test_actual_yaml_irrigation_admission_timing
+    subprocess.run([str(irrigation_binary), scenario], check=True, timeout=10)
+/workspace/home/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation', 'explicit_center']' died with <Signals.SIGABRT: 6>.
+----------------------------- Captured stderr call -----------------------------
+actual-irrigation: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/irrigation-admission0/actual-irrigation.cpp:347: void explicit_clean(bool): Assertion `f.irrig_state == expected_state && f.irrig_timer_ms == 60000u' failed.
+___________ test_actual_yaml_mister_phase_timing[initial-30s-legacy] ___________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:428: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[initial-30s-snapshot] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:428: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+___________ test_actual_yaml_mister_phase_timing[initial-90s-legacy] ___________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:428: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[initial-90s-snapshot] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:428: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void initial(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[escalation-30s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[escalation-30s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[escalation-90s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[escalation-90s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[deescalation-30s-legacy] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_______ test_actual_yaml_mister_phase_timing[deescalation-30s-snapshot] ________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[deescalation-90s-legacy] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_______ test_actual_yaml_mister_phase_timing[deescalation-90s-snapshot] ________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:446: void rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...id rearm(bool, uint32_t, bool): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+___________ test_actual_yaml_mister_phase_timing[reentry-30s-legacy] ___________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:507: void reentry(bool, uint32_t): Assertion `f.center_mister.state && f.mister_state == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...tual-mister.cpp:507: void reentry(bool, uint32_t): Assertion `f.center_mister.state && f.mister_state == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[reentry-30s-snapshot] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:507: void reentry(bool, uint32_t): Assertion `f.center_mister.state && f.mister_state == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...tual-mister.cpp:507: void reentry(bool, uint32_t): Assertion `f.center_mister.state && f.mister_state == 1' failed.\n").returncode
+___________ test_actual_yaml_mister_phase_timing[reentry-90s-legacy] ___________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:508: void reentry(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 2' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void reentry(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 2' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[reentry-90s-snapshot] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:508: void reentry(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 2' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist...: void reentry(bool, uint32_t): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 2' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_south-30s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[hint_south-30s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_south-90s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+________ test_actual_yaml_mister_phase_timing[hint_south-90s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[hint_west-30s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_west-30s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[hint_west-90s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_west-90s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[hint_none-30s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_none-30s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+__________ test_actual_yaml_mister_phase_timing[hint_none-90s-legacy] __________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+_________ test_actual_yaml_mister_phase_timing[hint_none-90s-snapshot] _________
+tests/test_mister_pulse_admission_timing.py:379: in test_actual_yaml_mister_phase_timing
+    assert result.returncode == 0, result.stdout + result.stderr
+E   AssertionError: actual-mister: /tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mister.cpp:515: void topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.
+E     
+E   assert -6 == 0
+E    +  where -6 = CompletedProcess(args=['/tmp/verdify-control-native-96464472-20261026-01/baseline-pytest/mister-admission0/actual-mist... topology(bool, uint32_t, int): Assertion `f.mister_pulse_timer_ms == on_ms && f.center_mister.starts == 1' failed.\n").returncode
+=============================== warnings summary ===============================
+tests/test_irrigation_admission_timing.py: 11 warnings
+  tests/test_irrigation_admission_timing.py:315: PytestWarning: record_property is incompatible with junit_family 'xunit2' (use 'legacy' or 'xunit1')
+    @pytest.mark.parametrize(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+CAUSAL_BASELINE_RESULT={"counts": {"errors": 0, "failed": 76, "passed": 143, "skipped": 0, "tests": 219}, "head_sensor_sha256": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f", "historical_pytest_exit_code": 1, "historical_sensor_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e", "historical_sensor_source": "18570b0fc1b2cb34dea9a3b81899090fe6676aea", "primary_checkout_controls_unchanged": true, "private_worktree_restored_to_head": true, "private_worktree_sensor_diff_exit_code": 0, "selected_test_functions": ["tests/test_policy_relay_dwell_refresh.py", "tests/test_irrigation_admission_timing.py", "tests/test_mister_pulse_admission_timing.py"], "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c"}

@@ -1,0 +1,22 @@
+{
+  "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+  "historical_sensor_source": "18570b0fc1b2cb34dea9a3b81899090fe6676aea",
+  "historical_sensor_sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+  "head_sensor_sha256": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f",
+  "historical_pytest_exit_code": 1,
+  "private_worktree_restored_to_head": true,
+  "private_worktree_sensor_diff_exit_code": 0,
+  "primary_checkout_controls_unchanged": true,
+  "selected_test_functions": [
+    "tests/test_policy_relay_dwell_refresh.py",
+    "tests/test_irrigation_admission_timing.py",
+    "tests/test_mister_pulse_admission_timing.py"
+  ],
+  "counts": {
+    "tests": 219,
+    "failed": 76,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 143
+  }
+}

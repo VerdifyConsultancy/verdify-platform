@@ -1,0 +1,2702 @@
+################################################################################
+# greenhouse/controls.yaml — Mode-based climate controller (2026-04-10)
+#
+# 6-mode architecture: SAFETY_COOL, SAFETY_HEAT, SEALED_MIST,
+# THERMAL_RELIEF, VENTILATE, IDLE. Each mode defines a complete, consistent
+# set of relay outputs. No override layers — the mode table IS the truth.
+#
+# Vent and fans are always consistent: sealed modes have vent closed + fans off,
+# open modes have vent open + fans on. Open-vent moisture is allowed only for
+# the explicit VENTILATE assist path. Heater/vent oscillation is structurally
+# impossible.
+################################################################################
+
+interval:
+  # 1 s (was 5 s): the control loop is the ONLY relay actuator path (the mode
+  # table is the truth), so manual-override button presses become responsive only
+  # as fast as this loop ticks — at 5 s a press lagged the relay up to 5 s. The
+  # loop is fully dt_ms-based (accumulates real elapsed millis, self-correcting at
+  # any tick rate) and relay min-on/min-off dwell is millis-based, so faster
+  # ticking cannot rapid-cycle. Replay is unaffected (the harness calls the
+  # decision fns per corpus row, not via this interval).
+  - interval: 1s
+    then:
+      - lambda: |-
+          const uint32_t control_loop_started_us = micros();
+          /*************** POLICY ENGINE SNAPSHOT (Lane E, #586) *****************/
+          // ONE by-value policy snapshot at the top of the control tick
+          // (audit §8.9). Until an experiment manifest is armed through the
+          // policy_* api services, psnap.experiment_active is false and every
+          // gated read below falls through to the legacy global — behavior is
+          // bit-identical to pre-Lane-E firmware (feature-off equivalence).
+          // Lazy one-time boot init: bind the NVS journal and resolve the
+          // persisted policy once the clock is valid, or conservatively boot
+          // the ROM baseline after a 5-minute SNTP grace window.
+          {
+            static bool policy_boot_done = false;
+            if (!policy_boot_done) {
+              auto boot_now = id(sntp_time).now();
+              const bool boot_clock_valid = boot_now.is_valid();
+              if (boot_clock_valid || millis() > 300000UL) {
+                verdify_policy::policy_engine().bind_storage(&esp_policy_journal());
+                const uint32_t boot_day = boot_clock_valid
+                    ? uint32_t(boot_now.year) * 1000UL + uint32_t(boot_now.day_of_year) : 0UL;
+                const verdify_policy::ResetEvent reset_ev = verdify_policy::policy_engine().boot_init(
+                    boot_clock_valid ? uint32_t(boot_now.timestamp) : 0UL, boot_clock_valid, boot_day);
+                ESP_LOGI("policy", "boot_init outcome=%d gen=%u manifest=%d water_consumed=%d",
+                         (int) reset_ev.outcome, (unsigned) reset_ev.resumed_generation,
+                         (int) reset_ev.manifest_rearmed, (int) reset_ev.water_budget_marked_consumed);
+                policy_boot_done = true;
+              }
+            }
+          }
+          auto policy_now = id(sntp_time).now();
+          const bool policy_clock_valid = policy_now.is_valid();
+          const uint32_t policy_day = policy_clock_valid
+              ? uint32_t(policy_now.year) * 1000UL + uint32_t(policy_now.day_of_year) : 0UL;
+          const verdify_policy::PolicySnapshot psnap = verdify_policy::policy_engine().on_tick(
+              policy_clock_valid ? uint32_t(policy_now.timestamp) : 0UL, policy_clock_valid, policy_day);
+          // Gated reads for EVERY policy-field consumer on the control path
+          // (tranche 2 complete, #586): legacy global until an experiment is
+          // armed, snapshot value while armed. The consumer manifest
+          // (firmware/policy_consumer_manifest.json) is CI-enforced at 100%:
+          // any new unmigrated id() read of a wire field fails the gate.
+          const auto pol = [&](uint8_t f, float legacy) -> float {
+              return psnap.experiment_active ? psnap.values[f] : legacy;
+          };
+          const auto polb = [&](uint8_t f, bool legacy) -> bool {
+              return psnap.experiment_active ? (psnap.values[f] != 0.0f) : legacy;
+          };
+          // Journal-visible daily water high-water mark (§8.9 conservative
+          // reboot rule): never rolls backward; only a journaled same-day
+          // mark lifts the consumed flag after a reboot.
+          if (policy_clock_valid) {
+              verdify_policy::policy_engine().note_water_high_water(policy_day, id(mister_water_today));
+          }
+          /*************** CONFIG CONSTANTS **************************************/
+          const uint32_t MIN_HEAT_ON_MS    = uint32_t(pol(verdify_policy::kPF_min_heat_on_s, id(min_heat_on_s)))  * 1000UL;
+          const uint32_t MIN_HEAT_OFF_MS   = uint32_t(pol(verdify_policy::kPF_min_heat_off_s, id(min_heat_off_s))) * 1000UL;
+          const uint32_t MIN_FAN_ON_MS     = uint32_t(pol(verdify_policy::kPF_min_fan_on_s, id(min_fan_on_s)))   * 1000UL;
+          const uint32_t MIN_FAN_OFF_MS    = uint32_t(pol(verdify_policy::kPF_min_fan_off_s, id(min_fan_off_s)))  * 1000UL;
+          const uint32_t MIN_VENT_ON_MS    = uint32_t(pol(verdify_policy::kPF_min_vent_on_s, id(min_vent_on_s)))  * 1000UL;
+          const uint32_t MIN_VENT_OFF_MS   = uint32_t(pol(verdify_policy::kPF_min_vent_off_s, id(min_vent_off_s))) * 1000UL;
+          const uint32_t MIN_FOG_ON_MS     = uint32_t(pol(verdify_policy::kPF_min_fog_on_s,  id(min_fog_on_s)))  * 1000UL;
+          const uint32_t MIN_FOG_OFF_MS    = uint32_t(pol(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s))) * 1000UL;
+
+          const float    EXTRA_COOL_S3_DELTA_F = 2.0f;
+          const uint32_t LEAD_ROTATE_TIMEOUT_MS =
+                   std::max(uint32_t(id(lead_rotate_timeout_s)) * 1000UL, uint32_t(60000UL));
+
+          // Enums (Mode) and structs (SensorInputs, Setpoints,
+          // ControlState, RelayOutputs) defined in greenhouse_logic.h
+          // — included via esphome.includes in greenhouse.yaml
+
+          /**************** 1 — time bookkeeping *********************************/
+          static uint32_t last_ms = millis();
+          uint32_t now_ms = millis();
+          const ElapsedIntervals elapsed = elapsed_intervals(now_ms, last_ms);
+          const uint32_t raw_dt_ms = elapsed.raw_ms;
+          uint32_t dt_ms = elapsed.control_ms;
+          // Clamp only the control interval. A gap of several seconds is a
+          // hiccup (RTOS hang, OTA pause, debugger break), and one huge dt_ms
+          // must not leap through control dwell gates in a single tick. The
+          // wrap-safe raw interval remains available to forensic DLI below.
+          last_ms = now_ms;
+
+          /**************** 1b — occupancy fail-safe *****************************/
+          const uint32_t OCCUPANCY_FAILSAFE_MS = 3600000UL;
+          const bool occupancy_override_active = id(occupancy_override_until_ms) != 0
+            && (int32_t)(id(occupancy_override_until_ms) - now_ms) > 0;
+          if(id(occupancy_override_until_ms) != 0 && !occupancy_override_active){
+            id(occupancy_override_until_ms) = 0;
+            ESP_LOGW("occupancy","Local quiet override expired");
+          }
+          if(occupancy_override_active && id(greenhouse_occupied)){
+            id(greenhouse_occupied) = false;
+            id(occupancy_last_true_ms) = 0;
+            id(sw_greenhouse_occupied).publish_state(false);
+            ESP_LOGW("occupancy","Local quiet override forced occupancy empty");
+          }
+          if(id(greenhouse_occupied)){
+            if(id(occupancy_last_true_ms) == 0){
+              id(occupancy_last_true_ms) = now_ms;
+            } else if(now_ms - id(occupancy_last_true_ms) > OCCUPANCY_FAILSAFE_MS){
+              id(greenhouse_occupied) = false;
+              id(occupancy_last_true_ms) = 0;
+              id(sw_greenhouse_occupied).publish_state(false);
+              ESP_LOGW("occupancy","Occupancy fail-safe expired without fresh API detection; forcing empty");
+            }
+          }
+
+          /**************** 2 — relay metadata & helpers **************************/
+          struct RelayMeta {
+            esphome::switch_::Switch *sw;
+            uint32_t on_stamp_ms = 0;
+            uint32_t runtime_ms = 0;
+            uint32_t min_on_ms;
+            uint32_t min_off_ms;
+            uint32_t last_on_ms = 0;
+            uint32_t last_off_ms = 0;
+          };
+
+          static RelayMeta R[] = {
+            { id(heat1_rly), 0,0, MIN_HEAT_ON_MS, MIN_HEAT_OFF_MS }, // H1
+            { id(heat2_rly), 0,0, MIN_HEAT_ON_MS, MIN_HEAT_OFF_MS }, // H2
+            { id(fan1_rly) , 0,0, MIN_FAN_ON_MS , MIN_FAN_OFF_MS  }, // F1
+            { id(fan2_rly) , 0,0, MIN_FAN_ON_MS , MIN_FAN_OFF_MS  }, // F2
+            { id(fog_rly)  , 0,0, MIN_FOG_ON_MS , MIN_FOG_OFF_MS  }, // Fog
+            { id(vent_rly) , 0,0, MIN_VENT_ON_MS, MIN_VENT_OFF_MS }  // Vent
+          };
+
+          // Refresh policy/legacy dwell limits without resetting transition
+          // history: mid-cycle changes still measure from the original edge.
+          R[0].min_on_ms = R[1].min_on_ms = MIN_HEAT_ON_MS;
+          R[0].min_off_ms = R[1].min_off_ms = MIN_HEAT_OFF_MS;
+          R[2].min_on_ms = R[3].min_on_ms = MIN_FAN_ON_MS;
+          R[2].min_off_ms = R[3].min_off_ms = MIN_FAN_OFF_MS;
+          R[4].min_on_ms = MIN_FOG_ON_MS;
+          R[4].min_off_ms = MIN_FOG_OFF_MS;
+          R[5].min_on_ms = MIN_VENT_ON_MS;
+          R[5].min_off_ms = MIN_VENT_OFF_MS;
+
+          auto update_runtime = [&](RelayMeta &r){
+            if(!r.sw->state && r.on_stamp_ms){
+              r.runtime_ms += now_ms - r.on_stamp_ms;
+              r.on_stamp_ms = 0;
+            }
+          };
+          auto can_on  = [&](RelayMeta &r){ return now_ms - r.last_off_ms >= r.min_off_ms; };
+          auto can_off = [&](RelayMeta &r){ return now_ms - r.last_on_ms  >= r.min_on_ms; };
+
+          auto set_relay = [&](RelayMeta &r,bool want,bool force_on,bool force_off=false){
+            update_runtime(r);
+            if(want){
+              if(!r.sw->state && (force_on || can_on(r))){
+                r.sw->turn_on();
+                r.last_on_ms = now_ms;
+                r.on_stamp_ms= now_ms;
+              }
+            }else{
+              if(r.sw->state && (force_off || can_off(r))){
+                r.sw->turn_off();
+                r.last_off_ms = now_ms;
+                update_runtime(r);
+              }
+            }
+          };
+
+          /**************** 3 — mid‑night reset of runtimes (A3 fix) **************/
+          static int last_doy = -1;
+          if(id(sntp_time).now().is_valid()){
+            int doy = id(sntp_time).now().day_of_year;
+                if(doy != last_doy){
+                  // A3: snapshot runtime for relays ON at midnight boundary
+                  for(auto &r : R){
+                    if(r.sw->state && r.on_stamp_ms){
+                      r.runtime_ms += now_ms - r.on_stamp_ms;
+                      r.on_stamp_ms = now_ms;
+                    }
+                  }
+                  // Now reset counters
+                  for(auto &r : R) r.runtime_ms = 0;
+                  id(runtime_heat1_ms) = 0;
+                  id(runtime_heat2_ms) = 0;
+                  id(runtime_fan1_ms)  = 0;
+                  id(runtime_fan2_ms)  = 0;
+                  id(runtime_fog_ms)   = 0;
+                  id(runtime_vent_ms)  = 0;
+                  // SAF-4/IRR-5: reset the per-zone mister cumulative-runtime
+                  // counters that back the non-bypassable duty cap, and the
+                  // daily mister volume, so the cap and the hard volume ceiling
+                  // re-arm each local day. (Previously runtime_mister_*_ms
+                  // accumulated forever on the climate side and were never
+                  // reset, which would permanently lock out the duty cap.)
+                  id(runtime_mister_south_ms)  = 0;
+                  id(runtime_mister_west_ms)   = 0;
+                  id(runtime_mister_center_ms) = 0;
+                  // Last-off stamps use monotonic millis(), not calendar days.
+                  // Preserve them across midnight so an aborted pulse cannot
+                  // bypass its existing minimum-off fence at a day rollover.
+                  id(mister_water_today) = 0.0f;
+                  // B5: reset DLI accumulator at midnight
+                  id(dli_accumulator) = 0.0f;
+                  last_doy = doy;
+                }
+          }
+
+          /**************** 4 — sensor ingest & derived fields ********************/
+          auto vpd_calc = [&](float T,float RH){
+            float tc=(T-32.0f)*5.0f/9.0f;
+            if(fabs(tc + 237.3f) < 0.1f) return 1.0f;  // guard against division by ~zero
+            float es=0.6108f*expf((17.27f*tc)/(tc+237.3f));
+            return es*(1.0f-RH/100.0f);
+          };
+
+          // Age pulled outdoor data — invalidate if >1 hour stale
+          id(pulled_data_age_s) += dt_ms / 1000;
+          if(id(pulled_data_age_s) > 3600){
+            id(pulled_outdoor_temp_f) = NAN;
+            id(pulled_outdoor_rh_pct) = NAN;
+          }
+          float Tin;
+          float RHin;
+          // Use average sensors if valid, otherwise fall back to case probe.
+          bool avg_ok = !isnan(id(average_temperature).state) && !isnan(id(average_humidity).state);
+          bool case_ok_t = !isnan(id(case_temperature).state);
+          if(avg_ok){
+            Tin = id(average_temperature).state;
+            RHin = id(average_humidity).state;
+          }else if(case_ok_t){
+            Tin = id(case_temperature).state;
+            RHin = isnan(id(case_humidity).state) ? 50.0f : id(case_humidity).state;
+            ESP_LOGW("sensor","Average sensors NaN — using case probe (%.1f°F)", Tin);
+          }else{
+            Tin = 65.0f;  // safe mid-range assumption
+            RHin = 50.0f;
+            ESP_LOGE("sensor","ALL temperature probes NaN — using safe default 65°F");
+          }
+
+          // Track how long ALL probes have been offline
+          static uint32_t all_probes_nan_ms = 0;
+          if(!avg_ok && !case_ok_t){
+            all_probes_nan_ms += dt_ms;
+            if(all_probes_nan_ms > 300000 && (all_probes_nan_ms % 60000) < dt_ms){
+              ESP_LOGE("health","ALL temperature probes offline for %.0f min!",
+                       all_probes_nan_ms / 60000.0f);
+            }
+          }else{
+            all_probes_nan_ms = 0;
+          }
+
+          // Sanity check: reject physically impossible indoor readings
+          if(Tin < -20.0f || Tin > 150.0f){
+            ESP_LOGE("sensor","Tin=%.1f out of range — clamping to 65°F", Tin);
+            Tin = 65.0f;
+          }
+
+          float VPD = id(average_vpd_kpa).state;
+          if(isnan(VPD) && !isnan(Tin) && !isnan(RHin)){
+            VPD = vpd_calc(Tin,RHin);
+          }
+          if(isnan(VPD)) VPD = 1.0f;  // safe mid-range if all else fails
+          if(VPD < 0.0f) VPD = 0.0f;
+          if(VPD > 10.0f) VPD = 10.0f;  // cap at physically reasonable max
+
+          float dH = id(enthalpy_diff).state;   // outside - inside
+          // Track enthalpy staleness — if no update in 10 min, treat as NaN
+          static uint32_t enthalpy_age_ms = 0;
+          static float last_dH = NAN;
+          if(!isnan(dH) && dH != last_dH){
+            enthalpy_age_ms = 0;
+            last_dH = dH;
+          }else{
+            enthalpy_age_ms += dt_ms;
+          }
+          if(enthalpy_age_ms > 600000){  // 10 min stale → treat as NaN
+            dH = NAN;
+          }
+
+          /**************** 5 — apply safety rails & NaN handling (A6 graduated) */
+          bool tin_nan = isnan(Tin);
+          if(tin_nan){
+            // A6: 3-tier NaN fallback:
+            //   1) ha_outdoor_temp + indoor offset
+            //   2) binary assumption (cold or hot)
+            float ha_t = id(ha_outdoor_temp).state;
+            if(isnan(ha_t)) ha_t = id(pulled_outdoor_temp_f);
+            if(!isnan(ha_t)){
+              Tin = ha_t + id(indoor_offset_on_nan_f);
+              ESP_LOGW("nan","Tin NaN — using HA outdoor %.1f + offset %.1f = %.1f°F",
+                       ha_t, id(indoor_offset_on_nan_f), Tin);
+            } else if(id(assume_cold_on_nan)){
+              Tin = id(safety_min_f) - 10.0f;
+              ESP_LOGW("nan","Tin NaN — all sources failed, assuming cold %.1f°F", Tin);
+            }else{
+              Tin = id(safety_max_f) + 10.0f;
+              ESP_LOGW("nan","Tin NaN — all sources failed, assuming hot %.1f°F", Tin);
+            }
+          }
+          bool vpd_nan = isnan(VPD);
+          if(vpd_nan){
+            // approximate VPD from RH only if possible
+            if(!isnan(RHin)){
+              VPD = vpd_calc(Tin,RHin);
+            }else{
+              VPD = 0.0f;
+            }
+          }
+
+          /**************** 6 — set-points & thresholds ***************************/
+          const float Tlow  = id(target_temp_low_f)  + id(bias_heat_f);
+          const float Thigh = id(target_temp_high_f) + id(bias_cool_f);
+          const float HT    = pol(verdify_policy::kPF_temp_hysteresis, id(hyst_temp_f));
+          const float dH2   = id(stage2_heat_delta_f);
+          const float dC2   = id(stage2_cool_delta_f);
+          const float VPDlo = id(target_vpd_low_kpa);
+          const float VPDhi = id(target_vpd_high_kpa);
+          const float HV    = pol(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
+          // SAFETY SANITY: refuse invalid bounds — fall back to hardcoded defaults
+          float TminSafe = id(safety_min_f);
+          float TmaxSafe = id(safety_max_f);
+          float VPDminSafe = id(safety_vpd_min_kpa);
+          float VPDmaxSafe = id(safety_vpd_max_kpa);
+          if(TminSafe < 30.0f || TminSafe > 70.0f || isnan(TminSafe)){
+            id(safety_min_f) = 45.0f; TminSafe = 45.0f;
+            ESP_LOGE("safety","Invalid safety_min (%.1f) — reset to 45°F", TminSafe);
+          }
+          if(TmaxSafe < 70.0f || TmaxSafe > 120.0f || isnan(TmaxSafe)){
+            id(safety_max_f) = 95.0f; TmaxSafe = 95.0f;
+            ESP_LOGE("safety","Invalid safety_max (%.1f) — reset to 95°F", TmaxSafe);
+          }
+          if(TminSafe >= TmaxSafe){
+            id(safety_min_f) = 45.0f; id(safety_max_f) = 95.0f;
+            TminSafe = 45.0f; TmaxSafe = 95.0f;
+            ESP_LOGE("safety","Inverted safety bounds — reset to 45/95°F");
+          }
+          if(VPDminSafe < 0.0f || VPDmaxSafe < 1.0f || VPDminSafe >= VPDmaxSafe || isnan(VPDminSafe) || isnan(VPDmaxSafe)){
+            id(safety_vpd_min_kpa) = 0.3f; id(safety_vpd_max_kpa) = 3.0f;
+            VPDminSafe = 0.3f; VPDmaxSafe = 3.0f;
+            ESP_LOGE("safety","Invalid VPD safety bounds — reset to 0.3/3.0 kPa");
+          }
+
+          /* enthalpy gate (economiser) — persist across loops for deadband hysteresis */
+          bool econ_block = id(econ_block_state);
+          if(!id(economiser_enabled)){
+            econ_block = false;
+          } else if(isnan(dH)){
+            // Intake sensor offline — block venting to avoid blind decisions
+            if(!econ_block){
+              ESP_LOGW("econ","Intake sensor offline (dH=NaN) — blocking economiser venting");
+            }
+            econ_block = true;
+          } else {
+            // A8: log economiser transitions
+            bool was_blocked = econ_block;
+            if(dH <= pol(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg)))  econ_block = false;
+            if(dH >= pol(verdify_policy::kPF_enthalpy_close, id(enthalpy_close_kjkg))) econ_block = true;
+            if(econ_block && !was_blocked)
+              ESP_LOGI("econ","Economiser BLOCKED (dH=%.1f >= %.1f)", dH, pol(verdify_policy::kPF_enthalpy_close, id(enthalpy_close_kjkg)));
+            if(!econ_block && was_blocked)
+              ESP_LOGI("econ","Economiser UNBLOCKED (dH=%.1f <= %.1f)", dH, pol(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg)));
+          }
+
+          /**************** 6b — OUTDOOR RH ADAPTIVE FOG BURST ******************/
+          {
+            float outdoor_rh = id(ha_outdoor_rh).state;
+            if(!isnan(outdoor_rh)){
+              int new_mode;
+              // Hysteresis: use 5% dead band
+              if(outdoor_rh < 15.0f)      new_mode = 0;  // DRY
+              else if(outdoor_rh > 45.0f) new_mode = 2;  // HUMID
+              else if(outdoor_rh > 20.0f && outdoor_rh < 40.0f) new_mode = 1;  // MODERATE
+              else new_mode = id(outdoor_rh_mode);  // In dead band — hold
+
+              if(new_mode != id(outdoor_rh_mode)){
+                id(outdoor_rh_mode) = new_mode;
+                // Only adjust fog burst duration — NOT VPD thresholds
+                switch(new_mode){
+                  case 0: id(fog_burst_minutes) = 3; break;  // DRY: short bursts
+                  case 1: id(fog_burst_minutes) = 5; break;  // MODERATE
+                  case 2: id(fog_burst_minutes) = 8; break;  // HUMID: longer bursts
+                }
+                ESP_LOGI("adapt","RH mode → %s (RH=%.0f%%, fog_burst=%dmin)",
+                         new_mode==0?"DRY":new_mode==1?"MOD":"HUMID",
+                         outdoor_rh, id(fog_burst_minutes));
+              }
+            }
+          }
+
+                    /**************** 7 — runtime-aware lead/lag selection ****************/
+          bool currentLeadIs1 = id(fan_lead_is_fan1);
+          static uint32_t last_rotate_ms = millis();
+          const bool wall_clock_rotate_due = now_ms - last_rotate_ms >= LEAD_ROTATE_TIMEOUT_MS;
+          const bool any_fan_running = id(fan1_rly)->state || id(fan2_rly)->state;
+          uint32_t fan1_runtime_with_active_ms = relay_runtime_with_active_ms(
+            R[2].runtime_ms, id(fan1_rly)->state, R[2].on_stamp_ms, now_ms);
+          uint32_t fan2_runtime_with_active_ms = relay_runtime_with_active_ms(
+            R[3].runtime_ms, id(fan2_rly)->state, R[3].on_stamp_ms, now_ms);
+          bool leadIs1 = choose_runtime_balanced_fan_lead(
+            currentLeadIs1,
+            fan1_runtime_with_active_ms,
+            fan2_runtime_with_active_ms,
+            any_fan_running,
+            wall_clock_rotate_due);
+          if(leadIs1 != currentLeadIs1){
+            id(fan_lead_is_fan1) = leadIs1;
+            last_rotate_ms = now_ms;
+            ESP_LOGI("lead","Lead fan selected -> %s (fan1=%lus fan2=%lus)",
+                     leadIs1 ? "Fan 1" : "Fan 2",
+                     static_cast<unsigned long>(fan1_runtime_with_active_ms / 1000UL),
+                     static_cast<unsigned long>(fan2_runtime_with_active_ms / 1000UL));
+          }else if(wall_clock_rotate_due && !any_fan_running){
+            last_rotate_ms = now_ms;
+          }
+
+          /**************** 8+9 — MODE + EQUIPMENT (via greenhouse_logic.h) *******/
+          // Single source of truth: same code runs on ESP32 and in x86 tests.
+          static ControlState ctl_state = initial_state();
+          // Mister telemetry (local tracking for state labels — not in ControlState
+          // because the mister state machine in section 12 is the authority)
+          // mist_telemetry replaced by ctl_state.mist_stage (the authority)  // 0=off, 1=S1, 2=S2
+
+          auto sntp_now = id(sntp_time).now();
+          const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);
+          int local_hour = controller_time_valid ? sntp_now.hour : 12;
+
+          // ── Firmware-v2: ON-CHIP solar ephemeris (offline-first) ──────────
+          // Compute sunrise / solar-noon / sunset locally from the calendar
+          // date so the diurnal program tracks the drifting sun with ZERO
+          // network. utc_offset is derived from the time component, so DST is
+          // correct by construction. When time is invalid we fall back to a
+          // representative day and the header's fallback phase keeps control
+          // sane (degraded, not wrong).
+          int sv2_now_minute = controller_time_valid ? (sntp_now.hour * 60 + sntp_now.minute) : (local_hour * 60);
+          int sv2_doy = controller_time_valid ? sntp_now.day_of_year : 172;
+          int sv2_utc_off = -360;  // MST/MDT fallback
+          if (controller_time_valid) {
+              auto utc_now = id(sntp_time).utcnow();
+              if (utc_now.is_valid()) {
+                  int local_tod = sntp_now.hour * 60 + sntp_now.minute;
+                  int utc_tod = utc_now.hour * 60 + utc_now.minute;
+                  int diff = local_tod - utc_tod;
+                  if (diff > 720) diff -= 1440; else if (diff < -720) diff += 1440;
+                  sv2_utc_off = diff;
+              }
+          }
+          SolarTimes sv2_solar = compute_greenhouse_solar_times(sv2_doy, sv2_utc_off);
+          float sv2_phase = solar_phase(sv2_now_minute, sv2_solar);
+
+          // ── Firmware-v2: deterministic band curve from NVS anchors ────────
+          // The served band is a pure function of (crop anchors, solar phase),
+          // computed on-chip. When sw_onchip_band_enabled is true these
+          // OVERRIDE any dispatcher-pushed target_temp_*/vpd_* so the box runs
+          // the full program offline; legacy mode keeps the pushed scalars.
+          auto sv2_curve = [&](float sr, float sm, float ss, float mid) -> float {
+              BandAnchors a = {sr, sm, ss, mid};
+              return band_value_at_phase(a, sv2_phase);
+          };
+          float sv2_temp_low  = id(target_temp_low_f);
+          float sv2_temp_high = id(target_temp_high_f);
+          float sv2_temp_tgt  = (sv2_temp_low + sv2_temp_high) * 0.5f;
+          float sv2_vpd_low   = id(target_vpd_low);
+          float sv2_vpd_high  = id(target_vpd_high);
+          float sv2_vpd_tgt   = (sv2_vpd_low + sv2_vpd_high) * 0.5f;
+          if (id(sw_onchip_band_enabled)) {
+              sv2_temp_low  = sv2_curve(id(band_temp_low_sr),   id(band_temp_low_sm),   id(band_temp_low_ss),   id(band_temp_low_mid));
+              sv2_temp_tgt  = sv2_curve(id(band_temp_target_sr),id(band_temp_target_sm),id(band_temp_target_ss),id(band_temp_target_mid));
+              sv2_temp_high = sv2_curve(id(band_temp_high_sr),  id(band_temp_high_sm),  id(band_temp_high_ss),  id(band_temp_high_mid));
+              sv2_vpd_low   = sv2_curve(id(band_vpd_low_sr),    id(band_vpd_low_sm),    id(band_vpd_low_ss),    id(band_vpd_low_mid));
+              sv2_vpd_tgt   = sv2_curve(id(band_vpd_target_sr), id(band_vpd_target_sm), id(band_vpd_target_ss), id(band_vpd_target_mid));
+              sv2_vpd_high  = sv2_curve(id(band_vpd_high_sr),   id(band_vpd_high_sm),   id(band_vpd_high_ss),   id(band_vpd_high_mid));
+          }
+
+          // Item-4 night-dry lever (planner-pushable, clamped 0..0.25 kPa): raise
+          // the VPD band overnight so the dryer keeps running, weighted by a smooth
+          // sin^2 bump that PEAKS at solar midnight and is exactly 0 at sunset (phase
+          // 2) and sunrise (phase 4) — so it can never re-introduce a slope corner.
+          // Lets the planner pre-empt a humid night without touching the anchors.
+          {
+            const float nbias = pol(verdify_policy::kPF_night_vpd_bias_kpa, id(night_vpd_bias_kpa));
+            if (nbias > 0.0f && sv2_phase >= 2.0f && sv2_phase <= 4.0f) {
+              const float s = sinf(3.14159265f * (sv2_phase - 2.0f) * 0.5f);
+              const float add = nbias * s * s;  // s^2: 0 at phase 2/4, 1 at phase 3
+              sv2_vpd_low  += add;
+              sv2_vpd_tgt  += add;
+              sv2_vpd_high += add;
+            }
+          }
+
+          // Sprint-15: outdoor temp + dewpoint feed the summer-vent gate.
+          // Sources:
+          //   - ha_outdoor_temp/ha_outdoor_rh from direct Tempest UDP
+          //   - pulled_outdoor_* remains a legacy fallback if present
+          //   - outdoor_data_age_s from the Tempest obs_st receive timestamp
+          // Outdoor dewpoint computed from temp+RH using the standard
+          // Magnus formula (matches the indoor dewpoint sensor convention).
+          // If either reading is NaN, force outdoor_data_age_s to a stale
+          // sentinel so the gate fails safe (disabled).
+          float outdoorT = id(ha_outdoor_temp).state;
+          float outdoorRH = id(ha_outdoor_rh).state;
+          float outdoor_dp = NAN;
+          if (!isnan(outdoorT) && !isnan(outdoorRH) && outdoorRH > 0.0f) {
+              // Magnus: a=17.27, b=237.7°C; convert °F → °C → DP °C → DP °F.
+              float Tc = (outdoorT - 32.0f) * (5.0f / 9.0f);
+              float gamma = (17.27f * Tc) / (237.7f + Tc) + log(outdoorRH / 100.0f);
+              float dp_c = (237.7f * gamma) / (17.27f - gamma);
+              outdoor_dp = dp_c * (9.0f / 5.0f) + 32.0f;
+          }
+          uint32_t outdoor_age = uint32_t(99999);
+          if (!isnan(outdoorT) && !isnan(outdoorRH)) {
+              uint32_t last_obs = id(tempest_last_obs_ms);
+              outdoor_age = last_obs > 0 ? (now_ms - last_obs) / 1000 : id(pulled_data_age_s);
+          }
+
+          SensorInputs sensor_in = {
+              .temp_f = Tin, .vpd_kpa = VPD, .rh_pct = RHin,
+              .dew_point_f = isnan(id(dewpoint_avg).state) ? Tin - 10.0f : id(dewpoint_avg).state,
+              .outdoor_rh_pct = isnan(id(ha_outdoor_rh).state) ? 30.0f : id(ha_outdoor_rh).state,
+              .enthalpy_delta = isnan(dH) ? -5.0f : dH,
+              .solar_w_m2 = isnan(id(tempest_solar_w_m2)) ? 0.0f : id(tempest_solar_w_m2),
+              .vpd_south = id(vpd_south).state,
+              .vpd_west = id(vpd_west).state,
+              .vpd_east = id(vpd_east).state,
+              .local_hour = local_hour,
+              .occupied = id(greenhouse_occupied),
+              .outdoor_temp_f = outdoorT,
+              .outdoor_dewpoint_f = outdoor_dp,
+              .outdoor_data_age_s = outdoor_age,
+              // SAF-1 / SF1: degraded when the indoor AVERAGE temp/RH probes are
+              // unavailable (avg_ok==false, computed in step 4 above) — whether
+              // we fell back to the case probe OR to the fabricated 65/50
+              // default. The VPD/RH the controller sees is then not a measured
+              // canopy average, so VPD-chasing wetting (humidify/dehum/fog) is
+              // suppressed in the header and only conservative timed center
+              // bursts + temp control remain. SENSOR_FAULT (inf/garbage) still
+              // takes over via sensors_plausible() when even the fabricated
+              // value is implausible.
+              .sensor_degraded = !avg_ok,
+              // Firmware-v2 on-chip solar inputs (offline-first time-of-day).
+              .now_minute = sv2_now_minute,
+              .sunrise_min = sv2_solar.sunrise_min,
+              .solar_noon_min = sv2_solar.solar_noon_min,
+              .sunset_min = sv2_solar.sunset_min,
+              .solar_phase = sv2_phase
+          };
+
+          // FRT-6: absorption hold active while now_ms is before the armed
+          // deadline. Wrap-aware (millis() wraps ~49.7 days): a hold is at most
+          // post_feed_hold_min minutes, far below the wrap period, so the
+          // signed-difference test is safe. 0 deadline = no hold.
+          const bool feed_hold_active =
+              id(feed_hold_until_ms) != 0
+              && (int32_t)(id(feed_hold_until_ms) - now_ms) > 0;
+
+          Setpoints setpts = {
+              // Firmware-v2: band edges come from the ON-CHIP solar curve
+              // (sv2_*) when sw_onchip_band_enabled, else the pushed scalars.
+              .temp_high = sv2_temp_high,
+              .temp_low = sv2_temp_low,
+              .vpd_high = id(sw_onchip_band_enabled) ? sv2_vpd_high : VPDhi,
+              .vpd_low = id(sw_onchip_band_enabled) ? sv2_vpd_low : VPDlo,
+              .bias_cool = id(bias_cool_f), .bias_heat = id(bias_heat_f),
+              .vpd_hysteresis = HV,
+              .temp_hysteresis = pol(verdify_policy::kPF_temp_hysteresis, id(hyst_temp_f)),
+              .heat_hysteresis = pol(verdify_policy::kPF_heat_hysteresis, id(heat_hysteresis_f)),
+              .dH2 = dH2, .dC2 = dC2,
+              .safety_max = TmaxSafe, .safety_min = TminSafe,
+              .vpd_max_safe = VPDmaxSafe, .vpd_min_safe = VPDminSafe,
+              .sealed_max_ms = uint32_t(pol(verdify_policy::kPF_mist_max_closed_vent_s, id(mist_max_closed_vent_s))) * 1000UL,
+              .relief_duration_ms = uint32_t(pol(verdify_policy::kPF_mist_thermal_relief_s, id(mist_thermal_relief_s))) * 1000UL,
+              .vpd_watch_dwell_ms = uint32_t(pol(verdify_policy::kPF_vpd_watch_dwell_s, id(vpd_watch_dwell_s))) * 1000UL,
+              .mist_s2_delay_ms =
+                  uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL,
+              .max_relief_cycles = (uint32_t)id(max_relief_cycles),
+              .fog_escalation_kpa = pol(verdify_policy::kPF_fog_escalation_kpa, id(fog_escalation_kpa)),
+              .fog_rh_ceiling = (float)id(fog_rh_ceiling_pct),
+              .fog_min_temp = (float)id(fog_min_temp_f),
+              .dehum_aggressive_kpa = id(dehum_aggressive_kpa),
+              .occupancy_inhibit = id(occupancy_inhibit_enabled) && id(greenhouse_occupied),
+              .econ_block = econ_block,
+              .vent_latch_timeout_ms = id(vent_latch_timeout_ms),
+              .safety_max_seal_margin_f = id(safety_max_seal_margin_f),
+              .econ_heat_margin_f = id(econ_heat_margin_f),
+              // sprint-15: summer thermal-driven vent gate.
+              .sw_summer_vent_enabled = polb(verdify_policy::kPF_sw_summer_vent_enabled, id(sw_summer_vent_enabled)),
+              .vent_prefer_temp_delta_f = pol(verdify_policy::kPF_vent_prefer_temp_delta_f, id(vent_prefer_temp_delta_f)),
+              .vent_prefer_dp_delta_f = pol(verdify_policy::kPF_vent_prefer_dp_delta_f, id(vent_prefer_dp_delta_f)),
+              .outdoor_staleness_max_s = (uint32_t)pol(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s)),
+              .summer_vent_min_runtime_s = (uint32_t)id(summer_vent_min_runtime_s),
+              // Phase-2 dwell gate.
+              .sw_dwell_gate_enabled = polb(verdify_policy::kPF_sw_dwell_gate_enabled, id(sw_dwell_gate_enabled)),
+              .dwell_gate_ms = (uint32_t)pol(verdify_policy::kPF_dwell_gate_ms, id(dwell_gate_ms)),
+              // Unified band-first controller compatibility field. The
+              // ESPHome control loop forces this ON so planner, dispatcher,
+              // and ESP32 share one live control path.
+              .sw_fsm_controller_enabled = id(sw_fsm_controller_enabled),
+              .cool_stage2_over_high_f = pol(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f)),
+              .cool_stage2_exit_hysteresis_f = pol(verdify_policy::kPF_cool_stage2_exit_hysteresis_f, id(cool_stage2_exit_hysteresis_f)),
+              .cool_exit_hysteresis_f = pol(verdify_policy::kPF_cool_exit_hysteresis_f, id(cool_exit_hysteresis_f)),
+              .cold_vent_guard_delta_f = pol(verdify_policy::kPF_cold_vent_guard_delta_f, id(cold_vent_guard_delta_f)),
+              .cool_all_fans_at_high_enabled =
+                  polb(verdify_policy::kPF_sw_cool_all_fans_at_high_enabled, id(cool_all_fans_at_high_enabled)),
+              // Firmware-v2: ONE stress-wetting rule (band-high + margin, dew-
+              // gated, solar-night-aware). Replaces the clock-window stress paths.
+              .direct_wet_stress_override_enabled = polb(verdify_policy::kPF_sw_direct_wet_stress_override_enabled, id(direct_wet_stress_override_enabled)),
+              .direct_wet_stress_vpd_margin_kpa = pol(verdify_policy::kPF_direct_wet_stress_vpd_margin_kpa, id(direct_wet_stress_vpd_margin_kpa)),
+              .direct_wet_stress_min_dew_margin_f = pol(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f)),
+              .mist_backoff_ms = (uint32_t)pol(verdify_policy::kPF_mist_backoff_s, id(mist_backoff_s)) * 1000UL,
+              // Firmware-v2: never heat-to-chase-humidity in the solar night.
+              .sw_night_econ_heat_suppress_enabled = id(sw_night_econ_heat_suppress_enabled),
+              // Firmware-v2: solar wet taper (replaces the dusk_cutoff clock rail).
+              .sw_wet_taper_enabled = id(sw_wet_taper_enabled),
+              .wet_taper_before_sunset_min = id(wet_taper_before_sunset_min),
+              // Firmware-v2: night emergency wetting (replaces CYC-4 micropulse).
+              .sw_night_stress_wet_enabled = id(sw_night_stress_wet_enabled),
+              .night_stress_min_dew_margin_f = id(night_stress_min_dew_margin_f),
+              // FRT-6 absorption hold (computed above from feed_hold_until_ms).
+              .feed_hold_active = feed_hold_active,
+              // Deliberate dawn/midday center watering is retired. Keep the
+              // compatibility fields inert; center mist uses the base VPD
+              // cadence only.
+              .sw_dawn_rehydrate_enabled = id(sw_dawn_rehydrate_enabled),
+              .dawn_boost_offset_min = id(dawn_boost_offset_min),
+              .dawn_rehydrate_window_min = id(dawn_rehydrate_window_min),
+              .dawn_rehydrate_on_s = id(dawn_rehydrate_on_s),
+              .dawn_rehydrate_gap_s = id(dawn_rehydrate_gap_s),
+              .sw_midday_drench_enabled = id(sw_midday_drench_enabled),
+              .midday_boost_offset_min = id(midday_boost_offset_min),
+              .midday_drench_window_min = id(midday_drench_window_min),
+              .midday_drench_on_s = id(midday_drench_on_s),
+              .midday_drench_gap_s = id(midday_drench_gap_s),
+              // Firmware-v2 served-band targets (telemetry + normalized arbitration).
+              .temp_target = id(sw_onchip_band_enabled) ? sv2_temp_tgt : (sv2_temp_low + sv2_temp_high) * 0.5f,
+              .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f,
+              // ADR-0004: default 0 floats inside the served crop corridor and acts
+              // only at the edges. Nonzero pinches toward the served target only for
+              // explicit operator diagnostics; C++ default_setpoints matches.
+              .band_track_fraction = pol(verdify_policy::kPF_band_track_fraction, id(band_track_fraction)),
+              // BC-13 (ADR0003 §6.4): moisture-exchange selector. vent_exchange_fraction
+              // is the AI-tunable single-cycle exchange fraction (Jason 2026-06-17, from
+              // the global/number). The gain margin + heat-assist min-dwell are device-side
+              // globals (match default_setpoints; not planner-pushable this sprint).
+              .dehum_vent_gain_margin_kpa = id(dehum_vent_gain_margin_kpa),
+              .dehum_heat_assist_min_dwell_ms = id(dehum_heat_assist_min_dwell_ms),
+              .vent_exchange_fraction = pol(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction)),
+              // #410: vent+reheat held-temp dehum enable (ships OFF; armed by a
+              // logged tunable push, readback cfg_dehum_vent_hold_enabled).
+              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled)
+          };
+
+          validate_setpoints(setpts);
+          setpts.sw_fsm_controller_enabled = true;
+          if (!id(sw_fsm_controller_enabled)) {
+              id(sw_fsm_controller_enabled) = true;
+              id(sw_fsm_controller_enabled_switch).publish_state(true);
+          }
+          Mode mode = determine_mode(sensor_in, setpts, ctl_state, dt_ms);
+          RelayOutputs relay_out = resolve_equipment(mode, sensor_in, setpts, ctl_state, leadIs1);
+
+          bool willHeat1 = relay_out.heat1, willHeat2 = relay_out.heat2;
+          bool willFan1 = relay_out.fan1, willFan2 = relay_out.fan2;
+          bool willFog = relay_out.fog, willVent = relay_out.vent;
+
+          const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
+
+          auto fog_safety_block_reason = [&]() -> const char* {
+            if(!controller_time_valid) return "time_invalid";
+            if(dew_margin_f(sensor_in) < setpts.direct_wet_stress_min_dew_margin_f) return "dew_margin";
+            if(!fog_hour_permitted(sensor_in, setpts)) return "time_window";
+            if(sensor_in.rh_pct > setpts.fog_rh_ceiling) return "rh_ceiling";
+            if(sensor_in.temp_f < setpts.fog_min_temp) return "temp_low";
+            return "";
+          };
+          // ── Firmware-v2 BUTTON OVERRIDE LAYER (deadline latches) ──────────
+          // FANS / HUMID / VENT-BYPASS are momentary buttons; each press
+          // toggles a LATCH with a deadline (manual_*_until_ms, set in the
+          // button on_press handlers). While latched the relays are FORCED and
+          // SUPERSEDE all climate automation — only a re-press, the timeout, or
+          // a true safety rail interrupts them. This is the absolute-priority
+          // override layer; it sits ABOVE the mode table and below only safety.
+          // Deadlines are wrap-safe signed-difference tests (millis wraps).
+          const bool manual_fans_latched =
+              id(manual_fans_until_ms) != 0
+              && (int32_t)(id(manual_fans_until_ms) - now_ms) > 0;
+          const bool manual_fog_latched =
+              id(manual_fog_until_ms) != 0
+              && (int32_t)(id(manual_fog_until_ms) - now_ms) > 0;
+          const bool vent_bypass_latched =
+              id(vent_bypass_until_ms) != 0
+              && (int32_t)(id(vent_bypass_until_ms) - now_ms) > 0;
+          // Expire latches: clear the deadline once elapsed so telemetry/UI
+          // reflect the real state and the next press re-arms cleanly.
+          if (id(manual_fans_until_ms) != 0 && !manual_fans_latched) id(manual_fans_until_ms) = 0;
+          if (id(manual_fog_until_ms)  != 0 && !manual_fog_latched)  id(manual_fog_until_ms)  = 0;
+          if (id(vent_bypass_until_ms) != 0 && !vent_bypass_latched) id(vent_bypass_until_ms) = 0;
+          // EFFECTIVE manual state = the new deadline latch OR the legacy
+          // script flags (manual_*_active / vent_lock_active are still driven by
+          // the legacy timer scripts triggered elsewhere). We READ both so both
+          // trigger paths work; we never clobber the legacy flags here.
+          const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);
+          const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);
+          const bool vent_bypass_eff   = vent_bypass_latched || id(vent_lock_active);
+          const bool manual_fog_requested = manual_fog_eff;
+          const char* manual_fog_safety_block = fog_safety_block_reason();
+
+          // Resolve the absolute-priority override through the pure, unit-tested
+          // apply_manual_overrides() (greenhouse_logic.h) so this relay table
+          // matches the native tests exactly. Safety modes (SENSOR_FAULT /
+          // SAFETY_COOL / SAFETY_HEAT) are a no-op there — a manual press never
+          // fights a safety rail. Otherwise FANS/VENT-BYPASS force BOTH fans
+          // (vent OPEN, or CLOSED under bypass — the winter house-air pull) and
+          // HUMID forces the fogger unless a genuine fog safety block is up.
+          // ManualForce.fans/.fog feed set_relay's force_on below so a press
+          // bypasses relay min-off dwell and engages within one tick — the #289
+          // fix (manual_fan_force was previously computed but NEVER passed to the
+          // fan set_relay calls, so the FANS button stuck behind the fan min-off
+          // timer while the vent moved: the exact "pressed fans, nothing happened"
+          // signature).
+          RelayOutputs ov_out = {willHeat1, willHeat2, willFan1, willFan2, willFog, willVent};
+          const ManualOverrides manual_ov = {
+              manual_fans_eff,                     // fans_active
+              vent_bypass_eff,                     // vent_bypass_active
+              manual_fog_eff,                      // humid_active
+              manual_fog_safety_block[0] != '\0'   // fog_safety_blocked
+          };
+          const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);
+          willFan1 = ov_out.fan1; willFan2 = ov_out.fan2;
+          willFog  = ov_out.fog;  willVent = ov_out.vent;
+          const bool manual_fan_force = manual_force.fans;
+          const bool manual_fog_force = manual_force.fog;
+          if(sensor_fault_relay_lock) {
+            willHeat1 = false;
+            willHeat2 = false;
+            willFan1 = false;
+            willFan2 = false;
+            willFog = false;
+            willVent = false;
+          }
+
+          /**************** 11a — FAN/VENT + VENT-CLOSE INTERLOCKS ***************/
+          // The pure state machine keeps fans and vent logically consistent,
+          // but relay dwell timers are physical state. On a VENTILATE→sealed
+          // transition, fan min_on can otherwise keep a fan running after the
+          // vent is allowed to close. Hold/reopen the vent until non-safety fan
+          // dwell clears. SAFETY_HEAT is the intentional circulation exception:
+          // it runs the lead fan with vent closed to keep heat in.
+          const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
+          const bool fan_wanted = willFan1 || willFan2;
+          // VENT-BYPASS carve-out (#290): normally fans force the vent open so a
+          // running fan never works against a shut vent, but bypass is the
+          // deliberate fans-on / vent-CLOSED winter house-air mode — so it must
+          // NOT re-open the vent. fan_requires_open_vent() encodes that carve-out
+          // (and the SAFETY_HEAT/SENSOR_FAULT exceptions) as a pure, tested rule.
+          const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);
+          const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
+          static bool fan_vent_interlock_prev = false;
+          if (fan_requires_vent) {
+              willVent = true;
+          }
+          if (fan_vent_interlock_active != fan_vent_interlock_prev) {
+              if (fan_vent_interlock_active) {
+                  ESP_LOGI("interlock","Fan/vent: holding vent open until fan dwell clears");
+              } else {
+                  ESP_LOGI("interlock","Fan/vent: fan dwell clear, releasing vent hold");
+              }
+              fan_vent_interlock_prev = fan_vent_interlock_active;
+          }
+
+          const bool vent_is_open = id(vent_rly)->state;
+          // BC-5/BC-11: DEHUM_VENT is the ONE sanctioned heat+vent state — a bounded
+          // stage-1 heat-assist holds the temperature floor while dehumidifying — so
+          // it is exempt from the heat<->air suppression exactly like SAFETY_HEAT.
+          // (resolve_equipment only ever sets heat1, never heat2, in DEHUM_VENT.)
+          const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);
+          const bool heat_vent_interlock_active =
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (vent_is_open || willVent);
+          const bool heat_fan_interlock_active =
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
+          const bool heat_air_exchange_interlock_active =
+              heat_vent_interlock_active || heat_fan_interlock_active;
+          static bool heat_vent_interlock_prev = false;
+          static bool heat_fan_interlock_prev = false;
+          if (heat_air_exchange_interlock_active) {
+              willHeat1 = false;
+              willHeat2 = false;
+          }
+          if (heat_vent_interlock_active != heat_vent_interlock_prev) {
+              if (heat_vent_interlock_active) {
+                  ESP_LOGI("interlock","Heat/vent: suppressing non-safety heat until vent closes");
+              } else {
+                  ESP_LOGI("interlock","Heat/vent: vent closed, releasing heat hold");
+              }
+              heat_vent_interlock_prev = heat_vent_interlock_active;
+          }
+          if (heat_fan_interlock_active != heat_fan_interlock_prev) {
+              if (heat_fan_interlock_active) {
+                  ESP_LOGI("interlock","Heat/fan: suppressing non-safety heat until fan dwell clears");
+              } else {
+                  ESP_LOGI("interlock","Heat/fan: fan dwell clear, releasing heat hold");
+              }
+              heat_fan_interlock_prev = heat_fan_interlock_active;
+          }
+
+          const bool heat1_available = willHeat1 && (id(heat1_rly)->state || can_on(R[0]));
+          const bool heat_stage_interlock_active = willHeat2 && !heat1_available;
+          static bool heat_stage_interlock_prev = false;
+          if (heat_stage_interlock_active) {
+              willHeat2 = false;
+          }
+          if (heat_stage_interlock_active != heat_stage_interlock_prev) {
+              if (heat_stage_interlock_active) {
+                  ESP_LOGI("interlock","Heat stage: suppressing heat2 until heat1 is available");
+              } else {
+                  ESP_LOGI("interlock","Heat stage: heat1 available, releasing heat2 hold");
+              }
+              heat_stage_interlock_prev = heat_stage_interlock_active;
+          }
+
+          // Fog + misters follow their existing vent-policy tunables. Pre-sprint-15.1,
+          // 74% of fog-on-time and 12% of mister-on-time had vent still open
+          // (set_relay respects per-relay min_on timers but has no cross-relay
+          // ordering). Reading `vent_rly->state` gives the ACTUAL physical state,
+          // so even if firmware has already set willVent=false this cycle, we
+          // can suppress normal moisture until the actuator reports closed when
+          // the corresponding tunable asks for closed-vent moisture.
+          //
+          // Operator toggles:
+          //   - sw_fog_closes_vent (`fog_closes_vent`, default true) gates fog
+          //   - sw_mister_closes_vent (`mister_closes_vent`, default false)
+          //     gates normal mister pulses. The explicit VENTILATE assist path
+          //     bypasses both so dry-hot cooling can add moisture without
+          //     pretending the house is sealed.
+          const bool open_vent_fog_assist =
+              open_vent_fog_assist_permitted(mode, relay_out);
+          const bool open_vent_mister_assist =
+              (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
+          const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
+          const bool leak_block = id(bs_leak_detected).state;
+          const bool irrigation_water_conflict = id(irrig_state) > 0;
+          // FW-9: VPD emergency override — allow wet assist even if the daily
+          // water budget is exhausted. Include house and zone VPD so a
+          // safety miss is not hidden by stale/missing local sensors.
+          float budget_vpd_max = VPD;
+          auto merge_budget_vpd = [&](float observed_vpd) {
+              if(!isnan(observed_vpd)) {
+                  budget_vpd_max = isnan(budget_vpd_max) ? observed_vpd : fmax(budget_vpd_max, observed_vpd);
+              }
+          };
+          merge_budget_vpd(id(vpd_south).state);
+          merge_budget_vpd(id(vpd_west).state);
+          merge_budget_vpd(id(vpd_east).state);
+          const bool climate_vpd_emergency =
+              !isnan(budget_vpd_max) && (budget_vpd_max > id(safety_vpd_max_kpa));
+          const bool climate_water_budget_block =
+              id(mister_water_today) >= pol(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal))
+              && !climate_vpd_emergency;
+          // SAF-4: absolute daily volume hard-ceiling. Unlike the soft budget
+          // above, this is NOT bypassed by climate_vpd_emergency — even a VPD
+          // emergency cannot push wetting past the hard cap. It sits above the
+          // budget (default 360 vs 300 gal) so normal emergencies still have
+          // headroom but runaway saturation is impossible.
+          const bool mister_volume_hard_block =
+              id(mister_daily_volume_max_gal) > 0.0f
+              && id(mister_water_today) >= id(mister_daily_volume_max_gal);
+          static bool leak_water_interlock_prev = false;
+          static bool occupancy_water_interlock_prev = false;
+          static bool mister_volume_hard_block_prev = false;
+          if (mister_volume_hard_block != mister_volume_hard_block_prev) {
+              if (mister_volume_hard_block) {
+                  ESP_LOGW("interlock","SAF-4 daily volume hard-ceiling reached (%.0f >= %.0f gal): all wetting off",
+                           id(mister_water_today), id(mister_daily_volume_max_gal));
+              } else {
+                  ESP_LOGI("interlock","SAF-4 daily volume hard-ceiling cleared");
+              }
+              mister_volume_hard_block_prev = mister_volume_hard_block;
+          }
+
+          // (Firmware-v2: the CYC-4 overnight micro-pulse timer/lockout block is
+          // DELETED. Overnight humidity emergencies are handled by the normal
+          // SEALED_MIST/fog path under the solar night band — when VPD exceeds
+          // the LOW night band edge + stress margin the header's stress-wet rule
+          // permits fog, bounded by the standard relay min-on/off + duty caps.
+          // The HUMID button (manual_fog_force, above) is the operator path.)
+
+          // SAF-5: the AquaFog is clean-water-only by plumbing (there is no
+          // fog_fert relay). Positive interlock: fog NEVER co-fires with the
+          // fertilizer master valve, so salts can never reach the fogger even
+          // if a future plumbing change introduced a path. Also covered by
+          // irrigation_water_conflict (irrig_state>0 while feeding), but this
+          // is the explicit, plumbing-independent assertion of the invariant.
+          const bool fert_master_on = id(fertilizer_master_valve).state;
+          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on) {
+              willFog = false;
+          }
+          if (leak_block != leak_water_interlock_prev) {
+              if (leak_block) {
+                  ESP_LOGE("interlock","Leak detected: forcing fog, misters, and irrigation off");
+              } else {
+                  ESP_LOGW("interlock","Leak lock cleared: water actuators may resume");
+              }
+              leak_water_interlock_prev = leak_block;
+          }
+          if (occupancy_moisture_block != occupancy_water_interlock_prev) {
+              if (occupancy_moisture_block) {
+                  ESP_LOGW("interlock","Occupancy inhibit: forcing fog and climate misters off");
+              } else {
+                  ESP_LOGI("interlock","Occupancy inhibit cleared: moisture actuators may resume");
+              }
+              occupancy_water_interlock_prev = occupancy_moisture_block;
+          }
+          if (polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist) {
+              willFog = false;
+          }
+
+          /**************** 10 — CYCLE COUNTERS ***********************************/
+          // Count accepted relay edges after applying dwell and overrides.
+          // Repeated ON intent while min-off holds is not a new relay cycle.
+          const bool relay_was_on[] = {
+              id(heat1_rly)->state, id(heat2_rly)->state,
+              id(fan1_rly)->state, id(fan2_rly)->state,
+              id(fog_rly)->state, id(vent_rly)->state};
+
+          /**************** 11 — APPLY RELAY OUTPUTS ******************************/
+          const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
+          const bool heat1_will_be_on_after_apply =
+              (willHeat1 && (id(heat1_rly)->state || can_on(R[0])))
+              || (id(heat1_rly)->state && !force_heat_off && !can_off(R[0]));
+          const bool force_heat2_off =
+              force_heat_off
+              || (id(heat2_rly)->state && !willHeat2 && !heat1_will_be_on_after_apply);
+          set_relay(R[0], willHeat1, false, force_heat_off);
+          set_relay(R[1], willHeat2, false, force_heat2_off);
+          set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
+          // #289 fix: pass manual_fan_force so a FANS / VENT-BYPASS press forces
+          // the fans on THIS tick, bypassing the fan min-off dwell that silently
+          // swallowed manual presses before.
+          set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock);
+          set_relay(R[3], willFan2, manual_fan_force, sensor_fault_relay_lock);
+          set_relay(
+              R[4],
+              willFog,
+              // CYC-4: force_on bypasses MIN_FOG_OFF_MS so a ≤5s micro-pulse can
+              // start even if the fogger toggled recently; force_off bypasses
+              // MIN_FOG_ON_MS so the pulse is cut at its ≤5s cap (and on any
+              // safety interlock). The safety disjunction below is unchanged.
+              manual_fog_force,
+              sensor_fault_relay_lock
+                  || leak_block
+                  || occupancy_moisture_block
+                  || irrigation_water_conflict
+                  || !controller_time_valid
+                  || climate_water_budget_block
+                  || mister_volume_hard_block
+                  || fert_master_on);
+
+          if(!relay_was_on[0] && id(heat1_rly)->state) id(cnt_heat1_today) += 1;
+          if(!relay_was_on[1] && id(heat2_rly)->state) id(cnt_heat2_today) += 1;
+          if(!relay_was_on[2] && id(fan1_rly)->state)  id(cnt_fan1_today) += 1;
+          if(!relay_was_on[3] && id(fan2_rly)->state)  id(cnt_fan2_today) += 1;
+          if(!relay_was_on[4] && id(fog_rly)->state)   id(cnt_fog_today) += 1;
+          if(!relay_was_on[5] && id(vent_rly)->state)  id(cnt_vent_today) += 1;
+
+          /**************** 12 — MISTER STATE MACHINE *****************************/
+          // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
+          // chooses the pulse target; it does not create a standalone mister mode.
+          // Stages: S1 (single zone) → S2 (all zones rotating) → FOG (escalation)
+          char moisture_block_reason[96] = "none";
+          char direct_wet_zone_mask[48] = "unknown";
+          {
+            const uint32_t MISTER_ENGAGE_DELAY_MS = uint32_t(pol(verdify_policy::kPF_mister_engage_delay_s, id(mister_engage_delay_s))) * 1000UL;
+            const uint32_t MISTER_ALL_DELAY_MS    =
+                uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL;
+
+            float south_vpd = id(vpd_south).state;
+            float west_vpd  = id(vpd_west).state;
+            float east_vpd  = id(vpd_east).state;
+            float avg_vpd   = VPD;
+            float south_temp = id(south_wall_temperature).state;
+            float west_temp  = id(west_wall_temperature).state;
+            float east_temp  = id(east_wall_temperature).state;
+
+            // Sprint-15.1 fix 5: vent-close interlock for normal mister
+            // pulses. Atomizers ejecting moisture while vent is open leaks
+            // most of the humidity, so `sw_mister_closes_vent` still blocks
+            // ordinary SEALED_MIST pulses until the physical vent closes.
+            // VENTILATE assist is an explicit exception: temp has priority,
+            // fans/vent must remain open, and the planner/firmware are asking
+            // for bounded evaporative support rather than sealed humidifying.
+              const bool mister_vent_ok = open_vent_mister_assist || !polb(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent)) || !vent_is_open;
+              // BC-14 (ADR0003 §6.6) FOG-FIRST: the zone misters engage only when the
+              // FSM ladder has ESCALATED PAST the fog entry stage (mist_stage >= MIST_S1).
+              // Fog itself is driven by the FSM out.fog/willFog (it leads at MIST_FOG and
+              // persists, LAYERED). So misters must NOT run while the ladder is still at
+              // MIST_FOG — fog gets its window first; misters add only when fog can't hold.
+              const bool fsm_escalated_to_misters =
+                  (ctl_state.mist_stage == MIST_S1) || (ctl_state.mist_stage == MIST_S2);
+              const bool climate_wet_assist_demand =
+                  ((mode == SEALED_MIST) && fsm_escalated_to_misters) || ctl_state.vent_mist_assist_active;
+              bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;
+
+            auto now_for_wet_gate = id(sntp_time).now();
+            const bool wet_time_valid = now_for_wet_gate.is_valid() && !id(sntp_failed);
+            const int wet_now_minute = wet_time_valid
+              ? local_minute_of_day(now_for_wet_gate.hour, now_for_wet_gate.minute)
+              : 0;
+            const float wet_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
+              ? Tin - id(dewpoint_avg).state
+              : -999.0f;
+            // Firmware-v2: defer to the header's single-source wet-assist gate
+            // (solar wet taper + stress rule + feed-hold + dew margin). No
+            // controls.yaml-side wall-clock recompute — same code as the FSM.
+            const bool climate_wet_assist_safety_ok =
+              wet_time_valid && climate_wet_assist_permitted(sensor_in, setpts);
+            // ADR-007: command origin, not an availability window, owns relay
+            // selection. Every climate/VPD wet request resolves to center mist;
+            // dormant irrigation enables are irrelevant to this path.
+            const WetTopologyPolicy climate_topology{};
+            const WetResolution climate_wet_resolution = resolve_wet_request(
+              {WetCommandOrigin::CLIMATE_VPD, WetZone::NONE, WetChemistry::CLEAN},
+              climate_topology);
+            // SAF-4/IRR-5: non-bypassable per-zone (center) cumulative-runtime
+            // duty cap. Once the center mister has run mister_max_runtime_min
+            // minutes today it is locked out for the rest of the day —
+            // regardless of VPD emergency — so the bare-root Vanda velamen
+            // cycles green<->silver instead of staying continuously saturated.
+            // (runtime_mister_center_ms resets at midnight.) mister_max_runtime
+            // <= 0 disables the cap.
+            const bool center_duty_cap_reached =
+                id(mister_max_runtime_min) > 0
+                && id(runtime_mister_center_ms) >= (uint32_t)id(mister_max_runtime_min) * 60000UL;
+            // SAF-4: absolute daily volume hard-ceiling — blocks ALL climate
+            // misting even under a VPD emergency (mister_volume_hard_block is
+            // computed earlier from mister_water_today vs the hard cap).
+            const bool south_wet_allowed = false;
+            const bool west_wet_allowed = false;
+            const bool center_wet_allowed = climate_wet_assist_demand
+                                            && climate_wet_assist_safety_ok
+                                            && climate_wet_resolution.admitted
+                                            && climate_wet_resolution.relay == WetRelay::CENTER_MISTER
+                                            && !center_duty_cap_reached
+                                            && !mister_volume_hard_block;
+            const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
+            {
+              direct_wet_zone_mask[0] = '\0';
+              size_t mask_n = 0;
+              auto add_zone = [&](const char* tag){
+                if(mask_n > 0 && mask_n + 1 < sizeof(direct_wet_zone_mask)) {
+                  direct_wet_zone_mask[mask_n++] = ',';
+                }
+                size_t len = strlen(tag);
+                if(mask_n + len < sizeof(direct_wet_zone_mask)) {
+                  memcpy(direct_wet_zone_mask + mask_n, tag, len);
+                  mask_n += len;
+                }
+              };
+              if(south_wet_allowed) add_zone("south");
+              if(west_wet_allowed) add_zone("west");
+              if(center_wet_allowed) add_zone("center");
+              direct_wet_zone_mask[mask_n] = '\0';
+              if(mask_n == 0) snprintf(direct_wet_zone_mask, sizeof(direct_wet_zone_mask), "none");
+            }
+            auto direct_wet_relay_watchdog = [&]() {
+              // Climate owns center only. Non-wall fertilizer is never eligible,
+              // even if stale HA state or a legacy retry attempts to restore it.
+              if(id(irrig_state) == 0) {
+                id(south_wall_mister).turn_off();
+                id(west_wall_mister).turn_off();
+              }
+              id(south_wall_mister_fertilized).turn_off();
+              id(west_wall_mister_fertilized).turn_off();
+              id(center_drips_fertilized).turn_off();
+              if(!center_wet_allowed) id(center_mister).turn_off();
+              bool active_zone_gate_closed =
+                  (id(mister_pulse_zone) == 1 && !south_wet_allowed) ||
+                  (id(mister_pulse_zone) == 2 && !west_wet_allowed) ||
+                  (id(mister_pulse_zone) == 3 && !center_wet_allowed);
+              if(active_zone_gate_closed) {
+                id(mister_pulse_zone) = 0;
+                id(mister_pulse_timer_ms) = 0;
+              }
+            };
+            direct_wet_relay_watchdog();
+            auto first_allowed_mister_zone = [&]() -> int {
+              if(center_wet_allowed) return 3;
+              return 0;
+            };
+
+              // If misters WERE firing but vent just opened, kill the zone
+              // drivers immediately so we don't wait for the pulse timer.
+            if (!mister_vent_ok && id(mister_pulse_zone) > 0) {
+              if(id(irrig_state) == 0) {
+                id(south_wall_mister).turn_off();
+                id(west_wall_mister).turn_off();
+              }
+                id(south_wall_mister_fertilized).turn_off();
+                id(west_wall_mister_fertilized).turn_off();
+                id(center_mister).turn_off();
+                id(mister_pulse_zone) = 0;
+                id(mister_pulse_timer_ms) = 0;
+                ESP_LOGI("interlock","Mister suppressed — vent still open");
+            }
+
+            // Defensive: zero the engage-delay timers on SEALED_MIST rising edge.
+            // The mister_blocked branch intentionally preserves them (fast
+            // re-engage when block clears), so a SEALED→IDLE bounce inside the
+            // 60s idle holdoff could otherwise carry stale accumulation into
+            // the next seal cycle and fire mister_state=1 immediately.
+            static bool was_sealed = false;
+            if(humidity_demand && !was_sealed){
+              id(humid_s1_duration_ms) = 0;
+              id(humid_s2_duration_ms) = 0;
+            }
+            was_sealed = humidity_demand;
+
+            // Misters run for sealed humidification and band-first controller vent mist assist.
+            // Fog remains the heavy escalation and is still gated by the vent
+            // close interlock above when fog_closes_vent is enabled.
+              bool occupancy_blocks = occupancy_moisture_block;
+              // Quick check: is any zone above its crop VPD target?
+              bool any_zone_stressed = false;
+              if(south_wet_allowed && !isnan(south_vpd) && id(vpd_target_south) > 0 && south_vpd > id(vpd_target_south)) any_zone_stressed = true;
+              if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
+              if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
+              if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
+              bool global_stressed = (avg_vpd > pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)));
+              bool budget_block = climate_water_budget_block;
+              bool irrigation_block = irrigation_water_conflict;
+              bool zone_mister_demand = humidity_demand && mister_vent_ok;
+              bool mister_blocked =
+                  leak_block
+                  || budget_block
+                  || !zone_mister_demand
+                  || !any_mister_wet_allowed
+                  || irrigation_block
+                  || occupancy_blocks;
+              if(mister_blocked) {
+                if(leak_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "leak_detected");
+                } else if(budget_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
+                } else if(!zone_mister_demand) {
+                  snprintf(
+                    moisture_block_reason,
+                    sizeof(moisture_block_reason),
+                    ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && !mister_vent_ok
+                      ? "vent_interlock"
+                      : "no_humidity_demand");
+                } else if(!any_mister_wet_allowed) {
+                  if(climate_wet_assist_demand) {
+                    if(!wet_time_valid) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
+                    } else if(VPD <= (VPDhi + pol(verdify_policy::kPF_direct_wet_stress_vpd_margin_kpa, id(direct_wet_stress_vpd_margin_kpa)))) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "below_threshold");
+                    } else if(wet_dew_margin_f < pol(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f))) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin");
+                    } else if(past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "wet_taper");
+                    } else {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
+                    }
+                  } else if(!polb(verdify_policy::kPF_sw_direct_wet_gate_enabled, id(direct_wet_gate_enabled))) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
+                  } else if(!wet_time_valid) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
+                  } else if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_temp");
+                  } else {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_window");
+                  }
+                } else if(irrigation_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "irrigation");
+                } else if(occupancy_blocks) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "occupancy");
+                }
+              } else if(!any_zone_stressed && !global_stressed) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_vpd_demand");
+              } else if(id(mister_state) == 0 && humidity_demand && id(humid_s1_duration_ms) < MISTER_ENGAGE_DELAY_MS) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "engage_delay");
+              }
+
+            if(mister_blocked && id(mister_state) > 0){
+              ESP_LOGI("mister","BLOCKED (budget=%.0f/%.0f humid=%d zone=%d occ=%d)",
+                       id(mister_water_today), pol(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal)),
+                       humidity_demand, any_zone_stressed, occupancy_blocks);
+              if(id(irrig_state) == 0) {
+                id(south_wall_mister).turn_off();
+                id(west_wall_mister).turn_off();
+              }
+              id(south_wall_mister_fertilized).turn_off();
+              id(west_wall_mister_fertilized).turn_off();
+              id(center_mister).turn_off();
+              id(mister_state) = 0;
+              id(mister_selected_zone) = 0;
+              id(mister_duty_phase) = 0;
+              id(mister_duty_timer_ms) = 0;
+              // NOTE: Do NOT reset humid_s1/s2 duration timers here.
+              // Preserves escalation progress so misters re-engage quickly
+              // when the blocking condition clears (e.g., COOL→IDLE transition).
+            }
+
+            if(!mister_blocked){
+              // Track humidity duration for mister engage delay.
+              if(humidity_demand && id(mister_state) == 0){
+                id(humid_s1_duration_ms) += dt_ms;
+                id(humid_idle_holdoff_ms) = 0;
+              } else if(!humidity_demand){
+                // Hold-off: only reset engage timer after 60s continuous idle
+                id(humid_idle_holdoff_ms) += dt_ms;
+                if(id(humid_idle_holdoff_ms) > 60000UL){
+                  id(humid_s1_duration_ms) = 0;
+                  id(humid_s2_duration_ms) = 0;
+                }
+              } else {
+                id(humid_idle_holdoff_ms) = 0;
+              }
+
+              // ═══════════ FOG → MISTERS ESCALATION (lowest-GPM-first; ADR0003 §6.6) ═══════════
+              // ENTRY: FOG (AquaFog ~0.26 GPM — gentlest, lowest WATER; driven by the FSM
+              //        out.fog/willFog, runs BEFORE these misters and persists under them).
+              // S1: Pulse-rotation misters (~1 GPM/zone, targeted) — fog couldn't hold the target.
+              // S2: Aggressive misters (all zones rotating, heaviest water) — last resort.
+              // (Ordered by WATER GPM per Jason 2026-06-17; fog is higher electrical-power but
+              //  lowest water, so it leads. The mister_state machine below only RUNS once the FSM
+              //  has escalated past fog — see fsm_escalated_to_misters at the humidity_demand gate.)
+
+              const uint32_t PULSE_ON_MS  =
+                  uint32_t(pol(verdify_policy::kPF_mister_pulse_on_s, id(mister_pulse_on_s))) * 1000UL;
+              const uint32_t PULSE_GAP_MS =
+                  uint32_t(pol(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s))) * 1000UL;
+
+              // Center mist is climate/VPD-only. Every zone uses the base pulse
+              // cadence; there is no dawn or midday watering substitution.
+              ctl_state.center_burst = CENTER_BURST_NONE;
+              auto pulse_on_ms_for  = [&](int) -> uint32_t { return PULSE_ON_MS; };
+              auto pulse_gap_ms_for = [&](int) -> uint32_t { return PULSE_GAP_MS; };
+
+              // Mister re-fire dwell fence: a zone may not re-energize within
+              // mister_min_off_s of its own last off. The misters bypass the
+              // RelayMeta R[] min-on/off machinery (they're a multi-zone pulse
+              // FSM), so this is their per-zone equivalent. Suppression only
+              // DELAYS a re-fire (never forces a relay on / never over-waters),
+              // so the failure mode is benign. Returns true if energizing is
+              // allowed now.
+              const uint32_t MISTER_MIN_OFF_MS = (uint32_t)pol(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s)) * 1000UL;
+              auto mister_zone_last_off = [&](int z) -> uint32_t {
+                return z == 1 ? id(last_off_south_ms)
+                     : z == 2 ? id(last_off_west_ms)
+                     : id(last_off_center_ms);
+              };
+              auto mister_zone_can_on = [&](int z) -> bool {
+                return z <= 0 || (now_ms - mister_zone_last_off(z)) >= MISTER_MIN_OFF_MS;
+              };
+
+              // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
+              // operator-tunable mister_hysteresis_kpa (default 0.10) so the
+              // mister state machine cannot chatter inside a tight band. Still
+              // capped by band width (HV) and the engage-kPa-derived term.
+              const float MISTER_HYST = fminf(HV, fmaxf(id(mister_hysteresis_kpa),
+                  pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)) * 0.25f));
+
+              // Helper: select mister zone with highest stress score.
+              // Each zone has its own VPD target from its planted crops.
+              // Stress score starts with (actual VPD - target) / target.
+              // Once humidity demand exists, zone heat stress is also folded
+              // in from the crop temp band so hot south/east pockets influence
+              // which mister zone gets the next pulse.
+              // East has a sensor + target but NO mister — its stress boosts
+              // adjacent zones (south, center) to increase their misting urgency.
+              // Center has no sensor, uses avg_vpd with a penalty multiplier.
+              auto select_most_stressed_zone = [&]() -> int {
+                float s_stress = -999.0f, w_stress = -999.0f, c_stress = -999.0f;
+                float temp_band = max(2.0f, id(target_temp_high_f) - id(target_temp_low_f));
+                auto zone_temp_stress = [&](float zone_temp) -> float {
+                  if(isnan(zone_temp)) return 0.0f;
+                  float above_high = max(0.0f, zone_temp - id(target_temp_high_f)) / temp_band;
+                  float above_avg  = max(0.0f, zone_temp - Tin) / temp_band;
+                  return above_high + above_avg;
+                };
+
+                // East zone stress (sensor, no mister) — boosts south + center
+                float east_vpd_val = isnan(east_vpd) ? 0.0f : east_vpd;
+                float e_stress = 0.0f;
+                if(!isnan(east_vpd) && id(vpd_target_east) > 0.0f)
+                  e_stress = max(0.0f, (east_vpd_val - id(vpd_target_east)) / id(vpd_target_east));
+                e_stress += zone_temp_stress(east_temp);
+
+                // South: own sensor + gets boost from east stress (adjacent)
+                  if(south_wet_allowed && !isnan(south_vpd) && id(vpd_target_south) > 0.0f)
+                    s_stress = (south_vpd - id(vpd_target_south)) / id(vpd_target_south)
+                               + zone_temp_stress(south_temp)
+                               + e_stress * id(east_adjacency_factor);
+
+                  // West: own sensor, no east adjacency boost
+                  if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0.0f)
+                    w_stress = (west_vpd - id(vpd_target_west)) / id(vpd_target_west)
+                               + zone_temp_stress(west_temp);
+
+                  // Center: avg_vpd proxy + east adjacency boost + sensor penalty
+                  if(center_wet_allowed && id(vpd_target_center) > 0.0f)
+                    c_stress = (avg_vpd - id(vpd_target_center)) / id(vpd_target_center)
+                               * pol(verdify_policy::kPF_mister_center_penalty, id(mister_center_penalty))
+                               + e_stress * id(east_adjacency_factor);
+
+                // Only mist zones actually above their VPD or temp target.
+                if(s_stress <= 0 && w_stress <= 0 && c_stress <= 0) return 0;
+                if(s_stress >= w_stress && s_stress >= c_stress && s_stress > 0) return 1;
+                if(w_stress >= s_stress && w_stress >= c_stress && w_stress > 0) return 2;
+                if(c_stress > 0) return 3;
+                return 0;
+              };
+
+              auto turn_on_zone = [&](int zone) {
+                if(id(irrig_state) == 0) {
+                  id(south_wall_mister).turn_off();
+                  id(west_wall_mister).turn_off();
+                }
+                id(south_wall_mister_fertilized).turn_off();
+                id(west_wall_mister_fertilized).turn_off();
+                id(center_mister).turn_off();
+                // Resolve every climate selection through the pure topology;
+                // stale fairness/zone hints cannot route away from center.
+                if(zone != 3) zone = first_allowed_mister_zone();
+                if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
+                if(zone == 0) { id(mister_pulse_zone) = 0; return; }
+                // Mister re-fire dwell fence (mister_min_off_s): if the chosen
+                // zone is still inside its min-off hold, try the other eligible
+                // zone; if none is ready, hold this cycle (all misters stay off,
+                // mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
+                // pulse_on_ms_for(0) = PULSE_ON_MS, so the FSM re-evaluates ~one
+                // gap later — by which point min_off has elapsed and it fires.
+                // Suppression only DELAYS a re-fire; it never forces a relay on
+                // and never extends a normal pulse, so the failure mode is benign.
+                if(!mister_zone_can_on(zone)) {
+                  int alt = first_allowed_mister_zone();
+                  if(alt > 0 && alt != zone && mister_zone_can_on(alt)) {
+                    zone = alt;
+                  } else {
+                    ESP_LOGI("mister","DWELL-HOLD zone=%d (min_off %us)", zone, (unsigned)pol(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s)));
+                    id(mister_pulse_zone) = 0;
+                    return;
+                  }
+                }
+                // sprint-2: last-fire ms for fairness watchdog.
+                // sprint-7: per-zone cycle counters at the rising edge
+                //          (turn_on_zone is always preceded by all-off,
+                //          so every call is an off→on transition).
+                id(climate_wet_controller_actuating) = true;
+                if(zone == 3) { id(center_mister).turn_on(); id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
+                id(climate_wet_controller_actuating) = false;
+                id(mister_pulse_zone) = zone;
+                id(mister_selected_zone) = zone;
+              };
+
+              auto turn_off_all_misters = [&]() {
+                // GPIO falling-edge callbacks own last-off stamps for every
+                // stop path, including watchdog/irrigation cancellation. A
+                // repeated OFF request must not restart the minimum-off fence.
+                id(south_wall_mister).turn_off();
+                id(south_wall_mister_fertilized).turn_off();
+                id(west_wall_mister).turn_off();
+                id(west_wall_mister_fertilized).turn_off();
+                id(center_mister).turn_off();
+                id(mister_pulse_zone) = 0;
+              };
+
+              const char* zone_names[] = {"none", "south", "west", "center"};
+
+              // Fairness watchdog (sprint-2): if a stressed zone hasn't fired in
+              // FAIRNESS_WINDOW_MS, it bypasses the stress-scoring contest. Motivated
+              // by the 90-day audit showing west stressed 36% of time but firing only
+              // 13% of mister cycles — center's use of avg_vpd as a stress proxy
+              // correlates it with south, and east adjacency boosts south+center when
+              // east is stressed; west gets neither boost. Guarantees no stressed
+              // zone waits longer than 10 min without a pulse. Ties → most overdue.
+              auto select_overdue_zone = [&]() -> int {
+                const uint32_t FAIRNESS_WINDOW_MS = 600000UL;  // 10 min
+                  int candidate = 0;
+                  uint32_t candidate_age = 0;
+                  auto check = [&](int z, float vpd, float target, uint32_t last_fire) {
+                    if((z == 1 && !south_wet_allowed)
+                       || (z == 2 && !west_wet_allowed)
+                       || (z == 3 && !center_wet_allowed)) return;
+                    if(isnan(vpd) || target <= 0.0f) return;
+                    if(vpd <= target) return;  // zone not stressed
+                  uint32_t age = now_ms - last_fire;  // last_fire==0 ⇒ age == uptime
+                  if(age > FAIRNESS_WINDOW_MS && age > candidate_age) {
+                    candidate = z;
+                    candidate_age = age;
+                  }
+                };
+                check(1, south_vpd, id(vpd_target_south),  id(last_fire_south_ms));
+                check(2, west_vpd,  id(vpd_target_west),   id(last_fire_west_ms));
+                check(3, avg_vpd,   id(vpd_target_center), id(last_fire_center_ms));
+                return candidate;
+              };
+
+              // Pulse-zone selector: watchdog first, then EITHER the per-zone band
+              // arbiter (item 3, when sw_arbiter_zone_enabled) OR the legacy stress
+              // scoring. Caller decided "fire a pulse now"; this answers "which zone."
+                // Item-3 arbiter: choose the wet zone from the deterministic per-zone
+                // VPD band + owner priority (center=rank 1) — the SAME math the diag
+                // block already publishes as gh_zone_wet_granted, now wired to relays.
+                // Gated by sw_arbiter_zone_enabled (default OFF) so it ships inert and
+                // replay-clean; flip on after a corpus zone-distribution review. Maps
+                // the solar.h ZoneId (center0/south1/west2/east3) → legacy misting
+                // numbering (none0/south1/west2/center3). EAST has no mister relay.
+                auto select_arbiter_zone = [&]() -> int {
+                  ZoneBand zb[ZONE_COUNT];
+                  zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
+                  zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
+                  zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
+                  zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
+                  const float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+                  ZoneWetIntent zi[ZONE_COUNT];
+                  for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
+                  const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
+                  const bool zact[ZONE_COUNT] = { center_wet_allowed, south_wet_allowed, west_wet_allowed, false };
+                  const int won = arbitrate_wet_zone(zi, prank, zact);
+                  if (won == ZONE_SOUTH)  return 1;
+                  if (won == ZONE_WEST)   return 2;
+                  if (won == ZONE_CENTER) return 3;
+                  return 0;  // none, or EAST (no relay)
+                };
+                auto select_zone_for_pulse = [&]() -> int {
+                  int overdue = select_overdue_zone();
+                  if(overdue > 0) {
+                    id(cnt_mister_fairness_overrides_today) += 1;
+                    ESP_LOGI("mister","FAIRNESS: zone=%s overdue — overriding scoring",
+                             zone_names[overdue]);
+                    return overdue;
+                  }
+                  if (id(sw_arbiter_zone_enabled)) {
+                    const int az = select_arbiter_zone();
+                    if (az > 0) return az;  // arbiter granted a zone; else fall through to legacy
+                  }
+                  return select_most_stressed_zone();
+                };
+                auto fallback_wet_zone = [&]() -> int {
+                  if(south_wet_allowed) return 1;
+                  if(west_wet_allowed) return 2;
+                  if(center_wet_allowed) return 3;
+                  return 0;
+                };
+
+              // --- S1 ENGAGE: misters start only under humidity demand; zone/global
+              // stress decide whether a pulse is warranted and which zone gets it.
+              // The elapsed interval precedes any phase armed in this tick.
+              // A new pulse must receive its complete requested duration.
+              bool mister_timer_armed_this_tick = false;
+              if(id(mister_state) == 0
+                 && humidity_demand
+                 && id(humid_s1_duration_ms) >= MISTER_ENGAGE_DELAY_MS
+                 && (any_zone_stressed || global_stressed)){
+
+                int zone = select_zone_for_pulse();
+                  if(zone == 0) zone = fallback_wet_zone();
+                if(zone > 0) {  // Engage
+                  id(mister_state) = 1;  // S1 = single zone pulse
+                  id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
+                  turn_on_zone(zone);
+                  // IRR-3/IRR-4: cadence keyed on the ACTUAL fired zone
+                  // (turn_on_zone may remap to first_allowed); center override
+                  // only applies to zone 3.
+                  id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                  mister_timer_armed_this_tick = true;
+                  ESP_LOGI("mister","S1 MISTERS: pulse %s %ums (VPD=%.2f, target=%.2f)",
+                           zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd,
+                           zone == 1 ? id(vpd_target_south) : zone == 2 ? id(vpd_target_west) : id(vpd_target_center));
+                }
+              }
+
+              // --- ESCALATE S1 → S2: all zones rotating ---
+              if(id(mister_state) == 1){
+                id(humid_s2_duration_ms) += dt_ms;
+                if(id(humid_s2_duration_ms) >= MISTER_ALL_DELAY_MS
+                   && avg_vpd > pol(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa))){
+                    id(mister_state) = 2;  // S2 = all zones rotating
+                    id(mister_rotation_index) = 0;
+                    int zone = select_zone_for_pulse();
+                    if(zone == 0) zone = fallback_wet_zone();
+                    turn_on_zone(zone);
+                  // IRR-3/IRR-4: base ON keyed on actual fired zone (center
+                  // burst override applies only to zone 3). The south/west
+                  // VPD-weight multiplier is unchanged and never touches center.
+                  uint32_t weighted_ms = pulse_on_ms_for(id(mister_pulse_zone));
+                  float svpd = isnan(south_vpd) ? 0.0f : south_vpd;
+                  float wvpd = isnan(west_vpd) ? 0.0f : west_vpd;
+                  float max_vpd = max(max(svpd, wvpd), avg_vpd);
+                  if(zone == 1 && svpd >= max_vpd * 0.95f) weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
+                  else if(zone == 2 && wvpd >= max_vpd * 0.95f) weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
+                  id(mister_pulse_timer_ms) = weighted_ms;
+                  mister_timer_armed_this_tick = true;
+                  ESP_LOGI("mister","S2 ALL-ROTATE: start %s %dms (VPD=%.2f)",
+                           zone_names[zone], weighted_ms, avg_vpd);
+                }else{
+                }
+              }
+
+              // --- ESCALATE S2 → S3: FOG (heavy artillery) ---
+              // Fog fires when misters alone can't control VPD.
+              // fog_closes_vent controls whether fog forces the vent shut.
+              // This is tracked separately — see willFog gate at line ~439.
+
+              // --- DE-ESCALATE S2 → S1 ---
+              if(id(mister_state) == 2
+                 && avg_vpd < (pol(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa)) - MISTER_HYST)){
+                ESP_LOGI("mister","S2→S1: VPD=%.2f", avg_vpd);
+                  id(mister_state) = 1;
+                  id(humid_s2_duration_ms) = 0;
+                  int zone = select_zone_for_pulse();
+                  if(zone == 0) zone = fallback_wet_zone();
+                  turn_on_zone(zone);
+                id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                mister_timer_armed_this_tick = true;
+              }
+
+              // --- DE-ESCALATE S1 → off ---
+              if(id(mister_state) == 1 && !any_zone_stressed
+                 && avg_vpd < (pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)) - MISTER_HYST)){
+                ESP_LOGI("mister","S1→off: VPD=%.2f", avg_vpd);
+                turn_off_all_misters();
+                id(mister_state) = 0;
+                id(mister_selected_zone) = 0;
+                id(mister_pulse_timer_ms) = 0;
+                id(humid_s1_duration_ms) = 0;
+                id(humid_s2_duration_ms) = 0;
+              }
+
+              // --- PULSE TIMER (both S2 and S3) ---
+              if(id(mister_state) > 0){
+                if(!mister_timer_armed_this_tick){
+                  if(id(mister_pulse_timer_ms) > dt_ms){
+                    id(mister_pulse_timer_ms) -= dt_ms;
+                  }else{
+                    id(mister_pulse_timer_ms) = 0;
+                  }
+                }
+
+                if(id(mister_pulse_timer_ms) == 0){
+                  if(id(mister_pulse_zone) > 0){
+                    // === PULSE ON → GAP ===
+                    // IRR-3/IRR-4: capture the just-finished zone BEFORE
+                    // turn_off_all_misters() clears mister_pulse_zone, so the
+                    // GAP after a CENTER pulse uses the denser center gap.
+                    const int finished_zone = id(mister_pulse_zone);
+                    // Track effectiveness: VPD change during this pulse
+                    if(!isnan(id(mister_vpd_at_start)) && !isnan(avg_vpd)){
+                      float delta = avg_vpd - id(mister_vpd_at_start);
+                      id(mister_vpd_delta).publish_state(delta);
+                      ESP_LOGI("mister","Pulse done: zone=%s delta=%.3f kPa (%.2f → %.2f)",
+                               zone_names[finished_zone], delta,
+                               id(mister_vpd_at_start), avg_vpd);
+                    }
+                    turn_off_all_misters();
+                    id(mister_pulse_timer_ms) = pulse_gap_ms_for(finished_zone);
+
+                  }else{
+                    // === GAP → NEXT PULSE ===
+                    if(id(mister_state) == 1){
+                        // S1: re-read VPD, pulse most stressed zone
+                        int zone = select_zone_for_pulse();
+                        if(zone == 0) zone = fallback_wet_zone();
+                      id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
+                      turn_on_zone(zone);
+                      id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                      ESP_LOGI("mister","PULSE: %s %ums (VPD=%.2f)",
+                               zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd);
+
+                    }else if(id(mister_state) == 2){
+                        // S2: pick the most stressed zone each pulse (not round-robin)
+                        int zone = select_zone_for_pulse();
+                        if(zone == 0) zone = fallback_wet_zone();
+                      id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
+                      turn_on_zone(zone);
+                      // VPD-weighted duration for high-stress zones. Base ON is
+                      // keyed on the actual fired zone (IRR-3/IRR-4 center burst
+                      // override applies only to zone 3); the south/west VPD
+                      // weight multiplier is unchanged and never touches center.
+                      uint32_t weighted_ms = pulse_on_ms_for(id(mister_pulse_zone));
+                      float zone_vpd = (zone == 1) ? south_vpd : (zone == 2) ? west_vpd : avg_vpd;
+                      float zone_target = (zone == 1) ? id(vpd_target_south) : (zone == 2) ? id(vpd_target_west) : id(vpd_target_center);
+                      if(!isnan(zone_vpd) && zone_target > 0 && zone_vpd > zone_target * 1.2f){
+                        weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
+                      }
+                      id(mister_pulse_timer_ms) = weighted_ms;
+                      ESP_LOGI("mister","ROTATE: %s %dms (VPD=%.2f target=%.2f)",
+                               zone_names[zone], weighted_ms,
+                               isnan(zone_vpd) ? 0.0f : zone_vpd, zone_target);
+                    }
+                  }
+                }
+              }
+
+              // Update h for telemetry (new hierarchy: S1=misters, S2=all-rotate, S3=fog)
+
+              // --- RUNTIME TRACKING ---
+              if(id(south_wall_mister).state) id(runtime_mister_south_ms) += dt_ms;
+              if(id(west_wall_mister).state)  id(runtime_mister_west_ms) += dt_ms;
+              if(id(center_mister).state)     id(runtime_mister_center_ms) += dt_ms;
+              if(id(south_wall_mister).state || id(west_wall_mister).state || id(center_mister).state) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "served");
+              } else if(humidity_demand && id(mister_state) > 0 && id(mister_pulse_zone) == 0) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "pulse_gap");
+              }
+
+              // Water tracking (flow meter during climate wet assist)
+              const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;
+              const bool climate_fog_flow_active = id(fog_rly)->state;
+              if(climate_mister_flow_active || climate_fog_flow_active){
+                float gpm = id(water_flow_rate).state;
+                if(!isnan(gpm) && gpm > 0.0f){
+                  id(mister_water_today) += gpm * (float(dt_ms) / 60000.0f);
+                }
+              }
+            }
+          }
+
+          /**************** 14 — Telemetry & debug *******************************/
+          char lbl[48];
+          if(mode == SEALED_MIST){
+            snprintf(lbl, sizeof(lbl), "SEALED_MIST_%s", MIST_NAMES[ctl_state.mist_stage]);
+          }else{
+            snprintf(lbl, sizeof(lbl), "%s", MODE_NAMES[mode]);
+          }
+          {
+            static char last_gh_state[48] = "";
+            if(strcmp(last_gh_state, lbl) != 0){
+              id(gh_state).publish_state(lbl);
+              snprintf(last_gh_state, sizeof(last_gh_state), "%s", lbl);
+            }
+          }
+
+          /*** ClimateIntent controller decision — primary path telemetry ***/
+          {
+            ClimateActionDecision climate_decision = describe_effective_climate_decision(mode, sensor_in, setpts, ctl_state, relay_out);
+            const char* climate_action = CLIMATE_ACTION_NAMES[climate_decision.climate_action];
+            const char* priority_axis = CLIMATE_PRIORITY_AXIS_NAMES[climate_decision.priority_axis];
+            const char* moisture_state = CLIMATE_MOISTURE_ASSIST_STATE_NAMES[climate_decision.moisture_assist_state];
+            const char* moisture_zone = CLIMATE_MOISTURE_ZONE_NAMES[climate_decision.moisture_zone];
+            const bool selected_wet_action =
+              climate_decision.climate_action == CLIMATE_VENT_COOL_MIST_ASSIST
+              || climate_decision.climate_action == CLIMATE_VENT_COOL_FOG_ASSIST
+              || climate_decision.climate_action == CLIMATE_SEALED_HUMIDIFY
+              || climate_decision.climate_action == CLIMATE_SEALED_FOG;
+            const bool mister_relay_on =
+              id(south_wall_mister).state
+              || id(west_wall_mister).state
+              || id(center_mister).state;
+            auto climate_zone_name = [](int zone) -> const char* {
+              if(zone == 1) return "south";
+              if(zone == 2) return "west";
+              if(zone == 3) return "center";
+              return "none";
+            };
+            const char* effective_moisture_state = moisture_state;
+            const char* effective_moisture_zone = moisture_zone;
+            float effective_next_mist_s = climate_decision.next_mist_eligible_s;
+
+            if(!selected_wet_action && VPD <= VPDhi) {
+              effective_moisture_state = "inactive";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(selected_wet_action && mister_relay_on && id(mister_pulse_zone) > 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && id(mister_state) > 0 && id(mister_pulse_zone) == 0 && id(mister_pulse_timer_ms) > 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "served") == 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "pulse_gap") == 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "engage_delay") == 0) {
+              effective_moisture_state = "engage_delay";
+              effective_moisture_zone = "none";
+            } else if(selected_wet_action
+                      && strcmp(moisture_block_reason, "none") != 0
+                      && strcmp(moisture_block_reason, "no_vpd_demand") != 0) {
+              effective_moisture_state = "blocked";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(!mister_relay_on && id(mister_pulse_zone) == 0) {
+              effective_moisture_zone = "none";
+            }
+            char temp_error[24];
+            char vpd_error[24];
+            char fog_margin[24];
+            char next_mist[24];
+            char resource_cost[112];
+            // #963: compact v1 keys expand to the unchanged estimator schema
+            // in the ingestor. The buffer caps every published HA state at255.
+            char moisture_exchange[256];
+            snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
+            snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
+            snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
+            if(effective_next_mist_s >= 0.0f) {
+              snprintf(next_mist, sizeof(next_mist), "%.0f", effective_next_mist_s);
+            } else {
+              snprintf(next_mist, sizeof(next_mist), "none");
+            }
+            snprintf(resource_cost, sizeof(resource_cost),
+                     "{\"water_gal\":%.3f,\"electric_kwh\":%.3f,\"gas_therm\":%.3f}",
+                     climate_decision.resource_cost_estimate.water_gal,
+                     climate_decision.resource_cost_estimate.electric_kwh,
+                     climate_decision.resource_cost_estimate.gas_therm);
+            // #410 canonical names remain settled after wire expansion:
+            // vh = vent_held_vpd_gain_kpa; hr = hold_required.
+            const int moisture_exchange_len = snprintf(moisture_exchange, sizeof(moisture_exchange),
+                     "{\"_mx\":1,\"a\":\"%s\",\"r\":\"%s\",\"vg\":%.3f,"
+                     "\"vh\":%.3f,"
+                     "\"hg\":%.3f,\"of\":%s,"
+                     "\"oa\":%u,"
+                     "\"vo\":%s,\"hc\":%s,"
+                     "\"hr\":%s,"
+                     "\"ha\":%s,\"ht\":%.0f}",
+                     climate_decision.moisture_exchange_action,
+                     climate_decision.moisture_exchange_reason,
+                     climate_decision.moisture_vent_vpd_gain_kpa,
+                     climate_decision.moisture_vent_held_vpd_gain_kpa,
+                     climate_decision.moisture_heat_vpd_gain_kpa,
+                     climate_decision.moisture_outdoor_fresh ? "true" : "false",
+                     sensor_in.outdoor_data_age_s,
+                     climate_decision.moisture_vent_overcools ? "true" : "false",
+                     climate_decision.moisture_heat_assist_corun ? "true" : "false",
+                     climate_decision.moisture_hold_required ? "true" : "false",
+                     climate_decision.moisture_heat_assist_active ? "true" : "false",
+                     float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
+            if(moisture_exchange_len < 0
+               || static_cast<size_t>(moisture_exchange_len) >= sizeof(moisture_exchange)) {
+              ESP_LOGE("climate", "Moisture-exchange telemetry truncated: required=%d capacity=%u",
+                moisture_exchange_len, unsigned(sizeof(moisture_exchange)));
+              // Do not publish partial JSON or retain stale detail as current.
+              snprintf(moisture_exchange, sizeof(moisture_exchange),
+                "{\"raw\":\"moisture_exchange_payload_unavailable\"}");
+            }
+            const uint32_t climate_diag_now_ms = millis();
+            static uint32_t last_climate_continuous_diag_ms = 0;
+            static uint32_t last_climate_band_diag_ms = 0;
+            static uint32_t last_consumed_band_evidence_ms = 0;
+            const bool climate_continuous_diag_due = last_climate_continuous_diag_ms == 0
+              || (climate_diag_now_ms - last_climate_continuous_diag_ms) >= 60000UL;
+            const bool climate_band_diag_due = last_climate_band_diag_ms == 0
+              || (climate_diag_now_ms - last_climate_band_diag_ms) >= 300000UL;
+
+            const bool consumed_band_evidence_due = last_consumed_band_evidence_ms == 0
+              || (climate_diag_now_ms - last_consumed_band_evidence_ms) >= 15000UL;
+            // Fresh computed evidence has a 30s source contract. Keep its six
+            // consumed Setpoints, branch and sample clock in one 15s batch;
+            // publish the marker last. This does not request API cached state.
+            if (consumed_band_evidence_due) {
+              id(gh_consumed_temp_low_f).publish_state(setpts.temp_low);
+              id(gh_consumed_temp_high_f).publish_state(setpts.temp_high);
+              id(gh_consumed_vpd_low_kpa).publish_state(setpts.vpd_low);
+              id(gh_consumed_vpd_high_kpa).publish_state(setpts.vpd_high);
+              id(gh_house_temp_target).publish_state(setpts.temp_target);
+              id(gh_house_vpd_target).publish_state(setpts.vpd_target);
+              id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
+              id(gh_consumed_band_sample_epoch).publish_state(
+                controller_time_valid ? std::to_string(sntp_now.timestamp) : "");
+              last_consumed_band_evidence_ms = climate_diag_now_ms;
+            }
+
+            // ── Firmware-v2 EVIDENCE SURFACE (per-zone bands + solar) ─────────
+            // Compute the per-zone VPD bands on-chip from the NVS anchor curves
+            // at the current solar phase, score each zone's delta-to-target,
+            // run the priority arbiter, and publish the new-architecture
+            // telemetry so the dispatcher/DB can verify the data is flowing.
+            // Keep slowly varying solar/per-zone/wet/delta diagnostics at five
+            // minutes; consumed Setpoints evidence has its own fresh cadence.
+            if (climate_band_diag_due) {
+              auto zcurve = [&](float sr, float sm, float ss, float mid) -> float {
+                BandAnchors a = {sr, sm, ss, mid};
+                return band_value_at_phase(a, sv2_phase);
+              };
+              ZoneBand zb[ZONE_COUNT];
+              zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
+              zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
+              zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
+              zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
+              // Zone VPD readings: center has no dedicated sensor → house proxy.
+              float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+              ZoneWetIntent zi[ZONE_COUNT];
+              for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
+              const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
+              const bool zact[ZONE_COUNT] = { true, true, true, false };  // EAST has no mister relay
+              const int won = arbitrate_wet_zone(zi, prank, zact);
+              // Publish solar + house targets/deltas + per-zone target/delta.
+              id(gh_solar_phase).publish_state(sv2_phase);
+              id(gh_solar_sunrise_min).publish_state(sv2_solar.sunrise_min);
+              id(gh_solar_noon_min).publish_state(sv2_solar.solar_noon_min);
+              id(gh_solar_sunset_min).publish_state(sv2_solar.sunset_min);
+              id(gh_house_temp_delta).publish_state(Tin - setpts.temp_target);
+              id(gh_house_vpd_delta).publish_state(VPD - setpts.vpd_target);
+              id(gh_zone_vpd_target_center).publish_state(zb[ZONE_CENTER].target);
+              id(gh_zone_vpd_target_south).publish_state(zb[ZONE_SOUTH].target);
+              id(gh_zone_vpd_target_west).publish_state(zb[ZONE_WEST].target);
+              id(gh_zone_vpd_target_east).publish_state(zb[ZONE_EAST].target);
+              id(gh_zone_vpd_delta_center).publish_state(zvpd[ZONE_CENTER] - zb[ZONE_CENTER].target);
+              id(gh_zone_vpd_delta_south).publish_state(std::isfinite(zvpd[ZONE_SOUTH]) ? zvpd[ZONE_SOUTH] - zb[ZONE_SOUTH].target : NAN);
+              id(gh_zone_vpd_delta_west).publish_state(std::isfinite(zvpd[ZONE_WEST]) ? zvpd[ZONE_WEST] - zb[ZONE_WEST].target : NAN);
+              id(gh_zone_vpd_delta_east).publish_state(std::isfinite(zvpd[ZONE_EAST]) ? zvpd[ZONE_EAST] - zb[ZONE_EAST].target : NAN);
+              id(gh_zone_wet_granted).publish_state(won < 0 ? "none" : ZONE_NAMES[won]);
+              last_climate_band_diag_ms = climate_diag_now_ms;
+            }
+
+            static char last_climate_action[48] = "";
+            if(strcmp(last_climate_action, climate_action) != 0){
+              id(gh_climate_action).publish_state(climate_action);
+              snprintf(last_climate_action, sizeof(last_climate_action), "%s", climate_action);
+            }
+            static char last_climate_priority_axis[24] = "";
+            if(strcmp(last_climate_priority_axis, priority_axis) != 0){
+              id(gh_climate_priority_axis).publish_state(priority_axis);
+              snprintf(last_climate_priority_axis, sizeof(last_climate_priority_axis), "%s", priority_axis);
+            }
+            static char last_climate_candidate_summary[160] = "";
+            if(strcmp(last_climate_candidate_summary, climate_decision.candidate_summary) != 0){
+              id(gh_climate_candidate_summary).publish_state(climate_decision.candidate_summary);
+              snprintf(last_climate_candidate_summary, sizeof(last_climate_candidate_summary), "%s", climate_decision.candidate_summary);
+            }
+            static char last_climate_moisture_state[24] = "";
+            if(strcmp(last_climate_moisture_state, effective_moisture_state) != 0){
+              id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state);
+              snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", effective_moisture_state);
+            }
+            static char last_climate_moisture_zone[24] = "";
+            if(strcmp(last_climate_moisture_zone, effective_moisture_zone) != 0){
+              id(gh_climate_moisture_zone).publish_state(effective_moisture_zone);
+              snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", effective_moisture_zone);
+            }
+            static char last_climate_temp_error[24] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_temp_error, temp_error) != 0){
+              id(gh_climate_temp_error_f).publish_state(temp_error);
+              snprintf(last_climate_temp_error, sizeof(last_climate_temp_error), "%s", temp_error);
+            }
+            static char last_climate_vpd_error[24] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_vpd_error, vpd_error) != 0){
+              id(gh_climate_vpd_error_kpa).publish_state(vpd_error);
+              snprintf(last_climate_vpd_error, sizeof(last_climate_vpd_error), "%s", vpd_error);
+            }
+            static char last_climate_fog_margin[24] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_fog_margin, fog_margin) != 0){
+              id(gh_climate_fog_margin_kpa).publish_state(fog_margin);
+              snprintf(last_climate_fog_margin, sizeof(last_climate_fog_margin), "%s", fog_margin);
+            }
+            static char last_climate_fog_block[48] = "";
+            if(strcmp(last_climate_fog_block, climate_decision.fog_block_reason) != 0){
+              id(gh_climate_fog_block_reason).publish_state(climate_decision.fog_block_reason);
+              snprintf(last_climate_fog_block, sizeof(last_climate_fog_block), "%s", climate_decision.fog_block_reason);
+            }
+            static char last_climate_resource_cost[112] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_resource_cost, resource_cost) != 0){
+              id(gh_climate_resource_cost_estimate).publish_state(resource_cost);
+              snprintf(last_climate_resource_cost, sizeof(last_climate_resource_cost), "%s", resource_cost);
+            }
+            static char last_climate_next_mist[24] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_next_mist, next_mist) != 0){
+              id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
+              snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
+            }
+            static char last_climate_moisture_exchange[256] = "";
+            if(climate_continuous_diag_due && strcmp(last_climate_moisture_exchange, moisture_exchange) != 0){
+              // #963: HA gets a short action; the ingestor retains the exact
+              // structured payload through a default-disabled native entity.
+              id(gh_climate_moisture_exchange).publish_state(climate_decision.moisture_exchange_action);
+              id(gh_climate_moisture_exchange_details).publish_state(moisture_exchange);
+              snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
+            }
+            if(climate_continuous_diag_due){
+              last_climate_continuous_diag_ms = climate_diag_now_ms;
+            }
+          }
+
+          /*** OBS-1e — Silent-override audit (Sprint 16) ***/
+          {
+            OverrideFlags of = evaluate_overrides(sensor_in, setpts, ctl_state, mode);
+            char obuf[224]; obuf[0] = '\0'; size_t n = 0;
+            auto add = [&](const char* tag){
+              if(n > 0 && n + 1 < sizeof(obuf)) obuf[n++] = ',';
+              size_t len = strlen(tag);
+              if(n + len < sizeof(obuf)){ memcpy(obuf + n, tag, len); n += len; }
+            };
+            if(of.occupancy_blocks_equipment) add("occupancy_blocks_equipment");
+            if(of.fog_gate_rh)               add("fog_gate_rh");
+            if(of.fog_gate_temp)             add("fog_gate_temp");
+            if(of.fog_gate_window)           add("fog_gate_window");
+            if(of.relief_cycle_breaker)      add("relief_cycle_breaker");
+            if(of.seal_blocked_temp)         add("seal_blocked_temp");
+            if(of.vpd_dry_override)          add("vpd_dry_override");
+            // Sprint-15.1 fix 1: wire the sprint-15 gate flag into
+            // active_overrides. Pre-fix the gate was invisible — no way to
+            // tell whether it was firing. Short tag "summer_vent" matches
+            // what ingestor override_events routing expects.
+            if(of.summer_vent_active)        add("summer_vent");
+            if(of.vent_mist_assist)          add("vent_mist_assist");
+            if(of.fog_heat_assist)           add("fog_heat_assist");
+            obuf[n] = '\0';
+            const char* overrides = n > 0 ? obuf : "none";
+            static char last_overrides[224] = "";
+            if(strcmp(last_overrides, overrides) != 0){
+              id(gh_overrides).publish_state(overrides);
+              snprintf(last_overrides, sizeof(last_overrides), "%s", overrides);
+            }
+
+            char fog_block_reason[64];
+            if(leak_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
+            } else if(occupancy_moisture_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
+            } else if(irrigation_water_conflict) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
+            } else if(climate_water_budget_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
+            } else if(!controller_time_valid) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid");
+            } else if(manual_fog_requested && manual_fog_safety_block[0] != '\0') {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
+            } else if(id(fog_rly)->state) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
+            } else if(!fog_phase_permitted(sensor_in, setpts)) {
+              // Firmware-v2: solar wet taper / night without a stress-wet pass.
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "wet_taper");
+            } else if(of.fog_gate_rh) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "rh_ceiling");
+            } else if(of.fog_gate_temp) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "temp_low");
+            } else if(relay_out.fog && polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "vent_interlock");
+            } else if(willFog && !id(fog_rly)->state) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "relay_min_off");
+            } else {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "none");
+            }
+
+            static char last_fog_block_reason[64] = "";
+            if(strcmp(last_fog_block_reason, fog_block_reason) != 0){
+              id(gh_fog_block_reason).publish_state(fog_block_reason);
+              snprintf(last_fog_block_reason, sizeof(last_fog_block_reason), "%s", fog_block_reason);
+            }
+          }
+
+          // Sprint-15.1 fix 8: publish mode_reason. The literal is owned
+          // by determine_mode() (short static C string, no heap). Guard
+          // against nullptr so an unknown branch never crashes the publish.
+          {
+            const char* reason = ctl_state.last_mode_reason;
+            const char* safe_reason = reason ? reason : "unknown";
+            static char last_mode_reason[48] = "";
+            if(strcmp(last_mode_reason, safe_reason) != 0){
+              id(gh_mode_reason).publish_state(safe_reason);
+              snprintf(last_mode_reason, sizeof(last_mode_reason), "%s", safe_reason);
+            }
+          }
+
+          // SAF-1 / SF1: surface the sensor-degraded fallback to operators so a
+          // single-probe loss (avg probes down, running on the case-probe/
+          // fabricated value with VPD-chasing suppressed) is visible, not
+          // silent. Only publish on change.
+          {
+            static int last_degraded = -1;
+            const int degraded_now = sensor_in.sensor_degraded ? 1 : 0;
+            if(degraded_now != last_degraded){
+              id(sensor_degraded_active).publish_state((float)degraded_now);
+              last_degraded = degraded_now;
+              if(degraded_now)
+                ESP_LOGW("sensor","DEGRADED — avg probes down; VPD-chasing suppressed, timed wetting only");
+              else
+                ESP_LOGI("sensor","Sensor-degraded cleared — VPD control restored");
+            }
+          }
+
+          /*** AI-control diagnostics — requested vs served actuator paths ***/
+          {
+            const bool vent_mist_served =
+                ctl_state.vent_mist_assist_active
+                && (id(fog_rly)->state
+                    || id(south_wall_mister).state
+                    || id(west_wall_mister).state
+                    || id(center_mister).state);
+            char vent_status[128];
+            if(!ctl_state.vent_mist_assist_active) {
+              snprintf(vent_status, sizeof(vent_status), "inactive");
+            } else if(vent_mist_served) {
+              snprintf(vent_status, sizeof(vent_status), "served");
+            } else {
+              snprintf(vent_status, sizeof(vent_status), "blocked:%s", moisture_block_reason);
+            }
+
+            static char last_moisture_block_reason[96] = "";
+            if(strcmp(last_moisture_block_reason, moisture_block_reason) != 0){
+              id(gh_moisture_block_reason).publish_state(moisture_block_reason);
+              snprintf(last_moisture_block_reason, sizeof(last_moisture_block_reason), "%s", moisture_block_reason);
+            }
+
+            static char last_direct_wet_zone_mask[48] = "";
+            if(strcmp(last_direct_wet_zone_mask, direct_wet_zone_mask) != 0){
+              id(gh_direct_wet_zone_mask).publish_state(direct_wet_zone_mask);
+              snprintf(last_direct_wet_zone_mask, sizeof(last_direct_wet_zone_mask), "%s", direct_wet_zone_mask);
+            }
+
+            static char last_vent_status[128] = "";
+            if(strcmp(last_vent_status, vent_status) != 0){
+              id(gh_vent_mist_assist_status).publish_state(vent_status);
+              snprintf(last_vent_status, sizeof(last_vent_status), "%s", vent_status);
+            }
+          }
+
+          /*** OBS-3 — Relief-cycle state exposure (Sprint 18) ***/
+          {
+            static uint8_t ctl_diag_ctr = 59;
+            if(++ctl_diag_ctr >= 60){
+              ctl_diag_ctr = 0;
+              id(ctl_relief_cycle_count).publish_state((float)ctl_state.relief_cycle_count);
+              id(ctl_vent_latch_timer_s).publish_state((float)(ctl_state.vent_latch_timer_ms / 1000));
+              id(ctl_sealed_timer_s).publish_state((float)(ctl_state.sealed_timer_ms / 1000));
+              id(ctl_vpd_watch_timer_s).publish_state((float)(ctl_state.vpd_watch_timer_ms / 1000));
+              id(ctl_mist_backoff_timer_s).publish_state((float)(ctl_state.mist_backoff_timer_ms / 1000));
+              id(ctl_vent_mist_assist_active).publish_state(ctl_state.vent_mist_assist_active ? 1.0f : 0.0f);
+            }
+          }
+
+          /*** A1 — State transition logging ***/
+          {
+            static Mode prev_log_mode = IDLE;
+            static MistStage prev_log_mist = MIST_WATCH;
+            if(mode != prev_log_mode || (mode == SEALED_MIST && ctl_state.mist_stage != prev_log_mist)){
+              char trans[80];
+              auto hm = id(sntp_time).now();
+              if(hm.is_valid()){
+                snprintf(trans, sizeof(trans), "%s→%s @ %02d:%02d",
+                         lbl, lbl, hm.hour, hm.minute);
+              }else{
+                snprintf(trans, sizeof(trans), "→%s", lbl);
+              }
+              ESP_LOGI("transition","State change: %s", trans);
+              id(ts_last_transition).publish_state(trans);
+              prev_log_mode = mode;
+              prev_log_mist = ctl_state.mist_stage;
+            }
+          }
+
+          /*** B5 — forensic DLI proxy accumulation (real elapsed time) ***/
+          {
+            // #295: a circuit flagged out_of_service emits no light, so its
+            // switch-ON state must NOT credit supplemental DLI (phantom-DLI
+            // suppression — the dead west grow circuit was self-deceivingly
+            // crediting 0.4515 mol/m²/h with dark fixtures).
+            const float dli_dt_s = raw_dt_ms > 0
+              ? (float)raw_dt_ms / 1000.0f
+              : 0.0f;
+            id(dli_accumulator) += lighting_dli_increment(
+              id(greenhouse_light_lux).state,
+              id(tempest_lux),
+              id(grow_light_main).state,
+              id(grow_light_grow).state,
+              dli_dt_s,
+              id(gl_main_out_of_service),
+              id(gl_grow_out_of_service));
+          }
+
+          /*** B6 — Per-circuit lighting state machines (evaluate 5s; publish 60s/change) ***/
+          {
+            static LightingState gl_main_state = initial_lighting_state();
+            static LightingState gl_grow_state = initial_lighting_state();
+            static bool prev_main_want_on = false;
+            static bool prev_grow_want_on = false;
+            static const char* prev_main_reason = "init";
+            static const char* prev_grow_reason = "init";
+            auto publish_lighting_epoch = [](auto *sensor, time_t epoch){
+              char buf[24];
+              snprintf(buf, sizeof(buf), "%lld", (long long)epoch);
+              sensor->publish_state(buf);
+            };
+
+            const bool lighting_heartbeat_due = (now_ms - id(gl_last_check_ms)) >= 60000;
+            auto time = id(sntp_time).now();
+            if(!time.is_valid()){
+              if(id(grow_light_main).state){
+                id(grow_light_main).turn_off();
+                ESP_LOGW("grow_light","main OFF: time_invalid");
+              }
+              if(id(grow_light_grow).state){
+                id(grow_light_grow).turn_off();
+                ESP_LOGW("grow_light","grow OFF: time_invalid");
+              }
+              const bool changed = prev_main_want_on || prev_grow_want_on
+                || strcmp(prev_main_reason, "time_invalid") != 0
+                || strcmp(prev_grow_reason, "time_invalid") != 0;
+              if(lighting_heartbeat_due || changed){
+                id(gl_main_state_text).publish_state("OFF");
+                id(gl_main_reason).publish_state("time_invalid");
+                id(gl_grow_state_text).publish_state("OFF");
+                id(gl_grow_reason).publish_state("time_invalid");
+                id(gl_main_decision_epoch).publish_state("invalid");
+                id(gl_grow_decision_epoch).publish_state("invalid");
+                id(gl_last_check_ms) = now_ms;
+              }
+              prev_main_want_on = false;
+              prev_grow_want_on = false;
+              prev_main_reason = "time_invalid";
+              prev_grow_reason = "time_invalid";
+            } else {
+              float exterior_lux = id(tempest_lux);
+              uint32_t tempest_age_s = 99999UL;
+              if(id(tempest_last_obs_ms) != 0){
+                tempest_age_s = (now_ms - id(tempest_last_obs_ms)) / 1000UL;
+              }
+              const bool exterior_lux_fresh = !isnan(exterior_lux)
+                && tempest_age_s <= (uint32_t)pol(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s));
+
+              float cur_lux = exterior_lux;
+              if(isnan(cur_lux)) cur_lux = id(greenhouse_light_lux).state;
+              if(isnan(cur_lux)) cur_lux = 0.0f;
+              const float lighting_dt_s = dt_ms > 0 ? ((float)dt_ms / 1000.0f) : 0.0f;
+
+              // #295: wire the on-chip solar minute fields so each circuit can
+              // solar-phase its photoperiod (sv2_solar is computed earlier in
+              // this same 1s lambda). minute-of-day = time.hour:time.minute.
+              LightingInputs light_in = {
+                .natural_lux = cur_lux,
+                .exterior_lux = exterior_lux,
+                .exterior_lux_fresh = exterior_lux_fresh,
+                .local_hour = time.hour,
+                .occupied = id(greenhouse_occupied),
+                .local_minute = time.minute,
+                .sunrise_min = sv2_solar.sunrise_min,
+                .sunset_min = sv2_solar.sunset_min
+              };
+              LightingSetpoints main_sp = {
+                .target_light_minutes = (uint32_t)id(gl_main_target_light_minutes),
+                .lux_on_threshold = id(gl_main_lux_threshold),
+                .lux_hysteresis = id(gl_main_lux_hysteresis),
+                .start_hour = id(gl_main_sunrise_hour),
+                .cutoff_hour = id(gl_main_sunset_hour),
+                .min_on_ms = (uint32_t)id(gl_main_min_on_s) * 1000UL,
+                .min_off_ms = (uint32_t)id(gl_main_min_off_s) * 1000UL,
+                .auto_enabled = id(gl_main_auto_enabled),
+                .solar_phasing = id(gl_main_solar_phasing),
+                .sunrise_offset_min = id(gl_main_sunrise_offset_min),
+                .sunset_offset_min = id(gl_main_sunset_offset_min),
+                .out_of_service = id(gl_main_out_of_service)
+              };
+              LightingSetpoints grow_sp = {
+                .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),
+                .lux_on_threshold = id(gl_grow_lux_threshold),
+                .lux_hysteresis = id(gl_grow_lux_hysteresis),
+                .start_hour = id(gl_grow_sunrise_hour),
+                .cutoff_hour = id(gl_grow_sunset_hour),
+                .min_on_ms = (uint32_t)id(gl_grow_min_on_s) * 1000UL,
+                .min_off_ms = (uint32_t)id(gl_grow_min_off_s) * 1000UL,
+                .auto_enabled = id(gl_grow_auto_enabled),
+                .solar_phasing = id(gl_grow_solar_phasing),
+                .sunrise_offset_min = id(gl_grow_sunrise_offset_min),
+                .sunset_offset_min = id(gl_grow_sunset_offset_min),
+                .out_of_service = id(gl_grow_out_of_service)
+              };
+
+              LightingDecision main_dec = evaluate_lighting(
+                light_in, main_sp, gl_main_state, id(grow_light_main).state, now_ms, lighting_dt_s);
+              LightingDecision grow_dec = evaluate_lighting(
+                light_in, grow_sp, gl_grow_state, id(grow_light_grow).state, now_ms, lighting_dt_s);
+
+              auto apply_light = [&](const char* label, esphome::switch_::Switch* sw, LightingDecision dec){
+                if(dec.want_on && !sw->state){
+                  sw->turn_on();
+                  ESP_LOGI("grow_light","%s ON: %s | lux=%.0f | exterior=%.0f fresh=%d | light=%.0f/%.0f min | h=%d",
+                           label, dec.reason, cur_lux, exterior_lux, exterior_lux_fresh,
+                           dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
+                } else if(!dec.want_on && sw->state){
+                  sw->turn_off();
+                  ESP_LOGI("grow_light","%s OFF: %s | lux=%.0f | exterior=%.0f fresh=%d | light=%.0f/%.0f min | h=%d",
+                           label, dec.reason, cur_lux, exterior_lux, exterior_lux_fresh,
+                           dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
+                }
+              };
+              apply_light("main", id(grow_light_main), main_dec);
+              apply_light("grow", id(grow_light_grow), grow_dec);
+
+              const bool main_changed = main_dec.want_on != prev_main_want_on
+                || strcmp(prev_main_reason, main_dec.reason) != 0;
+              const bool grow_changed = grow_dec.want_on != prev_grow_want_on
+                || strcmp(prev_grow_reason, grow_dec.reason) != 0;
+              if(lighting_heartbeat_due || main_changed || grow_changed){
+                id(gl_main_state_text).publish_state(main_dec.want_on ? "ON" : "OFF");
+                id(gl_main_reason).publish_state(main_dec.reason);
+                id(gl_grow_state_text).publish_state(grow_dec.want_on ? "ON" : "OFF");
+                id(gl_grow_reason).publish_state(grow_dec.reason);
+                publish_lighting_epoch(id(gl_main_decision_epoch), time.timestamp);
+                publish_lighting_epoch(id(gl_grow_decision_epoch), time.timestamp);
+                id(gl_last_check_ms) = now_ms;
+              }
+              prev_main_want_on = main_dec.want_on;
+              prev_grow_want_on = grow_dec.want_on;
+              prev_main_reason = main_dec.reason;
+              prev_grow_reason = grow_dec.reason;
+            }
+          }
+
+              // Log a concise summary at debug level. To see these logs,
+              // temporarily raise logger.level in the top-level config.
+              ESP_LOGD("summary","%s | Tin %.1f°F VPD %.2f kPa | "
+                                 "H1:%d H2:%d F1:%d F2:%d Fog:%d Vent:%d",
+                       lbl, Tin, VPD,
+                       willHeat1, willHeat2, willFan1, willFan2,
+                       willFog, willVent);
+
+              {
+                static uint8_t state_log_ctr = 11;
+                static Mode state_log_mode = IDLE;
+                static MistStage state_log_mist = MIST_WATCH;
+                bool state_changed = mode != state_log_mode || (mode == SEALED_MIST && ctl_state.mist_stage != state_log_mist);
+                if(state_changed || ++state_log_ctr >= 60){
+                  state_log_ctr = 0;
+                  state_log_mode = mode;
+                  state_log_mist = ctl_state.mist_stage;
+                  ESP_LOGI("state","Mode=%s Tin=%.1f°F VPD=%.2f kPa", lbl, Tin, VPD);
+                }
+              }
+
+          {
+              static uint8_t heat_diag_ctr = 0;
+              if (++heat_diag_ctr >= 60) {
+                  heat_diag_ctr = 0;
+                  float S1_thr = Tlow + setpts.heat_hysteresis;
+                  float S2_thr = Tlow - dH2;
+                  ESP_LOGD("heat_diag",
+                      "S1<%.1f S2<%.1f Tin=%.1f Tlow=%.1f hyst=%.1f dH2=%.1f H1:%d H2:%d",
+                      S1_thr, S2_thr, Tin, Tlow, setpts.heat_hysteresis, dH2,
+                      (int)willHeat1, (int)willHeat2);
+              }
+          }
+
+              // Expose runtime metrics and economiser state to global variables for HA sensors
+              id(runtime_heat1_ms) = R[0].runtime_ms;
+              id(runtime_heat2_ms) = R[1].runtime_ms;
+              id(runtime_fan1_ms)  = R[2].runtime_ms;
+              id(runtime_fan2_ms)  = R[3].runtime_ms;
+              id(runtime_fog_ms)   = R[4].runtime_ms;
+              id(runtime_vent_ms)  = R[5].runtime_ms;
+              id(econ_block_state) = econ_block;
+          gh_record_control_loop_duration_us(micros() - control_loop_started_us);
+          App.feed_wdt();
+  ################################################################################
+  # Per-probe watchdog — only reboot if ALL probes silent (not just case)
+  # Case probe: 120s timeout. Wall probes: 300s. Only reboot if all 5 fail.
+  ################################################################################
+  - interval: 60s
+    then:
+      - lambda: |-
+          if(!id(sntp_time).now().is_valid()) return;
+          uint32_t now_ms = millis();
+          bool case_ok   = (id(last_case_ms) > 0 && (now_ms - id(last_case_ms)) < 120000);
+          bool north_ok  = (id(last_north_ms) > 0 && (now_ms - id(last_north_ms)) < 300000);
+          bool west_ok   = (id(last_west_ms) > 0 && (now_ms - id(last_west_ms)) < 300000);
+          bool south_ok  = (id(last_south_ms) > 0 && (now_ms - id(last_south_ms)) < 300000);
+          bool east_ok   = (id(last_east_ms) > 0 && (now_ms - id(last_east_ms)) < 300000);
+          bool any_ok = case_ok || north_ok || west_ok || south_ok || east_ok;
+          if(!case_ok && id(last_case_ms) > 0){
+            ESP_LOGW("watchdog","Case probe stale >120s");
+          }
+          if(!any_ok && id(last_case_ms) > 0){
+            ESP_LOGE("watchdog","ALL probes silent — rebooting");
+            esp_restart();
+          }
+
+
+  ################################################################################
+  # External probe watchdog – reboot if *all* probes silent > fallback_window_s
+  ################################################################################
+  - interval: 60s
+    then:
+      - lambda: |-
+          uint32_t now = millis()/1000;
+          if(id(last_external_update) > 0 &&
+             now > id(last_external_update) &&
+             (now - id(last_external_update)) > id(fallback_window_s)){
+            ESP_LOGE("watchdog","No probe update >%u s – rebooting", id(fallback_window_s));
+            esp_restart();
+          }
+
+
+  ################################################################################
+  # 14b — IRRIGATION / COMMISSIONED WALL-FEED STATE MACHINE
+  #
+  # One resolver owns every wet origin. Fixed-clock jobs and every
+  # center/non-wall fertilizer job are actuation-ineligible. Automatic
+  # fertilizer is an exact-once weekly solar claim with measured liters:
+  # wall PREWET(clean) -> wall FEED(fertilized) -> fertilizer OFF -> immediate
+  # wall FLUSH(clean) -> terminal. There is no global post-feed hold.
+  #
+  # irrig_state: 0=idle, 1=wall_clean, 2=center_drip_clean,
+  #              5=wall_prewet, 6=wall_feed, 7=wall_flush.
+  # States 3/4 and every non-wall fertilizer path are retired/ineligible.
+  # irrig_queue has exactly two callers: bit0 wall clean, bit2 center clean.
+  # Every legacy fertilizer or unknown bit is rejected and cleared fail-closed.
+  ################################################################################
+  - interval: 5s
+    then:
+      - lambda: |-
+          static uint32_t irrig_last_ms = millis();
+          uint32_t irrig_now = millis();
+          uint32_t irrig_dt = (irrig_now < irrig_last_ms) ? 0 : (irrig_now - irrig_last_ms);
+          irrig_last_ms = irrig_now;
+
+          const bool leak_block = id(bs_leak_detected).state;
+          // The retired 90-minute global hold can never block center climate.
+          id(feed_hold_until_ms) = 0;
+
+          // ── Daily runtime reset/tracking ──
+          static int irrig_last_doy = -1;
+          if(id(sntp_time).now().is_valid()){
+            int doy = id(sntp_time).now().day_of_year;
+            if(doy != irrig_last_doy && irrig_last_doy != -1){
+              id(irrig_vpd_stress_ms) = 0;
+              id(runtime_wall_drip_ms) = 0;
+              id(runtime_center_drip_ms) = 0;
+              id(runtime_fert_master_ms) = 0;
+              ESP_LOGI("irrig","Midnight reset — counters cleared");
+            }
+            irrig_last_doy = doy;
+          }
+
+            // ── Runtime tracking ──
+            if(id(wall_drips).state)              id(runtime_wall_drip_ms)   += irrig_dt;
+            if(id(center_drips).state)            id(runtime_center_drip_ms) += irrig_dt;
+            if(id(south_wall_mister_fertilized).state) id(runtime_mister_south_ms) += irrig_dt;
+            if(id(west_wall_mister_fertilized).state)  id(runtime_mister_west_ms)  += irrig_dt;
+            if(id(fertilizer_master_valve).state) id(runtime_fert_master_ms) += irrig_dt;
+
+            auto turn_off_all_irrigation = [&]() {
+              id(wall_drips).turn_off();
+              id(wall_drips_fertilized).turn_off();
+              id(south_wall_mister).turn_off();
+              id(south_wall_mister_fertilized).turn_off();
+              id(west_wall_mister).turn_off();
+              id(west_wall_mister_fertilized).turn_off();
+              id(center_drips).turn_off();
+              id(center_drips_fertilized).turn_off();
+              id(fertilizer_master_valve).turn_off();
+            };
+          auto now_t = id(sntp_time).now();
+          const bool clock_valid = now_t.is_valid() && !id(sntp_failed) && now_t.timestamp > 0;
+          uint32_t solar_day = clock_valid ? uint32_t(now_t.timestamp / 86400) : 0;
+          float current_solar_phase = NAN;
+          if(clock_valid) {
+            int utc_offset_min = -360;
+            auto utc_t = id(sntp_time).utcnow();
+            if(utc_t.is_valid()) {
+              int diff = (now_t.hour * 60 + now_t.minute) - (utc_t.hour * 60 + utc_t.minute);
+              if(diff > 720) diff -= 1440; else if(diff < -720) diff += 1440;
+              utc_offset_min = diff;
+            }
+            SolarTimes solar = compute_greenhouse_solar_times(now_t.day_of_year, utc_offset_min);
+            current_solar_phase = solar_phase(now_t.hour * 60 + now_t.minute, solar);
+          }
+
+          WallFeedCommissioning commissioning{
+            id(wall_fertigation_commissioned),
+            id(wall_commissioning_revision),
+            static_cast<uint16_t>(id(wall_commissioning_evidence_mask)),
+            clock_valid ? static_cast<uint32_t>(now_t.timestamp) : 0u,
+            id(wall_commissioning_valid_until_epoch_s),
+            id(wall_flow_lpm),
+            id(wall_flow_valid_until_epoch_s),
+            id(wall_prewet_liters),
+            id(wall_feed_liters),
+            id(wall_flush_liters)};
+          const WallFeedDurations durations = validate_wall_feed_commissioning(commissioning);
+          id(wall_feed_commissioning_ready) = durations.valid && id(irrig_wall_enabled);
+
+          WetTopologyPolicy topology{
+            id(irrig_center_enabled), id(irrig_south_enabled), id(irrig_west_enabled),
+            id(irrig_wall_enabled), id(wall_feed_commissioning_ready)};
+          WeeklyWallFeedState weekly_state{
+            static_cast<WallFeedStage>(id(wall_feed_stage)),
+            id(wall_feed_claimed_solar_day),
+            id(wall_feed_last_terminal_solar_day),
+            id(wall_feed_claim_revision)};
+          int weekly_terminal_code = id(wall_feed_terminal_code);
+
+          // One authoritative packed record owns exact-once durability. The
+          // restore_value globals above are readback mirrors only: their 1s
+          // polling save cannot acknowledge a relay boundary synchronously.
+          static ESPPreferenceObject wall_feed_journal_pref =
+            global_preferences->make_preference<WeeklyWallFeedJournalRecord>(
+              WALL_FEED_JOURNAL_KEY, true);
+          static WeeklyWallFeedJournalRecord wall_feed_journal_record{};
+          static bool wall_feed_journal_load_attempted = false;
+          static bool wall_feed_journal_ready = false;
+          bool journal_boot_active = false;
+
+          auto weekly_stage_active = [](WallFeedStage stage) {
+            return stage == WallFeedStage::PREWET
+              || stage == WallFeedStage::FEED
+              || stage == WallFeedStage::FLUSH;
+          };
+          auto mirror_weekly_readbacks = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) {
+            id(wall_feed_stage) = static_cast<int>(state.stage);
+            id(wall_feed_claimed_solar_day) = state.claimed_solar_day;
+            id(wall_feed_last_terminal_solar_day) = state.last_terminal_solar_day;
+            id(wall_feed_claim_revision) = state.commissioning_revision;
+            id(wall_feed_terminal_code) = terminal_code;
+            weekly_state = state;
+            weekly_terminal_code = terminal_code;
+          };
+
+          const bool journal_first_tick = !wall_feed_journal_load_attempted;
+          if(journal_first_tick) {
+            WeeklyWallFeedJournalRecord loaded{};
+            const bool found = wall_feed_journal_pref.load(&loaded);
+            if(found && wall_feed_journal_record_valid(loaded)) {
+              wall_feed_journal_record = loaded;
+              weekly_state = wall_feed_state_from_journal(loaded);
+              weekly_terminal_code = loaded.terminal_code;
+              wall_feed_journal_ready = true;
+              journal_boot_active = weekly_stage_active(weekly_state.stage);
+              mirror_weekly_readbacks(weekly_state, weekly_terminal_code);
+            } else if(found) {
+              // A corrupt authoritative record must never fall back to a stale
+              // restoring-global claim. Permanently fail closed until an
+              // operator repairs/reset storage deliberately.
+              weekly_state = {
+                WallFeedStage::CANCELLED, UINT32_MAX, UINT32_MAX, 0u};
+              weekly_terminal_code = 2;
+              wall_feed_journal_record = {};
+              ESP_LOGE("irrig", "Wall-feed journal invalid; forcing terminal cancellation");
+            } else {
+              // One-time migration from pre-journal firmware. Any active legacy
+              // restore is cancelled before the first relay can energize.
+              if(weekly_stage_active(weekly_state.stage)) {
+                weekly_state = cancel_interrupted_wall_feed(weekly_state, solar_day);
+                weekly_terminal_code = 2;
+              }
+              wall_feed_journal_record = {};
+            }
+            wall_feed_journal_load_attempted = true;
+          }
+
+          auto persist_weekly_and_sync = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) -> bool {
+            WeeklyWallFeedJournalRecord committed{};
+            const uint32_t next_sequence = wall_feed_journal_record.sequence + 1u;
+            const bool durable = commit_wall_feed_journal(
+              state, static_cast<uint8_t>(terminal_code), next_sequence,
+              [&](const WeeklyWallFeedJournalRecord& candidate) {
+                return wall_feed_journal_pref.save(&candidate);
+              },
+              [&]() { return global_preferences->sync(); },
+              committed);
+            if(!durable) {
+              wall_feed_journal_ready = false;
+              ESP_LOGE("irrig", "Wall-feed journal save/sync failed at stage=%d seq=%u",
+                static_cast<int>(state.stage), next_sequence);
+              return false;
+            }
+            wall_feed_journal_record = committed;
+            wall_feed_journal_ready = true;
+            // Mirrors update only after the authoritative record is durable.
+            mirror_weekly_readbacks(state, terminal_code);
+            return true;
+          };
+
+          if(journal_first_tick && !wall_feed_journal_ready) {
+            if(!persist_weekly_and_sync(weekly_state, weekly_terminal_code)) {
+              ESP_LOGE("irrig", "Wall-feed journal initialization failed; automatic feed blocked");
+            }
+          }
+          auto cancel_all = [&](const char* reason) {
+            turn_off_all_irrigation();
+            if(weekly_stage_active(weekly_state.stage)) {
+              auto cancelled = advance_wall_feed_sequence(
+                weekly_state, false, true, solar_day);
+              if(!persist_weekly_and_sync(cancelled, 2)) {
+                ESP_LOGE("irrig", "Cancellation persistence failed; all relays remain OFF");
+              }
+            }
+            id(irrig_state) = 0;
+            id(irrig_queue) = 0;
+            id(irrig_timer_ms) = 0;
+            ESP_LOGE("irrig", "STOPPED fail-closed: %s", reason);
+          };
+
+          // A journaled active stage proves a reset occurred after relay
+          // admission. Cancel it durably on the first control tick; never
+          // resume or re-dose an interrupted stage.
+          if(journal_boot_active) {
+            turn_off_all_irrigation();
+            auto cancelled = cancel_interrupted_wall_feed(weekly_state, solar_day);
+            if(!persist_weekly_and_sync(cancelled, 2)) {
+              ESP_LOGE("irrig", "Interrupted wall-feed cancellation not durable; relays remain OFF");
+            }
+            id(irrig_state) = 0;
+            id(irrig_queue) = 0;
+            id(irrig_timer_ms) = 0;
+            return;
+          }
+
+          const bool weekly_active = weekly_stage_active(weekly_state.stage);
+          if(id(wall_feed_stage) < static_cast<int>(WallFeedStage::IDLE)
+             || id(wall_feed_stage) > static_cast<int>(WallFeedStage::CANCELLED)) {
+            cancel_all("invalid persisted stage");
+            WeeklyWallFeedState invalid_cancelled{
+              WallFeedStage::CANCELLED, UINT32_MAX, UINT32_MAX, 0u};
+            if(!persist_weekly_and_sync(invalid_cancelled, 2)) {
+              ESP_LOGE("irrig", "Invalid-stage cancellation persistence failed");
+            }
+            return;
+          }
+          if(leak_block) { cancel_all("leak"); return; }
+          if(weekly_active && (!id(irrig_wall_enabled) || !clock_valid || !durations.valid
+             || weekly_state.commissioning_revision != id(wall_commissioning_revision))) {
+            cancel_all(!id(irrig_wall_enabled) ? "wall irrigation disabled" : !clock_valid ? "clock invalid" : !durations.valid
+              ? "commissioning invalid/stale" : "commissioning revision changed");
+            return;
+          }
+          if(!id(irrig_enabled)) { cancel_all("irrigation disabled"); return; }
+          const int rejected_queue_bits = id(irrig_queue) & ~(1 | 4);
+          if(rejected_queue_bits != 0) {
+            ESP_LOGW("irrig", "Rejected legacy/unknown irrigation queue bits: 0x%X",
+              rejected_queue_bits);
+          }
+          id(irrig_queue) &= (1 | 4);
+
+          // Claim at most once each seven-day interval, only from sunrise to
+          // solar noon. Missing today's window leaves the next solar day due.
+          if(id(irrig_state) == 0 && id(irrig_queue) == 0 && !weekly_active) {
+            WeeklyWallEligibilityInput eligibility{
+              clock_valid, leak_block, current_solar_phase, solar_day, 7u};
+            const auto feed_route = resolve_wet_request(
+              {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED,
+               WetZone::WALL_DRIP, WetChemistry::FERTILIZER}, topology);
+            if(feed_route.admitted
+               && weekly_wall_feed_eligible(eligibility, weekly_state, durations)) {
+              auto claimed = claim_weekly_wall_feed(
+                eligibility, weekly_state, id(wall_commissioning_revision));
+              if(!persist_weekly_and_sync(claimed, 0)) {
+                cancel_all("claim persistence sync failed");
+                return;
+              }
+              id(irrig_state) = 5;
+              id(irrig_timer_ms) = durations.prewet_ms;
+              id(center_mister).turn_off();
+              id(water_controller_actuating) = true;
+              id(wall_drips).turn_on();
+              id(water_controller_actuating) = false;
+              id(cnt_drip_wall_today) += 1;
+              ESP_LOGI("irrig", "WALL PREWET claim_day=%u rev=%u ms=%u",
+                solar_day, id(wall_commissioning_revision), durations.prewet_ms);
+              // irrig_dt elapsed before this PREWET began. Its first interval
+              // is accounted on the next invocation, never on the claim tick.
+              return;
+            }
+          }
+
+          // Advance the wall sequence. FEED completion closes fertilizer first
+          // and opens wall-local clean flush in this same control tick.
+          if(id(irrig_state) >= 5 && id(irrig_state) <= 7) {
+            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
+            else id(irrig_timer_ms) -= irrig_dt;
+            if(id(irrig_timer_ms) == 0) {
+              if(id(irrig_state) == 5) {
+                id(wall_drips).turn_off();
+                auto next = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(next, 0)) {
+                  cancel_all("FEED transition persistence sync failed");
+                  return;
+                }
+                id(irrig_state) = 6;
+                id(irrig_timer_ms) = durations.feed_ms;
+                id(fert_controller_actuating) = true;
+                id(fertilizer_master_valve).turn_on();
+                id(wall_drips_fertilized).turn_on();
+                id(fert_controller_actuating) = false;
+                ESP_LOGI("irrig", "WALL FEED ms=%u", durations.feed_ms);
+              } else if(id(irrig_state) == 6) {
+                id(wall_drips_fertilized).turn_off();
+                id(fertilizer_master_valve).turn_off();
+                auto next = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(next, 0)) {
+                  cancel_all("FLUSH transition persistence sync failed");
+                  return;
+                }
+                id(irrig_state) = 7;
+                id(irrig_timer_ms) = durations.flush_ms;
+                id(water_controller_actuating) = true;
+                id(wall_drips).turn_on();
+                id(water_controller_actuating) = false;
+                id(cnt_drip_wall_today) += 1;
+                ESP_LOGI("irrig", "WALL IMMEDIATE CLEAN FLUSH ms=%u", durations.flush_ms);
+              } else {
+                id(wall_drips).turn_off();
+                auto complete = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(complete, 1)) {
+                  cancel_all("COMPLETE transition persistence sync failed");
+                  return;
+                }
+                id(irrig_wall_cycle_count) += 1;
+                id(irrig_state) = 0;
+                ESP_LOGI("irrig", "WALL FEED COMPLETE claim_day=%u", complete.claimed_solar_day);
+              }
+            }
+            return;  // weekly owner excludes every explicit clean writer
+          }
+
+          // Explicit clean irrigation remains represented but has no automatic
+          // clock schedule. Center drip defaults disabled and requires its
+          // operator enable; center mist is not an irrigation destination.
+          if(id(irrig_state) == 0 && id(irrig_queue) != 0) {
+            int job = 0, bit = 0;
+            WetZone zone = WetZone::NONE;
+            if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }
+            else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }
+            id(irrig_queue) &= ~bit;
+            const auto route = resolve_wet_request(
+              {WetCommandOrigin::EXPLICIT_IRRIGATION, zone, WetChemistry::CLEAN}, topology);
+            if(route.admitted) {
+              turn_off_all_irrigation();
+              id(center_mister).turn_off();
+              id(irrig_state) = job;
+              const int duration_min = job == 2
+                ? id(irrig_center_duration_min) : id(irrig_wall_duration_min);
+              id(irrig_timer_ms) = uint32_t(duration_min) * 60000UL;
+              id(water_controller_actuating) = true;
+              if(route.relay == WetRelay::WALL_DRIP_CLEAN) { id(wall_drips).turn_on(); id(cnt_drip_wall_today) += 1; }
+              else if(route.relay == WetRelay::CENTER_DRIP) { id(center_drips).turn_on(); id(cnt_drip_center_today) += 1; }
+              id(water_controller_actuating) = false;
+              ESP_LOGI("irrig", "EXPLICIT CLEAN START state=%d ms=%u", job, id(irrig_timer_ms));
+              // Preserve the full requested duration on this admission tick.
+              if(id(irrig_timer_ms) > 0) return;
+            } else {
+              ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s", route.reason);
+            }
+          }
+
+          if(id(irrig_state) >= 1 && id(irrig_state) <= 2) {
+            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
+            else id(irrig_timer_ms) -= irrig_dt;
+            if(id(irrig_timer_ms) == 0) {
+              if(id(irrig_state) == 1) id(wall_drips).turn_off();
+              else if(id(irrig_state) == 2) id(center_drips).turn_off();
+              id(irrig_state) = 0;
+              ESP_LOGI("irrig", "EXPLICIT CLEAN COMPLETE");
+            }
+          }
+
+################################################################################
+# HEAP PROFILE — low-rate fallback fragmentation telemetry.
+################################################################################
+  - interval: 900s
+    startup_delay: 900s
+    then:
+      - lambda: |-
+          const float free_kb = gh_free_heap_kb();
+          const float min_free_kb = gh_min_free_heap_kb();
+          const float largest_kb = gh_largest_free_heap_block_kb();
+          const uint32_t loop_last_us = gh_control_loop_last_us();
+          const uint32_t loop_max_us = gh_take_control_loop_max_us();
+          const uint32_t loop_overruns = gh_take_control_loop_overrun_count();
+          const bool floor_met = gh_pre_ota_heap_floor_met(free_kb, largest_kb);
+          // Global logging stays WARN to protect heap, so this intentionally
+          // uses one WARN packet per 15 minutes instead of opening INFO logs.
+          const auto api_heap = id(ha_api).heap_snapshot();
+          ESP_LOGW("heap_profile",
+                   "free=%.1fKB lifetime_min=%.1fKB largest=%.1fKB floor=%s "
+                   "loop_last=%uus loop_15m_max=%uus loop_15m_overruns=%u reset=%d api_peers=%u api_rm=%u api_sync=%u api_ov_n=%u api_ov_b=%u api_pending_b=%u api_batch_n=%u api_batch_b=%u api_rx_b=%u api_shared_b=%u",
+                   free_kb, min_free_kb, largest_kb, floor_met ? "PASS" : "FAIL",
+                   loop_last_us, loop_max_us, loop_overruns, int(esp_reset_reason()),
+                   unsigned(api_heap.peers), unsigned(api_heap.removing), unsigned(api_heap.syncing), unsigned(api_heap.overflow_entries), unsigned(api_heap.overflow_bytes), unsigned(api_heap.pending_bytes), unsigned(api_heap.batch_items), unsigned(api_heap.batch_bytes), unsigned(api_heap.rx_bytes), unsigned(api_heap.shared_bytes));
+          if(!floor_met || loop_overruns > 0) {
+            ESP_LOGW("heap", "Pre-OTA runtime floor violation: heap=%s loop_overruns=%u",
+                     floor_met ? "PASS" : "FAIL", loop_overruns);
+          }
+
+################################################################################
+# END OF FILE
+################################################################################

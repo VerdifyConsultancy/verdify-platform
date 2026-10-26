@@ -1,7 +1,7 @@
 {
   "1094-corrected-private-custody.json": {
-    "bytes": 432,
-    "sha256": "197efd66c764aea6bdaac9697f4c5b31cb3d8d2f3dd64014c657562924c8de01"
+    "bytes": 528,
+    "sha256": "46c05120de816449e7716d629802c2a54e92a294d4442bd1c7e82b6ce5eb119e"
   },
   "1094-corrected-private-junit.xml": {
     "bytes": 71764,
@@ -20,8 +20,120 @@
     "sha256": "66587b08a08cc6e754ec79806915812cb662563e8fe9ce761e9048a6d3e962d0"
   },
   "README.md": {
-    "bytes": 730,
-    "sha256": "e43f9171a01f238ebf1919b7a2baf634cbc3463e5db84f90d6b9b8971fb13f65"
+    "bytes": 1586,
+    "sha256": "20e52cb1c5f34591b1babcfd507feaf520f6829ebebad4880c6ba9d90c6095d5"
+  },
+  "control-native-custody-manifest.json": {
+    "bytes": 4107,
+    "sha256": "208a06cbd12adadcf90ae0680cca22c08f3fdce7aef8c8b7e87e7a40c86fc696"
+  },
+  "control-native-results.json": {
+    "bytes": 1683,
+    "sha256": "07f548333a6d6db2ecfa02a964f98982465439de0a36d3f516adacfc5cef7400"
+  },
+  "control-native-terminal-workflow.json": {
+    "bytes": 226593,
+    "sha256": "4dfb46e23b38f148a9eaf9bff74fb92bfda6ae1334dd786c042151c1dd88235c"
+  },
+  "control-native-workflow.json": {
+    "bytes": 12529,
+    "sha256": "2bac9e2a846b597f5459e5b4ddd83f9f13c112a61e67f461857c4c1b9a380151"
+  },
+  "control-timing-native/baseline-execution.json": {
+    "bytes": 789,
+    "sha256": "bb10b37189b3d0e71da5ccfe553407e9060c8330657745aa17906cfb028fdcbd"
+  },
+  "control-timing-native/baseline-junit.xml": {
+    "bytes": 231122,
+    "sha256": "66d1651e0de27ab83493213b4d935a877b96af30cb9a2ac51a429baea25c6a18"
+  },
+  "control-timing-native/baseline-pytest/irrigation-admission0/actual-irrigation.cpp": {
+    "bytes": 19623,
+    "sha256": "6093b496227d065bde5ef19bbba08057807d8e73cd11fb0fcf245a8640ac0f1a"
+  },
+  "control-timing-native/baseline-pytest/mister-admission0/actual-mister.cpp": {
+    "bytes": 27407,
+    "sha256": "8ba2d5b8bf562a531f276c9c7050bce84db092b440aac3673d694c3975c9d7d5"
+  },
+  "control-timing-native/baseline-pytest/mister-admission0/source-manifest.json": {
+    "bytes": 1786,
+    "sha256": "27dac4a7894b12a0bcb4ad9d21590c41ff1c68aba9f6d650b6f8434dd2406c8a"
+  },
+  "control-timing-native/baseline-pytest/policy-relay-dwell0/relay_consumer.cpp": {
+    "bytes": 18188,
+    "sha256": "f353accc3cf0179eb5faf10accd960a64d3eb5e44fa66a80cfd0e24d51f9e611"
+  },
+  "control-timing-native/baseline-pytest/policy-relay-dwell0/source-manifest.json": {
+    "bytes": 1133,
+    "sha256": "1328881fac622b1293dca9e86355fd622419bb5d5ba8d166397e0428dca69ff1"
+  },
+  "control-timing-native/causal-baseline.log": {
+    "bytes": 100969,
+    "sha256": "19e7d92d87c28c2878cff9152881e8d704e029523aa6f558fd89f44a7cdc59f7"
+  },
+  "control-timing-native/causal-baseline.py": {
+    "bytes": 3291,
+    "sha256": "fa77566a42794c6f4ef79d93472c2f1026dc21fcae588c20e2c78b4dc0decab4"
+  },
+  "control-timing-native/committed-replay.diff.tsv": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "control-timing-native/committed-replay.log": {
+    "bytes": 2003,
+    "sha256": "6ffc8ef3b18e3a22bec87027aef9b197ba0bce92b3fac001203177d179854c5e"
+  },
+  "control-timing-native/controls-base.yaml": {
+    "bytes": 158457,
+    "sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e"
+  },
+  "control-timing-native/controls-head.yaml": {
+    "bytes": 159615,
+    "sha256": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f"
+  },
+  "control-timing-native/current-junit.xml": {
+    "bytes": 38494,
+    "sha256": "38ac6eebebfd02478553878c2160a1299692a64c8e59756b03b684b3e1c62d2a"
+  },
+  "control-timing-native/current-pytest/irrigation-admission0/actual-irrigation.cpp": {
+    "bytes": 19930,
+    "sha256": "ffbbaaf325b6e5ceaadf527d6bc9b43b8b01e6d1f8435abb8f1e736777505ac6"
+  },
+  "control-timing-native/current-pytest/mister-admission0/actual-mister.cpp": {
+    "bytes": 27858,
+    "sha256": "c545af1363405e2fc65b41866be098f4f212981e194f62cdd8429e14cbe358c2"
+  },
+  "control-timing-native/current-pytest/mister-admission0/source-manifest.json": {
+    "bytes": 1786,
+    "sha256": "9cabde0035e6782d4ae9a4861db6ff1f8b0a44f5998c274c3c1bc3ba0fcdf3d0"
+  },
+  "control-timing-native/current-pytest/policy-relay-dwell0/relay_consumer.cpp": {
+    "bytes": 18588,
+    "sha256": "08de4102856ed6b9fb93a66ffae11693b32d2951b29413aa74131cb9f31021b3"
+  },
+  "control-timing-native/current-pytest/policy-relay-dwell0/source-manifest.json": {
+    "bytes": 1133,
+    "sha256": "4e2848bf45a292147b453f7eb2a2b0e3f41389eb3f97e51f81e53f4a3a1a3f53"
+  },
+  "control-timing-native/current-yaml.log": {
+    "bytes": 709,
+    "sha256": "5ac5b312f7153a0fb8f2d0ad6878a676a7be20cbfbb4c354ae7adce526933055"
+  },
+  "control-timing-native/firmware-invariants.log": {
+    "bytes": 7152,
+    "sha256": "1e0a64a85b43556f4274063925d54079ae6a041b77d357361b67c0a5b6a2c558"
+  },
+  "control-timing-native/native-summary.json": {
+    "bytes": 1683,
+    "sha256": "82523297919a0e0956870fbe0f8628fbb14a42af9c4937e68fbd0b4003a6edf7"
+  },
+  "control-timing-native/step-exit-codes.tsv": {
+    "bytes": 90,
+    "sha256": "f85d6c99857f106d4047294bb40ee47129c383ba26741fb1efcb445449a3edbb"
+  },
+  "control-timing-native/test-firmware.log": {
+    "bytes": 23763,
+    "sha256": "cfbb1acd58e2c9527c8212032c79e6893f74d042a105ce12b0acd3cf2a87f0dc"
   },
   "firmware1091-secretless-receipt.json": {
     "bytes": 7468,

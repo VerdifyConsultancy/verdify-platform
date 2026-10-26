@@ -1,0 +1,125 @@
+{
+  "files": [
+    {
+      "bytes": 789,
+      "path": "baseline-execution.json",
+      "sha256": "bb10b37189b3d0e71da5ccfe553407e9060c8330657745aa17906cfb028fdcbd"
+    },
+    {
+      "bytes": 231122,
+      "path": "baseline-junit.xml",
+      "sha256": "66d1651e0de27ab83493213b4d935a877b96af30cb9a2ac51a429baea25c6a18"
+    },
+    {
+      "bytes": 19623,
+      "path": "baseline-pytest/irrigation-admission0/actual-irrigation.cpp",
+      "sha256": "6093b496227d065bde5ef19bbba08057807d8e73cd11fb0fcf245a8640ac0f1a"
+    },
+    {
+      "bytes": 27407,
+      "path": "baseline-pytest/mister-admission0/actual-mister.cpp",
+      "sha256": "8ba2d5b8bf562a531f276c9c7050bce84db092b440aac3673d694c3975c9d7d5"
+    },
+    {
+      "bytes": 1786,
+      "path": "baseline-pytest/mister-admission0/source-manifest.json",
+      "sha256": "27dac4a7894b12a0bcb4ad9d21590c41ff1c68aba9f6d650b6f8434dd2406c8a"
+    },
+    {
+      "bytes": 18188,
+      "path": "baseline-pytest/policy-relay-dwell0/relay_consumer.cpp",
+      "sha256": "f353accc3cf0179eb5faf10accd960a64d3eb5e44fa66a80cfd0e24d51f9e611"
+    },
+    {
+      "bytes": 1133,
+      "path": "baseline-pytest/policy-relay-dwell0/source-manifest.json",
+      "sha256": "1328881fac622b1293dca9e86355fd622419bb5d5ba8d166397e0428dca69ff1"
+    },
+    {
+      "bytes": 100969,
+      "path": "causal-baseline.log",
+      "sha256": "19e7d92d87c28c2878cff9152881e8d704e029523aa6f558fd89f44a7cdc59f7"
+    },
+    {
+      "bytes": 3291,
+      "path": "causal-baseline.py",
+      "sha256": "fa77566a42794c6f4ef79d93472c2f1026dc21fcae588c20e2c78b4dc0decab4"
+    },
+    {
+      "bytes": 0,
+      "path": "committed-replay.diff.tsv",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2003,
+      "path": "committed-replay.log",
+      "sha256": "6ffc8ef3b18e3a22bec87027aef9b197ba0bce92b3fac001203177d179854c5e"
+    },
+    {
+      "bytes": 158457,
+      "path": "controls-base.yaml",
+      "sha256": "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e"
+    },
+    {
+      "bytes": 159615,
+      "path": "controls-head.yaml",
+      "sha256": "8e4af6f7dd8df2b45d93859c82f15a2f676ebe9594da57c3734d96c142b1a51f"
+    },
+    {
+      "bytes": 38494,
+      "path": "current-junit.xml",
+      "sha256": "38ac6eebebfd02478553878c2160a1299692a64c8e59756b03b684b3e1c62d2a"
+    },
+    {
+      "bytes": 19930,
+      "path": "current-pytest/irrigation-admission0/actual-irrigation.cpp",
+      "sha256": "ffbbaaf325b6e5ceaadf527d6bc9b43b8b01e6d1f8435abb8f1e736777505ac6"
+    },
+    {
+      "bytes": 27858,
+      "path": "current-pytest/mister-admission0/actual-mister.cpp",
+      "sha256": "c545af1363405e2fc65b41866be098f4f212981e194f62cdd8429e14cbe358c2"
+    },
+    {
+      "bytes": 1786,
+      "path": "current-pytest/mister-admission0/source-manifest.json",
+      "sha256": "9cabde0035e6782d4ae9a4861db6ff1f8b0a44f5998c274c3c1bc3ba0fcdf3d0"
+    },
+    {
+      "bytes": 18588,
+      "path": "current-pytest/policy-relay-dwell0/relay_consumer.cpp",
+      "sha256": "08de4102856ed6b9fb93a66ffae11693b32d2951b29413aa74131cb9f31021b3"
+    },
+    {
+      "bytes": 1133,
+      "path": "current-pytest/policy-relay-dwell0/source-manifest.json",
+      "sha256": "4e2848bf45a292147b453f7eb2a2b0e3f41389eb3f97e51f81e53f4a3a1a3f53"
+    },
+    {
+      "bytes": 709,
+      "path": "current-yaml.log",
+      "sha256": "5ac5b312f7153a0fb8f2d0ad6878a676a7be20cbfbb4c354ae7adce526933055"
+    },
+    {
+      "bytes": 7152,
+      "path": "firmware-invariants.log",
+      "sha256": "1e0a64a85b43556f4274063925d54079ae6a041b77d357361b67c0a5b6a2c558"
+    },
+    {
+      "bytes": 1683,
+      "path": "native-summary.json",
+      "sha256": "82523297919a0e0956870fbe0f8628fbb14a42af9c4937e68fbd0b4003a6edf7"
+    },
+    {
+      "bytes": 90,
+      "path": "step-exit-codes.tsv",
+      "sha256": "f85d6c99857f106d4047294bb40ee47129c383ba26741fb1efcb445449a3edbb"
+    },
+    {
+      "bytes": 23763,
+      "path": "test-firmware.log",
+      "sha256": "cfbb1acd58e2c9527c8212032c79e6893f74d042a105ce12b0acd3cf2a87f0dc"
+    }
+  ],
+  "total_bytes": 865569
+}

@@ -1,0 +1,35 @@
+bash scripts/firmware-replay-diff.sh "18570b0fc1b2cb34dea9a3b81899090fe6676aea" "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+[1/4] Building OLD (18570b0fc1b2cb34dea9a3b81899090fe6676aea)...
+Preparing worktree (detached HEAD 18570b0f)
+HEAD is now at 18570b0f fix: reject nonfinite climate aggregate contributors (#1091)
+[2/4] Building NEW (96464472f58ccb7bb1f62aa19af1421fa601a56c)...
+Preparing worktree (detached HEAD 96464472)
+HEAD is now at 96464472 Preserve admitted control durations and count accepted relay starts
+[3/4] Running both against /tmp/verdify-control-native-96464472-20261026-01/committed-replay/replay_overrides.csv...
+[replay_emit] WARNING: 6 sp_* column(s) the Setpoints struct expects are absent from the CSV header (TWIN-3 setpoint-coverage). These fields will fall back to default_setpoints() and can manufacture false divergence:
+    - sp_sw_wet_taper_enabled
+    - sp_wet_taper_before_sunset_min
+    - sp_sw_night_stress_wet_enabled
+    - sp_night_stress_min_dew_margin_f
+    - sp_dawn_boost_offset_min
+    - sp_midday_boost_offset_min
+replay_emit: 296698 rows emitted
+[replay_emit] WARNING: 6 sp_* column(s) the Setpoints struct expects are absent from the CSV header (TWIN-3 setpoint-coverage). These fields will fall back to default_setpoints() and can manufacture false divergence:
+    - sp_sw_wet_taper_enabled
+    - sp_wet_taper_before_sunset_min
+    - sp_sw_night_stress_wet_enabled
+    - sp_night_stress_min_dew_margin_f
+    - sp_dawn_boost_offset_min
+    - sp_midday_boost_offset_min
+replay_emit: 296698 rows emitted
+[4/4] Diffing...
+0 divergent rows
+
+═══ Replay diff summary ═══
+  OLD ref: 18570b0fc1b2cb34dea9a3b81899090fe6676aea
+  NEW ref: 96464472f58ccb7bb1f62aa19af1421fa601a56c
+  CSV:     /tmp/verdify-control-native-96464472-20261026-01/committed-replay/replay_overrides.csv (296698 rows)
+  Divergent rows: 0
+  Diagnostic-only rows: 0 (ignored: mode/relay/mist unchanged)
+  Full diff:      /tmp/replay_diff.tsv
+  ✓ No divergence. Behavior preserved.
