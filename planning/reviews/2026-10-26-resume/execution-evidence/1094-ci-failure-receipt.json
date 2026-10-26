@@ -1,0 +1,112 @@
+{
+  "observedAt": "2026-10-26T14:17:31.638992+00:00",
+  "source": "e7bd3ba0f35911e52f3bcc3bb33c46e31a588a40",
+  "workflow": "verdify-platform-pr-ci-fk4n5",
+  "workflowUID": "724326b5-b0b0-46e0-a44c-a4fa33e62838",
+  "workflowPhase": "Failed",
+  "startedAt": "2026-10-26T14:04:11Z",
+  "finishedAt": "2026-10-26T14:15:47Z",
+  "requiredStatus": {
+    "url": "https://api.github.com/repos/VerdifyConsultancy/verdify-platform/statuses/e7bd3ba0f35911e52f3bcc3bb33c46e31a588a40",
+    "avatar_url": "https://avatars.githubusercontent.com/u/3673164?v=4",
+    "id": 57268019002,
+    "node_id": "SC_kwDOSlarUc8AAAANVXCfOg",
+    "state": "failure",
+    "description": "Verdify Platform in-cluster PR validation failed",
+    "target_url": null,
+    "context": "Verdify Platform / Argo PR CI",
+    "created_at": "2026-10-26T14:15:37Z",
+    "updated_at": "2026-10-26T14:15:37Z"
+  },
+  "qualified": false,
+  "nativePrivateCaseNames": 22,
+  "junitEntries": 23,
+  "oldCasesPassed": 19,
+  "positiveCasesPassed": 0,
+  "positive": [
+    {
+      "name": "test_native_positive_exposure_alert[multiple]",
+      "passed": false,
+      "failure": "AssertionError: assert [{'actor': 'f...arning', ...}] == [{'actor': 'f...arning', ...}]\n  \n  At index 3 diff: {'actor': 'synthetic-ci/worker-0', 'detail': {'reason': 'synthetic-private-positive', 'v2_event': 'baseline_recovery_requested', 'source_work_id': None, 'recovery_work_id': 'a41884bc-861e-4969-bae7-3c7fa77d0b9b'}, 'event_id': 4, 'severity': 'warning', 'event_kind': 'override', 'recorded_at': '2026-10-26T14:11:03.665638+00:00', 'assignment_id': None, 'experiment_id': '58763900-0000-4000-8000-000000000001'} != {'actor': 'synthetic-ci/native-positive', 'detail': {'reason': None, 'v2_admission': 'closed'}, 'event_id': 6, 'severity': 'info', 'event_kind': 's...\n  \n  ...Full output truncated (3 lines hidden), use '-vv' to show",
+      "disposal": null
+    },
+    {
+      "name": "test_native_positive_exposure_alert[multiple]",
+      "passed": false,
+      "failure": "failed on teardown with \"assert (False)\"",
+      "disposal": {
+        "generated_cluster": "/tmp/scorecard-pg-fndoe6hx",
+        "generated_directory_absent": true,
+        "host_auth_reject": true,
+        "mode": "committed_private_cluster_disposed",
+        "network_listeners_disabled": true,
+        "original_process_gone": false,
+        "postmaster_pid": 1477,
+        "postmaster_start_ticks": "20808940",
+        "socket_absent": true,
+        "stop_returncode": 0
+      }
+    },
+    {
+      "name": "test_native_positive_exposure_alert[expired]",
+      "passed": false,
+      "failure": "AssertionError: assert [{'actor': 'f...arning', ...}] == [{'actor': 'f...arning', ...}]\n  \n  At index 3 diff: {'actor': 'synthetic-ci/worker-0', 'detail': {'reason': 'synthetic-private-positive', 'v2_event': 'baseline_recovery_requested', 'source_work_id': None, 'recovery_work_id': 'cc45739b-ba17-44c7-bee9-efe934bad367'}, 'event_id': 4, 'severity': 'warning', 'event_kind': 'override', 'recorded_at': '2026-10-26T14:11:49.926119+00:00', 'assignment_id': None, 'experiment_id': '58763900-0000-4000-8000-000000000001'} != {'actor': 'synthetic-ci/native-positive', 'detail': {'reason': None, 'v2_admission': 'closed'}, 'event_id': 5, 'severity': 'info', 'event_kind': 's...\n  \n  ...Full output truncated (3 lines hidden), use '-vv' to show",
+      "disposal": {
+        "generated_cluster": "/tmp/scorecard-pg-qthgosoh",
+        "generated_directory_absent": true,
+        "host_auth_reject": true,
+        "mode": "committed_private_cluster_disposed",
+        "network_listeners_disabled": true,
+        "original_process_gone": true,
+        "postmaster_pid": 1644,
+        "postmaster_start_ticks": "20813557",
+        "socket_absent": true,
+        "stop_returncode": 0
+      }
+    },
+    {
+      "name": "test_native_positive_exposure_alert[stale]",
+      "passed": false,
+      "failure": "AssertionError: assert [{'actor': 'f...arning', ...}] == [{'actor': 'f...arning', ...}]\n  \n  At index 3 diff: {'actor': 'synthetic-ci/worker-0', 'detail': {'reason': 'synthetic-private-positive', 'v2_event': 'baseline_recovery_requested', 'source_work_id': None, 'recovery_work_id': '59967fcb-3fb3-49a7-becb-8fc0f46d3f0a'}, 'event_id': 4, 'severity': 'warning', 'event_kind': 'override', 'recorded_at': '2026-10-26T14:13:10.676292+00:00', 'assignment_id': None, 'experiment_id': '58763900-0000-4000-8000-000000000001'} != {'actor': 'synthetic-ci/native-positive', 'detail': {'reason': None, 'v2_admission': 'closed'}, 'event_id': 5, 'severity': 'info', 'event_kind': 's...\n  \n  ...Full output truncated (3 lines hidden), use '-vv' to show",
+      "disposal": {
+        "generated_cluster": "/tmp/scorecard-pg-g7e7k826",
+        "generated_directory_absent": true,
+        "host_auth_reject": true,
+        "mode": "committed_private_cluster_disposed",
+        "network_listeners_disabled": true,
+        "original_process_gone": true,
+        "postmaster_pid": 1798,
+        "postmaster_start_ticks": "20821189",
+        "socket_absent": true,
+        "stop_returncode": 0
+      }
+    }
+  ],
+  "artifacts": {
+    "1094-private-junit.xml": {
+      "bytes": 39781,
+      "sha256": "2ab130c9a565116e32e0a1f046b64de91f1ca17005c59294256829a6e7e9930d"
+    },
+    "1094-private-report.json": {
+      "bytes": 29103,
+      "sha256": "64bbd723902396b9ae9e7e8b16836a6648b12a0c47cf68aebcdcd01d91a9b6b9"
+    },
+    "1094-pr-ci.log": {
+      "bytes": 37754,
+      "sha256": "368ab5fb2180d77f427ef663db43f0e681bfd2e67bd8f63f5aa6029e8d411b8f"
+    },
+    "1094-workflow-latest.json": {
+      "bytes": 73861,
+      "sha256": "d9e531217aed56c7caafa6692f3838c94f252c623796c51da4f7dbd6ec054d8a"
+    },
+    "1094-github-status.json": {
+      "bytes": 5809,
+      "sha256": "ab653da63a5073f7d55d64494636d31b9fb76da4d6a7117c8fd690d20f859248"
+    }
+  },
+  "acceptanceLimits": [
+    "Not qualified: three positive final-custody failures and one disposal teardown error.",
+    "13 reasons is the required manifest, not passing exercised coverage.",
+    "No physical, production runtime, real alert delivery or writer recovery credit."
+  ]
+}

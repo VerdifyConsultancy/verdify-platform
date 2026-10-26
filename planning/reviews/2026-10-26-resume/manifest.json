@@ -1,0 +1,78 @@
+{
+  "README.md": {
+    "bytes": 17131,
+    "sha256": "7ed4f0ace4a1a546417d70c2bc7b8d7f6195556418f16a228e08ceac5ffc5e46"
+  },
+  "dependency-corrections.json": {
+    "bytes": 9778,
+    "sha256": "cd9cf1cef03de4a7805ed40853d954e6b6034cc07d74b947d64350bdbc79c45e"
+  },
+  "execution-evidence/1094-ci-failure-receipt.json": {
+    "bytes": 6126,
+    "sha256": "d0409ba7d11e02ba8feeb199d027148979bf9f8605994a9b4176d636c850c4e8"
+  },
+  "execution-evidence/1094-private-junit.xml": {
+    "bytes": 39781,
+    "sha256": "2ab130c9a565116e32e0a1f046b64de91f1ca17005c59294256829a6e7e9930d"
+  },
+  "execution-evidence/1094-private-report.json": {
+    "bytes": 29103,
+    "sha256": "64bbd723902396b9ae9e7e8b16836a6648b12a0c47cf68aebcdcd01d91a9b6b9"
+  },
+  "execution-evidence/candidate-queue-closed.json": {
+    "bytes": 2640,
+    "sha256": "f4360f3da11f7ee04e855cfaafb047f1e7f29e395c672da4edc73128374f082e"
+  },
+  "execution-evidence/firmware1091-native-results.json": {
+    "bytes": 1393,
+    "sha256": "1265a14904530a360d03f350e4ee50d48d2ce217ad0f2a79bcf6e5fac9680598"
+  },
+  "execution-evidence/firmware1091-secretless-receipt.json": {
+    "bytes": 7468,
+    "sha256": "77905b11687a9e160e0ed470ef5be18e47033243dae994719b67e821bb6866b3"
+  },
+  "execution-evidence/firmware1091-secretless-summary.json": {
+    "bytes": 15745,
+    "sha256": "4657a17c1f5c29e815397780d58d74b46a9091429c4344bf1fc1efa77ba71f8a"
+  },
+  "execution-evidence/firmware1091-secretless-terminal-custody.json": {
+    "bytes": 4910,
+    "sha256": "8974ce8107c4446b8ce12b4a3c7f8e207bec8cae3f064273bafd770f7a1b8bf9"
+  },
+  "execution-evidence/passive-resume-410-386.json": {
+    "bytes": 11749,
+    "sha256": "d63cf4c049a365145997e0ccff6426d9cd27b0456e3298d60e2b8de0d89fe408"
+  },
+  "execution-evidence/passive-resume-410-386.md": {
+    "bytes": 4385,
+    "sha256": "d4a954ea5119d72ca360c20546797a809be6c6dfff80bc767e955950e256d7aa"
+  },
+  "execution-evidence/resume-ci-receipts.json": {
+    "bytes": 10220,
+    "sha256": "9110bdd9ef53867472f5074d8c3c3d583f2b752c0778da5d7a80526285cf333e"
+  },
+  "issue-review.json": {
+    "bytes": 53285,
+    "sha256": "2939e6152c426bcdeb74a032250a9a505b1fbe1d06847df0ef9458d7f679638d"
+  },
+  "native-graph.json": {
+    "bytes": 32537,
+    "sha256": "d1ab277c9a7ec06b39991654008ee051491a170ace6712208623da3062e4de6d"
+  },
+  "positive-source-review.md": {
+    "bytes": 11929,
+    "sha256": "42e408246dda9ee933c01afc321c601573c41c5327e06fcbbbd68ce3f0684ddc"
+  },
+  "prior-terminal-ci.json": {
+    "bytes": 12607,
+    "sha256": "6215d1c273f7c90137501863d031a655b434032c532481e0991db2c04e48087c"
+  },
+  "runtime-snapshots.json": {
+    "bytes": 3709,
+    "sha256": "8342f507661413dd63991e0d07801df314dfb22a78f0b42a9a1f04e4692eae1d"
+  },
+  "validation.json": {
+    "bytes": 459,
+    "sha256": "329e0b5b5c2453aa598e31301df3df8e6598b7d4b3015caecf2febaedf8674a2"
+  }
+}

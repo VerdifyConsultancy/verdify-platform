@@ -1,0 +1,442 @@
+[
+  {
+    "name": "verdify-platform-pr-ci-qlfgm",
+    "uid": "338e7e08-7443-4e2f-ab75-0c186ce4c611",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-25T16:49:35Z",
+    "finishedAt": "2026-10-25T17:09:21Z",
+    "message": null,
+    "arguments": {
+      "parameters": [
+        {
+          "name": "event-action",
+          "value": "push"
+        },
+        {
+          "name": "repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "head-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-ref",
+          "value": "main"
+        },
+        {
+          "name": "head-ref",
+          "value": "main"
+        },
+        {
+          "name": "base-revision",
+          "value": "b4f78b4012e6ae578517bcc049dba69c585ec9a6"
+        },
+        {
+          "name": "head-revision",
+          "value": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+        }
+      ]
+    },
+    "nodes": [
+      {
+        "displayName": "verdify-platform-pr-ci-qlfgm",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T17:09:01Z"
+      },
+      {
+        "displayName": "report",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:09:01Z",
+        "finishedAt": "2026-10-25T17:09:21Z"
+      },
+      {
+        "displayName": "validate(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:55Z",
+        "finishedAt": "2026-10-25T17:08:52Z"
+      },
+      {
+        "displayName": "validate",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:55Z",
+        "finishedAt": "2026-10-25T17:09:01Z"
+      },
+      {
+        "displayName": "report(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:09:01Z",
+        "finishedAt": "2026-10-25T17:09:12Z"
+      },
+      {
+        "displayName": "verdify-platform-pr-ci-qlfgm.onExit",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:09:01Z",
+        "finishedAt": "2026-10-25T17:09:21Z"
+      },
+      {
+        "displayName": "trusted-precheck",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T16:49:41Z"
+      },
+      {
+        "displayName": "report-pending",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T16:49:55Z"
+      },
+      {
+        "displayName": "[1]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:55Z",
+        "finishedAt": "2026-10-25T17:09:01Z"
+      },
+      {
+        "displayName": "[0]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:09:01Z",
+        "finishedAt": "2026-10-25T17:09:21Z"
+      },
+      {
+        "displayName": "[0]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T16:49:55Z"
+      },
+      {
+        "displayName": "report-pending(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:35Z",
+        "finishedAt": "2026-10-25T16:49:50Z"
+      }
+    ]
+  },
+  {
+    "name": "verdify-platform-pr-ci-gps29",
+    "uid": "68dc76bc-0135-4872-9218-67a465ba4973",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-25T16:49:49Z",
+    "finishedAt": "2026-10-25T17:09:16Z",
+    "message": null,
+    "arguments": {
+      "parameters": [
+        {
+          "name": "event-action",
+          "value": "opened"
+        },
+        {
+          "name": "repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "head-repository",
+          "value": "VerdifyConsultancy/verdify-platform"
+        },
+        {
+          "name": "base-ref",
+          "value": "main"
+        },
+        {
+          "name": "head-ref",
+          "value": "codex/release-checklist-current-path-20261025"
+        },
+        {
+          "name": "base-revision",
+          "value": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+        },
+        {
+          "name": "head-revision",
+          "value": "b0a1020a8e74736f681281196c28b9e5f3b5b547"
+        }
+      ]
+    },
+    "nodes": [
+      {
+        "displayName": "verdify-platform-pr-ci-gps29",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T17:08:56Z"
+      },
+      {
+        "displayName": "verdify-platform-pr-ci-gps29.onExit",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:56Z",
+        "finishedAt": "2026-10-25T17:09:16Z"
+      },
+      {
+        "displayName": "report-pending(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T16:50:02Z"
+      },
+      {
+        "displayName": "trusted-precheck",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T16:49:56Z"
+      },
+      {
+        "displayName": "[0]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:56Z",
+        "finishedAt": "2026-10-25T17:09:16Z"
+      },
+      {
+        "displayName": "report(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:56Z",
+        "finishedAt": "2026-10-25T17:09:05Z"
+      },
+      {
+        "displayName": "report-pending",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T16:50:09Z"
+      },
+      {
+        "displayName": "report",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:56Z",
+        "finishedAt": "2026-10-25T17:09:16Z"
+      },
+      {
+        "displayName": "validate(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:50:09Z",
+        "finishedAt": "2026-10-25T17:08:49Z"
+      },
+      {
+        "displayName": "[1]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:50:09Z",
+        "finishedAt": "2026-10-25T17:08:56Z"
+      },
+      {
+        "displayName": "[0]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:49Z",
+        "finishedAt": "2026-10-25T16:50:09Z"
+      },
+      {
+        "displayName": "validate",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:50:09Z",
+        "finishedAt": "2026-10-25T17:08:56Z"
+      }
+    ]
+  },
+  {
+    "name": "verdify-platform-ci-6gn6p",
+    "uid": "55158486-86e6-4a46-9505-847ad2d3cf1c",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-25T16:49:38Z",
+    "finishedAt": "2026-10-25T17:15:00Z",
+    "message": null,
+    "arguments": {
+      "parameters": [
+        {
+          "name": "revision",
+          "value": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+        },
+        {
+          "name": "before-revision",
+          "value": "b4f78b4012e6ae578517bcc049dba69c585ec9a6"
+        },
+        {
+          "name": "commit-message",
+          "value": "test: qualify native experiment prerequisite refusals (#1085)\n\nAdd private executor-login refusal checks for missing runtime generation and missing observation receipts; retain SQL alert reason coverage at 10 of 16. Restart: none \u2014 tests and qualification tooling only."
+        }
+      ]
+    },
+    "nodes": [
+      {
+        "displayName": "verdify-platform-ci-6gn6p",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:38Z",
+        "finishedAt": "2026-10-25T17:15:00Z"
+      },
+      {
+        "displayName": "[0]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:38Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      },
+      {
+        "displayName": "[3]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "[4]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "[7]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "[6]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "classify-push(0)",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:38Z",
+        "finishedAt": "2026-10-25T17:08:01Z"
+      },
+      {
+        "displayName": "build-setpoint-server",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "build-lab-publisher",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:51Z",
+        "finishedAt": "2026-10-25T17:14:13Z"
+      },
+      {
+        "displayName": "[8]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:14:18Z"
+      },
+      {
+        "displayName": "[1]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      },
+      {
+        "displayName": "[2]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      },
+      {
+        "displayName": "[5]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "[9]",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:14:18Z",
+        "finishedAt": "2026-10-25T17:15:00Z"
+      },
+      {
+        "displayName": "build-orchestrator",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "build-mcp",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      },
+      {
+        "displayName": "build-migrate",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "pin-digests",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:14:18Z",
+        "finishedAt": "2026-10-25T17:14:50Z"
+      },
+      {
+        "displayName": "build-planner",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:10:50Z",
+        "finishedAt": "2026-10-25T17:10:50Z"
+      },
+      {
+        "displayName": "build-api",
+        "phase": "Skipped",
+        "message": "when ''false' == 'true'' evaluated false",
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      },
+      {
+        "displayName": "build-ingestor",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T17:08:12Z",
+        "finishedAt": "2026-10-25T17:10:47Z"
+      },
+      {
+        "displayName": "classify-push",
+        "phase": "Succeeded",
+        "message": null,
+        "startedAt": "2026-10-25T16:49:38Z",
+        "finishedAt": "2026-10-25T17:08:12Z"
+      }
+    ]
+  }
+]

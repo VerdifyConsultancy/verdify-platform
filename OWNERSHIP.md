@@ -1,15 +1,21 @@
 # OWNERSHIP: VerdifyConsultancy/verdify-platform
 
-This file is the detailed ownership record for everything the **Verdify greenhouse product** lane owns: namespaces `verdify-prod`, `verdify-descheduler` and `verdify-db-rehearsal`, the lab/labs/api/mcp/graphs.verdify.ai routes and the tier-1 `*.verdify.ai` HostRegexp, the `verdify-*` PriorityClasses, product Grafana, the ESP32 greenhouse controller and its probes, the product images, database and firmware.
+This file records current and historical ownership for the **Verdify greenhouse product** lane. Its running product namespaces are `verdify-prod` and `verdify-descheduler`; `verdify-db-rehearsal` was retired under #992. The lane also owns the lab/labs/api/mcp/graphs.verdify.ai routes and tier-1 `*.verdify.ai` HostRegexp, the `verdify-*` PriorityClasses, product Grafana, the ESP32 greenhouse controller and its probes, the product images, database and firmware.
 
 - Central record (one owner per item, R1): [ESTATE-INVENTORY.md](https://github.com/jvallery/agents/blob/main/docs/fleet-inventory/ESTATE-INVENTORY.md), rendered from `registry/policy/estate-ownership` in jvallery/agents. Lane map and rules R1 to R22: [docs/estate/README.md](https://github.com/jvallery/agents/blob/main/docs/estate/README.md).
 - How to update: change the central entry in jvallery/agents and this file in the same change set (a companion PR pair, R1 exception (a)). Where the central record and this file disagree, the central record wins.
 - Facts with their own authoritative doc are linked, not copied (R22): device IPs and VLANs → [network-infra `ipam/allocation.md`](https://github.com/jvallery/network-infra/blob/main/ipam/allocation.md); hardware rows → [proxmox-infrastructure `inventory/fleet-hardware.md`](https://github.com/jvallery/proxmox-infrastructure/blob/main/inventory/fleet-hardware.md); the NAS share behind `verdify-db-dumps` → [storage-infra `inventory/obsidian-data-inventory.md`](https://github.com/jvallery/storage-infra/blob/main/inventory/obsidian-data-inventory.md); Longhorn disks → storage-infra `inventory/longhorn-v1-disks.yml`; Secret names and keys → [`deploy/k8s/SECRETS.md`](deploy/k8s/SECRETS.md).
-- Snapshot: live readback of cluster `vallery` on 2026-10-19; source at verdify-platform `origin/main` 7e86ca1. Secret values were never read; only names appear here.
+- Historical snapshot: live readback of cluster `vallery` on 2026-10-19; source at verdify-platform `origin/main` 7e86ca1. Secret values were never read; only names appear here. The dated inventory tables and counts below preserve that snapshot, not current running state; subsequent receipts supersede its rows and action notes.
+
+## Current retirement boundary — October 26, 2026
+
+[#992's completed retirement](https://github.com/VerdifyConsultancy/verdify-platform/issues/992#issuecomment-6313798020) supersedes the rehearsal rows and A2–A4 instructions below. The namespace, CNPG Cluster, eight claims, three Applications, two AppProjects and legacy Garage bucket/two keys are absent. The [central namespace record](https://github.com/jvallery/agents/blob/main/control-plane/agent-fleet-control/registry/policy/estate-ownership/kubernetes-namespaces.yaml) and [generated product inventory](https://github.com/jvallery/agents/blob/main/docs/fleet-inventory/estate/VerdifyConsultancy__verdify-platform.md) record the rehearsal as retired.
+
+Storage-infra retains the eight original Released/Retain PVs and detached Longhorn volumes, native snapshots and all eight B2 backups. Independently verified logical dumps and sealed recovery remain private. No rehearsal adoption, namespace recreation or further deletion is pending. This documentation correction changes no owner, running workload or recovery custody.
 
 Health legend: P = probes, A = alerts, M = metrics, D = dashboards. `[VNS]` = the six namespace-level Verdify alerts (VerdifyIngestBacklogHigh, VerdifyIngestBacklogStale, VerdifyIngestDiskHeadroomLow, VerdifyIngestSpoolHealthUnknown, VerdifyWriterLeaseObservationUnknown, VerdifyWriterLeaseUnsafe); `[ARGO]` = ArgoCDAppMetricsAbsent, ArgoCDApplicationDegraded, ArgoCDApplicationHealthUnknown, ArgoCDApplicationOutOfSync; `[LH]` = LonghornProtectedVolumeBackupStale, LonghornVolumeDetachedTooLong, LonghornVolumeNotHealthy; `[EP]` = the namespace-level endpoint probes for api, graphs, lab, labs, mcp and the tier-1 hosts. **none** marks a coverage gap. Action codes A1 to A15 refer to [Open actions](#open-actions); D-xx codes refer to [Decisions applied](#decisions-applied-2026-10-19).
 
-## Summary
+## October 19 inventory summary (historical)
 
 | Kind | Items | Status `owned` | Other status |
 |---|---:|---:|---:|
@@ -29,7 +35,7 @@ Health legend: P = probes, A = alerts, M = metrics, D = dashboards. `[VNS]` = th
 | secret | 2 | 2 | 0 |
 | **total** | **101** | **81** | **20** |
 
-Record status: owned 81, retire 11, adopt 6, resolve-conflict 3. The Status column in every table below is the central record's status; the text after it is this repo's note or action.
+Historical record status: owned 81, retire 11, adopt 6, resolve-conflict 3. The Status column in the snapshot tables is the central record's October 19 status; the text after it is the note or proposed action from that snapshot. Use the current central record and subsequent completion receipts for present state.
 
 Live Kubernetes objects attributed to this repo: 474 declared, 252 residue-delete, 11 system, 4 hand-applied-adopt, 3 generated-by-owned-component, 3 hand-applied, 1 conflict-needs-decision (748 total). Action objects: 257 (see [Open actions](#open-actions)).
 
@@ -629,7 +635,9 @@ Items: `k8s-workload:verdify-prod/job/adhoc-kubectl-jobs`, `cluster-object:verdi
 
 </details>
 
-### A2 Delete verdify-db-rehearsal run residue (non-data; approved 2026-10-19, D-04)
+### A2 Historical rehearsal residue cleanup — completed
+
+The following October 19 object list is retained as history. #991 removed the non-data residue, and #992 completed retirement. It is not a current deletion list.
 
 Items: `k8s-workload:verdify-db-rehearsal/job/adhoc-kubectl-jobs`, `k8s-workload:verdify-db-rehearsal/pod/standalone-pods`, `k8s-workload:verdify-db-rehearsal/deployment/verdify-s2-grafana-proof`, `cluster-object:verdify-db-rehearsal/networkpolicies-residue`.
 
@@ -644,15 +652,15 @@ Items: `k8s-workload:verdify-db-rehearsal/job/adhoc-kubectl-jobs`, `k8s-workload
 
 </details>
 
-### A3 Delete rehearsal spool PVCs (data, R10)
+### A3 Historical rehearsal spool PVC retirement — completed
 
-- PersistentVolumeClaim (2): `verdify-s2-spool-382-7fa4f802`, `verdify-s2-spool-qualification`. D-04 (approved 2026-10-19) sets the retirement path, but these hold data: snapshot first; delete only on Jason's explicit go.
+- Former PersistentVolumeClaims (2): `verdify-s2-spool-382-7fa4f802`, `verdify-s2-spool-qualification`. The original D-04 snapshot/custody conditions were resolved in the attended #992 retirement. The claims are absent; their retained recovery storage is not authorized for deletion by this historical action.
 
-### A4 Retire verdify-db-rehearsal when S2 closes (approved 2026-10-19, D-04)
+### A4 Historical rehearsal retirement — completed by #992
 
-Approved 2026-10-19 (D-04): `verdify-db-rehearsal` stays this repo's experiment namespace until S2 closes, then retires.
+The October 19 D-04 proposal to keep `verdify-db-rehearsal` until S2 closed was superseded by Jason's DR-49 decision and the completed October 21 retirement. There is no remaining namespace expiry, policy adoption, CNPG alert installation or deletion step.
 
-Items: `namespace:verdify-db-rehearsal`, `argo-app:argocd/verdify-db-rehearsal-namespace`, `argo-app:argocd/verdify-db-rehearsal-cluster` (OutOfSync), `k8s-workload:verdify-db-rehearsal/cluster/verdify-cnpg-s2-integration`, both ObjectStores, the six CNPG PVCs, both Secret groups. Now: label the namespace disposable with an expiry, add it to the lane table, sync to adopt NetworkPolicy (2) `cnpg-s2-runtime-client-ingress`, `cnpg-s2-runtime-client-only`, and add CNPG alert coverage while it holds data. At S2 close: dump, then on Jason's explicit go delete the Cluster, its PVCs and the `verdify-cnpg-rehearsal` Garage bucket (storage-infra); agents retires the two Applications, AppProject `app-verdify-cnpg-rehearsal` and the 8 KSOPS Secrets.
+Former items included the namespace, rehearsal Applications, `verdify-cnpg-s2-integration`, both ObjectStores, six CNPG claims, two spool claims and rehearsal Secret groups. [Final product and owner receipts](planning/execution/2026-10-20-followthrough/evidence/992-final/README.md) distinguish the removed runtime objects from the preserved eight PVs/Longhorn volumes, snapshots, B2 backups and encrypted logical custody. Earlier CNPG migration and restore evidence remains historical; it does not authorize restoring a retired environment.
 
 ### A5 Adopt NetworkPolicy allow-db-from-restore
 
