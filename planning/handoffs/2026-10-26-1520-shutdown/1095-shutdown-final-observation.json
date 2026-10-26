@@ -1,0 +1,258 @@
+{
+  "schema": "verdify.ci-shutdown-final-observation/1",
+  "capturedAt": "2026-10-26T15:17:39.615724+00:00",
+  "context": "vallery",
+  "namespace": "agent-fleet-ci",
+  "requestedAction": "Observer stops for shutdown; all existing cluster processing left unchanged.",
+  "exactSource": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+  "pr1095": {
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1095",
+    "workflow": "verdify-platform-pr-ci-qkprq",
+    "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19",
+    "observedAt": "2026-10-26T15:16:47.357462+00:00",
+    "phase": "Running",
+    "startedAt": "2026-10-26T15:03:36Z",
+    "finishedAt": null,
+    "requiredStatuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "pending",
+        "description": "Verdify Platform in-cluster PR validation started",
+        "updated_at": "2026-10-26T15:03:45Z"
+      }
+    ],
+    "pods": [
+      {
+        "name": "verdify-platform-pr-ci-qkprq-validate-1123460752",
+        "uid": "cca4eab8-372f-4544-a221-d4833d1420f8",
+        "phase": "Running",
+        "node": "vm-k3s-node6",
+        "logBytes": 32636,
+        "logSha256": "20515326e4b16117680fa28727c66e8ed04def5e67e890e7b1a8a90dc22568cb",
+        "tail": [
+          "........................................................................ [ 39%]",
+          "........................................................................ [ 40%]",
+          "........................................................................ [ 42%]",
+          "........................................................................ [ 44%]",
+          "........................................................................ [ 45%]"
+        ]
+      }
+    ],
+    "privateReport": {
+      "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+      "qualified": true,
+      "cases": 19,
+      "passed": 19,
+      "fixtureSha256": "7327686a2ff0f5b997216fe0e88f292531c8eb152be18bf5fcd71eb86946fdcf",
+      "reasonCoverage": {
+        "exercised": [
+          "baseline_artifact_missing",
+          "baseline_recovery_in_progress",
+          "completed_with_incomplete_outcomes",
+          "confirmed_baseline_recovery_missing",
+          "expired_work_not_terminal",
+          "facility_emergency_hold",
+          "open_admission_without_current_work",
+          "preexposure_state_mismatch",
+          "runtime_fault_requires_recovery",
+          "terminal_experiment_capability_enabled"
+        ],
+        "retained_after_facility_closure": [
+          "preexposure_state_mismatch"
+        ],
+        "not_exercised": [
+          "multiple_open_exposures",
+          "open_exposure_observation_missing",
+          "open_exposure_observation_stale",
+          "open_exposure_state_mismatch",
+          "open_exposure_work_expired",
+          "runtime_generation_missing"
+        ],
+        "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+        "active_runtime_or_physical_acceptance": false,
+        "additional_real_delivery_credit": false
+      }
+    },
+    "progressAtLastLog": "ordinary full test suite45%; no full-CI completion claim",
+    "scope": "Exact source96464472 private19-case scope. Main positive22-case source was merged separately and must be preserved through an ordinary merge; do not rebase solely because main moved."
+  },
+  "compiler": {
+    "workflow": "verdify-control-compile-96464472-20261026-01",
+    "uid": "3d86b16a-f485-4d9f-9660-0fcf6f320214",
+    "observedAt": "2026-10-26T15:16:46.872282+00:00",
+    "phase": "Running",
+    "startedAt": "2026-10-26T15:05:26Z",
+    "finishedAt": null,
+    "pods": [
+      {
+        "containers": [
+          {
+            "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+            "name": "main",
+            "state": {
+              "terminated": {
+                "containerID": "containerd://53e0238479f84df54aaf35dbef7d3788f79a2faa8702d86d729855c1364bbc93",
+                "exitCode": 0,
+                "finishedAt": "2026-10-26T15:05:29Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-26T15:05:28Z"
+              }
+            }
+          },
+          {
+            "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+            "name": "wait",
+            "state": {
+              "terminated": {
+                "containerID": "containerd://75760215aa5a5c9c42fb2bb816af416f33d512e18ac4ff01f8b4689117286281",
+                "exitCode": 0,
+                "finishedAt": "2026-10-26T15:05:30Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-26T15:05:28Z"
+              }
+            }
+          }
+        ],
+        "name": "verdify-control-compile-96464472-20261026-01-prepare-4111929614",
+        "node": "vm-k3s-node7",
+        "phase": "Succeeded",
+        "uid": "50d4d5f5-1ada-4f6c-959a-0819aadd06ec"
+      },
+      {
+        "containers": [
+          {
+            "imageID": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+            "name": "main",
+            "state": {
+              "running": {
+                "startedAt": "2026-10-26T15:06:24Z"
+              }
+            }
+          },
+          {
+            "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+            "name": "wait",
+            "state": {
+              "running": {
+                "startedAt": "2026-10-26T15:06:24Z"
+              }
+            }
+          }
+        ],
+        "latest_log_lines": [
+          " - tool-scons @ 4.40801.0 (4.8.1) ",
+          " - tool-xtensa-esp-elf-gdb @ 17.1.0+20260402 ",
+          " - toolchain-xtensa-esp-elf @ 14.2.0+20260121",
+          "Using Python 3.13.14 environment at: /workspace/verdify-firmware-ci-cpgli2s4/platformio/penv/.espidf-5.5.4",
+          "Reading CMake configuration..."
+        ],
+        "log_bytes": 1759592,
+        "log_sha256": "ebd94574cdf61b454e0e1623c1aff82fb2ec6a01900bb51bbdc45cf44de4af9d",
+        "name": "verdify-control-compile-96464472-20261026-01-run-check-4028844439",
+        "node": "vm-k3s-node5",
+        "phase": "Running",
+        "uid": "82b3ee9e-cd39-4494-b338-8c8df36662dd"
+      }
+    ],
+    "completedPositiveCompileTimesSeconds": [
+      478.6
+    ],
+    "positiveTargetCompleted": "greenhouse",
+    "pending": "greenhouse-recovery currently in CMake/compile sequence; final two-target/negative/provenance receipt not present",
+    "finalReceiptPresent": false,
+    "receiptChecks": null,
+    "commandProvenance": {
+      "observedAt": "2026-10-26T15:08:23.924741+00:00",
+      "workflow": "verdify-control-compile-96464472-20261026-01",
+      "uid": "3d86b16a-f485-4d9f-9660-0fcf6f320214",
+      "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+      "sameDeclaredCheckAsPriorSuccessful": false,
+      "checksJsonSha256": "717f8757da9f016381a57122d1825ec7ce9dd8ac94dbb31c307350c27e639dbd",
+      "commandSha256": "7a5ea7e8bf29e453e4861a3fb016b89b5e6697e5c80a182186f07152ba6da269",
+      "pinnedImage": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+      "actualMainImageID": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+      "runCheckNode": "vm-k3s-node5",
+      "state": {
+        "running": {
+          "startedAt": "2026-10-26T15:06:24Z"
+        }
+      },
+      "noResubmission": true,
+      "sameExactCompilerCommandAsPriorSuccessful": true,
+      "sameImageAsPriorSuccessful": true,
+      "declaredCheckDifferences": [
+        "name"
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "file": "1095-pr-ci.log",
+      "bytes": 32636,
+      "sha256": "20515326e4b16117680fa28727c66e8ed04def5e67e890e7b1a8a90dc22568cb"
+    },
+    {
+      "file": "1095-private-report.json",
+      "bytes": 27138,
+      "sha256": "83eebfd96a5dea5cd790fe9b5b15c4067036d9ead549c5cd6ae0973844cf4379"
+    },
+    {
+      "file": "1095-summary-current.json",
+      "bytes": 4974,
+      "sha256": "97abe7201b5dacbd51a9698fbcc7d00ac924c022c85ab65245ab597c34e55cc0"
+    },
+    {
+      "file": "1095-workflow-identity.json",
+      "bytes": 207,
+      "sha256": "0abb4b276be0c71deb42d670535796f1735cc8501899de892ab91a1157b2732a"
+    },
+    {
+      "file": "control-secretless-check.log",
+      "bytes": 1759592,
+      "sha256": "ebd94574cdf61b454e0e1623c1aff82fb2ec6a01900bb51bbdc45cf44de4af9d"
+    },
+    {
+      "file": "control-secretless-check-clean.log",
+      "bytes": 1746120,
+      "sha256": "bea89f3337d3c23750a4d09227cbefd3f2f4ed908bf231a6d98313f9918dc95d"
+    },
+    {
+      "file": "control-secretless-summary.json",
+      "bytes": 3532,
+      "sha256": "f5aa1b12f0eba9076267cc2238e8ad69e5014491b56ce97ff8d7af50f477dcaa"
+    },
+    {
+      "file": "control-secretless-workflow-current.json",
+      "bytes": 188500,
+      "sha256": "af78f91ecb47a47d2300b9d12c4367b0d8d6152ed93484fd0f3420f1fb67bd97"
+    },
+    {
+      "file": "control-secretless-pods-current.json",
+      "bytes": 170379,
+      "sha256": "3cf449c36edd513326a533577f0aa301fc3600fa39a0c0a349b00fe92991dac1"
+    },
+    {
+      "file": "control-secretless-command-provenance.json",
+      "bytes": 966,
+      "sha256": "f7169f0523dfba6408c533dad5bc45596e37d80acc5d6b39f6346f79a9bf5fa0"
+    }
+  ],
+  "resume": [
+    "Read the current exact workflows and compare UIDs/source before interpreting state.",
+    "If Running, observe the same handles; observation or model-capacity errors do not mean workflow failure.",
+    "For PR1095 obtain terminal required status and preserve full exact-source CI receipts.",
+    "For compiler require terminal Succeeded, run-check exit0, exact source/image and final FIRMWARE_SECRETLESS_RECEIPT with both target outputs, expected generated-C++ negative and16 compiler hashes.",
+    "Do not resubmit, retry, cancel, rebase, merge, flash or deploy from this snapshot. Re-evaluate authorization and current issue/source/live state on resume."
+  ],
+  "mutations": {
+    "retries": 0,
+    "newJobs": 0,
+    "cancellations": 0,
+    "sourceChanges": 0,
+    "githubWrites": 0,
+    "clusterWrites": 0,
+    "esp32Connections": 0,
+    "nodeActions": 0
+  },
+  "observerStoppedAfterSnapshot": true
+}

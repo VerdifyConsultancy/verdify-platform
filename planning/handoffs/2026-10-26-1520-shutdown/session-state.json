@@ -1,0 +1,84 @@
+{
+  "schema": "verdify.shutdown/2026-10-26-v2",
+  "prepared_at": "2026-10-26T15:22:29.211885+00:00",
+  "execution": "paused by Jason; no new work",
+  "cluster_processing": "leave existing Jobs, Workflows, CronJobs and serving workloads unchanged; normal existing lifecycle continues",
+  "context": "vallery",
+  "namespace": "verdify-prod",
+  "ci_namespace": "agent-fleet-ci",
+  "latest_main": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+  "open_issues": 41,
+  "open_prs": [
+    1095,
+    855
+  ],
+  "completed_source": [
+    {
+      "pr": 1092,
+      "merge": "119b85290ded94730abc03f45c332606d67431f4",
+      "scope": "candidate pin only; prod render identical;9 superseded candidate PRs closed"
+    },
+    {
+      "pr": 1091,
+      "merge": "18570b0fc1b2cb34dea9a3b81899090fe6676aea",
+      "scope": "finite contributors:140 actual YAML cases, strict native gates and both secretless compiler targets pass; no flash"
+    },
+    {
+      "pr": 1094,
+      "merge": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+      "scope": "private synthetic22/22;13/16 native SQL reasons; full required CI green; no production effects"
+    }
+  ],
+  "pending_pr": {
+    "number": 1095,
+    "head": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+    "native_cases": 219,
+    "baseline_expected_failures": 76,
+    "baseline_passes": 143,
+    "full_ci": "running at last read",
+    "compiler": "greenhouse compiled; recovery/terminal custody pending at last read",
+    "merge_authorized_during_shutdown": false
+  },
+  "writer": {
+    "status": "halted",
+    "completed": 12,
+    "staged": 0,
+    "handoff": "unsettled",
+    "state_sha256": "5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663"
+  },
+  "boundaries": [
+    "no new ESP32 connection",
+    "no unapproved cordon",
+    "no firmware upload/OTA",
+    "no ingestor rollout or writer-hold release",
+    "no experiment activation, credentials/RBAC or Slack sends",
+    "no competing agents merge/catalog pin train"
+  ],
+  "source_only_1010": {
+    "verdify": "33e5ad3beb8830b50c29877cd57cf7bd8de71506",
+    "network": "cefc6f5c2f1cfb8681c2d37caea243f7ea9036e1",
+    "agents": "c4cda6a61ddb7c2d72bb60d83ca8c96cad509794",
+    "pr_ci_deploy": "not submitted",
+    "access_policy": "Block Everyone retained; Hermes internal; no external client identity",
+    "delivery_order": [
+      "receiver CI/build and MCP-only promotion; prove boundary",
+      "Network exact MCP tunnel row",
+      "coordinator-owned Agents catalog pin train and exact child delivery",
+      "bounded live acceptance/soak; do not weaken Access denial"
+    ]
+  },
+  "deferred_input": [
+    "survey later",
+    "no reference NDIR CO2 meter",
+    "legitimate analyst identity",
+    "genuine scientific/crop/contributor/target inputs",
+    "attended physical baseline-target-baseline and selected release/recovery proof"
+  ],
+  "next_resume": [
+    "Read current issue775 handoff and current steer/inflight; verify all exact existing job UIDs/source before observing results.",
+    "Harvest final1095 ordinary CI and compiler receipts; no duplicate submission because observation ended.",
+    "Independent review and source merge only after full required CI and both compiler targets pass; keep main22-case fixture. Do not rebase solely for moved main.",
+    "Continue1010 normal source CI and owner coordination; coordinator owns agents merge/pins.",
+    "Retain safety/readiness/writer/physical gates. No issue closure from merged software or healthy telemetry."
+  ]
+}

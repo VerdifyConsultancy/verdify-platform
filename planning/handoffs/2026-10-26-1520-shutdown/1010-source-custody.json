@@ -1,0 +1,58 @@
+{
+  "prepared_at": "2026-10-26T14:22:24.112065+00:00",
+  "base_sha": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+  "branch": "codex/mcp-trusted-attribution-20261026",
+  "files": [
+    {
+      "path": "OWNERSHIP.md",
+      "sha256": "814623861ed3220e7158e9352a2c23f6d55a5c66a0163af1629d1a6d697254eb"
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/traefik/generated-routes.yaml",
+      "sha256": "103bca4cab27c36fab836077e07bb30ac82f7244c736fd2f3bb596f91c6c83ae"
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-tier1-apps-forward.yaml",
+      "sha256": "d6c88a7666fceab9996e7364f200d5a1f1bc09bd10e3fa6faa6226eecd29d988"
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml",
+      "sha256": "9bf80a7a5e5bccf75f917bdbbd65fc6e58d7f28f7b095c5a9fee67cb4b735378"
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-traefik-netpol.yaml",
+      "sha256": "c1b7c19e42d19ef613747aaf48ee1ec6b97f00af756b427e6e26d275ec22d7f2"
+    },
+    {
+      "path": "deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml",
+      "sha256": "d4cb0a2b5d20c4623003b108d83dd8cb508ed577d21d459a39c84bf45cae130a"
+    },
+    {
+      "path": "mcp/server.py",
+      "sha256": "57b7506393c45eb26387ac76168199d9653e445e0b1c6883596b2e8ff3b2cad8"
+    },
+    {
+      "path": "scripts/generate-verdify-traefik-file.py",
+      "sha256": "031a79bc972ae986a648ec117be997f2dfb004be7b01adbc80c6ff530837bdc3"
+    },
+    {
+      "path": "tests/test_mcp_tool_audit.py",
+      "sha256": "c6c0d6336addb8d4bb19467a1a9b8e88f8677073e43595df391b85c41384cb10"
+    },
+    {
+      "path": "docs/runbooks/mcp-client-attribution.md",
+      "sha256": "8e5996696077c69dc28b1ed93ebe01dc2bdb670a80332f3210e3d4b6eacc61d8"
+    },
+    {
+      "path": "tests/test_mcp_client_attribution.py",
+      "sha256": "1a0fe4904d169f8ce7472db8c57d9dc25ddce3e8e00b3f606582fc8cfcb17f10"
+    }
+  ],
+  "patch_sha256": "4bd491341ff88edc2693537ab7a6605a55246551f1b79f6867de3f1012bdd911",
+  "github_push": false,
+  "ci_submitted": false,
+  "cluster_or_provider_mutation": false,
+  "adjacent_source_mutation": false,
+  "new_esp32_connection": false,
+  "node_action": false
+}

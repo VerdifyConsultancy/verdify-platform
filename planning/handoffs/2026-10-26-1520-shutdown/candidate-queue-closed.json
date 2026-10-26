@@ -1,0 +1,74 @@
+[
+  {
+    "number": 1089,
+    "head": "c97b5196b9f2a20d65dfdb9398f88e1015dd4c6f",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1089#issuecomment-6418176577",
+    "closed_at": "2026-10-26T14:13:09Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1087,
+    "head": "53dad33539bc4685a8cc3286b937811e47d9cd63",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1087#issuecomment-6418177939",
+    "closed_at": "2026-10-26T14:13:12Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1082,
+    "head": "3748d4c4fe11b427d2805831cb46efdb197687dd",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1082#issuecomment-6418179335",
+    "closed_at": "2026-10-26T14:13:15Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1075,
+    "head": "2568331330a10fdb3a4c4d295b09954fd0394855",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1075#issuecomment-6418180742",
+    "closed_at": "2026-10-26T14:13:19Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1071,
+    "head": "02afc47d7236f828731717a5e928bdab859904e2",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1071#issuecomment-6418182108",
+    "closed_at": "2026-10-26T14:13:22Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1065,
+    "head": "29291f0fe6cc9387b378500de1aa9dd23c470ae1",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1065#issuecomment-6418183441",
+    "closed_at": "2026-10-26T14:13:26Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1062,
+    "head": "d540c699bfbbd8d036a1502c4dd24b27f9b630ae",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1062#issuecomment-6418184663",
+    "closed_at": "2026-10-26T14:13:29Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1061,
+    "head": "e2da73c7befd149e341dc466396a3009a4374882",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1061#issuecomment-6418186039",
+    "closed_at": "2026-10-26T14:13:33Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  },
+  {
+    "number": 1058,
+    "head": "53e573a1efecc2dc0ee4019c04a275ecdc7a4a60",
+    "comment_url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1058#issuecomment-6418187281",
+    "closed_at": "2026-10-26T14:13:36Z",
+    "replacement": 1092,
+    "branches_preserved": true
+  }
+]

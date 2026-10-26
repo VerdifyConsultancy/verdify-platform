@@ -1,0 +1,794 @@
+{
+  "captured_at": "2026-10-26T15:17:10.092213+00:00",
+  "resources": [
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-freezer",
+      "uid": "398d673c-7e10-48f1-9ee2-bc89f949afe9",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-lifecycle",
+      "uid": "55610359-c153-4f90-b670-e64b33250d00",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "experiment-v2-selector",
+      "uid": "e1463798-093b-4fda-a7b8-3c6fba371388",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-api",
+      "uid": "1798428c-0da0-4d47-b0ff-a0a5e010c0f0",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-db-backup-exporter",
+      "uid": "e8893eb2-d121-4f5b-b26c-17df6a6fe0ec",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-grafana",
+      "uid": "87d1186a-2baf-4922-86c9-793f2e71673c",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-grafana-render-cache",
+      "uid": "4fed4d78-3b64-42b3-94cf-f2a8368efab7",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-hermes-iris",
+      "uid": "ae52b99a-459c-4984-9aa7-f42be98d3ddc",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "uid": "27889696-ee26-43ff-bfd8-a950ba279866",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-lab",
+      "uid": "70989e64-bb75-4325-b886-788543c522fb",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-lab-cache-origin",
+      "uid": "1c2c5689-da44-404d-b5db-bc83b13cd6e5",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mcp",
+      "uid": "7afb4c3c-9113-43d3-af1c-be1abb37796c",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-mqtt",
+      "uid": "5c8bd30b-863c-4915-8fb6-e43ea7c88d44",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-outbound",
+      "uid": "c522c93f-8545-44e4-8a65-0e1a1152eeda",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-planner",
+      "uid": "d57756ae-4f7d-42bc-aba4-293f1aec0335",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-setpoint-server",
+      "uid": "92485295-17f3-4a6f-9868-d283f456a4fb",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "Deployment",
+      "name": "verdify-traefik",
+      "uid": "c5ac81e4-ee08-491e-81d0-a8e240fb5cc9",
+      "desired": 2,
+      "ready": 2,
+      "updated": 2
+    },
+    {
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+      "desired": 1,
+      "ready": 1,
+      "updated": 1
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-band-curve-refresh",
+      "uid": "c1850fb9-b575-483d-9262-c583d816b8cb",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T15:02:42Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-db-backup",
+      "uid": "e17742c4-9863-409b-9700-6110f1830629",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T08:19:32Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-firmware-builder",
+      "uid": "c8846acd-4ee1-4e6c-a4c2-1347083481db",
+      "suspend": true,
+      "active": [],
+      "lastSuccessfulTime": "2026-09-29T17:49:29Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-firmware-flasher",
+      "uid": "a4f21534-14d2-4cc8-b165-83d7ddb0ceb7",
+      "suspend": true,
+      "active": [],
+      "lastSuccessfulTime": null
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-fixed-panel-native-freezer",
+      "uid": "96da9ff0-7a82-48b2-821f-8a58323bd534",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T06:30:09Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "uid": "0326f59b-f1ea-4e6d-9d05-1ca4b1c3779f",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T14:23:35Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-lab-publisher",
+      "uid": "79aa5222-4fb3-439b-ba33-28101c514543",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T15:12:49Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "uid": "4b0f62d3-20f2-4e28-b841-b7f649a12ddb",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T06:00:32Z"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-winter-feasibility",
+      "uid": "357d96ac-f387-493c-8f8d-7dce8655ef4d",
+      "suspend": false,
+      "active": [],
+      "lastSuccessfulTime": "2026-10-26T06:30:28Z"
+    },
+    {
+      "kind": "Pod",
+      "name": "experiment-v2-freezer-855f658b97-94mjm",
+      "uid": "864bf6b9-bc15-43e7-9134-911f1d9d3c37",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "freezer",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "experiment-v2-lifecycle-5bfc5777d9-kht2q",
+      "uid": "f63345f9-502f-4342-b7a6-203721238446",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "lifecycle",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "experiment-v2-selector-7bfc958bb-g4lrv",
+      "uid": "86fc6cbd-5867-4f4a-9f47-e0bd4bef53af",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "selector",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-api-7fb89cdd4f-qqdvl",
+      "uid": "47b1994d-4a5c-4d75-97dc-059bff1555c0",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "api",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-api-7fb89cdd4f-xvr5t",
+      "uid": "d537fea7-df5b-4516-bb30-1703cd3ec2ea",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "api",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-db-0",
+      "uid": "35bc247f-457a-499e-90f1-a19acfae6bca",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "postgres",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/timescale/timescaledb@sha256:1e07c25f3ba3fdecd2a445a7fb8f5380bd0f9464a60fd4ad00566dbee31d1e55"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-db-backup-29881937-vl2ds",
+      "uid": "c589d43a-7242-4cd0-b9bc-b5eba7a9436c",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "pg-dump",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-db-backup-29883377-snv67",
+      "uid": "a7270baf-b3f5-4f7c-89cc-a2d86fba3b6b",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "pg-dump",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-db-backup-exporter-5b655c9485-68mtl",
+      "uid": "9a59496e-f7fa-4bfa-a01e-109c14a564f2",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "exporter",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/library/python@sha256:236173eb74001afe2f60862de935b74fcbd00adfca247b2c27051a70a6a39a2d"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-fixed-panel-native-freezer-29883270-g2969",
+      "uid": "4d7db0b6-f6cd-460f-9fd2-485d0cd95332",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "freeze-native-route-day",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-grafana-65dfc8bb5c-n42kp",
+      "uid": "b96a4552-815b-4900-8e6a-95aeda4af5b3",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "grafana",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/grafana/grafana@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd"
+        },
+        {
+          "name": "renderer",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/grafana/grafana-image-renderer@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-grafana-render-cache-77647fc5f7-fxb47",
+      "uid": "61de6919-82b2-40ad-a4d5-ee8ac29645d3",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "render-cache",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-grafana-render-cache-77647fc5f7-qrknq",
+      "uid": "e85db121-a008-4214-b196-cf40641eb221",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "render-cache",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-ha-gap-backfill-29883683-kskk9",
+      "uid": "c8f88ff0-3a0d-4a92-8b58-fac989e96aff",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "backfill",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-ha-gap-backfill-29883743-tqdln",
+      "uid": "8b6299f0-c088-44ef-871e-af7f9e9d2fa0",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "backfill",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-hermes-iris-84b577df4c-v6c27",
+      "uid": "8aedcaf0-9501-4937-8628-eb94392c93d8",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "hermes-iris",
+          "ready": true,
+          "restartCount": 1,
+          "imageID": "docker.io/nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-ingestor-7bd9494655-4kzcw",
+      "uid": "955fec0b-7ee0-4872-bc13-78e428d0e659",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "ingestor",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-lab-588bb94656-4vqfl",
+      "uid": "57eb143a-d49f-4c3c-aec3-f3777f5e407a",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "cache-refresh",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41"
+        },
+        {
+          "name": "lab-site",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-lab-588bb94656-pgp7n",
+      "uid": "f11c8c4d-55da-45dd-839d-9ed9f3569332",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "cache-refresh",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41"
+        },
+        {
+          "name": "lab-site",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-lab-cache-origin-6c59554448-4tvf2",
+      "uid": "7a8930b0-c668-47eb-bc6b-640db7419a09",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "origin",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-lab-publisher-29883755-jzcr5",
+      "uid": "a033c54d-7d8a-4e9b-9c1e-8f076bddb3a4",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "publisher",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-lab-publisher-29883785-w2mlr",
+      "uid": "a805255f-7362-411c-a5ea-99e17fda0a75",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "publisher",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a3dda8dc4dd23b6c2b5b13b3bdf8f1ce587431b5662d6b49b3ee131ea0678b41"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-mcp-675849667d-vgt6w",
+      "uid": "53700948-f70a-4a8f-ab6c-8154aee1985c",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "mcp",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-mcp-675849667d-xrq7s",
+      "uid": "b508594d-c18f-45e3-87c2-1178673c9c9f",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "mcp",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:d5d4fa59ffe5fd0d1c105dac4a8c0d37c28335c534de0f9b964c3d7e827c093c"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-mqtt-59d74c489c-fpgc5",
+      "uid": "ac3ca1fc-ab43-46a4-bc90-a24accf4719a",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "mosquitto",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/library/eclipse-mosquitto@sha256:12436df85d6b2b91e63c71184da35ec89400a98abdc688a78b1403a11ecf44b4"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-outbound-5f7bbf6459-9b2cv",
+      "uid": "8033643f-2fdd-437a-a6ca-68b20718a390",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "relay",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-outbound-5f7bbf6459-pglbf",
+      "uid": "51fe3c9e-8c01-4a1b-9cac-86ed682c1499",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "relay",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-planner-d9bfb46d4-x9cwb",
+      "uid": "55a2cc6d-0cc5-478d-b16f-bcc00a1de0cc",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "planner",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-setpoint-server-6f9db98667-vk6kp",
+      "uid": "d8331744-768d-477f-8bed-7c5bb94eaa79",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "setpoint-server",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:a009c2a3be621fda4080276a376a1d19428aadfea2b0131234fa0a97ba04fe6a"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-traefik-fb9689b4d-2spxq",
+      "uid": "8cf56bab-0cf1-47de-b6cb-8b75d2376693",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "traefik",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/library/traefik@sha256:72ed9e98f2395fca5a9e1c67e131910c21ff06e694955da8e0eae0e5206fc27b"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-traefik-fb9689b4d-zb5gk",
+      "uid": "d8b75e18-8f29-461b-8e4f-670272d5ccbb",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "traefik",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "docker.io/library/traefik@sha256:72ed9e98f2395fca5a9e1c67e131910c21ff06e694955da8e0eae0e5206fc27b"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-vision-29882880-l2p5x",
+      "uid": "2101d372-659a-4d50-83a4-7240e1d2c476",
+      "node": "vm-k3s-node7",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "vision",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-vision-29883060-cdxps",
+      "uid": "ee1d3941-cd6b-4ba1-b670-8f69edd023a3",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "vision",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-vision-29883240-p897s",
+      "uid": "e390c7c8-28b3-42a1-aa5f-0af6659253b9",
+      "node": "vm-k3s-node4",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "vision",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-winter-archive-init-rwwgs",
+      "uid": "1feab449-09a5-4ddd-9a52-530c85594b9a",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "init-archive",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-winter-feasibility-29881830-zwwwg",
+      "uid": "c6d25fc2-7128-429c-9b1c-4ee250196795",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "collect",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+        }
+      ]
+    },
+    {
+      "kind": "Pod",
+      "name": "verdify-winter-feasibility-29883270-qtgzj",
+      "uid": "81e68d09-478d-4b1e-9fd1-7cb46579df45",
+      "node": "vm-k3s-node4",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "collect",
+          "ready": false,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624"
+        }
+      ]
+    }
+  ]
+}

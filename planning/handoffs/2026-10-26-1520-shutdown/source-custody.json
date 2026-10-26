@@ -1,0 +1,95 @@
+{
+  "captured_at": "2026-10-26T15:19:06.392281+00:00",
+  "branches": [
+    {
+      "worktree": "/private/tmp/verdify-qualification-receipts-20261026",
+      "purpose": "receipt custody",
+      "branch": "codex/qualification-receipts-20261026",
+      "head": "129783ed68810ef9db1a170660cee20d0f2a8760",
+      "remote_head": "129783ed68810ef9db1a170660cee20d0f2a8760",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-finite-contributors-20261026",
+      "purpose": "1091 merged",
+      "branch": "codex/finite-contributors-20261026",
+      "head": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "remote_head": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-qualification-resume-20261026",
+      "purpose": "1094 merged",
+      "branch": "codex/qualification-resume-20261026",
+      "head": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+      "remote_head": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-control-timing-20261026",
+      "purpose": "timing WIP backup",
+      "branch": "codex/control-timing-20261026",
+      "head": "a18e6a0f16833dc4b7312f37632e8d671a853353",
+      "remote_head": "a18e6a0f16833dc4b7312f37632e8d671a853353",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-control-timing-qualification-20261026",
+      "purpose": "1095 active",
+      "branch": "codex/control-timing-qualification-20261026",
+      "head": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+      "remote_head": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-mcp-attribution-20261026",
+      "purpose": "1010 receiver",
+      "branch": "codex/mcp-trusted-attribution-20261026",
+      "head": "33e5ad3beb8830b50c29877cd57cf7bd8de71506",
+      "remote_head": "33e5ad3beb8830b50c29877cd57cf7bd8de71506",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/network-mcp-attribution-20261026",
+      "purpose": "1010 network companion",
+      "branch": "codex/mcp-tunnel-row-20261026",
+      "head": "cefc6f5c2f1cfb8681c2d37caea243f7ea9036e1",
+      "remote_head": "cefc6f5c2f1cfb8681c2d37caea243f7ea9036e1",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/agents-mcp-attribution-20261026",
+      "purpose": "1010 ownership companion",
+      "branch": "codex/verdify-mcp-attribution-owner-20261026",
+      "head": "c4cda6a61ddb7c2d72bb60d83ca8c96cad509794",
+      "remote_head": "c4cda6a61ddb7c2d72bb60d83ca8c96cad509794",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-positive-exposure-20261026",
+      "purpose": "positive original WIP",
+      "branch": "codex/positive-exposure-fixture-20261026",
+      "head": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+      "remote_head": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+      "remote_matches": true,
+      "status": ""
+    },
+    {
+      "worktree": "/private/tmp/verdify-resume-inventory-20261026",
+      "purpose": "historical shutdown, do not merge",
+      "branch": "codex/resume-review-inventory-20261026",
+      "head": "f90263d186ffa5da76ea79ba49be34493f05b8b1",
+      "remote_head": "f90263d186ffa5da76ea79ba49be34493f05b8b1",
+      "remote_matches": true,
+      "status": ""
+    }
+  ]
+}

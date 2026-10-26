@@ -1,0 +1,56 @@
+{
+  "prepared_at": "2026-10-26T14:45:18.008132+00:00",
+  "repos": [
+    {
+      "repo": "network",
+      "base": "178512e7e753796708c2b8b512ffbfc7e7314169",
+      "branch": "codex/mcp-tunnel-row-20261026",
+      "files": [
+        {
+          "path": "OWNERSHIP.md",
+          "sha256": "a77df31337e41a0c89a1ce68ca949c6587c69f019512b43ab65a78e4bc78db32"
+        },
+        {
+          "path": "ci/network-infra-gates/cloudflared_ha_contract_gate.py",
+          "sha256": "5f7f4dfda8ac29b438aab4ecbe076b8754da4832b9b384b41d64116c080497d9"
+        },
+        {
+          "path": "ci/network-infra-gates/test_cloudflared_ha_contract_gate.py",
+          "sha256": "3f3b8bc60dfa8e043b64b8e942e14fce6b8a1a99e9701cc2b986b25e3cc69572"
+        },
+        {
+          "path": "deploy/networking/cloudflared/cloudflared-config.yaml",
+          "sha256": "c1d034f1418b6d61aed43e6edb4b0fb9816a583134f735e7084df1b67f50f207"
+        },
+        {
+          "path": "deploy/networking/cloudflared/cloudflared-deployment.yaml",
+          "sha256": "fd692d43762d07dc6f20427e602fd96ed65ed759845ea2d7eec4c99140beccae"
+        }
+      ],
+      "patch_sha256": "5a907514fe3e0ca3aeca5a418b9b6af930fb45480776ec4e4e660a27a3194d3e"
+    },
+    {
+      "repo": "agents",
+      "base": "fc149f88519d0028779cc39924bf4b6eedf84ed2",
+      "branch": "codex/verdify-mcp-attribution-owner-20261026",
+      "files": [
+        {
+          "path": "control-plane/agent-fleet-control/registry/policy/estate-ownership/kubernetes-items.yaml",
+          "sha256": "9817bd298cc4e52c55a7aa4d8e57797333978fd58319c538457ca238e7bf850c"
+        },
+        {
+          "path": "docs/fleet-inventory/ESTATE-INVENTORY.md",
+          "sha256": "50216fcaf1c7b72cfd40e641f700be4a56537d6ac05c727742a3ceb049cec1a7"
+        },
+        {
+          "path": "docs/fleet-inventory/estate/VerdifyConsultancy__verdify-platform.md",
+          "sha256": "3828826efac36bb6d7e64fa335dd2d1021952f711b4e27e4c91a62a31a684760"
+        }
+      ],
+      "patch_sha256": "36970284b9400b9f7505ad10fc50252ff8daf27b56c00e917bd9cda0ac54d6b3"
+    }
+  ],
+  "no_git_commits_pushes_or_prs": true,
+  "no_ci_submissions": true,
+  "no_cluster_provider_or_secret_actions": true
+}

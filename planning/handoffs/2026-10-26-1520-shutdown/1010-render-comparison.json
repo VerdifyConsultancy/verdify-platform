@@ -1,0 +1,49 @@
+{
+  "base_sha": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+  "resource_count_before": 144,
+  "resource_count_after": 148,
+  "changes": [
+    {
+      "resource": "apps/v1/Deployment/verdify-prod/verdify-traefik",
+      "change": "modified"
+    },
+    {
+      "resource": "networking.k8s.io/v1/NetworkPolicy/verdify-prod/allow-verdify-mcp-tunnel-from-apps-ingress",
+      "change": "added"
+    },
+    {
+      "resource": "traefik.io/v1alpha1/IngressRoute/verdify-prod/verdify-mcp-tunnel-forward",
+      "change": "added"
+    },
+    {
+      "resource": "traefik.io/v1alpha1/IngressRoute/verdify-prod/verdify-t2-mcp",
+      "change": "modified"
+    },
+    {
+      "resource": "traefik.io/v1alpha1/IngressRoute/verdify-prod/verdify-t2-mcp-tunnel",
+      "change": "added"
+    },
+    {
+      "resource": "traefik.io/v1alpha1/Middleware/verdify-prod/verdify-strip-client-headers",
+      "change": "added"
+    },
+    {
+      "resource": "v1/ConfigMap/verdify-prod/verdify-traefik-routing-7fc94gkmck",
+      "change": "removed"
+    },
+    {
+      "resource": "v1/ConfigMap/verdify-prod/verdify-traefik-routing-ckd5mkf99m",
+      "change": "added"
+    },
+    {
+      "resource": "v1/Service/verdify-prod/verdify-traefik",
+      "change": "modified"
+    }
+  ],
+  "ingestor_template_unchanged": true,
+  "ingestor_template_sha256_before": "79b0b32638866d9f6d9c37de37c3354b0f87bfbc430b979f99615805fc8c852f",
+  "ingestor_template_sha256_after": "79b0b32638866d9f6d9c37de37c3354b0f87bfbc430b979f99615805fc8c852f",
+  "release_pins_bytes_unchanged": true,
+  "release_pins_sha256": "af705be512d51f3fd8be0046d4101317a24513a071f855ff0e291911061d47fa",
+  "rendered_secret_count": 0
+}

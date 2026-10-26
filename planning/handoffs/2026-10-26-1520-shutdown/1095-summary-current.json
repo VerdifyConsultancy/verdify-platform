@@ -1,0 +1,161 @@
+{
+  "observedAt": "2026-10-26T15:16:47.357462+00:00",
+  "name": "verdify-platform-pr-ci-qkprq",
+  "uid": "63665964-8b9a-46f7-839e-6f2ce0af2f19",
+  "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+  "parameters": {
+    "event-action": "opened",
+    "repository": "VerdifyConsultancy/verdify-platform",
+    "base-repository": "VerdifyConsultancy/verdify-platform",
+    "head-repository": "VerdifyConsultancy/verdify-platform",
+    "base-ref": "main",
+    "head-ref": "codex/control-timing-qualification-20261026",
+    "base-revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+    "head-revision": "96464472f58ccb7bb1f62aa19af1421fa601a56c"
+  },
+  "phase": "Running",
+  "startedAt": "2026-10-26T15:03:36Z",
+  "finishedAt": null,
+  "requiredStatuses": [
+    {
+      "context": "Verdify Platform / Argo PR CI",
+      "state": "pending",
+      "description": "Verdify Platform in-cluster PR validation started",
+      "updated_at": "2026-10-26T15:03:45Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "verdify-platform-pr-ci-qkprq",
+      "displayName": "verdify-platform-pr-ci-qkprq",
+      "type": "Steps",
+      "phase": "Running",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1123460752",
+      "displayName": "validate(0)",
+      "type": "Pod",
+      "phase": "Running",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1134851731",
+      "displayName": "[1]",
+      "type": "StepGroup",
+      "phase": "Running",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-1985391017",
+      "displayName": "validate",
+      "type": "Retry",
+      "phase": "Running",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-2275876918",
+      "displayName": "[0]",
+      "type": "StepGroup",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": null
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-3580149807",
+      "displayName": "report-pending(0)",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-3899366677",
+      "displayName": "trusted-precheck",
+      "type": "Pod",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0",
+        "parameters": [
+          {
+            "name": "validation-mode",
+            "value": "full",
+            "valueFrom": {
+              "path": "/tmp/validation-mode"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "verdify-platform-pr-ci-qkprq-640390340",
+      "displayName": "report-pending",
+      "type": "Retry",
+      "phase": "Succeeded",
+      "message": null,
+      "outputs": {
+        "exitCode": "0"
+      }
+    }
+  ],
+  "pods": [
+    {
+      "name": "verdify-platform-pr-ci-qkprq-validate-1123460752",
+      "uid": "cca4eab8-372f-4544-a221-d4833d1420f8",
+      "phase": "Running",
+      "node": "vm-k3s-node6",
+      "logBytes": 32636,
+      "logSha256": "20515326e4b16117680fa28727c66e8ed04def5e67e890e7b1a8a90dc22568cb",
+      "tail": [
+        "........................................................................ [ 39%]",
+        "........................................................................ [ 40%]",
+        "........................................................................ [ 42%]",
+        "........................................................................ [ 44%]",
+        "........................................................................ [ 45%]"
+      ]
+    }
+  ],
+  "privateReport": {
+    "source": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+    "qualified": true,
+    "cases": 19,
+    "passed": 19,
+    "fixtureSha256": "7327686a2ff0f5b997216fe0e88f292531c8eb152be18bf5fcd71eb86946fdcf",
+    "reasonCoverage": {
+      "exercised": [
+        "baseline_artifact_missing",
+        "baseline_recovery_in_progress",
+        "completed_with_incomplete_outcomes",
+        "confirmed_baseline_recovery_missing",
+        "expired_work_not_terminal",
+        "facility_emergency_hold",
+        "open_admission_without_current_work",
+        "preexposure_state_mismatch",
+        "runtime_fault_requires_recovery",
+        "terminal_experiment_capability_enabled"
+      ],
+      "retained_after_facility_closure": [
+        "preexposure_state_mismatch"
+      ],
+      "not_exercised": [
+        "multiple_open_exposures",
+        "open_exposure_observation_missing",
+        "open_exposure_observation_stale",
+        "open_exposure_state_mismatch",
+        "open_exposure_work_expired",
+        "runtime_generation_missing"
+      ],
+      "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+      "active_runtime_or_physical_acceptance": false,
+      "additional_real_delivery_credit": false
+    }
+  },
+  "terminal": false
+}

@@ -1,0 +1,11 @@
+{
+  "source": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+  "private_qualified": true,
+  "passed": 22,
+  "required": 22,
+  "report_sha256": "5e003d3e569f97e80e9fd304c5c3fccf868ab885713ffa595c4357a2f5128f58",
+  "junit_sha256": "05950010912fe0adad32fdb43c899c3b53446f88ac76d1b70598a420fa5b7b14",
+  "full_ci": "still running; merge held",
+  "workflow": "verdify-platform-pr-ci-g7vr4",
+  "uid": "b476b9ca-715e-4e3f-9ea2-6f693449668b"
+}

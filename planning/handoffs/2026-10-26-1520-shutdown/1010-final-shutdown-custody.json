@@ -1,0 +1,144 @@
+{
+  "captured_at": "2026-10-26T15:19:05.854546+00:00",
+  "scope": "Read-only remote head custody; no mutations or CI/device calls",
+  "rows": [
+    {
+      "label": "1010 product",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-mcp-attribution-20261026",
+      "branch": "codex/mcp-trusted-attribution-20261026",
+      "local_sha": "33e5ad3beb8830b50c29877cd57cf7bd8de71506",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "33e5ad3beb8830b50c29877cd57cf7bd8de71506",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/mcp-trusted-attribution-20261026"
+      ]
+    },
+    {
+      "label": "1010 Network",
+      "repo": "jvallery/network-infra",
+      "local_path": "/private/tmp/network-mcp-attribution-20261026",
+      "branch": "codex/mcp-tunnel-row-20261026",
+      "local_sha": "cefc6f5c2f1cfb8681c2d37caea243f7ea9036e1",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "cefc6f5c2f1cfb8681c2d37caea243f7ea9036e1",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/mcp-tunnel-row-20261026"
+      ]
+    },
+    {
+      "label": "1010 ownership",
+      "repo": "jvallery/agents",
+      "local_path": "/private/tmp/agents-mcp-attribution-20261026",
+      "branch": "codex/verdify-mcp-attribution-owner-20261026",
+      "local_sha": "c4cda6a61ddb7c2d72bb60d83ca8c96cad509794",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "c4cda6a61ddb7c2d72bb60d83ca8c96cad509794",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/verdify-mcp-attribution-owner-20261026"
+      ]
+    },
+    {
+      "label": "prior guard refusals",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-private-guard-refusals-20261025",
+      "branch": "codex/private-guard-refusals-20261025",
+      "local_sha": "80c01fc08030afbf53522280afd1e9cc43fe2dbd",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "80c01fc08030afbf53522280afd1e9cc43fe2dbd",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/private-guard-refusals-20261025"
+      ]
+    },
+    {
+      "label": "prior release checklist",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-release-checklist-20261025",
+      "branch": "codex/release-checklist-current-path-20261025",
+      "local_sha": "b0a1020a8e74736f681281196c28b9e5f3b5b547",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "b0a1020a8e74736f681281196c28b9e5f3b5b547",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/release-checklist-current-path-20261025"
+      ]
+    },
+    {
+      "label": "prior unblocked followthrough",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-unblocked-followthrough-20261025",
+      "branch": "codex/unblocked-graph-followthrough-20261025",
+      "local_sha": "eda5daedfc01d4106047c5b801fa42cd5afb1f1e",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "eda5daedfc01d4106047c5b801fa42cd5afb1f1e",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/unblocked-graph-followthrough-20261025"
+      ]
+    },
+    {
+      "label": "current positive fixture",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-positive-exposure-20261026",
+      "branch": "codex/positive-exposure-fixture-20261026",
+      "local_sha": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/positive-exposure-fixture-20261026"
+      ]
+    },
+    {
+      "label": "current finite contributors",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-finite-contributors-20261026",
+      "branch": "codex/finite-contributors-20261026",
+      "local_sha": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/finite-contributors-20261026"
+      ]
+    },
+    {
+      "label": "current issue inventory",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-resume-inventory-20261026",
+      "branch": "codex/resume-review-inventory-20261026",
+      "local_sha": "f90263d186ffa5da76ea79ba49be34493f05b8b1",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "f90263d186ffa5da76ea79ba49be34493f05b8b1",
+      "remote_matches_local": true,
+      "exact_sha_remote_branches": [
+        "codex/resume-review-inventory-20261026"
+      ]
+    },
+    {
+      "label": "codex/qualification-resume-20261026",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-qualification-resume-20261026",
+      "branch": "codex/qualification-resume-20261026",
+      "local_sha": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "6d2dccca89200b60eba916f22f8ef9169490f4f6",
+      "remote_matches_local": true
+    },
+    {
+      "label": "codex/qualification-receipts-20261026",
+      "repo": "VerdifyConsultancy/verdify-platform",
+      "local_path": "/private/tmp/verdify-qualification-receipts-20261026",
+      "branch": "codex/qualification-receipts-20261026",
+      "local_sha": "129783ed68810ef9db1a170660cee20d0f2a8760",
+      "working_tree_clean": true,
+      "same_named_remote_sha": "129783ed68810ef9db1a170660cee20d0f2a8760",
+      "remote_matches_local": true
+    }
+  ],
+  "last_verified_at": "2026-10-26T15:22:04.828220+00:00"
+}

@@ -1,0 +1,757 @@
+{
+  "schema": "verdify.shutdown-issue-deltas/1",
+  "preparedAt": "2026-10-26T15:22:44.445975+00:00",
+  "inputIssueCapture": "2026-10-26T15:17:10.987569+00:00",
+  "issueCount": 41,
+  "readOnlyReviewer": true,
+  "publishByRootOnly": true,
+  "allIssuesRemainOpen": true,
+  "acceptanceRewrites": false,
+  "liveEvidenceTimeLimits": {
+    "runtime": "2026-10-26T15:17:09Z\u201315:17:24Z",
+    "ciCompiler": "2026-10-26T15:16:46Z\u201315:17:39Z",
+    "passive410386": "2026-10-26T14:14:31Z"
+  },
+  "historicalEvidenceNotCurrent": [
+    "shutdown-final-ci-status.json (13:20 prior continuation)",
+    "native-firmware-shutdown.md (13:16 prior continuation)",
+    "graph-shutdown.md (uncommitted earlier19/pending22 source snapshot)"
+  ],
+  "issues": [
+    {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Track shared field-survey children without duplicate implementation or visit hours.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No new field commissioning occurred; shared crop/probe/plumbing survey remains deferred by the operator.",
+      "next_action": "Keep one shared visit/worksheet for the hardware children; record observed identity and enabled/disabled/uncommissioned state.",
+      "acceptance_limit": "Crop identity, hardware cause and calibration remain unproved.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No new field commissioning occurred; shared crop/probe/plumbing survey remains deferred by the operator.\n\nNext action after explicit resume: Keep one shared visit/worksheet for the hardware children; record observed identity and enabled/disabled/uncommissioned state.\n\nAcceptance limits: Crop identity, hardware cause and calibration remain unproved."
+    },
+    {
+      "number": 31,
+      "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "state": "OPEN",
+      "prior_review_category": "deferred-option",
+      "prior_next_action": "Select a concrete twin oracle question before adding implementation; preserve consolidated coverage obligations.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No selected twin oracle or broader twin runtime qualification was completed.",
+      "next_action": "Select one concrete consumer/export/action question before adding bounded qualification.",
+      "acceptance_limit": "Private containment alert fixtures do not fill the 21 historical prefix gaps or prove twin parity.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No selected twin oracle or broader twin runtime qualification was completed.\n\nNext action after explicit resume: Select one concrete consumer/export/action question before adding bounded qualification.\n\nAcceptance limits: Private containment alert fixtures do not fill the 21 historical prefix gaps or prove twin parity."
+    },
+    {
+      "number": 45,
+      "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+      "state": "OPEN",
+      "prior_review_category": "field-input-blocked",
+      "prior_next_action": "After #398, commission each required soil/runoff channel with identity, calibration and actual feedback receipts.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No new commissioned soil/runoff readings or calibration evidence were collected.",
+      "next_action": "After observed topology #298 and target correction #398, commission each required channel and use the existing actual feedback check.",
+      "acceptance_limit": "Fresh climate telemetry is not soil/runoff commissioning; no fertilizer/irrigation authority from seed data.",
+      "evidence_files": [
+        "all-open-issue-review.json",
+        "shutdown-telemetry.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No new commissioned soil/runoff readings or calibration evidence were collected.\n\nNext action after explicit resume: After observed topology #298 and target correction #398, commission each required channel and use the existing actual feedback check.\n\nAcceptance limits: Fresh climate telemetry is not soil/runoff commissioning; no fertilizer/irrigation authority from seed data."
+    },
+    {
+      "number": 51,
+      "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "state": "OPEN",
+      "prior_review_category": "reference-meter-blocked",
+      "prior_next_action": "Obtain an actual reference NDIR meter before calibration; retain uncalibrated label.",
+      "preserve_original_acceptance": true,
+      "status_delta": "The operator still has no reference NDIR CO2 meter; no paired calibration was performed.",
+      "next_action": "Wait for actual reference pairs and predeclared tolerance; keep the explicit uncalibrated state.",
+      "acceptance_limit": "Visit availability does not create a reference measurement or justify guessed coefficients.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. The operator still has no reference NDIR CO2 meter; no paired calibration was performed.\n\nNext action after explicit resume: Wait for actual reference pairs and predeclared tolerance; keep the explicit uncalibrated state.\n\nAcceptance limits: Visit availability does not create a reference measurement or justify guessed coefficients."
+    },
+    {
+      "number": 52,
+      "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+      "state": "OPEN",
+      "prior_review_category": "field-observation-deferred",
+      "prior_next_action": "Use the later shared survey for species-specific observations and reversible seasonal decision.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Species-specific observations remain deferred with the shared survey.",
+      "next_action": "Record a supported no-change or reversible species-specific decision from actual crop observations.",
+      "acceptance_limit": "No generic orchid-wide dormancy rule or inferred species.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Species-specific observations remain deferred with the shared survey.\n\nNext action after explicit resume: Record a supported no-change or reversible species-specific decision from actual crop observations.\n\nAcceptance limits: No generic orchid-wide dormancy rule or inferred species."
+    },
+    {
+      "number": 75,
+      "title": "[C4][P2] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Track remaining #963 plus owner observability receipts; do not repeat delivered exporter/watchdog work.",
+      "preserve_original_acceptance": true,
+      "status_delta": "15:17 UTC live readback: all17 Deployments and the single DB StatefulSet have desired replicas ready; API health endpoints200; climate/action source rows15:16:30. New firmware corrections are source-only.",
+      "next_action": "Keep #963/#749 and remaining child acceptance explicit; do not repeat delivered exporter/watchdog work.",
+      "acceptance_limit": "Replica/API health and active_alerts_1h=0 are bounded availability evidence, not sensor recovery, writer reconciliation, efficacy or complete observability acceptance.",
+      "evidence_files": [
+        "shutdown-workloads.json",
+        "shutdown-api-health.json",
+        "shutdown-telemetry.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [
+        "The October18 07:07 runtime paragraph is historical; it is not the latest live readback."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. 15:17 UTC live readback: all17 Deployments and the single DB StatefulSet have desired replicas ready; API health endpoints200; climate/action source rows15:16:30. New firmware corrections are source-only.\n\nNext action after explicit resume: Keep #963/#749 and remaining child acceptance explicit; do not repeat delivered exporter/watchdog work.\n\nAcceptance limits: Replica/API health and active_alerts_1h=0 are bounded availability evidence, not sensor recovery, writer reconciliation, efficacy or complete observability acceptance."
+    },
+    {
+      "number": 297,
+      "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "state": "OPEN",
+      "prior_review_category": "commissioned-input-blocked",
+      "prior_next_action": "Reuse delivered evaluator and 19 fixtures; prepare measured-target/source and alert adapter only with genuine #398/#45 input.",
+      "preserve_original_acceptance": true,
+      "status_delta": "The existing source evaluator/19 saturation fixtures remain delivered; no new commissioned target or actual saturation/skip event was accepted.",
+      "next_action": "Reuse the delivered evaluator and bind only genuine #398/#45 targets/source before alert/actuation enablement.",
+      "acceptance_limit": "The separate22-case containment fixture is not saturation commissioning or drip-skip acceptance.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. The existing source evaluator/19 saturation fixtures remain delivered; no new commissioned target or actual saturation/skip event was accepted.\n\nNext action after explicit resume: Reuse the delivered evaluator and bind only genuine #398/#45 targets/source before alert/actuation enablement.\n\nAcceptance limits: The separate22-case containment fixture is not saturation commissioning or drip-skip acceptance."
+    },
+    {
+      "number": 298,
+      "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+      "state": "OPEN",
+      "prior_review_category": "field-survey-deferred",
+      "prior_next_action": "Reuse merged #1081 worksheet when Jason resumes the survey; record actual crop/pot/substrate/probe/plumbing identities.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Survey remains later. Release-checklist/field worksheet documentation PR1086 is merged, not an observed crop inventory.",
+      "next_action": "Use the shared worksheet when the operator supplies actual position/crop/pot/substrate/probe/plumbing evidence.",
+      "acceptance_limit": "No fabricated topology, automatic appointment, DB import or control enablement.",
+      "evidence_files": [
+        "resume-ci-receipts.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Survey remains later. Release-checklist/field worksheet documentation PR1086 is merged, not an observed crop inventory.\n\nNext action after explicit resume: Use the shared worksheet when the operator supplies actual position/crop/pot/substrate/probe/plumbing evidence.\n\nAcceptance limits: No fabricated topology, automatic appointment, DB import or control enablement."
+    },
+    {
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "state": "OPEN",
+      "prior_review_category": "source-preparation-release-blocked",
+      "prior_next_action": "Add only missing native actual-wrapper min-off boundary/restart/manual-origin cases, then carry into #390.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.",
+      "next_action": "Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.",
+      "acceptance_limit": "No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests.",
+      "evidence_files": [
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json",
+        "control-timing-pr-body.md"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 adds actual-YAML admission/pulse/accepted-transition regression coverage at exacthead96464472; strict native qualification219/219 passed with76 historical behavioral failures/143 passes. Full PR CI and two-target compiler remain running at shutdown.\n\nNext action after explicit resume: Resume exact existing CI/compiler handles, preserve current source/provenance, and only after terminal qualification carry accepted re-fire/cycle semantics into #390.\n\nAcceptance limits: No source merge, firmware deployment, actual restart/manual-origin physical proof, OTA or writer-hold release follows from native tests."
+    },
+    {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Track release/re-fire/topology and field-input/commissioning chains separately.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Shared irrigation/control source PR1095 is native-qualified219/219 but its full PR CI/compiler remain active. Field topology, calibrated wall-feed and release proof remain separate.",
+      "next_action": "Track #299/#434/#390 source qualification separately from #298\u2192#398\u2192#45 physical commissioning.",
+      "acceptance_limit": "No center-drip connection, wall-feed calibration, dosing action or physical qualification occurred.",
+      "evidence_files": [
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared irrigation/control source PR1095 is native-qualified219/219 but its full PR CI/compiler remain active. Field topology, calibrated wall-feed and release proof remain separate.\n\nNext action after explicit resume: Track #299/#434/#390 source qualification separately from #298\u2192#398\u2192#45 physical commissioning.\n\nAcceptance limits: No center-drip connection, wall-feed calibration, dosing action or physical qualification occurred."
+    },
+    {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Track contributor truth, dwell simplification, dry-out, lighting and post-study corridor evidence.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Finite aggregate contributors are corrected in merged1091/18570b0f; control timing/accepted relay-cycle PR1095 is native-qualified but pending full CI/compiler.",
+      "next_action": "Reuse current source receipts; keep jump/flatline, field inputs, actual cycling and post-study corridor decisions separate.",
+      "acceptance_limit": "Source/native success does not establish deployed cycling, sensor recovery or scientific efficacy.",
+      "evidence_files": [
+        "firmware1091-native-results.json",
+        "firmware1091-secretless-terminal-custody.json",
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Finite aggregate contributors are corrected in merged1091/18570b0f; control timing/accepted relay-cycle PR1095 is native-qualified but pending full CI/compiler.\n\nNext action after explicit resume: Reuse current source receipts; keep jump/flatline, field inputs, actual cycling and post-study corridor decisions separate.\n\nAcceptance limits: Source/native success does not establish deployed cycling, sensor recovery or scientific efficacy."
+    },
+    {
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "state": "OPEN",
+      "prior_review_category": "source-preparation-release-blocked",
+      "prior_next_action": "Reuse #985 eight-limit correction and 84 wrapper cases; finish single-authority semantics and missing causal boundary proof.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.",
+      "next_action": "Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.",
+      "acceptance_limit": "No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source.",
+      "evidence_files": [
+        "control-timing-pr-body.md",
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json"
+      ],
+      "stale_wording": [
+        "Current action to finish source authority semantics should distinguish the prepared1095 owner/force documentation from remaining deployed/physical proof."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 documents existing dwell ownership/force exceptions and preserves newly admitted phase durations; accepted OFF-to-ON transitions now govern cycle counts in proposed source. Original84 dwell cases are retained within219 passing actual-YAML cases; full CI/compiler remain pending.\n\nNext action after explicit resume: Continue the exact running qualification handles, then carry qualified source into the single selected #390 release packet.\n\nAcceptance limits: No new single-authority/physical chatter/starvation/reboot acceptance is inferred from source."
+    },
+    {
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "state": "OPEN",
+      "prior_review_category": "safe-software-next",
+      "prior_next_action": "Use accepted callback history to define separate finite/range/freshness/jump/flatline semantics, continuity boundaries and conservative recovery tests.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1091 merged as18570b0f: all12 aggregate contributor guards now reject NaN and\u00b1Inf. Exact-source140/140 causal YAML tests, strict firmware/invariant/replay and both secretless compiler targets passed; expected historical32 failures/38 passes retained.",
+      "next_action": "Reuse this source qualification in #390; finish separately justified jump/flatline/shared-health semantics from actual accepted inputs.",
+      "acceptance_limit": "Reported live firmware remains2026.10.2.0637.620a218a-wifi-bound; dummy compiler outputs are nondeployable. No hardware recovery or full issue closure.",
+      "evidence_files": [
+        "firmware1091-native-results.json",
+        "firmware1091-secretless-terminal-custody.json",
+        "shutdown-telemetry.json"
+      ],
+      "stale_wording": [
+        "Separate the newer aggregate contributor fix from earlier finite diagnostic source; do not leave the current action implying the12 guards are still unimplemented."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1091 merged as18570b0f: all12 aggregate contributor guards now reject NaN and\u00b1Inf. Exact-source140/140 causal YAML tests, strict firmware/invariant/replay and both secretless compiler targets passed; expected historical32 failures/38 passes retained.\n\nNext action after explicit resume: Reuse this source qualification in #390; finish separately justified jump/flatline/shared-health semantics from actual accepted inputs.\n\nAcceptance limits: Reported live firmware remains2026.10.2.0637.620a218a-wifi-bound; dummy compiler outputs are nondeployable. No hardware recovery or full issue closure."
+    },
+    {
+      "number": 369,
+      "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+      "state": "OPEN",
+      "prior_review_category": "deferred-refactor",
+      "prior_next_action": "Inventory only named surviving consumers; remove nothing absent zero-consumer proof and a justified #390 cohort.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No new zero-consumer removal was made. Source/source-qualification progress does not justify a broad refactor.",
+      "next_action": "Inventory named surviving consumers only; remove nothing without zero-consumer proof and an explicit release cohort.",
+      "acceptance_limit": "No fan-burst removal, safety-writability change or silent full48 identity change.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No new zero-consumer removal was made. Source/source-qualification progress does not justify a broad refactor.\n\nNext action after explicit resume: Inventory named surviving consumers only; remove nothing without zero-consumer proof and an explicit release cohort.\n\nAcceptance limits: No fan-burst removal, safety-writability change or silent full48 identity change."
+    },
+    {
+      "number": 370,
+      "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+      "state": "OPEN",
+      "prior_review_category": "deferred-refactor",
+      "prior_next_action": "After #367 authority semantics, capture current reverse-conflict/origin/restart/partial-delivery behavior before minimal consolidation.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No new arbitration refactor was made; PR1095 retains current cancellation/topology/journal/dwell/force rules while qualifying timing and cycle semantics.",
+      "next_action": "Reuse #367 source authority documentation, then capture actual reverse-conflict/origin/restart/partial-delivery behavior before justified consolidation.",
+      "acceptance_limit": "Do not substitute the timing regression suite for arbitration or physical conflict acceptance.",
+      "evidence_files": [
+        "control-timing-pr-body.md",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No new arbitration refactor was made; PR1095 retains current cancellation/topology/journal/dwell/force rules while qualifying timing and cycle semantics.\n\nNext action after explicit resume: Reuse #367 source authority documentation, then capture actual reverse-conflict/origin/restart/partial-delivery behavior before justified consolidation.\n\nAcceptance limits: Do not substitute the timing regression suite for arbitration or physical conflict acceptance."
+    },
+    {
+      "number": 378,
+      "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+      "state": "OPEN",
+      "prior_review_category": "scientific-blocked",
+      "prior_next_action": "Wait for #785 fixed-target study readout before corridor-width decisions.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No completed fixed-target pilot readout exists.",
+      "next_action": "Wait for #785 unchanged-design results before corridor-width decisions.",
+      "acceptance_limit": "No retrospective endpoint change or controller-credit inference.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No completed fixed-target pilot readout exists.\n\nNext action after explicit resume: Wait for #785 unchanged-design results before corridor-width decisions.\n\nAcceptance limits: No retrospective endpoint change or controller-credit inference."
+    },
+    {
+      "number": 386,
+      "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "state": "OPEN",
+      "prior_review_category": "passive-natural-event",
+      "prior_next_action": "Reuse accepted ordinary main/grow cutoff receipts; await one naturally eligible minimum-on overlap with exact decision and relay evidence.",
+      "preserve_original_acceptance": true,
+      "status_delta": "New October25 ordinary cutoff receipts: main OFF02:00:00.175863Z and grow OFF04:00:00.761588Z October26, both outside_window with corresponding state/reason epochs.",
+      "next_action": "Wait for a naturally eligible original ON transition shortly before cutoff and retain exact relay/decision evidence through actual minimum-on expiry.",
+      "acceptance_limit": "No active minimum-on overlap, original ON transition, continuous physical ON or override boundary was established; no forced toggle or OTA.",
+      "evidence_files": [
+        "passive-resume-410-386.md",
+        "passive-resume-410-386.lighting.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. New October25 ordinary cutoff receipts: main OFF02:00:00.175863Z and grow OFF04:00:00.761588Z October26, both outside_window with corresponding state/reason epochs.\n\nNext action after explicit resume: Wait for a naturally eligible original ON transition shortly before cutoff and retain exact relay/decision evidence through actual minimum-on expiry.\n\nAcceptance limits: No active minimum-on overlap, original ON transition, continuous physical ON or override boundary was established; no forced toggle or OTA."
+    },
+    {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "state": "OPEN",
+      "prior_review_category": "safe-documentation-and-release-preparation",
+      "prior_next_action": "Finish current-path docs PR1086 after its existing checks; select exact candidate/recovery provenance and canaries before any attended release.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.",
+      "next_action": "Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.",
+      "acceptance_limit": "No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed.",
+      "evidence_files": [
+        "resume-ci-receipts.json",
+        "firmware1091-secretless-terminal-custody.json",
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json",
+        "shutdown-telemetry.json"
+      ],
+      "stale_wording": [
+        "The old review action to finish docs1086 is completed. Never present a secretless compiler output as deployable or last-good."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Docs1086 are merged. Finite contributor1091 is merged with full strict native/two-target nondeployable compiler qualification. Control timing1095 has219/219 strict native evidence but full PR CI and compiler remain active. Reported live firmware is unchanged.\n\nNext action after explicit resume: Resume exact1095 jobs; then select one exact candidate/topology/configuration/recovery/rollback/canary packet using merged qualified source.\n\nAcceptance limits: No deployable signed candidate, independently available qualified recovery/bake, physical release or OTA was completed."
+    },
+    {
+      "number": 398,
+      "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "state": "OPEN",
+      "prior_review_category": "field-input-blocked",
+      "prior_next_action": "After #298, replace seed assumptions using a new ledgered version of actual crop/substrate targets.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No actual crop/substrate topology or threshold correction was imported.",
+      "next_action": "After #298 evidence, append a new ledgered target correction with inverse and preserve valid operator values.",
+      "acceptance_limit": "Do not edit applied migration064 or enable feedback from seed labels.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No actual crop/substrate topology or threshold correction was imported.\n\nNext action after explicit resume: After #298 evidence, append a new ledgered target correction with inverse and preserve valid operator values.\n\nAcceptance limits: Do not edit applied migration064 or enable feedback from seed labels."
+    },
+    {
+      "number": 410,
+      "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+      "state": "OPEN",
+      "prior_review_category": "passive-prospective-evidence",
+      "prior_next_action": "Retain two accepted criteria and seek complete prospective daylight/solar-night evidence using existing collectors and bounded getter.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Accepted criteria1 and3 retained. October25 installed getter returned no_episodes in3.718s. Daylight610/646 represented minutes leaves36 gaps and4 observed ordinary drying minutes; complete-day measured-zero staysNULL.",
+      "next_action": "Keep existing collectors/getter and seek a genuinely complete prospective observation with explicit continuity/freshness.",
+      "acceptance_limit": "No new model/consumer invocation; scheduled plan metadata alone is not a consumer trace. Missing minutes were not interpolated.",
+      "evidence_files": [
+        "passive-resume-410-386.md",
+        "passive-resume-410-386.daytime.json",
+        "passive-resume-410-386.getter.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Accepted criteria1 and3 retained. October25 installed getter returned no_episodes in3.718s. Daylight610/646 represented minutes leaves36 gaps and4 observed ordinary drying minutes; complete-day measured-zero staysNULL.\n\nNext action after explicit resume: Keep existing collectors/getter and seek a genuinely complete prospective observation with explicit continuity/freshness.\n\nAcceptance limits: No new model/consumer invocation; scheduled plan metadata alone is not a consumer trace. Missing minutes were not interpolated."
+    },
+    {
+      "number": 412,
+      "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+      "state": "OPEN",
+      "prior_review_category": "field-observation-deferred",
+      "prior_next_action": "At later shared visit record screen position, measured trigger and explicit no-change/change decision.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No new screen-position/night-context observation or equipment actuation occurred.",
+      "next_action": "At the deferred shared visit record actual position and measured trigger, then a bounded no-change/change decision.",
+      "acceptance_limit": "No guessed maintenance date or inferred energy/compliance benefit.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No new screen-position/night-context observation or equipment actuation occurred.\n\nNext action after explicit resume: At the deferred shared visit record actual position and measured trigger, then a bounded no-change/change decision.\n\nAcceptance limits: No guessed maintenance date or inferred energy/compliance benefit."
+    },
+    {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Sequence #367, then justified #369/#370 work without adding blanket dependencies.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Shared control PR1095 is native-qualified219/219 but not yet full-CI/compiler accepted or deployed. No new broad cleanup/refactor was done.",
+      "next_action": "Reuse #367 owner/force semantics and finish exact pending qualification before justified #369/#370 work.",
+      "acceptance_limit": "Do not add blanket dependencies or infer physical anti-chatter acceptance.",
+      "evidence_files": [
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared control PR1095 is native-qualified219/219 but not yet full-CI/compiler accepted or deployed. No new broad cleanup/refactor was done.\n\nNext action after explicit resume: Reuse #367 owner/force semantics and finish exact pending qualification before justified #369/#370 work.\n\nAcceptance limits: Do not add blanket dependencies or infer physical anti-chatter acceptance."
+    },
+    {
+      "number": 434,
+      "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "state": "OPEN",
+      "prior_review_category": "source-preparation-field-release-blocked",
+      "prior_next_action": "Prepare missing all-origin/reverse-conflict/calibration-negative/no-double-dose cases against approved topology.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.",
+      "next_action": "After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.",
+      "acceptance_limit": "No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred.",
+      "evidence_files": [
+        "control-timing-pr-body.md",
+        "control-native-results.json",
+        "1095-shutdown-final-observation.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1095 fixes proposed PREWET/pulse admission timing and cycle counting, with219 actual-YAML passes and76 causal historical failures; full PR CI/compiler remain active.\n\nNext action after explicit resume: After exact terminal qualification, retain source in #390; field mapping/calibration and physical wall-feed/no-double-dose acceptance still require genuine evidence.\n\nAcceptance limits: No plumbing, dosing, GPIO, automatic fertilizer, OTA or ESP32 action occurred."
+    },
+    {
+      "number": 581,
+      "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Keep pre-draw critical path explicit through readiness, containment, physical proof, input lock and real pilot.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Shared containment PR1094 is merged0ed369fd with22/22 private cases and13/16 native reason coverage. The runtime writer stage remains halted12completed/0records and handoff unsettled.",
+      "next_action": "Carry the residual readiness/containment/physical/input-lock chain explicitly; no draw, launch or active executor follows.",
+      "acceptance_limit": "Private synthetic source qualification is not live experiment exclusivity/recovery or physical/scientific acceptance.",
+      "evidence_files": [
+        "1094-corrected-private-report.json",
+        "1094-qualified-comment.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shared containment PR1094 is merged0ed369fd with22/22 private cases and13/16 native reason coverage. The runtime writer stage remains halted12completed/0records and handoff unsettled.\n\nNext action after explicit resume: Carry the residual readiness/containment/physical/input-lock chain explicitly; no draw, launch or active executor follows.\n\nAcceptance limits: Private synthetic source qualification is not live experiment exclusivity/recovery or physical/scientific acceptance."
+    },
+    {
+      "number": 587,
+      "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+      "state": "OPEN",
+      "prior_review_category": "safe-private-qualification-next",
+      "prior_next_action": "Extend proper positive private exposure fixture under active guards; test remaining reachable stale/expiry/multi-device conditions and native mismatch closure.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.",
+      "next_action": "Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.",
+      "acceptance_limit": "Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance.",
+      "evidence_files": [
+        "1094-corrected-private-report.json",
+        "1094-qualified-comment.json",
+        "1094-corrected-private-custody.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [
+        "19 cases/10-of16 reason coverage is superseded for current main by22/13; keep old exact-source receipts historical.",
+        "The missing retained rehearsal target is not a blocker for the delivered authorized private CI fixture.",
+        "PR1095 current branch still reports19 cases because it predates1094; an ordinary merge must preserve main22-case implementation, not overwrite it."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.\n\nNext action after explicit resume: Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.\n\nAcceptance limits: Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance."
+    },
+    {
+      "number": 588,
+      "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+      "state": "OPEN",
+      "prior_review_category": "scientific-and-runtime-blocked",
+      "prior_next_action": "Prepare exact GPT-6 Luna/xhigh identity and compatibility manifest, then wait for #641/#782/#783 before lock/draw.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No scientific lock, random draw or new runtime identity was activated. Shared containment source improved through1094, but #641/#782/#783 remain incomplete.",
+      "next_action": "Prepare exact model/runtime/scientific identity and compatibility manifest; consume genuinely accepted predecessors before lock/draw.",
+      "acceptance_limit": "No missing-data or no-go disposition is a randomization authority.",
+      "evidence_files": [
+        "1094-corrected-private-report.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No scientific lock, random draw or new runtime identity was activated. Shared containment source improved through1094, but #641/#782/#783 remain incomplete.\n\nNext action after explicit resume: Prepare exact model/runtime/scientific identity and compatibility manifest; consume genuinely accepted predecessors before lock/draw.\n\nAcceptance limits: No missing-data or no-go disposition is a randomization authority."
+    },
+    {
+      "number": 639,
+      "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+      "state": "OPEN",
+      "prior_review_category": "safe-private-qualification-next",
+      "prior_next_action": "Same shared positive private exposure fixture as #587; preserve immutable guards, exact native causal paths, idempotent close-first behavior and transactional custody.",
+      "preserve_original_acceptance": true,
+      "status_delta": "PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.",
+      "next_action": "Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.",
+      "acceptance_limit": "Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance.",
+      "evidence_files": [
+        "1094-corrected-private-report.json",
+        "1094-qualified-comment.json",
+        "1094-corrected-private-custody.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [
+        "19 cases/10-of16 reason coverage is superseded for current main by22/13; keep old exact-source receipts historical.",
+        "The missing retained rehearsal target is not a blocker for the delivered authorized private CI fixture.",
+        "PR1095 current branch still reports19 cases because it predates1094; an ordinary merge must preserve main22-case implementation, not overwrite it."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. PR1094 is merged0ed369fd. Exacthead6d2dccca full requiredCI passed; private qualification22/22,13/16 nativeSQL reasons, real existing lifecycle/executor LOGIN transitions and all3 exact process/socket/directory disposal proofs.\n\nNext action after explicit resume: Reuse the22-case report. Map only residual lifecycle/executor/blinding/alert/real-prefix/runtime clauses to legitimate current inputs and own-LOGIN routes; preserve the three defensive conditions as guards rather than manufacturing invalid positives.\n\nAcceptance limits: Synthetic/capture-only results provide no new real Slack delivery, active executor exclusivity/recovery, historical-prefix, physical proof or writer-hold clearance."
+    },
+    {
+      "number": 640,
+      "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+      "state": "OPEN",
+      "prior_review_category": "assigned-day-blocked",
+      "prior_next_action": "Prepare exact freeze/reconciliation/export failure-day commands; execute only after genuine #642 assigned window.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No real randomized assigned day was frozen or exported.",
+      "next_action": "Prepare exact freeze/reconciliation/export/failure-day commands and execute only after genuine #642 assignment.",
+      "acceptance_limit": "Private synthetic fixtures are not intention-to-treat observations.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No real randomized assigned day was frozen or exported.\n\nNext action after explicit resume: Prepare exact freeze/reconciliation/export/failure-day commands and execute only after genuine #642 assignment.\n\nAcceptance limits: Private synthetic fixtures are not intention-to-treat observations."
+    },
+    {
+      "number": 641,
+      "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+      "state": "OPEN",
+      "prior_review_category": "physical-and-predecessor-blocked",
+      "prior_next_action": "Keep draft855 parked; only prepare current dormant successor/rollback until #749/#587/#639 pass.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Draft855 stays parked. Private22-case containment progress does not satisfy remaining predecessor or physical proof. Writer hold is unchanged/handoff unsettled.",
+      "next_action": "Keep dormant successor/rollback preparation separate; a fresh attended baseline-target-baseline proof follows accepted #749/#587/#639 only.",
+      "acceptance_limit": "Must end baseline-confirmed/component-off; no activation, draw, launch or hold release from current source receipts.",
+      "evidence_files": [
+        "shutdown-current-prs.json",
+        "1094-corrected-private-report.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Draft855 stays parked. Private22-case containment progress does not satisfy remaining predecessor or physical proof. Writer hold is unchanged/handoff unsettled.\n\nNext action after explicit resume: Keep dormant successor/rollback preparation separate; a fresh attended baseline-target-baseline proof follows accepted #749/#587/#639 only.\n\nAcceptance limits: Must end baseline-confirmed/component-off; no activation, draw, launch or hold release from current source receipts."
+    },
+    {
+      "number": 642,
+      "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+      "state": "OPEN",
+      "prior_review_category": "locked-design-blocked",
+      "prior_next_action": "Prepare identity and rollback checks, but activation requires qualified #588 lock/draw and separate physical scope.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No randomized day1 exists or was activated.",
+      "next_action": "After #588 qualified lock/draw, use separately authorized bounded physical activation and rollback checks.",
+      "acceptance_limit": "No inherited efficacy authority from a technical readiness gate or private CI.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No randomized day1 exists or was activated.\n\nNext action after explicit resume: After #588 qualified lock/draw, use separately authorized bounded physical activation and rollback checks.\n\nAcceptance limits: No inherited efficacy authority from a technical readiness gate or private CI."
+    },
+    {
+      "number": 749,
+      "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+      "state": "OPEN",
+      "prior_review_category": "safety-evidence-blocked",
+      "prior_next_action": "Prepare criterion-specific parser and spread/alert-lineage evidence from real inputs; preserve sealed failed packet.",
+      "preserve_original_acceptance": true,
+      "status_delta": "The sealed spread/catalog failure and four unsupported physical wetting criteria remain unresolved. No new physical source receipt was collected.",
+      "next_action": "Implement/use criterion-specific real equipment/binary/rails/counter proof with preserved failed packet and exact unchanged limits.",
+      "acceptance_limit": "No hash, bare true, source correction or healthy telemetry releases the safety hold; no #751 blanket gate.",
+      "evidence_files": [
+        "all-open-issue-review.json",
+        "live-writer.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. The sealed spread/catalog failure and four unsupported physical wetting criteria remain unresolved. No new physical source receipt was collected.\n\nNext action after explicit resume: Implement/use criterion-specific real equipment/binary/rails/counter proof with preserved failed packet and exact unchanged limits.\n\nAcceptance limits: No hash, bare true, source correction or healthy telemetry releases the safety hold; no #751 blanket gate."
+    },
+    {
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "state": "OPEN",
+      "prior_review_category": "field-service-deferred",
+      "prior_next_action": "Use shared survey to distinguish south climate, south1 soil and hydro publication faults before repair.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No south-climate/hydro field repair was performed. Finite aggregate contributor fix1091 is source-qualified and merged, with installed firmware still620a218a.",
+      "next_action": "Use the deferred shared survey to distinguish climate, south1 soil and hydro faults before a bounded identified repair.",
+      "acceptance_limit": "UNKNOWN telemetry alone does not prove hardware cause; no silent locked-panel change or recovery claim.",
+      "evidence_files": [
+        "firmware1091-native-results.json",
+        "shutdown-telemetry.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No south-climate/hydro field repair was performed. Finite aggregate contributor fix1091 is source-qualified and merged, with installed firmware still620a218a.\n\nNext action after explicit resume: Use the deferred shared survey to distinguish climate, south1 soil and hydro faults before a bounded identified repair.\n\nAcceptance limits: UNKNOWN telemetry alone does not prove hardware cause; no silent locked-panel change or recovery claim."
+    },
+    {
+      "number": 775,
+      "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "state": "OPEN",
+      "prior_review_category": "rollup",
+      "prior_next_action": "Resume handoff by reading existing CI/PR outcomes, completing safe pending source, then shared #587/#639 and #368 packets.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Shutdown requested after source progress:1091 merged/native+compiler qualified;1092 candidate merged and9 older candidates superseded;1094 merged22/13;1095 strict native219 passed with full PR CI/compiler still running.1010 source companions are prepared across owners.15:17 runtime remains healthy at comparison0ed369fd, but writer remains halted12completed/0staged/handoff unsettled.",
+      "next_action": "Publish exact source/evidence and issue status, preserve active cluster jobs, then stop local work. On explicit resume inspect the same exact handles and source/UID before interpreting outcomes or taking another write.",
+      "acceptance_limit": "No new ESP32 connection, node cordon, credentials, Slack pair, OTA, experiment activation or hold clearance occurred. Fresh health is not writer recovery.",
+      "evidence_files": [
+        "live-writer.json",
+        "shutdown-workloads.json",
+        "shutdown-api-health.json",
+        "shutdown-telemetry.json",
+        "1095-shutdown-final-observation.json",
+        "1094-corrected-private-report.json",
+        "1010-source-preparation.md",
+        "1010-adjacent-source-preparation.md"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Shutdown requested after source progress:1091 merged/native+compiler qualified;1092 candidate merged and9 older candidates superseded;1094 merged22/13;1095 strict native219 passed with full PR CI/compiler still running.1010 source companions are prepared across owners.15:17 runtime remains healthy at comparison0ed369fd, but writer remains halted12completed/0staged/handoff unsettled.\n\nNext action after explicit resume: Publish exact source/evidence and issue status, preserve active cluster jobs, then stop local work. On explicit resume inspect the same exact handles and source/UID before interpreting outcomes or taking another write.\n\nAcceptance limits: No new ESP32 connection, node cordon, credentials, Slack pair, OTA, experiment activation or hold clearance occurred. Fresh health is not writer recovery."
+    },
+    {
+      "number": 782,
+      "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+      "state": "OPEN",
+      "prior_review_category": "scientific-input-blocked",
+      "prior_next_action": "Use existing November2-3 winter collection and custody path when due; obtain genuine selected crop/contributor/target inputs before empirical power.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Existing winter collector remains active; October26 last successful scheduled job06:30:28Z is before the Nov2 first declared observation window. No authentic selected crop/contributor/target interval or original draw was supplied.",
+      "next_action": "Retain existing Nov2/Nov3 observation/custody path; obtain genuine inputs before empirical joint power or lock.",
+      "acceptance_limit": "A scheduled successful no-due collector is not a study day or qualified endpoint; no duplicate collector or fabricated clocks.",
+      "evidence_files": [
+        "shutdown-workloads.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Existing winter collector remains active; October26 last successful scheduled job06:30:28Z is before the Nov2 first declared observation window. No authentic selected crop/contributor/target interval or original draw was supplied.\n\nNext action after explicit resume: Retain existing Nov2/Nov3 observation/custody path; obtain genuine inputs before empirical joint power or lock.\n\nAcceptance limits: A scheduled successful no-due collector is not a study day or qualified endpoint; no duplicate collector or fabricated clocks."
+    },
+    {
+      "number": 783,
+      "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+      "state": "OPEN",
+      "prior_review_category": "runtime-identity-and-predecessor-blocked",
+      "prior_next_action": "After shared containment qualify full selector-to-freezer/analyzer path with real component LOGINs and a legitimate analyst identity.",
+      "preserve_original_acceptance": true,
+      "status_delta": "The22-case1094 fixture adds real existing lifecycle/executor LOGIN committed native transitions; it does not complete the selector-to-freezer/analyst vertical route. Analyst remains unresolved in retained evidence.",
+      "next_action": "Reuse the actual scoped LOGIN receipts, retain #587/#639 completion edges and qualify legitimate remaining stages/analyst with authentic inputs.",
+      "acceptance_limit": "Owner catalog/SET ROLE/synthetic output cannot qualify the full authentic vertical path; no credential issuance.",
+      "evidence_files": [
+        "1094-corrected-private-report.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [
+        "The blanket historical phrase no duty authenticated yet is stale: at least lifecycle/executor now have actual private LOGIN transition receipts. Keep exact scopes separate from complete vertical acceptance."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. The22-case1094 fixture adds real existing lifecycle/executor LOGIN committed native transitions; it does not complete the selector-to-freezer/analyst vertical route. Analyst remains unresolved in retained evidence.\n\nNext action after explicit resume: Reuse the actual scoped LOGIN receipts, retain #587/#639 completion edges and qualify legitimate remaining stages/analyst with authentic inputs.\n\nAcceptance limits: Owner catalog/SET ROLE/synthetic output cannot qualify the full authentic vertical path; no credential issuance."
+    },
+    {
+      "number": 784,
+      "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+      "state": "OPEN",
+      "prior_review_category": "real-pilot-blocked",
+      "prior_next_action": "Prepare light blinded daily custody/deviation ownership; actual60-day operation follows #640.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No actual full60-day assigned pilot was operated.",
+      "next_action": "Prepare blinded custody/deviation ownership; actual operation follows genuine #640 acceptance.",
+      "acceptance_limit": "No substitute days, redraw or synthetic assignments.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No actual full60-day assigned pilot was operated.\n\nNext action after explicit resume: Prepare blinded custody/deviation ownership; actual operation follows genuine #640 acceptance.\n\nAcceptance limits: No substitute days, redraw or synthetic assignments."
+    },
+    {
+      "number": 785,
+      "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+      "state": "OPEN",
+      "prior_review_category": "completed-pilot-blocked",
+      "prior_next_action": "Prepare outcome report skeleton and independent unchanged-byte reproduction; reveal once after #784.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No completed authentic pilot or audited reveal exists.",
+      "next_action": "Retain outcome-report and independent unchanged-byte reproduction preparation until #784 completes.",
+      "acceptance_limit": "No yield/profit extrapolation or automatic control change.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No completed authentic pilot or audited reveal exists.\n\nNext action after explicit resume: Retain outcome-report and independent unchanged-byte reproduction preparation until #784 completes.\n\nAcceptance limits: No yield/profit extrapolation or automatic control change."
+    },
+    {
+      "number": 963,
+      "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+      "state": "OPEN",
+      "prior_review_category": "qualified-release-blocked",
+      "prior_next_action": "Bind delivered formatter/compact-detail source to actual firmware/ingestor/HA consumers and qualified rollback in #390.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Live reported firmware remains620a218a. Delivered formatter/consumer source and newer source compiler qualification do not provide HA length-error recovery or rollback proof.",
+      "next_action": "Bind exact selected firmware/ingestor/HA consumers and qualified recovery in #390; retain current unknowns.",
+      "acceptance_limit": "No fresh flash-byte hash, real HA recovery canary or newly accepted last-good.",
+      "evidence_files": [
+        "shutdown-telemetry.json",
+        "firmware1091-secretless-terminal-custody.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Live reported firmware remains620a218a. Delivered formatter/consumer source and newer source compiler qualification do not provide HA length-error recovery or rollback proof.\n\nNext action after explicit resume: Bind exact selected firmware/ingestor/HA consumers and qualified recovery in #390; retain current unknowns.\n\nAcceptance limits: No fresh flash-byte hash, real HA recovery canary or newly accepted last-good."
+    },
+    {
+      "number": 1001,
+      "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+      "state": "OPEN",
+      "prior_review_category": "external-owner-deferred",
+      "prior_next_action": "Keep exact D16 hostname and unused certificate/namespace residue mapped to network602 and agents4468.",
+      "preserve_original_acceptance": true,
+      "status_delta": "No namespace/certificate/HostRegexp cleanup occurred in this session.",
+      "next_action": "Keep exact owner outputs mapped to network602 and agents4468 and refresh those owner states before a future cleanup.",
+      "acceptance_limit": "No deletion or TLS/DNS change without exact no-consumer evidence; retained deferred scope remains.",
+      "evidence_files": [
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. No namespace/certificate/HostRegexp cleanup occurred in this session.\n\nNext action after explicit resume: Keep exact owner outputs mapped to network602 and agents4468 and refresh those owner states before a future cleanup.\n\nAcceptance limits: No deletion or TLS/DNS change without exact no-consumer evidence; retained deferred scope remains."
+    },
+    {
+      "number": 1009,
+      "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+      "state": "OPEN",
+      "prior_review_category": "external-passive-and-physical-blocked",
+      "prior_next_action": "Replace closed555 prerequisite with carried matrix/passive device ACL output on network839; retain signed-artifact software acceptance.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Signed-artifact software remains delivered; native dependency correction already follows network839 for the exact carried passive device ACL/current-flow output. New source-only firmware qualification does not flash the controller.",
+      "next_action": "Consume exact effective TCP3232/6053 boundary output plus reviewed candidate/recovery custody before any separately scoped attended cutover.",
+      "acceptance_limit": "No new ESP32 connection, password rotation, OTA, device signing enforcement or writer-hold release.",
+      "evidence_files": [
+        "candidate-queue-supersession-review.json",
+        "firmware1091-secretless-terminal-custody.json",
+        "all-open-issue-review.json"
+      ],
+      "stale_wording": [],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Signed-artifact software remains delivered; native dependency correction already follows network839 for the exact carried passive device ACL/current-flow output. New source-only firmware qualification does not flash the controller.\n\nNext action after explicit resume: Consume exact effective TCP3232/6053 boundary output plus reviewed candidate/recovery custody before any separately scoped attended cutover.\n\nAcceptance limits: No new ESP32 connection, password rotation, OTA, device signing enforcement or writer-hold release."
+    },
+    {
+      "number": 1010,
+      "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
+      "state": "OPEN",
+      "prior_review_category": "safe-attribution-trace-next",
+      "prior_next_action": "Trace Verdify tunnel/tier1/tier2/transport-header provenance and verify which exact network743 output applies before trusting client IP.",
+      "preserve_original_acceptance": true,
+      "status_delta": "Current chain diagnosis is complete and source receivers/log correlation are prepared in Verdify; exact MCP tunnel-row/checksum contract in network-infra and3 declared ownership rows in Agents are also prepared/reviewed. None is deployed. Existing successful secret-free per-tool audit remains delivered.",
+      "next_action": "On resume continue normal serialized source CI/review, coordinator-owned pin train and receiver-first locked delivery. Preserve declared MCP Access deny/everyone until an explicitly approved usable public identity/path exists; genuine external DB-read/spoof/Loki join remains required.",
+      "acceptance_limit": "CF-Ray is only bounded correlation; exact trusted router/entrypoint plus emitting proxy Pod UID/IP and actual MCP transport peer are mandatory. No broad CIDR trust, Access relaxation, new credentials or synthetic-header substitution.",
+      "evidence_files": [
+        "1010-source-preparation.md",
+        "1010-independent-review.md",
+        "1010-adjacent-source-preparation.md",
+        "1010-adjacent-source-custody.json"
+      ],
+      "stale_wording": [
+        "Current Approach still suggests trusting the verdify-traefik pod CIDR; replace that unsafe alternative with the selected isolated access-log design.",
+        "Tracing current hops and adding successful tool-audit events are no longer pending implementation; external attribution remains pending.",
+        "network743 is closed; options846 is unrelated. Existing current-body correction already removed the stale blocker."
+      ],
+      "draft_status_comment": "Shutdown evidence review, October26,2026. Current chain diagnosis is complete and source receivers/log correlation are prepared in Verdify; exact MCP tunnel-row/checksum contract in network-infra and3 declared ownership rows in Agents are also prepared/reviewed. None is deployed. Existing successful secret-free per-tool audit remains delivered.\n\nNext action after explicit resume: On resume continue normal serialized source CI/review, coordinator-owned pin train and receiver-first locked delivery. Preserve declared MCP Access deny/everyone until an explicitly approved usable public identity/path exists; genuine external DB-read/spoof/Loki join remains required.\n\nAcceptance limits: CF-Ray is only bounded correlation; exact trusted router/entrypoint plus emitting proxy Pod UID/IP and actual MCP transport peer are mandatory. No broad CIDR trust, Access relaxation, new credentials or synthetic-header substitution."
+    }
+  ]
+}

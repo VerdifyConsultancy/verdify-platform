@@ -1,0 +1,20 @@
+[
+  {
+    "headRefName": "codex/control-timing-qualification-20261026",
+    "headRefOid": "96464472f58ccb7bb1f62aa19af1421fa601a56c",
+    "isDraft": false,
+    "mergeStateStatus": "BLOCKED",
+    "number": 1095,
+    "title": "Preserve admitted phase durations and count accepted relay cycles",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1095"
+  },
+  {
+    "headRefName": "agent/c1-gatep-activation-20260927",
+    "headRefOid": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+    "isDraft": true,
+    "mergeStateStatus": "UNKNOWN",
+    "number": 855,
+    "title": "Stage one-shot Gate P direct-proof activation for #641",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/855"
+  }
+]

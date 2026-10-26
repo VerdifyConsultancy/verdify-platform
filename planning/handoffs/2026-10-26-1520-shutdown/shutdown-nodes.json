@@ -1,0 +1,213 @@
+{
+  "captured_at": "2026-10-26T15:17:10.176525+00:00",
+  "nodes": [
+    {
+      "name": "vm-k3s-node1",
+      "unschedulable": true,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node2",
+      "unschedulable": true,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node3",
+      "unschedulable": true,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node4",
+      "unschedulable": false,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node5",
+      "unschedulable": false,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node6",
+      "unschedulable": false,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node7",
+      "unschedulable": false,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    },
+    {
+      "name": "vm-k3s-node8",
+      "unschedulable": false,
+      "conditions": [
+        {
+          "type": "MemoryPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientMemory"
+        },
+        {
+          "type": "DiskPressure",
+          "status": "False",
+          "reason": "KubeletHasNoDiskPressure"
+        },
+        {
+          "type": "PIDPressure",
+          "status": "False",
+          "reason": "KubeletHasSufficientPID"
+        },
+        {
+          "type": "Ready",
+          "status": "True",
+          "reason": "KubeletReady"
+        }
+      ]
+    }
+  ]
+}

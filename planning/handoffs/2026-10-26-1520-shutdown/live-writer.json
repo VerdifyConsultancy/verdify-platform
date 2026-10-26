@@ -1,0 +1,57 @@
+{
+  "captured_at": "2026-10-26T15:17:09.902566+00:00",
+  "read_only": true,
+  "argo": {
+    "sync": "Synced",
+    "health": "Healthy",
+    "revision": "0ed369fde08ee7d45bda8f6ad03a69f169c98e79",
+    "operation": null,
+    "reconciledAt": "2026-10-26T15:15:33Z"
+  },
+  "ingestor": {
+    "name": "verdify-ingestor-7bd9494655-4kzcw",
+    "uid": "955fec0b-7ee0-4872-bc13-78e428d0e659",
+    "node": "vm-k3s-node5",
+    "phase": "Running",
+    "containers": [
+      {
+        "name": "ingestor",
+        "ready": true,
+        "restartCount": 0,
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+      }
+    ]
+  },
+  "node5": {
+    "unschedulable": false,
+    "ready": "True"
+  },
+  "files": {
+    "writer-stage-state.json": {
+      "sha256": "5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663",
+      "bytes": 23040,
+      "status": "halted",
+      "halt_reason": "unapproved candidate appeared",
+      "run_id": "0ae45182806445649458568603c32fdb",
+      "completed_count": 12,
+      "records_count": 0
+    },
+    "writer-policy-hold.json": {
+      "sha256": "fc7245b1983c3a3a80ca5e8a58ecf44c9212058e299817edb1ecc1fd89238d5c",
+      "bytes": 7071,
+      "reason": "run halted; bounded rollback available",
+      "disposition": "bounded_hold_no_dispatch",
+      "generation": 5,
+      "source_revision": "7a2b6a76adb86ee749ebaa1a70dc36f31acaff8d",
+      "field_count": 20
+    }
+  },
+  "existing_esp32_sockets": [
+    {
+      "local_hex": "93062A0A:DBAA",
+      "remote_hex": "6F0AA8C0:17A5",
+      "state": "01",
+      "inode": "1451546504"
+    }
+  ]
+}
