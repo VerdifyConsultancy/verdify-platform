@@ -1,0 +1,3592 @@
+{
+  "captured_at": "2026-10-26T13:18:00.638547+00:00",
+  "workflows": [
+    {
+      "name": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+      "uid": "d7119bc5-1c88-4265-ab73-007efb8cdfe0",
+      "createdAt": "2026-10-11T15:58:33Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-11T15:58:33Z",
+      "finishedAt": "2026-10-11T16:05:55Z",
+      "message": "Stopped with strategy 'Terminate'",
+      "template": {
+        "name": "repo-validate"
+      },
+      "parameters": {
+        "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "revision": "34e7f1fcfeb299e692a8d4c205b48e96f7a29206"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "repo-validate-verdify-platform-eace664b290bd879d11f6e5d",
+          "phase": "Failed",
+          "message": null
+        },
+        {
+          "name": "check(1:command_b64:ZXhwb3J0IFBZVEhPTlBBVEg9IiRQV0QiICYmIHV2IHN5bmMgLS1weXRob24gMy4xMiAtLWV4dHJhIGRldiAtLWV4dHJhIGFwaSAtLWV4dHJhIHBsYW5uZXIgLS1leHRyYSBwbGFubmVyLWdyYXBoICYmIHV2IHBpcCBpbnN0YWxsIC0tcHl0aG9uIC52ZW52L2Jpbi9weXRob24gLXIgaW5nZXN0b3IvcmVxdWlyZW1lbnRzLWltYWdlLnR4dCAmJiB1diBydW4gcHl0ZXN0IC1xIHZlcmRpZnlfc2NoZW1hcy90ZXN0cy8gLS1pZ25vcmU9dmVyZGlmeV9zY2hlbWFzL3Rlc3RzL3Rlc3RfY2xpbWF0ZV9pbnRlbnQucHkgLS1pZ25vcmU9dmVyZGlmeV9zY2hlbWFzL3Rlc3RzL3Rlc3RfZHJpZnRfZ3VhcmRzLnB5IC0taWdub3JlPXZlcmRpZnlfc2NoZW1hcy90ZXN0cy90ZXN0X21jcF9yZXNwb25zZXMucHkgLS1pZ25vcmU9dmVyZGlmeV9zY2hlbWFzL3Rlc3RzL3Rlc3RfcmVsYXRpb25zaGlwcy5weSAtLWlnbm9yZT12ZXJkaWZ5X3NjaGVtYXMvdGVzdHMvdGVzdF90dW5hYmxlcy5weSAtLWlnbm9yZT12ZXJkaWZ5X3NjaGVtYXMvdGVzdHMvdGVzdF92YXVsdF93cml0ZXJzLnB5IC0taWdub3JlPXZlcmRpZnlfc2NoZW1hcy90ZXN0cy90ZXN0X3ZpZXdzLnB5ICYmIHV2IHJ1biBweXRlc3QgLXEgdGVzdHMvdGVzdF9kZXZpY2Vfd3JpdGVfZ2F0ZS5weSB0ZXN0cy90ZXN0X21pZ3JhdGlvbl9yb2xsYmFja19zYWZldHkucHkgdGVzdHMvdGVzdF8xNF9zaXRlX2RvY3Rvci5weSB0ZXN0cy90ZXN0X2NsaW1hdGVfaW50ZW50X3JlcGxheV9ldmFsdWF0b3IucHkgdGVzdHMvdGVzdF9nNV9kdWFsd3JpdGVfdmFsaWRhdGlvbi5weSB0ZXN0cy90ZXN0X2dlbmVyYXRlX2RhaWx5X3BsYW4ucHkgdGVzdHMvdGVzdF9sYWJfZ2VuZXJhdG9yX3N0YW5kYXJkaXphdGlvbi5weSB0ZXN0cy90ZXN0X2xhYl9wdWJsaXNoX2szc19ndWFyZC5weSB0ZXN0cy90ZXN0X21xdHRfZmFub3V0LnB5IHRlc3RzL3Rlc3RfcGxhbm5lcl9tZW1vcnlfaW5nZXN0LnB5IHRlc3RzL3Rlc3Rfc2l0ZV9jb250ZW50X3JlZnJlc2gucHkgdGVzdHMvdGVzdF9zbGFja19jb25maWcucHkgdGVzdHMvdGVzdF9zbGFja19vcHMucHkgdGVzdHMvdGVzdF9zb2lsX2RyeW91dF9hbGVydC5weSB0ZXN0cy90ZXN0X3RlbXBlc3Rfc3luYy5weSB0ZXN0cy90ZXN0X3dyaXRlcl9sZWFzZV9mZW5jZS5weSB0ZXN0cy90ZXN0X2NvbXBvbmVudF9ncmlkX2NhcHR1cmUucHkgdGVzdHMvdGVzdF9jb21wb25lbnRfcHJlZml4X3JlcGxheS5weQ==,image:registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:a2680b9b2153fc4cee6302d408f055001979280ace7e34bb39cf2b7992aa00ef,name:platform-tests)",
+          "phase": "Pending",
+          "message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 4/8"
+        },
+        {
+          "name": "check",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "check(4:command_b64:cHl0aG9uMyAtIDw8J1BZJwppbXBvcnQgaGFzaGxpYgppbXBvcnQganNvbgppbXBvcnQgb3MKZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCBzdWJwcm9jZXNzCmltcG9ydCB0ZW1wZmlsZQoKVkVSU0lPTiA9ICcyMDI2LjYuNScKSU1BR0UgPSAnZ2hjci5pby9lc3Bob21lL2VzcGhvbWVAc2hhMjU2OmZmZTIzNDAyZDE2OWZjOWI4ZmYyOWZjM2M5ZmMxM2IzYzQ3ZThhNTM3MjZmY2U0NTY5ZTIyODBiZDUzNGM4NGMnClRBUkdFVFMgPSAoJ2dyZWVuaG91c2UnLCAnZ3JlZW5ob3VzZS1yZWNvdmVyeScpCkRVTU1ZID0gJ3dpZmlfc3NpZDogQ0ktTk9OREVQTE9ZQUJMRVxud2lmaV9wYXNzd29yZDogQ0ktTk9OREVQTE9ZQUJMRS1OT1QtQS1XTEFOLVBBU1NXT1JEXG5vdGFfcGFzc3dvcmQ6IENJLU5PTkRFUExPWUFCTEUtTk9ULUFOLU9UQS1QQVNTV09SRFxuYXBpX2VuY3J5cHRpb25fa2V5OiBBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBPVxuJwoKCmRlZiBkaWdlc3QocGF0aCk6CiAgICByZXR1cm4gaGFzaGxpYi5zaGEyNTYocGF0aC5yZWFkX2J5dGVzKCkpLmhleGRpZ2VzdCgpCgoKZGVmIHNvdXJjZV9maWxlcyhyb290KToKICAgICMgUmVhZCBvbmx5IHRyYWNrZWQgZmlybXdhcmUgYmxvYnM7IG5ldmVyIGZvbGxvdyBjaGVja291dCBzeW1saW5rcywgYW4gaWdub3JlZAogICAgIyBzZWNyZXRzLnlhbWwsIC5lc3Bob21lIGNhY2hlLCBvcGVyYXRvciBhcnRpZmFjdHMgb3IgYSBjYWxsZXItc2VsZWN0ZWQgZmlsZS4KICAgIG5hbWVzID0gc3VicHJvY2Vzcy5jaGVja19vdXRwdXQoWydnaXQnLCAnbHMtdHJlZScsICctcnonLCAnSEVBRCcsICdmaXJtd2FyZSddLCBjd2Q9cm9vdCkuc3BsaXQoYidcMCcpCiAgICByZXN1bHQgPSB7fQogICAgZm9yIGVudHJ5IGluIGZpbHRlcihOb25lLCBuYW1lcyk6CiAgICAgICAgbWV0YSwgbmFtZSA9IGVudHJ5LnNwbGl0KGInXHQnLCAxKQogICAgICAgIG1vZGUsIGtpbmQsIG9pZCA9IG1ldGEuc3BsaXQoKQogICAgICAgIHBhdGggPSBuYW1lLmRlY29kZSgpCiAgICAgICAgaWYgbW9kZSBub3QgaW4gKGInMTAwNjQ0JywgYicxMDA3NTUnKSBvciBraW5kICE9IGInYmxvYic6CiAgICAgICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcignbm9uLXJlZ3VsYXIgdHJhY2tlZCBmaXJtd2FyZSBpbnB1dCByZWZ1c2VkJykKICAgICAgICBpZiBhbnkoeCBpbiBwYXRoLnNwbGl0KCcvJykgZm9yIHggaW4gKCdzZWNyZXRzLnlhbWwnLCAnLmVzcGhvbWUnLCAnYXJ0aWZhY3RzJykpOgogICAgICAgICAgICByYWlzZSBSdW50aW1lRXJyb3IoJ3NlY3JldC9jYWNoZS9hcnRpZmFjdCB0cmFja2VkIGlucHV0IHJlZnVzZWQnKQogICAgICAgIHJlc3VsdFtwYXRoXSA9IHN1YnByb2Nlc3MuY2hlY2tfb3V0cHV0KFsnZ2l0JywgJ2NhdC1maWxlJywgJ2Jsb2InLCBvaWQuZGVjb2RlKCldLCBjd2Q9cm9vdCkKICAgIGZvciB0YXJnZXQgaW4gVEFSR0VUUzoKICAgICAgICBpZiAnZmlybXdhcmUvJyArIHRhcmdldCArICcueWFtbCcgbm90IGluIHJlc3VsdDoKICAgICAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKCdkZWNsYXJlZCBmaXJtd2FyZSB0YXJnZXQgbWlzc2luZycpCiAgICAjIFRoZSBvcmlnaW5hbCBzY3JpcHQgYXBwbGllcyBhIGd1YXJkZWQgY29ycmVjdGlvbiB0byBleGFjdGx5IHRoaXMgRVNQSG9tZS4KICAgIGlmIGInMjAyNi42LjUnIG5vdCBpbiByZXN1bHQuZ2V0KCdmaXJtd2FyZS9idWlsZF9hcGlfYmF0Y2hfcGF0Y2gucHknLCBiJycpOgogICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcignZmlybXdhcmUvdG9vbGNoYWluIGNvbnRyYWN0IG1pc21hdGNoJykKICAgIHJldHVybiByZXN1bHQKCgpkZWYgbWFpbigpOgogICAgcm9vdCA9IFBhdGguY3dkKCkKICAgIHNvdXJjZSA9IHN1YnByb2Nlc3MuY2hlY2tfb3V0cHV0KFsnZ2l0JywgJ3Jldi1wYXJzZScsICdIRUFEJ10sIGN3ZD1yb290LCB0ZXh0PVRydWUpLnN0cmlwKCkKICAgIGJvdW5kID0gb3MuZW52aXJvbi5nZXQoJ0ZMRUVUX0NJX0hFQURfUkVWSVNJT04nKQogICAgaWYgYm91bmQgYW5kIGJvdW5kICE9IHNvdXJjZToKICAgICAgICByYWlzZSBSdW50aW1lRXJyb3IoJ2NoZWNrb3V0IHJldmlzaW9uIGRpZmZlcnMgZnJvbSBuYXRpdmUgcmVxdWVzdGVkIHNvdXJjZScpCiAgICBmaWxlcyA9IHNvdXJjZV9maWxlcyhyb290KQogICAgcmVwb3J0ID0geydzY2hlbWEnOiAndmVyZGlmeS5zZWNyZXRsZXNzLWZpcm13YXJlL3YxJywgJ3NvdXJjZSc6IHNvdXJjZSwKICAgICAgICAgICAgICAndG9vbGNoYWluX2ltYWdlJzogSU1BR0UsICdlc3Bob21lX3ZlcnNpb24nOiBWRVJTSU9OLAogICAgICAgICAgICAgICdkZXBsb3lhYmxlJzogRmFsc2UsICdwaHlzaWNhbF9xdWFsaWZpY2F0aW9uJzogRmFsc2UsCiAgICAgICAgICAgICAgJ2NyZWRlbnRpYWxzJzogJ3B1YmxpYyBjb21waWxlLW9ubHkgZHVtbXkgdmFsdWVzJywgJ3RhcmdldHMnOiBbXX0KICAgIHdpdGggdGVtcGZpbGUuVGVtcG9yYXJ5RGlyZWN0b3J5KHByZWZpeD0ndmVyZGlmeS1maXJtd2FyZS1jaS0nLCBkaXI9cm9vdC5wYXJlbnQpIGFzIHdvcms6CiAgICAgICAgd29yayA9IFBhdGgod29yaykKICAgICAgICBob21lID0gd29yayAvICdob21lJzsgaG9tZS5ta2RpcigpCiAgICAgICAgZW52ID0geydQQVRIJzogb3MuZW52aXJvblsnUEFUSCddLCAnSE9NRSc6IHN0cihob21lKSwgJ1RNUERJUic6IHN0cih3b3JrKSwKICAgICAgICAgICAgICAgJ1BMQVRGT1JNSU9fQ09SRV9ESVInOiBzdHIod29yayAvICdwbGF0Zm9ybWlvJyksCiAgICAgICAgICAgICAgICdFU1BIT01FX0RFRkFVTFRfQ09NUElMRV9QUk9DRVNTX0xJTUlUJzogJzInLAogICAgICAgICAgICAgICAnU09VUkNFX0RBVEVfRVBPQ0gnOiBzdWJwcm9jZXNzLmNoZWNrX291dHB1dChbJ2dpdCcsICdzaG93JywgJy1zJywgJy0tZm9ybWF0PSVjdCcsICdIRUFEJ10sIGN3ZD1yb290LCB0ZXh0PVRydWUpLnN0cmlwKCl9CiAgICAgICAgaW1wb3J0IGltcG9ydGxpYi5tZXRhZGF0YQogICAgICAgIGlmIGltcG9ydGxpYi5tZXRhZGF0YS52ZXJzaW9uKCdlc3Bob21lJykgIT0gVkVSU0lPTjoKICAgICAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKCd3cm9uZyBFU1BIb21lIHZlcnNpb247IG5vIGNvbXBpbGUgcGVyZm9ybWVkJykKICAgICAgICBmb3IgdGFyZ2V0IGluIFRBUkdFVFM6CiAgICAgICAgICAgIHRyZWUgPSB3b3JrIC8gdGFyZ2V0CiAgICAgICAgICAgIGZvciBuYW1lLCBjb250ZW50IGluIGZpbGVzLml0ZW1zKCk6CiAgICAgICAgICAgICAgICBkZXN0ID0gdHJlZSAvIG5hbWU7IGRlc3QucGFyZW50Lm1rZGlyKHBhcmVudHM9VHJ1ZSwgZXhpc3Rfb2s9VHJ1ZSk7IGRlc3Qud3JpdGVfYnl0ZXMoY29udGVudCkKICAgICAgICAgICAgZmlybXdhcmUgPSB0cmVlIC8gJ2Zpcm13YXJlJwogICAgICAgICAgICAoZmlybXdhcmUgLyAnc2VjcmV0cy55YW1sJykud3JpdGVfdGV4dChEVU1NWSkKICAgICAgICAgICAgY29uZmlnID0gZmlybXdhcmUgLyAodGFyZ2V0ICsgJy55YW1sJykKICAgICAgICAgICAgY21kID0gWydlc3Bob21lJywgJy1zJywgJ2Z3X3ZlcnNpb24nLCAnQ0ktTk9OREVQTE9ZQUJMRS0nICsgc291cmNlWzoxMl1dCiAgICAgICAgICAgIHN1YnByb2Nlc3MucnVuKGNtZCArIFsnY29uZmlnJywgc3RyKGNvbmZpZyldLCBjd2Q9dHJlZSwgZW52PWVudiwgY2hlY2s9VHJ1ZSkKICAgICAgICAgICAgc3VicHJvY2Vzcy5ydW4oY21kICsgWydjb21waWxlJywgc3RyKGNvbmZpZyldLCBjd2Q9dHJlZSwgZW52PWVudiwgY2hlY2s9VHJ1ZSkKICAgICAgICAgICAgYmluYXJ5ID0gZmlybXdhcmUgLyAnLmVzcGhvbWUvYnVpbGQvZ3JlZW5ob3VzZS8ucGlvZW52cy9ncmVlbmhvdXNlL2Zpcm13YXJlLm90YS5iaW4nCiAgICAgICAgICAgIGlmIG5vdCBiaW5hcnkuaXNfZmlsZSgpIG9yIG5vdCBiaW5hcnkuc3RhdCgpLnN0X3NpemU6CiAgICAgICAgICAgICAgICByYWlzZSBSdW50aW1lRXJyb3IoJ2NvbXBpbGVyIHN1Y2NlZWRlZCB3aXRob3V0IE9UQS1mb3JtYXQgYmluYXJ5JykKICAgICAgICAgICAgcmVwb3J0Wyd0YXJnZXRzJ10uYXBwZW5kKHsndGFyZ2V0JzogdGFyZ2V0LCAnY29uZmlnX3NoYTI1Nic6IGRpZ2VzdChjb25maWcpLAogICAgICAgICAgICAgICAgJ3NvdXJjZV9tYW5pZmVzdF9zaGEyNTYnOiBoYXNobGliLnNoYTI1Nihqc29uLmR1bXBzKHtrOiBoYXNobGliLnNoYTI1Nih2KS5oZXhkaWdlc3QoKSBmb3IgaywgdiBpbiBzb3J0ZWQoZmlsZXMuaXRlbXMoKSl9LCBzb3J0X2tleXM9VHJ1ZSkuZW5jb2RlKCkpLmhleGRpZ2VzdCgpLAogICAgICAgICAgICAgICAgJ2dlbmVyYXRlZF9jcHBfc2hhMjU2JzogZGlnZXN0KGZpcm13YXJlIC8gJy5lc3Bob21lL2J1aWxkL2dyZWVuaG91c2Uvc3JjL21haW4uY3BwJyksCiAgICAgICAgICAgICAgICAncGxhdGZvcm1pb19pbmlfc2hhMjU2JzogZGlnZXN0KGZpcm13YXJlIC8gJy5lc3Bob21lL2J1aWxkL2dyZWVuaG91c2UvcGxhdGZvcm1pby5pbmknKSwKICAgICAgICAgICAgICAgICdiaW5hcnlfc2hhMjU2JzogZGlnZXN0KGJpbmFyeSksICdiaW5hcnlfYnl0ZXMnOiBiaW5hcnkuc3RhdCgpLnN0X3NpemUsCiAgICAgICAgICAgICAgICAncmVzdWx0JzogJ2NvbXBpbGVkJywgJ2RlcGxveWFibGUnOiBGYWxzZX0pCiAgICAgICAgICAgIGlmIHRhcmdldCA9PSAnZ3JlZW5ob3VzZSc6CiAgICAgICAgICAgICAgICAjIFJlYWwgZ2VuZXJhdGVkIEFQSSBzZXJ2aWNlIHJlZ3Jlc3Npb246IGNvbmZpZy12YWxpZCBDKysgbXVzdAogICAgICAgICAgICAgICAgIyBmYWlsIGFjdHVhbCBjb21waWxhdGlvbi4gUmV1c2Ugb25seSB0aGlzIHByaXZhdGUgZHVtbXkgYnVpbGQuCiAgICAgICAgICAgICAgICB0ZXh0ID0gY29uZmlnLnJlYWRfdGV4dCgpCiAgICAgICAgICAgICAgICBpZiB0ZXh0LmNvdW50KCcgIHNlcnZpY2VzOlxuJykgIT0gMToKICAgICAgICAgICAgICAgICAgICByYWlzZSBSdW50aW1lRXJyb3IoJ25hdGl2ZSBnZW5lcmF0ZWQgc2VydmljZSBpbnNlcnRpb24gcG9pbnQgY2hhbmdlZCcpCiAgICAgICAgICAgICAgICBjb25maWcud3JpdGVfdGV4dCh0ZXh0LnJlcGxhY2UoJyAgc2VydmljZXM6XG4nLAogICAgICAgICAgICAgICAgICAgICcgIHNlcnZpY2VzOlxuICAgIC0gc2VydmljZTogY2lfZ2VuZXJhdGVkX3NlcnZpY2VfZmFpbHVyZVxuJwogICAgICAgICAgICAgICAgICAgICcgICAgICB0aGVuOlxuICAgICAgICAtIGxhbWJkYTogfC1cbicKICAgICAgICAgICAgICAgICAgICAnICAgICAgICAgICAgQ0lfTk9OREVQTE9ZQUJMRV9HRU5FUkFURURfU0VSVklDRV9NVVNUX05PVF9FWElTVCgpO1xuJywgMSkpCiAgICAgICAgICAgICAgICBzdWJwcm9jZXNzLnJ1bihjbWQgKyBbJ2NvbmZpZycsIHN0cihjb25maWcpXSwgY3dkPXRyZWUsIGVudj1lbnYsIGNoZWNrPVRydWUpCiAgICAgICAgICAgICAgICBuZWdhdGl2ZSA9IHN1YnByb2Nlc3MucnVuKGNtZCArIFsnY29tcGlsZScsIHN0cihjb25maWcpXSwgY3dkPXRyZWUsIGVudj1lbnYsIHN0ZG91dD1zdWJwcm9jZXNzLlBJUEUsIHN0ZGVycj1zdWJwcm9jZXNzLlNURE9VVCkKICAgICAgICAgICAgICAgIGlmIG5lZ2F0aXZlLnJldHVybmNvZGUgPT0gMCBvciBiJ0NJX05PTkRFUExPWUFCTEVfR0VORVJBVEVEX1NFUlZJQ0VfTVVTVF9OT1RfRVhJU1QnIG5vdCBpbiBuZWdhdGl2ZS5zdGRvdXQ6CiAgICAgICAgICAgICAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKCdicm9rZW4gZ2VuZXJhdGVkIEMrKyBkaWQgbm90IGZhaWwgY29tcGlsYXRpb24gYXMgZXhwZWN0ZWQnKQogICAgICAgICAgICAgICAgcmVwb3J0WydnZW5lcmF0ZWRfY3BwX25lZ2F0aXZlJ10gPSB7J3Jlc3VsdCc6ICdleHBlY3RlZF9jb21waWxlX2ZhaWx1cmUnLCAnZXhpdF9jb2RlJzogbmVnYXRpdmUucmV0dXJuY29kZX0KICAgICAgICByZXBvcnRbJ3BsYXRmb3JtaW9fcGFja2FnZXMnXSA9IHtqc29uLmxvYWRzKHAucmVhZF90ZXh0KCkpWyduYW1lJ106IGpzb24ubG9hZHMocC5yZWFkX3RleHQoKSlbJ3ZlcnNpb24nXSBmb3IgcCBpbiBzb3J0ZWQoKHdvcmsgLyAncGxhdGZvcm1pby9wYWNrYWdlcycpLmdsb2IoJyovcGFja2FnZS5qc29uJykpfQogICAgICAgIGlmIG5vdCByZXBvcnRbJ3BsYXRmb3JtaW9fcGFja2FnZXMnXToKICAgICAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKCdjb21waWxlZCB0b29sY2hhaW4gcGFja2FnZSBwcm92ZW5hbmNlIGFic2VudCcpCiAgICAgICAgcHJpbnQoJ0ZJUk1XQVJFX1NFQ1JFVExFU1NfUkVDRUlQVD0nICsganNvbi5kdW1wcyhyZXBvcnQsIHNvcnRfa2V5cz1UcnVlKSwgZmx1c2g9VHJ1ZSkKCgppZiBfX25hbWVfXyA9PSAnX19tYWluX18nOgogICAgbWFpbigpClBZCg==,image:ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c,name:firmware-secretless-compile)",
+          "phase": "Pending",
+          "message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 4/8"
+        },
+        {
+          "name": "check(3:command_b64:YmFzaCAtbGMgJyBzZXQgLWV1byBwaXBlZmFpbDsgdGVzdCAtZiBmaXJtd2FyZS90ZXN0L2RhdGEvcmVwbGF5X292ZXJyaWRlcy5jc3YgfHwgZ3VuemlwIC1rIGZpcm13YXJlL3Rlc3QvZGF0YS9yZXBsYXlfb3ZlcnJpZGVzLmNzdi5nejsgY2QgZmlybXdhcmU7IGcrKyAtc3RkPWMrKzE3IC1JIGxpYiAtbyB0ZXN0L3Rlc3RfZ3JlZW5ob3VzZSB0ZXN0L3Rlc3RfZ3JlZW5ob3VzZV9sb2dpYy5jcHA7IC4vdGVzdC90ZXN0X2dyZWVuaG91c2U7IGcrKyAtc3RkPWMrKzE3IC1PMiAtSSBsaWIgLW8gdGVzdC9yZXBsYXlfb3ZlcnJpZGVzIHRlc3QvcmVwbGF5X292ZXJyaWRlcy5jcHA7IC4vdGVzdC9yZXBsYXlfb3ZlcnJpZGVzIHRlc3QvZGF0YS9yZXBsYXlfb3ZlcnJpZGVzLmNzdiB8IHRhaWwgLTMwOyBnKysgLXN0ZD1jKysxNyAtTzIgLUkgbGliIC1vIHRlc3QvcmVwbGF5X2ludmFyaWFudHMgdGVzdC9yZXBsYXlfaW52YXJpYW50cy5jcHA7IHNldCArZTsgLi90ZXN0L3JlcGxheV9pbnZhcmlhbnRzIHRlc3QvZGF0YS9yZXBsYXlfb3ZlcnJpZGVzLmNzdjsgcmM9JD87IHNldCAtZTsgaWYgWyAiJHJjIiAtZXEgMiBdOyB0aGVuCiAgZWNobyAicmVwbGF5IGNvcnB1cyBwcmVkYXRlcyBpbnZhcmlhbnQgc2NoZW1hOyBhY2NlcHRlZCBsZWdhY3kgY29ycHVzIjsKICBleGl0IDA7CmZpOyBleGl0ICIkcmMiICc=,image:registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:a2680b9b2153fc4cee6302d408f055001979280ace7e34bb39cf2b7992aa00ef,name:firmware-logic)",
+          "phase": "Pending",
+          "message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 4/8"
+        },
+        {
+          "name": "check(2:command_b64:ZXhwb3J0IFBZVEhPTlBBVEg9IiRQV0QiICYmIHV2IHN5bmMgLS1weXRob24gMy4xMiAtLWV4dHJhIGRldiAtLWV4dHJhIGFwaSAtLWV4dHJhIHBsYW5uZXIgLS1leHRyYSBwbGFubmVyLWdyYXBoICYmIHV2IHBpcCBpbnN0YWxsIC0tcHl0aG9uIC52ZW52L2Jpbi9weXRob24gLXIgaW5nZXN0b3IvcmVxdWlyZW1lbnRzLWltYWdlLnR4dCAmJiBweXRob24zIC91c3IvbG9jYWwvYmluL3ZlcmRpZnktY2FtcGFpZ24tY2k=,image:registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:a2680b9b2153fc4cee6302d408f055001979280ace7e34bb39cf2b7992aa00ef,name:campaign-qualification)",
+          "phase": "Pending",
+          "message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 4/8"
+        },
+        {
+          "name": "check",
+          "phase": "Pending",
+          "message": "Waiting for agent-fleet-ci/ConfigMap/agent-fleet-ci-concurrency/repo-validate lock. Lock status: 4/8"
+        },
+        {
+          "name": "prepare",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01",
+      "uid": "88700998-b28a-4303-8363-3cb053dfbd00",
+      "createdAt": "2026-10-26T13:14:57Z",
+      "phase": "Running",
+      "startedAt": "2026-10-26T13:14:57Z",
+      "finishedAt": null,
+      "message": null,
+      "template": {
+        "name": "repo-validate-568985cdbf6b4e3f"
+      },
+      "parameters": {
+        "repo": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+        "revision": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+        "base_revision": "ccc4274cb790308685110a154831480f700e95d7"
+      },
+      "activeDeadlineSeconds": 7200,
+      "node_summary": [
+        {
+          "name": "verdify-finite-native-d7c25b0c-20261026-01",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "prepare",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "check",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "conclusion",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "check",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "check",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "enforce-conclusion",
+          "phase": "Running",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-6gn6p",
+      "uid": "55158486-86e6-4a46-9505-847ad2d3cf1c",
+      "createdAt": "2026-10-25T16:49:37Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:49:38Z",
+      "finishedAt": "2026-10-25T17:15:00Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "2439c5f1ce2d2b578c6186829e683f6aecbef87f"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-6gn6p",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-7lmbr",
+      "uid": "8ef38573-b599-4989-838e-7db1aabecaa1",
+      "createdAt": "2026-10-25T13:31:34Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T13:31:35Z",
+      "finishedAt": "2026-10-25T13:59:03Z",
+      "message": "child 'verdify-platform-ci-7lmbr-679381611' failed",
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "522f77a2d1222dd2d0e3518b755f93355da90f53"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-7lmbr",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-ci-7lmbr-679381611' failed"
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-ci-7lmbr-679381611' failed"
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Failed",
+          "message": "registry-capacity-preflight: Error (exit code 1): agent-fleet-capacity-preflight-v2:eyJleHBlY3RlZCI6eyJjYXBhY2l0eV9jb250cmFjdF9pZCI6IjFhMTNlY2JiZGNlNTdjNDdjNDU1MGM0MDk4OTI1ZWFjYjVhMzA1ZGZiZDZlZjg1OTQxZjlkZmUwZDY3MDgzZWMiLCJtYXhfYWdlX3NlY29uZHMiOjMwMCwibWluX2ZyZWVfYnl0ZXMiOjE1MDMyMzg1NTM2MCwicHJvdGVjdGVkX2NvdW50IjozMzUsInByb3RlY3RlZF9jdXJyZW50X2NvdW50Ijo0MSwicHJvdGVjdGVkX2dlbmVyYXRpb24iOjE5NSwicHJvdGVjdGVkX21heF9hZ2Vfc2Vjb25kcyI6NjA0ODAwLCJwcm90ZWN0ZWRfcm9sbGJhY2tfY291bnQiOjI5NCwicHJvdGVjdGVkX3NldF9oYXNoIjoiNGYwYThlZjM5YzUxMDcxYWY2MGNiZDk1MzVmMmIyOTk0N2UzNzU1NDIzMDIzODZiNjI5OTMxYTY2NTA2NmI2YiJ9LCJnYXRlIjoiYWRtaXNzaW9uIiwib2JzZXJ2ZWQiOnt9LCJvdXRjb21lIjoiYmxvY2tlZCIsInJlYXNvbiI6InByb3RlY3RlZC1zZXQtbWlzbWF0Y2giLCJzY2hlbWEiOiJhZ2VudC1mbGVldC5yZWdpc3RyeS1jYXBhY2l0eS1wcmVmbGlnaHQtcmVjZWlwdC8yIn0"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-hb2b9",
+      "uid": "ff499feb-c98a-474a-b3ac-c9a7426f25aa",
+      "createdAt": "2026-10-25T15:43:38Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T15:43:40Z",
+      "finishedAt": "2026-10-25T16:11:18Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "ec69b71d77000b262dcfb8f22a219d9af3a95042"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-hb2b9",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-mg75b",
+      "uid": "3a664114-ed53-4bc7-89fc-19fff7fea3b1",
+      "createdAt": "2026-10-25T14:42:16Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T14:42:21Z",
+      "finishedAt": "2026-10-25T15:14:44Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "a01149a877ed96bfa1eb649ab1f66f1d9f03e079"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-mg75b",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-pgdvp",
+      "uid": "7498715c-1faa-4fc2-b8d7-4d6b4dfa7cb8",
+      "createdAt": "2026-10-25T16:31:53Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:31:55Z",
+      "finishedAt": "2026-10-25T16:32:47Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "b4f78b4012e6ae578517bcc049dba69c585ec9a6"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-pgdvp",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Skipped",
+          "message": "when ''skip' == 'build'' evaluated false"
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-phrt4",
+      "uid": "1b2cae0a-7516-4aba-9937-0c0e23f36da6",
+      "createdAt": "2026-10-25T22:52:06Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:52:12Z",
+      "finishedAt": "2026-10-25T23:11:35Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "ccc4274cb790308685110a154831480f700e95d7"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-phrt4",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Skipped",
+          "message": "when ''validate' == 'build'' evaluated false"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-sl7bh",
+      "uid": "92632257-9351-4b7e-852e-6d0318351185",
+      "createdAt": "2026-10-26T13:08:34Z",
+      "phase": "Running",
+      "startedAt": "2026-10-26T13:08:35Z",
+      "finishedAt": null,
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "ca9120fa308c77b2c71054758d0ca143428bdea6"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-sl7bh",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Running",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-tlpsc",
+      "uid": "33fb69b9-a530-488c-be11-1cc807602827",
+      "createdAt": "2026-10-25T22:00:57Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:01:03Z",
+      "finishedAt": "2026-10-25T22:29:47Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "3c9d6ad8ae3b826bfb552be3186b321980bd8a96"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-tlpsc",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[8]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-planner",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-lab-publisher",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-orchestrator",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "pin-digests",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-setpoint-server",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-migrate",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[4]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[7]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[9]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[5]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[6]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-vh5cc",
+      "uid": "18c94c77-bae8-4bde-9b7e-f943276de27c",
+      "createdAt": "2026-10-25T12:13:11Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T12:13:14Z",
+      "finishedAt": "2026-10-25T13:25:08Z",
+      "message": "child 'verdify-platform-ci-vh5cc-2488202946' failed",
+      "template": {
+        "name": "verdify-platform-ci"
+      },
+      "parameters": {
+        "revision": "0fc7567dd17131ca608e119669b924758c646457"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-ci-vh5cc",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-ci-vh5cc-2488202946' failed"
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build-ingestor",
+          "phase": "Failed",
+          "message": "registry-capacity-publish-gate: Error (exit code 1): agent-fleet-capacity-preflight-v2:eyJleHBlY3RlZCI6eyJjYXBhY2l0eV9jb250cmFjdF9pZCI6IjFhMTNlY2JiZGNlNTdjNDdjNDU1MGM0MDk4OTI1ZWFjYjVhMzA1ZGZiZDZlZjg1OTQxZjlkZmUwZDY3MDgzZWMiLCJtYXhfYWdlX3NlY29uZHMiOjMwMCwibWluX2ZyZWVfYnl0ZXMiOjE1MDMyMzg1NTM2MCwicHJvdGVjdGVkX2NvdW50IjozMzUsInByb3RlY3RlZF9jdXJyZW50X2NvdW50Ijo0MSwicHJvdGVjdGVkX2dlbmVyYXRpb24iOjE5NSwicHJvdGVjdGVkX21heF9hZ2Vfc2Vjb25kcyI6NjA0ODAwLCJwcm90ZWN0ZWRfcm9sbGJhY2tfY291bnQiOjI5NCwicHJvdGVjdGVkX3NldF9oYXNoIjoiNGYwYThlZjM5YzUxMDcxYWY2MGNiZDk1MzVmMmIyOTk0N2UzNzU1NDIzMDIzODZiNjI5OTMxYTY2NTA2NmI2YiJ9LCJnYXRlIjoicHVibGlzaCIsIm9ic2VydmVkIjp7fSwib3V0Y29tZSI6ImJsb2NrZWQiLCJyZWFzb24iOiJwcm90ZWN0ZWQtc2V0LW1pc21hdGNoIiwic2NoZW1hIjoiYWdlbnQtZmxlZXQucmVnaXN0cnktY2FwYWNpdHktcHJlZmxpZ2h0LXJlY2VpcHQvMiJ9"
+        },
+        {
+          "name": "build-api",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[2]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[3]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-ci-vh5cc-2488202946' failed"
+        },
+        {
+          "name": "build-mcp",
+          "phase": "Skipped",
+          "message": "when ''false' == 'true'' evaluated false"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-2r9rj",
+      "uid": "b3a00711-173b-4eeb-8591-b4dff94c8d25",
+      "createdAt": "2026-10-25T11:05:48Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:05:48Z",
+      "finishedAt": "2026-10-25T11:11:22Z",
+      "message": "child 'verdify-platform-pr-ci-2r9rj-953438435' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-2r9rj",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-2r9rj-953438435' failed"
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-2r9rj-953438435' failed"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-2r9rj.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 1)"
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "retryStrategy.expression evaluated to false"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-4p5bn",
+      "uid": "23201bf1-da96-4cf6-a09a-072acf85bdd8",
+      "createdAt": "2026-10-25T22:29:39Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:29:42Z",
+      "finishedAt": "2026-10-25T22:50:09Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-4p5bn",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-4p5bn.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-597g9",
+      "uid": "d4c1f66e-4872-42a2-9d61-1a08963ddc17",
+      "createdAt": "2026-10-25T14:42:12Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T14:42:15Z",
+      "finishedAt": "2026-10-25T15:04:35Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-597g9",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-597g9.onExit",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-686fx",
+      "uid": "46afb7de-9eb2-431c-bafe-24e66f160a98",
+      "createdAt": "2026-10-25T14:17:56Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T14:17:56Z",
+      "finishedAt": "2026-10-25T14:36:50Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-686fx",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-686fx.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-72qq6",
+      "uid": "7bc9ba17-63c4-45c7-9f1f-b0e2f8f3990f",
+      "createdAt": "2026-10-25T15:14:37Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T15:14:38Z",
+      "finishedAt": "2026-10-25T15:35:25Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-72qq6",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-72qq6.onExit",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-8qckf",
+      "uid": "2d30dc88-513a-45bc-81e8-0ec2480a1ed9",
+      "createdAt": "2026-10-25T22:00:55Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:00:57Z",
+      "finishedAt": "2026-10-25T22:20:51Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-8qckf",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-8qckf.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-946tx",
+      "uid": "cc139a9e-dcb7-4705-b0b7-12bf6ebdd9ee",
+      "createdAt": "2026-10-25T22:31:36Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:31:37Z",
+      "finishedAt": "2026-10-25T22:51:35Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-946tx",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-946tx.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-9tf87",
+      "uid": "2d43efc8-03e6-44d5-a074-fdc0e636c113",
+      "createdAt": "2026-10-25T12:59:19Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T12:59:20Z",
+      "finishedAt": "2026-10-25T13:16:00Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-9tf87",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-9tf87-4267864096' failed"
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-9tf87.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 143)"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-9tf87-4267864096' failed"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-b6b7v",
+      "uid": "35926e0e-18f2-4e54-b091-189d7034cd7b",
+      "createdAt": "2026-10-25T22:52:04Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T22:52:06Z",
+      "finishedAt": "2026-10-25T23:12:24Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-b6b7v",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-b6b7v.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-crr7d",
+      "uid": "0004bfb5-6922-4195-ab7a-e42285673a16",
+      "createdAt": "2026-10-25T16:11:10Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:11:10Z",
+      "finishedAt": "2026-10-25T16:31:17Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-crr7d",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-crr7d.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-gps29",
+      "uid": "68dc76bc-0135-4872-9218-67a465ba4973",
+      "createdAt": "2026-10-25T16:49:49Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:49:49Z",
+      "finishedAt": "2026-10-25T17:09:16Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-gps29",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-gps29.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-l9lhx",
+      "uid": "5afeae9f-7962-4b9d-97b2-35d96536b710",
+      "createdAt": "2026-10-25T17:14:53Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T17:14:55Z",
+      "finishedAt": "2026-10-25T17:33:11Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-l9lhx",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-l9lhx.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-lv49z",
+      "uid": "b49b9cf6-a7d5-48a5-9602-650daf6cdf80",
+      "createdAt": "2026-10-26T13:08:32Z",
+      "phase": "Running",
+      "startedAt": "2026-10-26T13:08:32Z",
+      "finishedAt": null,
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-lv49z",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Running",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-mbzsw",
+      "uid": "210db88b-c4a7-4130-9036-e5bae248bede",
+      "createdAt": "2026-10-25T21:40:49Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T21:40:50Z",
+      "finishedAt": "2026-10-25T22:00:07Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-mbzsw",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-mbzsw.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-n2cs6",
+      "uid": "70d6431b-cb01-4583-8305-4e44b9ed346d",
+      "createdAt": "2026-10-25T13:31:34Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T13:31:35Z",
+      "finishedAt": "2026-10-25T13:52:33Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-n2cs6",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-n2cs6.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-nl6gt",
+      "uid": "015a138d-f749-40ab-ae85-c8705267d19f",
+      "createdAt": "2026-10-25T15:17:24Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T15:17:26Z",
+      "finishedAt": "2026-10-25T15:20:47Z",
+      "message": "child 'verdify-platform-pr-ci-nl6gt-4289116671' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-nl6gt",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-nl6gt-4289116671' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-nl6gt-4289116671' failed"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-nl6gt.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Error",
+          "message": "pod deleted"
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-pq229",
+      "uid": "4a3bce3e-6d1e-4a55-9c01-199bb18ea278",
+      "createdAt": "2026-10-25T11:21:06Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:21:07Z",
+      "finishedAt": "2026-10-25T11:27:13Z",
+      "message": "child 'verdify-platform-pr-ci-pq229-132474398' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-pq229",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-pq229-132474398' failed"
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "retryStrategy.expression evaluated to false"
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 1)"
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-pq229-132474398' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-pq229.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-q5x4l",
+      "uid": "9f55fce1-82b1-430d-9b54-ced907f2b446",
+      "createdAt": "2026-10-25T12:49:45Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T12:49:46Z",
+      "finishedAt": "2026-10-25T13:02:38Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-q5x4l",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-q5x4l-2360808010' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 143)"
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-q5x4l-2360808010' failed"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-q5x4l.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-q9rzq",
+      "uid": "68b41140-3e11-4abe-a961-d4b4102665d8",
+      "createdAt": "2026-10-26T13:12:10Z",
+      "phase": "Running",
+      "startedAt": "2026-10-26T13:12:11Z",
+      "finishedAt": null,
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-q9rzq",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Running",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-qlfgm",
+      "uid": "338e7e08-7443-4e2f-ab75-0c186ce4c611",
+      "createdAt": "2026-10-25T16:49:34Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:49:35Z",
+      "finishedAt": "2026-10-25T17:09:21Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-qlfgm",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-qlfgm.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-qpzhx",
+      "uid": "48c66e64-6942-4d8a-a123-4bdab540a631",
+      "createdAt": "2026-10-25T11:12:03Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:12:04Z",
+      "finishedAt": "2026-10-25T11:20:40Z",
+      "message": "child 'verdify-platform-pr-ci-qpzhx-4227588445' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-qpzhx",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-qpzhx-4227588445' failed"
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 1)"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-qpzhx.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "retryStrategy.expression evaluated to false"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-qpzhx-4227588445' failed"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-qq7kg",
+      "uid": "044771ad-a9a0-4b63-b3e5-437dc176544e",
+      "createdAt": "2026-10-25T11:27:39Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:27:41Z",
+      "finishedAt": "2026-10-25T11:32:29Z",
+      "message": "child 'verdify-platform-pr-ci-qq7kg-3391440885' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-qq7kg",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-qq7kg-3391440885' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "retryStrategy.expression evaluated to false"
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 1)"
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-qq7kg.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-qq7kg-3391440885' failed"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-qz4vz",
+      "uid": "e4fa0113-4f33-4601-b401-713bc6dcd7d7",
+      "createdAt": "2026-10-25T13:13:05Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T13:13:06Z",
+      "finishedAt": "2026-10-25T13:31:03Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-qz4vz",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-qz4vz.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-r7p8w",
+      "uid": "478b2f8d-5cbf-4c6b-af28-0db21df8f725",
+      "createdAt": "2026-10-25T15:19:41Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T15:20:09Z",
+      "finishedAt": "2026-10-25T15:23:38Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-r7p8w",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-r7p8w-1764216124' failed"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 143)"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-r7p8w-1764216124' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-r7p8w.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-rfmp8",
+      "uid": "d9353e0a-9836-4ba7-98e3-fb8c4091697f",
+      "createdAt": "2026-10-25T15:19:13Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T15:20:07Z",
+      "finishedAt": "2026-10-25T15:21:49Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-rfmp8",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-rfmp8-2621125231' failed"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "workflow shutdown with strategy:  Stop"
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-rfmp8-2621125231' failed"
+        },
+        {
+          "name": "verdify-platform-pr-ci-rfmp8.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-szthq",
+      "uid": "c5bb43cf-d5eb-4f24-9723-73ef2e875dfd",
+      "createdAt": "2026-10-25T15:43:35Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T15:43:37Z",
+      "finishedAt": "2026-10-25T16:04:50Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-szthq",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-szthq.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-tz4wb",
+      "uid": "b05e363a-3525-49b5-87e7-662e180aa29d",
+      "createdAt": "2026-10-25T16:31:51Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:31:51Z",
+      "finishedAt": "2026-10-25T16:49:05Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-tz4wb",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-tz4wb.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-w7q5b",
+      "uid": "9cdbb387-2fee-423a-8162-d1548a596d2c",
+      "createdAt": "2026-10-25T14:11:29Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T14:11:30Z",
+      "finishedAt": "2026-10-25T14:17:19Z",
+      "message": "child 'verdify-platform-pr-ci-w7q5b-888342526' failed",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-w7q5b",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-w7q5b-888342526' failed"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-w7q5b.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 1)"
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "retryStrategy.expression evaluated to false"
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-w7q5b-888342526' failed"
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-wnd44",
+      "uid": "f129645f-8fb8-47b5-b653-ab18db41128c",
+      "createdAt": "2026-10-25T14:21:24Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T14:21:24Z",
+      "finishedAt": "2026-10-25T14:41:46Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-wnd44",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-wnd44.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-xgsvk",
+      "uid": "5bee295a-3419-4d79-8035-0e4452ddd8cd",
+      "createdAt": "2026-10-25T15:22:14Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T15:22:14Z",
+      "finishedAt": "2026-10-25T15:43:19Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-xgsvk",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-xgsvk.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-xngl4",
+      "uid": "23fe9b92-3524-4a31-8dbe-fe553b2ed1ca",
+      "createdAt": "2026-10-25T16:30:20Z",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-25T16:30:21Z",
+      "finishedAt": "2026-10-25T16:48:29Z",
+      "message": null,
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-xngl4",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-xngl4.onExit",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-xpxnk",
+      "uid": "013e4af9-ab1c-4af4-b14e-2219000b9571",
+      "createdAt": "2026-10-25T11:11:42Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:11:43Z",
+      "finishedAt": "2026-10-25T11:14:15Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-xpxnk",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-xpxnk-2236570427' failed"
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-xpxnk.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 143)"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-xpxnk-2236570427' failed"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-xt5jr",
+      "uid": "80cf5422-a540-4f4a-b0f8-e5d7609f4e14",
+      "createdAt": "2026-10-25T11:45:49Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-25T11:45:51Z",
+      "finishedAt": "2026-10-25T11:55:31Z",
+      "message": "Stopped with strategy 'Stop'",
+      "template": {
+        "name": "verdify-platform-pr-ci"
+      },
+      "parameters": {},
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-platform-pr-ci-xt5jr",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-xt5jr-382353123' failed"
+        },
+        {
+          "name": "report(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending(0)",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "verdify-platform-pr-ci-xt5jr.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-platform-pr-ci-xt5jr-382353123' failed"
+        },
+        {
+          "name": "trusted-precheck",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "validate",
+          "phase": "Failed",
+          "message": "Stopped with strategy 'Stop'"
+        },
+        {
+          "name": "validate(0)",
+          "phase": "Failed",
+          "message": "main: Error (exit code 143)"
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        }
+      ]
+    },
+    {
+      "name": "verdify-www-ci-2bwvp",
+      "uid": "84a184e2-eba0-4495-9518-fc9b8e0dbdf8",
+      "createdAt": "2026-10-24T16:35:06Z",
+      "phase": "Failed",
+      "startedAt": "2026-10-24T16:35:08Z",
+      "finishedAt": "2026-10-24T16:36:29Z",
+      "message": "child 'verdify-www-ci-2bwvp-662098577' failed",
+      "template": {
+        "name": "verdify-www-ci"
+      },
+      "parameters": {
+        "revision": "69075d8354c8d8be6e66cc53a20303b4028ea34f"
+      },
+      "activeDeadlineSeconds": null,
+      "node_summary": [
+        {
+          "name": "verdify-www-ci-2bwvp",
+          "phase": "Failed",
+          "message": "child 'verdify-www-ci-2bwvp-662098577' failed"
+        },
+        {
+          "name": "verdify-www-ci-2bwvp.onExit",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-www-ci-2bwvp-56748050' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report-pending",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "classify-push",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "[1]",
+          "phase": "Failed",
+          "message": "child 'verdify-www-ci-2bwvp-662098577' failed"
+        },
+        {
+          "name": "[0]",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "report",
+          "phase": "Succeeded",
+          "message": null
+        },
+        {
+          "name": "build",
+          "phase": "Failed",
+          "message": "registry-capacity-preflight: Error (exit code 1): agent-fleet-capacity-preflight-v2:eyJleHBlY3RlZCI6eyJjYXBhY2l0eV9jb250cmFjdF9pZCI6IjFhMTNlY2JiZGNlNTdjNDdjNDU1MGM0MDk4OTI1ZWFjYjVhMzA1ZGZiZDZlZjg1OTQxZjlkZmUwZDY3MDgzZWMiLCJtYXhfYWdlX3NlY29uZHMiOjMwMCwibWluX2ZyZWVfYnl0ZXMiOjE1MDMyMzg1NTM2MCwicHJvdGVjdGVkX2NvdW50IjozMzEsInByb3RlY3RlZF9jdXJyZW50X2NvdW50Ijo0MSwicHJvdGVjdGVkX2dlbmVyYXRpb24iOjE5MiwicHJvdGVjdGVkX21heF9hZ2Vfc2Vjb25kcyI6NjA0ODAwLCJwcm90ZWN0ZWRfcm9sbGJhY2tfY291bnQiOjI5MCwicHJvdGVjdGVkX3NldF9oYXNoIjoiNjBhZTdhOWEwOTI4MGRmNDlkZjQ2NmQxYmE2NmJiNzBlMDIyOWM1NmVkZTFmNWZjYjdkODNjMjAzYWVkNmNmMCJ9LCJnYXRlIjoiYWRtaXNzaW9uIiwib2JzZXJ2ZWQiOnt9LCJvdXRjb21lIjoiYmxvY2tlZCIsInJlYXNvbiI6InNpZ25hbC1pbnZhbGlkIiwic2NoZW1hIjoiYWdlbnQtZmxlZXQucmVnaXN0cnktY2FwYWNpdHktcHJlZmxpZ2h0LXJlY2VpcHQvMiJ9"
+        },
+        {
+          "name": "run-release",
+          "phase": "Failed",
+          "message": "child 'verdify-www-ci-2bwvp-56748050' failed"
+        }
+      ]
+    }
+  ]
+}

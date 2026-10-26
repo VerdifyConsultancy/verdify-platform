@@ -1,0 +1,13 @@
+{
+  "source": "firmware/greenhouse/sensors.yaml",
+  "source_sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563",
+  "count_lambda_sha256": "4489f3f7149c4274d2030b023c9406f16480d04ec5822f54a7a7ab10056c04d1",
+  "health_lambda_sha256": "771723db5c101f97e58fdbda752ee82834ff492ca640e97fe5ea620eea88b076",
+  "aggregate_lambda_sha256": {
+    "average_temperature": "169226005dba8baf5b2cd09b373c5a14a6104c2f9ba86341bd7fe1c7c22f1976",
+    "average_humidity": "088eb9abf8db343365253da3d485095f5bb3157b4561701dce83530258aedd0a",
+    "average_vpd_kpa": "42bc699a79eb30749b91abc7d04cbbaa2d22ac9aa80493fc99368a4d33a2695f"
+  },
+  "helper_sha256": "b55de7077fce6efeccc2f298d394399cae204965cacda0a9dae30017af2807c8",
+  "scope": "Actual diagnostic and aggregate lambdas; clock and sensor storage adapters only"
+}

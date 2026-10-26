@@ -1,0 +1,137 @@
+{
+  "captured_at": "2026-10-26T13:16:50.413632+00:00",
+  "head": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+  "workflow_name": "verdify-platform-pr-ci-q9rzq",
+  "pod_name": "verdify-platform-pr-ci-q9rzq-validate-1426173840",
+  "errors": {},
+  "pr": {
+    "baseRefOid": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+    "headRefOid": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+    "mergeCommit": null,
+    "mergeStateStatus": "BLOCKED",
+    "mergedAt": null,
+    "number": 1091,
+    "state": "OPEN",
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1091"
+  },
+  "pr_status": {
+    "sha": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+    "state": "pending",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "pending",
+        "description": "Verdify Platform in-cluster PR validation started",
+        "created_at": "2026-10-26T13:12:19Z",
+        "updated_at": "2026-10-26T13:12:19Z",
+        "target_url": null
+      }
+    ]
+  },
+  "main_status": {
+    "sha": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+    "state": "pending",
+    "statuses": [
+      {
+        "context": "Verdify Platform / Argo PR CI",
+        "state": "pending",
+        "description": "Verdify Platform in-cluster main validation started",
+        "created_at": "2026-10-26T13:08:43Z",
+        "updated_at": "2026-10-26T13:08:43Z",
+        "target_url": null
+      }
+    ]
+  },
+  "workflow": {
+    "name": "verdify-platform-pr-ci-q9rzq",
+    "uid": "68b41140-3e11-4abe-a961-d4b4102665d8",
+    "resourceVersion": "312354969",
+    "phase": "Running",
+    "startedAt": "2026-10-26T13:12:11Z",
+    "finishedAt": null,
+    "exact_head_in_arguments": true,
+    "nodes": [
+      {
+        "id": "verdify-platform-pr-ci-q9rzq",
+        "name": "verdify-platform-pr-ci-q9rzq",
+        "type": "Steps",
+        "phase": "Running",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": null,
+        "exitCode": null
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-1018312644",
+        "name": "report-pending",
+        "type": "Retry",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": "2026-10-26T13:12:31Z",
+        "exitCode": "0"
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-1426173840",
+        "name": "validate(0)",
+        "type": "Pod",
+        "phase": "Running",
+        "startedAt": "2026-10-26T13:12:31Z",
+        "finishedAt": null,
+        "exitCode": null
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-2387158185",
+        "name": "validate",
+        "type": "Retry",
+        "phase": "Running",
+        "startedAt": "2026-10-26T13:12:31Z",
+        "finishedAt": null,
+        "exitCode": null
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-248609078",
+        "name": "[0]",
+        "type": "StepGroup",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": "2026-10-26T13:12:31Z",
+        "exitCode": null
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-2505209877",
+        "name": "trusted-precheck",
+        "type": "Pod",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": "2026-10-26T13:12:16Z",
+        "exitCode": "0"
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-3402551187",
+        "name": "[1]",
+        "type": "StepGroup",
+        "phase": "Running",
+        "startedAt": "2026-10-26T13:12:31Z",
+        "finishedAt": null,
+        "exitCode": null
+      },
+      {
+        "id": "verdify-platform-pr-ci-q9rzq-80707887",
+        "name": "report-pending(0)",
+        "type": "Pod",
+        "phase": "Succeeded",
+        "startedAt": "2026-10-26T13:12:11Z",
+        "finishedAt": "2026-10-26T13:12:21Z",
+        "exitCode": "0"
+      }
+    ]
+  },
+  "log": {
+    "path": "/private/tmp/verdify-resume-review-20261026/1091-pr-ci.log",
+    "sha256": "410bfe40ae22d4721f2d60976996de8671bbda193b9f0989f27f1656541d5d4e",
+    "bytes": 3289,
+    "probe_test_lines": [],
+    "terminal_markers": [
+      "All checks passed!"
+    ]
+  }
+}

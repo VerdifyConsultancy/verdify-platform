@@ -1,0 +1,4237 @@
+###############################################################################
+# greenhouse/sensors.yaml — refactored edition (2025-07-20)
+#
+# Defines uptime, analog sensors, Modbus sensors, derived metrics and daily
+# counters.  All lambdas end with a semicolon to satisfy the ESPHome compiler.
+###############################################################################
+
+substitutions:
+  upd_int: 10s
+  modbus_temp_lambda: |
+    /* raw register = 0.1 °C; convert → °F.
+       0x7FFF (32767) = Modbus sensor error sentinel → NAN */
+    if(x >= 32000.0f) return NAN;
+    return (x * 0.1f) * 9.0f / 5.0f + 32.0f;
+  vpd_lambda: |-
+    /* VPD [kPa] from T (°F) & RH (%) */
+    float tc = (T - 32) * 5.0 / 9.0;
+    float es = 0.6108 * expf((17.27 * tc) / (tc + 237.3));
+    return es * (1.0 - RH / 100.0);
+
+sensor:
+  # --------------------------------------------------------------------------
+  # 1‑A Uptime
+  # --------------------------------------------------------------------------
+  - platform: uptime
+    id: uptime_seconds
+    name: "Uptime"
+    entity_category: diagnostic
+    update_interval: 60s
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    entity_category: diagnostic
+    update_interval: 60s
+
+  - platform: template
+    id: heap_free
+    name: "Free Heap"
+    unit_of_measurement: "kB"
+    entity_category: diagnostic
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: 'return gh_free_heap_kb();'
+
+  - platform: template
+    id: heap_min_free
+    name: "Minimum Free Heap"
+    unit_of_measurement: "kB"
+    entity_category: diagnostic
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: 'return gh_min_free_heap_kb();'
+
+  - platform: template
+    id: heap_largest_free_block
+    name: "Largest Free Heap Block"
+    unit_of_measurement: "kB"
+    entity_category: diagnostic
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: 'return gh_largest_free_heap_block_kb();'
+
+  # --------------------------------------------------------------------------
+  # 1‑B Analog – CO₂ & Light
+  # --------------------------------------------------------------------------
+  - platform: adc
+    id: co2_raw_v
+    pin: GPIO36
+    attenuation: 12db
+    internal: true
+    update_interval: 5s
+  - platform: template
+    id: greenhouse_co2_ppm
+    name: "CO₂ (ppm)"
+    device_class: carbon_dioxide
+    unit_of_measurement: "ppm"
+    state_class: measurement
+    accuracy_decimals: 0
+    lambda: |-
+      // B13 / M2: corrected CO2 transform.
+      // The analog module's output voltage DECREASES as CO2 rises (MG811-style),
+      // so the prior linear `raw_v * K` produced an INVERTED diurnal (low at
+      // night when respiration raised CO2, high midday when photosynthesis drew
+      // it down). Use a two-point INVERTED-linear map: ppm falls as voltage
+      // rises, anchored on (v_lo_ppm @ co2_cal_lo_ppm) and (v_hi_ppm @
+      // co2_cal_hi_ppm). True absolute accuracy still needs a reference-NDIR
+      // two-point field calibration (see globals.yaml co2_cal_*).
+      float v = id(co2_raw_v).state;
+      float v_lo = id(co2_cal_v_lo_ppm);   // voltage at LOW ppm (higher v)
+      float v_hi = id(co2_cal_v_hi_ppm);   // voltage at HIGH ppm (lower v)
+      float ppm_lo = id(co2_cal_lo_ppm);
+      float ppm_hi = id(co2_cal_hi_ppm);
+      // Guard a degenerate calibration (equal voltages) → avoid div-by-zero.
+      float dv = v_hi - v_lo;
+      if (fabsf(dv) < 1e-4f) {
+        id(co2_plausible) = false;
+        return NAN;
+      }
+      float ppm = ppm_lo + (v - v_lo) * (ppm_hi - ppm_lo) / dv;
+      // Plausibility gate: a disconnected/railed analog line, or a ppm outside
+      // the planted-greenhouse band, is flagged AND suppressed (NAN) rather than
+      // fed downstream as a real reading.
+      bool raw_ok = v >= id(co2_raw_v_min) && v <= id(co2_raw_v_max);
+      bool ppm_ok = ppm >= id(co2_plausible_min_ppm) && ppm <= id(co2_plausible_max_ppm);
+      bool ok = raw_ok && ppm_ok;
+      id(co2_plausible) = ok;
+      if (!ok) return NAN;   // flagged implausible → don't publish a bogus value
+      return ppm;
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 10000
+
+  # B13 / M2: plausibility flag for the CO2 reading (1 = inside band, 0 = the
+  # last sample was flagged implausible — disconnected/railed line or ppm out of
+  # the 300–5000 planted-greenhouse band). Lets the planner/operator distinguish
+  # "no data" from "real low CO2".
+  - platform: template
+    id: co2_plausible_flag
+    name: "CO₂ Plausible"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      return id(co2_plausible) ? 1.0f : 0.0f;
+
+  - platform: adc
+    id: lux_raw_v
+    pin: GPIO35
+    attenuation: 12db
+    internal: true
+    update_interval: 5s
+  - platform: template
+    id: greenhouse_light_lux
+    name: "Light (lx)"
+    device_class: illuminance
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    lambda: |-
+      // ADC baseline offset: 0.142V at 12dB attenuation = 2820 lux phantom reading.
+      // Subtract offset voltage before scaling.  Confirmed by 72h of nighttime data
+      // reading a constant 2820 lux while Tempest reads 0.
+      float v = id(lux_raw_v).state - 0.142f;
+      if (v < 0.0f) v = 0.0f;
+      return v * (5.0f/3.3f) * (65535.0f/5.0f);
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 65535
+
+  # --------------------------------------------------------------------------
+  # 1‑C Water meter (diagnostic flow + total usage)
+  # DAE AS200U-75P, 3/4" NPT, pulse output, measures in gallons.
+  # Measures ALL water downstream including: misting, hydro, sink,
+  # workstation, pressure washer hose. NOT greenhouse-only.
+  # Calibrate: fill a known container (e.g., 5 gallon bucket), read
+  # pulse count, adjust multiply factor. Current multiply: 1.0 (uncalibrated).
+  # --------------------------------------------------------------------------
+  - platform: pulse_counter
+    id: water_flow_rate
+    name: "Water Flow (gpm)"
+    pin:
+      number: GPIO33
+      mode: INPUT_PULLUP
+      inverted: true
+    internal_filter: 10us
+    update_interval: 60s
+    unit_of_measurement: gal/min
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    filters:
+      - multiply: 1.0   # adjust after calibration (see above)
+    total:
+      id: water_total_used
+      name: "Water Used (gal)"
+      unit_of_measurement: gal
+      device_class: water
+      state_class: total_increasing
+      accuracy_decimals: 1
+      filters:
+        - multiply: 1.0
+
+  # --------------------------------------------------------------------------
+  # 2. MODBUS PROBES
+  # --------------------------------------------------------------------------
+  # Controller case
+  - platform: modbus_controller
+    id: case_temperature
+    name: "Case Temp (°F)"
+    modbus_controller_id: case_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+            id(last_case_ms) = millis();
+
+  - platform: modbus_controller
+    id: case_humidity
+    name: "Case RH (%)"
+    modbus_controller_id: case_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+
+  # North wall
+  - platform: modbus_controller
+    id: north_wall_temperature
+    name: "North Temp (°F)"
+    modbus_controller_id: north_wall_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+            id(last_north_ms) = millis();
+  - platform: modbus_controller
+    id: north_wall_humidity
+    name: "North RH (%)"
+    modbus_controller_id: north_wall_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+  - platform: template
+    id: vpd_north
+    name: "North VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(north_wall_temperature).state;
+      float RH = id(north_wall_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      ${vpd_lambda}
+
+  # West wall
+  - platform: modbus_controller
+    id: west_wall_temperature
+    name: "West Temp (°F)"
+    modbus_controller_id: west_wall_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+            id(last_west_ms) = millis();
+  - platform: modbus_controller
+    id: west_wall_humidity
+    name: "West RH (%)"
+    modbus_controller_id: west_wall_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+  - platform: template
+    id: vpd_west
+    name: "West VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(west_wall_temperature).state;
+      float RH = id(west_wall_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      ${vpd_lambda}
+
+  # South wall
+  - platform: modbus_controller
+    id: south_wall_temperature
+    name: "South Temp (°F)"
+    modbus_controller_id: south_wall_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+            id(last_south_ms) = millis();
+  - platform: modbus_controller
+    id: south_wall_humidity
+    name: "South RH (%)"
+    modbus_controller_id: south_wall_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+  - platform: template
+    id: vpd_south
+    name: "South VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(south_wall_temperature).state;
+      float RH = id(south_wall_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      ${vpd_lambda}
+
+  # East wall
+  - platform: modbus_controller
+    id: east_wall_temperature
+    name: "East Temp (°F)"
+    modbus_controller_id: east_wall_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+            id(last_east_ms) = millis();
+  - platform: modbus_controller
+    id: east_wall_humidity
+    name: "East RH (%)"
+    modbus_controller_id: east_wall_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+  - platform: template
+    id: vpd_east
+    name: "East VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(east_wall_temperature).state;
+      float RH = id(east_wall_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      ${vpd_lambda}
+
+  # Exterior intake
+  - platform: modbus_controller
+    id: exterior_intake_temperature
+    name: "Exterior Intake Temp (°F)"
+    modbus_controller_id: exterior_intake_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+    on_value:
+      then:
+        - lambda: |-
+            id(last_external_update) = millis() / 1000;
+  - platform: modbus_controller
+    id: exterior_intake_humidity
+    name: "Exterior Intake RH (%)"
+    modbus_controller_id: exterior_intake_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - lambda: "return x > 110.0f ? NAN : x;"  # 0x7FFF sentinel → NAN
+  - platform: template
+    id: vpd_exterior
+    name: "Exterior Intake VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(exterior_intake_temperature).state;
+      float RH = id(exterior_intake_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      ${vpd_lambda}
+
+  # --------------------------------------------------------------------------
+  # 2a. SOIL SENSORS (DFRobot SEN0600 / SEN0601)
+  # Modbus RTU 9600 8N1. Poll every 60s with 200ms throttle.
+  # timeout_filter: if no valid reading in 5 min, publish NaN (avoids stale data)
+  # --------------------------------------------------------------------------
+  # South zone sensor 1 — SEN0601 (moisture + temp + EC), addr 7
+  - platform: modbus_controller
+    id: south_1_soil_moisture
+    name: "South 1 Soil Moisture (%)"
+    modbus_controller_id: south_1_soil_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: moisture
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - timeout: 300s
+  - platform: modbus_controller
+    id: south_1_soil_temp
+    name: "South 1 Soil Temp (°F)"
+    modbus_controller_id: south_1_soil_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+      - timeout: 300s
+  - platform: modbus_controller
+    id: south_1_soil_ec
+    name: "South 1 Soil EC (µS⁄cm)"
+    modbus_controller_id: south_1_soil_probe
+    register_type: holding
+    address: 0x0002
+    value_type: U_WORD
+    unit_of_measurement: "µS/cm"
+    state_class: measurement
+    accuracy_decimals: 0
+    filters:
+      - timeout: 300s
+
+  # South zone sensor 2 — SEN0600 (moisture + temp), addr 8
+  - platform: modbus_controller
+    id: south_2_soil_moisture
+    name: "South 2 Soil Moisture (%)"
+    modbus_controller_id: south_2_soil_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: moisture
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - timeout: 300s
+  - platform: modbus_controller
+    id: south_2_soil_temp
+    name: "South 2 Soil Temp (°F)"
+    modbus_controller_id: south_2_soil_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+      - timeout: 300s
+
+  # West zone — SEN0600 (moisture + temp)
+  - platform: modbus_controller
+    id: west_soil_moisture
+    name: "West Soil Moisture (%)"
+    modbus_controller_id: west_soil_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    device_class: moisture
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - timeout: 300s
+  - platform: modbus_controller
+    id: west_soil_temp
+    name: "West Soil Temp (°F)"
+    modbus_controller_id: west_soil_probe
+    register_type: holding
+    address: 0x0001
+    value_type: U_WORD
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - lambda: ${modbus_temp_lambda}
+      - timeout: 300s
+
+  # --------------------------------------------------------------------------
+  # 2b. OUTDOOR CLIMATE — Tempest direct primary, legacy pulled globals fallback
+  # --------------------------------------------------------------------------
+  # Tempest UDP provides data every 60s. The pulled globals are retained only as
+  # a no-HTTP compatibility fallback if an external path ever sets them.
+  # The enthalpy calculation and economiser reference these IDs.
+  - platform: template
+    id: ha_outdoor_temp
+    internal: true
+    update_interval: 30s
+    lambda: |-
+      float t = id(tempest_temp_f);
+      if (!isnan(t)) return t;
+      return id(pulled_outdoor_temp_f);
+
+  - platform: template
+    id: ha_outdoor_rh
+    internal: true
+    update_interval: 30s
+    lambda: |-
+      float r = id(tempest_rh_pct);
+      if (!isnan(r)) return r;
+      return id(pulled_outdoor_rh_pct);
+
+  # Outdoor weather — now sourced from Tempest UDP (see external_sensors.yaml)
+  # Legacy HA imports removed. Tempest sensors: tempest_outdoor_temp, tempest_outdoor_rh, tempest_illuminance
+
+  # Expose Tempest illuminance as outdoor reference for grow light automation
+  - platform: template
+    id: outdoor_illuminance
+    name: "Outdoor Illuminance"
+    icon: mdi:weather-sunny
+    unit_of_measurement: "lx"
+    accuracy_decimals: 0
+    device_class: illuminance
+    update_interval: 60s
+    lambda: |-
+      float v = id(tempest_lux);
+      if(isnan(v)) return NAN;
+      return v;
+
+  # --------------------------------------------------------------------------
+  # 3. DERIVED METRICS
+  # --------------------------------------------------------------------------
+  # Absolute humidity outside (g/m³, internal)
+  - platform: template
+    id: absolute_humidity_out
+    internal: true
+    unit_of_measurement: "g/m³"
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |-
+      // Prefer local Modbus probe; fall back to HA 3-tier sensor
+      float T  = id(exterior_intake_temperature).state;
+      float RH = id(exterior_intake_humidity).state;
+      if(isnan(T) || isnan(RH)){
+        T  = id(ha_outdoor_temp).state;
+        RH = id(ha_outdoor_rh).state;
+      }
+      if(isnan(T) || isnan(RH)){
+        T  = id(pulled_outdoor_temp_f);
+        RH = id(pulled_outdoor_rh_pct);
+      }
+      if(isnan(T) || isnan(RH)) return NAN;
+      float tc = (T - 32) * 5.0f / 9.0f;
+      float es = 0.6108f * expf((17.27f * tc) / (tc + 237.3f)) * 10.0f;  // kPa→hPa
+      float avp= es * RH / 100.0f;
+      return 216.7f * (avp / (tc + 273.15f));
+
+  # Interior averages — FW-10 (Sprint 17): skip stale probes.
+  #
+  # When a Modbus probe times out, its sensor state retains the last
+  # successful reading rather than going NaN, so !isnan() alone is not
+  # sufficient to exclude a dead probe from the aggregate. We also check
+  # the per-probe last_update timestamp against PROBE_STALE_MS. A probe
+  # older than 5 min is considered dead for averaging purposes; its
+  # reading is dropped until it comes back. Matches the watchdog's 300s
+  # wall-probe threshold in controls.yaml.
+  - platform: template
+    id: average_temperature
+    name: "Avg Temp (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |
+      const uint32_t now = millis();
+      const uint32_t STALE = 300000; // 5 min, matches watchdog
+      auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
+      float s = 0; int n = 0;
+      if(ok(id(last_north_ms)) && std::isfinite(id(north_wall_temperature).state)){ s += id(north_wall_temperature).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(west_wall_temperature).state)) { s += id(west_wall_temperature).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(south_wall_temperature).state)){ s += id(south_wall_temperature).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(east_wall_temperature).state)) { s += id(east_wall_temperature).state;  n++; }
+      return n ? s/n : NAN;
+
+  - platform: template
+    id: average_humidity
+    name: "Avg RH (%)"
+    device_class: humidity
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |
+      const uint32_t now = millis();
+      const uint32_t STALE = 300000;
+      auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
+      float s = 0; int n = 0;
+      if(ok(id(last_north_ms)) && std::isfinite(id(north_wall_humidity).state)){ s += id(north_wall_humidity).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(west_wall_humidity).state)) { s += id(west_wall_humidity).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(south_wall_humidity).state)){ s += id(south_wall_humidity).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(east_wall_humidity).state)) { s += id(east_wall_humidity).state;  n++; }
+      return n ? s/n : NAN;
+
+  - platform: template
+    id: average_vpd_kpa
+    name: "Avg VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |
+      const uint32_t now = millis();
+      const uint32_t STALE = 300000;
+      auto ok = [&](uint32_t ts){ return ts > 0 && (now - ts) < STALE; };
+      float s = 0; int n = 0;
+      if(ok(id(last_north_ms)) && std::isfinite(id(vpd_north).state)){ s += id(vpd_north).state; n++; }
+      if(ok(id(last_west_ms))  && std::isfinite(id(vpd_west).state)) { s += id(vpd_west).state;  n++; }
+      if(ok(id(last_south_ms)) && std::isfinite(id(vpd_south).state)){ s += id(vpd_south).state; n++; }
+      if(ok(id(last_east_ms))  && std::isfinite(id(vpd_east).state)) { s += id(vpd_east).state;  n++; }
+      return n ? s/n : NAN;
+
+  # Complete wall probes eligible to contribute all three climate fields.
+  # Each existing aggregate still independently filters its own field; a probe
+  # with one invalid field must not inflate this complete-probe diagnostic.
+  # This is not the separate Gate P quorum or a stuck/jump plausibility test.
+  - platform: template
+    id: active_probe_count
+    name: "Active Probe Count"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      const uint32_t now = millis();
+      const uint32_t STALE = 300000;
+      auto ok = [&](uint32_t ts, float temperature, float humidity, float vpd) {
+        return probe_sample_fresh(now, ts, STALE) &&
+               probe_triple_finite(temperature, humidity, vpd);
+      };
+      int n = 0;
+      if(ok(id(last_north_ms), id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state)) n++;
+      if(ok(id(last_west_ms), id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state)) n++;
+      if(ok(id(last_south_ms), id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state)) n++;
+      if(ok(id(last_east_ms), id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state)) n++;
+      return (float)n;
+
+  # OBS-3 (Sprint 18): firmware control-state exposure for planner feedback.
+  # ControlState.relief_cycle_count and vent_latch_timer_ms are firmware-
+  # internal breaker state — when they're nonzero the firmware is
+  # silently refusing to seal (max_relief_cycles hit) or latched in
+  # VENTILATE (post-relief timeout). The planner needs to see this to
+  # know her seal requests are being rejected; see Sprint 16's OBS-1e
+  # for the "silent overrides invisible to the planner" origin story.
+  #
+  # These are lambda-less push sensors: controls.yaml main interval lambda
+  # calls publish_state() on them at the end of each determine_mode()
+  # cycle. Unit for vent_latch is seconds (ms in firmware state divided
+  # by 1000 at publish time, for human readability in Grafana + MCP).
+  - platform: template
+    id: ctl_relief_cycle_count
+    name: "Relief Cycle Count"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+
+  # Sprint 19 followup: rename from "Vent Latch Timer (s)" — the parens
+  # slugified the object_id to vent_latch_timer__s_ (double underscore,
+  # trailing underscore), which didn't match entity_map.py's
+  # "vent_latch_timer_s" key, so the value never reached the DB column.
+  # Unit is already expressed by unit_of_measurement.
+  - platform: template
+    id: ctl_vent_latch_timer_s
+    name: "Vent Latch Timer s"
+    entity_category: diagnostic
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ctl_sealed_timer_s
+    name: "Sealed Timer s"
+    entity_category: diagnostic
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ctl_vpd_watch_timer_s
+    name: "VPD Watch Timer s"
+    entity_category: diagnostic
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ctl_mist_backoff_timer_s
+    name: "Mist Backoff Timer s"
+    entity_category: diagnostic
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ctl_vent_mist_assist_active
+    name: "Vent Mist Assist Active"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+
+  - platform: template
+    id: controller_local_hour
+    name: "Controller Local Hour"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      auto now = id(sntp_time).now();
+      if(!now.is_valid() || id(sntp_failed)) return NAN;
+      return (float)now.hour;
+
+  - platform: template
+    id: sntp_valid
+    name: "SNTP Valid"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      return sntp_acquisition_valid(id(sntp_acquired), id(sntp_time).now().is_valid(),
+                                    id(sntp_failed)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: sntp_miss_count
+    name: "SNTP Miss Count"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      return (float)id(sntp_heartbeat_misses);
+
+  - platform: template
+    id: last_sntp_sync_age_s
+    name: "Last SNTP Sync Age s"
+    entity_category: diagnostic
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      if(!id(sntp_acquired)) return NAN;
+      return (float)((millis() - id(sntp_last_sync_ms)) / 1000UL);
+
+  # Absolute humidity inside
+  - platform: template
+    id: absolute_humidity
+    name: "Abs Humidity (g⁄m³)"
+    unit_of_measurement: "g/m³"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |
+      if(isnan(id(average_temperature).state) || isnan(id(average_humidity).state)) return NAN;
+      float tc = (id(average_temperature).state - 32.0f) * 5.0f / 9.0f;
+      float rh = id(average_humidity).state;
+      float es = 0.6108f * expf((17.27f * tc) / (tc + 237.3f)) * 10.0f;  // kPa→hPa
+      float avp= es * rh / 100.0f;
+      return 216.7f * (avp / (tc + 273.15f));
+
+  # Dew point
+  - platform: template
+    id: dewpoint_avg
+    name: "Dew Point (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 15s
+    lambda: |
+      if(isnan(id(average_temperature).state) || isnan(id(average_humidity).state)) return NAN;
+      float tc  = (id(average_temperature).state - 32.0f) * 5.0f / 9.0f;
+      float rh  = id(average_humidity).state;
+      float lnR = logf(rh / 100.0f);
+      float dpC = (237.3f * (lnR + ((17.27f * tc) / (237.3f + tc)))) /
+                  (17.27f - lnR - ((17.27f * tc) / (237.3f + tc)));
+      return dpC * 9.0f / 5.0f + 32.0f;
+
+  # Enthalpy (inside, outside, Δ)
+  - platform: template
+    id: inside_enthalpy
+    internal: true
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float T  = id(average_temperature).state;
+      float RH = id(average_humidity).state;
+      if(isnan(T) || isnan(RH)) return NAN;
+      float tc = (T - 32.0f) * 5.0f / 9.0f;
+      float pv = 0.6108f * expf((17.27f * tc) / (tc + 237.3f)) * RH / 100.0f * 10.0f;  // kPa→hPa
+      float P  = id(site_pressure_hpa);
+      float x  = 0.622f * pv / (P - pv);
+      return 1.006f * tc + x * (2501.0f + 1.84f * tc);
+
+  - platform: template
+    id: outside_enthalpy
+    internal: true
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      // Prefer local Modbus probe; fall back to HA 3-tier sensor
+      float T  = id(exterior_intake_temperature).state;
+      float RH = id(exterior_intake_humidity).state;
+      if(isnan(T) || isnan(RH)){
+        T  = id(ha_outdoor_temp).state;
+        RH = id(ha_outdoor_rh).state;
+      }
+      if(isnan(T) || isnan(RH)){
+        T  = id(pulled_outdoor_temp_f);
+        RH = id(pulled_outdoor_rh_pct);
+      }
+      if(isnan(T) || isnan(RH)) return NAN;
+      float tc = (T - 32.0f) * 5.0f / 9.0f;
+      float pv = 0.6108f * expf((17.27f * tc) / (tc + 237.3f)) * RH / 100.0f * 10.0f;  // kPa→hPa
+      float P  = id(site_pressure_hpa);
+      float x  = 0.622f * pv / (P - pv);
+      return 1.006f * tc + x * (2501.0f + 1.84f * tc);
+
+  - platform: template
+    id: enthalpy_diff
+    name: "Enthalpy Δ (kJ⁄kg)"
+    unit_of_measurement: "kJ/kg"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 15s
+    lambda: |-
+      float out = id(outside_enthalpy).state;
+      float in  = id(inside_enthalpy).state;
+      if(isnan(out) || isnan(in)) return NAN;
+      float diff = out - in;
+      if(diff < -200.0f || diff > 200.0f) return NAN;
+      return diff;
+
+  # --------------------------------------------------------------------------
+  # 4. DAILY CYCLE COUNTERS (diagnostic)
+  # --------------------------------------------------------------------------
+  - platform: template
+    id: daily_fan1_cycles
+    name: "Cycles • Fan 1 (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_fan1_today);"
+
+  - platform: template
+    id: daily_fan2_cycles
+    name: "Cycles • Fan 2 (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_fan2_today);"
+
+  - platform: template
+    id: daily_heat1_cycles
+    name: "Cycles • Heat 1 (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_heat1_today);"
+
+  - platform: template
+    id: daily_heat2_cycles
+    name: "Cycles • Heat 2 (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_heat2_today);"
+
+  - platform: template
+    id: daily_fog_cycles
+    name: "Cycles • Fog Fan (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_fog_today);"
+
+  - platform: template
+    id: daily_vent_cycles
+    name: "Cycles • Vent (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_vent_today);"
+
+  # Sprint-7: per-zone mister + drip cycle counters. Increments at rising
+  # edge of the underlying relay (see turn_on_zone in controls.yaml for
+  # misters; irrigation dispatch in controls.yaml section 14b for drips).
+  # Reset at local midnight via greenhouse.yaml on_time handler.
+  - platform: template
+    id: daily_mister_south_cycles
+    name: "Cycles • Mister South (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_mister_south_today);"
+
+  - platform: template
+    id: daily_mister_west_cycles
+    name: "Cycles • Mister West (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_mister_west_today);"
+
+  - platform: template
+    id: daily_mister_center_cycles
+    name: "Cycles • Mister Center (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_mister_center_today);"
+
+  - platform: template
+    id: daily_drip_wall_cycles
+    name: "Cycles • Drip Wall (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_drip_wall_today);"
+
+  - platform: template
+    id: daily_drip_center_cycles
+    name: "Cycles • Drip Center (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "cycles"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_drip_center_today);"
+
+  # --------------------------------------------------------------------------
+  # 5. RUNTIME METRICS (DIAGNOSTIC)
+  # These sensors expose the accumulated runtime of each relay (minutes since
+  # midnight).  Values reset to zero at local midnight.  Useful for duty
+  # cycle analysis and lead/lag balancing.
+  - platform: template
+    id: runtime_heat1_min
+    name: "Runtime • Heat 1 (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_heat1_ms) / 60000.0;"
+
+  - platform: template
+    id: runtime_heat2_min
+    name: "Runtime • Heat 2 (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_heat2_ms) / 60000.0;"
+
+  - platform: template
+    id: runtime_fan1_min
+    name: "Runtime • Fan 1 (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_fan1_ms) / 60000.0;"
+
+  - platform: template
+    id: runtime_fan2_min
+    name: "Runtime • Fan 2 (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_fan2_ms) / 60000.0;"
+
+  - platform: template
+    id: runtime_fog_min
+    name: "Runtime • Fog (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_fog_ms) / 60000.0;"
+
+  - platform: template
+    id: runtime_vent_min
+    name: "Runtime • Vent (min today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(runtime_vent_ms) / 60000.0;"
+
+  # --------------------------------------------------------------------------
+  # 6. CONTROL INPUTS (TIN & VPD)
+  # These sensors mirror the temperature and VPD values actually used in the
+  # control loop after applying fallback logic.  They are helpful for debugging
+  # when averages are invalid or sensors are failing.
+  - platform: template
+    id: control_tin
+    name: "Control Tin (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if(isnan(id(average_temperature).state) || isnan(id(average_humidity).state)){
+        return id(case_temperature).state;
+      }else{
+        return id(average_temperature).state;
+      }
+
+  - platform: template
+    id: control_vpd_kpa
+    name: "Control VPD (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 10s
+    lambda: |-
+      float Tin;
+      float RHin;
+      if(isnan(id(average_temperature).state) || isnan(id(average_humidity).state)){
+        Tin = id(case_temperature).state;
+        RHin = id(case_humidity).state;
+      }else{
+        Tin = id(average_temperature).state;
+        RHin = id(average_humidity).state;
+      }
+      float tc=(Tin-32.0f)*5.0f/9.0f;
+      float es=0.6108f*expf((17.27f*tc)/(tc+237.3f));
+      if(isnan(RHin)) return NAN;
+      float vpd = es*(1.0f-RHin/100.0f);
+      return vpd < 0.0f ? 0.0f : vpd;
+
+################################################################################
+# 7. CONFIGURATION / SET‑POINT OUTPUTS  – entity_category fixed to “diagnostic”
+#
+# Readback truth decision (tranche 2, #586, audit §8.9): cfg_* readbacks of
+# policy wire fields are DEVICE-CONFIRMED TRUTH — while an experiment manifest
+# is armed they report the ACTIVE policy value (verdify_policy::policy_read /
+# _read_b), i.e. exactly what the control tick consumes; while inactive they
+# report the legacy global, unchanged from pre-Lane-E behavior. The
+# cfg_first_pull_ok NAN guard applies only to the legacy path: it exists to
+# avoid echoing unconfirmed NVS defaults as registry truth, whereas an armed
+# policy value is engine truth independent of any registry push, so it is
+# never blanked (guards on migrated readbacks are `!cfg_first_pull_ok &&
+# !policy_experiment_active()`).
+################################################################################
+
+  # ─── Temperature band & hysteresis (°F) ────────────────────────────────
+  - platform: template
+    id: cfg_temp_low_f
+    name: "Cfg • Temp Low (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(target_temp_low_f);
+
+  - platform: template
+    id: cfg_temp_high_f
+    name: "Cfg • Temp High (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(target_temp_high_f);
+
+  - platform: template
+    id: cfg_stage2_heat_delta_f
+    name: "Cfg • Δ Heat S2 (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(stage2_heat_delta_f);
+
+  - platform: template
+    id: cfg_stage2_cool_delta_f
+    name: "Cfg • Δ Cool S2 (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(stage2_cool_delta_f);
+
+  - platform: template
+    id: cfg_cool_stage2_over_high_f
+    name: "Cfg • Cool S2 Over High (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f));
+
+  - platform: template
+    id: cfg_cool_exit_hysteresis_f
+    name: "Cfg • Cool Exit Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_exit_hysteresis_f, id(cool_exit_hysteresis_f));
+
+  # BC-8 (ADR0003 §6.5): on-device readback of the fan2 de-escalation hysteresis
+  # (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_cool_stage2_exit_hysteresis_f
+    name: "Cfg • Cool S2 Exit Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_exit_hysteresis_f, id(cool_stage2_exit_hysteresis_f));
+
+  # ADR-0004: on-device readback of the live control-band tracking tightness.
+  # Expected planner value is 0; NAN until the first push confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_band_track_fraction
+    name: "Cfg • Band Track Fraction"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_band_track_fraction, id(band_track_fraction));
+
+  # BC-13 (ADR0003 §6.4): on-device readback of the AI-tunable air-exchange fraction
+  # (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_vent_exchange_fraction
+    name: "Cfg • Vent Exchange Fraction"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction));
+
+  # #410 (freeze rule 6): readback for the vent+reheat held-temp dehum enable
+  # (sw_dehum_vent_hold in tunables.yaml). Ships OFF; NAN until the first push
+  # confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_dehum_vent_hold_enabled
+    name: "Cfg • Dehum Vent Hold Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(dehum_vent_hold_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_cold_vent_guard_delta_f
+    name: "Cfg • Cold Vent Guard Delta (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cold_vent_guard_delta_f, id(cold_vent_guard_delta_f));
+
+  - platform: template
+    id: cfg_cool_all_fans_at_high_enabled
+    name: "Cfg • Cool All Fans At High"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_cool_all_fans_at_high_enabled, id(cool_all_fans_at_high_enabled)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_hyst_temp_f
+    name: "Cfg • Temp Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_temp_hysteresis, id(hyst_temp_f));
+
+  # ─── VPD band & hysteresis (kPa) ───────────────────────────────────────
+  - platform: template
+    id: cfg_vpd_low_kpa
+    name: "Cfg • VPD Low (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(target_vpd_low_kpa);
+
+  - platform: template
+    id: cfg_vpd_high_kpa
+    name: "Cfg • VPD High (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(target_vpd_high_kpa);
+
+  - platform: template
+    id: cfg_hyst_vpd_kpa
+    name: "Cfg • VPD Hyst (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
+
+  - platform: template
+    id: cfg_heat_hysteresis_f
+    name: "Cfg • Heat Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_heat_hysteresis, id(heat_hysteresis_f));
+
+  - platform: template
+    id: ctl_effective_heat_target_f
+    name: "Effective Heat Target (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      validate_setpoints(sp);
+      return band_heat_target_f(sp);
+
+  - platform: template
+    id: ctl_effective_cool_stage2_delta_f
+    name: "Effective Cool Stage 2 Delta (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      sp.dC2 = id(stage2_cool_delta_f);
+      sp.cool_stage2_over_high_f = verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f));
+      sp.safety_max = id(safety_max_f);
+      validate_setpoints(sp);
+      return band_cool_stage2_delta_f(sp);
+
+  - platform: template
+    id: ctl_effective_vpd_hysteresis_kpa
+    name: "Effective VPD Hysteresis (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      sp.vpd_hysteresis = verdify_policy::policy_read(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
+      validate_setpoints(sp);
+      return band_vpd_hysteresis(sp);
+
+  - platform: template
+    id: ctl_effective_dehum_aggressive_kpa
+    name: "Effective Dehum Aggressive (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      sp.dehum_aggressive_kpa = id(dehum_aggressive_kpa);
+      validate_setpoints(sp);
+      return effective_dehum_aggressive_kpa(sp);
+
+  # ─── Feed‑forward biases (°F) ─────────────────────────────────────────-
+  - platform: template
+    id: cfg_bias_heat_f
+    name: "Cfg • Bias Heat (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(bias_heat_f);
+
+  - platform: template
+    id: cfg_bias_cool_f
+    name: "Cfg • Bias Cool (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(bias_cool_f);
+
+  # ─── Safety rails (°F & kPa) ───────────────────────────────────────────
+  - platform: template
+    id: cfg_safety_min_f
+    name: "Cfg • Safety Min (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(safety_min_f);
+
+  - platform: template
+    id: cfg_safety_max_f
+    name: "Cfg • Safety Max (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(safety_max_f);
+
+  - platform: template
+    id: cfg_safety_max_seal_margin_f
+    name: "Cfg • Safety Seal Margin (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(safety_max_seal_margin_f);
+
+  - platform: template
+    id: cfg_safety_vpd_min_kpa
+    name: "Cfg • Safety VPD Min (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(safety_vpd_min_kpa);
+
+  - platform: template
+    id: cfg_safety_vpd_max_kpa
+    name: "Cfg • Safety VPD Max (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(safety_vpd_max_kpa);
+
+  # ─── Economiser thresholds & site pressure ────────────────────────────
+  - platform: template
+    id: cfg_site_pressure_hpa
+    name: "Cfg • Site Pressure (hPa)"
+    device_class: pressure
+    unit_of_measurement: "hPa"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(site_pressure_hpa);
+
+  - platform: template
+    id: cfg_enthalpy_open_kjkg
+    name: "Cfg • Enthalpy‑Open (kJ kg‑¹)"
+    unit_of_measurement: "kJ/kg"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg));
+
+  - platform: template
+    id: cfg_enthalpy_close_kjkg
+    name: "Cfg • Enthalpy‑Close (kJ kg‑¹)"
+    unit_of_measurement: "kJ/kg"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_close, id(enthalpy_close_kjkg));
+
+  - platform: template
+    id: cfg_econ_heat_margin_f
+    name: "Cfg • Econ Heat Margin (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(econ_heat_margin_f);
+
+  # ─── Manual‑burst & control timers ─────────────────────────────────────
+  - platform: template
+    id: cfg_fan_burst_min
+    name: "Cfg • Fan Burst (min)"
+    device_class: duration
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(fan_burst_minutes);
+
+  - platform: template
+    id: cfg_vent_bypass_min
+    name: "Cfg • Vent Bypass (min)"
+    device_class: duration
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(vent_bypass_minutes);
+
+  - platform: template
+    id: cfg_fog_burst_min
+    name: "Cfg • Fog Burst (min)"
+    device_class: duration
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(fog_burst_minutes);
+
+  - platform: template
+    id: cfg_lead_rotate_timeout_s
+    name: "Cfg • Lead‑Rotate Timeout (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(lead_rotate_timeout_s);
+
+  - platform: template
+    id: cfg_fallback_window_s
+    name: "Cfg • Fallback Window (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(fallback_window_s);
+
+  # ─── Relay timing tunables (seconds) ─────────────────────────────────
+  - platform: template
+    id: cfg_min_heat_on_s
+    name: "Cfg • Min Heat ON (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_heat_on_s, id(min_heat_on_s));
+
+  - platform: template
+    id: cfg_min_heat_off_s
+    name: "Cfg • Min Heat OFF (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_heat_off_s, id(min_heat_off_s));
+
+  - platform: template
+    id: cfg_min_fan_on_s
+    name: "Cfg • Min Fan ON (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_fan_on_s, id(min_fan_on_s));
+
+  - platform: template
+    id: cfg_min_fan_off_s
+    name: "Cfg • Min Fan OFF (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_fan_off_s, id(min_fan_off_s));
+
+  # ─── Vent relay timing tunables (seconds) ─────────────────────────────
+  - platform: template
+    id: cfg_min_vent_on_s
+    name: "Cfg • Min Vent ON (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_vent_on_s, id(min_vent_on_s));
+
+  - platform: template
+    id: cfg_min_vent_off_s
+    name: "Cfg • Min Vent OFF (s)"
+    device_class: duration
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_vent_off_s, id(min_vent_off_s));
+
+  # --------------------------------------------------------------------------
+  # 8. DLI — availability-bearing interior crop evidence (B5 / ADR-008)
+  # The physical interior sensor is broken.  Keep the legacy proxy accumulator
+  # internal for forensics, but publish NAN until an operator validates a
+  # replacement sensor.  Companion text sensors below carry reason/provenance.
+  # --------------------------------------------------------------------------
+  - platform: template
+    id: dli_sensor
+    name: "DLI (mol m⁻² day⁻¹)"
+    unit_of_measurement: "mol/m²"
+    state_class: total_increasing
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: "return interior_dli_evidence(id(dli_accumulator)).value_mol_m2_day;"
+
+  # --------------------------------------------------------------------------
+  # 9. MISTER STATE MACHINE SENSORS
+  # --------------------------------------------------------------------------
+  - platform: template
+    id: mister_state_sensor
+    name: "Mister State"
+    entity_category: diagnostic
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: "return id(mister_state);"
+
+  - platform: template
+    id: mister_water_today_sensor
+    name: "Mister Water Today"
+    unit_of_measurement: "gal"
+    state_class: total
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: "return id(mister_water_today);"
+
+  - platform: template
+    id: mister_selected_zone_sensor
+    name: "Mister Selected Zone"
+    entity_category: diagnostic
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: "return id(mister_selected_zone);"
+
+  - platform: template
+    id: runtime_mister_south_min
+    name: "Mister South Wall Runtime (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "h"
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: "return id(runtime_mister_south_ms) / 3600000.0;"
+
+  - platform: template
+    id: runtime_mister_west_min
+    name: "Mister West Wall Runtime (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "h"
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: "return id(runtime_mister_west_ms) / 3600000.0;"
+
+  - platform: template
+    id: runtime_mister_center_min
+    name: "Mister Center Runtime (today)"
+    entity_category: diagnostic
+    state_class: total
+    unit_of_measurement: "h"
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: "return id(runtime_mister_center_ms) / 3600000.0;"
+
+  # Sprint-2: fairness watchdog override counter. Increments each time
+  # select_overdue_zone() chose a zone because it had been stressed for
+  # ≥10 min without firing. Reset at midnight. Expect 0–5/day if the
+  # starvation pattern observed in the 90-day audit is real; 0 if the
+  # scoring formula is already fair in practice.
+  - platform: template
+    id: mister_fairness_overrides_today
+    name: "Mister Fairness Overrides (today)"
+    entity_category: diagnostic
+    state_class: total
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: "return id(cnt_mister_fairness_overrides_today);"
+
+  - platform: template
+    id: cfg_mister_engage_kpa
+    name: "Cfg Mister Engage (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa));
+
+  - platform: template
+    id: cfg_mister_all_kpa
+    name: "Cfg Mister All (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa));
+
+  # Sprint-3: per-zone VPD target readbacks + mister scoring tunables.
+  # The setpoint dispatcher pushes vpd_target_{south,west,east,center},
+  # mister_center_penalty, east_adjacency_factor every planner cycle. Without
+  # a cfg_* readback, the ingestor's alert_monitor can't confirm the firmware
+  # applied them — every cycle produced 5 setpoint_unconfirmed alerts (3 warning
+  # + 2 critical once >15 min stale). Adding readbacks closes the confirmation
+  # loop; observed at entity_category: diagnostic with 30 s update interval.
+  - platform: template
+    id: cfg_vpd_target_south
+    name: "Cfg • VPD Target South (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(vpd_target_south);
+
+  - platform: template
+    id: cfg_vpd_target_west
+    name: "Cfg • VPD Target West (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(vpd_target_west);
+
+  - platform: template
+    id: cfg_vpd_target_east
+    name: "Cfg • VPD Target East (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(vpd_target_east);
+
+  - platform: template
+    id: cfg_vpd_target_center
+    name: "Cfg • VPD Target Center (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(vpd_target_center);
+
+  - platform: template
+    id: cfg_mister_center_penalty
+    name: "Cfg • Mister Center Penalty"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_center_penalty, id(mister_center_penalty));
+
+  - platform: template
+    id: cfg_east_adjacency_factor
+    name: "Cfg • East Adjacency Factor"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(east_adjacency_factor);
+
+  # ─── Sprint-14: close readback gaps for dispatcher-pushable params ─────────
+  # These parameters are dispatcher-pushable ESPHome numbers stored in ESP32
+  # globals, but pre-sprint-14 had no cfg_* readback sensor.
+  # Sprint-24.7 confirmation monitor can cover them once ingestor's
+  # CFG_READBACK_MAP picks them up (handoff PR).
+
+  - platform: template
+    id: cfg_d_heat_stage_2_f
+    name: "Cfg • d_heat_stage_2 (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(stage2_heat_delta_f);
+
+  - platform: template
+    id: cfg_d_cool_stage_2_f
+    name: "Cfg • d_cool_stage_2 (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(stage2_cool_delta_f);
+
+  - platform: template
+    id: cfg_vpd_watch_dwell_s
+    name: "Cfg • VPD Watch Dwell (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_vpd_watch_dwell_s, id(vpd_watch_dwell_s));
+
+  - platform: template
+    id: cfg_mister_engage_delay_s
+    name: "Cfg • Mister Engage Delay (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_engage_delay_s, id(mister_engage_delay_s));
+
+  - platform: template
+    id: cfg_mister_all_delay_s
+    name: "Cfg • Mister All Delay (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s));
+
+  - platform: template
+    id: cfg_min_fog_on_s
+    name: "Cfg • Min Fog On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_min_fog_on_s, id(min_fog_on_s));
+
+  - platform: template
+    id: cfg_min_fog_off_s
+    name: "Cfg • Min Fog Off (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s));
+
+  - platform: template
+    id: cfg_fog_escalation_kpa
+    name: "Cfg • Fog Escalation (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_fog_escalation_kpa, id(fog_escalation_kpa));
+
+  - platform: template
+    id: cfg_max_relief_cycles
+    name: "Cfg • Max Relief Cycles"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(max_relief_cycles);
+
+  - platform: template
+    id: cfg_dehum_aggressive_kpa
+    name: "Cfg • Dehum Aggressive (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(dehum_aggressive_kpa);
+
+  - platform: template
+    id: cfg_vent_latch_timeout_ms
+    name: "Cfg • Vent Latch Timeout (ms)"
+    unit_of_measurement: "ms"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(vent_latch_timeout_ms);
+
+  - platform: template
+    id: cfg_fog_rh_ceiling_pct
+    name: "Cfg • Fog RH Ceiling (%)"
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(fog_rh_ceiling_pct);
+
+  - platform: template
+    id: cfg_fog_min_temp_f
+    name: "Cfg • Fog Min Temp (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(fog_min_temp_f);
+
+  # ─── Sprint-15: summer thermal-driven vent gate readbacks ─────────
+  # 5 tunable readbacks + 2 live outdoor readings firmware compares
+  # against. Names slugify to slugs declared in the coordinator
+  # CFG_READBACK_MAP (commit e91f31e). All gated on cfg_first_pull_ok
+  # like sprint-14 cfg_* sensors.
+
+  - platform: template
+    id: cfg_vent_prefer_temp_delta_f
+    name: "Cfg • Vent Prefer Temp Delta (F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_temp_delta_f, id(vent_prefer_temp_delta_f));
+
+  - platform: template
+    id: cfg_vent_prefer_dp_delta_f
+    name: "Cfg • Vent Prefer DP Delta (F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_dp_delta_f, id(vent_prefer_dp_delta_f));
+
+  - platform: template
+    id: cfg_outdoor_staleness_max_s
+    name: "Cfg • Outdoor Staleness Max (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s));
+
+  - platform: template
+    id: cfg_summer_vent_min_runtime_s
+    name: "Cfg • Summer Vent Min Runtime (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(summer_vent_min_runtime_s);
+
+  # cfg_summer_vent_enabled — switch readback as a float (0.0/1.0) so
+  # the existing setpoint_snapshot pipe handles it like other switch
+  # tunables. Name has no • bullet so the slug is cfg_summer_vent_enabled
+  # (matches the coordinator CFG_READBACK_MAP entry exactly).
+  - platform: template
+    id: cfg_summer_vent_enabled
+    name: "Cfg Summer Vent Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_summer_vent_enabled, id(sw_summer_vent_enabled)) ? 1.0f : 0.0f;
+
+  # Periodic consumed-config samples: switch callbacks deduplicate unchanged values.
+  - platform: template
+    id: cfg_direct_wet_gate_enabled
+    name: "Cfg Direct Wet Gate Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_gate_enabled, id(direct_wet_gate_enabled)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_fog_closes_vent
+    name: "Cfg Fog Closes Vent"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_mister_closes_vent
+    name: "Cfg Mister Closes Vent"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_fsm_controller_enabled
+    name: "Cfg FSM Controller Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_fsm_controller_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_dwell_gate_enabled
+    name: "Cfg Dwell Gate Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_dwell_gate_enabled, id(sw_dwell_gate_enabled)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_dwell_gate_ms
+    name: "Cfg Dwell Gate Ms"
+    unit_of_measurement: "ms"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_dwell_gate_ms, id(dwell_gate_ms));
+
+  - platform: template
+    id: cfg_mist_backoff_s
+    name: "Cfg • Mist Backoff (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_backoff_s, id(mist_backoff_s));
+
+  # Live outdoor readings (firmware exposes the values it's actually
+  # comparing). Useful for Iris to see whether the gate is data-poor
+  # or data-rich. Gated on cfg_first_pull_ok like the rest.
+  - platform: template
+    id: cfg_outdoor_temp_f
+    name: "Cfg • Outdoor Temp (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(ha_outdoor_temp).state;
+
+  - platform: template
+    id: cfg_outdoor_dewpoint_f
+    name: "Cfg • Outdoor Dewpoint (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      // Recompute outdoor DP here from the Tempest-primary outdoor inputs so
+      // the readback reflects the same value SensorInputs uses.
+      float Tf = id(ha_outdoor_temp).state;
+      float RH = id(ha_outdoor_rh).state;
+      if (isnan(Tf) || isnan(RH) || RH <= 0.0f) return NAN;
+      float Tc = (Tf - 32.0f) * (5.0f / 9.0f);
+      float gamma = (17.27f * Tc) / (237.7f + Tc) + log(RH / 100.0f);
+      float dp_c = (237.7f * gamma) / (17.27f - gamma);
+      return dp_c * (9.0f / 5.0f) + 32.0f;
+
+  # ─── Phase 1c: fire-and-forget tunable readbacks ──────────────────
+  # 10 cfg_* sensors closing the "dispatcher pushes but firmware never
+  # echoes" gap for mister pulse, VPD-primary, and fog-escalation
+  # tunables. Gated on cfg_first_pull_ok like every other cfg_*.
+
+  - platform: template
+    id: cfg_mister_pulse_on_s
+    name: "Cfg • Mister Pulse On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_on_s, id(mister_pulse_on_s));
+
+  - platform: template
+    id: cfg_mister_pulse_gap_s
+    name: "Cfg • Mister Pulse Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s));
+
+  - platform: template
+    id: cfg_mister_min_off_s
+    name: "Cfg • Mister Min Off (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s));
+
+  - platform: template
+    id: cfg_mister_water_budget_gal
+    name: "Cfg • Mister Water Budget (gal)"
+    unit_of_measurement: "gal"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal));
+
+  - platform: template
+    id: cfg_mister_vpd_weight
+    name: "Cfg • Mister VPD Weight"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight));
+
+  - platform: template
+    id: cfg_night_vpd_bias_kpa
+    name: "Cfg Night VPD Bias kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_night_vpd_bias_kpa, id(night_vpd_bias_kpa));
+
+  - platform: template
+    id: cfg_mist_vent_close_lead_s
+    name: "Cfg • Mist Vent Close Lead (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(mist_vent_close_lead_s);
+
+  - platform: template
+    id: cfg_mist_max_closed_vent_s
+    name: "Cfg • Mist Max Closed Vent (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_max_closed_vent_s, id(mist_max_closed_vent_s));
+
+  - platform: template
+    id: cfg_mist_vent_reopen_delay_s
+    name: "Cfg • Mist Vent Reopen Delay (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(mist_vent_reopen_delay_s);
+
+  - platform: template
+    id: cfg_mist_thermal_relief_s
+    name: "Cfg • Mist Thermal Relief (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_thermal_relief_s, id(mist_thermal_relief_s));
+
+  - platform: template
+    id: cfg_gl_lux_hysteresis
+    name: "Cfg • GL Lux Hysteresis"
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_lux_hysteresis);
+
+  - platform: template
+    id: cfg_gl_main_dli_target
+    name: "Cfg GL Main DLI Target"
+    unit_of_measurement: "mol/m²/day"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_dli_target);
+
+  - platform: template
+    id: cfg_gl_main_target_light_minutes
+    name: "Cfg GL Main Target Light Minutes"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_target_light_minutes);
+
+  - platform: template
+    id: cfg_gl_main_lux_threshold
+    name: "Cfg GL Main Lux Threshold"
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_lux_threshold);
+
+  - platform: template
+    id: cfg_gl_main_lux_hysteresis
+    name: "Cfg GL Main Lux Hysteresis"
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_lux_hysteresis);
+
+  - platform: template
+    id: cfg_gl_main_sunrise_hour
+    name: "Cfg GL Main Sunrise Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunrise_hour);
+
+  - platform: template
+    id: cfg_gl_main_sunset_hour
+    name: "Cfg GL Main Sunset Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunset_hour);
+
+  - platform: template
+    id: cfg_activity_start_hour
+    name: "Cfg Activity Start Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(activity_start_hour);
+
+  - platform: template
+    id: cfg_activity_start_min
+    name: "Cfg Activity Start Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(activity_start_minute);
+
+  - platform: template
+    id: cfg_activity_duration_min
+    name: "Cfg Activity Duration Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(activity_duration_min);
+
+  - platform: template
+    id: cfg_direct_wet_min_temp_f
+    name: "Cfg Direct Wet Min Temp F"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(direct_wet_min_temp_f);
+
+  - platform: template
+    id: cfg_direct_wet_wall_start_offset_min
+    name: "Cfg • Direct Wet Wall Start Offset (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_wall_start_offset_min);
+
+  - platform: template
+    id: cfg_direct_wet_wall_drydown_before_off_min
+    name: "Cfg • Direct Wet Wall Drydown Before Off (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_wall_drydown_before_off_min);
+
+  - platform: template
+    id: cfg_direct_wet_south_start_offset_min
+    name: "Cfg Direct Wet South Start Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_south_start_offset_min);
+
+  - platform: template
+    id: cfg_direct_wet_south_drydown_before_off_min
+    name: "Cfg Direct Wet South Drydown Before Off Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_south_drydown_before_off_min);
+
+  - platform: template
+    id: cfg_direct_wet_west_start_offset_min
+    name: "Cfg Direct Wet West Start Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_west_start_offset_min);
+
+  - platform: template
+    id: cfg_direct_wet_west_drydown_before_off_min
+    name: "Cfg Direct Wet West Drydown Before Off Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_west_drydown_before_off_min);
+
+  - platform: template
+    id: cfg_direct_wet_center_start_offset_min
+    name: "Cfg Direct Wet Center Start Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_center_start_offset_min);
+
+  - platform: template
+    id: cfg_direct_wet_center_drydown_before_off_min
+    name: "Cfg Direct Wet Center Drydown Before Off Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(direct_wet_center_drydown_before_off_min);
+
+  - platform: template
+    id: cfg_direct_wet_stress_override_enabled
+    name: "Cfg Direct Wet Stress Override Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_stress_override_enabled, id(direct_wet_stress_override_enabled)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_direct_wet_stress_vpd_margin_kpa
+    name: "Cfg Direct Wet Stress VPD Margin kPa"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_vpd_margin_kpa, id(direct_wet_stress_vpd_margin_kpa));
+
+  - platform: template
+    id: cfg_direct_wet_stress_min_dew_margin_f
+    name: "Cfg Direct Wet Stress Min Dew Margin F"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f));
+
+  - platform: template
+    id: cfg_irrig_wall_start_hour
+    name: "Cfg Irrig Wall Start Hour"
+    unit_of_measurement: "h"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_start_hour);
+
+  - platform: template
+    id: cfg_irrig_wall_start_min
+    name: "Cfg Irrig Wall Start Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_start_minute);
+
+  - platform: template
+    id: cfg_irrig_wall_duration_min
+    name: "Cfg Irrig Wall Duration Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_duration_min);
+
+  - platform: template
+    id: cfg_irrig_wall_fert_duration_min
+    name: "Cfg Irrig Wall Fert Duration Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_fert_duration_min);
+
+  - platform: template
+    id: cfg_irrig_wall_fert_every_n
+    name: "Cfg Irrig Wall Fert Every N"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_fert_every_n);
+
+  - platform: template
+    id: cfg_irrig_wall_days_mask
+    name: "Cfg Irrig Wall Days Mask"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_days_mask);
+
+  - platform: template
+    id: cfg_irrig_wall_fert_days_mask
+    name: "Cfg Irrig Wall Fert Days Mask"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_fert_days_mask);
+
+  - platform: template
+    id: cfg_irrig_wall_flush_min
+    name: "Cfg Irrig Wall Flush Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_flush_min);
+
+  - platform: template
+    id: cfg_irrig_wall_interval_days
+    name: "Cfg Irrig Wall Interval Days"
+    unit_of_measurement: "d"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_wall_interval_days);
+
+  - platform: template
+    id: cfg_irrig_center_start_hour
+    name: "Cfg Irrig Center Start Hour"
+    unit_of_measurement: "h"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_start_hour);
+
+  - platform: template
+    id: cfg_irrig_center_start_min
+    name: "Cfg Irrig Center Start Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_start_minute);
+
+  - platform: template
+    id: cfg_irrig_center_duration_min
+    name: "Cfg Irrig Center Duration Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_duration_min);
+
+  - platform: template
+    id: cfg_irrig_center_fert_duration_min
+    name: "Cfg Irrig Center Fert Duration Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_fert_duration_min);
+
+  - platform: template
+    id: cfg_irrig_center_fert_every_n
+    name: "Cfg Irrig Center Fert Every N"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_fert_every_n);
+
+  - platform: template
+    id: cfg_irrig_center_days_mask
+    name: "Cfg Irrig Center Days Mask"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_days_mask);
+
+  - platform: template
+    id: cfg_irrig_center_fert_days_mask
+    name: "Cfg Irrig Center Fert Days Mask"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_fert_days_mask);
+
+  - platform: template
+    id: cfg_irrig_center_flush_min
+    name: "Cfg Irrig Center Flush Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_flush_min);
+
+  - platform: template
+    id: cfg_irrig_center_interval_days
+    name: "Cfg Irrig Center Interval Days"
+    unit_of_measurement: "d"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(irrig_center_interval_days);
+
+  # Commissioned weekly wall-feed cfg readbacks. Every value is operator-owned
+  # and planner-ineligible; zero/off is intentionally incomplete commissioning.
+  - platform: template
+    id: cfg_irrig_enabled
+    name: "Cfg Irrig Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_wall_enabled
+    name: "Cfg Irrig Wall Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_wall_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_center_enabled
+    name: "Cfg Irrig Center Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_center_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_south_enabled
+    name: "Cfg Irrig South Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_south_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_west_enabled
+    name: "Cfg Irrig West Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_west_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_wall_fertigation_commissioned
+    name: "Cfg Wall Fertigation Commissioned"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(wall_fertigation_commissioned) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_wall_commissioning_revision
+    name: "Cfg Wall Commissioning Revision"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_revision);'
+
+  - platform: template
+    id: cfg_wall_commissioning_evidence_mask
+    name: "Cfg Wall Commissioning Evidence Mask"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_evidence_mask);'
+
+  - platform: template
+    id: cfg_wall_commissioning_valid_until_epoch_s
+    name: "Cfg Wall Commissioning Valid Until Epoch S"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_valid_until_epoch_s);'
+
+  - platform: template
+    id: cfg_wall_flow_lpm
+    name: "Cfg Wall Flow LPM"
+    unit_of_measurement: "L/min"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_flow_lpm);'
+
+  - platform: template
+    id: cfg_wall_flow_valid_until_epoch_s
+    name: "Cfg Wall Flow Valid Until Epoch S"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_flow_valid_until_epoch_s);'
+
+  - platform: template
+    id: cfg_wall_prewet_liters
+    name: "Cfg Wall Prewet Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_prewet_liters);'
+
+  - platform: template
+    id: cfg_wall_feed_liters
+    name: "Cfg Wall Feed Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_feed_liters);'
+
+  - platform: template
+    id: cfg_wall_flush_liters
+    name: "Cfg Wall Flush Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_flush_liters);'
+
+  - platform: template
+    id: cfg_gl_main_min_on_s
+    name: "Cfg GL Main Min On S"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_min_on_s);
+
+  - platform: template
+    id: cfg_gl_main_min_off_s
+    name: "Cfg GL Main Min Off S"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_min_off_s);
+
+  - platform: template
+    id: cfg_gl_main_auto_mode
+    name: "Cfg GL Main Auto Mode"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_auto_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_grow_dli_target
+    name: "Cfg GL Grow DLI Target"
+    unit_of_measurement: "mol/m²/day"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_dli_target);
+
+  - platform: template
+    id: cfg_gl_grow_target_light_minutes
+    name: "Cfg GL Grow Target Light Minutes"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_target_light_minutes);
+
+  - platform: template
+    id: cfg_gl_grow_lux_threshold
+    name: "Cfg GL Grow Lux Threshold"
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_lux_threshold);
+
+  - platform: template
+    id: cfg_gl_grow_lux_hysteresis
+    name: "Cfg GL Grow Lux Hysteresis"
+    unit_of_measurement: "lx"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_lux_hysteresis);
+
+  - platform: template
+    id: cfg_gl_grow_sunrise_hour
+    name: "Cfg GL Grow Sunrise Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunrise_hour);
+
+  - platform: template
+    id: cfg_gl_grow_sunset_hour
+    name: "Cfg GL Grow Sunset Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunset_hour);
+
+  - platform: template
+    id: cfg_gl_grow_min_on_s
+    name: "Cfg GL Grow Min On S"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_min_on_s);
+
+  - platform: template
+    id: cfg_gl_grow_min_off_s
+    name: "Cfg GL Grow Min Off S"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_min_off_s);
+
+  - platform: template
+    id: cfg_gl_grow_auto_mode
+    name: "Cfg GL Grow Auto Mode"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_auto_enabled) ? 1.0f : 0.0f;
+
+  # ─── #295: per-circuit solar-phasing + dead-fixture config readbacks ───
+  # One cfg_* diagnostic per new tunable (CLAUDE.md freeze rule 6 + CI
+  # no-new-fire-and-forget). A silent push corruption surfaces here.
+  - platform: template
+    id: cfg_gl_main_solar_phasing
+    name: "Cfg GL Main Solar Phasing"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_solar_phasing) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_main_sunrise_offset_min
+    name: "Cfg GL Main Sunrise Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunrise_offset_min);
+
+  - platform: template
+    id: cfg_gl_main_sunset_offset_min
+    name: "Cfg GL Main Sunset Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunset_offset_min);
+
+  - platform: template
+    id: cfg_gl_main_out_of_service
+    name: "Cfg GL Main Out Of Service"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_out_of_service) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_grow_solar_phasing
+    name: "Cfg GL Grow Solar Phasing"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_solar_phasing) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_grow_sunrise_offset_min
+    name: "Cfg GL Grow Sunrise Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunrise_offset_min);
+
+  - platform: template
+    id: cfg_gl_grow_sunset_offset_min
+    name: "Cfg GL Grow Sunset Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunset_offset_min);
+
+  - platform: template
+    id: cfg_gl_grow_out_of_service
+    name: "Cfg GL Grow Out Of Service"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_out_of_service) ? 1.0f : 0.0f;
+
+  # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) config readbacks ───
+  # One cfg_* diagnostic per new tunable (CLAUDE.md rule 6 + CI
+  # no-new-fire-and-forget). Each reads the underlying global back so a silent
+  # push corruption surfaces. Names mirror the tunables.yaml entity ids
+  # (cfg_<entity_id>) so the readback-coverage gate matches them.
+  - platform: template
+    id: cfg_num_dawn_rehydrate_window_min
+    name: "Cfg Dawn Rehydrate Window (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_window_min);
+
+  - platform: template
+    id: cfg_num_dawn_rehydrate_on_s
+    name: "Cfg Dawn Rehydrate Pulse On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_on_s);
+
+  - platform: template
+    id: cfg_num_dawn_rehydrate_gap_s
+    name: "Cfg Dawn Rehydrate Pulse Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_gap_s);
+
+  - platform: template
+    id: cfg_sw_dawn_rehydrate_enabled_switch
+    name: "Cfg Dawn Rehydrate Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_dawn_rehydrate_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_num_midday_drench_window_min
+    name: "Cfg Midday Drench Window (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_window_min);
+
+  - platform: template
+    id: cfg_num_midday_drench_on_s
+    name: "Cfg Midday Drench Pulse On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_on_s);
+
+  - platform: template
+    id: cfg_num_midday_drench_gap_s
+    name: "Cfg Midday Drench Pulse Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_gap_s);
+
+  - platform: template
+    id: cfg_sw_midday_drench_enabled_switch
+    name: "Cfg Midday Drench Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_midday_drench_enabled) ? 1.0f : 0.0f;
+
+  # Retired fixed-clock feed-window compatibility readbacks (fixed zero).
+  - platform: template
+    id: cfg_num_feed_start_hour
+    name: "Cfg Feed Start Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(feed_start_hour);
+
+  - platform: template
+    id: cfg_num_feed_end_hour
+    name: "Cfg Feed End Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(feed_end_hour);
+
+  # (CYC-4 overnight micro-pulse readbacks + daily count DELETED in
+  # firmware-v2; the micro-pulse path is gone — contract §B4.)
+
+  # Mister pulse VPD effectiveness (updated by controls.yaml after each pulse)
+  - platform: template
+    id: mister_vpd_delta
+    name: "Mister VPD Delta"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 3
+    update_interval: never
+    icon: "mdi:water-opacity"
+
+  # SAF-1 / SF1: 1 while the indoor average probes are degraded (controller
+  # running on the case-probe/fabricated value with VPD-chasing suppressed and
+  # conservative timed wetting only); 0 when VPD control is trusted. Published
+  # on change by controls.yaml.
+  - platform: template
+    id: sensor_degraded_active
+    name: "Sensor Degraded Active"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: never
+    icon: "mdi:alert-circle-outline"
+
+  # ══════════════════════════════════════════════════════════════════════
+  # FIRMWARE-V2 cfg_* readbacks (contract §B2/§B4/§B5; CLAUDE.md rule 6)
+  # Every new band anchor, zone anchor, zone width, zone priority, and new
+  # number/switch tunable echoes its global so a silent push corruption
+  # surfaces (no-new-fire-and-forget). All gated on cfg_first_pull_ok.
+  # ══════════════════════════════════════════════════════════════════════
+
+  # ─── B2: house temperature band anchor readbacks (°F) ───
+  - platform: template
+    id: cfg_band_temp_low_sr
+    name: "Cfg • Band Temp Low SR (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_low_sr);
+
+  - platform: template
+    id: cfg_band_temp_low_sm
+    name: "Cfg • Band Temp Low SM (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_low_sm);
+
+  - platform: template
+    id: cfg_band_temp_low_ss
+    name: "Cfg • Band Temp Low SS (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_low_ss);
+
+  - platform: template
+    id: cfg_band_temp_low_mid
+    name: "Cfg • Band Temp Low Mid (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_low_mid);
+
+  - platform: template
+    id: cfg_band_temp_target_sr
+    name: "Cfg • Band Temp Target SR (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_target_sr);
+
+  - platform: template
+    id: cfg_band_temp_target_sm
+    name: "Cfg • Band Temp Target SM (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_target_sm);
+
+  - platform: template
+    id: cfg_band_temp_target_ss
+    name: "Cfg • Band Temp Target SS (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_target_ss);
+
+  - platform: template
+    id: cfg_band_temp_target_mid
+    name: "Cfg • Band Temp Target Mid (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_target_mid);
+
+  - platform: template
+    id: cfg_band_temp_high_sr
+    name: "Cfg • Band Temp High SR (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_high_sr);
+
+  - platform: template
+    id: cfg_band_temp_high_sm
+    name: "Cfg • Band Temp High SM (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_high_sm);
+
+  - platform: template
+    id: cfg_band_temp_high_ss
+    name: "Cfg • Band Temp High SS (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_high_ss);
+
+  - platform: template
+    id: cfg_band_temp_high_mid
+    name: "Cfg • Band Temp High Mid (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_temp_high_mid);
+
+  # ─── B2: house VPD band anchor readbacks (kPa) ───
+  - platform: template
+    id: cfg_band_vpd_low_sr
+    name: "Cfg • Band VPD Low SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_low_sr);
+
+  - platform: template
+    id: cfg_band_vpd_low_sm
+    name: "Cfg • Band VPD Low SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_low_sm);
+
+  - platform: template
+    id: cfg_band_vpd_low_ss
+    name: "Cfg • Band VPD Low SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_low_ss);
+
+  - platform: template
+    id: cfg_band_vpd_low_mid
+    name: "Cfg • Band VPD Low Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_low_mid);
+
+  - platform: template
+    id: cfg_band_vpd_target_sr
+    name: "Cfg • Band VPD Target SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_target_sr);
+
+  - platform: template
+    id: cfg_band_vpd_target_sm
+    name: "Cfg • Band VPD Target SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_target_sm);
+
+  - platform: template
+    id: cfg_band_vpd_target_ss
+    name: "Cfg • Band VPD Target SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_target_ss);
+
+  - platform: template
+    id: cfg_band_vpd_target_mid
+    name: "Cfg • Band VPD Target Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_target_mid);
+
+  - platform: template
+    id: cfg_band_vpd_high_sr
+    name: "Cfg • Band VPD High SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_high_sr);
+
+  - platform: template
+    id: cfg_band_vpd_high_sm
+    name: "Cfg • Band VPD High SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_high_sm);
+
+  - platform: template
+    id: cfg_band_vpd_high_ss
+    name: "Cfg • Band VPD High SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_high_ss);
+
+  - platform: template
+    id: cfg_band_vpd_high_mid
+    name: "Cfg • Band VPD High Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(band_vpd_high_mid);
+
+  # ─── B2: per-zone VPD target anchor readbacks (kPa) ───
+  - platform: template
+    id: cfg_zone_vpd_target_center_sr
+    name: "Cfg • Zone VPD Target Center SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_center_sr);
+
+  - platform: template
+    id: cfg_zone_vpd_target_center_sm
+    name: "Cfg • Zone VPD Target Center SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_center_sm);
+
+  - platform: template
+    id: cfg_zone_vpd_target_center_ss
+    name: "Cfg • Zone VPD Target Center SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_center_ss);
+
+  - platform: template
+    id: cfg_zone_vpd_target_center_mid
+    name: "Cfg • Zone VPD Target Center Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_center_mid);
+
+  - platform: template
+    id: cfg_zone_vpd_target_south_sr
+    name: "Cfg • Zone VPD Target South SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_south_sr);
+
+  - platform: template
+    id: cfg_zone_vpd_target_south_sm
+    name: "Cfg • Zone VPD Target South SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_south_sm);
+
+  - platform: template
+    id: cfg_zone_vpd_target_south_ss
+    name: "Cfg • Zone VPD Target South SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_south_ss);
+
+  - platform: template
+    id: cfg_zone_vpd_target_south_mid
+    name: "Cfg • Zone VPD Target South Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_south_mid);
+
+  - platform: template
+    id: cfg_zone_vpd_target_west_sr
+    name: "Cfg • Zone VPD Target West SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_west_sr);
+
+  - platform: template
+    id: cfg_zone_vpd_target_west_sm
+    name: "Cfg • Zone VPD Target West SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_west_sm);
+
+  - platform: template
+    id: cfg_zone_vpd_target_west_ss
+    name: "Cfg • Zone VPD Target West SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_west_ss);
+
+  - platform: template
+    id: cfg_zone_vpd_target_west_mid
+    name: "Cfg • Zone VPD Target West Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_west_mid);
+
+  - platform: template
+    id: cfg_zone_vpd_target_east_sr
+    name: "Cfg • Zone VPD Target East SR (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_east_sr);
+
+  - platform: template
+    id: cfg_zone_vpd_target_east_sm
+    name: "Cfg • Zone VPD Target East SM (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_east_sm);
+
+  - platform: template
+    id: cfg_zone_vpd_target_east_ss
+    name: "Cfg • Zone VPD Target East SS (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_east_ss);
+
+  - platform: template
+    id: cfg_zone_vpd_target_east_mid
+    name: "Cfg • Zone VPD Target East Mid (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_target_east_mid);
+
+  # ─── B2: per-zone VPD half-width readbacks (kPa) ───
+  - platform: template
+    id: cfg_zone_vpd_width_below_center
+    name: "Cfg • Zone VPD Width Below Center (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_below_center);
+
+  - platform: template
+    id: cfg_zone_vpd_width_below_south
+    name: "Cfg • Zone VPD Width Below South (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_below_south);
+
+  - platform: template
+    id: cfg_zone_vpd_width_below_west
+    name: "Cfg • Zone VPD Width Below West (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_below_west);
+
+  - platform: template
+    id: cfg_zone_vpd_width_below_east
+    name: "Cfg • Zone VPD Width Below East (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_below_east);
+
+  - platform: template
+    id: cfg_zone_vpd_width_above_center
+    name: "Cfg • Zone VPD Width Above Center (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_above_center);
+
+  - platform: template
+    id: cfg_zone_vpd_width_above_south
+    name: "Cfg • Zone VPD Width Above South (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_above_south);
+
+  - platform: template
+    id: cfg_zone_vpd_width_above_west
+    name: "Cfg • Zone VPD Width Above West (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_above_west);
+
+  - platform: template
+    id: cfg_zone_vpd_width_above_east
+    name: "Cfg • Zone VPD Width Above East (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(zone_vpd_width_above_east);
+
+  # ─── B2: per-zone priority rank readbacks ───
+  - platform: template
+    id: cfg_zone_priority_center
+    name: "Cfg • Zone Priority Center"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(zone_priority_center);
+
+  - platform: template
+    id: cfg_zone_priority_south
+    name: "Cfg • Zone Priority South"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(zone_priority_south);
+
+  - platform: template
+    id: cfg_zone_priority_west
+    name: "Cfg • Zone Priority West"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(zone_priority_west);
+
+  - platform: template
+    id: cfg_zone_priority_east
+    name: "Cfg • Zone Priority East"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(zone_priority_east);
+
+  # ─── B4/B5: new control/tunable readbacks ───
+  - platform: template
+    id: cfg_wet_taper_before_sunset_min
+    name: "Cfg • Wet Taper Before Sunset (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(wet_taper_before_sunset_min);
+
+  - platform: template
+    id: cfg_night_stress_min_dew_margin_f
+    name: "Cfg • Night Stress Min Dew Margin (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(night_stress_min_dew_margin_f);
+
+  - platform: template
+    id: cfg_dawn_boost_offset_min
+    name: "Cfg • Dawn Boost Offset (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_boost_offset_min);
+
+  - platform: template
+    id: cfg_midday_boost_offset_min
+    name: "Cfg • Midday Boost Offset (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_boost_offset_min);
+
+  - platform: template
+    id: cfg_manual_override_timeout_min
+    name: "Cfg • Manual Override Timeout (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(manual_override_timeout_min);
+
+  # ─── B2/B4: new master-switch readbacks (0/1) ───
+  - platform: template
+    id: cfg_sw_onchip_band_enabled
+    name: "Cfg On-Chip Band Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_onchip_band_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_sw_arbiter_zone_enabled
+    name: "Cfg Arbiter Zone Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_arbiter_zone_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_sw_wet_taper_enabled
+    name: "Cfg Wet Taper Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_wet_taper_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_sw_night_stress_wet_enabled
+    name: "Cfg Night Stress Wet Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_night_stress_wet_enabled) ? 1.0f : 0.0f;
+
+  # F9 (issue 5): readback for the night econ-heat suppression switch. It is
+  # ENFORCED (greenhouse_logic.h night_econ_heat_suppressed) but had no cfg_*
+  # readback — fire-and-forget. The ingestor confirm/alert loop needs this to
+  # verify the device actually holds the operator's value.
+  - platform: template
+    id: cfg_sw_night_econ_heat_suppress_enabled
+    name: "Cfg Night Econ Heat Suppress Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_night_econ_heat_suppress_enabled) ? 1.0f : 0.0f;
+
+# ─────────────────── TEXT SENSORS ──────────────────────────────────────────
+
+text_sensor:
+  - platform: template
+    id: dli_availability
+    name: "DLI Availability"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).available
+        ? "available" : "unavailable"};
+
+  - platform: template
+    id: dli_unavailable_reason
+    name: "DLI Unavailable Reason"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).unavailable_reason};
+
+  - platform: template
+    id: dli_provenance
+    name: "DLI Provenance"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).provenance};
+
+  - platform: template
+    id: dli_validity_revision
+    name: "DLI Validity Revision"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).validity_revision};
+
+  - platform: template
+    id: dli_valid_from
+    name: "DLI Valid From"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).valid_from};
+
+  - platform: template
+    id: dli_valid_to
+    name: "DLI Valid To"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).valid_to};
+
+  # Full Unix epochs exceed ESPHome sensor float precision. Publish them as
+  # strings and let the ingestor parse exact bigint values.
+  - platform: template
+    id: controller_time_epoch
+    name: "Controller Time Epoch"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      auto now = id(sntp_time).now();
+      if(!now.is_valid()) return {};
+      char buf[24];
+      snprintf(buf, sizeof(buf), "%lld", (long long)now.timestamp);
+      return {buf};
+
+  - platform: template
+    id: gl_main_decision_epoch
+    name: "GL Main Decision Epoch"
+    entity_category: diagnostic
+    update_interval: never
+
+  - platform: template
+    id: gl_grow_decision_epoch
+    name: "GL Grow Decision Epoch"
+    entity_category: diagnostic
+    update_interval: never
+
+  # A1: State machine transition logging
+  - platform: template
+    id: ts_last_transition
+    name: "Last State Transition"
+    entity_category: diagnostic
+
+  # A2: Per-probe health monitoring. Preserve the earlier 120s warning
+  # (aggregate eligibility is 300s); recent NaN/Inf values report INVALID.
+  # Case has only temperature/RH; wall probes also require their VPD field.
+  - platform: template
+    id: probe_health
+    name: "Probe Health"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      uint32_t now = millis();
+      const uint32_t STALE_MS = 120000;
+      char result[96];
+      size_t n = 0;
+      result[0] = '\0';
+      struct { const char* name; uint32_t last; bool values_finite; } probes[] = {
+        {"Case", id(last_case_ms), probe_pair_finite(id(case_temperature).state, id(case_humidity).state)},
+        {"North", id(last_north_ms), probe_triple_finite(id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state)},
+        {"West", id(last_west_ms), probe_triple_finite(id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state)},
+        {"South", id(last_south_ms), probe_triple_finite(id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state)},
+        {"East", id(last_east_ms), probe_triple_finite(id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state)}
+      };
+      bool all_ok = true;
+      auto append = [&](const char* s) {
+        while (*s != '\0' && n + 1 < sizeof(result)) {
+          result[n++] = *s++;
+        }
+        result[n] = '\0';
+      };
+      for(auto &p : probes){
+        const bool fresh = probe_sample_fresh(now, p.last, STALE_MS);
+        if(!fresh || !p.values_finite){
+          if(!all_ok) append(", ");
+          append(p.name);
+          append(fresh ? " INVALID" : " STALE");
+          all_ok = false;
+        }
+      }
+      return all_ok ? std::string("OK") : std::string(result);
+
+###############################################################################
+# END OF FILE
+###############################################################################

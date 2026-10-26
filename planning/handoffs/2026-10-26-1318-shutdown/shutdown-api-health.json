@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-10-26T13:18:03.604485+00:00",
+  "pod": "verdify-api-7fb89cdd4f-qqdvl",
+  "endpoints": {
+    "/health": {
+      "http_status": 200,
+      "status": "ok",
+      "git_sha": null,
+      "checks": {
+        "climate_age_seconds": 4,
+        "climate_action_log_age_seconds": 4,
+        "compliance_pct": 0,
+        "active_alerts_1h": 0
+      }
+    },
+    "/health/detailed": {
+      "http_status": 200,
+      "status": "ready",
+      "git_sha": "183af7a93fe236ab97f4556173a07195515b732a",
+      "checks": {
+        "db_reachable": true
+      }
+    }
+  }
+}

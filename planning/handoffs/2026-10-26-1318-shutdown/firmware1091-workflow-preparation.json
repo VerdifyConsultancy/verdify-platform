@@ -1,0 +1,19 @@
+{
+  "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+  "base": "ccc4274cb790308685110a154831480f700e95d7",
+  "template": "repo-validate-568985cdbf6b4e3f",
+  "submitted": false,
+  "compile_command_exact_from_committed_declaration": true,
+  "compile_command_sha256": "7a5ea7e8bf29e453e4861a3fb016b89b5e6697e5c80a182186f07152ba6da269",
+  "compile_image": "ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c",
+  "files": {
+    "firmware1091-native-workflow.json": {
+      "bytes": 12761,
+      "sha256": "7a34bac665c6f2b72b32bc9952064919fa62a5d36fea9aa269b6ca5a38660668"
+    },
+    "firmware1091-secretless-workflow.json": {
+      "bytes": 10008,
+      "sha256": "3b8c47cb3993b6ba14b9acd4f58b2a563b39585472bf0ce7ffa645e78642e7d9"
+    }
+  }
+}

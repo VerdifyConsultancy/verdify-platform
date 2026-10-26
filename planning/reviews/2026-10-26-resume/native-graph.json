@@ -1,0 +1,1091 @@
+{
+  "captured_at": "2026-10-26T13:15:54.320449+00:00",
+  "read_only": true,
+  "github": {
+    "data": {
+      "repository": {
+        "issues": {
+          "totalCount": 41,
+          "pageInfo": {
+            "hasNextPage": false
+          },
+          "nodes": [
+            {
+              "number": 16,
+              "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 751,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 298,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 398,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 45,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 51,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 52,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 412,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 31,
+              "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 45,
+              "title": "[C7]Commission soil and runoff feedback before enabling irrigation decisions",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 398,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 51,
+              "title": "[C7][P3] Calibrate CO2 against a real reference and publish measurement uncertainty",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 52,
+              "title": "[C7][P3] Define species-appropriate seasonal dormancy care from operator observations",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 75,
+              "title": "[C4][P2] Observability program: prove actionable health from source through device",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 563,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 394,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 89,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 671,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 49,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 950,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 951,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 952,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 953,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 835,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 862,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 963,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 964,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 965,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 976,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 980,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 981,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 317,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 297,
+              "title": "[C6]Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+              "parent": {
+                "number": 350,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 45,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 298,
+              "title": "[C7]Rebaseline actual crop, pot and probe topology before feedback control",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 299,
+              "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+              "parent": {
+                "number": 350,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 350,
+              "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 434,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 299,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 297,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 296,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 359,
+              "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 371,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 424,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 386,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 430,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 368,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 324,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 410,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 378,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 361,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 379,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 367,
+              "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+              "parent": {
+                "number": 430,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 368,
+              "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+              "parent": {
+                "number": 359,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 369,
+              "title": "[C6][P3] Remove dead tunables and code from a verified consumer inventory",
+              "parent": {
+                "number": 430,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 370,
+              "title": "[C6][P3] Consolidate equipment conflict resolution into one pure arbitration function",
+              "parent": {
+                "number": 430,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 367,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 378,
+              "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
+              "parent": {
+                "number": 359,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 785,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 386,
+              "title": "[C4][P2] Prove grow-light minimum-on behavior at the solar-window boundary",
+              "parent": {
+                "number": 359,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 390,
+              "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 419,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 398,
+              "title": "[C7]Replace stale soil threshold seeds with commissioned crop/substrate truth",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 298,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 410,
+              "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
+              "parent": {
+                "number": 359,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 412,
+              "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 430,
+              "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+              "parent": {
+                "number": 359,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 433,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 428,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 367,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 370,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 369,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 949,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 434,
+              "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
+              "parent": {
+                "number": 350,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 299,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 581,
+              "title": "[C2]Complete the bounded AI-admission pilot and publish a decision",
+              "parent": {
+                "number": 775,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 642,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 639,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 782,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 783,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 588,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 640,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 784,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 785,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 749,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 641,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 587,
+              "title": "[C1]Qualify lifecycle authority and blinded monitoring in containment",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 588,
+              "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 783,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 782,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 641,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 639,
+              "title": "[C1]Qualify the component executor, exclusivity and recovery behavior in containment",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 640,
+              "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 642,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 641,
+              "title": "[C1]Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 749,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 639,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 642,
+              "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 588,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 676,
+                    "state": "CLOSED"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 749,
+              "title": "[C1]Qualify current three-probe readiness and explicit safety dependencies",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 751,
+              "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+              "parent": {
+                "number": 16,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 775,
+              "title": "[C0]Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+              "parent": null,
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": [
+                  {
+                    "number": 778,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 779,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 780,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 781,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 581,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 644,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 427,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 75,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 218,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 359,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 214,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 350,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 16,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 174,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 14,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 638,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 586,
+                    "state": "CLOSED"
+                  },
+                  {
+                    "number": 390,
+                    "state": "OPEN"
+                  },
+                  {
+                    "number": 31,
+                    "state": "OPEN"
+                  }
+                ]
+              }
+            },
+            {
+              "number": 782,
+              "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 783,
+              "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 639,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  },
+                  {
+                    "number": 587,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 784,
+              "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 640,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 785,
+              "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
+              "parent": {
+                "number": 581,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 784,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 963,
+              "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
+              "parent": {
+                "number": 75,
+                "state": "OPEN"
+              },
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 390,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 1001,
+              "title": "[OWN] Finish Verdify transitions owned elsewhere: retire ns verdify-edge and drop D-16 hosts from the tier-1 HostRegexp",
+              "parent": null,
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 602,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "jvallery/network-infra"
+                    }
+                  },
+                  {
+                    "number": 4468,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "jvallery/agents"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 1009,
+              "title": "[AUD] Sign greenhouse ESP32 firmware and flash only reviewed archived builds: the device accepts any OTA image that carries the one static password",
+              "parent": null,
+              "blockedBy": {
+                "nodes": [
+                  {
+                    "number": 839,
+                    "state": "OPEN",
+                    "repository": {
+                      "nameWithOwner": "jvallery/network-infra"
+                    }
+                  }
+                ]
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            },
+            {
+              "number": 1010,
+              "title": "[AUD] Finish trusted client IP attribution for successful verdify-mcp calls",
+              "parent": null,
+              "blockedBy": {
+                "nodes": []
+              },
+              "subIssues": {
+                "nodes": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

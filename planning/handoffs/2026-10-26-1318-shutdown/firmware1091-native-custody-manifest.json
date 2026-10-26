@@ -1,0 +1,95 @@
+{
+  "files": [
+    {
+      "bytes": 1201,
+      "path": "baseline-execution.json",
+      "sha256": "ff5a05a2303fc39373a868ef9edcdf1ca5240a85ccb6fb40e37f09eac92701e8"
+    },
+    {
+      "bytes": 36547,
+      "path": "baseline-junit.xml",
+      "sha256": "5ae02badeb978200b16b4a658a80e2ae5df4aefddb3e7f4809b402cef093da9d"
+    },
+    {
+      "bytes": 5950,
+      "path": "baseline-pytest/probe-diagnostics0/diagnostics.cpp",
+      "sha256": "25cb7a35b240b3eef07cb5ab7a0255423c58871b6ce94e488566c25787496dfd"
+    },
+    {
+      "bytes": 819,
+      "path": "baseline-pytest/probe-diagnostics0/source-manifest.json",
+      "sha256": "255a6b7aab5b675bcc01cdd50bfc35f6fac6fc2a600519f9f856776648802afd"
+    },
+    {
+      "bytes": 19372,
+      "path": "causal-baseline.log",
+      "sha256": "84ee711bdc716e4571d6fa144563254a7d51310d48982427ebe5983329c0465e"
+    },
+    {
+      "bytes": 3765,
+      "path": "causal-baseline.py",
+      "sha256": "1cbc8682ac8ce031cfc198efd1c298aac061c11c2f87321b80ca3574eea45d06"
+    },
+    {
+      "bytes": 0,
+      "path": "committed-replay.diff.tsv",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2024,
+      "path": "committed-replay.log",
+      "sha256": "1e52ec79ec88467a2d13e2b584489cacfceaef6adf74d12fde4c7efecac3be5f"
+    },
+    {
+      "bytes": 22524,
+      "path": "current-junit.xml",
+      "sha256": "388a1a7348ebcb05979a608388a95a36d462bc51deaf516fba32b0490550ae1e"
+    },
+    {
+      "bytes": 6034,
+      "path": "current-pytest/probe-diagnostics0/diagnostics.cpp",
+      "sha256": "fad61a7c059d5f54ba4cc5b4b7dd61ad5eb20198372067a43ce5ed41ad3e60bb"
+    },
+    {
+      "bytes": 819,
+      "path": "current-pytest/probe-diagnostics0/source-manifest.json",
+      "sha256": "2b5560437e371403c3ba1771d2bfa7715f0a5610fcd1cf5dae240a311a8b802f"
+    },
+    {
+      "bytes": 160,
+      "path": "current-yaml.log",
+      "sha256": "3ca63df1dde3ba9e2d2084a8facf905367fe65246c76bc33b3d06e0024ecdfa9"
+    },
+    {
+      "bytes": 7150,
+      "path": "firmware-invariants.log",
+      "sha256": "c990dd387800a58d7e696bece879c4722be92b8f6a2b2275e388acc6e2e1a370"
+    },
+    {
+      "bytes": 1393,
+      "path": "native-summary.json",
+      "sha256": "4f9217c5fa64c83f0e68e62f03e46665fd334774852d087f71c8273347e3b80b"
+    },
+    {
+      "bytes": 140379,
+      "path": "sensors-base.yaml",
+      "sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563"
+    },
+    {
+      "bytes": 140463,
+      "path": "sensors-head.yaml",
+      "sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d"
+    },
+    {
+      "bytes": 90,
+      "path": "step-exit-codes.tsv",
+      "sha256": "f85d6c99857f106d4047294bb40ee47129c383ba26741fb1efcb445449a3edbb"
+    },
+    {
+      "bytes": 23758,
+      "path": "test-firmware.log",
+      "sha256": "d34fe7bec013246fcd18ec8b678fe45447762bb16306533ad632c5a64fa1c5b0"
+    }
+  ],
+  "total_bytes": 412448
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "verdify.finite-contributor-native/v1",
+  "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+  "base": "ccc4274cb790308685110a154831480f700e95d7",
+  "step_exit_codes": {
+    "test-firmware": 0,
+    "firmware-invariants": 0,
+    "committed-replay": 0,
+    "current-yaml": 0,
+    "causal-baseline": 0
+  },
+  "current_yaml_counts": {
+    "tests": 140,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 140
+  },
+  "sensor_source_sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d",
+  "test_source_sha256": "d3f1c3eee6ec36de76fa71c7ab704974390e49207a358cc467e1803ddd06f140",
+  "primary_checkout_sensor_unchanged": true,
+  "tracked_corpus": {
+    "path": "firmware/test/data/replay_overrides.csv.gz",
+    "bytes": 17172732,
+    "sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b"
+  },
+  "replay_outputs": {
+    "trace.old.tsv": {
+      "bytes": 16574198,
+      "sha256": "fab3140cdb39219631f9662f59722152a5e814c8525e03889ebd4cc418cd81bd"
+    },
+    "trace.new.tsv": {
+      "bytes": 16574198,
+      "sha256": "fab3140cdb39219631f9662f59722152a5e814c8525e03889ebd4cc418cd81bd"
+    },
+    "diagnostic_only.count": {
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  },
+  "physical_qualification": false,
+  "precommit_replay_claim": false,
+  "accepted": true
+}

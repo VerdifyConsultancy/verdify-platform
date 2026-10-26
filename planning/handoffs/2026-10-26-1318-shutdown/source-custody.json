@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-10-26T13:19:09.846005+00:00",
+  "branches": [
+    {
+      "path": "/Users/jason/repos/verdify-platform",
+      "head": "910562e13b0fb5c2d155b98bd8c8d6d81b65a3c8",
+      "branch": "main",
+      "status": [
+        "?? .kube/",
+        "?? planning/handoffs/"
+      ]
+    },
+    {
+      "path": "/private/tmp/verdify-finite-contributors-20261026",
+      "head": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "branch": "codex/finite-contributors-20261026",
+      "status": []
+    },
+    {
+      "path": "/private/tmp/verdify-positive-exposure-20261026",
+      "head": "c616e4702db5f3b4723f68e39ee7a408e2c4599b",
+      "branch": "codex/positive-exposure-fixture-20261026",
+      "status": []
+    },
+    {
+      "path": "/private/tmp/verdify-resume-inventory-20261026",
+      "head": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+      "branch": "codex/resume-review-inventory-20261026",
+      "status": [
+        "M LANES.md",
+        " M MILESTONES.md",
+        " M OWNERSHIP.md",
+        " M PROJECT_BOARD.md",
+        " M SPRINTS.md",
+        " M planning/DEPENDENCIES.md",
+        " M planning/backlog.yaml",
+        " M planning/issues_manifest.json",
+        "?? planning/handoffs/",
+        "?? planning/reviews/2026-10-26-resume/"
+      ]
+    },
+    {
+      "path": "/private/tmp/verdify-release-checklist-20261025",
+      "head": "b0a1020a8e74736f681281196c28b9e5f3b5b547",
+      "branch": "codex/release-checklist-current-path-20261025",
+      "status": []
+    },
+    {
+      "path": "/private/tmp/verdify-private-guard-refusals-20261025",
+      "head": "80c01fc08030afbf53522280afd1e9cc43fe2dbd",
+      "branch": "codex/private-guard-refusals-20261025",
+      "status": []
+    },
+    {
+      "path": "/private/tmp/verdify-unblocked-followthrough-20261025",
+      "head": "eda5daedfc01d4106047c5b801fa42cd5afb1f1e",
+      "branch": "codex/unblocked-graph-followthrough-20261025",
+      "status": []
+    }
+  ],
+  "original_checkout_preserved": true,
+  "no_worktree_deleted": true
+}

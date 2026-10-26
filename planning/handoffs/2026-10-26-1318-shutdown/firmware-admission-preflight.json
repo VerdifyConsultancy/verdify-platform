@@ -1,0 +1,1051 @@
+{
+  "nodes": [
+    {
+      "name": "vm-k3s-node1",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "0",
+        "cpu": "7250m",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "173571726403",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "5361876Ki",
+        "pods": "180"
+      },
+      "unschedulable": true,
+      "taints": [
+        {
+          "effect": "NoSchedule",
+          "key": "node.kubernetes.io/unschedulable",
+          "timeAdded": "2026-08-26T23:59:21Z"
+        }
+      ],
+      "conditions": {
+        "EtcdIsVoter": "True",
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node2",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "0",
+        "cpu": "7250m",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "173571726403",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "5361880Ki",
+        "pods": "180"
+      },
+      "unschedulable": true,
+      "taints": [
+        {
+          "effect": "NoSchedule",
+          "key": "node.kubernetes.io/unschedulable",
+          "timeAdded": "2026-08-26T23:59:21Z"
+        }
+      ],
+      "conditions": {
+        "EtcdIsVoter": "True",
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node3",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "0",
+        "cpu": "7250m",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "173571726403",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "5361880Ki",
+        "pods": "180"
+      },
+      "unschedulable": true,
+      "taints": [
+        {
+          "effect": "NoSchedule",
+          "key": "node.kubernetes.io/unschedulable",
+          "timeAdded": "2026-08-26T23:59:21Z"
+        }
+      ],
+      "conditions": {
+        "EtcdIsVoter": "True",
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node4",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "6",
+        "cpu": "43",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "369134377161",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "86841322960",
+        "nvidia.com/gpu": "2",
+        "pods": "250"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node5",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "5",
+        "cpu": "43",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "331690937812",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "86841315587",
+        "nvidia.com/gpu": "2",
+        "pods": "250"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node6",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "6",
+        "cpu": "43",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "271780866411",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "86841005930",
+        "nvidia.com/gpu": "1",
+        "pods": "250"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node7",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "5",
+        "cpu": "43",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "294246551058",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "84666689799",
+        "nvidia.com/gpu": "2",
+        "pods": "250"
+      },
+      "unschedulable": false,
+      "taints": [],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    },
+    {
+      "name": "vm-k3s-node8",
+      "allocatable": {
+        "agentfleet.vallery.net/arc-validation-slot": "6",
+        "cpu": "43",
+        "devices.kubevirt.io/kvm": "1k",
+        "devices.kubevirt.io/tun": "1k",
+        "devices.kubevirt.io/vhost-net": "1k",
+        "ephemeral-storage": "275525305086",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "86841326646",
+        "nvidia.com/gpu": "0",
+        "nvidia.com/node8-frigate-5070": "1",
+        "nvidia.com/node8-gpustack-4060ti": "1",
+        "pods": "250"
+      },
+      "unschedulable": false,
+      "taints": [
+        {
+          "effect": "NoSchedule",
+          "key": "dedicated",
+          "value": "frigate"
+        }
+      ],
+      "conditions": {
+        "MemoryPressure": "False",
+        "DiskPressure": "False",
+        "PIDPressure": "False",
+        "Ready": "True"
+      }
+    }
+  ],
+  "ci_pods": [
+    {
+      "name": "agent-fleet-ci-controller-watchdog-7ff689d94f-7kzcn",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "200m",
+            "memory": "256Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "64Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-agents-sensor-xdtf8-d4445ncm95",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-cortex-ai-compute-sensor-4tjn2",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-homeassistant-sensor-92vl6x9tp",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-kepler-sensor-cps5q-7cfbfmrbl2",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-network-infra-sensor-7h54bfm2n",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-options-tracker-sensor-j9bdc7x",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-storage-infra-sensor-8prfp5sx6",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-build-jvallery-weather-sensor-vktfr-7dd9c9fzm",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-fleet-event-ci-sensor-lb567-764b58fc9f-mslgz",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "256Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "argo-events-controller-manager-5979685d7f-5jmvn",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "250m",
+            "memory": "3Gi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "1Gi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "argo-workflows-server-8fc6c4467-nhxtd",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "250m",
+            "memory": "2Gi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "256Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "argo-workflows-workflow-controller-54bd98c94f-zpd4m",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "2",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "250m",
+            "memory": "2Gi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ci-platform-smoke-sensor-85v4x-7467cd4749-8mcr5",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "estate-security-report-555c888b7d-fljjk",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "250m",
+            "ephemeral-storage": "1Gi",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "25m",
+            "ephemeral-storage": "128Mi",
+            "memory": "256Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "estate-security-report-hourly-1793020440-capture-3124083622",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "500m",
+            "ephemeral-storage": "1Gi",
+            "memory": "2Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "ephemeral-storage": "128Mi",
+            "memory": "256Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eventbus-default-js-0",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "1",
+            "memory": "1536Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "512Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "200m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "64Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eventbus-default-js-1",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "1",
+            "memory": "1536Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "512Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "200m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "64Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eventbus-default-js-2",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "1",
+            "memory": "1536Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "512Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "100m",
+            "memory": "64Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "32Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "200m",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "10m",
+            "memory": "64Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "github-app-eventsource-c5m7x-64448b6d-lg8xj",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "256Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "github-app-eventsource-c5m7x-64448b6d-tw8dp",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "256Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "github-webhook-eventsource-gzc44-c86657748-jzwtc",
+      "node": "vm-k3s-node7",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "256Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "github-webhook-eventsource-gzc44-c86657748-vxclb",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "256Mi"
+          },
+          "requests": {
+            "cpu": "50m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "native-ci-controller-86456765b-9dt6q",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "1Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "250m",
+            "ephemeral-storage": "128Mi",
+            "memory": "2Gi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "registry-capacity-signal-1793020440",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "1",
+            "memory": "128Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "48Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "repo-validate-jvallery-options-tracker-d6bdc145c95f-push-report-status-489666665",
+      "node": "vm-k3s-node5",
+      "phase": "Pending",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "sunshine-club-ci-sensor-m4rvt-85f49789c9-vmpjf",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-sensor-chfmb-79ccd56c4d-wqk8x",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-ci-sl7bh-validate-1191298556",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "10Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "ephemeral-storage": "10Gi",
+            "memory": "768Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-lv49z-validate-561261324",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "10Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "ephemeral-storage": "10Gi",
+            "memory": "768Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-q9rzq-validate-1426173840",
+      "node": "vm-k3s-node6",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        },
+        {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "10Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "ephemeral-storage": "10Gi",
+            "memory": "768Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-platform-pr-ci-sensor-gvsrx-786b6657b4-dch8p",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-www-ci-sensor-l9gfc-5cb849cfd8-f5sx4",
+      "node": "vm-k3s-node4",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weather-keogram-debug",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "resources": [
+        {
+          "limits": {
+            "cpu": "2",
+            "memory": "2Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "512Mi"
+          }
+        }
+      ]
+    }
+  ],
+  "quota": [
+    {
+      "name": "agent-fleet-ci-budget",
+      "status": {
+        "hard": {
+          "limits.cpu": "108",
+          "limits.memory": "184Gi",
+          "pods": "80",
+          "requests.cpu": "56",
+          "requests.memory": "53Gi"
+        },
+        "used": {
+          "limits.cpu": "22850m",
+          "limits.memory": "33728Mi",
+          "pods": "30",
+          "requests.cpu": "2695m",
+          "requests.memory": "11024Mi"
+        }
+      }
+    },
+    {
+      "name": "agent-fleet-ci-foreign-budget",
+      "status": {
+        "hard": {
+          "limits.cpu": "52",
+          "limits.memory": "116Gi",
+          "pods": "56",
+          "requests.cpu": "14",
+          "requests.memory": "28Gi"
+        },
+        "used": {
+          "limits.cpu": "8500m",
+          "limits.memory": "14848Mi",
+          "pods": "4",
+          "requests.cpu": "2",
+          "requests.memory": "2944Mi"
+        }
+      }
+    }
+  ],
+  "template": {
+    "uid": "09f8d5e5-68bf-484e-b5a3-1181d1a1ee50",
+    "spec": {
+      "activeDeadlineSeconds": 14400,
+      "entrypoint": "validate",
+      "podGC": {
+        "deleteDelayDuration": "60s",
+        "strategy": "OnPodCompletion"
+      },
+      "serviceAccountName": "argo-ci-workflow",
+      "ttlStrategy": {
+        "secondsAfterCompletion": 86400,
+        "secondsAfterFailure": 172800
+      }
+    },
+    "templates": [
+      {
+        "name": "validate",
+        "nodeSelector": null,
+        "affinity": null,
+        "tolerations": null,
+        "resources": null,
+        "image": null
+      },
+      {
+        "name": "enforce-conclusion",
+        "nodeSelector": {
+          "agentfleet.vallery.net/runner-eligible": "true"
+        },
+        "affinity": null,
+        "tolerations": null,
+        "resources": null,
+        "image": null
+      },
+      {
+        "name": "prepare",
+        "nodeSelector": {
+          "agentfleet.vallery.net/runner-eligible": "true"
+        },
+        "affinity": null,
+        "tolerations": null,
+        "resources": null,
+        "image": null
+      },
+      {
+        "name": "run-check",
+        "nodeSelector": {
+          "agentfleet.vallery.net/runner-eligible": "true"
+        },
+        "affinity": null,
+        "tolerations": null,
+        "resources": {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "12Gi",
+            "memory": "4Gi"
+          },
+          "requests": {
+            "cpu": "500m",
+            "ephemeral-storage": "4Gi",
+            "memory": "1Gi"
+          }
+        },
+        "image": "{{inputs.parameters.image}}"
+      },
+      {
+        "name": "conclusion",
+        "nodeSelector": {
+          "agentfleet.vallery.net/runner-eligible": "true"
+        },
+        "affinity": null,
+        "tolerations": null,
+        "resources": null,
+        "image": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+  "historical_sensor_source": "ccc4274cb790308685110a154831480f700e95d7",
+  "historical_sensor_sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563",
+  "head_sensor_sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d",
+  "historical_pytest_exit_code": 1,
+  "private_worktree_restored_to_head": true,
+  "private_worktree_sensor_diff_exit_code": 0,
+  "primary_checkout_sensor_unchanged": true,
+  "selected_test_functions": [
+    "test_nonfinite_contributor_does_not_contaminate_healthy_field_peers",
+    "test_no_finite_contributor_returns_nan_only_for_that_field",
+    "test_partial_probes_keep_their_other_valid_fields_in_each_aggregate",
+    "test_aggregate_preserves_300_second_boundary_independent_of_health_warning",
+    "test_missing_timestamp_excludes_all_fields_from_that_probe",
+    "test_aggregate_freshness_boundary_survives_uint32_rollover",
+    "test_finite_recovery_rejoins_each_independent_aggregate",
+    "test_fresh_steady_and_saturated_zero_vpd_inputs_remain_eligible"
+  ],
+  "counts": {
+    "tests": 70,
+    "failed": 32,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 38
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "writer_snapshot": {
+    "captured_at": "2026-10-26T13:07:18.853289+00:00",
+    "read_only": true,
+    "argo": {
+      "sync": "Synced",
+      "health": "Healthy",
+      "revision": "ccc4274cb790308685110a154831480f700e95d7",
+      "operation": null,
+      "reconciledAt": "2026-10-26T13:06:53Z"
+    },
+    "ingestor": {
+      "name": "verdify-ingestor-7bd9494655-4kzcw",
+      "uid": "955fec0b-7ee0-4872-bc13-78e428d0e659",
+      "node": "vm-k3s-node5",
+      "phase": "Running",
+      "containers": [
+        {
+          "name": "ingestor",
+          "ready": true,
+          "restartCount": 0,
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:c10b34418daf526d33c1b0f3b1e59cddf4837814faa40e2fe6084bf4653d6aaf"
+        }
+      ]
+    },
+    "node5": {
+      "unschedulable": false,
+      "ready": "True"
+    },
+    "files": {
+      "writer-stage-state.json": {
+        "sha256": "5fee179703f55cdd31d106bbcd4c9bcc1b8aa9512a756411f23ad269fb997663",
+        "bytes": 23040,
+        "status": "halted",
+        "halt_reason": "unapproved candidate appeared",
+        "run_id": "0ae45182806445649458568603c32fdb",
+        "completed_count": 12,
+        "records_count": 0
+      },
+      "writer-policy-hold.json": {
+        "sha256": "0039439db76a46a5093e9ec1a88f18cc0416d457b0e89e09c2b102df57426435",
+        "bytes": 5269,
+        "reason": "run halted; bounded rollback available",
+        "disposition": "bounded_hold_no_dispatch",
+        "generation": 5,
+        "source_revision": "7a2b6a76adb86ee749ebaa1a70dc36f31acaff8d",
+        "field_count": 15
+      }
+    },
+    "existing_esp32_sockets": [
+      {
+        "local_hex": "93062A0A:DBAA",
+        "remote_hex": "6F0AA8C0:17A5",
+        "state": "01",
+        "inode": "1451546504"
+      }
+    ]
+  },
+  "api_snapshot": {
+    "captured_at": "2026-10-26T13:13:58.141357+00:00",
+    "endpoints": {
+      "/health": {
+        "http_status": 200,
+        "keys": [
+          "checks",
+          "status"
+        ],
+        "status": "ok",
+        "checks": {
+          "climate_age_seconds": 12,
+          "climate_action_log_age_seconds": 12,
+          "compliance_pct": 0,
+          "planner_score": 64.2,
+          "active_alerts_1h": 0,
+          "last_setpoint_change_seconds": 51179
+        },
+        "check_names": [
+          "active_alerts_1h",
+          "climate_action_log_age_seconds",
+          "climate_action_log_proof_missing",
+          "climate_age_seconds",
+          "compliance_pct",
+          "greenhouse_mode",
+          "last_setpoint_change_seconds",
+          "planner_score",
+          "service_climate_action_log",
+          "service_ingestor"
+        ]
+      },
+      "/health/detailed": {
+        "http_status": 200,
+        "keys": [
+          "build_time",
+          "checks",
+          "git_ref",
+          "git_sha",
+          "status"
+        ],
+        "status": "ready",
+        "git_sha": "183af7a93fe236ab97f4556173a07195515b732a",
+        "checks": {
+          "db_reachable": true
+        },
+        "check_names": [
+          "db_reachable"
+        ]
+      }
+    },
+    "pod": "verdify-api-7fb89cdd4f-qqdvl",
+    "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:e7216c15a50863dbd28a1ca9f6e401afb8d2a27f1845594d17b1ff619f24e3b8"
+  },
+  "telemetry_snapshot": {
+    "firmware": {
+      "ts": "2026-10-26T13:12:40.579743+00:00",
+      "version": "2026.10.2.0637.620a218a-wifi-bound"
+    },
+    "read_only": "on",
+    "captured_at": "2026-10-26T13:13:48.018965+00:00",
+    "action_latest": "2026-10-26T13:13:45.840462+00:00",
+    "climate_latest": "2026-10-26T13:13:45.840462+00:00",
+    "setpoint_snapshot_latest": "2026-10-26T13:12:48.819972+00:00"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "scope": "bounded local documentation/planning checks only",
+  "planning_schema": "pass:118 issues,9 stages,70 historical dependency edges",
+  "generated_views": "pass:seven views current",
+  "focused_planning_tests": "43 passed",
+  "diff_check": "pass",
+  "review_integrity": "41open issues,25live edges,zero closed blockers,all other acceptance/status/parent/internal dependencies preserved",
+  "native_ci_submitted": false,
+  "commit_created": false
+}

@@ -1,0 +1,252 @@
+{
+  "name": "verdify-finite-native-d7c25b0c-20261026-01",
+  "uid": "88700998-b28a-4303-8363-3cb053dfbd00",
+  "captured_at": "2026-10-26T13:18:30.211024+00:00",
+  "phase": "Succeeded",
+  "message": null,
+  "startedAt": "2026-10-26T13:14:57Z",
+  "finishedAt": "2026-10-26T13:17:56Z",
+  "pods": [
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01-conclusion-467231754",
+      "uid": "6ce80a2c-4e48-41cb-b1fc-25a4943ac380",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "main_resources": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        }
+      },
+      "statuses": [
+        {
+          "name": "main",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://2e62f8ba8a69aee809ade17ef668da5636ff4c1eaf842200debc8c1337c054db",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:31Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:17:30Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://e49f84705187441b6d08b77ff6a974feab512e35bd92f3b8a7526e85446d0947",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:32Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:17:30Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01-enforce-conclusion-904433631",
+      "uid": "66321e60-4fbf-4434-a552-2ee9b0e7788c",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "main_resources": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        }
+      },
+      "statuses": [
+        {
+          "name": "main",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://2b1c14a7115885529bd2373496b2b7b87c9abfd5658b519edde6008e4bf0a41d",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:44Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:17:43Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://4ff817cc0720ab02e54bd3163caeb9f2d32b71b699cc3b80e216b87529666608",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:44Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:17:42Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01-prepare-2976188976",
+      "uid": "5a8ddcf5-e8b3-4c28-aea8-4c2c0af79dce",
+      "node": "vm-k3s-node5",
+      "phase": "Succeeded",
+      "main_resources": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        }
+      },
+      "statuses": [
+        {
+          "name": "main",
+          "imageID": "docker.io/library/python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://feeb7e3c747b2ae10e32ca4e6b4a3dfcc6eac8c96535bdfad40b789c4c49c741",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:15:02Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:15:01Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://348aa01f52312df045d92c495a918bdd0e7cc43bfe7fe92f7d985e81061d9b48",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:15:03Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:15:00Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdify-finite-native-d7c25b0c-20261026-01-run-check-576053662",
+      "uid": "02638fd2-f38b-4e96-a42e-64ee5a7c7a27",
+      "node": "vm-k3s-node7",
+      "phase": "Succeeded",
+      "main_resources": {
+        "limits": {
+          "cpu": "2",
+          "ephemeral-storage": "12Gi",
+          "memory": "4Gi"
+        },
+        "requests": {
+          "cpu": "500m",
+          "ephemeral-storage": "4Gi",
+          "memory": "1Gi"
+        }
+      },
+      "statuses": [
+        {
+          "name": "main",
+          "imageID": "registry.vallery.net/jvallery/agents-ci-tools@sha256:7d61fca39280efb3b26419a111609f4713f3a1cc54b736a7af624fdf03c8f0e6",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://d8ef57e762fea8d36ad8a2e81d2834f02c5ec37cdde98e66e40b73671e5bed90",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:15Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:16:08Z"
+            }
+          }
+        },
+        {
+          "name": "wait",
+          "imageID": "quay.io/argoproj/argoexec@sha256:985c24ef182e066842c424f5aff5ee0a838ca359d78ee2beb415229737fa99a8",
+          "restartCount": 0,
+          "state": {
+            "terminated": {
+              "containerID": "containerd://53bc5860c9a4565e884e478cc4a7a8ae1684ac9345aedb4fc4fc980ecce57347",
+              "exitCode": 0,
+              "finishedAt": "2026-10-26T13:17:16Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-26T13:15:48Z"
+            }
+          }
+        }
+      ],
+      "log_bytes": 612959,
+      "log_sha256": "7614b57c429157ddc31351165c6482ff97390964c801852e7e3ab5fcd219d729",
+      "results": {
+        "accepted": true,
+        "base": "ccc4274cb790308685110a154831480f700e95d7",
+        "current_yaml_counts": {
+          "errors": 0,
+          "failed": 0,
+          "passed": 140,
+          "skipped": 0,
+          "tests": 140
+        },
+        "physical_qualification": false,
+        "precommit_replay_claim": false,
+        "primary_checkout_sensor_unchanged": true,
+        "replay_outputs": {
+          "diagnostic_only.count": {
+            "bytes": 2,
+            "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+          },
+          "trace.new.tsv": {
+            "bytes": 16574198,
+            "sha256": "fab3140cdb39219631f9662f59722152a5e814c8525e03889ebd4cc418cd81bd"
+          },
+          "trace.old.tsv": {
+            "bytes": 16574198,
+            "sha256": "fab3140cdb39219631f9662f59722152a5e814c8525e03889ebd4cc418cd81bd"
+          }
+        },
+        "schema": "verdify.finite-contributor-native/v1",
+        "sensor_source_sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d",
+        "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+        "step_exit_codes": {
+          "causal-baseline": 0,
+          "committed-replay": 0,
+          "current-yaml": 0,
+          "firmware-invariants": 0,
+          "test-firmware": 0
+        },
+        "test_source_sha256": "d3f1c3eee6ec36de76fa71c7ab704974390e49207a358cc467e1803ddd06f140",
+        "tracked_corpus": {
+          "bytes": 17172732,
+          "path": "firmware/test/data/replay_overrides.csv.gz",
+          "sha256": "9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b"
+        }
+      },
+      "custody_files_verified": 18,
+      "recent_output": [
+        "FIRMWARE_STRICT_RESULTS={\"accepted\": true, \"base\": \"ccc4274cb790308685110a154831480f700e95d7\", \"current_yaml_counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 140, \"skipped\": 0, \"tests\": 140}, \"physical_qualification\": false, \"precommit_replay_claim\": false, \"primary_checkout_sensor_unchanged\": true, \"replay_outputs\": {\"diagnostic_only.count\": {\"bytes\": 2, \"sha256\": \"9a271f2a916b0b6ee6cecb2426f0b3206e",
+        "check 'finite-contributor-strict-native-causal' exit_code=0",
+        "time=2026-10-26T13:17:15.928Z level=INFO msg=\"sub-process exited\" argo=true error=<nil>",
+        "time=2026-10-26T13:17:15.928Z level=INFO msg=\"no need to save parameter - on overlapping volume\" argo=true src=/workspace/result.json",
+        "time=2026-10-26T13:17:15.928Z level=INFO msg=\"no need to save parameter - on overlapping volume\" argo=true src=/workspace/ci-test-report.json",
+        "time=2026-10-26T13:17:15.928Z level=INFO msg=\"file signal handler exiting due to context cancellation\" argo=true"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "1091-pr-ci-shutdown.json": {
+    "bytes": 4120,
+    "sha256": "be7135d82eb19e18e66a7c8c6e34c276b7088eb17c271d194594dfec6771cd16"
+  },
+  "README.md": {
+    "bytes": 7725,
+    "sha256": "0b134180069b7c24e999923091f03510b84d184b5b8a393a7d53448d75201e28"
+  },
+  "firmware-admission-preflight.json": {
+    "bytes": 24440,
+    "sha256": "0424c4a348b77a22f8bb347dec2a8248f5e33d4b168bab2f6efd39b6fd799571"
+  },
+  "firmware-validation-path.md": {
+    "bytes": 5814,
+    "sha256": "c81f5f4012f21a4d5385ab50462ab6ba48b7f2f026883e85634f6c1eb70db17f"
+  },
+  "firmware1091-native-custody-manifest.json": {
+    "bytes": 2951,
+    "sha256": "d2cc9b6e1f3a8367c0cbf58452150bd12ee525c51077022468182603b9b1d12e"
+  },
+  "firmware1091-native-live-status.json": {
+    "bytes": 9441,
+    "sha256": "1f065f24e715ffff9e97c148f714713ad2e8f8cae248327ccb5879660d103222"
+  },
+  "firmware1091-native-results.json": {
+    "bytes": 1393,
+    "sha256": "1265a14904530a360d03f350e4ee50d48d2ce217ad0f2a79bcf6e5fac9680598"
+  },
+  "firmware1091-native-terminal-workflow.json": {
+    "bytes": 230236,
+    "sha256": "3b9163c5856b9d958782798c160668d4f74d907184d1f62fe4f613146130e9eb"
+  },
+  "firmware1091-workflow-preparation.json": {
+    "bytes": 788,
+    "sha256": "1d467154a70d4c99462ae7ccfc11dc5e6c79a221fe52e77aa2326f16ae3a2e2b"
+  },
+  "graph-shutdown.md": {
+    "bytes": 5160,
+    "sha256": "393816903c2368de0a36a3d9277f9292f3c78cfe9f65c03e64f6e26bdc0e791f"
+  },
+  "handoff-pr-review.md": {
+    "bytes": 4185,
+    "sha256": "f662bee82e357bbd0feddaa715a262e1afb70c62d5dbf7e92363f8a51a5a9e3b"
+  },
+  "live-writer.json": {
+    "bytes": 1662,
+    "sha256": "9847623a52b91aa6077b00fa5cb3fe358a802a844e417bb7ef9a5b8d56a98804"
+  },
+  "native-firmware-custody/baseline-execution.json": {
+    "bytes": 1201,
+    "sha256": "ff5a05a2303fc39373a868ef9edcdf1ca5240a85ccb6fb40e37f09eac92701e8"
+  },
+  "native-firmware-custody/baseline-junit.xml": {
+    "bytes": 36547,
+    "sha256": "5ae02badeb978200b16b4a658a80e2ae5df4aefddb3e7f4809b402cef093da9d"
+  },
+  "native-firmware-custody/baseline-pytest/probe-diagnostics0/diagnostics.cpp": {
+    "bytes": 5950,
+    "sha256": "25cb7a35b240b3eef07cb5ab7a0255423c58871b6ce94e488566c25787496dfd"
+  },
+  "native-firmware-custody/baseline-pytest/probe-diagnostics0/source-manifest.json": {
+    "bytes": 819,
+    "sha256": "255a6b7aab5b675bcc01cdd50bfc35f6fac6fc2a600519f9f856776648802afd"
+  },
+  "native-firmware-custody/causal-baseline.log": {
+    "bytes": 19372,
+    "sha256": "84ee711bdc716e4571d6fa144563254a7d51310d48982427ebe5983329c0465e"
+  },
+  "native-firmware-custody/causal-baseline.py": {
+    "bytes": 3765,
+    "sha256": "1cbc8682ac8ce031cfc198efd1c298aac061c11c2f87321b80ca3574eea45d06"
+  },
+  "native-firmware-custody/committed-replay.diff.tsv": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "native-firmware-custody/committed-replay.log": {
+    "bytes": 2024,
+    "sha256": "1e52ec79ec88467a2d13e2b584489cacfceaef6adf74d12fde4c7efecac3be5f"
+  },
+  "native-firmware-custody/current-junit.xml": {
+    "bytes": 22524,
+    "sha256": "388a1a7348ebcb05979a608388a95a36d462bc51deaf516fba32b0490550ae1e"
+  },
+  "native-firmware-custody/current-pytest/probe-diagnostics0/diagnostics.cpp": {
+    "bytes": 6034,
+    "sha256": "fad61a7c059d5f54ba4cc5b4b7dd61ad5eb20198372067a43ce5ed41ad3e60bb"
+  },
+  "native-firmware-custody/current-pytest/probe-diagnostics0/source-manifest.json": {
+    "bytes": 819,
+    "sha256": "2b5560437e371403c3ba1771d2bfa7715f0a5610fcd1cf5dae240a311a8b802f"
+  },
+  "native-firmware-custody/current-yaml.log": {
+    "bytes": 160,
+    "sha256": "3ca63df1dde3ba9e2d2084a8facf905367fe65246c76bc33b3d06e0024ecdfa9"
+  },
+  "native-firmware-custody/firmware-invariants.log": {
+    "bytes": 7150,
+    "sha256": "c990dd387800a58d7e696bece879c4722be92b8f6a2b2275e388acc6e2e1a370"
+  },
+  "native-firmware-custody/native-summary.json": {
+    "bytes": 1393,
+    "sha256": "4f9217c5fa64c83f0e68e62f03e46665fd334774852d087f71c8273347e3b80b"
+  },
+  "native-firmware-custody/sensors-base.yaml": {
+    "bytes": 140379,
+    "sha256": "50c40ee2f392e3432d28a109f4340b95287f19d5ff444b1f802af7701685c563"
+  },
+  "native-firmware-custody/sensors-head.yaml": {
+    "bytes": 140463,
+    "sha256": "5746602b8888c9794271e6aa5b5eab88f0bb4c90dd49fda2af63325309eedf9d"
+  },
+  "native-firmware-custody/step-exit-codes.tsv": {
+    "bytes": 90,
+    "sha256": "f85d6c99857f106d4047294bb40ee47129c383ba26741fb1efcb445449a3edbb"
+  },
+  "native-firmware-custody/test-firmware.log": {
+    "bytes": 23758,
+    "sha256": "d34fe7bec013246fcd18ec8b678fe45447762bb16306533ad632c5a64fa1c5b0"
+  },
+  "native-firmware-shutdown.md": {
+    "bytes": 4485,
+    "sha256": "e078cafde416b9509712017e2c89273e45a7f82563c17687bb36404d89112588"
+  },
+  "positive-committed-custody-plan.md": {
+    "bytes": 8769,
+    "sha256": "024b3b5746a30473985d96acab60480256490793ac7f4542340eea7b9865bb22"
+  },
+  "positive-fixture-shutdown.md": {
+    "bytes": 8424,
+    "sha256": "f6d3fb59bea93f8158495a85371c64c036274e1bcfe4e35c1438684f9e90ba31"
+  },
+  "pr1091-ci-shutdown.md": {
+    "bytes": 1621,
+    "sha256": "abf7673b413313910d2d45cd56aedf6598e0126dd43966c0b3b16adb55188fc4"
+  },
+  "shutdown-api-health.json": {
+    "bytes": 577,
+    "sha256": "56dea5ed756fa96ff0f18f08d0e4d5263da168282658567845818c213145a0b8"
+  },
+  "shutdown-nodes.json": {
+    "bytes": 4934,
+    "sha256": "969f875f953f9e91e4b2daa032f15b32524ad640a228ac130bb02cc58fbc1644"
+  },
+  "shutdown-telemetry.json": {
+    "bytes": 373,
+    "sha256": "56efc64091510410dc469e5a7dad3e04bc50b5b9b5502e4748ba8a73f0bcfbfa"
+  },
+  "shutdown-workflows.json": {
+    "bytes": 104742,
+    "sha256": "9072f57acc725881a08e01fa35582510330afb1efd8d80f2278ee2d8edb23856"
+  },
+  "shutdown-workloads.json": {
+    "bytes": 23727,
+    "sha256": "ac0cffb0fba070b2b27e4add8ec4c85effea1bc97b5822b2fcd6751a0280b6b7"
+  },
+  "source-custody.json": {
+    "bytes": 2014,
+    "sha256": "4917ed5bffdff3154fbe2181e5324bdd245e816fbb2328868f9fb4047fe8d5d1"
+  },
+  "tools/capture-shutdown.py": {
+    "bytes": 5150,
+    "sha256": "e2723c4a73c2047dee0a410684853164d60ee139bc466bd344cb7076ac557850"
+  },
+  "tools/monitor-firmware1091-native.py": {
+    "bytes": 4304,
+    "sha256": "1752a5110ba0a113847ab7136b7366e11c417b7a1e036c1f48b1746fea10ec0a"
+  },
+  "tools/read-live-writer.py": {
+    "bytes": 2653,
+    "sha256": "1621e81abb296878f1172f8ca18e68411c36116ddc37afdcc644374846becba1"
+  },
+  "unsubmitted/firmware1091-secretless-command.sh": {
+    "bytes": 8242,
+    "sha256": "7a5ea7e8bf29e453e4861a3fb016b89b5e6697e5c80a182186f07152ba6da269"
+  },
+  "unsubmitted/firmware1091-secretless-workflow.json": {
+    "bytes": 10008,
+    "sha256": "3b8c47cb3993b6ba14b9acd4f58b2a563b39585472bf0ce7ffa645e78642e7d9"
+  }
+}
