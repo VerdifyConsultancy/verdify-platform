@@ -1,0 +1,259 @@
+{
+  "schema": "verdify.passive-resume-410-386/1",
+  "observedAt": "2026-10-26T14:14:31.343565+00:00",
+  "readOnly": true,
+  "source": {
+    "observedAt": "2026-10-26T14:13:12.017406+00:00",
+    "currentMain": "119b85290ded94730abc03f45c332606d67431f4",
+    "file": "firmware/lib/greenhouse_logic.h",
+    "currentGithubBlobSha": "be4ae465f76421323f94d29f340b542cebad7a68",
+    "currentFunctionSha256": "970c2012ba557ba063799faa7a25555dd16ec0b5fb5762c9e8bdc5d674654f82",
+    "reportedFirmwareSourcePrefix": "620a218a",
+    "reportedSourceReadSucceeded": true,
+    "reportedSourceFunctionSha256": "970c2012ba557ba063799faa7a25555dd16ec0b5fb5762c9e8bdc5d674654f82",
+    "functionUnchangedSinceReportedSource": true,
+    "policyGuards": [
+      "explicit auto-disable selects auto_disabled before demand",
+      "outside solar window removes ordinary demand with outside_window",
+      "min-on hold applies only when auto_enabled and current_on and elapsed<min_on_ms"
+    ],
+    "regressionSource": "firmware/test/test_greenhouse_logic.cpp",
+    "causalRegressionNames": [
+      "lighting_solar_cutoff_holds_only_until_exact_min_on_boundary",
+      "lighting_solar_cutoff_does_not_reverse_external_manual_off",
+      "lighting_manual_auto_disable_preempts_active_min_on_hold"
+    ],
+    "limits": [
+      "Reported firmware source identity is not a fresh flash-byte hash.",
+      "Source equality and existing native regression code do not authenticate physical relay continuity."
+    ]
+  },
+  "databaseCalls": {
+    "total": 4,
+    "retries": 0,
+    "queryType": "one read-only transaction per call, rollback on normal completion",
+    "clientElapsedSecondsTotal": 9.464986,
+    "calls": [
+      {
+        "mode": "metadata",
+        "observedAt": "2026-10-26T14:09:29.747886+00:00",
+        "elapsedSeconds": 0.486443,
+        "returncode": 0,
+        "querySha256": "413a86f01753e89cd6eb9858b3a938f777190a570f6e2ff2941c7b2138f98658",
+        "queryFile": "passive-resume-410-386.metadata.sql",
+        "rawSha256": "0fa53a09ba2188ec5a38fdd1322b5e94a85da073d5929a79199c6cf8e5bb8317"
+      },
+      {
+        "mode": "getter",
+        "observedAt": "2026-10-26T14:09:41.268753+00:00",
+        "elapsedSeconds": 3.717843,
+        "returncode": 0,
+        "querySha256": "7571efa66ea949e3c73508fd2513b86ac4c1e7b25dbb383fc6dde3015370b785",
+        "queryFile": "passive-resume-410-386.getter.sql",
+        "rawSha256": "e4e21846fb5d1a29c35829579f350ef27cccf00710428e1b57492be05cb78b98"
+      },
+      {
+        "mode": "daytime",
+        "observedAt": "2026-10-26T14:10:09.607531+00:00",
+        "elapsedSeconds": 0.486083,
+        "returncode": 0,
+        "querySha256": "d85fc40c110c52a89553c34f7143a6add7e80d98a98a204acc51c7b71b19a575",
+        "queryFile": "passive-resume-410-386.daytime.sql",
+        "rawSha256": "a9b3ade5a3a6136b5ff1fcd37e175f68801ef2d315b759351a10ce8b1e3bf229"
+      },
+      {
+        "mode": "lighting",
+        "observedAt": "2026-10-26T14:11:34.661043+00:00",
+        "elapsedSeconds": 4.774617,
+        "returncode": 0,
+        "querySha256": "21368a55829424e674faa6783f27c77d07105038e278ca4600cae28defed46de",
+        "queryFile": "passive-resume-410-386.lighting.sql",
+        "rawSha256": "0cb4102b628a803a5e563c684cd1a7f9545d2460437cede195d383eddd1399e0"
+      }
+    ]
+  },
+  "issue410": {
+    "state": "OPEN",
+    "acceptedCriteriaRetained": [
+      1,
+      3
+    ],
+    "remainingCriterion": 2,
+    "periodDay": "2026-10-25",
+    "nightDate": "2026-10-25",
+    "periodCompleteAtRead": true,
+    "observedNowSolarPhase": 0.13627172036965624,
+    "nightAvailability": "no_episodes",
+    "nightEpisodes": 0,
+    "getterDefinitionSha256": "89782089fd6ae3ecfeecdfbc1b730f6ab6a272c0da7b35ef562788eddbfa42c0",
+    "daytimeCoverage": {
+      "last_solar_day_bucket": "2026-10-26T00:07:00+00:00",
+      "action_missing_minutes": 36,
+      "action_present_minutes": 610,
+      "finite_climate_minutes": 610,
+      "first_solar_day_bucket": "2026-10-25T13:22:00+00:00",
+      "climate_invalid_minutes": 0,
+      "climate_missing_minutes": 36,
+      "climate_present_minutes": 610,
+      "hold_flag_present_minutes": 610,
+      "expected_solar_day_minutes": 646,
+      "joint_retained_valid_minutes": 610,
+      "relay_field_complete_minutes": 610,
+      "decision_fields_known_minutes": 610,
+      "moisture_reason_present_minutes": 610,
+      "observed_all_dry_action_minutes": 4,
+      "observed_hold_admission_minutes": 0,
+      "missing_or_invalid_joint_minutes": 36,
+      "observed_nonhold_dry_action_minutes": 4,
+      "climate_reported_solar_phase_minutes": 610,
+      "observed_hold_candidate_marker_minutes": 0,
+      "observed_held_temperature_decision_minutes": 0
+    },
+    "completeRecordedDecisionCoverage": false,
+    "recordedDecisionZeroHeldAdmission": null,
+    "nativeGetterRepeated": false,
+    "latestNaturalCycleCandidates": [
+      {
+        "id": 6310,
+        "status": "plan_written",
+        "event_type": "SUNRISE",
+        "terminal_at": "2026-10-26T13:29:56.047319+00:00",
+        "delivered_at": "2026-10-26T13:25:40.695953+00:00",
+        "hermes_run_id": "run_195599d700174aba818652b6b710a3aa",
+        "terminal_action": "set_plan",
+        "resulting_plan_id": "iris-20261026-0725"
+      },
+      {
+        "id": 6304,
+        "status": "plan_written",
+        "event_type": "SUNSET",
+        "terminal_at": "2026-10-26T00:13:21.96579+00:00",
+        "delivered_at": "2026-10-26T00:08:10.395049+00:00",
+        "hermes_run_id": "run_946521d158464639b5865c38e94e0698",
+        "terminal_action": "set_plan",
+        "resulting_plan_id": "iris-20261025-1808"
+      }
+    ],
+    "newNaturalConsumptionTraceRetrieved": false,
+    "acceptedNaturalConsumptionReceipt": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410#issuecomment-6400035057",
+    "disposition": "Newly completed period remains incomplete; 610/646 represented valid daylight minute buckets,36missing. Zero observed held samples and4ordinary nonhold drying minutes do not establish complete-day zero. Night no_episodes is availability only, not measured zero or physical efficacy.",
+    "nextAction": "Keep ordinary collectors active; seek a genuinely complete prospective observation with an explicit source freshness/continuity contract. Reuse accepted getter and natural-consumption evidence; do not fill historical gaps or repeat model qualification."
+  },
+  "issue386": {
+    "state": "OPEN",
+    "cutoffObservations": [
+      {
+        "circuit": "main",
+        "cutoff": "2026-10-26T02:00:00+00:00",
+        "firstOffRelay": {
+          "ts": "2026-10-26T02:00:00.175863+00:00",
+          "state": false,
+          "cutoff": "2026-10-26T02:00:00+00:00",
+          "circuit": "main",
+          "equipment": "grow_light_main"
+        },
+        "firstOffState": {
+          "ts": "2026-10-26T02:00:00.206568+00:00",
+          "value": "OFF",
+          "cutoff": "2026-10-26T02:00:00+00:00",
+          "entity": "gl_main_state",
+          "circuit": "main"
+        },
+        "firstOutsideWindowReason": {
+          "ts": "2026-10-26T02:00:00.234409+00:00",
+          "value": "outside_window",
+          "cutoff": "2026-10-26T02:00:00+00:00",
+          "entity": "gl_main_reason",
+          "circuit": "main"
+        },
+        "cutoffDecisionEpoch": {
+          "ts": "2026-10-26T02:00:00.307555+00:00",
+          "value": "1792980000",
+          "cutoff": "2026-10-26T02:00:00+00:00",
+          "entity": "gl_main_decision_epoch",
+          "circuit": "main"
+        },
+        "recordedMinOnHoldRows": 0,
+        "recordedPrecutoffOnStateRows": 3,
+        "originalOnTransitionEstablished": false,
+        "activeMinimumOnOverlapEstablished": false,
+        "continuousPhysicalOnEstablished": false
+      },
+      {
+        "circuit": "grow",
+        "cutoff": "2026-10-26T04:00:00+00:00",
+        "firstOffRelay": {
+          "ts": "2026-10-26T04:00:00.761588+00:00",
+          "state": false,
+          "cutoff": "2026-10-26T04:00:00+00:00",
+          "circuit": "grow",
+          "equipment": "grow_light_grow"
+        },
+        "firstOffState": {
+          "ts": "2026-10-26T04:00:00.816098+00:00",
+          "value": "OFF",
+          "cutoff": "2026-10-26T04:00:00+00:00",
+          "entity": "gl_grow_state",
+          "circuit": "grow"
+        },
+        "firstOutsideWindowReason": {
+          "ts": "2026-10-26T04:00:00.833037+00:00",
+          "value": "outside_window",
+          "cutoff": "2026-10-26T04:00:00+00:00",
+          "entity": "gl_grow_reason",
+          "circuit": "grow"
+        },
+        "cutoffDecisionEpoch": {
+          "ts": "2026-10-26T04:00:00.882036+00:00",
+          "value": "1792987200",
+          "cutoff": "2026-10-26T04:00:00+00:00",
+          "entity": "gl_grow_decision_epoch",
+          "circuit": "grow"
+        },
+        "recordedMinOnHoldRows": 0,
+        "recordedPrecutoffOnStateRows": 3,
+        "originalOnTransitionEstablished": false,
+        "activeMinimumOnOverlapEstablished": false,
+        "continuousPhysicalOnEstablished": false
+      }
+    ],
+    "equipmentRows": 4,
+    "systemRows": 36,
+    "payloadBytes": 6947,
+    "rowCapsExceeded": false,
+    "functionUnchangedFromReportedFirmwareSource": true,
+    "reportedFirmware": {
+      "ts": "2026-10-26T14:08:17.805841+00:00",
+      "firmware_version": "2026.10.2.0637.620a218a-wifi-bound"
+    },
+    "disposition": "Two new ordinary cutoff observations agree with expected reported state/reason/epoch. Neither narrow window establishes the original ON transition or an active minimum-on overlap; physical continuity and manual/safety dominance remain unproved live.",
+    "nextAction": "Await a naturally eligible ON transition less than the declared minimum-on interval before solar cutoff, with exact original decision and authentic relay/source evidence through expiry. No forced toggle or firmware change is warranted by this packet."
+  },
+  "boundaries": {
+    "newEsp32Connections": 0,
+    "forcedActions": 0,
+    "modelCalls": 0,
+    "githubWrites": 0,
+    "clusterWrites": 0,
+    "schedulingChanges": 0,
+    "broadHistoryScans": 0,
+    "historicalRowsModified": 0
+  },
+  "interpretationNotes": [
+    "The reused getter query reports natural_scorecard_consumption_proven=false only because that query does not inspect retained Hermes traces; it does not revoke the already accepted third criterion.",
+    "Incomplete observed counts remain NULL for whole-day absence. No interpolation or bucket filling was performed.",
+    "Repeated source/state rows and source function equality are distinct from physical relay continuity and a flash-byte hash."
+  ],
+  "artifactHashes": {
+    "passive-resume-410-386.metadata.sql": "413a86f01753e89cd6eb9858b3a938f777190a570f6e2ff2941c7b2138f98658",
+    "passive-resume-410-386.getter.sql": "7571efa66ea949e3c73508fd2513b86ac4c1e7b25dbb383fc6dde3015370b785",
+    "passive-resume-410-386.daytime.sql": "d85fc40c110c52a89553c34f7143a6add7e80d98a98a204acc51c7b71b19a575",
+    "passive-resume-410-386.lighting.sql": "21368a55829424e674faa6783f27c77d07105038e278ca4600cae28defed46de",
+    "passive-resume-410-386.metadata.json": "1963f76ddc1481ec440bca61909eac28bdd75aa2997eae7ee8898c011228fec6",
+    "passive-resume-410-386.getter.json": "b43c59624f87260e4b30c71178852a70be046862468538b4ff2d25e89174e19f",
+    "passive-resume-410-386.daytime.json": "8dff7ee70a13cec16f95963f36fc8122936fb90a805cf07bb7995c6c1f80848b",
+    "passive-resume-410-386.lighting.json": "18702ccb5c608575ce25126b5aa1b4160c19df278b85f33385e08f837fc8f547",
+    "passive-resume-410-386.source.json": "60ca53949159300ab78130a0034ff145e324ec964eaf7ea9bf0e20017e265c81",
+    "passive-resume-410-386.issues.json": "d9b8bf3620da4ded193e6e9c8a154aa4a0c9a472be4b3bb679e18b99c9117d85"
+  }
+}

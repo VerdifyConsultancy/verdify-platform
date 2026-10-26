@@ -5,6 +5,7 @@ PostgreSQL toolchain resolver reuses agents verdify_campaign_ci.py at 26c275536.
 No ambient database credential/address is passed to pytest. No live device calls.
 """
 
+import datetime as dt
 import hashlib
 import json
 import os
@@ -134,6 +135,18 @@ def positive_case_qualified(case):
     bindings = proof.get("receipt_bindings", [])
     messages = proof.get("delivery", {}).get("messages", [])
     path = disposal.get("generated_cluster")
+    close = effects.get("admission_close_event", {})
+    event = close.get("event", {})
+    event_ids = close.get("preserved_event_ids", [])
+    disappearance = disposal.get("process_disappearance", {})
+    try:
+        close_started = dt.datetime.fromisoformat(close["server_started_at"])
+        transaction_started = dt.datetime.fromisoformat(close["transaction_started_at"])
+        closed_at = dt.datetime.fromisoformat(close["control_updated_at"])
+        close_finished = dt.datetime.fromisoformat(close["server_finished_at"])
+        event_recorded = dt.datetime.fromisoformat(event["recorded_at"])
+    except (KeyError, TypeError, ValueError):
+        return False
     return (
         proof.get("synthetic_only") is True
         and proof.get("physical_acceptance") is False
@@ -149,6 +162,25 @@ def positive_case_qualified(case):
         and effects.get("mode") == "committed_private_cluster_disposed"
         and effects.get("preexisting_rows_preserved_except_native_control") is True
         and effects.get("opened_immutable_rows_preserved") is True
+        and len(event_ids) == 3 + count
+        and all(isinstance(value, int) and value > 0 for value in event_ids)
+        and len(set(event_ids)) == len(event_ids)
+        and sha(close.get("opened_events_sha256"))
+        and close["opened_events_sha256"] == close.get("preserved_events_sha256")
+        and close_started.tzinfo is not None
+        and event_recorded == transaction_started
+        and close_started <= transaction_started <= closed_at <= close_finished
+        and event
+        == {
+            "event_id": max(event_ids) + 1,
+            "experiment_id": "58763900-0000-4000-8000-000000000001",
+            "assignment_id": None,
+            "event_kind": "state_transition",
+            "severity": "info",
+            "actor": "synthetic-ci/native-positive",
+            "detail": {"v2_admission": "closed", "reason": None},
+            "recorded_at": event["recorded_at"],
+        }
         and sha(effects.get("rows_before_sha256"))
         and sha(effects.get("rows_after_sha256"))
         and effects["rows_before_sha256"] != effects["rows_after_sha256"]
@@ -201,6 +233,22 @@ def positive_case_qualified(case):
         and disposal.get("host_auth_reject") is True
         and disposal.get("network_listeners_disabled") is True
         and disposal.get("original_process_gone") is True
+        and disappearance.get("original_process_gone") is True
+        and disappearance.get("timeout_seconds") == 5.0
+        and disappearance.get("sample_interval_seconds") == 0.05
+        and disappearance.get("elapsed_seconds", -1) >= 0
+        and disappearance.get("sample_count", 0) >= 1
+        and disappearance.get("read_error") is None
+        and (
+            disappearance.get("outcome") == "absent"
+            and disappearance.get("final_state") is None
+            and disappearance.get("final_start_ticks") is None
+            or disappearance.get("outcome") == "pid_reused"
+            and isinstance(disappearance.get("final_state"), str)
+            and isinstance(disappearance.get("final_start_ticks"), str)
+            and disappearance["final_start_ticks"].isdigit()
+            and disappearance["final_start_ticks"] != disposal["postmaster_start_ticks"]
+        )
         and disposal.get("socket_absent") is True
         and disposal.get("generated_directory_absent") is True
     )

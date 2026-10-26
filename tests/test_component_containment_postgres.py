@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
@@ -768,14 +769,56 @@ LIFECYCLE_LOGIN = "verdify_experiment_v2_lifecycle_login"
 EXECUTOR_LOGIN = "verdify_experiment_v2_component_executor_login"
 
 
-def _process_start(pid):
+def _process_identity(pid):
     """Exact Linux process identity; never enumerate or signal other processes."""
     try:
         # comm can contain spaces/parentheses; fields after its final ')' start
         # at field 3, and starttime is field 22.
-        return Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()[19]
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()
     except FileNotFoundError:
         return None
+    if len(fields) < 20 or not fields[19].isdigit() or len(fields[0]) != 1:
+        raise ValueError("malformed owned-process stat")
+    return {"state": fields[0], "start_ticks": fields[19]}
+
+
+def _wait_for_process_disappearance(pid, start_ticks):
+    """Bounded read-only reap wait; a matching zombie is still present."""
+    started = time.monotonic()
+    timeout, interval = 5.0, 0.05
+    deadline = started + timeout
+    samples, final, outcome = 0, None, "missing_start_identity"
+    error = None
+    if isinstance(pid, int) and pid > 1 and isinstance(start_ticks, str) and start_ticks.isdigit():
+        while True:
+            samples += 1
+            try:
+                final = _process_identity(pid)
+            except (OSError, ValueError, IndexError) as exc:
+                outcome, error = "read_error", type(exc).__name__
+                break
+            if final is None:
+                outcome = "absent"
+                break
+            if final["start_ticks"] != start_ticks:
+                outcome = "pid_reused"
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                outcome = "deadline"
+                break
+            time.sleep(min(interval, remaining))
+    return {
+        "original_process_gone": outcome in {"absent", "pid_reused"},
+        "outcome": outcome,
+        "timeout_seconds": timeout,
+        "sample_interval_seconds": interval,
+        "elapsed_seconds": time.monotonic() - started,
+        "sample_count": samples,
+        "final_state": final["state"] if final else None,
+        "final_start_ticks": final["start_ticks"] if final else None,
+        "read_error": error,
+    }
 
 
 @pytest.fixture
@@ -801,8 +844,9 @@ def committed_containment(tmp_path, monkeypatch, record_property):
         result = original_run(args, **kwargs)
         if tool == "pg_ctl" and args[-1] == "start" and result.returncode == 0:
             owned["pid"] = int((owned["path"] / "data/postmaster.pid").read_text().splitlines()[0])
-            owned["process_start"] = _process_start(owned["pid"])
-            assert owned["process_start"] is not None
+            identity = _process_identity(owned["pid"])
+            assert identity is not None
+            owned["process_start"] = identity["start_ticks"]
         if tool == "pg_ctl" and args[-1] == "stop":
             assert args[-4:] == ["-m", "fast", "-w", "stop"]
             owned["stop_returncode"] = result.returncode
@@ -824,9 +868,8 @@ def committed_containment(tmp_path, monkeypatch, record_property):
             generator.close()
         finally:
             cluster = owned.get("path")
-            original_gone = bool(owned.get("process_start")) and (
-                _process_start(owned["pid"]) != owned["process_start"]
-            )
+            disappearance = _wait_for_process_disappearance(owned.get("pid"), owned.get("process_start"))
+            original_gone = disappearance["original_process_gone"]
             disposal = {
                 "mode": "committed_private_cluster_disposed",
                 "generated_cluster": str(cluster) if cluster else None,
@@ -836,6 +879,7 @@ def committed_containment(tmp_path, monkeypatch, record_property):
                 "host_auth_reject": owned.get("host_auth_reject", False),
                 "network_listeners_disabled": owned.get("network_listeners_disabled", False),
                 "original_process_gone": original_gone,
+                "process_disappearance": disappearance,
                 "socket_absent": bool(cluster) and not (cluster / ".s.PGSQL.55472").exists(),
                 "generated_directory_absent": bool(cluster) and not cluster.exists(),
             }
@@ -997,7 +1041,7 @@ async def _positive_refusal(query, operation, expected, refusals):
     refusals.append({"message": expected, "sqlstate": "P0001", "custody_unchanged": True})
 
 
-def _positive_effect_custody(query, before, before_rows, opened_rows, trigger_before, count):
+def _positive_effect_custody(query, before, before_rows, opened_rows, trigger_before, count, admission_close):
     """Explicit committed deltas, never a false before==after rollback claim."""
     after = snapshot(query)
     after_rows = _public_rows(query)
@@ -1040,7 +1084,44 @@ def _positive_effect_custody(query, before, before_rows, opened_rows, trigger_be
             assert all(row in after_rows[name] for row in rows)
             if name not in expected_rows:
                 assert after_rows[name] == rows
-        if name not in {"control_experiments", "alert_log", "experiment_v2_exposure_closures"}:
+        if name == "experiment_events":
+            opened_events = {row["event_id"]: row for row in opened_rows[name]}
+            final_events = {row["event_id"]: row for row in after_rows[name]}
+            assert len(opened_events) == len(opened_rows[name])
+            assert len(final_events) == len(after_rows[name])
+            preserved = {key: final_events[key] for key in opened_events}
+            assert preserved == opened_events
+            appended = [row for key, row in final_events.items() if key not in opened_events]
+            assert len(appended) == 1
+            close_event = appended[0]
+            transaction_started = admission_close["transaction_started_at"]
+            closed_at = admission_close["control_updated_at"]
+            assert (
+                admission_close["server_started_at"]
+                <= transaction_started
+                <= closed_at
+                <= admission_close["server_finished_at"]
+            )
+            assert dt.datetime.fromisoformat(close_event["recorded_at"]) == transaction_started
+            assert dt.datetime.fromisoformat(after_rows["control_experiments"][0]["updated_at"]) == closed_at
+            assert close_event == {
+                "event_id": max(opened_events) + 1,
+                "experiment_id": EXP,
+                "assignment_id": None,
+                "event_kind": "state_transition",
+                "severity": "info",
+                "actor": "synthetic-ci/native-positive",
+                "detail": {"v2_admission": "closed", "reason": None},
+                "recorded_at": close_event["recorded_at"],
+            }
+            close_event_custody = {
+                "event": close_event,
+                "preserved_event_ids": sorted(opened_events),
+                "opened_events_sha256": _hash_json(opened_events),
+                "preserved_events_sha256": _hash_json(preserved),
+                **{key: value.isoformat() for key, value in admission_close.items()},
+            }
+        elif name not in {"control_experiments", "alert_log", "experiment_v2_exposure_closures"}:
             assert opened_rows[name] == after_rows[name]
     old_catalog, new_catalog = json.loads(before[1]), json.loads(after[1])
     old_sequences = {r[1]: r[2] for r in old_catalog.pop("sequences")}
@@ -1069,6 +1150,7 @@ def _positive_effect_custody(query, before, before_rows, opened_rows, trigger_be
         "sequence_deltas": sequence_deltas,
         "preexisting_rows_preserved_except_native_control": True,
         "opened_immutable_rows_preserved": True,
+        "admission_close_event": close_event_custody,
         "append_only_rows_sha256": {
             name: _hash_json(after_rows[name]) for name in expected_rows if name != "alert_log"
         },
@@ -1364,11 +1446,21 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
                     work["exposure_id"],
                     "synthetic-ci/native-positive",
                 )
-            await lifecycle.fetchval(
-                "SELECT experiment_id FROM fn_experiment_v2_set_admission($1::uuid,'closed',$2)",
+            close_started = await lifecycle.fetchval("SELECT clock_timestamp()")
+            closed = await lifecycle.fetchrow(
+                """SELECT experiment_id,updated_at,transaction_timestamp() AS transaction_started_at
+                    FROM fn_experiment_v2_set_admission($1::uuid,'closed',$2)""",
                 EXP,
                 "synthetic-ci/native-positive",
             )
+            close_finished = await lifecycle.fetchval("SELECT clock_timestamp()")
+            assert str(closed["experiment_id"]) == EXP
+            admission_close = {
+                "server_started_at": close_started,
+                "transaction_started_at": closed["transaction_started_at"],
+                "control_updated_at": closed["updated_at"],
+                "server_finished_at": close_finished,
+            }
             final = dict(
                 await owner.fetchrow("SELECT * FROM fn_experiment_v2_ops_status() WHERE experiment_id=$1", EXP)
             )
@@ -1385,7 +1477,9 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
             }
             assert resolved["disposition"] == "resolved" and resolved["resolved_by"] == "system"
             assert resolved["resolved_at"] is not None and resolved["resolution"] is not None
-            effects = _positive_effect_custody(query, before, before_rows, opened_rows, trigger_before, device_count)
+            effects = _positive_effect_custody(
+                query, before, before_rows, opened_rows, trigger_before, device_count, admission_close
+            )
             proof = {
                 "synthetic_only": True,
                 "physical_acceptance": False,

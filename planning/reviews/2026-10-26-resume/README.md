@@ -141,3 +141,28 @@ A fresh13:57UTC read still found the same ingestor Pod/image and established
 socket, node5 schedulable, Argo Synced/Healthy and unchanged halted12completed/
 zero-staged writer stage. Its dynamic ordinary policy hold had20fields.
 The writer handoff remains unsettled. All authority boundaries remain in force.
+
+## Source qualification and actual CI correction at14:30UTC
+
+PR#1091 was squash-merged at18570b0f after required PR CI, strict140case/invariant/
+replay/causal checks and both pinned ESPHome targets passed. The expected generated
+service negative and16compiler hashes were verified. These dummy-credential outputs
+remain nondeployable; installed firmware and physical-release acceptance are unchanged.
+Exact source-bound receipts are in execution-evidence/.
+
+Candidate-only#1092 merged at119b8529 with byte-identical production render; nine
+older one-digest candidate PRs were independently verified superseded and closed,
+with branches/receipts retained. No runtime rollout followed candidate bookkeeping.
+
+The first1094run completed within600s: the original19cases passed; all3positive
+cases failed on an overly strict whole-event-rowset comparison and one teardown
+observed the original process immediately after stop. The correction preserves all
+opened event IDs/content and permits exactly the native final admission event,
+bound to its transaction timestamp and returned control update between server clocks.
+It waits up to5s for exact PID/start disappearance and still rejects a surviving
+process, including a zombie. Exact counts/catalog checks and original19case bodies
+remain. Corrected native22case proof is pending; no22/22claim is made.
+
+A bounded passive refresh found Oct25daylight610/646 valid minutes,36missing;
+whole-day measured-zero staysNULL. New ordinary main/grow cutoff OFF receipts do
+not prove active minimum-on overlap or continuous physical ON. #410/#386 stay open.

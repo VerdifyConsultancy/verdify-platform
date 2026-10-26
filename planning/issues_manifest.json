@@ -153,7 +153,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "8493e8a70cee1bbb3e1777ab9ff3f54055a72f14426dc6fce200e317dc84d2bf"
+      "body_sha256": "1e91111b6cb60672abe86b089076062a64009081570e8ae44266162b6f4ea082"
     },
     {
       "key": "587",
@@ -164,7 +164,7 @@
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "5e30611bcfd51ca1832673e71343ff8fb2afed1a2a27bf97e72add8f3766b699"
+      "body_sha256": "c2a0174b330148ef4012eee00e982c377098c1e6d021a1d1870fac8fa941135e"
     },
     {
       "key": "study_design",
@@ -588,7 +588,7 @@
       "blocked_by": [
         424
       ],
-      "body_sha256": "d9f76ccdfcdeb58976d3fe96ef578ba0f27355b4257ec45f1c610a8e33f70446"
+      "body_sha256": "44dcd777168f659fbeb37cb06dd0dd8213c61ad1cb2d478d6097c3c679a2e07c"
     },
     {
       "key": "367",

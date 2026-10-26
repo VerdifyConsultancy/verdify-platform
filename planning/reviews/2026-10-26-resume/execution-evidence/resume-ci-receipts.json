@@ -1,0 +1,246 @@
+{
+  "observedAt": "2026-10-26T14:03:32.256309+00:00",
+  "readOnly": true,
+  "workflowReceipts": [
+    {
+      "name": "verdify-platform-pr-ci-q9rzq",
+      "uid": "68b41140-3e11-4abe-a961-d4b4102665d8",
+      "phase": "Succeeded",
+      "finishedAt": "2026-10-26T13:30:05Z",
+      "logFile": "verdify-platform-pr-ci-q9rzq-retained-loki.log",
+      "logSha256": "213c5580602dcff62042450f9d81c9cc5b64c48b1bd53211e21efc820933ec13",
+      "logLines": 577,
+      "logTruncatedByQuery": false,
+      "privateReports": [
+        {
+          "source": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+          "qualified": true,
+          "cases": 19,
+          "passed": 19,
+          "fixtureSha256": "7327686a2ff0f5b997216fe0e88f292531c8eb152be18bf5fcd71eb86946fdcf",
+          "nativeGuardRefusals": {
+            "test_native_epoch_refuses_missing_runtime_generation": "epoch writer/connection generations are not current",
+            "test_native_exposure_refuses_missing_observation_receipts": "exposure requires two exact complete source epochs at least 30 seconds apart"
+          },
+          "reasonCoverage": {
+            "exercised": [
+              "baseline_artifact_missing",
+              "baseline_recovery_in_progress",
+              "completed_with_incomplete_outcomes",
+              "confirmed_baseline_recovery_missing",
+              "expired_work_not_terminal",
+              "facility_emergency_hold",
+              "open_admission_without_current_work",
+              "preexposure_state_mismatch",
+              "runtime_fault_requires_recovery",
+              "terminal_experiment_capability_enabled"
+            ],
+            "retained_after_facility_closure": [
+              "preexposure_state_mismatch"
+            ],
+            "not_exercised": [
+              "multiple_open_exposures",
+              "open_exposure_observation_missing",
+              "open_exposure_observation_stale",
+              "open_exposure_state_mismatch",
+              "open_exposure_work_expired",
+              "runtime_generation_missing"
+            ],
+            "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+            "active_runtime_or_physical_acceptance": false,
+            "additional_real_delivery_credit": false
+          },
+          "file": "verdify-platform-pr-ci-q9rzq-private-report.json",
+          "sha256": "8a8024b32f21f156a5e954f2f73b5aac74cf16a7758320e3d1ccb358b8bec4c9"
+        }
+      ],
+      "validationExitZero": true
+    },
+    {
+      "name": "verdify-platform-pr-ci-lv49z",
+      "uid": "b49b9cf6-a7d5-48a5-9602-650daf6cdf80",
+      "phase": "Succeeded",
+      "finishedAt": "2026-10-26T13:26:40Z",
+      "logFile": "verdify-platform-pr-ci-lv49z-retained-loki.log",
+      "logSha256": "4946cef4c4691edb630c2d4a7d72bf0abd162e41c081fa0529242fe389189c4f",
+      "logLines": 575,
+      "logTruncatedByQuery": false,
+      "privateReports": [
+        {
+          "source": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "qualified": true,
+          "cases": 19,
+          "passed": 19,
+          "fixtureSha256": "7327686a2ff0f5b997216fe0e88f292531c8eb152be18bf5fcd71eb86946fdcf",
+          "nativeGuardRefusals": {
+            "test_native_epoch_refuses_missing_runtime_generation": "epoch writer/connection generations are not current",
+            "test_native_exposure_refuses_missing_observation_receipts": "exposure requires two exact complete source epochs at least 30 seconds apart"
+          },
+          "reasonCoverage": {
+            "exercised": [
+              "baseline_artifact_missing",
+              "baseline_recovery_in_progress",
+              "completed_with_incomplete_outcomes",
+              "confirmed_baseline_recovery_missing",
+              "expired_work_not_terminal",
+              "facility_emergency_hold",
+              "open_admission_without_current_work",
+              "preexposure_state_mismatch",
+              "runtime_fault_requires_recovery",
+              "terminal_experiment_capability_enabled"
+            ],
+            "retained_after_facility_closure": [
+              "preexposure_state_mismatch"
+            ],
+            "not_exercised": [
+              "multiple_open_exposures",
+              "open_exposure_observation_missing",
+              "open_exposure_observation_stale",
+              "open_exposure_state_mismatch",
+              "open_exposure_work_expired",
+              "runtime_generation_missing"
+            ],
+            "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+            "active_runtime_or_physical_acceptance": false,
+            "additional_real_delivery_credit": false
+          },
+          "file": "verdify-platform-pr-ci-lv49z-private-report.json",
+          "sha256": "5cd0255d7d814567b42e150235ff4de97c6d10ee692b46e50ceeb1909afedf1f"
+        }
+      ],
+      "validationExitZero": true
+    },
+    {
+      "name": "verdify-platform-ci-sl7bh",
+      "uid": "92632257-9351-4b7e-852e-6d0318351185",
+      "phase": "Succeeded",
+      "finishedAt": "2026-10-26T13:29:06Z",
+      "logFile": "verdify-platform-ci-sl7bh-retained-loki.log",
+      "logSha256": "3f819072e6f9e894c7c40887082c56490204fe820a4ddbb4d3f4b6ea2303a997",
+      "logLines": 571,
+      "logTruncatedByQuery": false,
+      "privateReports": [
+        {
+          "source": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+          "qualified": true,
+          "cases": 19,
+          "passed": 19,
+          "fixtureSha256": "7327686a2ff0f5b997216fe0e88f292531c8eb152be18bf5fcd71eb86946fdcf",
+          "nativeGuardRefusals": {
+            "test_native_epoch_refuses_missing_runtime_generation": "epoch writer/connection generations are not current",
+            "test_native_exposure_refuses_missing_observation_receipts": "exposure requires two exact complete source epochs at least 30 seconds apart"
+          },
+          "reasonCoverage": {
+            "exercised": [
+              "baseline_artifact_missing",
+              "baseline_recovery_in_progress",
+              "completed_with_incomplete_outcomes",
+              "confirmed_baseline_recovery_missing",
+              "expired_work_not_terminal",
+              "facility_emergency_hold",
+              "open_admission_without_current_work",
+              "preexposure_state_mismatch",
+              "runtime_fault_requires_recovery",
+              "terminal_experiment_capability_enabled"
+            ],
+            "retained_after_facility_closure": [
+              "preexposure_state_mismatch"
+            ],
+            "not_exercised": [
+              "multiple_open_exposures",
+              "open_exposure_observation_missing",
+              "open_exposure_observation_stale",
+              "open_exposure_state_mismatch",
+              "open_exposure_work_expired",
+              "runtime_generation_missing"
+            ],
+            "scope": "private negative preconditions, current SQL projection and capture-only alert lifecycle",
+            "active_runtime_or_physical_acceptance": false,
+            "additional_real_delivery_credit": false
+          },
+          "file": "verdify-platform-ci-sl7bh-private-report.json",
+          "sha256": "512228052b86eb491262186887e4bd473c6c31e9089b4e6ac232dcafad46e8b6"
+        }
+      ],
+      "validationExitZero": true
+    }
+  ],
+  "commitStatuses": {
+    "pr1091": {
+      "sha": "d7c25b0c620d537d56f938302d8be236a4d46fbb",
+      "state": "success",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "success",
+          "description": "Verdify Platform in-cluster PR validation passed",
+          "created_at": "2026-10-26T13:29:54Z",
+          "updated_at": "2026-10-26T13:29:54Z",
+          "target_url": null
+        }
+      ]
+    },
+    "main_ca9120fa": {
+      "sha": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+      "state": "success",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "success",
+          "description": "Verdify Platform in-cluster main validation passed",
+          "created_at": "2026-10-26T13:26:28Z",
+          "updated_at": "2026-10-26T13:26:28Z",
+          "target_url": null
+        }
+      ]
+    },
+    "candidate1092": {
+      "sha": "5a6f50bd7b819d55621ad9f5f8d87582ecb5ea53",
+      "state": "success",
+      "statuses": [
+        {
+          "context": "Verdify Platform / Argo PR CI",
+          "state": "success",
+          "description": "Verdify Platform in-cluster PR validation passed",
+          "created_at": "2026-10-26T13:46:24Z",
+          "updated_at": "2026-10-26T13:46:24Z",
+          "target_url": null
+        }
+      ]
+    }
+  },
+  "currentMain": "a19824dfd8ed5f46d35c4074b20084d1f00c3c2b",
+  "sourceToCurrentMain": {
+    "status": "ahead",
+    "ahead_by": 1,
+    "behind_by": 0,
+    "files": [
+      "AGENTS.md"
+    ]
+  },
+  "candidate": {
+    "number": 1092,
+    "url": "https://github.com/VerdifyConsultancy/verdify-platform/pull/1092",
+    "head": "5a6f50bd7b819d55621ad9f5f8d87582ecb5ea53",
+    "state": "OPEN",
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "sourceRevision": "ca9120fa308c77b2c71054758d0ca143428bdea6",
+    "sourceWorkflowUid": "92632257-9351-4b7e-852e-6d0318351185",
+    "pinSetSha256": "ab8df6f2378aa0f7e440ad99d8f5ea1cfaf233f6de680ec1281d311d87d0bc31",
+    "changedFiles": [
+      "deploy/k8s/overlays/prod/kustomization.yaml"
+    ],
+    "changedImages": [
+      "verdify-ingestor"
+    ],
+    "digest": "sha256:8cff4ca0bb17cda577c07b0984c849a3e3264cfc2746ad83a2edfdc28c0ae142",
+    "releasePinsChanged": false
+  },
+  "limitations": [
+    "No CI retry, job submission, merge, rebase, deployment, ESP32 connection or node action performed.",
+    "Workflow Pods were garbage collected; complete retained logs and private JSON were recovered from existing Loki streams through the Kubernetes service proxy.",
+    "Private fixture proof is synthetic-only; no production, historical-prefix, physical or additional Slack delivery credit.",
+    "This receipt does not independently re-run or requalify firmware compilation; strict native workflow 88700998 is preserved separately and was not rerun."
+  ]
+}
