@@ -20,7 +20,10 @@ RUN set -eux; \
     test ! -e /usr/local/bin/timescaledb-tune; \
     test -e /usr/local/lib/postgresql/timescaledb-2.25.2.so; \
     postgres --version | grep -q ' 16\.11'; \
-    apk version -t "$(apk info -v libssl3 2>/dev/null | sed -n 's/^libssl3-//p' | head -n1)" 3.3.7-r0 | grep -q '[=>]'; \
-    apk version -t "$(apk info -v libcrypto3 2>/dev/null | sed -n 's/^libcrypto3-//p' | head -n1)" 3.3.7-r0 | grep -q '[=>]'
+    for pkg in libssl3 libcrypto3; do \
+        v="$(apk list --installed "$pkg" | awk '{print $1}' | sed "s/^$pkg-//")"; \
+        test -n "$v"; \
+        apk version -t "$v" 3.3.7-r0 | grep -q '[=>]'; \
+    done
 
 ENV NO_TS_TUNE=true
