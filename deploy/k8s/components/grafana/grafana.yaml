@@ -304,7 +304,7 @@ spec:
         # /render/d-solo PNG embeds on lab.verdify.ai. grafana-image-renderer,
         # pinned (UPSTREAM image; not transformer-rewritten).
         - name: renderer
-          image: grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986
+          image: grafana/grafana-image-renderer:v5.12.9@sha256:24df1663f600abc6daa8ef006a0749c1d8f532e43a4542baf55ba15c5a3eaeac
           ports:
             - name: renderer
               containerPort: 8081
