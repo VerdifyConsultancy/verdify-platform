@@ -1,0 +1,26 @@
+# Derived TimescaleDB runtime for verdify-prod (fleet control-plane #5787, Wave 2.5 item 1.1).
+#
+# Same PostgreSQL 16.11 and TimescaleDB 2.25.2 as the upstream image it replaces
+# (timescale/timescaledb:2.25.2-pg16, the linux/amd64 manifest pinned below), so the
+# live data directory and extension version do not change. Two changes only:
+#   * Remove the bundled Go tools timescaledb-parallel-copy and timescaledb-tune
+#     (Critical findings in Go stdlib 1.22.4/1.24.6 and pgx v5.7.2). Nothing in this
+#     repository runs either one. NO_TS_TUNE=true makes a fresh initdb skip the
+#     upstream 001_timescaledb_tune.sh script instead of calling the removed binary.
+#   * Upgrade OpenSSL (libssl3/libcrypto3) to the Alpine 3.21 security release
+#     (CVE-2026-31789, fixed in 3.3.7-r0).
+# Built in-cluster by the repo-build-verdifyconsultancy Kaniko workflow and pinned by
+# digest in deploy/k8s/overlays/prod/kustomization.yaml.
+FROM docker.io/timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140
+
+RUN set -eux; \
+    apk upgrade --no-cache libssl3 libcrypto3; \
+    rm -f /usr/local/bin/timescaledb-parallel-copy /usr/local/bin/timescaledb-tune; \
+    test ! -e /usr/local/bin/timescaledb-parallel-copy; \
+    test ! -e /usr/local/bin/timescaledb-tune; \
+    test -e /usr/local/lib/postgresql/timescaledb-2.25.2.so; \
+    postgres --version | grep -q ' 16\.11'; \
+    apk version -t "$(apk info -v libssl3 2>/dev/null | sed -n 's/^libssl3-//p' | head -n1)" 3.3.7-r0 | grep -q '[=>]'; \
+    apk version -t "$(apk info -v libcrypto3 2>/dev/null | sed -n 's/^libcrypto3-//p' | head -n1)" 3.3.7-r0 | grep -q '[=>]'
+
+ENV NO_TS_TUNE=true
