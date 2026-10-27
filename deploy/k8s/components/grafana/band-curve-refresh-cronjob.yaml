@@ -49,6 +49,9 @@ spec:
                       matchLabels:
                         app.kubernetes.io/component: db
                     topologyKey: kubernetes.io/hostname
+          # Derived TimescaleDB image on the zot origin (fleet control-plane #5787).
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -57,7 +60,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: refresh
-              image: timescale/timescaledb:2.25.2-pg16@sha256:5d523957b04041e1c8dc776dd086a2d68fd1ebc9d4ac3e948b65f02c88550140
+              image: registry.vallery.net/verdifyconsultancy/verdify-timescaledb@sha256:05f59252c3bb8e439b0b41d62a1dea6067efab4bd6193998319fcfb561408a66
               securityContext:
                 allowPrivilegeEscalation: false
                 runAsNonRoot: true
