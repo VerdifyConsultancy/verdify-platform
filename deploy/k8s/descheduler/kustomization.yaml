@@ -1,5 +1,8 @@
 # VP-01 (#802): the manual verdify-descheduler Argo Application owns exactly
-# these eight existing objects, including namespace adoption under #995.
+# these six existing objects, including namespace adoption under #995.
+# The cluster-scoped ClusterRole/ClusterRoleBinding verdify-descheduler moved to
+# the fleet control plane (fleet control-plane #5794): a tenant repo may not
+# grant cluster RBAC.
 # Agents owns the exact Application pin and AppProject. Existing namespace
 # labels are preserved; STAGED-rebalanceable-labels-patch.yaml stays historical.
 # See descheduler-arm.md for adoption, verification and the non-cascading inverse.

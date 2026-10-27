@@ -16,56 +16,6 @@ metadata:
   labels:
     app.kubernetes.io/name: descheduler
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: verdify-descheduler
-  labels:
-    app.kubernetes.io/name: descheduler
-rules:
-  - apiGroups: ["events.k8s.io"]
-    resources: ["events"]
-    verbs: ["create", "update"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "watch", "list", "delete"]
-  - apiGroups: [""]
-    resources: ["pods/eviction"]
-    verbs: ["create"]
-  # PVC read is required because the DefaultEvictor ignorePvcPods:true filter and
-  # evictLocalStoragePods:false need to resolve a pod's PVC/volume bindings; the
-  # descheduler starts a PVC informer at boot. Read-only, cluster scope.
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: ["scheduling.k8s.io"]
-    resources: ["priorityclasses"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "watch", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: verdify-descheduler
-  labels:
-    app.kubernetes.io/name: descheduler
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: verdify-descheduler
-subjects:
-  - kind: ServiceAccount
-    name: descheduler
-    namespace: verdify-descheduler
----
 # Namespaced Role for the descheduler's own leader-election lease (CronJob
 # concurrency lock); scoped to its own namespace only.
 apiVersion: rbac.authorization.k8s.io/v1
