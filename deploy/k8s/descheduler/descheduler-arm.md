@@ -1,5 +1,7 @@
 # Descheduler ownership and attended adoption (#802)
 
+> **2026-10-27 (fleet control-plane #5794):** this source now renders six objects. The cluster-scoped ClusterRole and ClusterRoleBinding `verdify-descheduler` moved to a fleet control-plane-owned source with an identical spec, because a tenant repository may not grant cluster RBAC. The eight-object procedure below is history.
+
 The source runs in enforce mode, matching the live CronJob since #234 GATE 6
 (2026-06-08). It runs hourly at `15 * * * *`, with exactly these arguments:
 
