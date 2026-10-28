@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.7
 # One non-actuating image; Kubernetes selects lifecycle, selector, or freezer.
-FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS builder
+FROM python:3.13-slim@sha256:b3575dcf816cdacc5292df77a6e3e59b8941631078373a045efa2ac1e9c5c3b2 AS builder
 
 WORKDIR /build
 COPY experiment_orchestrator/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS runtime
+FROM python:3.13-slim@sha256:b3575dcf816cdacc5292df77a6e3e59b8941631078373a045efa2ac1e9c5c3b2 AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && apt-get clean \
