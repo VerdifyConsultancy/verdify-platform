@@ -1,7 +1,8 @@
 # Tier-2 Verdify Traefik — Deployment + Service (D7 two-tier edge).
 #
 # Pinned to the SAME Traefik version as the shared apps Traefik (docker.io/traefik
-# :v3.7.1, observed live 2026-06-07) so CRD schema + behaviour match exactly.
+# :v3.7.16@sha256:c8a121e4, the traefik-apps digest since 2026-10) so CRD schema and
+# behaviour match exactly. First pinned to :v3.7.1 (observed live 2026-06-07).
 #
 # Provider scope (the load-bearing isolation):
 #   - kubernetescrd ONLY, namespaces=verdify-prod, labelselector traefik-tier=verdify.
@@ -79,7 +80,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: traefik
-          image: docker.io/traefik:v3.7.1@sha256:72ed9e98f2395fca5a9e1c67e131910c21ff06e694955da8e0eae0e5206fc27b
+          image: docker.io/traefik:v3.7.16@sha256:c8a121e4bb1347e8fd52657fab12f2cb70b68f8a018895e2068f92c9e519b9c2
           args:
             - "--global.checknewversion=false"
             - "--global.sendanonymoususage=false"
