@@ -75,7 +75,7 @@ spec:
         # at init while the rolling strategy retains the old ready pod. CSS lives in
         # verdify-grafana-canvas-css (iterate there + rollout restart).
         - name: inject-canvas-css
-          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
+          image: grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7
           command:
             - sh
             - -c
@@ -105,7 +105,7 @@ spec:
               readOnly: true
       containers:
         - name: grafana
-          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
+          image: grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7
           ports:
             - name: http
               containerPort: 3000

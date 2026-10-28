@@ -10,7 +10,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "deploy/k8s/components/grafana/grafana.yaml"
 SECRET_CONTRACT = ROOT / "deploy/k8s/SECRETS.md"
-GRAFANA_IMAGE = "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd"
+GRAFANA_IMAGE = "grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7"
 RENDERER_IMAGE = (
     "grafana/grafana-image-renderer:v5.12.9@sha256:24df1663f600abc6daa8ef006a0749c1d8f532e43a4542baf55ba15c5a3eaeac"
 )

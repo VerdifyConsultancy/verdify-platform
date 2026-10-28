@@ -495,8 +495,8 @@ Argo-declared containers (one row per workload container). Digest-pinned = image
 | verdify-prod | Deployment/verdify-api | api | container | `registry.vallery.net/verdifyconsultancy/verdify-api@sha256:701b4dfe22bde2d80d39f5dbb5e18efdf268484634b886f7220d1dbe496c38a4` | yes |
 | verdify-prod | Deployment/verdify-api | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |
 | verdify-prod | Deployment/verdify-db-backup-exporter | exporter | container | `python:3.12-alpine` | **no** |
-| verdify-prod | Deployment/verdify-grafana | grafana | container | `grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd` | yes |
-| verdify-prod | Deployment/verdify-grafana | inject-canvas-css | initContainer | `grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd` | yes |
+| verdify-prod | Deployment/verdify-grafana | grafana | container | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
+| verdify-prod | Deployment/verdify-grafana | inject-canvas-css | initContainer | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
 | verdify-prod | Deployment/verdify-grafana | renderer | container | `grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986` | yes |
 | verdify-prod | Deployment/verdify-grafana-render-cache | render-cache | container | `nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6` | yes |
 | verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
@@ -512,7 +512,7 @@ Argo-declared containers (one row per workload container). Digest-pinned = image
 | verdify-prod | Deployment/verdify-planner | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |
 | verdify-prod | Deployment/verdify-setpoint-server | setpoint-server | container | `registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:21336cd82de4b9545b67beb84a6f61fc3022fb7bb1c0754a97310a7fb4c28491` | yes |
 | verdify-prod | Deployment/verdify-setpoint-server | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |
-| verdify-prod | Deployment/verdify-traefik | traefik | container | `docker.io/traefik:v3.7.1` | **no** |
+| verdify-prod | Deployment/verdify-traefik | traefik | container | `docker.io/traefik:v3.7.16@sha256:c8a121e4bb1347e8fd52657fab12f2cb70b68f8a018895e2068f92c9e519b9c2` | yes |
 | verdify-prod | StatefulSet/verdify-db | postgres | container | `timescale/timescaledb:2.25.2-pg16` | **no** |
 
 Tag-only images (A12): `docker.io/traefik:v3.7.1`, `eclipse-mosquitto:2`, `postgres:16`, `python:3.12-alpine`, `python:3.13-alpine`, `timescale/timescaledb:2.25.2-pg16`.
