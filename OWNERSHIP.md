@@ -470,6 +470,8 @@ Longhorn Engine/Replica/Snapshot/Volume/VolumeAttachment objects are generated b
 
 ## Container images
 
+Since 2026-10-27 (fleet control-plane #5787) every deployed `timescale/timescaledb:2.25.2-pg16` reference uses the derived image `registry.vallery.net/verdifyconsultancy/verdify-timescaledb` (`db/Dockerfile.timescaledb`: the same PostgreSQL 16.11 and TimescaleDB 2.25.2, without the bundled Go tools, with patched OpenSSL), built by the manual `repo-build-verdifyconsultancy` path and pinned by digest. The tables below are the dated live snapshot; `db/restore-job.yaml` (manual runbook manifest) keeps the upstream tag.
+
 Argo-declared containers (one row per workload container). Digest-pinned = image reference carries `@sha256`.
 
 | Namespace | Workload | Container | Type | Image | Digest-pinned |

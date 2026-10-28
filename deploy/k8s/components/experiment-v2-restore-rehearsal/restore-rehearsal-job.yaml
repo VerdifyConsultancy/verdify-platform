@@ -83,7 +83,7 @@ spec:
               mountPath: /work
       containers:
         - name: restore-and-verify
-          image: timescale/timescaledb:2.25.2-pg16@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6
+          image: registry.vallery.net/verdifyconsultancy/verdify-timescaledb@sha256:05f59252c3bb8e439b0b41d62a1dea6067efab4bd6193998319fcfb561408a66
           command: ["/bin/bash", "/scripts/rehearse.sh"]
           env:
             - name: PGDATA
