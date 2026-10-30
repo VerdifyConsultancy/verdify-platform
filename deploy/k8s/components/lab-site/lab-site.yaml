@@ -156,7 +156,7 @@ spec:
           # Content-free runtime, pinned by digest. The validated cache and ConfigMap are
           # the only content/config authority; no Astro or baked Quartz payload
           # exists in this container to replace the published site accidentally.
-          image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
+          image: nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6
           ports:
             - name: http
               containerPort: 8080

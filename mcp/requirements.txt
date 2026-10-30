@@ -14,6 +14,8 @@ asyncpg>=0.29,<1
 pydantic>=2.8,<3
 pyyaml>=6.0,<7
 python-dotenv>=1.0,<2
+# GHSA-6q48-6c7w-9gw2: certifi before 2026.10.18 (transitive via httpx).
+certifi>=2026.10.18
 
 # Semantic retrieval uses the same declared OpenAI embedding provider.
 openai>=1.50,<3
