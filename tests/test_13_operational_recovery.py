@@ -158,6 +158,47 @@ def test_ha_gap_backfill_does_not_retry_authentication_errors():
     sleep.assert_not_called()
 
 
+def test_ha_gap_backfill_retries_refused_first_connect():
+    """network-infra#865: the pod-start guard refuses the first connect to HA."""
+    module = _ha_gap_backfill_globals()
+    response = MagicMock()
+    response.__enter__.return_value.read.return_value = b'{"status":"ok"}'
+    refused = urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    with (
+        patch("urllib.request.urlopen", side_effect=[refused, refused, response]) as urlopen,
+        patch("time.sleep") as sleep,
+    ):
+        result = module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
+
+    assert result == {"status": "ok"}
+    assert urlopen.call_count == 3
+    assert sleep.call_args_list == [call(2), call(3)]
+
+
+def test_ha_gap_backfill_connect_retry_is_bounded_and_skips_other_url_errors():
+    module = _ha_gap_backfill_globals()
+    refused = urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    with (
+        patch("urllib.request.urlopen", side_effect=[refused] * 10) as urlopen,
+        patch("time.sleep") as sleep,
+        pytest.raises(urllib.error.URLError),
+    ):
+        module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
+    assert urlopen.call_count == len(module["HA_CONNECT_RETRY_DELAYS"]) + 1
+    assert sum(c.args[0] for c in sleep.call_args_list) <= 30
+
+    with (
+        patch("urllib.request.urlopen", side_effect=urllib.error.URLError("certificate verify failed")) as urlopen,
+        patch("time.sleep") as sleep,
+        pytest.raises(urllib.error.URLError),
+    ):
+        module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
+    urlopen.assert_called_once()
+    sleep.assert_not_called()
+
+
 def test_derived_history_reconcile_script_uses_canonical_daily_refresh():
     src = Path("scripts/reconcile-derived-history.py").read_text()
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import errno
 import json
 import logging
 import math
@@ -69,6 +70,7 @@ ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
 HA_READ_ATTEMPTS = 3
 HA_RETRY_DELAY_SECONDS = 2
 HA_RETRYABLE_HTTP_STATUS = {404, 408, 425, 429, 500, 502, 503, 504}
+HA_CONNECT_RETRY_DELAYS = (2, 3, 5, 8, 12)
 
 SAMPLE_TABLES = ("climate", "diagnostics", "setpoint_snapshot", "energy")
 WRITE_TABLES = (*SAMPLE_TABLES, "equipment_state", "system_state")
@@ -557,12 +559,21 @@ def load_ha_token(path: str) -> str:
     return token
 
 
+def is_connect_failure(error: urllib.error.URLError) -> bool:
+    reason = getattr(error, "reason", None)
+    if isinstance(reason, ConnectionRefusedError | ConnectionResetError):
+        return True
+    return isinstance(reason, OSError) and reason.errno in {errno.EHOSTUNREACH, errno.ENETUNREACH}
+
+
 def ha_get_json(ha_url: str, token: str, path: str, timeout: int = 60) -> Any:
     req = urllib.request.Request(
         f"{ha_url.rstrip('/')}{path}",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
-    for attempt in range(1, HA_READ_ATTEMPTS + 1):
+    attempt = 1
+    connect_retries = 0
+    while True:
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read())
@@ -577,9 +588,24 @@ def ha_get_json(ha_url: str, token: str, path: str, timeout: int = 60) -> Any:
                 HA_READ_ATTEMPTS,
                 delay,
             )
+            attempt += 1
             time.sleep(delay)
-
-    raise RuntimeError("unreachable HA retry state")
+        except urllib.error.URLError as error:
+            # Pod-start guard (network-infra#865): a new pod's connects to HA are
+            # refused until kube-router programs its policies. Retry only a
+            # connect failure, on a fixed ~30 s budget.
+            if not is_connect_failure(error) or connect_retries >= len(HA_CONNECT_RETRY_DELAYS):
+                raise
+            delay = HA_CONNECT_RETRY_DELAYS[connect_retries]
+            connect_retries += 1
+            LOG.warning(
+                "HA connect failed (%s); retry %s/%s in %ss",
+                error.reason,
+                connect_retries,
+                len(HA_CONNECT_RETRY_DELAYS),
+                delay,
+            )
+            time.sleep(delay)
 
 
 def fetch_current_entities(ha_url: str, token: str) -> set[str]:
