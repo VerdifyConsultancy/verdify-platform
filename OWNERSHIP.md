@@ -498,13 +498,13 @@ Argo-declared containers (one row per workload container). Digest-pinned = image
 | verdify-prod | Deployment/verdify-grafana | grafana | container | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
 | verdify-prod | Deployment/verdify-grafana | inject-canvas-css | initContainer | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
 | verdify-prod | Deployment/verdify-grafana | renderer | container | `grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986` | yes |
-| verdify-prod | Deployment/verdify-grafana-render-cache | render-cache | container | `nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6` | yes |
+| verdify-prod | Deployment/verdify-grafana-render-cache | render-cache | container | `nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6` | yes |
 | verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
 | verdify-prod | Deployment/verdify-hermes-iris | seed-config | initContainer | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
 | verdify-prod | Deployment/verdify-ingestor | ingestor | container | `registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000` | yes |
 | verdify-prod | Deployment/verdify-ingestor | install-psql | initContainer | `postgres:16` | **no** |
 | verdify-prod | Deployment/verdify-ingestor | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |
-| verdify-prod | Deployment/verdify-lab | lab-site | container | `nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6` | yes |
+| verdify-prod | Deployment/verdify-lab | lab-site | container | `nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6` | yes |
 | verdify-prod | Deployment/verdify-lab | prepare-private-public-root | initContainer | `registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:e8f799091468f6bcd849b52aa3c620e7245edbd1dc3c466aa3dfad02891f944a` | yes |
 | verdify-prod | Deployment/verdify-mcp | mcp | container | `registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:ae8a367035a3ae8a06ab2384bc166f444b3decad0da21e5c70e53e76203d9c73` | yes |
 | verdify-prod | Deployment/verdify-mqtt | mosquitto | container | `eclipse-mosquitto:2` | **no** |
@@ -545,7 +545,7 @@ Images in Job and bare-Pod residue (hand-applied, all removed with A1/A2):
 | verdify-db-rehearsal | `registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a` | 5 |
 | verdify-db-rehearsal | `registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952` | 5 |
 | verdify-db-rehearsal | `registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137` | 3 |
-| verdify-prod | `nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6` | 6 |
+| verdify-prod | `nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6` | 6 |
 | verdify-prod | `registry.vallery.net/verdifyconsultancy/verdify-api@sha256:75f510f52d71846197fdc1ddabead87912d8a31070439a29747e4ec36dc37624` | 1 |
 | verdify-prod | `registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d` | 2 |
 | verdify-prod | `registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52` | 7 |

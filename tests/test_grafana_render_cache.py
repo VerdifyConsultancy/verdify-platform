@@ -94,7 +94,7 @@ def test_render_cache_runtime_is_pinned_unprivileged_and_credential_free():
     assert pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] == "DoNotSchedule"
     assert pod["automountServiceAccountToken"] is False
     assert disruption_budget["spec"]["minAvailable"] == 1
-    assert container["image"].startswith("nginxinc/nginx-unprivileged:1.29-alpine@sha256:")
+    assert container["image"].startswith("nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:")
     assert container["securityContext"]["readOnlyRootFilesystem"] is True
     assert container["securityContext"]["allowPrivilegeEscalation"] is False
     assert container["securityContext"]["capabilities"]["drop"] == ["ALL"]
