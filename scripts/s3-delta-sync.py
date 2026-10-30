@@ -17,7 +17,7 @@ Drives uploads off a per-file SHA-256 manifest instead of mtime:
   2. load the manifest of what was last uploaded (PVC cache, else S3, else cold)
   3. CHANGE GATE: if nothing differs, upload zero objects and exit
   4. otherwise upload ONLY the changed/new files (one `aws s3 cp --recursive`
-     over a hardlink staging tree containing just those files)
+     over an isolated staging copy containing just those files)
   5. with --delete, remove keys whose local file vanished
   6. persist the new manifest (PVC cache + S3) so the next run is a true delta
 
@@ -103,16 +103,19 @@ def load_prev_manifest(local_manifest: str, manifest_uri: str, endpoint: str | N
 
 
 def stage_changed(local: str, changed: list[str], parent: str) -> str:
-    """Hardlink (copy on cross-device) the changed files into a temp tree mirroring relpaths."""
+    """Copy changed bytes without aliasing the validated source tree's inodes.
+
+    A timeout can kill the uploader before its ``finally`` cleanup. Hardlink
+    staging then leaves the public tree with shared inodes, which its next
+    fail-closed privacy scan correctly rejects. Independent files preserve the
+    source's trust boundary even if an interrupted upload leaves residue.
+    """
     staging = tempfile.mkdtemp(prefix=".s3delta-", dir=parent)
     for rel in changed:
         src = os.path.join(local, rel)
         dst = os.path.join(staging, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        try:
-            os.link(src, dst)
-        except OSError:
-            shutil.copy2(src, dst)
+        shutil.copy2(src, dst)
     return staging
 
 
