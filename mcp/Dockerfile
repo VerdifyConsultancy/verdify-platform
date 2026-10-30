@@ -37,7 +37,10 @@
 
 FROM python:3.13-slim@sha256:b3575dcf816cdacc5292df77a6e3e59b8941631078373a045efa2ac1e9c5c3b2 AS base
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# apt-get upgrade picks up Debian security fixes the pinned base predates
+# (perl-base and libbrotli1 +deb13u1: CVE-2026-13221, -42496, -8376, -111497).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
     && apt-get clean \
