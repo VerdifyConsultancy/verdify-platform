@@ -99,6 +99,11 @@ def _statement(text: str, start: str) -> tuple[int, int]:
     return first, text.index(";", first) + 1
 
 
+def _span_through(text: str, start: str, end: str) -> tuple[int, int]:
+    first, last = _span(text, start, end)
+    return first, last + len(end)
+
+
 def extract_fragments(root: Path = ROOT, controls_text: str | None = None) -> dict:
     root = Path(root).resolve()
     controls = (root / CONTROLS).read_text() if controls_text is None else controls_text
@@ -119,7 +124,9 @@ def extract_fragments(root: Path = ROOT, controls_text: str | None = None) -> di
             "if (polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist)",
         ),
         "vent_apply": _statement(controls, "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock)"),
-        "fog_apply": _span(controls, "set_relay(\n              R[4],", "/**************** 12"),
+        "fog_apply": _span_through(
+            controls, "set_relay(\n              R[4],", "\n                  || fert_master_on);"
+        ),
     }
     # Refuse reordering that would change pre-apply readback semantics.
     order = [spans[name][0] for name in spans]

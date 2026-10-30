@@ -932,12 +932,12 @@ interval:
           }
 
           /**************** 10 — CYCLE COUNTERS ***********************************/
-          if(willHeat1 && !id(heat1_rly)->state) id(cnt_heat1_today) += 1;
-          if(willHeat2 && !id(heat2_rly)->state) id(cnt_heat2_today) += 1;
-          if(willFog && !id(fog_rly)->state)     id(cnt_fog_today) += 1;
-          if(willFan1 && !id(fan1_rly)->state)   id(cnt_fan1_today) += 1;
-          if(willFan2 && !id(fan2_rly)->state)   id(cnt_fan2_today) += 1;
-          if(willVent && !id(vent_rly)->state)    id(cnt_vent_today) += 1;
+          // Count accepted relay edges after applying dwell and overrides.
+          // Repeated ON intent while min-off holds is not a new relay cycle.
+          const bool relay_was_on[] = {
+              id(heat1_rly)->state, id(heat2_rly)->state,
+              id(fan1_rly)->state, id(fan2_rly)->state,
+              id(fog_rly)->state, id(vent_rly)->state};
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
           const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
@@ -971,6 +971,13 @@ interval:
                   || climate_water_budget_block
                   || mister_volume_hard_block
                   || fert_master_on);
+
+          if(!relay_was_on[0] && id(heat1_rly)->state) id(cnt_heat1_today) += 1;
+          if(!relay_was_on[1] && id(heat2_rly)->state) id(cnt_heat2_today) += 1;
+          if(!relay_was_on[2] && id(fan1_rly)->state)  id(cnt_fan1_today) += 1;
+          if(!relay_was_on[3] && id(fan2_rly)->state)  id(cnt_fan2_today) += 1;
+          if(!relay_was_on[4] && id(fog_rly)->state)   id(cnt_fog_today) += 1;
+          if(!relay_was_on[5] && id(vent_rly)->state)  id(cnt_vent_today) += 1;
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -1456,6 +1463,9 @@ interval:
 
               // --- S1 ENGAGE: misters start only under humidity demand; zone/global
               // stress decide whether a pulse is warranted and which zone gets it.
+              // The elapsed interval precedes any phase armed in this tick.
+              // A new pulse must receive its complete requested duration.
+              bool mister_timer_armed_this_tick = false;
               if(id(mister_state) == 0
                  && humidity_demand
                  && id(humid_s1_duration_ms) >= MISTER_ENGAGE_DELAY_MS
@@ -1471,6 +1481,7 @@ interval:
                   // (turn_on_zone may remap to first_allowed); center override
                   // only applies to zone 3.
                   id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                  mister_timer_armed_this_tick = true;
                   ESP_LOGI("mister","S1 MISTERS: pulse %s %ums (VPD=%.2f, target=%.2f)",
                            zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd,
                            zone == 1 ? id(vpd_target_south) : zone == 2 ? id(vpd_target_west) : id(vpd_target_center));
@@ -1497,6 +1508,7 @@ interval:
                   if(zone == 1 && svpd >= max_vpd * 0.95f) weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
                   else if(zone == 2 && wvpd >= max_vpd * 0.95f) weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
                   id(mister_pulse_timer_ms) = weighted_ms;
+                  mister_timer_armed_this_tick = true;
                   ESP_LOGI("mister","S2 ALL-ROTATE: start %s %dms (VPD=%.2f)",
                            zone_names[zone], weighted_ms, avg_vpd);
                 }else{
@@ -1518,6 +1530,7 @@ interval:
                   if(zone == 0) zone = fallback_wet_zone();
                   turn_on_zone(zone);
                 id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                mister_timer_armed_this_tick = true;
               }
 
               // --- DE-ESCALATE S1 → off ---
@@ -1534,10 +1547,12 @@ interval:
 
               // --- PULSE TIMER (both S2 and S3) ---
               if(id(mister_state) > 0){
-                if(id(mister_pulse_timer_ms) > dt_ms){
-                  id(mister_pulse_timer_ms) -= dt_ms;
-                }else{
-                  id(mister_pulse_timer_ms) = 0;
+                if(!mister_timer_armed_this_tick){
+                  if(id(mister_pulse_timer_ms) > dt_ms){
+                    id(mister_pulse_timer_ms) -= dt_ms;
+                  }else{
+                    id(mister_pulse_timer_ms) = 0;
+                  }
                 }
 
                 if(id(mister_pulse_timer_ms) == 0){
@@ -2557,6 +2572,9 @@ interval:
               id(cnt_drip_wall_today) += 1;
               ESP_LOGI("irrig", "WALL PREWET claim_day=%u rev=%u ms=%u",
                 solar_day, id(wall_commissioning_revision), durations.prewet_ms);
+              // irrig_dt elapsed before this PREWET began. Its first interval
+              // is accounted on the next invocation, never on the claim tick.
+              return;
             }
           }
 
@@ -2633,6 +2651,8 @@ interval:
               else if(route.relay == WetRelay::CENTER_DRIP) { id(center_drips).turn_on(); id(cnt_drip_center_today) += 1; }
               id(water_controller_actuating) = false;
               ESP_LOGI("irrig", "EXPLICIT CLEAN START state=%d ms=%u", job, id(irrig_timer_ms));
+              // Preserve the full requested duration on this admission tick.
+              if(id(irrig_timer_ms) > 0) return;
             } else {
               ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s", route.reason);
             }
