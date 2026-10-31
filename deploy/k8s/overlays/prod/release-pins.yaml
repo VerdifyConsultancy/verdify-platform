@@ -50,7 +50,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:e11479fe4f8032f60ddc040c132ac2a21fdcb9cdd785a6086249517a2ad6f46c
+  digest: sha256:5219aba3d90134c984c258b32fe4682070309a7d27a9ab6fe2be80ba2f608d14
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -58,4 +58,4 @@ metadata:
   name: release-pin-verdify-experiment-v2-orchestrator
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-  digest: sha256:b43822f50820d5668babb5e3546cfebeec2d68f6e7d60ce0ac8da2c3d2498fcd
+  digest: sha256:c4fe058ac2a5e21d4d699c5f2f7f95be210b31a35c9e1fcf7385d8c193c8dee0
