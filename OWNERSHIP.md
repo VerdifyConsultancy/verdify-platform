@@ -384,6 +384,7 @@ Longhorn Engine/Replica/Snapshot/Volume/VolumeAttachment objects are generated b
 - ConfigMap (1): `descheduler-policy`
 - CronJob (1): `descheduler`
 - NetworkPolicy (2, declared, delivered by an NP-only sync; network-infra#839): `egress-deny-management` (vendored management-set deny, every pod), `egress-allow-management-descheduler-kube-api` (control plane :6443 only)
+- NetworkPolicy (1, declared, delivered by an NP-only sync; STD-K8S-04): `default-deny-ingress` (podSelector {}, Ingress only, no allow: nothing listens)
 - Job (6): CronJob-owned runs and Argo one-shots: `descheduler-29800020`, `descheduler-29801310`, `descheduler-29801340`, `descheduler-29873595`, `descheduler-29873655`, `descheduler-29873715`
 - Role (1): `descheduler`
 - RoleBinding (1): `descheduler`

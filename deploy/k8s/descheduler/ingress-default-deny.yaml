@@ -1,0 +1,22 @@
+# STD-K8S-04: namespace-wide ingress default-deny for verdify-descheduler (estate goal "every
+# namespace has ingress default-deny"). Ingress only: egress stays governed by
+# egress-deny-management.yaml and egress-allow-management.yaml.
+#
+# Consumer evidence (live census 2026-11-01 18:55Z, read-only): the namespace has no Service,
+# Ingress, LoadBalancer, webhook or APIService; its only pods are the descheduler CronJob Jobs,
+# which call the Kubernetes API and listen on nothing reachable. No allow rule is needed.
+# kubelet probes from the pod's own node stay admitted by the kube-router local-node rule.
+#
+# Rollback (the Application is manual and non-pruning, so a revert alone leaves it live):
+#   kubectl --context vallery-api-vip -n verdify-descheduler delete networkpolicy default-deny-ingress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: verdify-descheduler
+  labels:
+    app.kubernetes.io/part-of: verdify-descheduler
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
