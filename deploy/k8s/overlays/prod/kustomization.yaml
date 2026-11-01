@@ -34,6 +34,10 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
+  # network-infra#839 (STD-EXP-03): deny egress to the estate management set for every
+  # component without its own egress allowlist, plus the declared Home Assistant consumers.
+  - egress-deny-management.yaml
+  - egress-allow-management.yaml
   - verdify-outbound.yaml
   # #382 durable source spool: claim and sole consumer land together.
   - ingestor-state-pvc.yaml
@@ -284,6 +288,33 @@ patches:
       version: v1
       kind: Deployment
       name: verdify-hermes-iris
+  # network-infra#839: the vendored egress-deny-management selects every pod (`{}`). Keep
+  # out every component that already has its own Egress allowlist: NetworkPolicies are
+  # additive, and selecting those pods would widen their allowlists.
+  # tests/test_egress_deny_management.py keeps this list equal to the rendered set.
+  - target:
+      kind: NetworkPolicy
+      name: egress-deny-management
+    patch: |-
+      - op: replace
+        path: /spec/podSelector
+        value:
+          matchExpressions:
+            - key: app.kubernetes.io/component
+              operator: NotIn
+              values:
+                - experiment-v2-freezer
+                - experiment-v2-lifecycle
+                - experiment-v2-selector
+                - firmware-artifact-verifier
+                - firmware-builder
+                - firmware-flasher
+                - ingestor
+                - lab-cache-origin
+                - lab-site
+                - mcp
+                - outbound
+                - winter-feasibility
 
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
