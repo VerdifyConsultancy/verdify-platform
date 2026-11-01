@@ -175,13 +175,23 @@ spec:
                 allowPrivilegeEscalation: false
                 capabilities:
                   drop: ["ALL"]
+              # Memory limit 2Gi -> 3Gi (2026-11-01): the only memory peak is the
+              # Quartz build inside rebuild-site.sh (main thread plus the parse
+              # worker pool, about 30s). Its sampled container RSS reached
+              # 1894Mi against 2048Mi at a 30s scrape, the daily max rose from
+              # 1787Mi to 1894Mi over 10-12..11-01 as the site grew, and six
+              # runs were OOMKilled in that step between 10-29 21:05Z and
+              # 11-01 04:05Z (node memory 61% available; not a leak: every run
+              # is a fresh process back at about 50Mi after the build). The
+              # request stays 512Mi: the peak is brief, and the RWO cache
+              # affinity pins every run to one node.
               resources:
                 requests:
                   cpu: "250m"
                   memory: "512Mi"
                 limits:
                   cpu: "2"
-                  memory: "2Gi"
+                  memory: "3Gi"
               volumeMounts:
                 - name: lab-cache
                   mountPath: /work
