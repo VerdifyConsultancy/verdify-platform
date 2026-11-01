@@ -20,8 +20,22 @@ def rendered():
 
 
 def selected(selector, labels):
-    # An unhandled selector must not silently disappear from the additive-policy check.
-    assert not selector.get("matchExpressions"), "review any new MCP selector expression"
+    # An unhandled selector must not silently disappear from the additive-policy check:
+    # every operator is evaluated, and an unknown one fails the test.
+    for expression in selector.get("matchExpressions", []):
+        key, operator, values = expression["key"], expression["operator"], expression.get("values", [])
+        if operator == "In":
+            matched = labels.get(key) in values
+        elif operator == "NotIn":
+            matched = labels.get(key) not in values
+        elif operator == "Exists":
+            matched = key in labels
+        elif operator == "DoesNotExist":
+            matched = key not in labels
+        else:
+            raise AssertionError(f"review selector operator {operator}")
+        if not matched:
+            return False
     return all(labels.get(key) == value for key, value in selector.get("matchLabels", {}).items())
 
 

@@ -1,0 +1,30 @@
+# network-infra#839 (STD-EXP-03): declared management consumers beside the vendored
+# egress-deny-management policy (egress-deny-management.yaml). docs/SERVICE_MAP.md lists
+# the Home Assistant consumers: the ingestor (already bounded by
+# allow-ingestor-device-egress, so not selected by the deny), the setpoint server and the
+# HA gap backfill CronJob. Home Assistant (HAOS 192.168.30.107) is in the management set.
+# Both call only the HA REST API on 8123; neither uses MQTT.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-allow-management-home-assistant
+  labels:
+    app.kubernetes.io/part-of: verdify
+    network.vallery.net/policy: egress-allow-management
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - setpoint-server
+          - ha-gap-backfill
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.30.107/32
+      ports:
+        - protocol: TCP
+          port: 8123
