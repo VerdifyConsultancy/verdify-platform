@@ -1,0 +1,30 @@
+# network-infra#839 (STD-EXP-03): declared management consumer beside the vendored
+# egress-deny-management policy. The descheduler lists nodes and pods and posts evictions
+# through kubernetes.default (10.43.0.1:443), which kube-router sees after the DNAT to the
+# control plane on 6443. It has no other client: its policy is a mounted ConfigMap.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-allow-management-descheduler-kube-api
+  namespace: verdify-descheduler
+  labels:
+    network.vallery.net/policy: egress-allow-management
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: descheduler
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.30.31/32
+        - ipBlock:
+            cidr: 192.168.30.32/32
+        - ipBlock:
+            cidr: 192.168.30.33/32
+        - ipBlock:
+            cidr: 192.168.30.240/32
+      ports:
+        - protocol: TCP
+          port: 6443

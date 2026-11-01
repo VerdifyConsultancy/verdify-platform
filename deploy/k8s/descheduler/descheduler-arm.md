@@ -2,6 +2,8 @@
 
 > **2026-10-27 (fleet control-plane #5794):** this source now renders six objects. The cluster-scoped ClusterRole and ClusterRoleBinding `verdify-descheduler` moved to a fleet control-plane-owned source with an identical spec, because a tenant repository may not grant cluster RBAC. The eight-object procedure below is history.
 
+> **2026-11-01 (network-infra#839):** the source also renders `NetworkPolicy/egress-deny-management` (vendored management-set deny) and `NetworkPolicy/egress-allow-management-descheduler-kube-api` (control plane :6443 only), eight objects in total. The AppProject must permit NetworkPolicy first (fleet control-plane #5942); the coordinator delivers them with an exact NP-only sync, never a full sync.
+
 The source runs in enforce mode, matching the live CronJob since #234 GATE 6
 (2026-06-08). It runs hourly at `15 * * * *`, with exactly these arguments:
 
