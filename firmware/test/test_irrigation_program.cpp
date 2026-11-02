@@ -424,10 +424,29 @@ static void codes_match_python() {
   CHECK(kRingSize == kPyEventsMax, "irr_events holds 8 outcomes");
   CHECK(std::strlen(kPyRomHash16) == 16, "ROM hash is 16 zeros");
   CHECK(kPyTextMaxLen == 255, "text sensors hold 255 characters");
-  // Line kinds and partners (irrigation §3).
-  CHECK(kCleanPartner[kL02] == kL01 && kCleanPartner[kL06] == kL05 && kCleanPartner[kL08] == kL07 &&
-            kCleanPartner[kL10] == kL09,
-        "clean partners L02/L01, L06/L05, L08/L07, L10/L09");
+  // Line kinds, clean partners and per-kind bounds: LINE_KIND, CLEAN_PARTNER and
+  // BOUNDS_BY_KIND (irrigation §3, §4.3), so a bounds change in Python cannot leave the
+  // decoder rejecting what the compiler packs.
+  const char* const kind_names[] = {"drip", "fert_drip", "master", "mister", "fert_mister", "fog"};
+  for (int i = 0; i < kLineCount; ++i) {
+    CHECK(std::strcmp(kind_names[uint8_t(kLineKind[i])], kPyLineKind[i]) == 0, "LINE_KIND by device_idx");
+    CHECK(kCleanPartner[i] == kPyCleanPartner[i], "CLEAN_PARTNER by device_idx");
+  }
+  const size_t kinds = sizeof(kPyKindBounds) / sizeof(kPyKindBounds[0]);
+  CHECK(kinds == 4, "BOUNDS_BY_KIND covers the four schedulable kinds");
+  for (size_t k = 0; k < kinds; ++k) {
+    const PyKindBounds& py = kPyKindBounds[k];
+    uint8_t kind = 0;
+    while (kind < 6 && std::strcmp(kind_names[kind], py.kind) != 0) ++kind;
+    CHECK(kind < 6, "BOUNDS_BY_KIND kind is known");
+    if (kind >= 6) continue;
+    const IrrKindBounds b = irr_kind_bounds(IrrLineKind(kind));
+    CHECK(b.on_lo == py.field[0][0] && b.on_hi == py.field[0][1] && b.count_lo == py.field[1][0] &&
+              b.count_hi == py.field[1][1] && b.gap_lo == py.field[2][0] && b.gap_hi == py.field[2][1] &&
+              py.field[3][0] == 0 && b.prewet_hi == py.field[3][1] && py.field[4][0] == 0 &&
+              b.flush_hi == py.field[4][1],
+          "BOUNDS_BY_KIND equals the decoder's per-kind bounds");
+  }
   CHECK(kMistZone[kL04] == 0 && kMistZone[kL07] == 1 && kMistZone[kL08] == 1 && kMistZone[kL09] == 2 &&
             kMistZone[kL10] == 2 && kMistZone[kL01] == 255,
         "mister zones center, south, west");
@@ -1095,6 +1114,15 @@ static void degraded_only_fallback() {
     s.boot(true, &p);
     s.run_until(601);
     CHECK(event_is(s.find_event(4, kL04), IrrOutcome::kSkipped, IrrReason::kNsm), "a plain window: skipped (nsm)");
+    // Membership is settled before a pause, as the platform's agenda predicts (dis, nvm/nsm, pau).
+    IrrProgram q = p;
+    q.lines[kL04].paused_until = at(1200);
+    add_slot(q, 5, kL04, 660, 30, 2, 60);
+    Sim t;
+    t.epoch = at(659);
+    t.boot(true, &q);
+    t.run_until(661);
+    CHECK(event_is(t.find_event(5, kL04), IrrOutcome::kSkipped, IrrReason::kNsm), "paused and not a member: nsm");
   }
 }
 

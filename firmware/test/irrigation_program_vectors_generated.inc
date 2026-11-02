@@ -29,6 +29,17 @@ static const char* const kPyRejectCodes[] = {"bad_length", "bad_magic", "bad_has
 static const char kPyRomHash16[] = "0000000000000000";
 static const size_t kPyEventsMax = 8;
 static const size_t kPyTextMaxLen = 255;
+// LINE_KIND and CLEAN_PARTNER by device_idx (255: none).
+static const char* const kPyLineKind[] = {"drip", "fert_drip", "master", "mister", "drip", "fert_drip", "mister", "fert_mister", "mister", "fert_mister", "fog"};
+static const uint8_t kPyCleanPartner[] = {255, 0, 255, 255, 255, 4, 255, 6, 255, 8, 255};
+// BOUNDS_BY_KIND, inclusive {lo, hi} per field: on_s, count, gap_s, prewet_s, flush_s.
+struct PyKindBounds { const char* kind; uint16_t field[5][2]; };
+static const PyKindBounds kPyKindBounds[] = {
+    {"drip", {{10, 7200}, {1, 1}, {0, 0}, {0, 0}, {0, 0}}},
+    {"fert_drip", {{10, 7200}, {1, 1}, {0, 0}, {0, 1800}, {0, 1800}}},
+    {"mister", {{10, 90}, {1, 60}, {30, 600}, {0, 0}, {0, 0}}},
+    {"fert_mister", {{10, 90}, {1, 60}, {30, 600}, {0, 1800}, {0, 1800}}},
+};
 
 // ── Golden vectors ──
 static const size_t kGoldenVectorCount = 3;

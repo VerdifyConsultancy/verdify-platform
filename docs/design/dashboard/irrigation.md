@@ -351,10 +351,11 @@ as the core settles them:
   `missed`; once started, it ends 60 min after its last planned pulse, `short` with the last blocking
   reason. SENSOR_FAULT, confirmed occupancy, a latch or a cap cuts a pulse at once; a cut pulse is
   delivered again later.
-- **Caps at the start.** An occurrence whose cap is already reached ends `cap` at once, with `cap`,
-  `res`, `saf` or `bud`. Run-now is refused `cap_reached` when the requested valve time is more than is
-  left under the line's cap (for mist, the zone's cap less its reserve), or when SAF-4 or the soft budget
-  is reached.
+- **Settled at the start.** A due occurrence is settled in the order the agenda predicts it
+  (`verdify_schemas/irrigation.py`): `dis`, then `nvm` or `nsm`, then `pau`, then the caps. One whose
+  cap is already reached ends `cap` at once, with `cap`, `res`, `saf` or `bud`. Run-now is refused
+  `cap_reached` when the requested valve time is more than is left under the line's cap (for mist, the
+  zone's cap less its reserve), or when SAF-4 or the soft budget is reached.
 - **Run-now refusals are outcomes.** Every refusal but `line_busy` (a repeated send) ends the request
   `skipped` in `irr_events`, slot 0, with its reason: `dis`, `pau`, `flt`, `nsm`, `sf`, `cap`, `res`,
   `saf`, `bud` or `man`. The device-only `bad_args` (outside the line kind's bounds) and `storage` (a

@@ -24,9 +24,10 @@ regeneration (scripts/ci-local.sh does).
 
 It also renders firmware/test/irrigation_program_vectors_generated.inc (VD-44, #1159) from the
 JSON: the vector bytes, hashes and decoded programs, the text samples, the fixed codes of
-verdify_schemas/irrigation.py, and REJECT_CASES, golden vectors with bytes patched and the code
-unpack_program() gives each, so the C++ decoder is checked against the Python one. --check
-covers the include too; never edit it by hand.
+verdify_schemas/irrigation.py (line kinds, clean partners and BOUNDS_BY_KIND included), and
+REJECT_CASES, golden vectors with bytes patched and the code unpack_program() gives each, so the
+C++ decoder is checked against the Python one. --check covers the include too; never edit it by
+hand.
 """
 
 from __future__ import annotations
@@ -480,6 +481,28 @@ def render_include(fixture: dict) -> str:
         f"static const char kPyRomHash16[] = {_c_string(irr.ROM_HASH16)};",
         f"static const size_t kPyEventsMax = {irr.IRR_EVENTS_MAX};",
         f"static const size_t kPyTextMaxLen = {irr.IRR_TEXT_MAX_LEN};",
+        "// LINE_KIND and CLEAN_PARTNER by device_idx (255: none).",
+        "static const char* const kPyLineKind[] = {"
+        + ", ".join(_c_string(irr.LINE_KIND[x]) for x in irr.LINE_IDS)
+        + "};",
+        "static const uint8_t kPyCleanPartner[] = {"
+        + ", ".join(
+            str(irr.DEVICE_IDX[irr.CLEAN_PARTNER[x]]) if x in irr.CLEAN_PARTNER else "255" for x in irr.LINE_IDS
+        )
+        + "};",
+        "// BOUNDS_BY_KIND, inclusive {lo, hi} per field: on_s, count, gap_s, prewet_s, flush_s.",
+        "struct PyKindBounds { const char* kind; uint16_t field[5][2]; };",
+        "static const PyKindBounds kPyKindBounds[] = {",
+        *(
+            f"    {{{_c_string(kind)}, {{"
+            + ", ".join(
+                f"{{{bounds[name][0]}, {bounds[name][1]}}}"
+                for name in ("on_s", "count", "gap_s", "prewet_s", "flush_s")
+            )
+            + "}},"
+            for kind, bounds in irr.BOUNDS_BY_KIND.items()
+        ),
+        "};",
         "",
         "// ── Golden vectors ──",
         f"static const size_t kGoldenVectorCount = {len(vectors)};",

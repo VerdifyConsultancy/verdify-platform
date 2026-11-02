@@ -1956,11 +1956,11 @@ inline bool settle(IrrEngine& e, IrrPending& p, uint8_t line, IrrOutcome o, IrrR
 }
 
 // Outcomes known at run time without opening a valve (irrigation §4.3): a disabled
-// line, a pause, mist schedule membership, and the caps. kNone: it may run.
+// line, mist membership, a pause, and the caps, in the order the platform's agenda
+// predicts them (verdify_schemas/irrigation.py _skip_code). kNone: it may run.
 inline IrrReason settle_reason(const IrrEngine& e, const IrrSlot& s, const IrrPending& p, IrrOutcome& o) {
   o = IrrOutcome::kSkipped;
   if (!line_enabled(e, s.line) || partner_disabled(e, s.line, s.prewet_s, s.flush_s)) return IrrReason::kDis;
-  if (paused_at(e, s.line, p.planned_epoch)) return IrrReason::kPau;
   if (is_clean_mister(s.line)) {
     if (s.degraded_only()) {
       if (!vpd_member(e, s.line)) return IrrReason::kNvm;
@@ -1968,6 +1968,7 @@ inline IrrReason settle_reason(const IrrEngine& e, const IrrSlot& s, const IrrPe
       return IrrReason::kNsm;
     }
   }
+  if (paused_at(e, s.line, p.planned_epoch)) return IrrReason::kPau;
   o = IrrOutcome::kCap;
   const IrrLineKind kind = kLineKind[s.line];
   if (kind == IrrLineKind::kDrip || kind == IrrLineKind::kFertDrip) {
