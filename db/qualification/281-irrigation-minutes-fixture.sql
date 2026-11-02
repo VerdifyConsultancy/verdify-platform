@@ -1,6 +1,8 @@
--- Run only inside an explicit rollback-only transaction after exact281.
--- Native checks of M4 on production rows: reads only; the temporary table is
--- dropped by the rollback. Any failed check raises and rolls everything back.
+-- Run only inside an explicit rollback-only transaction after exact281, as the
+-- superuser owner. Native checks of M4 on production rows: reads only, as the
+-- owner and then as each runtime login; the temporary table and the session
+-- authorization end with the rollback. Any failed check raises and rolls
+-- everything back.
 CREATE TEMP TABLE irrigation_minutes_qualification (name text PRIMARY KEY, value numeric) ON COMMIT DROP;
 DO $fixture$
 DECLARE
@@ -93,10 +95,66 @@ BEGIN
     INSERT INTO irrigation_minutes_qualification
     SELECT 'rows_400d', count(*) FROM public.fn_irrigation_minutes_daily(today - 399, today);
 END $fixture$;
+
+-- After the re-seal the api, ingestor and MCP logins still attest, the MCP and
+-- ingestor logins read the minutes as granted and the api login is denied.
+-- SET SESSION AUTHORIZATION needs the superuser owner; the rollback undoes it.
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $api$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() IS NOT TRUE THEN
+        RAISE EXCEPTION '281 api login does not attest';
+    END IF;
+    BEGIN
+        PERFORM 1 FROM public.v_irrigation_minutes_daily LIMIT 1;
+        RAISE EXCEPTION '281 api login read v_irrigation_minutes_daily';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    BEGIN
+        PERFORM 1 FROM public.v_irrigation_day_coverage LIMIT 1;
+        RAISE EXCEPTION '281 api login read v_irrigation_day_coverage';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    BEGIN
+        PERFORM 1 FROM public.fn_irrigation_minutes_daily(date '2026-05-29', date '2026-05-29');
+        RAISE EXCEPTION '281 api login executed fn_irrigation_minutes_daily';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+END $api$;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $ingestor$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() IS NOT TRUE THEN
+        RAISE EXCEPTION '281 ingestor login does not attest';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.fn_irrigation_minutes_daily(date '2026-05-29', date '2026-05-29')
+                   WHERE line_id = 'L01')
+       OR NOT EXISTS (SELECT 1 FROM public.v_irrigation_minutes_daily WHERE local_day = date '2026-05-29')
+       OR NOT EXISTS (SELECT 1 FROM public.v_irrigation_day_coverage WHERE local_day = date '2026-05-29')
+    THEN RAISE EXCEPTION '281 ingestor login cannot read the minutes'; END IF;
+END $ingestor$;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION verdify_mcp_runtime_login;
+DO $mcp$
+BEGIN
+    IF public.fn_mcp_runtime_attest_ordinary_login() IS NOT TRUE THEN
+        RAISE EXCEPTION '281 MCP login does not attest';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.fn_irrigation_minutes_daily(date '2026-05-29', date '2026-05-29')
+                   WHERE line_id = 'L01')
+       OR NOT EXISTS (SELECT 1 FROM public.v_irrigation_minutes_daily WHERE local_day = date '2026-05-29')
+       OR NOT EXISTS (SELECT 1 FROM public.v_irrigation_day_coverage WHERE local_day = date '2026-05-29')
+    THEN RAISE EXCEPTION '281 MCP login cannot read the minutes'; END IF;
+END $mcp$;
+RESET SESSION AUTHORIZATION;
+
 SELECT json_build_object(
     'checks', json_build_array('catalog_and_grants', 'reader_equals_view_30d', 'gallons_equal_run_accounting_30d',
-                               'wall_drip_2026_05_29', 'today_partial', 'no_data_days_without_rows'),
+                               'wall_drip_2026_05_29', 'today_partial', 'no_data_days_without_rows',
+                               'logins_attest', 'login_reads_and_api_denial'),
     'all_passed', true,
+    'attested', json_build_object('api', true, 'ingestor', true, 'mcp', true),
     'rows_400d', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'rows_400d'),
     'reader_30d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'reader_30d_ms'),
     'reader_400d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'reader_400d_ms'),

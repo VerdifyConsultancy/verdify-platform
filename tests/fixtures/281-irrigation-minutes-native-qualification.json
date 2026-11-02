@@ -13,7 +13,7 @@
   "exact_final_migration_sha256": null,
   "final_migration_rollback_verified": false,
   "inside_transaction_receipts_match": false,
-  "native_fixture_sha256": "ededea411ad26454902e0aa9b7f03523468f927f2cc538756e6fc03a16ef45c0",
+  "native_fixture_sha256": "0d3e3a0830046a1598f54fded29ae5be5bdce6b80608e68d3b58f34a2f3a51e2",
   "native_fixture": null,
   "native_fixture_rollback_verified": false
 }

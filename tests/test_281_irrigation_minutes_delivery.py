@@ -102,8 +102,12 @@ def test_every_registration_site_carries_the_same_seals():
     assert c0.SUCCESSOR_281_MCP_DIGEST == six.SUCCESSOR_281["mcp"]
     for duty in ("api", "ingestor", "mcp"):
         assert successor[duty] == [six.SUCCESSOR_281[duty]], duty
-        assert receipts[duty] == [predecessor[duty][0], six.SUCCESSOR_281[duty]], duty
         assert len(predecessor[duty]) == 1, duty
+        # The successor block re-seals each receipt the rolled-back measurement
+        # shows moved; while pending, all three carry the zero placeholder.
+        moved = PENDING or six.SUCCESSOR_281[duty] != predecessor[duty][0]
+        resealed = [six.SUCCESSOR_281[duty]] if moved else []
+        assert receipts[duty] == [predecessor[duty][0], *resealed], duty
     prior = 280 if hasattr(six, "sealed_sql_280") else 279
     profile = getattr(six, f"SUCCESSOR_{prior}")
     chained = getattr(six, f"sealed_sql_{prior}")()
@@ -248,9 +252,34 @@ def test_native_successor_retains_predecessor_authority_and_exact_ledger():
     assert hasattr(six, "sealed_sql_280") and later()[-2:] == [c0.SUCCESSOR_280, c0.SUCCESSOR_281]
 
 
+def test_native_fixture_attests_every_login_and_reads_as_granted():
+    """The rolled-back qualification calls each login's attestor after the re-seal."""
+    text = FIXTURE.read_text()
+    blocks = re.findall(
+        r"SET SESSION AUTHORIZATION (\w+);\nDO \$(\w+)\$\n(.*?)\nEND \$\2\$;\nRESET SESSION AUTHORIZATION;", text, re.S
+    )
+    attestors = {login: body for login, _, body in blocks}
+    assert set(attestors) == {f"verdify_{duty}_runtime_login" for duty in ("api", "ingestor", "mcp")}
+    for duty, attestor in (
+        ("api", "fn_runtime_attest_ordinary_login"),
+        ("ingestor", "fn_runtime_attest_ordinary_login"),
+        ("mcp", "fn_mcp_runtime_attest_ordinary_login"),
+    ):
+        assert f"public.{attestor}() IS NOT TRUE THEN" in attestors[f"verdify_{duty}_runtime_login"], duty
+    api = attestors["verdify_api_runtime_login"]
+    for target in ("v_irrigation_minutes_daily", "v_irrigation_day_coverage", "fn_irrigation_minutes_daily"):
+        assert re.search(r"PERFORM 1 FROM public\." + target + r"\b.*?WHEN insufficient_privilege", api, re.S), target
+    for duty in ("ingestor", "mcp"):
+        reader = attestors[f"verdify_{duty}_runtime_login"]
+        for target in ("fn_irrigation_minutes_daily", "v_irrigation_minutes_daily", "v_irrigation_day_coverage"):
+            assert f"FROM public.{target}" in reader, (duty, target)
+    assert text.rindex("RESET SESSION AUTHORIZATION;") < text.index("SELECT json_build_object(")
+
+
 @pytest.mark.skipif(PENDING, reason=WAITING)
 def test_native_fixture_passed_on_production_rows():
     assert RECEIPT["native_fixture_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest()
     fixture = RECEIPT["native_fixture"]
     assert fixture["all_passed"] and RECEIPT["native_fixture_rollback_verified"]
+    assert fixture["attested"] == {"api": True, "ingestor": True, "mcp": True}
     assert fixture["reader_400d_ms"] < 10_000
