@@ -226,10 +226,12 @@ EQUIPMENT_BINARY_MAP: dict[str, str] = {
     "water_flowing": "water_flowing",
     "heap_pressure_warning": "heap_pressure_warning",
     "heap_pressure_critical": "heap_pressure_critical",
+    # The burst latches (manual_override and the panel push buttons, VD-47).
+    # The occupancy quiet-override route went with the override; equipment_state
+    # history keeps its name (verdify_schemas/telemetry.py).
     "fan_burst_active": "fan_burst_active",
     "fog_burst_active": "fog_burst_active",
     "vent_bypass_active": "vent_bypass_active",
-    "occupancy_quiet_override_active": "occupancy_quiet_override_active",
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -254,6 +256,8 @@ EQUIPMENT_SWITCH_MAP: dict[str, str] = {
     # Config switches (boolean tunables exposed as HA switches)
     "economiser_enabled": "economiser_enabled",
     "fog_closes_vent": "fog_closes_vent",
+    # The L01 bridge's switches (irrigation §6.5): only the pre-engine firmware
+    # publishes them; they go with the bridge's rows in #1165's follow-up.
     "irrigation_enabled": "irrigation_enabled",
     "irrigation_wall_enabled": "irrigation_wall_enabled",
     "irrigation_center_enabled": "irrigation_center_enabled",

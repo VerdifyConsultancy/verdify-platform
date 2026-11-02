@@ -1,0 +1,97 @@
+# verdify-operator-api: the verdify-api image (the same release digest as Deployment verdify-api; no new image and
+# no new pin site) running api/operator_api.py. Only the dashboard BFF reaches it (networkpolicy.yaml), with the
+# shared bearer token; the pool attests the dashboard login on every new connection, so /readyz stays 503 until
+# the login attests. No /metrics.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-operator-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: operator-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: operator-api
+  strategy:
+    # A stateless reader and writer through the database: the new pod is Ready before the old one stops. Two pods
+    # hold at most 8 connections, the login's CONNECTION LIMIT.
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: operator-api
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator-api
+          image: ghcr.io/verdifyconsultancy/verdify-api  # pinned to the verdify-api release digest by overlays/prod
+          # --no-access-log: uvicorn's access line carries the query string; the app logs one JSON line per request.
+          command: ["uvicorn", "operator_api:app", "--host", "0.0.0.0", "--port", "8090", "--no-access-log"]
+          ports:
+            - name: http
+              containerPort: 8090
+          envFrom:
+            - configMapRef:
+                name: verdify-operator-api
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-dashboard-runtime-db
+                  key: password
+            - name: OPERATOR_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-operator-api
+                  key: operator-api-token
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # Endpoint drain before uvicorn stops accepting, as verdify-api does: the BFF retries a GET once but never
+          # resends a write.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -1112,7 +1112,9 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     assert "OCCUPANCY_VISIT_MAX_MIN" in occupancy_src
     assert "recording_quiet_occupancy_active" not in occupancy_src
     assert "quiet mode held" not in occupancy_src
-    assert "script.execute: occupancy_quiet_override" in greenhouse
+    # VD-47: no button lifts occupancy any more; the quiet override and its script are gone.
+    assert "script.execute: occupancy_quiet_override" not in greenhouse
+    assert "occupancy_override_until_ms" not in hardware
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     assert "Occupancy fail-safe expired without fresh API detection" in controls
     assert "occupancy_mist_inhibit" not in push_src
@@ -2778,8 +2780,8 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
 def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     """#1160 (F5): one engine grant replaces the per-origin tokens. A clean relay opens only with its
     bit; the climate path opens a VPD zone's mister (center, and since #1161 south and west, F6) only
-    after irr_vpd_grant(); nothing in controls.yaml opens a drip, and the RUN CLEAN buttons only write
-    their (inert) queue bits."""
+    after irr_vpd_grant(); nothing in controls.yaml opens a drip, and the RUN CLEAN buttons and their
+    queue are gone (VD-47, HA-01)."""
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
@@ -2826,9 +2828,9 @@ def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     ):
         assert f"id({relay}).turn_on();" not in controls
 
-    manual_buttons = tunables_yaml[tunables_yaml.index("# ─── IRRIGATION MANUAL TRIGGER BUTTONS") :]
-    assert ".turn_on()" not in manual_buttons
-    assert "id(irrig_queue) |=" in manual_buttons
+    assert "\nbutton:" not in tunables_yaml
+    for gone in ("btn_wall_clean", "btn_center_clean", "irrig_queue"):
+        assert gone not in tunables_yaml and gone not in globals_yaml
 
 
 def test_visible_gpio_relays_are_internal_or_controller_guarded():
@@ -2848,15 +2850,21 @@ def test_visible_gpio_relays_are_internal_or_controller_guarded():
         assert "id(irr_grant_mask)" in block.split("on_turn_on:", 1)[1], f"{id_line} guard skips the engine grant"
 
 
-def test_retired_irrigation_schedule_globals_are_inert_under_the_engine():
-    """#1160 (F1): schedules are the irrigation program's. The legacy schedule globals stay only for
-    their cfg readbacks until #1162 retires them: nothing zeroes them at boot any more and nothing on
-    the control path reads them; the duration entities stay for the pre-engine L01 bridge."""
-    greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
-    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
-    tunables_yaml = Path("firmware/greenhouse/tunables.yaml").read_text()
-    sensors_yaml = Path("firmware/greenhouse/sensors.yaml").read_text()
-    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+def test_retired_irrigation_schedule_globals_are_gone_with_their_readbacks():
+    """#1160 (F1) made the legacy schedule globals inert; VD-47 (F13) deleted them with their cfg
+    readbacks, entities and registry rows. The two run-now durations and the irrigation enables
+    left the firmware too, but their registry rows stay for the pre-engine L01 bridge (irrigation
+    §6.5) until #1165's follow-up."""
+    firmware = "\n".join(
+        Path(path).read_text()
+        for path in (
+            "firmware/greenhouse.yaml",
+            "firmware/greenhouse/globals.yaml",
+            "firmware/greenhouse/tunables.yaml",
+            "firmware/greenhouse/sensors.yaml",
+            "firmware/greenhouse/controls.yaml",
+        )
+    )
 
     retired = {
         "irrig_wall_start_hour": "cfg_irrig_wall_start_hour",
@@ -2878,35 +2886,21 @@ def test_retired_irrigation_schedule_globals_are_inert_under_the_engine():
     }
     for global_id, cfg_id in retired.items():
         registry_name = global_id.removesuffix("ute") if global_id.endswith("_minute") else global_id
-        block = re.search(rf"- id: {global_id}\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
-        assert block, f"{global_id} missing from globals.yaml"
-        assert "restore_value: no" in block.group("body")
-        assert "initial_value: '0'" in block.group("body")
-        assert REGISTRY[registry_name].default == 0
-        assert REGISTRY[registry_name].esp_object_id is None
-        assert REGISTRY[registry_name].cfg_readback_object_id == cfg_id
-        assert f"id: {cfg_id}" in sensors_yaml
-        assert f"return (float)id({global_id});" in sensors_yaml
-        assert f"id({global_id})" not in greenhouse_yaml  # no boot zeroing: nothing writes them
-        assert f"id({global_id})" not in controls
-        assert f"id: num_{global_id.removesuffix('ute')}" not in tunables_yaml
+        assert registry_name not in REGISTRY
+        assert f"id({global_id})" not in firmware and f"- id: {global_id}\n" not in firmware
+        assert f"id: {cfg_id}\n" not in firmware
+        assert f"id: num_{global_id.removesuffix('ute')}" not in firmware
 
     for global_id, entity_id, cfg_id in (
         ("irrig_wall_duration_min", "num_irrig_wall_duration", "cfg_irrig_wall_duration_min"),
         ("irrig_center_duration_min", "num_irrig_center_duration", "cfg_irrig_center_duration_min"),
     ):
-        block = re.search(rf"- id: {global_id}\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
-        assert block
-        assert "restore_value: yes" in block.group("body")
-        assert "initial_value: '10'" in block.group("body")
-        assert f"id: {entity_id}" in tunables_yaml
-        assert f"id: {cfg_id}" in sensors_yaml
-        assert f"id({global_id})" not in controls
-
-    assert "id: sw_irrig_center_enabled" in tunables_yaml
-    center_switch = tunables_yaml[tunables_yaml.index("id: sw_irrig_center_enabled") :]
-    center_switch = center_switch[: center_switch.index("  # Weather skip enable")]
-    assert "restore_mode: RESTORE_DEFAULT_OFF" in center_switch
+        assert f"id({global_id})" not in firmware and f"id: {entity_id}\n" not in firmware
+        assert f"id: {cfg_id}\n" not in firmware
+        assert REGISTRY[global_id].cfg_readback_object_id == cfg_id  # the bridge's row and route stay
+    for enable in ("irrig_enabled", "irrig_wall_enabled", "irrig_center_enabled", "irrig_south_enabled"):
+        assert f"id({enable})" not in firmware and f"id: sw_{enable}\n" not in firmware
+        assert f"sw_{enable}" in REGISTRY
 
 
 def test_center_mist_has_no_deliberate_dawn_or_midday_watering_surface():
@@ -3133,7 +3127,7 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
     assert 'return "time_window";' in manual_block
     assert 'return "rh_ceiling";' in manual_block
     assert 'return "temp_low";' in manual_block
-    assert "const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);" in manual_block
+    assert "const bool manual_fog_eff    = manual_fog_latched;" in manual_block
     assert "const bool manual_fog_requested = manual_fog_eff;" in manual_block
     assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
     assert "const ManualOverrides manual_ov = {" in manual_block
@@ -3157,7 +3151,7 @@ def test_manual_fan_cannot_open_vent_during_safety_heat():
     manual_block = controls[manual_start:manual_end]
 
     assert "SAFETY_COOL / SAFETY_HEAT) are a no-op there" in manual_block
-    assert "const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);" in manual_block
+    assert "const bool manual_fans_eff   = manual_fans_latched;" in manual_block
     assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
     assert "const bool manual_fan_force = manual_force.fans;" in manual_block
     interlock_block = controls[
@@ -3169,16 +3163,25 @@ def test_manual_fan_cannot_open_vent_during_safety_heat():
 
 
 def test_manual_climate_buttons_are_flag_only_controller_path():
+    """VD-47 (F12): the Home Assistant burst buttons are gone; manual_override sets only the three
+    deadline latches and drives no relay (the control loop stays the only relay actuator path)."""
     greenhouse = Path("firmware/greenhouse.yaml").read_text()
+    engine = Path("firmware/greenhouse/irrigation_engine.yaml").read_text()
 
-    dashboard_start = greenhouse.index("# ───────────────────── DASHBOARD BUTTONS")
-    dashboard_end = greenhouse.index("# END OF FILE", dashboard_start)
-    dashboard = greenhouse[dashboard_start:dashboard_end]
+    assert "DASHBOARD BUTTONS" not in greenhouse and "\nbutton:" not in greenhouse
+    override_start = engine.index("- service: manual_override")
+    override_end = engine.index("\ntext_sensor:", override_start)
+    override = engine[override_start:override_end]
 
-    assert "control loop remains the only relay actuator path" in dashboard
-    assert "id(manual_fan_active) = true;" in dashboard
-    assert "id(manual_fog_active) = true;" in dashboard
-    assert "id(vent_lock_active) = true;" in dashboard
+    assert "id(manual_fans_until_ms) = manual_override_deadline_ms(now_ms, minutes);" in override
+    assert "id(manual_fog_until_ms) = manual_override_deadline_ms(now_ms, minutes);" in override
+    assert "id(vent_bypass_until_ms) = manual_override_deadline_ms(now_ms, minutes);" in override
+    assert set(re.findall(r"id\((\w+)\)\s*=(?!=)", override)) == {
+        "manual_fans_until_ms",
+        "manual_fog_until_ms",
+        "vent_bypass_until_ms",
+    }
+    dashboard = override
 
     for forbidden in (
         "switch.turn_off: fan1_rly",

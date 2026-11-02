@@ -1102,6 +1102,7 @@ def test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth():
         "previous_source_algorithm",
         "pre_zone_vpd_source_algorithm",
         "pre_irrigation_engine_source_algorithm",
+        "pre_manual_override_source_algorithm",
         "pre_mist_path_source_algorithm",
         "stale_sample",
         "arbitrary_sql",
@@ -1154,10 +1155,15 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
         context["algorithm_revision"] = (
             "served-band-wire-v1:sha256:66d873c41eba1ac7f97cddffd81df29726ffd7097241fb82590424d85b511bf5"
         )
+    elif mutation == "pre_manual_override_source_algorithm":
+        # Retained source revision before the VD-47 button removal and manual_override stays historical.
+        context["algorithm_revision"] = (
+            "served-band-wire-v1:sha256:e4bbede7cfdf4c0cfeec5875b9b5996f7e901c8d3296aa113543a87b6eedd711"
+        )
     elif mutation == "pre_mist_path_source_algorithm":
         # Retained source revision before the VD-46 mist path rework stays historical.
         context["algorithm_revision"] = (
-            "served-band-wire-v1:sha256:e4bbede7cfdf4c0cfeec5875b9b5996f7e901c8d3296aa113543a87b6eedd711"
+            "served-band-wire-v1:sha256:cc71ca44a76d12a882eb70d9fb56134ac31bafd3098666ea07fed1c5315a314a"
         )
     elif mutation == "stale_sample":
         context["sample_epoch_callback"]["value"] = str(int(OBSERVED_AT.timestamp()) - 31)

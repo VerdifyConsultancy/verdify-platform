@@ -7,6 +7,9 @@ import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[1] / "research/planner-efficacy"))
+
+from switchback import v2_profiles  # noqa: E402
 
 from experiment_orchestrator.contracts import (  # noqa: E402
     CLIMATE_VALUE_FIELDS,
@@ -28,6 +31,9 @@ from scripts.prepare_experiment_v2_shadow import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOCK_DIR = REPO_ROOT / "research/planner-efficacy/protocols/shadow-v2"
 LOCK = json.loads((LOCK_DIR / "source-lock-v1.json").read_text())
+# Byte-identical copy of the tunables.yaml the lock froze; the live file may
+# change only while its entity grid still equals this snapshot's.
+FROZEN_TUNABLES = Path("research/planner-efficacy/protocols/frozen-sources/tunables-v1.yaml.txt")
 
 
 def _sha256(path: Path) -> str:
@@ -113,9 +119,10 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
         assert state_sha256 == row["policy_state_content_sha256"]
         assert state_sha256 == profiles["state_content_sha256"][profile]
     assert (
-        _sha256(REPO_ROOT / "firmware/greenhouse/tunables.yaml")
+        _sha256(REPO_ROOT / FROZEN_TUNABLES)
         == (LOCK["candidate_source_revisions"]["grid_revision"]["source_entity_grid_sha256"])
     )
+    assert v2_profiles.source_entity_grid(REPO_ROOT) == v2_profiles.source_entity_grid(REPO_ROOT, FROZEN_TUNABLES)
     assert (
         _sha256(LOCK_DIR / "tunable-registry-source-v1.py.txt")
         == (LOCK["candidate_source_revisions"]["registry_revision"]["source_sha256"])

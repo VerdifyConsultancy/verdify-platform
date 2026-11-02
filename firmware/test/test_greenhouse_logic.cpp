@@ -5058,6 +5058,52 @@ TEST(manual_fans_plus_humid_force_fans_vent_and_fog) {
     PASS();
 }
 
+// VD-47 (irrigation F12): the deadline latches the manual_override service sets
+// and the panel push buttons toggle. 0 means no burst; minutes clamp to 1-120.
+TEST(manual_override_minutes_clamp_to_1_through_120) {
+    ASSERT_EQ(manual_override_minutes(-5), 1);
+    ASSERT_EQ(manual_override_minutes(0), 1);
+    ASSERT_EQ(manual_override_minutes(1), 1);
+    ASSERT_EQ(manual_override_minutes(45), 45);
+    ASSERT_EQ(manual_override_minutes(120), 120);
+    ASSERT_EQ(manual_override_minutes(121), 120);
+    ASSERT_EQ(manual_override_minutes(100000), 120);
+    PASS();
+}
+
+TEST(manual_override_deadline_is_now_plus_minutes_and_never_zero) {
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 10), 601000u);
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 0), 61000u);       // clamped up to 1 min
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 500), 7201000u);   // clamped down to 120 min
+    // millis() wraps and the deadline wraps with it; one that lands on exactly
+    // 0 is stored as 1, because 0 means no burst.
+    ASSERT_EQ(manual_override_deadline_ms(UINT32_MAX - 59999u, 1), 1u);
+    ASSERT_EQ(manual_override_deadline_ms(UINT32_MAX - 9u, 1), 59990u);
+    PASS();
+}
+
+TEST(manual_latch_is_active_until_its_deadline_across_the_millis_wrap) {
+    ASSERT_FALSE(manual_latch_active(0u, 1000u));             // no burst
+    ASSERT_TRUE(manual_latch_active(5000u, 1000u));
+    ASSERT_FALSE(manual_latch_active(1000u, 1000u));          // the deadline itself has expired
+    ASSERT_FALSE(manual_latch_active(999u, 1000u));
+    const uint32_t now = UINT32_MAX - 9u;
+    const uint32_t until = manual_override_deadline_ms(now, 1);  // wrapped past 0
+    ASSERT_TRUE(manual_latch_active(until, now));
+    ASSERT_TRUE(manual_latch_active(until, now + 59999u));
+    ASSERT_FALSE(manual_latch_active(until, now + 60000u));
+    PASS();
+}
+
+TEST(push_button_toggles_its_latch_on_then_off) {
+    const uint32_t on = manual_latch_toggle(0u, 1000u, 10);      // idle: start a 10 min burst
+    ASSERT_EQ(on, 601000u);
+    ASSERT_EQ(manual_latch_toggle(on, 2000u, 10), 0u);           // running: a press clears it
+    ASSERT_EQ(manual_latch_toggle(500u, 1000u, 10), 601000u);    // expired but not yet zeroed: re-arms
+    ASSERT_EQ(manual_latch_toggle(0u, 1000u, 0), 61000u);        // a 0 timeout still runs 1 min
+    PASS();
+}
+
 TEST(fan_requires_open_vent_carves_out_bypass_and_safety) {
     ASSERT_TRUE(fan_requires_open_vent(VENTILATE, true, false));    // normal: vent forced open
     ASSERT_FALSE(fan_requires_open_vent(VENTILATE, true, true));    // bypass carve-out (#290)

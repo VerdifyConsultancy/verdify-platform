@@ -238,6 +238,21 @@ def _unregistered_entities(
     ]
 
 
+# The L01 bridge's pre-engine entities (irrigation §6.5) and the REGISTRY rows that
+# stay for each until #1165's follow-up (VD-47): the sw_irrig_* switches with their
+# sw_irrigation_* alias rows, and the two run-now durations.
+_L01_BRIDGE_ROWS: dict[str, tuple[str, ...]] = {
+    "sw_irrig_enabled": ("sw_irrig_enabled", "sw_irrigation_enabled"),
+    "sw_irrig_wall_enabled": ("sw_irrig_wall_enabled", "sw_irrigation_wall_enabled"),
+    "sw_irrig_center_enabled": ("sw_irrig_center_enabled", "sw_irrigation_center_enabled"),
+    "sw_irrig_south_enabled": ("sw_irrig_south_enabled",),
+    "sw_irrig_west_enabled": ("sw_irrig_west_enabled",),
+    "sw_irrig_weather_skip": ("sw_irrigation_weather_skip",),
+    "num_irrig_wall_duration": ("irrig_wall_duration_min",),
+    "num_irrig_center_duration": ("irrig_center_duration_min",),
+}
+
+
 class TestDriftGuard:
     def test_registry_clamps_match_tunables_yaml(self, tunables_yaml: str) -> None:
         """Every registry entry with fw_clamp_lo/hi must match tunables.yaml.
@@ -280,7 +295,8 @@ class TestDriftGuard:
         RETIRING_TUNABLES, the entities the engine release removes.
         """
         entities = _tunable_entities(tunables_yaml)
-        assert len(entities) > 150, f"tunables.yaml entity parse came back short: {len(entities)}"
+        # 142 numbers and switches since VD-47 retired 25 of them.
+        assert len(entities) > 120, f"tunables.yaml entity parse came back short: {len(entities)}"
         missing = _unregistered_entities(tunables_yaml, REGISTRY, RETIRING_TUNABLES)
         assert not missing, (
             f"{len(missing)} tunables.yaml entities have no REGISTRY row and are not in RETIRING_TUNABLES "
@@ -321,20 +337,41 @@ class TestDriftGuard:
             """
         )
         assert len(_tunable_entities(snippet)) == 5
-        # Matched by object_id, by the getter's global (twice) and by
-        # RETIRING_TUNABLES; only the brand-new number fails, named.
-        assert _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES) == [
+        # Matched by object_id, by the getter's global (twice) and by the
+        # retiring set; only the brand-new number fails, named. (The set is
+        # explicit: since VD-47 RETIRING_TUNABLES holds only the L01 bridge's.)
+        retiring = frozenset({"num_post_feed_hold_min"})
+        assert _unregistered_entities(snippet, REGISTRY, retiring) == [
             "number num_brand_new_knob (name 'Brand New Knob (s)', global brand_new_knob_s)"
         ]
-        assert not _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES | {"num_brand_new_knob"})
-        # Without its RETIRING_TUNABLES entry the unrowed hold fails too.
+        assert not _unregistered_entities(snippet, REGISTRY, retiring | {"num_brand_new_knob"})
+        # Without its retiring entry the unrowed hold fails too.
         assert len(_unregistered_entities(snippet, REGISTRY, frozenset())) == 2
 
-    def test_retiring_tunables_are_live_entities(self, tunables_yaml: str) -> None:
-        """A RETIRING_TUNABLES entry leaves the set with its entity (#1162), so none outlives it."""
+    def test_retiring_tunables_are_live_or_the_l01_bridge(self, tunables_yaml: str) -> None:
+        """A RETIRING_TUNABLES entry is a live entity the next release removes, or one of the L01
+        bridge's pre-engine entities (VD-47, #1162): their entities left the YAML, but the rows
+        behind them stay, routed, until #1165's follow-up retires the rows and empties the set."""
         entity_ids = {entity.entity_id for entity in _tunable_entities(tunables_yaml)}
-        stale = sorted(RETIRING_TUNABLES - entity_ids)
-        assert not stale, f"RETIRING_TUNABLES names entities tunables.yaml no longer has: {stale}"
+        gone = RETIRING_TUNABLES - entity_ids
+        assert gone == set(_L01_BRIDGE_ROWS), (
+            "RETIRING_TUNABLES names entities tunables.yaml no longer has that are not the L01 bridge's: "
+            f"{sorted(gone - set(_L01_BRIDGE_ROWS))}; bridge entities still listed: "
+            f"{sorted(set(_L01_BRIDGE_ROWS) - gone)}"
+        )
+        numbers, switches = _parse_entities(tunables_yaml)
+        for entity_id, rows in _L01_BRIDGE_ROWS.items():
+            for name in rows:
+                spec = REGISTRY[name]
+                # Still routed for the pre-engine firmware, but no entity in this release.
+                assert spec.esp_object_id and spec.esp_object_id not in numbers | switches, (entity_id, name)
+                assert name not in _ENTITY_NAMES, name
+                # Its own step, label and unit (the entity's), and no firmware clamp.
+                assert spec.step == 1.0 and spec.label and spec.notes, name
+                assert spec.fw_clamp_lo is None and spec.fw_clamp_hi is None, name
+                assert spec.control_class == "controller_safety" and not spec.planner_pushable, name
+        for name in ("irrig_wall_duration_min", "irrig_center_duration_min"):
+            assert (REGISTRY[name].unit, planner_effective_bounds(name)) == ("min", (1.0, 120.0))
 
     def test_controls_setpoints_are_not_literal_policy(self, controls_yaml: str) -> None:
         """Setpoints fields must come from globals/handler values, not local
@@ -625,14 +662,9 @@ class TestActivityDirectWetGuards:
             assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+        # VD-47 retired the day-mask rows with their cfg_* readbacks.
         for name in self.RETIRED_IRRIGATION_MASKS:
-            row = REGISTRY[name]
-            assert not row.planner_pushable
-            assert row.control_class == "retired"
-            assert row.push_owner == "firmware_internal"
-            assert row.esp_object_id is None
-            assert row.default == 0
-            assert row.cfg_readback_object_id
+            assert name not in REGISTRY
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
@@ -775,8 +807,8 @@ class TestActivityDirectWetGuards:
 
     def test_legacy_schedule_globals_cannot_schedule_actuation(self, controls_yaml: str) -> None:
         """#1160: schedules are the irrigation program's; no legacy schedule global or weekly
-        eligibility gate is read by the control path (the globals stay for their cfg readbacks
-        until #1162)."""
+        eligibility gate is read by the control path (VD-47 deleted the globals with their cfg
+        readbacks)."""
         for gone in ("WeeklyWallEligibilityInput", "weekly_wall_feed_eligible", "solar_day, 7u"):
             assert gone not in controls_yaml
         for retired_scheduler_field in (

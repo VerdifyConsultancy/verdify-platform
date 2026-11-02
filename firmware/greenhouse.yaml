@@ -88,23 +88,11 @@ esphome:
           if(id(min_fan_off_s) < 10){ id(min_fan_off_s) = 90; fixes++; }
           if(id(min_vent_on_s) < 5){ id(min_vent_on_s) = 30; fixes++; }
           if(id(min_vent_off_s) < 5){ id(min_vent_off_s) = 30; fixes++; }
-          // Burst durations — prevent 0 (which defaults to 60 min)
-          if(id(fan_burst_minutes) < 1){ id(fan_burst_minutes) = 10; fixes++; }
-          if(id(vent_bypass_minutes) < 1){ id(vent_bypass_minutes) = 10; fixes++; }
-          if(id(fog_burst_minutes) < 1){ id(fog_burst_minutes) = 8; fixes++; }
           // Setpoint sanity
           if(id(target_temp_low_f) < 40 || id(target_temp_low_f) > 80){ id(target_temp_low_f) = 58; fixes++; }
           if(id(target_temp_high_f) < 60 || id(target_temp_high_f) > 100){ id(target_temp_high_f) = 82; fixes++; }
           if(id(target_vpd_high_kpa) < 0.5 || id(target_vpd_high_kpa) > 4){ id(target_vpd_high_kpa) = 2.0; fixes++; }
           if(id(target_vpd_low_kpa) < 0.1 || id(target_vpd_low_kpa) > 2){ id(target_vpd_low_kpa) = 0.5; fixes++; }
-          // Current physical topology wins over legacy restored NVS. These
-          // dormant paths can be explicitly enabled after boot if commissioned.
-          id(irrig_center_enabled) = false;
-          id(irrig_south_enabled) = false;
-          id(irrig_west_enabled) = false;
-          id(sw_irrig_center_enabled).publish_state(false);
-          id(sw_irrig_south_enabled).publish_state(false);
-          id(sw_irrig_west_enabled).publish_state(false);
           // VPD-primary state machine globals
           if(id(vpd_watch_dwell_s) < 15 || id(vpd_watch_dwell_s) > 120){ id(vpd_watch_dwell_s) = 60; fixes++; }
           if(id(mist_max_closed_vent_s) < 60){ id(mist_max_closed_vent_s) = 600; fixes++; }
@@ -421,7 +409,12 @@ binary_sensor:
     lambda: "return id(fog_rly).state;"
     device_class: running
 
-  # Physical push buttons
+  # Physical push buttons (irrigation F12, VD-47). Each press toggles its
+  # deadline latch in its own handler: a running burst clears, otherwise it
+  # runs for manual_override_timeout_min minutes (manual_latch_toggle(),
+  # greenhouse_logic.h). The manual_override service (irrigation_engine.yaml)
+  # sets and clears the same latches; controls.yaml's override layer reads
+  # them. A press never touches occupancy.
   - platform: gpio
     id: fans_switch
     name: "PB • Fan Burst"
@@ -434,7 +427,9 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: fan_burst_btn
+        - lambda: |-
+            id(manual_fans_until_ms) = manual_latch_toggle(id(manual_fans_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB fan burst %s", id(manual_fans_until_ms) != 0 ? "latched" : "cleared");
 
   - platform: gpio
     id: vent_bypass_switch
@@ -448,7 +443,9 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: vent_bypass_btn
+        - lambda: |-
+            id(vent_bypass_until_ms) = manual_latch_toggle(id(vent_bypass_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB vent bypass %s", id(vent_bypass_until_ms) != 0 ? "latched" : "cleared");
 
   - platform: gpio
     id: fog_switch
@@ -462,33 +459,30 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: fog_burst_btn
+        - lambda: |-
+            id(manual_fog_until_ms) = manual_latch_toggle(id(manual_fog_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB fog burst %s", id(manual_fog_until_ms) != 0 ? "latched" : "cleared");
 
-  # Manual-override state indicators
+  # Manual-override state indicators: true while the deadline latch is set and
+  # still ahead. Their object ids are the fan_burst_active, vent_bypass_active
+  # and fog_burst_active routes (EQUIPMENT_BINARY_MAP), which confirm a burst.
   - platform: template
     id: bs_manual_fan
     name: "Fan Burst Active"
-    lambda: "return id(manual_fan_active);"
+    lambda: "return manual_latch_active(id(manual_fans_until_ms), millis());"
     device_class: running
 
   - platform: template
     id: bs_vent_lock
     name: "Vent Bypass Active"
-    lambda: "return id(vent_lock_active);"
+    lambda: "return manual_latch_active(id(vent_bypass_until_ms), millis());"
     device_class: running
 
   - platform: template
     id: bs_manual_fog
     name: "Fog Burst Active"
-    lambda: "return id(manual_fog_active);"
+    lambda: "return manual_latch_active(id(manual_fog_until_ms), millis());"
     device_class: running
-
-  - platform: template
-    id: bs_occupancy_quiet_override
-    name: "Occupancy Quiet Override Active"
-    lambda: |-
-      return id(occupancy_override_until_ms) != 0
-        && (int32_t)(id(occupancy_override_until_ms) - millis()) > 0;
 
   - platform: template
     id: bs_vent_state
@@ -675,107 +669,10 @@ interval:
                    free_kb, (up_ms - low_since_ms) / 1000.0f, up_ms / 1000.0f);
           App.safe_reboot();
 
-# ───────────────────── DASHBOARD BUTTONS ─────────────────────
-button:
-  - platform: restart
-    name: "Restart"
-    entity_category: config
-
-  - platform: template
-    id: fan_burst_btn
-    name: "Fan Cycle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(manual_fan_active);"
-          then:
-            - script.stop: manual_fan_burst
-            - lambda: "id(manual_fan_active) = false;"
-          else:
-            - script.execute: manual_fan_burst
-
-  - platform: template
-    id: vent_bypass_btn
-    name: "Vent Bypass Toggle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(vent_lock_active);"
-          then:
-            - script.stop: vent_bypass_timer
-            - lambda: "id(vent_lock_active) = false;"
-          else:
-            - script.execute: vent_bypass_timer
-
-  - platform: template
-    id: fog_burst_btn
-    name: "Fog Cycle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(manual_fog_active);"
-          then:
-            - script.stop: manual_fog_burst
-            - lambda: "id(manual_fog_active) = false;"
-          else:
-            - script.execute: manual_fog_burst
-
-# ───────────────────── SCRIPTS (0 min = 24 h) ────────────────────
-script:
-  - id: occupancy_quiet_override
-    mode: restart
-    then:
-      - lambda: |
-          id(occupancy_override_until_ms) = millis() + 3600000UL;
-          id(greenhouse_occupied) = false;
-          id(occupancy_last_true_ms) = 0;
-          id(sw_greenhouse_occupied).publish_state(false);
-          ESP_LOGW("occupancy","Local button override: occupancy ignored for 60 minutes");
-
-  # Manual fan burst script. Requests both fans for a user-defined number of
-  # minutes; the control loop remains the only relay actuator path.
-  - id: manual_fan_burst
-    mode: restart
-    then:
-      - lambda: |
-          id(manual_fan_active) = true;
-      - delay: !lambda |-
-          int minutes = id(fan_burst_minutes);
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(manual_fan_active) = false;
-
-  # Vent bypass timer. Requests a vent lockout for user-defined minutes; safety
-  # rails in the control loop decide whether the vent may actually close.
-  - id: vent_bypass_timer
-    mode: restart
-    then:
-      - lambda: |
-          id(vent_lock_active) = true;
-      - delay: !lambda |-
-          int minutes = id(vent_bypass_minutes);
-          if(minutes <= 0 || minutes > 30) minutes = 30;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(vent_lock_active) = false;
-
-  # Manual fog burst script. Requests fog for a user-defined number of minutes;
-  # the control loop remains the only relay actuator path.
-  - id: manual_fog_burst
-    mode: restart
-    then:
-      - lambda: |
-          id(manual_fog_active) = true;
-      - delay: !lambda |-
-          int minutes = id(fog_burst_minutes);
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(manual_fog_active) = false;
+# Home Assistant has no buttons on this controller (D-IRP-24, irrigation §7):
+# bursts, their clear and the restart reach it only through the ingestor's
+# manual_override service (irrigation_engine.yaml), and the panel push buttons
+# above drive the same latches.
 
 ###############################################################################
 # END OF FILE

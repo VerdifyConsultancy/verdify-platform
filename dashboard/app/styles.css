@@ -343,6 +343,18 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Equipment (screens SCR-07): each board row is the name and state over one line of facts; both wrap, so a row fits from 320 px up. */
+.equipment-rows{list-style:none;margin:0;padding:0}
+.equipment-row{padding:.55rem 0;border-top:1px solid var(--line);min-width:0}
+.equipment-row:first-child{padding-top:0;border-top:0}
+.equipment-row:last-child{padding-bottom:0}
+.equipment-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.15rem .75rem}
+.equipment-name{font-weight:600;min-width:0}
+.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-state{font-size:.85rem;font-variant-numeric:tabular-nums}
+.equipment-facts{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.equipment-note{margin:.75rem 0 0}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;

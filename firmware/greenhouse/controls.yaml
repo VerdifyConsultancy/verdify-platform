@@ -104,19 +104,9 @@ interval:
           last_ms = now_ms;
 
           /**************** 1b — occupancy fail-safe *****************************/
+          // Only the ingestor's API push sets or clears occupancy; no button or
+          // burst overrides it (VD-47). This expiry is the fail-safe for a lost push.
           const uint32_t OCCUPANCY_FAILSAFE_MS = 3600000UL;
-          const bool occupancy_override_active = id(occupancy_override_until_ms) != 0
-            && (int32_t)(id(occupancy_override_until_ms) - now_ms) > 0;
-          if(id(occupancy_override_until_ms) != 0 && !occupancy_override_active){
-            id(occupancy_override_until_ms) = 0;
-            ESP_LOGW("occupancy","Local quiet override expired");
-          }
-          if(occupancy_override_active && id(greenhouse_occupied)){
-            id(greenhouse_occupied) = false;
-            id(occupancy_last_true_ms) = 0;
-            id(sw_greenhouse_occupied).publish_state(false);
-            ESP_LOGW("occupancy","Local quiet override forced occupancy empty");
-          }
           if(id(greenhouse_occupied)){
             if(id(occupancy_last_true_ms) == 0){
               id(occupancy_last_true_ms) = now_ms;
@@ -388,32 +378,6 @@ interval:
               ESP_LOGI("econ","Economiser UNBLOCKED (dH=%.1f <= %.1f)", dH, pol(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg)));
           }
 
-          /**************** 6b — OUTDOOR RH ADAPTIVE FOG BURST ******************/
-          {
-            float outdoor_rh = id(ha_outdoor_rh).state;
-            if(!isnan(outdoor_rh)){
-              int new_mode;
-              // Hysteresis: use 5% dead band
-              if(outdoor_rh < 15.0f)      new_mode = 0;  // DRY
-              else if(outdoor_rh > 45.0f) new_mode = 2;  // HUMID
-              else if(outdoor_rh > 20.0f && outdoor_rh < 40.0f) new_mode = 1;  // MODERATE
-              else new_mode = id(outdoor_rh_mode);  // In dead band — hold
-
-              if(new_mode != id(outdoor_rh_mode)){
-                id(outdoor_rh_mode) = new_mode;
-                // Only adjust fog burst duration — NOT VPD thresholds
-                switch(new_mode){
-                  case 0: id(fog_burst_minutes) = 3; break;  // DRY: short bursts
-                  case 1: id(fog_burst_minutes) = 5; break;  // MODERATE
-                  case 2: id(fog_burst_minutes) = 8; break;  // HUMID: longer bursts
-                }
-                ESP_LOGI("adapt","RH mode → %s (RH=%.0f%%, fog_burst=%dmin)",
-                         new_mode==0?"DRY":new_mode==1?"MOD":"HUMID",
-                         outdoor_rh, id(fog_burst_minutes));
-              }
-            }
-          }
-
                     /**************** 7 — runtime-aware lead/lag selection ****************/
           bool currentLeadIs1 = id(fan_lead_is_fan1);
           static uint32_t last_rotate_ms = millis();
@@ -572,9 +536,10 @@ interval:
           };
 
           // FRT-6: absorption hold active while now_ms is before the armed
-          // deadline. Wrap-aware (millis() wraps ~49.7 days): a hold is at most
-          // post_feed_hold_min minutes, far below the wrap period, so the
-          // signed-difference test is safe. 0 deadline = no hold.
+          // deadline. Wrap-aware (millis() wraps ~49.7 days): a hold is far
+          // below the wrap period, so the signed-difference test is safe.
+          // 0 deadline = no hold; nothing arms it since the engine replaced the
+          // job machine (#1160).
           const bool feed_hold_active =
               id(feed_hold_until_ms) != 0
               && (int32_t)(id(feed_hold_until_ms) - now_ms) > 0;
@@ -699,12 +664,14 @@ interval:
             return "";
           };
           // ── Firmware-v2 BUTTON OVERRIDE LAYER (deadline latches) ──────────
-          // FANS / HUMID / VENT-BYPASS are momentary buttons; each press
-          // toggles a LATCH with a deadline (manual_*_until_ms, set in the
-          // button on_press handlers). While latched the relays are FORCED and
-          // SUPERSEDE all climate automation — only a re-press, the timeout, or
-          // a true safety rail interrupts them. This is the absolute-priority
-          // override layer; it sits ABOVE the mode table and below only safety.
+          // FANS / HUMID / VENT-BYPASS are LATCHES with a deadline
+          // (manual_*_until_ms): the momentary panel push buttons toggle them
+          // (greenhouse.yaml) and the manual_override service sets or clears
+          // them (irrigation_engine.yaml, VD-47). While latched the relays are
+          // FORCED and SUPERSEDE all climate automation — only a re-press, a
+          // clear, the timeout, or a true safety rail interrupts them. This is
+          // the absolute-priority override layer; it sits ABOVE the mode table
+          // and below only safety.
           // Deadlines are wrap-safe signed-difference tests (millis wraps).
           const bool manual_fans_latched =
               id(manual_fans_until_ms) != 0
@@ -720,13 +687,12 @@ interval:
           if (id(manual_fans_until_ms) != 0 && !manual_fans_latched) id(manual_fans_until_ms) = 0;
           if (id(manual_fog_until_ms)  != 0 && !manual_fog_latched)  id(manual_fog_until_ms)  = 0;
           if (id(vent_bypass_until_ms) != 0 && !vent_bypass_latched) id(vent_bypass_until_ms) = 0;
-          // EFFECTIVE manual state = the new deadline latch OR the legacy
-          // script flags (manual_*_active / vent_lock_active are still driven by
-          // the legacy timer scripts triggered elsewhere). We READ both so both
-          // trigger paths work; we never clobber the legacy flags here.
-          const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);
-          const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);
-          const bool vent_bypass_eff   = vent_bypass_latched || id(vent_lock_active);
+          // EFFECTIVE manual state = the deadline latches only. The legacy
+          // script flags and their Home Assistant buttons are gone (VD-47), so
+          // the push buttons and manual_override are the only ways in.
+          const bool manual_fans_eff   = manual_fans_latched;
+          const bool manual_fog_eff    = manual_fog_latched;
+          const bool vent_bypass_eff   = vent_bypass_latched;
           const bool manual_fog_requested = manual_fog_eff;
           const char* manual_fog_safety_block = fog_safety_block_reason();
 

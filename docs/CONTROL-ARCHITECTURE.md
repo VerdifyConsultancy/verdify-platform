@@ -182,7 +182,7 @@ the diurnal program autonomously and the dispatcher only re-syncs on a DB change
 | **Temperature** | `band_temp_low/target/high` | heat1→heat2, vent, fan1→fan2, economizer (dehum-vent) | `bias_heat`, `stage2_heat/cool`, `hyst_temp`, escalation/lead-rotate timeouts | **house-wide** (one air mass) |
 | **Humidity / VPD** | `zone_vpd_target_*` + `band_vpd_*` | center fog, S/W wall misters, vent (to dry), heat (warm→drier) | `mister_pulse_on/gap`, `mister_vpd_weight`, `engage_kpa`, `mister_center_penalty`, `east_adjacency_factor`, **`zone_priority_*`** | **per-zone** (misters/fog) + house (vent/heat) |
 | **Lighting** | DLI + photoperiod policy (2 circuits: `gl_main_*`, `gl_grow_*`) | `grow_light_main`, `grow_light_grow` | lux thresholds/hysteresis, sunrise/sunset, min on/off, DLI target | per-circuit |
-| **Irrigation** | the irrigation program: schedules, line enables, mister flags (`vpd_member`, `schedule_member`), caps | every wet relay through the engine's grant (drips, fertilizer runs, mist windows); misters shared with VPD control | none: people and agents edit the program | per-line |
+| **Irrigation** | the irrigation program: schedules, line enables, mister flags (`vpd_member`, `schedule_member`), caps (`verdify_schemas/irrigation.py`) | every wet relay through the engine's grant (drips, fertilizer runs, mist windows); misters shared with VPD control | none: people and agents edit the program through the dashboard and MCP (the VD-47 release retired the legacy durations, day masks and VPD boost) | per-line |
 
 **The tie-breaker primitive:** because temperature is house-wide and the air mass
 can't satisfy every crop at once, a **settable ranked crop/zone priority**

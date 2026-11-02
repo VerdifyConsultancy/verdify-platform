@@ -2699,6 +2699,38 @@ inline ManualForce apply_manual_overrides(RelayOutputs& out,
     return f;
 }
 
+// ── Manual override deadline latches (irrigation F12, VD-47) ─────────────
+// manual_fans_until_ms / manual_fog_until_ms / vent_bypass_until_ms hold a
+// millis() deadline; 0 means no burst. The manual_override service
+// (irrigation_engine.yaml) and the panel push buttons (greenhouse.yaml) are
+// their only writers besides the override layer's expiry in controls.yaml.
+// Minutes are clamped to 1-120, the bounds OverrideRequest (API-IRR-12) and
+// the manual_override_timeout_min row carry.
+inline int manual_override_minutes(int minutes) noexcept {
+    if (minutes < 1) return 1;
+    if (minutes > 120) return 120;
+    return minutes;
+}
+
+// now + minutes x 60 000 ms, wrapping with millis(). A deadline that wraps to
+// exactly 0 is stored as 1, because 0 means no burst.
+inline uint32_t manual_override_deadline_ms(uint32_t now_ms, int minutes) noexcept {
+    const uint32_t deadline = now_ms + uint32_t(manual_override_minutes(minutes)) * 60000u;
+    return deadline == 0u ? 1u : deadline;
+}
+
+// A latch is active while its deadline is set and still ahead (wrap-safe
+// signed difference, as the override layer tests it).
+inline bool manual_latch_active(uint32_t until_ms, uint32_t now_ms) noexcept {
+    return until_ms != 0u && int32_t(until_ms - now_ms) > 0;
+}
+
+// A push-button press toggles its latch: an active burst clears (0), otherwise
+// it runs for timeout_min minutes (manual_override_timeout_min).
+inline uint32_t manual_latch_toggle(uint32_t until_ms, uint32_t now_ms, int timeout_min) noexcept {
+    return manual_latch_active(until_ms, now_ms) ? 0u : manual_override_deadline_ms(now_ms, timeout_min);
+}
+
 // Whether the fan->vent interlock should force the vent OPEN this cycle. The
 // interlock holds the vent open while fans run so a closed-vent fan does not
 // leave the vent shut against the fan's airflow — EXCEPT (a) SAFETY_HEAT
