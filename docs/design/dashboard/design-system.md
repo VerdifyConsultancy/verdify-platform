@@ -301,8 +301,27 @@ WATERING MINUTES BY ZONE · LAST 7 DAYS              today    cap
 - **Time:** America/Denver, stated once in the eyebrow; clock times are 24-hour ("06:02", `hourCycle: "h23"` as in
   weather's plots). X values are UTC epoch seconds; labels use `Intl.DateTimeFormat` with `timeZone:
   "America/Denver"`: two lines with the offset at 1440 (weather `plotTime`: "11/01/2026 / 01:00 GMT-06:00"), time
-  only at 390. Today, 2026-11-01, falls back: 01:00–01:59 occurs twice, so times in that hour carry their offset, and
-  local days span real elapsed time (25 h today).
+  only at 390 (the date once ticks are a day or more apart, §5.5). Today, 2026-11-01, falls back: 01:00–01:59 occurs
+  twice, so times in that hour carry their offset, and local days span real elapsed time (25 h today).
+
+### 5.5 As built (VD-06)
+
+The chart layer is `dashboard/app/charts/` (#1126). Where it settles a detail §5 leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Stylesheets | A charting route spreads `chartLinks()` into its `links`: `uPlot.min.css` and `app/charts/charts.css` (reserved heights on weather's `.plot` and `.plot-small`, tooltip, legend, notes). Chart rules stay out of `styles.css`, whose weather sections are byte for byte and whose §2.2 block stays last. A source test (`charts/chunks.test.ts`) keeps `import("uplot")` in `uplot-chart.tsx` only and makes any route that imports chart code link `chartLinks()` |
+| Layers | Retention shading and the band wash paint in `drawClear` (under the grid), the band's 1px edges in `drawAxes`, and the steps, bounds, now line and all labels in `draw`. Labels never overlap: one that has no free place at its start or end is dropped, band labels first, the plan last |
+| Band | A ribbon that changes source (in force to crop, at now or at the 90-day boundary) joins at a shared point, so the change never reads as a gap; a null in force inside 90 days stays a gap |
+| Steps | Device: each readback change point held until the next, the last until now. Planned: the waypoint in force at now draws from now to the next waypoint, and the last one to the window's end. Requested, not confirmed and held rows draw with their state word; the tooltip adds who asked and, for held, the reason and the applied value |
+| Phone axis | At 860 px and below ticks a day or more apart read the date ("10/28"), not "00:00" on every tick |
+| Zoom | Double-click does not zoom out (uPlot's would zoom to the data's extent, not the window): "Reset zoom" puts every chart on the sync key back, lanes included. A poll keeps the zoom; an unzoomed chart follows its sliding window |
+| Legend | A hidden series also leaves the data table, the summary line and the CSV, so each holds exactly what is plotted |
+| Colours | The climate keys take `--c-temp`, `--c-vpd` and `--c-rh`, outdoor and forecast keys `--c-outdoor`; a further line in one unit takes the unit's colour if free, else the next unused of `--eq-fan2`, `--eq-heat1`, `--eq-vent`, `--eq-mister`, `--eq-light-grow`, `--eq-fert`, `--eq-heat2`, `--eq-fog` (each at least 3:1). Planned steps take the panel's first line colour |
+| Points | A lone sample between gaps draws as a point; a daily-summary series draws every day as a point |
+| Stale | "STALE · last data 06:02" names the start of the last bucket with data, and its date ("Oct 30, 06:02") when that was on an earlier local day |
+| Data table | One row per bucket: the time with its offset, each series, the band and its source, and a note (the null run's "No data …" on its first row, the retention words on the first row, STALE on the first row after the last value, a `daily.*` bucket's reason). A second table lists the setting steps, with the bounds in its caption. Rows build only once the disclosure opens |
+| CSV | `time (America/Denver)` as ISO 8601 local time with the offset ("2026-11-01T01:30:00-06:00"), then one `<key> (<unit>)` column per plotted series with the raw `avg`; a UTF-8 byte-order mark and CRLF rows. LinkedPanels offers one file for the window, rows on the union of the panels' bucket starts |
 
 ## 6. Responsive rules
 
