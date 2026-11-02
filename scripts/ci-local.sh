@@ -164,6 +164,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
