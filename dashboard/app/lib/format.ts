@@ -109,6 +109,12 @@ const NUMBERS = [0, 1, 2].map((digits) => new Intl.NumberFormat("en-US", { minim
 function fixed(value: number, digits: number): string {
   return NUMBERS[digits].format(value).replace("-", MINUS);
 }
+/** The decimals `formatValue` gives a unit (minutes read whole), so a chart axis never ticks finer than it prints. */
+export function unitDecimals(unit: string | null | undefined): number {
+  if (unit === "min") return 0;
+  const rule = unit ? UNITS[unit] : undefined;
+  return rule ? rule.digits : 1;
+}
 /** Run time in whole minutes; from 120 it reads "2 h 5 min". */
 function minutes(value: number): string {
   const whole = Math.round(Math.abs(value));

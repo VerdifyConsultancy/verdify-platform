@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime } from "./format";
+import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime, unitDecimals } from "./format";
 
 const NBSP = " ";
 const MINUS = "−";
@@ -74,6 +74,10 @@ test("units are fixed with their decimals, a no-break space before every unit bu
   expect(formatValue(38.6, "kB")).toBe(`39${NBSP}kB`);
   expect(formatValue(30, "s")).toBe(`30.0${NBSP}s`);
   expect(formatValue(1.25, null)).toBe("1.3");
+});
+
+test("unitDecimals matches the decimals formatValue prints", () => {
+  expect(["°F", "%", "kPa", "gal", "gal/min", "min", "kB", "ppm", "°", "s", null].map(unitDecimals)).toEqual([1, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1]);
 });
 
 test("run time reads in whole minutes, and as hours and minutes from 120", () => {
