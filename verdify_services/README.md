@@ -12,7 +12,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
 | `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
 | `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
-| `reads.py` | `reporting()`, the one §7 reporting test (heartbeat at most 180 s old, climate at most 300 s); #1167 adds the Now, plan and equipment reads |
+| `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13), and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
 
 Later modules (`series`, `irrigation`) follow the same rules.
 
@@ -164,8 +164,9 @@ a resolve (the MCP adapter keeps its `planner_tool_dependency_failed` retrieval 
 The login needs SELECT on `alert_log`, `slack_alert_runbooks`, `setpoint_snapshot`, `equipment_state`,
 `setpoint_changes`, `setpoint_clamps`, `system_state`, `climate`, `crop_band_anchors`, `v_active_plan`,
 `desired_state` and `v_desired_state_current`, UPDATE on the `alert_log` ack and resolve columns and the three
-`crop_band_anchors` columns, and EXECUTE on `fn_current_season()`: migrations 259, 261 and 280 grant the MCP
-login all of them, and M2 (#1179) the dashboard login.
+`crop_band_anchors` columns, and EXECUTE on `fn_current_season()` and `fn_mcp_armed_assignment_context()`
+(the experiment check every read and write makes): migrations 259, 261 and 280 grant the MCP login all of
+them, and M2 (#1179) and its successor the dashboard login.
 
 ## Route modules and images
 

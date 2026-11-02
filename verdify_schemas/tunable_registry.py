@@ -4613,7 +4613,7 @@ def desired_write_rule(name: str) -> tuple[bool, str | None]:
 # Switch params whose readback is an equipment_state mirror: param → equipment
 # key. It equals the ingestor's SWITCH_CONFIRM_EQUIPMENT (ingestor/tasks/
 # _common.py, built from entity_map.SWITCH_TO_ENTITY and EQUIPMENT_SWITCH_MAP);
-# verdify_schemas/tests/test_drift_guards.py rebuilds that map and keeps the two
+# verdify_schemas/tests/test_settings_rules.py rebuilds that map and keeps the two
 # equal. These switches have no cfg_* sensor: their native Switch state also
 # lands in setpoint_snapshot, and equipment_state records each change.
 SWITCH_READBACK_EQUIPMENT: dict[str, str] = {
