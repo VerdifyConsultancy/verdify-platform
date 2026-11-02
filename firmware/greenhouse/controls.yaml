@@ -1650,10 +1650,19 @@ interval:
                   && (any_zone_stressed || global_stressed) && !budget_block && !occupancy_blocks;
               irr_in.climate_demand = climate_mist_wanted || climate_fog_wanted;
               irr_in.occupied = occupancy_moisture_block;
-              irr_in.rh_pct = avg_ok ? RHin : NAN;  // measured; a missing reading never blocks
-              irr_in.dew_margin_known = avg_ok && !isnan(id(dewpoint_avg).state);
-              irr_in.dew_breach = irr_in.dew_margin_known
-                  && wet_dew_margin_f < pol(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f));
+              // The RH ceiling and the dew margin read the measured indoor air: the average
+              // probes, else the controller-case probe while it answers (this loop's own fallback
+              // for Tin and RHin; its 50 % and 65°F defaults are never a measurement). A missing
+              // RH never blocks. degraded_only mist (D-IRP-12) runs only while the averages are
+              // out and needs a known dew margin, so the case probe is what lets it run.
+              const bool irr_case_fresh = probe_sample_fresh(now_ms, id(last_case_ms), kZoneProbeStaleMs);
+              const verdify_irr::IrrAirInputs irr_air = verdify_irr::irr_air_inputs(
+                  avg_ok ? id(average_temperature).state : irr_case_fresh ? id(case_temperature).state : NAN,
+                  avg_ok ? id(average_humidity).state : irr_case_fresh ? id(case_humidity).state : NAN,
+                  pol(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f)));
+              irr_in.rh_pct = irr_air.rh_pct;
+              irr_in.dew_margin_known = irr_air.dew_margin_known;
+              irr_in.dew_breach = irr_air.dew_breach;
               const float irr_budget_gal = pol(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal));
               irr_in.soft_budget_centigal = (std::isfinite(irr_budget_gal) && irr_budget_gal > 0.0f)
                   ? uint32_t(irr_budget_gal * 100.0f + 0.5f) : 0u;

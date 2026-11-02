@@ -397,6 +397,13 @@ points the design left open, as the wiring settles them:
   token's planned end; the climate path works out the weighted S2 length before the pulse opens. A wait,
   a refusal or a pulse already served by a window on the zone opens nothing, and the climate path asks
   again one pulse later.
+- **Zone fence.** An engine pulse that closes, a VPD release and a stop stamp the zone's off time when
+  they happen. The next tick's relay sample stamps only the closes the engine did not see (a mist prewet
+  or flush, a relay closed outside an engine call), so a window's pulses run `max(gap_s,
+  mister_min_off_s)` apart and `irr_state` does not change between them.
+- **Runs not yet open.** A run whose relay cannot open yet (a drip waiting for a VPD pulse or fog to end,
+  a feed waiting for fog, a flush that opens at the next tick) is published as `w=<line>,man`, with the
+  VPD pulse's end when one holds the manifold, never as a `d=` or `m=` token with no start time.
 - **Stop.** A stop closes the wet relays in its scope inside the call (255: L01 to L10), the climate's VPD
   pulse included. Fog is climate only: a stop never touches it, and a stop naming L11 does nothing.
 - **Program push.** A commit that decodes is saved to NVS and synced, then runs from the next tick. If the
@@ -407,10 +414,13 @@ points the design left open, as the wiring settles them:
   `runtime_*_drip_ms` at each tick. Until VD-46 the accrual runs for climate pulses and fog only, as
   before.
 - **Climate inputs.** Each second the climate loop writes the engine's inputs: SENSOR_FAULT and
-  SAFETY_COOL from the mode, degraded sensing, the VPD emergency, the measured RH (missing when the average
-  probes are out), the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD
-  source per zone and the climate-yield demand (fog or VPD mist that only a drip holds back). None reads
-  the leak.
+  SAFETY_COOL from the mode, degraded sensing (the average probes are out), the VPD emergency, the
+  measured RH and the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD source
+  per zone and the climate-yield demand (fog or VPD mist that only a drip holds back). None reads the
+  leak. The RH and the dew margin come from one measured pair: the average probes, else the
+  controller-case probe while it answers, never the loop's fabricated fallback values. With neither the
+  RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages are out,
+  so the case probe is what lets a `degraded_only` window run (D-IRP-12).
 
 ## 5. Firmware changes
 

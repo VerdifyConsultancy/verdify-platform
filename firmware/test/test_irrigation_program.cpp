@@ -2470,6 +2470,39 @@ static void wiring_water_centigal() {
   CHECK(irr_water_centigal(6.0f, 1000u, carry) == 10 && carry >= 0.0f && carry < 0.01f, "a bad carry restarts at 0");
 }
 
+// The RH and dew margin the engine reads come from one measured pair (the averages, else the
+// case probe): the dewpoint_avg sensor's own Magnus form, and nothing from a missing reading.
+static void wiring_air_inputs() {
+  auto dewpoint_avg = [](float t_f, float rh) {  // sensors.yaml dewpoint_avg, verbatim
+    float tc = (t_f - 32.0f) * 5.0f / 9.0f;
+    float lnR = logf(rh / 100.0f);
+    float dpC = (237.3f * (lnR + ((17.27f * tc) / (237.3f + tc)))) / (17.27f - lnR - ((17.27f * tc) / (237.3f + tc)));
+    return dpC * 9.0f / 5.0f + 32.0f;
+  };
+  IrrAirInputs a = irr_air_inputs(77.0f, 50.0f, 5.0f);
+  CHECK(a.dew_margin_known && a.rh_pct == 50.0f && !a.dew_breach, "77 F, 50 %: a 20 F margin, no breach");
+  CHECK(irr_air_inputs(77.0f, 50.0f, 20.5f).dew_breach && !irr_air_inputs(77.0f, 50.0f, 19.5f).dew_breach,
+        "the margin is 77 less the dewpoint_avg dew point (about 57 F)");
+  CHECK(std::fabs(77.0f - dewpoint_avg(77.0f, 50.0f) - 20.05f) < 0.05f, "dewpoint_avg gives the same margin");
+  a = irr_air_inputs(70.0f, 95.0f, 4.0f);
+  CHECK(a.dew_margin_known && a.dew_breach, "70 F, 95 %: a 1.5 F margin breaches 4 F");
+  for (float t : {40.0f, 65.0f, 95.0f}) {
+    for (float rh : {20.0f, 60.0f, 99.0f}) {
+      const float margin = t - dewpoint_avg(t, rh);
+      CHECK(irr_air_inputs(t, rh, margin + 0.01f).dew_breach && !irr_air_inputs(t, rh, margin - 0.01f).dew_breach,
+            "the breach edge sits on the dewpoint_avg margin");
+    }
+  }
+  for (const auto& bad : {std::pair<float, float>{NAN, 50.0f}, {70.0f, NAN}, {70.0f, 0.0f}, {70.0f, 100.5f}}) {
+    a = irr_air_inputs(bad.first, bad.second, 4.0f);
+    CHECK(std::isnan(a.rh_pct) && !a.dew_margin_known && !a.dew_breach,
+          "no measured pair: RH missing (never blocks), dew margin unknown");
+  }
+  a = irr_air_inputs(70.0f, 100.0f, 0.5f);
+  CHECK(a.dew_margin_known && a.dew_breach, "saturated air has no margin");
+  CHECK(!irr_air_inputs(70.0f, 60.0f, NAN).dew_breach, "no threshold, no breach");
+}
+
 // The controller as irrigation_engine.yaml, irrigation_engine_esphome.h, hardware.yaml and the
 // climate path of controls.yaml wire it: the engine with its RTC block and NVS (claims and the
 // program record), the eleven relays and their guards, irr_grant_mask, the three text sensors,
@@ -2505,6 +2538,7 @@ struct Dev {
   int refused = 0;         // turn_on attempts the guards refused
   int uncaused = 0;        // ON edges whose line no published irr_state token named first
   int ungranted_held = 0;  // ticks with an engine relay ON and no grant bit
+  int zero_start = 0;      // published run tokens with no start time
   bool two_misters = false;
   bool drip_with_mist = false;
   bool l03_alone = false;
@@ -2561,6 +2595,17 @@ struct Dev {
       std::memcpy(state, s, sizeof(state));
       state_pub = true;
       ++state_publishes;
+      // irr_state carries absolute times: with the clock valid (always, in these traces) no
+      // d= or m= token goes out with a zero start.
+      for (const char* t = s; *t != '\0'; t = std::strchr(t, ' ') ? std::strchr(t, ' ') + 1 : t + std::strlen(t)) {
+        unsigned idx = 0, slot = 0;
+        char cause[16];
+        unsigned long start = 0, end = 0;
+        if ((t[0] == 'd' || t[0] == 'm') && t[1] == '=' &&
+            std::sscanf(t + 2, "%u,%15[a-z_],%u,%lu,%lu", &idx, cause, &slot, &start, &end) == 5 && start == 0) {
+          ++zero_start;
+        }
+      }
     }
     if (!events_pub || rtc.next_seq != pub_seq || rtc.ring_count != pub_count) {
       irr_format_events(rtc, events, sizeof(events));
@@ -2781,6 +2826,54 @@ static void wiring_state_published_on_transitions_only() {
     CHECK(d.on_edges[kL04] == 16 && d.refused == 0 && d.uncaused == 0, "the cut pulse is delivered again");
     EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
   }
+  {
+    // A gap under mister_min_off_s (gap_s 30 against the 45 s fence): the fence counts from each
+    // pulse's own close, so the next tick's relay sample never re-fences the zone. The pulses run
+    // 45 s apart (07:00:00, 07:01:15, ..., the 20th at 07:23:45) and irr_state never flips to a
+    // w=3,man token between them.
+    IrrProgram q = irr_rom_default();
+    members(q, kL04, true, true);
+    add_slot(q, 1, kL04, 420, 30, 20, 30);
+    Dev d;
+    d.store(q);
+    d.epoch = at(418);
+    d.boot(true);
+    d.tick();
+    const int base = d.state_publishes;
+    d.run_until(444, 10);
+    CHECK(d.on_edges[kL04] == 20 && (d.relays & irr_bit(kL04)), "07:24:10: the 20th pulse (opened 07:23:45) is open");
+    d.run_until(444, 15);
+    CHECK(d.on_edges[kL04] == 20 && !(d.relays & irr_bit(kL04)), "20 pulses, 45 s apart, done at 07:24:15");
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
+    CHECK(d.state_publishes == base + 2 && d.refused == 0 && d.uncaused == 0,
+          "a short-gap window publishes at its start and end only, never per pulse");
+  }
+}
+
+// A run whose relay cannot open yet is a w= token, never a run token with no start: an L01
+// schedule that comes due while a climate VPD pulse holds the mist manifold waits until the
+// pulse's end, and opens at the next tick once the climate path closed it.
+static void wiring_run_waiting_for_the_manifold_is_a_wait() {
+  IrrProgram p = irr_rom_default();
+  p.lines[kL01].daily_cap_min = 0;
+  add_slot(p, 1, kL01, 420, 300);  // L01 at 07:00 for 5 min
+  Dev d;
+  d.store(p);
+  d.epoch = at(418);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 60;
+  d.vpd_gap_s = 45;
+  d.run_until(420);
+  EXPECT_IRR_STATE(d.state, "m=3,vpd,0,1793627991,1793628051 w=0,man,1793628051 v=hoo");
+  CHECK(!(d.relays & irr_bit(kL01)) && (d.relays & irr_bit(kL04)), "07:00: the VPD pulse holds the water");
+  d.run_until(420, 5);
+  EXPECT_IRR_STATE(d.state, "d=0,schedule,1,1793628005,1793628305 v=hoo");
+  CHECK((d.relays & irr_bit(kL01)) && !(d.relays & irr_bit(kL04)), "07:00:05: the drip opens");
+  d.run_until(430);
+  CHECK(d.zero_start == 0 && d.refused == 0 && d.uncaused == 0, "no run token without its start");
+  EXPECT_IRR_EVENTS(d.events, "0,0,1,20759,ok");
 }
 
 // Acceptance: irr_program_id reads src=rom with no stored program and src=nvs with the record's
@@ -2907,6 +3000,7 @@ static void wiring_no_relay_without_the_grant() {
   }
   CHECK(d.refused == 0, "no wet relay turned on without its grant bit");
   CHECK(d.uncaused == 0, "every ON edge had its cause in irr_state first");
+  CHECK(d.zero_start == 0, "every published run token carried its start time");
   CHECK(d.ungranted_held == 0, "no engine relay stayed on without its bit");
   CHECK(!d.two_misters && !d.drip_with_mist && !d.l03_alone, "manifold rules");
   for (uint8_t line : {kL01, kL02, kL03, kL04, kL05, kL06, kL07, kL08, kL09, kL10}) {
@@ -3133,7 +3227,9 @@ int main() {
   wiring_program_push_staging();
   wiring_commands_and_clock();
   wiring_water_centigal();
+  wiring_air_inputs();
   wiring_state_published_on_transitions_only();
+  wiring_run_waiting_for_the_manifold_is_a_wait();
   wiring_program_id_rom_then_nvs();
   wiring_fallback_run_is_published_as_fallback();
   wiring_no_relay_without_the_grant();

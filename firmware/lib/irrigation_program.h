@@ -942,6 +942,9 @@ struct IrrEngine {
   bool sched_turn = false;
   bool zone_off_known[kZoneCount]{};
   uint32_t zone_off_ms[kZoneCount]{};
+  // Mister relays whose close the engine stamped when it happened since the last tick (an
+  // engine pulse, a VPD release, a stop): the next tick's relay sample does not stamp them again.
+  uint16_t off_stamped = 0;
   // Published state.
   IrrStateFields last_state{};
   bool last_state_valid = false;
@@ -1211,10 +1214,18 @@ inline void set_zone_off(IrrEngine& e, uint8_t idx, uint32_t now_ms) {
   }
 }
 
+// A mister relay closes now, in this call: stamp its zone at the moment it closed. The next
+// tick sees it go OFF in its relay sample and leaves this stamp alone, so the zone fence (and
+// a window's pulse spacing) counts from the real close, not from the tick after it.
+inline void stamp_close(IrrEngine& e, uint8_t idx, uint32_t now_ms) {
+  set_zone_off(e, idx, now_ms);
+  e.off_stamped = uint16_t(e.off_stamped | irr_bit(idx));
+}
+
 inline void close_pulse(IrrEngine& e, IrrRun& r, uint32_t now_ms) {
   if (!r.pulse_open) return;
   r.pulse_open = false;
-  set_zone_off(e, r.line, now_ms);
+  stamp_close(e, r.line, now_ms);
 }
 
 inline void clear_run(IrrEngine& e) {
@@ -1504,7 +1515,15 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
 
   IrrStateFields& s = out.state;
   s.reject = e.reject;
-  const bool run_blocked = r.kind != IrrRunKind::kNone && r.block != IrrReason::kNone;
+  // A run whose current stage has not opened yet (a drip waiting for a VPD pulse or fog to end,
+  // a feed waiting for fog, a flush the next tick opens) has no start to publish. With a valid
+  // clock it reads as waiting for the manifold (w=), never as a run token with no start time.
+  const bool pulse_train =
+      r.kind == IrrRunKind::kWindow || (r.kind == IrrRunKind::kFert && r.stage == IrrStage::kFeed && is_mister(r.line));
+  const bool run_unopened = r.kind != IrrRunKind::kNone && r.block == IrrReason::kNone && !r.to_flush &&
+                            !r.to_settle && e.in.clock.valid && r.start_epoch == 0 && run_relays(r) == 0 &&
+                            (!pulse_train || r.done == 0);
+  const bool run_blocked = r.kind != IrrRunKind::kNone && (r.block != IrrReason::kNone || run_unopened);
   if (r.kind != IrrRunKind::kNone && !run_blocked && !r.to_flush && !r.to_settle) {
     const IrrRunToken t = run_token(r);
     if (is_drip_line(t.line)) s.drip = t;
@@ -1517,8 +1536,9 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
   if (run_blocked) {
     // The active run waits on someone else: a VPD pulse names its planned end; fog or an
     // unknown holder names none.
-    const uint32_t until = r.block == IrrReason::kMan && e.vpd_line != kNoLine ? s.mist.end_epoch : 0u;
-    add_wait(s, run_stage_line(r), r.block, until);
+    const IrrReason why = r.block != IrrReason::kNone ? r.block : IrrReason::kMan;
+    const uint32_t until = why == IrrReason::kMan && e.vpd_line != kNoLine ? s.mist.end_epoch : 0u;
+    add_wait(s, run_stage_line(r), why, until);
   }
   // Pending occurrences, earliest due first.
   bool listed[kMaxSlots] = {};
@@ -2177,8 +2197,10 @@ inline void irr_tick(IrrEngine& e, const IrrInputs& in, IrrOutputs& out) {
   // Integrity first (a corrupted block is zeroed, never re-sealed), then the elapsed
   // interval is counted to the day it mostly belongs to, then local midnight rolls.
   irr_rtc_validate(b, false, 0);
-  // A mister relay that went OFF since the last tick fences its zone (mister_min_off_s).
-  const uint16_t went_off = uint16_t(prev_relays & ~in.relay_on_mask & kMistManifoldMask);
+  // A mister relay that went OFF since the last tick fences its zone (mister_min_off_s),
+  // unless its close was already stamped when it happened (stamp_close()).
+  const uint16_t went_off = uint16_t(prev_relays & ~in.relay_on_mask & kMistManifoldMask & ~e.off_stamped);
+  e.off_stamped = 0;
   for (uint8_t i = 0; i < kLineCount; ++i) {
     if (went_off & irr_bit(i)) detail::set_zone_off(e, i, in.now_ms);
   }
@@ -2320,7 +2342,7 @@ inline uint8_t irr_stop(IrrEngine& e, uint8_t line, uint32_t now_ms, IrrOutputs&
     }
   }
   if (e.vpd_line != kNoLine && (all || e.vpd_line == line)) {
-    set_zone_off(e, e.vpd_line, now_ms);
+    stamp_close(e, e.vpd_line, now_ms);  // the stop closes it inside the call
     e.vpd_line = kNoLine;
     e.sched_turn = true;
     ++ended;
@@ -2422,7 +2444,7 @@ inline void irr_vpd_release(IrrEngine& e, uint8_t idx, uint32_t now_ms, IrrOutpu
   using namespace detail;
   if (e.vpd_line == idx) {
     e.vpd_line = kNoLine;
-    set_zone_off(e, idx, now_ms);
+    stamp_close(e, idx, now_ms);  // the climate path calls this once its relay is off
     e.sched_turn = true;
     if (e.run.yielding) e.run.yield_vpd_done = true;  // a drip or drip flush yielding for it resumes
   }
@@ -2704,6 +2726,31 @@ inline uint32_t irr_water_centigal(float gpm, uint32_t dt_ms, float& carry) {
   const float whole = std::floor(total);
   carry = total - whole;
   return whole >= 4294967040.0f ? UINT32_MAX : uint32_t(whole);
+}
+
+// The RH ceiling and dew margin inputs (irrigation §4.6, D-IRP-09, D-IRP-12) from one measured
+// indoor temperature and RH pair: the average probes, or while they are out the controller-case
+// probe (the climate loop's own fallback for its temperature and RH). With no measured pair (a
+// NaN, or an RH outside (0, 100]) the RH reads missing, which never blocks, and the dew margin is
+// unknown, which holds degraded_only mist (dew). The dew point is the Magnus form of the
+// dewpoint_avg sensor (sensors.yaml: 17.27, 237.3 C).
+struct IrrAirInputs {
+  float rh_pct;           // NaN: missing
+  bool dew_margin_known;  // a dew margin could be computed
+  bool dew_breach;        // temperature less dew point is below `min_margin_f`
+};
+
+inline IrrAirInputs irr_air_inputs(float temp_f, float rh_pct, float min_margin_f) {
+  IrrAirInputs a{NAN, false, false};
+  if (!std::isfinite(temp_f) || !std::isfinite(rh_pct) || rh_pct <= 0.0f || rh_pct > 100.0f) return a;
+  const float tc = (temp_f - 32.0f) * 5.0f / 9.0f;
+  const float g = std::log(rh_pct / 100.0f) + (17.27f * tc) / (237.3f + tc);
+  const float dew_f = (237.3f * g) / (17.27f - g) * 9.0f / 5.0f + 32.0f;
+  if (!std::isfinite(dew_f)) return a;
+  a.rh_pct = rh_pct;
+  a.dew_margin_known = true;
+  a.dew_breach = std::isfinite(min_margin_f) && temp_f - dew_f < min_margin_f;
+  return a;
 }
 
 }  // namespace verdify_irr

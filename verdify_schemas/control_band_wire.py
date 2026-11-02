@@ -24,7 +24,7 @@ FIRMWARE_SOURCES = {
     # and counters from the engine) and removes the irrigation job machine;
     # solar/band expressions are unchanged. New captures bind this source;
     # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "4a26160d158dbc497775a631a7b7930ebd3ce3b2059e8929e25ffaf405fbb08c",
+    "firmware/greenhouse/controls.yaml": "ccbe44a8c6e6530478011a35895f6c95e498b5da777f96b20c07a10a685e37b2",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

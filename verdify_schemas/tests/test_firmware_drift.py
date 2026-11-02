@@ -657,6 +657,23 @@ def test_no_engine_input_guard_or_reason_reads_the_leak():
     assert reason_words and not [w for w in reason_words if "leak" in w]
 
 
+def test_engine_air_inputs_fall_back_to_the_case_probe():
+    """D-IRP-12 (#1160): degraded_only mist runs only while the average probes are out (SF1) and
+    needs a known dew margin, so the engine's RH and dew inputs come from the measured indoor pair:
+    the averages, else the controller-case probe while it answers, never the loop's fabricated RHin.
+    irr_air_inputs() itself is covered by firmware/test/test_irrigation_program.cpp."""
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    start = controls.index("// ── Irrigation engine inputs (#1160)")
+    block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
+    assert "irr_in.sensor_degraded = sensor_in.sensor_degraded;" in block
+    assert "probe_sample_fresh(now_ms, id(last_case_ms), kZoneProbeStaleMs)" in block
+    assert "avg_ok ? id(average_temperature).state : irr_case_fresh ? id(case_temperature).state : NAN" in block
+    assert "avg_ok ? id(average_humidity).state : irr_case_fresh ? id(case_humidity).state : NAN" in block
+    for field in ("rh_pct", "dew_margin_known", "dew_breach"):
+        assert f"irr_in.{field} = irr_air.{field};" in block
+    assert "RHin" not in block, "the loop's RHin may be its fabricated 50 %"
+
+
 def test_engine_program_and_claims_save_then_sync():
     """F2 and §4.7 (#1160): a committed push is saved to NVS and synced before it can run, and the
     claims record the engine journals before a relay opens is saved then synced (irr_commit_claims()
