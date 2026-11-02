@@ -88,7 +88,7 @@ export function ChemistryBadge({ chemistry }: { chemistry: "clean" | "fert" | nu
 
 /**
  * A line's state: RUNNING (green family), IDLE (base) or DISABLED (base, muted), with "Reserved" beside DISABLED for
- * L05 and L06 (`reserved`). Other codes read from the words table (raw until #1124 adds `line_state`). `unknown`
+ * L05 and L06 (`reserved`). Other codes read from the words table (raw for a code it lacks). `unknown`
  * shows only because the API sent it: nothing here looks at ages.
  */
 export function LineStateBadge({ code, reserved = false }: { code: string; reserved?: boolean }) {
