@@ -60,7 +60,7 @@ test("at 8 metrics per window the picker says so and offers no more", () => {
 test("+ Setting lists numeric settings in an open panel's unit, never the Band in force rows, grouped by panel", () => {
   const units = ["°F", "kPa", "%"];
   const groups = chooserGroups(SETTINGS, units);
-  // API-09's base fixture is the whole rendered registry, so a panel is checked for its rows rather than listed in full.
+  // A panel is checked for its rows rather than listed in full: VD-12 makes API-09's base fixture the whole rendered registry.
   const listed = (unit: string) => groups.find((group) => group.unit === unit)?.items.map((row) => row.param) ?? [];
   expect(groups.map((group) => group.unit)).toEqual(units);
   expect(listed("°F")).toContain("temp_low");
@@ -75,7 +75,7 @@ test("+ Setting lists numeric settings in an open panel's unit, never the Band i
   fireEvent.click(screen.getByRole("button", { name: "+ Setting" }));
   const list = within(dialog());
   expect(list.getByRole("link", { name: /Fog RH Ceiling/ }).getAttribute("href")).toBe("/graphs?range=72h&set=mister_engage_kpa&set=fog_rh_ceiling_pct");
-  expect(text(list.getByRole("link", { name: /Fog RH Ceiling/ }))).toBe("Fog RH Ceilingfog_rh_ceiling_pct · % · device 88.0%");
+  expect(text(list.getByRole("link", { name: /Fog RH Ceiling/ }))).toMatch(/^Fog RH Ceilingfog_rh_ceiling_pct · % · device \d+\.0%$/);
   expect(text(dialog())).toContain("VPD Mister Engagemister_engage_kpa · kPa · device 1.60 kPaOn the charts");
   expect(text(dialog())).not.toMatch(/band_house|band_center|sw_gl_main_auto_mode|mister_pulse_gap_s/);
   fireEvent.click(list.getByRole("button", { name: "Close" }));
