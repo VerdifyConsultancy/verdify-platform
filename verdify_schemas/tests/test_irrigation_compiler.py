@@ -822,7 +822,14 @@ def test_start_maps_the_openapi_schedule_start() -> None:
     ):
         with pytest.raises(ValueError):
             Start.from_api(bad)
+        with pytest.raises(ValidationError):  # the same shapes inside a schedule
+            _sched(None, start=bad)
     assert Start(kind="clock", minute=450).start_kind == irr.START_KIND["clock"]
+    # A clock start without its time is refused, never read as midnight; a bare solar kind is offset 0.
+    with pytest.raises(ValidationError):
+        Start.model_validate({"kind": "clock"})
+    assert _sched(None, start={"kind": "sunset"}).start == Start(kind="sunset", minute=0)
+    assert _sched(None, start={"kind": "clock", "minute": 450}).start == Start(kind="clock", minute=450)  # row shape
 
 
 def test_days_map_the_openapi_schedule_days() -> None:
@@ -1054,7 +1061,7 @@ def test_agenda_notes_the_daily_cap() -> None:
         _sched(3, "L01", start=_clock("18:00"), on_s=60),  # 61 min: past the 60 min cap
         _sched(4, "L07", start=_clock("06:00"), on_s=60, count=20),  # 20 min
         _sched(5, "L07", start=_clock("07:00"), on_s=60, count=15),  # 35 min: past 45 - 15
-        _sched(6, "L02", start=_clock("09:00"), on_s=7200, prewet_s=120, flush_s=240),
+        _sched(6, "L02", start=_clock("09:00"), on_s=7200),  # no cap; no prewet or flush on L01
         _sched(7, "L01", days=["tue"], start=_clock("06:00"), on_s=600),  # a new day starts at 0
     ]
     week = agenda(lines, slots, today=MONDAY, days=2)
@@ -1084,6 +1091,44 @@ def test_agenda_notes_the_daily_cap() -> None:
     degraded = _seed_lines(L04={"vpd_reserve_min": 119})  # 1 min left for schedules
     notes = [occ.reason for occ in agenda(degraded, _seed_slots(), today=MONDAY, days=1).occurrences]
     assert notes == ["only while VPD sensing is degraded; ends at the daily cap"] * 3
+
+
+def test_agenda_cap_counts_what_the_controllers_cap_counts() -> None:
+    """irrigation §4.5: a drip cap counts the prewet and flush a feed runs on it, and a mister zone's
+    duty counts every pulse on the zone, its fertilizer mister's feed included."""
+    lines = _seed_lines(
+        L02={"enabled": True},
+        L07={"enabled": True, "schedule_member": True},  # cap 45, reserve 15: 30 min for schedules
+        L08={"enabled": True},
+    )
+    feed = _sched(2, "L02", start=_clock("09:00"), on_s=300, prewet_s=120, flush_s=240)  # 6 min on L01
+    at_cap = [
+        _sched(1, "L01", start=_clock("06:00"), on_s=3240),
+        feed,
+        _sched(3, "L01", start=_clock("12:00"), on_s=60),
+    ]
+    reasons = {occ.slot_id: occ.reason for occ in agenda(lines, at_cap, today=MONDAY, days=1).occurrences}
+    assert reasons == {1: None, 2: None, 3: "ends at the daily cap"}  # 54 + 6 = 60, then 61
+    # The feed's own rinse takes L01 past its cap: the feed is the run that reaches it.
+    past_cap = [at_cap[0].model_copy(update={"on_s": 3360}), feed]
+    reasons = {occ.slot_id: occ.reason for occ in agenda(lines, past_cap, today=MONDAY, days=1).occurrences}
+    assert reasons == {1: None, 2: "ends at the daily cap"}
+    # A feed with no prewet or flush puts nothing on L01, even after L01 has passed its cap.
+    over = [_sched(1, "L01", start=_clock("06:00"), on_s=3700), feed.model_copy(update={"prewet_s": 0, "flush_s": 0})]
+    reasons = {occ.slot_id: occ.reason for occ in agenda(lines, over, today=MONDAY, days=1).occurrences}
+    assert reasons == {1: "ends at the daily cap", 2: None}
+    # South zone: 20 min on L07, then an L08 feed of 5 min with 5 min of prewet and flush on L07 (30 min),
+    # then one more L07 pulse (31 min).
+    south = [
+        _sched(4, "L07", start=_clock("06:00"), on_s=60, count=20),
+        _sched(5, "L08", start=_clock("08:00"), on_s=60, count=5, gap_s=60, prewet_s=120, flush_s=180),
+        _sched(6, "L07", start=_clock("12:00"), on_s=60, count=1),
+    ]
+    reasons = {occ.slot_id: occ.reason for occ in agenda(lines, south, today=MONDAY, days=1).occurrences}
+    assert reasons == {4: None, 5: None, 6: "ends at the daily cap"}
+    # A VPD reserve holds back mister minutes only; on a drip it changes nothing.
+    assert LineSpec(line_id="L01", daily_cap_min=60, vpd_reserve_min=30).schedule_budget_min == 60
+    assert LineSpec(line_id="L07", daily_cap_min=45, vpd_reserve_min=15).schedule_budget_min == 30
 
 
 def test_agenda_window_order_and_shape() -> None:

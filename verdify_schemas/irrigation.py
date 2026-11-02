@@ -1151,13 +1151,15 @@ class Start(BaseModel):
     ``sunrise``, ``solar_noon`` or ``sunset`` with ``minute`` the offset from it (−240 to 240).
 
     A fractional minute snaps to a whole one. The range is checked on submit by
-    ``validate_schedule``, which refuses it as ``out_of_range`` with its bounds.
+    ``validate_schedule``, which refuses it as ``out_of_range`` with its bounds. ``minute`` has no
+    default, so a clock start never silently means midnight; the OpenAPI shape, where a solar
+    ``offset_min`` defaults to 0, goes through ``from_api``.
     """
 
     model_config = _FROZEN
 
     kind: StartKind
-    minute: _Whole = 0
+    minute: _Whole
 
     @property
     def start_kind(self) -> int:
@@ -1235,7 +1237,9 @@ class ScheduleSpec(BaseModel):
     @field_validator("start", mode="before")
     @classmethod
     def _start_from_api(cls, value: object) -> object:
-        if isinstance(value, Mapping) and ("clock" in value or "offset_min" in value):
+        # Only the row shape ({kind, minute}) skips from_api, so {"kind": "clock"} with no clock is
+        # refused rather than read as midnight.
+        if isinstance(value, Mapping) and "minute" not in value:
             return Start.from_api(value)
         return value
 
@@ -1355,10 +1359,12 @@ class LineSpec(BaseModel):
 
     @property
     def schedule_budget_min(self) -> int | None:
-        """Daily minutes left to schedules: the cap less the VPD reserve; ``None`` with no cap (0)."""
+        """Daily minutes left to schedules: the cap, less the VPD reserve on a mister (L04, L07, L09,
+        whose reserve holds zone minutes back for VPD pulses); ``None`` with no cap (0)."""
         if self.daily_cap_min == 0:
             return None
-        return max(self.daily_cap_min - (self.vpd_reserve_min or 0), 0)
+        reserve = (self.vpd_reserve_min or 0) if self.kind == "mister" else 0
+        return max(self.daily_cap_min - reserve, 0)
 
     @classmethod
     def from_row(cls, row: Any) -> LineSpec:
@@ -1965,6 +1971,21 @@ def _skip_code(line: LineSpec, slot: ScheduleSpec, start: datetime) -> str | Non
     return None
 
 
+def _cap_charges(slot: ScheduleSpec, line: LineSpec) -> list[tuple[str, int]]:
+    """Valve-open seconds one occurrence adds to each line's daily cap counter (irrigation §4.5).
+
+    Its own run or pulses count on its own line. A fertilizer run's prewet and flush run on the
+    clean partner and count there, as a drip cap counts prewet and flush; a fertilizer mister's
+    feed pulses count there too, because a mister zone's duty counts every pulse on the zone.
+    """
+    charges = [(line.line_id, slot.open_s)]
+    if line.clean_partner is not None:
+        partner_s = slot.prewet_s + slot.flush_s + (slot.open_s if line.kind == "fert_mister" else 0)
+        if partner_s:
+            charges.append((line.clean_partner, partner_s))
+    return charges
+
+
 def _solar_day(day: date) -> SolarDay:
     times = solar_times(day)
     return SolarDay(
@@ -1991,10 +2012,13 @@ def agenda(
     ``REASON_WORDS``: "line disabled"; "not a schedule member" for a mist schedule whose zone has
     Schedule off, or "not a VPD member" for a ``degraded_only`` one, which follows ``vpd_member``;
     "paused" when it starts before ``paused_until``. A planned one notes "only while VPD sensing is
-    degraded" on a ``degraded_only`` schedule and "ends at the daily cap" once the line's planned
-    minutes that local day pass a non-zero ``daily_cap_min`` (misters: the cap less the VPD
-    reserve). Past days are planned the same way: the reads (#1155) join their outcomes and add who
-    paused. Starts are aware at the local offset in force (``local_start``).
+    degraded" on a ``degraded_only`` schedule and "ends at the daily cap" once the planned minutes
+    that local day on a line it waters pass that line's non-zero ``daily_cap_min`` (misters: the cap
+    less the VPD reserve). A line's minutes are what its cap counts (irrigation §4.5): its own runs
+    and pulses, plus the prewet and flush its fertilizer partner puts on it, and on a mister zone
+    that partner's feed pulses too (``_cap_charges``). Past days are planned the same way: the reads
+    (#1155) join their outcomes and add who paused. Starts are aware at the local offset in force
+    (``local_start``).
     """
     for name, value, lo, hi in (("days", days, 1, 7), ("past_days", past_days, 0, 7)):
         if isinstance(value, bool) or not isinstance(value, int) or not lo <= value <= hi:
@@ -2025,11 +2049,15 @@ def agenda(
         code = _skip_code(line, slot, start)
         if code is None:
             notes = [DEGRADED_ONLY_NOTE] if slot.degraded_only else []
-            # The controller's daily counters reset at local midnight, so the start's date counts.
-            key = (line.line_id, start.date())
-            used_s[key] = used_s.get(key, 0) + slot.open_s
-            budget = line.schedule_budget_min
-            if budget is not None and used_s[key] > budget * 60:
+            over_cap = False
+            for counted, seconds in _cap_charges(slot, line):
+                # The controller's daily counters reset at local midnight, so the start's date counts.
+                key = (counted, start.date())
+                used_s[key] = used_s.get(key, 0) + seconds
+                counter = by_id.get(counted)
+                budget = None if counter is None else counter.schedule_budget_min
+                over_cap = over_cap or (budget is not None and used_s[key] > budget * 60)
+            if over_cap:
                 notes.append(CAP_NOTE)
             reason = "; ".join(notes) or None
         else:
