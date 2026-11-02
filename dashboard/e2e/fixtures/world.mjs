@@ -633,6 +633,26 @@ export const FIXTURES = {
     for (const param of SITE_CAPS) Object.assign(settingOf(world, param), base.find((row) => row.param === param));
     for (const line of world.lines) line.sync = "confirmed";
   },
+  // #1135: south's own probe is out, so its VPD control reads the peer probes (D-IRP-13), and the probe's alert is open.
+  "south-peer": (world) => {
+    Object.assign(lineOf(world, "L07"), { vpd_member: true, vpd_source: "peer" });
+    openAlert(world, {
+      id: 501, alert_type: "sensor_offline", category: "system", severity: "warning", message: "South climate probe offline", zone: "south",
+      details: { sensor: "climate_south" }, first_seen_at: iso(world.now - 50 * MINUTE),
+    });
+  },
+  // #1135: an ingestor outage three days back, so API-IRR-10 reads that day no_data (a gap, never 0) inside a 7-day
+  // window; today reads partial, as always.
+  "minutes-gap": (world) => { world.noDataDays.push(3); },
+  // #1135: the controller came back with no stored program and runs the built-in one (src rom, irr_program_id reads 16
+  // zeros) until the platform pushes rev 42 again, so the program and every line read requested.
+  "program-rom": (world) => {
+    Object.assign(world, {
+      engine: true,
+      program: { ...programRev42(world.now), state: "requested", applied_revision: null, applied_hash: "0".repeat(16), src: "rom", pushed_at: iso(world.now - 20_000), confirmed_at: null },
+    });
+    for (const line of world.lines) line.sync = "requested";
+  },
   "reserved-lines": (world) => {
     for (const id of ["L05", "L06"]) Object.assign(lineOf(world, id), { reserved: true, enabled: false, state: { ...lineOf(world, id).state, code: "disabled" } });
   },
@@ -677,26 +697,6 @@ export const FIXTURES = {
     world.seriesWindow = { from: localInstant(addDays(today, -29)), to: nextMidnight(world.now) };
     world.seriesPoints = 31;
     world.minutesDays = 30;
-  },
-  // #1135: south's own probe is out, so its VPD control reads the peer probes (D-IRP-13), and the probe's alert is open.
-  "south-peer": (world) => {
-    Object.assign(lineOf(world, "L07"), { vpd_member: true, vpd_source: "peer" });
-    openAlert(world, {
-      id: 501, alert_type: "sensor_offline", category: "system", severity: "warning", message: "South climate probe offline", zone: "south",
-      details: { sensor: "climate_south" }, first_seen_at: iso(world.now - 50 * MINUTE),
-    });
-  },
-  // #1135: an ingestor outage three days back, so API-IRR-10 reads that day no_data (a gap, never 0) inside a 7-day
-  // window; today reads partial, as always.
-  "minutes-gap": (world) => { world.noDataDays.push(3); },
-  // #1135: the controller came back with no stored program and runs the built-in one (src rom, irr_program_id reads 16
-  // zeros) until the platform pushes rev 42 again, so the program and every line read requested.
-  "program-rom": (world) => {
-    Object.assign(world, {
-      engine: true,
-      program: { ...programRev42(world.now), state: "requested", applied_revision: null, applied_hash: "0".repeat(16), src: "rom", pushed_at: iso(world.now - 20_000), confirmed_at: null },
-    });
-    for (const line of world.lines) line.sync = "requested";
   },
   "stuck-delivery": (world) => {
     const since = clock(world.now)("06:10");

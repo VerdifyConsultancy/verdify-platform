@@ -30,8 +30,8 @@ import {
 } from "./operator-api";
 import { engineFlag, fetchRead, readKey, SETTLING_INTERVAL_MS } from "./queries";
 import { keptValueText, outOfRange, rangeText } from "./setting-values";
-import { NOW_QUERY_KEY } from "./shell";
 import { hasWords, words } from "./words";
+import { NOW_QUERY_KEY } from "./shell";
 
 /** Every edit form's "Manual: Iris skips this" box starts ticked (Round 2 #8). */
 export const MANUAL_DEFAULT = true;
