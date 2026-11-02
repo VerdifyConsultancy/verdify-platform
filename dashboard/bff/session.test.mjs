@@ -27,7 +27,9 @@ test("anonymous GET / answers 302 to /auth/login?returnTo=%2F, and a page keeps 
   // A URL too long to carry as returnTo returns to /.
   expect((await get(`/graphs?${"q".repeat(2100)}`)).headers.location).toBe("/auth/login?returnTo=%2F");
   expect(bff.lines[0]).toEqual({ service: "verdify-dashboard-web", route: "/", status: 302, duration_ms: expect.any(Number), request_id: expect.any(String) });
-  expect(JSON.stringify(bff.lines)).not.toMatch(/returnTo|L01|water/);
+  // Each line names the route template, a screen's included (#1124), never the query or returnTo.
+  expect(bff.lines.map((line) => line.route)).toEqual(["/", "/", "/water", "/graphs"]);
+  expect(JSON.stringify(bff.lines)).not.toMatch(/returnTo|L01|2026-11-01|qqq/);
 });
 
 test("a page whose encoded form would make /auth/login too long to serve returns to /", async () => {
