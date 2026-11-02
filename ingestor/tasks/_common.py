@@ -58,6 +58,7 @@ from verdify_schemas import (
     SetpointChange,
     build_validation_failed_envelope,
 )
+from verdify_schemas.alerts import flow_stopped_at
 from verdify_schemas.setting_values import SECOND_READBACK_ABS_TOLERANCE_PARAMS
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
@@ -186,6 +187,30 @@ SUPPRESSIBLE_ALERT_TYPES = frozenset(
         "soil_sensor_offline",  # unpotted/empty-zone probe (occupancy-aware; S1)
     }
 )
+
+
+# VD-72 (Round 2b C): one alert_log row per offline probe. A probe that keeps
+# failing re-opens or refreshes its row (details.count, details.last_seen_at)
+# instead of inserting a new unacknowledged row each time, and the row resolves
+# by itself once the probe has been offline longer than the configured period.
+# The forecast feed's sensor_offline row (_FORECAST_STALE_SENSOR_ID) keeps the
+# ordinary lifecycle.
+PROBE_OFFLINE_ALERT_TYPES = frozenset({"soil_sensor_offline", "sensor_offline"})
+
+
+def _probe_offline_resolve_days(raw: str | None) -> int:
+    """Whole days a probe may stay offline before its alert resolves (default 7)."""
+    try:
+        days = int(raw) if raw not in (None, "") else 7
+    except ValueError:
+        days = 0
+    if days < 1:
+        log.warning("VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS=%r is not a positive whole number; using 7", raw)
+        return 7
+    return days
+
+
+PROBE_OFFLINE_RESOLVE_DAYS = _probe_offline_resolve_days(os.environ.get("VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS"))
 
 
 # G6 / B19 §7.4: VPD-high stress alert threshold (hours/day).
@@ -1373,6 +1398,7 @@ __all__ = [
     "format_runbook",
     "AlertEnvelope",
     "build_validation_failed_envelope",
+    "flow_stopped_at",
     "ClimateRow",
     "EnergySample",
     "EquipmentStateEvent",
@@ -1411,6 +1437,8 @@ __all__ = [
     "HOUSE_VPD_LOW_MARGIN_KPA",
     "AIR_EXCHANGE_RELAY_STUCK_MODES",
     "SUPPRESSIBLE_ALERT_TYPES",
+    "PROBE_OFFLINE_ALERT_TYPES",
+    "PROBE_OFFLINE_RESOLVE_DAYS",
     "VPD_STRESS_FLOOR_H",
     "VPD_STRESS_LEGACY_THRESHOLD_H",
     "SOIL_DRYOUT_MIN_DURATION_H",

@@ -522,8 +522,14 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
   merged row counted once (a merged row is unacknowledged while any of its rows is). It always equals the
   unacknowledged rows API-14 returns, and the nav, Now, Activity, API-02, API-14 and the MCP `alerts` adapter all
   show it. API-14 returns the merged rows (count, first and last seen); "recent" means resolved in the last 24 h.
-  VD-72 auto-resolves alerts for long-offline probes and keeps one open row per offline probe. Severities are
-  `critical`, `warning` and `info` (R6).
+  VD-72 keeps one row per offline probe (`soil_sensor_offline`, keyed on the probe, and every `v_sensor_staleness`
+  `sensor_offline` but the forecast feed's): a repeat re-opens or refreshes that row, bumping `details.count` and
+  `details.last_seen_at`, and posts nothing new to Slack; a silent soil probe stays open at night, and an
+  unpotted zone raises nothing. The row resolves by itself once `details.last_seen_at` (else `ts`) is older than
+  `VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS` (default 7; marked `details.long_offline` until the probe reports again).
+  The leak alert never auto-resolves: after the flag clears it reads "Flow stopped at HH:MM" (America/Denver) with
+  `details.stopped_at` once the meter reads under 0.1 gal/min twice, goes back to the flowing text if flow starts
+  again, and stays open until a person or agent resolves it. Severities are `critical`, `warning` and `info` (R6).
 - **Banners**, worst first: API down; "Ingestor not running since HH:MM. The controller keeps running on its
   own." (heartbeat stale); "Controller not reporting since HH:MM" (heartbeat fresh, newest `climate` row older
   than 300 s); then the leak banner.

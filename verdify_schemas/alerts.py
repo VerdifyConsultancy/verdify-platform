@@ -4,10 +4,14 @@
 - AlertEnvelope: writable alert envelope validated against per-alert detail
   payloads before INSERT.
 - AlertAction: MCP `alerts` tool envelope — replaces free-form (action, data: str).
+- flow_stopped_at: when the site meter last went quiet (the leak alert's
+  "Flow stopped at HH:MM", shared by the alert monitor and the Now read).
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -149,7 +153,22 @@ class _DetailsBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class SensorOfflineDetails(_DetailsBase):
+class _ProbeOfflineLifecycle(_DetailsBase):
+    """One alert_log row per offline probe (VD-72, Round 2b C).
+
+    A repeat failure re-opens or refreshes the probe's row instead of inserting
+    a new one: ``count`` is how many times the row was raised (first insert plus
+    re-opens), ``last_seen_at`` when it was last raised. ``long_offline`` marks a
+    row the monitor resolved because the probe stayed offline past the
+    configured period; the mark clears once the probe reports again.
+    """
+
+    count: int = Field(default=1, ge=1)
+    last_seen_at: AwareDatetime | None = None
+    long_offline: bool = False
+
+
+class SensorOfflineDetails(_ProbeOfflineLifecycle):
     type: str
     staleness_ratio: float | None = None
 
@@ -228,6 +247,10 @@ class VpdExtremeDetails(_DetailsBase):
 
 class LeakDetectedDetails(_DetailsBase):
     since: AwareDatetime
+    # Set once the meter has read under 0.1 gal/min for two readings after the
+    # flag cleared ("Flow stopped at HH:MM"); null while water flows. The row
+    # stays open until a person or agent resolves it (US-WAT-18, J6).
+    stopped_at: AwareDatetime | None = None
 
 
 class ClimateActionProofStaleDetails(_DetailsBase):
@@ -364,12 +387,15 @@ class HeatManualOverrideDetails(_DetailsBase):
     watts: int = Field(..., ge=0)
 
 
-class SoilSensorOfflineDetails(_DetailsBase):
-    column: str
+class SoilSensorOfflineDetails(_ProbeOfflineLifecycle):
+    # Per-probe rows (VD-72) list the silent columns in ``columns``; ``column``
+    # is kept for the per-column rows raised before that change.
+    column: str | None = None
+    columns: list[str] = Field(default_factory=list)
     sensor: str
     # 'occupied' = zone has an active crop → genuine sensor fault (warning).
-    # 'unpotted' = zone empty (e.g. Canna on the patio) → probe dangling, no
-    # action needed (downgraded to info). Vanda zone-control design §5.4.
+    # 'unpotted' = zone empty (e.g. Canna on the patio): historical rows only;
+    # since VD-72 an unpotted zone raises nothing. Vanda zone-control design §5.4.
     occupancy: Literal["occupied", "unpotted"] | None = None
 
 
@@ -969,6 +995,34 @@ def build_validation_failed_envelope(payload: dict[str, Any], error: Exception, 
             },
         }
     )
+
+
+def flow_stopped_at(
+    readings: Iterable[tuple[datetime, float | None]],
+    below_gpm: float = 0.1,
+    needed: int = 2,
+) -> datetime | None:
+    """When the site meter went quiet: the ``needed``-th reading of the trailing quiet run.
+
+    ``readings`` are ``(ts, gpm)`` pairs, oldest first; a ``None`` gpm is no
+    reading and is skipped. The trailing run is the readings after the last one
+    at or above ``below_gpm``. Its ``needed``-th reading is returned, or None
+    while the run is shorter, so flow that starts again ends the run and the
+    result goes back to None. Pure: the alert monitor's leak lifecycle (VD-72)
+    and the Now read's leak block (VD-54) share it.
+    """
+    if needed < 1:
+        raise ValueError("needed must be at least 1")
+    quiet: list[datetime] = []
+    for ts, gpm in readings:
+        if gpm is None:
+            continue
+        if gpm < below_gpm:
+            if len(quiet) < needed:
+                quiet.append(ts)
+        else:
+            quiet = []
+    return quiet[needed - 1] if len(quiet) >= needed else None
 
 
 class AlertLogRow(BaseModel):
