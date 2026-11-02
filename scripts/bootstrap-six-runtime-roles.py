@@ -410,6 +410,35 @@ def sealed_sql_280():
     )
 
 
+LIGHTING_MANUAL_MIGRATION = (
+    285,
+    "285-lighting-policy-ignores-manual.sql",
+    "52175e8e5c18dd96e04c79c1dd01d9dc857c1b91c6e86df93f902bb023b91334",
+)
+# PROVISIONAL (VD-33): all-zero api and ingestor placeholders until the native
+# qualification measures them; MCP's seal is projected unchanged, as for 275.
+SUCCESSOR_285 = {
+    "api": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
+    "mcp": SUCCESSOR_280["mcp"],
+}
+
+
+def sealed_sql_285():
+    # Keep every280 predicate and bind the exact285 runner stamp with the seals
+    # its two lighting policy replacements move (api and ingestor).
+    predecessor = sealed_sql_280()
+    current = seal_profile_sql(280, SUCCESSOR_280)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(285, SUCCESSOR_285), 1)
+        + " AND "
+        + ledger_row_sql(*LIGHTING_MANUAL_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -426,6 +455,8 @@ def sealed_sql():
         + sealed_sql_279()
         + " OR "
         + sealed_sql_280()
+        + " OR "
+        + sealed_sql_285()
         + ")"
     )
 
