@@ -22,7 +22,8 @@ export const NOW_POLL_MS = POLL_INTERVAL;
 export const API_DOWN_AFTER = 2;
 /**
  * The reads' one keys (`readKey`), so the write hooks share the shell's entries: Stop notes what runs from this API-02
- * entry and reads it every 5 s while it confirms, and an Acknowledge refetches the count here.
+ * entry and reads it every 5 s while it confirms, and an Acknowledge refetches the count here, so it lowers the nav
+ * count at once (#1133).
  */
 export const ME_QUERY_KEY = readKey("API-01");
 export const NOW_QUERY_KEY = readKey("API-02");
