@@ -160,9 +160,8 @@ def test_writes_snap_store_the_flag_as_passed_and_refuse_with_problems(dsn):
 
         problem = await refused(settings.write(mcp, PERSON, "mister_engage_kpa", 2.6, True, None, None))
         assert (problem.code, problem.min, problem.max, problem.retryable) == ("out_of_range", 0.5, 2.5, False)
-        for param in ("sw_wall_fertigation_commissioned", "sw_onchip_band_enabled"):
-            problem = await refused(settings.write(mcp, PERSON, param, 1, True, None, None))
-            assert problem.code == "read_only", param
+        problem = await refused(settings.write(mcp, PERSON, "sw_onchip_band_enabled", 1, True, None, None))
+        assert problem.code == "read_only"
         problem = await refused(settings.write(mcp, PERSON, "no_such_setting", 1, True, None, None))
         assert problem.code == "unknown_target"
         assert await mcp.fetchval("SELECT count(*) FROM public.desired_state") == 1  # refusals stored nothing

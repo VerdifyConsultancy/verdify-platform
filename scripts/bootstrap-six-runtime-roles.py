@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 
 DUTIES = ("grafana", "planner", "setpoint_server", "ha_backfill", "lab_publisher", "vision")
 PREDECESSORS = {
@@ -67,6 +68,15 @@ class BootstrapError(RuntimeError):
     pass
 
 
+# Linux caps one argv string at MAX_ARG_STRLEN (128 KiB), and exec fails with E2BIG
+# before psql starts. The sealed profile gains an alternative per successor
+# migration and passed that limit at 280, so longer SQL goes through --file on the
+# Job's private /tmp. psql runs --command and --file actions in the order given.
+# bootstrap-maintenance-runtime-roles.py shares this helper.
+# No command carries a credential: values stay in environment and stdin.
+COMMAND_ARG_MAX_BYTES = 64 * 1024
+
+
 def psql(user, password, commands, *, password_input="", transactional=False):
     # Values stay in environment/stdin. Never relay raw errors/SQL/verifiers.
     args = [
@@ -88,12 +98,25 @@ def psql(user, password, commands, *, password_input="", transactional=False):
     ]
     if transactional:
         args.append("--single-transaction")
-    for command in commands:
-        args.extend(["--command", command])
     env = dict(os.environ, PGPASSWORD=password)
-    result = subprocess.run(
-        args, input=password_input, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, check=False
-    )
+    with tempfile.TemporaryDirectory(prefix="bootstrap-sql-") as workdir:
+        for index, command in enumerate(commands):
+            if len(command.encode()) <= COMMAND_ARG_MAX_BYTES:
+                args.extend(["--command", command])
+                continue
+            path = os.path.join(workdir, f"{index}.sql")
+            with open(path, "w", encoding="utf-8") as sql_file:
+                sql_file.write(command)
+            args.extend(["--file", path])
+        result = subprocess.run(
+            args,
+            input=password_input,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            check=False,
+        )
     if result.returncode:
         raise BootstrapError("database bootstrap operation refused")
     return result.stdout.strip()
