@@ -704,6 +704,16 @@ def test_out_of_range_names_the_field_and_its_bounds(line_id: str, fields: dict,
     assert (edit.code, edit.field, edit.current) == ("out_of_range", field, expected_current)
 
 
+def test_out_of_range_detail_reads_in_words() -> None:
+    lines = _seed_lines()
+    drip = validate_schedule(_sched(None, "L01", count=2), [], lines, today=MONDAY)
+    assert drip.detail == "count must be 1 pulse on a drip line (L01)"
+    mist = validate_schedule(_sched(None, "L04", count=61), [], lines, today=MONDAY)
+    assert mist.detail == "count must be 1-60 pulses on a mister line (L04)"
+    gap = validate_schedule(_sched(None, "L05", gap_s=30), [], lines, today=MONDAY)
+    assert gap.detail == "gap_s must be 0 s on a drip line (L05)"
+
+
 def test_degraded_only_is_allowed_on_the_clean_misters() -> None:
     for line_id in ("L04", "L07", "L09"):
         assert validate_schedule(_sched(None, line_id, degraded_only=True), [], _seed_lines(), today=MONDAY) is None

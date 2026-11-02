@@ -3474,13 +3474,15 @@ REGISTRY: dict[str, TunableDef] = {
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Irrigation site values (VD-37, #1152; irrigation §4.1, architecture §5.3).
-    # Written like any setting (API-10, MCP set_setting) into desired_state,
-    # and delivered to the controller only inside the irrigation program
-    # record (verdify_schemas.irrigation.compile_program, header bytes 4-7), so
-    # they have no esp_object_id and no cfg_* readback: the dispatcher never
-    # pushes them, and the program hash confirms them. control_class
-    # "irrigation_site" (IRRIGATION_SITE_PARAMS). With no firmware entity, each
-    # row carries its own step, label and unit.
+    # Settings stored in desired_state (written through API-10 and MCP
+    # set_setting once those ship) and delivered to the controller only inside
+    # the irrigation program record (verdify_schemas.irrigation.compile_program,
+    # header bytes 4-7), so they have no esp_object_id and no cfg_* readback:
+    # the dispatcher never pushes them, and the program hash confirms them.
+    # control_class "irrigation_site" (IRRIGATION_SITE_PARAMS). With no routed
+    # entity, each row carries its own step, label and unit (today's SAF-4
+    # number, num_mister_daily_volume_max, has no route and is in
+    # RETIRING_TUNABLES).
     # ─────────────────────────────────────────────────────────────────────
     "mister_daily_volume_max_gal": TunableDef(
         name="mister_daily_volume_max_gal",
@@ -4172,7 +4174,8 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
 # irrigation engine release removes (irrigation design §5, F12 and F13). The
 # catalog drift test (verdify_schemas/tests/test_tunable_registry.py) accepts
 # an entity listed here even when no REGISTRY row covers it, as for
-# num_post_feed_hold_min and num_mister_daily_volume_max. #1162 deletes these
+# num_post_feed_hold_min (num_mister_daily_volume_max's global is also the
+# program-bound irrigation_site row of that name). #1162 deletes these
 # entities and shrinks the set to the L01 bridge's; the follow-up that ships
 # once the engine firmware is last-good empties it.
 RETIRING_TUNABLES: frozenset[str] = frozenset(

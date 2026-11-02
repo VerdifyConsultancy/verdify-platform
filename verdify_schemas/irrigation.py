@@ -1463,7 +1463,7 @@ def _out_of_range(field: str, lo: int, hi: int, current: int | str | bool | None
 
 
 def _range_words(field: str, lo: int, hi: int) -> str:
-    unit = _UNITS.get(field, "")
+    unit = " pulse" if field == "count" and hi == 1 else _UNITS.get(field, "")
     return f"{lo}{unit}" if lo == hi else f"{lo}-{hi}{unit}"
 
 

@@ -344,7 +344,7 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
     if control_class == "crop_band":
         return "Do not push from the AI planning agent. Crop profiles and dispatcher own this value; use planner-policy bias/staging knobs instead."
     if control_class == "irrigation_site":
-        return "Irrigation site value. Set through Settings or set_setting; it reaches the controller only inside the irrigation program, confirmed by its hash. Never emit it in set_plan or set_tunable."
+        return "Irrigation site value: it reaches the controller only inside the irrigation program, confirmed by its hash. Never emit it in set_plan or set_tunable."
     if control_class == "readback_context":
         return "Read-only context. Use it to explain firmware decisions; never emit it in set_plan or set_tunable."
     if control_class == "retired":
