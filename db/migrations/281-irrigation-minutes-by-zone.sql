@@ -26,10 +26,11 @@ BEGIN
 END $predecessor$;
 
 -- One row per America/Denver day from the first wet-relay equipment_state row
--- to today, checked in order: no_data (after the newest climate row's day, or
--- wholly inside one data_gaps interval), partial (today, the newest climate
--- row's day, or any data_gaps overlap), complete. Only the newest climate row
--- is read, so days older than climate's 365-day retention stay complete.
+-- to today, checked in order: no_data (after the newest climate row's day, every
+-- day when there is no climate row at all, or wholly inside one data_gaps
+-- interval), partial (today, the newest climate row's day, or any data_gaps
+-- overlap), complete. Only the newest climate row is read, so days older than
+-- climate's 365-day retention stay complete.
 CREATE VIEW public.v_irrigation_day_coverage AS
 WITH wet_relays(relay_slug) AS (
     VALUES ('drip_wall'), ('drip_wall_fert'), ('fert_master_valve'),
@@ -73,7 +74,8 @@ WITH wet_relays(relay_slug) AS (
 SELECT d.greenhouse_id,
        d.local_day,
        CASE
-           WHEN d.local_day > d.newest_climate_day
+           WHEN d.newest_climate_day IS NULL
+             OR d.local_day > d.newest_climate_day
              OR EXISTS (SELECT 1 FROM public.data_gaps g
                         WHERE g.start_ts <= d.day_start AND g.end_ts >= d.day_end)
                THEN 'no_data'
@@ -87,7 +89,7 @@ SELECT d.greenhouse_id,
 FROM days d;
 
 COMMENT ON VIEW public.v_irrigation_day_coverage IS
-'Each America/Denver day from the first wet-relay row to today: no_data (after the newest climate row''s day, or wholly inside one data_gaps interval), partial (today, the newest climate row''s day, or a data_gaps overlap) or complete. A complete day with no runs has no minutes rows; nothing is zero-filled.';
+'Each America/Denver day from the first wet-relay row to today: no_data (after the newest climate row''s day, every day when there is no climate row, or wholly inside one data_gaps interval), partial (today, the newest climate row''s day, or a data_gaps overlap) or complete. A complete day with no runs has no minutes rows; nothing is zero-filled.';
 
 -- Runs are migration 194's v_water_relay_runs UNION ALL the L03 runs built the
 -- same way. Each run is split at local midnight (a day is d 00:00 to d+1 00:00

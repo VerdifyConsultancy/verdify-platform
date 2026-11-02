@@ -455,10 +455,10 @@ is pending, and every 60 s in full:
 - **`v_irrigation_minutes_daily`.** Valve-open minutes, pulses and gallons per America/Denver day,
   split at local midnight (23- and 25-hour days are handled), by zone, line, cause and chemistry.
   Per-day coverage comes from `v_irrigation_day_coverage`, also in M4, built on `data_gaps` and the
-  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row, is `no_data`; today
-  and any other day a gap touches are `partial`; the rest are `complete`. So days before climate's
-  365-day retention stay complete, and a day with no runs is told apart from a day with no data. Gaps
-  show as gaps, never as zero; nothing is back-filled.
+  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row (every day when
+  there is no `climate` row at all), is `no_data`; today and any other day a gap touches are `partial`;
+  the rest are `complete`. So days before climate's 365-day retention stay complete, and a day with no
+  runs is told apart from a day with no data. Gaps show as gaps, never as zero; nothing is back-filled.
 - **`fn_irrigation_minutes_daily(from, to)`.** The view rebuilds every run since the first edge on each
   read (about 1.4 s for 30 days on production in 2026-11, and more at two years of misting), so M4 also
   ships this reader: the view's rows for local days `from`..`to`, with the `equipment_state` scan bounded

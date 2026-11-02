@@ -219,7 +219,7 @@ SUCCESSOR_279_MCP_DIGEST = SUCCESSOR_278_MCP_DIGEST
 # rolled-back production transaction. Until then its seals are all-zero
 # placeholders, which no live boundary or receipt can equal.
 SUCCESSOR_281 = "281-irrigation-minutes-by-zone.sql"
-SUCCESSOR_281_SHA256 = "04a5d7c6224b0613ee80b412f62c7b4c3a5c1b001791421277d4f0a21bb4e651"
+SUCCESSOR_281_SHA256 = "cfb55fa846788af183a5fb9d8161a2077cf4e2c165160045f0edae7c9ded7801"
 SUCCESSOR_281_DIGESTS = {
     "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
     "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",

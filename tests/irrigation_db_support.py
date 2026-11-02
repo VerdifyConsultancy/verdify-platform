@@ -210,12 +210,15 @@ def walk_runs(edges, now: dt.datetime) -> list[tuple[str, str, dt.datetime, dt.d
 
 
 def coverage_days(first_row: dt.datetime, newest_climate: dt.datetime | None, gaps, now: dt.datetime) -> dict:
-    """Each local day's coverage from the first wet-relay row to today."""
+    """Each local day's coverage from the first wet-relay row to today.
+
+    With no climate row at all nothing was recorded, so every day is no_data.
+    """
     today, newest = local_day(now), (local_day(newest_climate) if newest_climate else None)
     days, day = {}, local_day(first_row)
     while day <= today:
         start, end = day_bounds(day)
-        if (newest is not None and day > newest) or any(a <= start and b >= end for a, b in gaps):
+        if newest is None or day > newest or any(a <= start and b >= end for a, b in gaps):
             days[day] = "no_data"
         elif day == today or day == newest or any(a < end and b > start for a, b in gaps):
             days[day] = "partial"

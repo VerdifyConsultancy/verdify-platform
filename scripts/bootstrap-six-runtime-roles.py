@@ -386,7 +386,7 @@ def sealed_sql_279():
 IRRIGATION_MINUTES_MIGRATION = (
     281,
     "281-irrigation-minutes-by-zone.sql",
-    "04a5d7c6224b0613ee80b412f62c7b4c3a5c1b001791421277d4f0a21bb4e651",
+    "cfb55fa846788af183a5fb9d8161a2077cf4e2c165160045f0edae7c9ded7801",
 )
 # Pending VD-39 measurement: all-zero seals until 280 merges and the rolled-back
 # native qualification measures them; this profile cannot match before then.

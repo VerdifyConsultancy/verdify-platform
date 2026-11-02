@@ -199,6 +199,17 @@ def test_days_after_the_newest_climate_row_have_no_data(database):
             await tr.start()
             try:
                 await conn.execute("DELETE FROM public.climate")
+                # No climate row at all: nothing was recorded, so no day is complete.
+                silent = {
+                    r["coverage"] for r in await conn.fetch("SELECT coverage FROM public.v_irrigation_day_coverage")
+                }
+                silent_rows = await conn.fetch("SELECT * FROM public.v_irrigation_minutes_daily")
+                silent_function = await conn.fetch(
+                    "SELECT * FROM public.fn_irrigation_minutes_daily('2025-01-01', '2026-11-01')"
+                )
+                silent_expected = support.expected_minutes(*await support.read_inputs(conn))
+                assert silent == {"no_data"}
+                assert not silent_rows and not silent_function and not silent_expected
                 await conn.execute(
                     "INSERT INTO public.climate (ts, greenhouse_id) VALUES "
                     "(('2026-10-18 12:00'::timestamp AT TIME ZONE 'America/Denver'), 'vallery')"
