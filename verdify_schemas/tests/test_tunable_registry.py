@@ -9,6 +9,9 @@ The test set that closes the sprint-15 / sprint-15.1 drift-class bug:
 - Every dispatcher-routed REGISTRY entry maps bidirectionally with
   `ingestor/entity_map.py::SETPOINT_MAP`; readback-only entries have
   `esp_object_id=None`.
+- Every number and switch in `firmware/greenhouse/tunables.yaml` has a
+  REGISTRY row or a `RETIRING_TUNABLES` entry, so the Settings catalog is
+  every setting (VD-63).
 
 Runs in <50ms — pure text parsing of tunables.yaml, no ESPHome build needed.
 Any drift → CI fails → operator fixes before merge.
@@ -21,16 +24,25 @@ import pathlib
 import re
 import runpy
 import sys
+import textwrap
 import types
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import NamedTuple
 
 import pytest
+import yaml
 
+from verdify_schemas.setpoint import SetpointSnapshot
 from verdify_schemas.tunable_registry import (
     _ENTITY_NAMES,
+    CFG_READBACK_ALIASES_REG,
+    CFG_READBACK_MAP_REG,
     FIRMWARE_V2_STAGED_REG,
     PLANNER_PUSHABLE_REG,
     REGISTRY,
+    RETIRED_TUNABLES_REG,
+    RETIRING_TUNABLES,
     TIER1_REG,
     TunableDef,
     registry_value_error,
@@ -38,6 +50,16 @@ from verdify_schemas.tunable_registry import (
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+
+def _entity_map() -> types.ModuleType:
+    """The ingestor's entity_map module, resolved the way the guards below do."""
+    for p in reversed((str(REPO_ROOT / "ingestor"), "/srv/verdify/ingestor", "/mnt/iris/verdify/ingestor")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import entity_map
+
+    return entity_map
 
 
 def _install_mcp_runtime_import_stubs(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -131,8 +153,13 @@ _BOOT_RANGE_RE = (
 
 
 def _esphome_object_id(name: str) -> str:
-    """Mirror ESPHome's object_id slug style used by entity_map.py."""
-    return re.sub(r"[^a-z0-9]", "_", name.lower())
+    """ESPHome's object_id for an entity name, as the device reports it.
+
+    Lower case, then each character outside [a-z0-9_-] becomes ``_`` on its
+    own: hyphens survive ("On-Chip Band Enabled" → ``on-chip_band_enabled``)
+    and underscores are neither collapsed nor trimmed.
+    """
+    return re.sub(r"[^a-z0-9_-]", "_", name.lower())
 
 
 def _parse_number_bounds(text: str) -> dict[str, tuple[float, float]]:
@@ -148,6 +175,62 @@ def _parse_number_bounds(text: str) -> dict[str, tuple[float, float]]:
             continue
         out[_esphome_object_id(name_m.group("name"))] = (float(min_m.group("value")), float(max_m.group("value")))
     return out
+
+
+# ─── Catalog completeness — every number and switch has a row (VD-63) ──────
+
+_GETTER_GLOBAL_RE = re.compile(r"\bid\((?P<global_id>[A-Za-z_][A-Za-z0-9_]*)\)")
+
+
+class _TunableEntity(NamedTuple):
+    section: str  # "number" or "switch"
+    entity_id: str
+    name: str
+    global_id: str | None
+
+
+def _tunable_entities(text: str) -> list[_TunableEntity]:
+    """Each ``number:`` and ``switch:`` entity of a tunables.yaml text.
+
+    ``global_id`` is the global the entity's getter ``lambda:`` returns, in
+    any of its forms (``return id(g);``, ``return (float)id(g);`` and the
+    ``verdify_policy::policy_read*(kPF_<field>, id(g))`` read), or None when
+    the getter names no global or more than one.
+    """
+    data = yaml.safe_load(text) or {}
+    entities: list[_TunableEntity] = []
+    for section in ("number", "switch"):
+        for entry in data.get(section) or []:
+            getter = entry.get("lambda")
+            found = _GETTER_GLOBAL_RE.findall(getter) if isinstance(getter, str) else []
+            entities.append(
+                _TunableEntity(
+                    section,
+                    str(entry.get("id")),
+                    str(entry.get("name") or ""),
+                    found[0] if len(found) == 1 else None,
+                )
+            )
+    return entities
+
+
+def _unregistered_entities(
+    text: str, registry: Mapping[str, TunableDef], retiring: frozenset[str] | set[str]
+) -> list[str]:
+    """Numbers and switches with neither a registry row nor a ``retiring`` entry.
+
+    An entity is registered when ``_esphome_object_id(name)`` is some row's
+    ``esp_object_id``, or the global its getter returns is a registry key.
+    Empty when the catalog is complete.
+    """
+    esp_object_ids = {spec.esp_object_id for spec in registry.values() if spec.esp_object_id}
+    return [
+        f"{entity.section} {entity.entity_id} (name {entity.name!r}, global {entity.global_id})"
+        for entity in _tunable_entities(text)
+        if _esphome_object_id(entity.name) not in esp_object_ids
+        and entity.global_id not in registry
+        and entity.entity_id not in retiring
+    ]
 
 
 class TestDriftGuard:
@@ -182,6 +265,71 @@ class TestDriftGuard:
             )
         if mismatched:
             pytest.fail(f"Clamp drift detected in {len(mismatched)} tunables:\n  " + "\n  ".join(mismatched))
+
+    def test_every_tunables_number_and_switch_is_registered_or_retiring(self, tunables_yaml: str) -> None:
+        """US-SET-01: Settings lists every REGISTRY row, so the catalog is every setting (VD-63).
+
+        A tunables.yaml number or switch with no registry row is invisible in
+        Settings and its readback is rejected by SetpointSnapshot. Each one
+        needs a row (writable, or read-only with a reason) or an entry in
+        RETIRING_TUNABLES, the entities the engine release removes.
+        """
+        entities = _tunable_entities(tunables_yaml)
+        assert len(entities) > 150, f"tunables.yaml entity parse came back short: {len(entities)}"
+        missing = _unregistered_entities(tunables_yaml, REGISTRY, RETIRING_TUNABLES)
+        assert not missing, (
+            f"{len(missing)} tunables.yaml entities have no REGISTRY row and are not in RETIRING_TUNABLES "
+            "(verdify_schemas/tunable_registry.py); add a row or, if the next release removes the entity, "
+            "a RETIRING_TUNABLES entry:\n  " + "\n  ".join(missing)
+        )
+
+    def test_catalog_guard_fails_on_an_unregistered_number(self) -> None:
+        """The guard above on a synthetic snippet: one unregistered number fails it."""
+        snippet = textwrap.dedent(
+            """\
+            number:
+              - platform: template
+                id: num_mister_hysteresis_kpa
+                name: "Mister Hysteresis (kPa)"
+                lambda: "return id(mister_hysteresis_kpa);"
+              - platform: template
+                id: num_renamed_engage
+                name: "Renamed Engage Threshold"
+                lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa));"
+              - platform: template
+                id: num_brand_new_knob
+                name: "Brand New Knob (s)"
+                lambda: "return id(brand_new_knob_s);"
+              - platform: template
+                id: num_post_feed_hold_min
+                name: "Post Feed Hold (min)"
+                lambda: "return id(post_feed_hold_min);"
+            switch:
+              - platform: template
+                id: sw_onchip_band_enabled_switch
+                name: "On-Chip Band Enabled"
+                lambda: "return id(sw_onchip_band_enabled);"
+            button:
+              - platform: template
+                id: btn_unregistered
+                name: "Unregistered Button"
+            """
+        )
+        assert len(_tunable_entities(snippet)) == 5
+        # Matched by object_id, by the getter's global (twice) and by
+        # RETIRING_TUNABLES; only the brand-new number fails, named.
+        assert _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES) == [
+            "number num_brand_new_knob (name 'Brand New Knob (s)', global brand_new_knob_s)"
+        ]
+        assert not _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES | {"num_brand_new_knob"})
+        # Without its RETIRING_TUNABLES entry the unrowed hold fails too.
+        assert len(_unregistered_entities(snippet, REGISTRY, frozenset())) == 2
+
+    def test_retiring_tunables_are_live_entities(self, tunables_yaml: str) -> None:
+        """A RETIRING_TUNABLES entry leaves the set with its entity (#1162), so none outlives it."""
+        entity_ids = {entity.entity_id for entity in _tunable_entities(tunables_yaml)}
+        stale = sorted(RETIRING_TUNABLES - entity_ids)
+        assert not stale, f"RETIRING_TUNABLES names entities tunables.yaml no longer has: {stale}"
 
     def test_controls_setpoints_are_not_literal_policy(self, controls_yaml: str) -> None:
         """Setpoints fields must come from globals/handler values, not local
@@ -687,24 +835,13 @@ class TestPlannerWriteContractLockout:
     def test_dehum_vent_hold_readback_route_is_registry_derived_only(self) -> None:
         """#420 reconciliation: exactly ONE authoritative CFG route.
 
-        The manual PR #421 entry in _CFG_READBACK_ADDED_FW_V2 merges LAST into
-        CFG_READBACK_MAP, so a leftover copy would shadow the registry-derived
-        route with the old unregistered param name and setpoint_snapshot rows
-        would keep being rejected (issue #420 break (b)).
+        A hand-written route for this readback would shadow the registry-derived
+        one with the old unregistered param name, and setpoint_snapshot rows
+        would keep being rejected (issue #420 break (b)). CFG_READBACK_MAP must
+        resolve it to the registry row.
         """
-        from verdify_schemas.tunable_registry import CFG_READBACK_MAP_REG
-
         assert CFG_READBACK_MAP_REG["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
-        for p in reversed((str(REPO_ROOT / "ingestor"), "/srv/verdify/ingestor", "/mnt/iris/verdify/ingestor")):
-            if p not in sys.path:
-                sys.path.insert(0, p)
-        from entity_map import _CFG_READBACK_ADDED_FW_V2, CFG_READBACK_MAP
-
-        assert "cfg___dehum_vent_hold_enabled" not in _CFG_READBACK_ADDED_FW_V2, (
-            "manual #421 route resurrected — it shadows the registry-derived route "
-            "(merge order puts _CFG_READBACK_ADDED_FW_V2 last in CFG_READBACK_MAP)"
-        )
-        assert CFG_READBACK_MAP["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
+        assert _entity_map().CFG_READBACK_MAP["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
 
     def test_set_plan_drops_band_owned_before_insert_and_rejects_non_policy(self) -> None:
         """set_plan's write path enforces the contract: band-owned params are
@@ -839,11 +976,6 @@ def _label_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) ->
     return mismatches
 
 
-def _wire_slug(display_name: str) -> str:
-    """ESPHome's per-character object_id normalization (aioesphomeapi slug)."""
-    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
-
-
 class TestStepLabelUnitDriftGuard:
     def test_registry_steps_match_tunables_yaml(self, tunables_yaml: str) -> None:
         numbers, switches = _parse_entities(tunables_yaml)
@@ -965,7 +1097,7 @@ class TestStepLabelUnitDriftGuard:
             rebuilt = f"Cfg • {spec.label}" + (f" ({spec.unit})" if spec.unit else "")
             if rebuilt not in readback_names:
                 missing.append(f"{name}: {rebuilt!r}")
-            elif _wire_slug(rebuilt) != spec.cfg_readback_object_id:
+            elif _esphome_object_id(rebuilt) != spec.cfg_readback_object_id:
                 rewired.append(f"{name}: {spec.cfg_readback_object_id!r} != slug of {rebuilt!r}")
         assert not missing, "anchor label/unit match no sensors.yaml name:\n  " + "\n  ".join(missing)
         assert not rewired, "anchor cfg_readback_object_id changed:\n  " + "\n  ".join(rewired)
@@ -1011,3 +1143,142 @@ class TestStepLabelUnitDriftGuard:
     )
     def test_split_entity_name(self, name: str, expected: tuple[str, str | None]) -> None:
         assert split_entity_name(name) == expected
+
+
+# ─── VD-63: the six firmware tunables that had no row, and the dead fog rows ───
+#
+# name: (kind, min, max, step, default, esp_object_id, cfg_readback_object_id,
+#        push_owner, control_class). Bounds equal the fw_clamp pair. The ids are
+# what the device reports (the native-API capture under
+# docs/handoffs/s1-2026-10-05/evidence/424-source81/ lists the five live ones).
+_VD63_ROWS: dict[str, tuple] = {
+    "mister_hysteresis_kpa": (
+        "numeric",
+        0.05,
+        0.50,
+        0.01,
+        0.10,
+        "mister_hysteresis__kpa_",
+        "cfg___mister_hysteresis__kpa_",
+        "operator",
+        "controller_safety",
+    ),
+    "night_stress_min_dew_margin_f": (
+        "numeric",
+        3.0,
+        15.0,
+        0.5,
+        6.0,
+        "night_stress_min_dew_margin___f_",
+        "cfg___night_stress_min_dew_margin___f_",
+        "safety",
+        "controller_safety",
+    ),
+    "sw_night_econ_heat_suppress_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "night_econ_heat_suppress_enabled",
+        "cfg_night_econ_heat_suppress_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_wet_taper_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "wet_taper_enabled",
+        "cfg_wet_taper_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_night_stress_wet_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "night_stress_wet_enabled",
+        "cfg_night_stress_wet_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_onchip_band_enabled": (
+        "switch",
+        None,
+        None,
+        None,
+        1.0,
+        None,
+        "cfg_on-chip_band_enabled",
+        "firmware_internal",
+        "readback_context",
+    ),
+}
+
+
+class TestRegisteredFirmwareTunables:
+    @pytest.mark.parametrize("name", sorted(_VD63_ROWS))
+    def test_row_contract(self, name: str) -> None:
+        kind, lo, hi, step, default, esp_id, cfg_id, owner, control_class = _VD63_ROWS[name]
+        spec = REGISTRY[name]
+        assert (spec.kind, spec.min, spec.max, spec.step, spec.default) == (kind, lo, hi, step, default)
+        assert (spec.fw_clamp_lo, spec.fw_clamp_hi) == (lo, hi)
+        assert (spec.esp_object_id, spec.cfg_readback_object_id) == (esp_id, cfg_id)
+        assert (spec.push_owner, spec.control_class) == (owner, control_class)
+        # Outside the policy wire and never planner-pushable: Iris's
+        # set_tunable keeps refusing it; set_setting writes it within bounds.
+        assert not spec.planner_pushable and spec.tier == 2 and spec.wire_id is None
+        assert name not in PLANNER_PUSHABLE_REG and name not in TIER1_REG
+        assert spec.label and spec.notes
+        if lo is not None:
+            assert registry_value_error(name, hi) is None
+            assert registry_value_error(name, hi + step) is not None
+
+    def test_onchip_band_is_read_only_with_its_reason(self, tunables_yaml: str) -> None:
+        spec = REGISTRY["sw_onchip_band_enabled"]
+        assert spec.esp_object_id is None, "a push route would make the band owner writable"
+        assert spec.notes.startswith("Decides which side owns the band.")
+        # With no esp_object_id the step and label guards skip this row, so its
+        # own label is checked here against the switch whose getter returns it.
+        (entity,) = [e for e in _tunable_entities(tunables_yaml) if e.global_id == "sw_onchip_band_enabled"]
+        assert entity.section == "switch"
+        assert (spec.label, spec.unit) == split_entity_name(entity.name) == ("On-Chip Band Enabled", None)
+
+    def test_readback_routes_derive_from_the_rows_only(self) -> None:
+        entity_map = _entity_map()
+        assert not hasattr(entity_map, "_CFG_READBACK_ADDED_FW_V2")
+        assert entity_map.CFG_READBACK_MAP == {**CFG_READBACK_MAP_REG, **CFG_READBACK_ALIASES_REG}
+        for name, row in _VD63_ROWS.items():
+            esp_id, cfg_id = row[5], row[6]
+            assert entity_map.CFG_READBACK_MAP[cfg_id] == name
+            if esp_id is None:
+                assert name not in entity_map.SETPOINT_MAP.values()
+            else:
+                assert entity_map.SETPOINT_MAP[esp_id] == name
+            # #420 break (b): the snapshot writer used to reject these params.
+            SetpointSnapshot(ts=datetime(2026, 11, 2, tzinfo=UTC), parameter=name, value=row[4])
+        # The stopgap's C++-id keys, which the device never sends, are gone.
+        stopgap_keys = {
+            "cfg_night_stress_min_dew_margin_f",
+            "cfg_sw_onchip_band_enabled",
+            "cfg_sw_wet_taper_enabled",
+            "cfg_sw_night_stress_wet_enabled",
+            "cfg_sw_night_econ_heat_suppress_enabled",
+        }
+        assert not stopgap_keys & set(entity_map.CFG_READBACK_MAP)
+
+    def test_fog_time_windows_are_retired_without_routes(self) -> None:
+        entity_map = _entity_map()
+        for name in ("fog_time_window_start", "fog_time_window_end"):
+            spec = REGISTRY[name]
+            assert name in RETIRED_TUNABLES_REG and spec.control_class == "retired"
+            assert spec.esp_object_id is None and spec.cfg_readback_object_id is None
+            assert name not in entity_map.SETPOINT_MAP.values()
+            assert name not in entity_map.CFG_READBACK_MAP.values()
+            # History rows still validate.
+            SetpointSnapshot(ts=datetime(2026, 6, 10, tzinfo=UTC), parameter=name, value=spec.default)

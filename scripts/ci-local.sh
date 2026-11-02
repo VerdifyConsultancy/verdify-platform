@@ -166,6 +166,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -225,6 +226,7 @@ $PY -m pytest -q -rs \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
   tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \

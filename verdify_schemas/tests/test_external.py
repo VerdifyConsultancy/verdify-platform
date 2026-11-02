@@ -9,6 +9,7 @@ from verdify_schemas.external import (
     HAEntityState,
     OpenMeteoForecastResponse,
     OpenMeteoHourly,
+    TuyaDeviceStatus,
 )
 
 
@@ -78,3 +79,25 @@ class TestHAEntityState:
         dt = s.as_datetime()
         assert dt is not None
         assert dt.year == 2026
+
+
+class TestTuyaDeviceStatus:
+    def test_keeps_raw_values_and_drops_the_envelope(self):
+        s = TuyaDeviceStatus.model_validate(
+            {"devId": "fixture-device", "t": 1, "dps": {"10": 621, "11": 2484, "101": "AsiaStandard", "102": False}}
+        )
+        assert s.dps == {"10": 621, "11": 2484, "101": "AsiaStandard", "102": False}
+        assert type(s.dps["102"]) is bool and "devId" not in s.model_dump()
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"Error": "Network Error: Unable to Connect", "Err": "901", "Payload": None},
+            {"dps": {"ph": 621}},
+            {"dps": {"10": None}},
+            {"dps": {"10": [621]}},
+        ],
+    )
+    def test_rejects_errors_named_dps_and_non_scalar_values(self, payload):
+        with pytest.raises(ValidationError):
+            TuyaDeviceStatus.model_validate(payload)

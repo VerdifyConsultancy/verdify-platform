@@ -1,0 +1,40 @@
+# VD-70 (#1183): direct, read-only YINMIK hydroponic meter reader, the ingestor
+# task hydro_probe_sync. It dials the meter's reserved IoT address on Tuya local
+# TCP 6668 (allow-ingestor-device-egress.yaml), only queries status() and never
+# writes a data point.
+# Secret verdify-hydro-probe (keys device-id and local-key; values in the
+# jvallery/agents KSOPS lane, names in deploy/k8s/SECRETS.md) is OPTIONAL: while
+# it is absent the mount is empty, the task logs one "hydro key missing" line and
+# idles, and Home Assistant's hydro read carries on. The task re-reads the files
+# every poll, so a sealed or resealed key applies without a restart.
+# VERDIFY_HYDRO_PROBE_TUYA_VERSION must equal the protocol version the meter
+# reports (tinytuya scan or wizard output); a mismatch logs tuya_err=914.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_HYDRO_PROBE_HOST
+              value: "192.168.10.105"
+            - name: VERDIFY_HYDRO_PROBE_TUYA_VERSION
+              value: "3.4"
+          volumeMounts:
+            - name: hydro-probe
+              mountPath: /etc/verdify/hydro-probe
+              readOnly: true
+      volumes:
+        - name: hydro-probe
+          secret:
+            secretName: verdify-hydro-probe
+            # A missing Secret must not stop the sole device writer.
+            optional: true
+            items:
+              - key: device-id
+                path: device-id
+              - key: local-key
+                path: local-key
