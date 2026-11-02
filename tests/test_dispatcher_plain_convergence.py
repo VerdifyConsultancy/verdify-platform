@@ -435,6 +435,24 @@ async def test_a_halting_drift_probe_holds_one_pass_and_never_later_passes(plain
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("phase", ["probe_inflight", "restore_awaiting"])
+async def test_a_probe_phase_past_its_deadline_never_holds_the_pass(plain, phase):
+    plan = _load(plain, PARAMS[:3])
+    # A phase a crash or a cancelled pass left behind holds for at most the
+    # probe's four-minute confirmation deadline; after it the pass dispatches.
+    started = datetime.now(UTC) - drift_probe.CONFIRM_DEADLINE - timedelta(seconds=1)
+    bounded_reconcile._write(
+        plain.state_dir / drift_probe.STATE_NAME,
+        {"version": 1, "run_id": "probe-run", "status": phase, "phase_started_at": started.isoformat()},
+    )
+    await plain.run_pass()
+    assert sorted(plain.controller.sent_params()) == sorted(plan)
+    assert plain.db.stage_rows == ["ordinary"]
+    state = bounded_reconcile._read(plain.state_dir / drift_probe.STATE_NAME)
+    assert state["status"] == "halted" and "deadline" in state["halt_reason"]
+
+
+@pytest.mark.asyncio
 async def test_thirteen_values_never_taken_go_out_once_per_90_s_without_self_wake(plain):
     plan = _load(plain, PARAMS[:13])
     plain.controller.refuses = set(plan)
