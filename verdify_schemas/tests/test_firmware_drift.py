@@ -293,6 +293,42 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
     },
 }
 
+# The L01 bridge's routes (irrigation §6.5, VD-47, #1162): their entities left
+# the engine firmware, but the pre-engine firmware publishes them until the
+# engine is last-good, so the bridge's REGISTRY rows keep the setpoint and
+# readback routes and EQUIPMENT_SWITCH_MAP keeps the hand-written switch routes.
+# The follow-up that #1165 merges after `make firmware-promote-last-good`
+# retires them and removes these entries, and only these, from the allowlist.
+_L01_BRIDGE_ROUTES: dict[str, set[str]] = {
+    "EQUIPMENT_SWITCH_MAP": {
+        "irrigation_enabled",
+        "irrigation_wall_enabled",
+        "irrigation_center_enabled",
+        "irrigation_weather_skip",
+    },
+    "SETPOINT_MAP": {
+        "irrigation_enabled",
+        "irrigation_wall_enabled",
+        "irrigation_center_enabled",
+        "irrigation_south_enabled",
+        "irrigation_west_enabled",
+        "irrigation_weather_skip",
+        "irrig_wall_duration__min_",
+        "irrig_center_duration__min_",
+    },
+    "CFG_READBACK_MAP": {
+        "cfg_irrig_enabled",
+        "cfg_irrig_wall_enabled",
+        "cfg_irrig_center_enabled",
+        "cfg_irrig_south_enabled",
+        "cfg_irrig_west_enabled",
+        "cfg_irrig_wall_duration_min",
+        "cfg_irrig_center_duration_min",
+    },
+}
+for _map_name, _routes in _L01_BRIDGE_ROUTES.items():
+    KNOWN_PRE_EXISTING_DRIFT.setdefault(_map_name, set()).update(_routes)
+
 # Firmware-v2 STAGED contract (docs/design/firmware-v2-contract-2026-06-10.md
 # §B2/§B7): the dispatcher-side band-anchor tunables are registered and routed
 # AHEAD of the firmware-v2 OTA that exposes the matching number entities
@@ -321,25 +357,31 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
 
 def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writable(entity_map):
     firmware_ids = _firmware_entity_ids()
+    # VD-47 (F13) deleted the 16 legacy schedule rows with their cfg_* readbacks and globals;
+    # only the two run-now durations stay, for the L01 bridge (irrigation §6.5).
+    legacy_schedule = {
+        f"irrig_{side}_{field}"
+        for side in ("wall", "center")
+        for field in (
+            "start_hour",
+            "start_min",
+            "fert_duration_min",
+            "fert_every_n",
+            "days_mask",
+            "fert_days_mask",
+            "flush_min",
+            "interval_days",
+        )
+    }
+    assert len(legacy_schedule) == 16
+    for name in legacy_schedule:
+        assert name not in REGISTRY, name
+        assert name not in entity_map.SETPOINT_MAP.values(), name
+        assert name not in entity_map.CFG_READBACK_MAP.values(), name
+        assert f"cfg_{name}" not in firmware_ids, name
     retired = {
         "feed_start_hour",
         "feed_end_hour",
-        "irrig_wall_start_hour",
-        "irrig_wall_start_min",
-        "irrig_wall_fert_duration_min",
-        "irrig_wall_fert_every_n",
-        "irrig_wall_days_mask",
-        "irrig_wall_fert_days_mask",
-        "irrig_wall_flush_min",
-        "irrig_wall_interval_days",
-        "irrig_center_start_hour",
-        "irrig_center_start_min",
-        "irrig_center_fert_duration_min",
-        "irrig_center_fert_every_n",
-        "irrig_center_days_mask",
-        "irrig_center_fert_days_mask",
-        "irrig_center_flush_min",
-        "irrig_center_interval_days",
         "sw_dawn_rehydrate_enabled",
         "dawn_rehydrate_window_min",
         "dawn_rehydrate_on_s",
@@ -513,33 +555,125 @@ def test_override_event_schema_matches_firmware_published_tags():
     )
 
 
-def test_irrigation_queue_buttons_are_inert_since_the_engine():
-    """The two RUN CLEAN buttons still write their queue bits (they retire with #1162), but since the
-    irrigation engine replaced the job machine (#1160) nothing reads the queue, so a press never
-    opens a relay: run-now is irr_command's.
-    """
-    tunables = (REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml").read_text()
-    firmware = "\n".join(
-        path.read_text()
-        for path in [
-            *sorted((REPO_ROOT / "firmware" / "greenhouse").glob("*.yaml")),
-            REPO_ROOT / "firmware" / "greenhouse.yaml",
-        ]
-        if path.name != "tunables.yaml"
-    )
+# The nine Home Assistant buttons (irrigation §7 HA-01 to HA-03): eight template buttons by id,
+# and the restart platform button, which had no id.
+HA_BUTTON_IDS = (
+    "btn_wall_clean",
+    "btn_center_clean",
+    "fan_burst_btn",
+    "vent_bypass_btn",
+    "fog_burst_btn",
+    "btn_manual_fans",
+    "btn_manual_humidify",
+    "btn_vent_bypass",
+)
+MANUAL_LATCHES = ("manual_fans_until_ms", "manual_fog_until_ms", "vent_bypass_until_ms")
+_ID_WRITE_RE = re.compile(
+    r"\bid\((\w+)\)\s*(?:[-+*/|&^]|<<|>>)?=(?!=)|(?:\+\+|--)\s*id\((\w+)\)|\bid\((\w+)\)\s*(?:\+\+|--)"
+)
 
-    queue_writes = re.findall(r"id\(irrig_queue\)\s*\|=\s*([^;]+);", tunables)
-    assert queue_writes == ["1", "4"], f"unexpected irrigation queue callers: {queue_writes}"
-    assert "id: btn_wall_clean" in tunables
-    assert "id: btn_center_clean" in tunables
-    for retired_button in (
-        "btn_wall_fert",
-        "btn_center_fert",
-        "btn_south_mister_fert",
-        "btn_west_mister_fert",
+
+def _firmware_sources() -> dict[Path, str]:
+    """Every text source under firmware/ (YAML, C++ headers and tests, includes, JSON, docs, scripts)."""
+    suffixes = {".yaml", ".h", ".cpp", ".inc", ".json", ".md", ".py"}
+    return {
+        path: path.read_text()
+        for path in sorted((REPO_ROOT / "firmware").rglob("*"))
+        if path.is_file() and path.suffix in suffixes and not {".esphome", ".pioenvs"} & set(path.parts)
+    }
+
+
+def _id_writes(code: str) -> set[str]:
+    """Globals a lambda assigns through ``id(x) =``, a compound assignment, or ++/--."""
+    return {next(group for group in match.groups() if group) for match in _ID_WRITE_RE.finditer(code)}
+
+
+def _firmware_yaml_docs() -> dict[str, dict]:
+    paths = [REPO_ROOT / "firmware" / "greenhouse.yaml", REPO_ROOT / "firmware" / "greenhouse-recovery.yaml"]
+    paths += sorted((REPO_ROOT / "firmware" / "greenhouse").glob("*.yaml"))
+    return {path.name: yaml.safe_load(path.read_text()) or {} for path in paths}
+
+
+def test_home_assistant_buttons_and_the_quiet_override_are_gone():
+    """F12 and HA-01 to HA-03 (VD-47, #1162): no Home Assistant button, no burst script and no
+    occupancy quiet override is left, and manual_override is the only remote way to a burst: its
+    lambda writes only the three deadline latches (restart only reboots), never a relay and never
+    occupancy, so a burst leaves mist and fog held while someone is inside."""
+    sources = _firmware_sources()
+    assert any(path.name == "irrigation_engine.yaml" for path in sources), "firmware sources not found"
+    entity_map_source = (REPO_ROOT / "ingestor" / "entity_map.py").read_text()
+    for token in ("occupancy_quiet_override", "occupancy_override_until_ms"):
+        assert token not in entity_map_source, token
+        hits = sorted(str(path.relative_to(REPO_ROOT)) for path, text in sources.items() if token in text)
+        assert not hits, f"{token} is still referenced under firmware/: {hits}"
+    for token in (*HA_BUTTON_IDS, "manual_fan_burst", "manual_fog_burst", "vent_bypass_timer", "irrig_queue"):
+        hits = sorted(
+            str(path.relative_to(REPO_ROOT)) for path, text in sources.items() if re.search(rf"\b{token}\b", text)
+        )
+        assert not hits, f"{token} is still referenced under firmware/: {hits}"
+    docs = _firmware_yaml_docs()
+    for name, doc in docs.items():
+        assert "button" not in doc, (
+            f"{name} defines buttons: {[b.get('id') or b.get('platform') for b in doc['button']]}"
+        )
+        assert "script" not in doc, f"{name} defines scripts"
+    for path, text in sources.items():
+        if path.suffix == ".yaml":
+            assert "platform: restart" not in text, path.name
+            assert "button.press" not in text, path.name
+
+    services = docs["irrigation_engine.yaml"]["api"]["services"]
+    (override,) = [service for service in services if service["service"] == "manual_override"]
+    assert override["variables"] == {"kind": "string", "minutes": "int"}
+    (step,) = override["then"]
+    code = _code_only(step["lambda"])
+    assert _id_writes(code) == set(MANUAL_LATCHES), _id_writes(code)
+    for latch, kind in zip(MANUAL_LATCHES, ("fans", "humidify", "vent_bypass"), strict=True):
+        assert f'kind == "{kind}"' in code
+        assert f"id({latch}) = manual_override_deadline_ms(now_ms, minutes);" in code
+        assert f"id({latch}) = 0;" in code  # clear zeroes all three
+    restart = code[code.index('kind == "restart"') :]
+    assert code.count("App.safe_reboot();") == 1 and "App.safe_reboot();" in restart[: restart.index("}")]
+    for forbidden in ("occupan", "publish_state", "turn_on", "turn_off", "_rly", "irr_", "set_band_anchor"):
+        assert forbidden not in code, forbidden
+
+    # Occupancy is the ingestor's API push alone: the OCCUPIED action has no override branch.
+    hardware = docs["hardware.yaml"]
+    (occupied,) = [entry for entry in hardware["switch"] if entry.get("id") == "sw_greenhouse_occupied"]
+    (on_action,) = occupied["turn_on_action"]
+    assert _id_writes(_code_only(on_action["lambda"])) == {"greenhouse_occupied", "occupancy_last_true_ms"}
+
+
+def test_push_buttons_toggle_the_burst_latches_and_the_indicators_read_them():
+    """F12 (VD-47): each panel push button toggles its own latch in its own handler, and the three
+    burst indicators (fan_burst_active, vent_bypass_active, fog_burst_active) read the latches."""
+    root = yaml.safe_load((REPO_ROOT / "firmware" / "greenhouse.yaml").read_text())
+    sensors = {entry["id"]: entry for entry in root["binary_sensor"] if "id" in entry}
+    for button, latch in (
+        ("fans_switch", "manual_fans_until_ms"),
+        ("fog_switch", "manual_fog_until_ms"),
+        ("vent_bypass_switch", "vent_bypass_until_ms"),
     ):
-        assert f"id: {retired_button}" not in tunables
-    assert "id(irrig_queue)" not in firmware, "nothing outside the buttons may read or write irrig_queue"
+        (action,) = sensors[button]["on_press"]["then"]
+        code = _code_only(action["lambda"])
+        assert _id_writes(code) == {latch}, (button, _id_writes(code))
+        assert f"id({latch}) = manual_latch_toggle(id({latch}), millis(), id(manual_override_timeout_min));" in code
+        assert "occupan" not in code, button
+    for indicator, name, latch in (
+        ("bs_manual_fan", "Fan Burst Active", "manual_fans_until_ms"),
+        ("bs_manual_fog", "Fog Burst Active", "manual_fog_until_ms"),
+        ("bs_vent_lock", "Vent Bypass Active", "vent_bypass_until_ms"),
+    ):
+        assert sensors[indicator]["name"] == name
+        assert sensors[indicator]["lambda"] == f"return manual_latch_active(id({latch}), millis());"
+    # The override layer reads only the latches.
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    for line in (
+        "const bool manual_fans_eff   = manual_fans_latched;",
+        "const bool manual_fog_eff    = manual_fog_latched;",
+        "const bool vent_bypass_eff   = vent_bypass_latched;",
+    ):
+        assert line in controls, line
 
 
 # Each wet relay (hardware.yaml) and its device_idx in the irrigation program (irrigation §3).

@@ -345,15 +345,16 @@ struct RelayOutputs {
 };
 
 // ── Manual button-override layer (FANS / HUMID / VENT-BYPASS) ────────────
-// The three momentary panel buttons each arm a deadline latch (handled in
-// controls.yaml). ManualOverrides is the per-cycle EFFECTIVE latch state +
-// whether a genuine fog safety block is active; apply_manual_overrides() turns
-// it into forced relay outputs. The pure function makes the override precedence
-// unit-testable (the replay corpus never exercises button presses).
+// Three deadline latches, toggled by the momentary panel push buttons and set
+// or cleared by the manual_override service (VD-47); controls.yaml reads them.
+// ManualOverrides is the per-cycle EFFECTIVE latch state + whether a genuine
+// fog safety block is active; apply_manual_overrides() turns it into forced
+// relay outputs. The pure function makes the override precedence unit-testable
+// (the replay corpus never exercises button presses).
 struct ManualOverrides {
-    bool fans_active;        // FANS button (or legacy manual_fan_active)
-    bool vent_bypass_active; // VENT-BYPASS button (or legacy vent_lock_active)
-    bool humid_active;       // HUMID button (or legacy manual_fog_active)
+    bool fans_active;        // FANS latch (manual_fans_until_ms)
+    bool vent_bypass_active; // VENT-BYPASS latch (vent_bypass_until_ms)
+    bool humid_active;       // HUMID latch (manual_fog_until_ms)
     bool fog_safety_blocked; // a real fog safety block (dew/RH/temp/time/leak) is up
 };
 

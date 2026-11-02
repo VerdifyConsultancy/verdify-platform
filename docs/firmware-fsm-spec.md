@@ -156,12 +156,34 @@ the full set is enumerated in `firmware/test/invariants.h` check #10).
 
 ## 4. Manual button-override layer (FANS / HUMID / VENT-BYPASS)
 
-Three momentary panel buttons (PCF8574 `pcf_in_2`) each arm a deadline latch
-(`manual_fans_until_ms` / `manual_fog_until_ms` / `vent_bypass_until_ms`, set in
-`hardware.yaml`). Each cycle, `controls.yaml` builds a `ManualOverrides` from the
-effective latch state + whether a real fog safety block is up, and applies the
-override through the **pure, unit-tested `apply_manual_overrides()`**
-(`greenhouse_logic.h`) on top of the resolved relay table:
+Three deadline latches (`manual_fans_until_ms` / `manual_fog_until_ms` /
+`vent_bypass_until_ms`; 0 = no burst) carry the FANS, HUMID and VENT-BYPASS
+overrides. They have exactly two writers besides the override layer's own expiry
+(irrigation F12, VD-47):
+
+- **The panel push buttons** (PCF8574 `pcf_in_2`: PB • Fan Burst, PB • Vent
+  Bypass, PB • Fog Burst, `greenhouse.yaml`). Each press toggles its latch in its
+  own `on_press`: a running burst clears, otherwise it runs for
+  `manual_override_timeout_min` minutes (`manual_latch_toggle()`).
+- **The `manual_override(kind, minutes)` API service** (`irrigation_engine.yaml`),
+  which the ingestor calls for API-IRR-12's `override` command rows. `fans`,
+  `humidify` and `vent_bypass` set their latch to now + minutes
+  (`manual_override_deadline_ms()`); `clear` zeroes all three; `restart` calls
+  `App.safe_reboot()`; any other kind logs and changes nothing.
+
+Both clamp minutes to 1-120 (OverrideRequest's bounds) and store a deadline
+that wraps to exactly 0 as 1, because 0 means no burst. Neither touches a relay
+or occupancy: a burst never lifts the occupancy hold, so mist and fog still wait
+while someone is inside. Home Assistant has no buttons on the controller (the old
+burst, RUN CLEAN and restart buttons, their timer scripts and the 60-minute
+occupancy quiet override are gone). `bs_manual_fan`, `bs_vent_lock` and
+`bs_manual_fog` (`fan_burst_active`, `vent_bypass_active`, `fog_burst_active`)
+read true while their latch is set and still ahead (`manual_latch_active()`).
+
+Each cycle, `controls.yaml` builds a `ManualOverrides` from the latches alone +
+whether a real fog safety block is up, and applies the override through the
+**pure, unit-tested `apply_manual_overrides()`** (`greenhouse_logic.h`) on top of
+the resolved relay table:
 
 | Button | Effect | Forced (bypasses min-off dwell) |
 |---|---|---|
@@ -182,12 +204,18 @@ while the vent moved — the "pressed fans, nothing happened" signature).
 `fan_requires_open_vent()` carves out VENT-BYPASS (and SAFETY_HEAT) from the
 fan→vent interlock so bypass can actually hold the vent shut — **the #290 fix**.
 
-**Pinned by** 8 native tests (`test_greenhouse_logic.cpp`): per-button relay
-outcomes, the safety-rail no-op, the fog-safety block, and the interlock carve-out.
+**Pinned by** native tests (`test_greenhouse_logic.cpp`): per-button relay
+outcomes, the safety-rail no-op, the fog-safety block, the interlock carve-out,
+and (VD-47) the latch helpers' clamp, wrap and toggle. The source check
+`test_home_assistant_buttons_and_the_quiet_override_are_gone`
+(`verdify_schemas/tests/test_firmware_drift.py`) pins that the
+`manual_override` lambda writes only the three latches.
 The replay corpus never presses a button, so a replay-diff is **0** (automatic
 control is unchanged) — these native tests are the required positive evidence.
 **Live status:** OTA-deployed 2026-06-17 (firmware `2026.6.17.0134.6a3b35a`);
-post-deploy sensor-health sweep 27/0/0. Closes #289, #290.
+post-deploy sensor-health sweep 27/0/0. Closes #289, #290. The VD-47 service and
+push-button toggles (and the Home Assistant button removal) ship in the irrigation
+engine release's R3 OTA (#1164).
 
 ## 5. Safety rails — the AI cannot override them (L2 #344 AC4)
 
