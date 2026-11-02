@@ -89,6 +89,22 @@ test("a request ends at its confirmation or the next request; not confirmed and 
   expect(settingSteps({ history }, "kPa", NOW, END).some((step) => step.kind === "requested")).toBe(false);
 });
 
+test("a superseded waypoint says what holds it off: a manual value until the setting is written again, else until a newer plan", () => {
+  const history = load<SettingHistory>(historyFixture);
+  const superseded = () => settingSteps({ history }, "kPa", NOW, END).filter((step) => step.kind === "superseded").map((step) => step.detail);
+  expect(superseded()).toEqual([
+    `mister_engage_kpa SUPERSEDED ${kpa("1.60")} · Iris plan · ${kpa("1.55")} (jason) holds until a newer plan`,
+    `mister_engage_kpa SUPERSEDED ${kpa("1.80")} · Iris plan · ${kpa("1.55")} (jason) holds until a newer plan`,
+  ]);
+  // A dashboard write is manual by default (R3): Iris's next plan does not end it.
+  history.desired[1].manual = true;
+  history.plan[3].source = "preemptive";
+  expect(superseded()[1]).toBe(`mister_engage_kpa SUPERSEDED ${kpa("1.80")} · Forecast rule · system · manual ${kpa("1.55")} (jason) holds until the setting is written again`);
+  // No desired row in force at now: the API's own words.
+  history.desired = [];
+  expect(superseded()[0]).toBe(`mister_engage_kpa SUPERSEDED ${kpa("1.60")} · Iris plan · a newer or manual value keeps it from applying`);
+});
+
 test("bounds label at the right edge, or as an edge arrow outside the y range; several settings name theirs", () => {
   const history = load<SettingHistory>(historyFixture);
   const bounds = settingBounds({ history }, "kPa");

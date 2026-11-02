@@ -38,8 +38,8 @@ these from weather's `web/` at the same commit, under the same MIT licence:
 
 | Dashboard file | Weather base | What carried over |
 | --- | --- | --- |
-| `app/charts/uplot-chart.tsx` | `app/components/history-plot.tsx`, `app/components/linked-plots.tsx` | `import("uplot")` inside an effect, a ResizeObserver calling `setSize`, `destroy()` and `disconnect()` on unmount, a load that resolves after unmount dropped, `spanGaps: false`. Weather's hex colours became design-system tokens read with `getComputedStyle`; its fixed heights became the stylesheet's reserved heights |
-| `app/charts/linked-panels.tsx`, `app/charts/time-series.tsx` | `app/components/linked-plots.tsx` | Linked panels on one cursor (`cursor.sync`), a shading pass in a draw hook, a CSSOM transform for anything positioned at run time, and the plot div as `role="img"` naming what is plotted and that a table follows |
+| `app/charts/uplot-chart.tsx` | `app/components/history-plot.tsx`, `app/components/linked-plots.tsx` | `import("uplot")` inside an effect, a ResizeObserver calling `setSize`, `destroy()` and `disconnect()` on unmount, a load that resolves after unmount dropped, `spanGaps: false`, and (from `history-plot.tsx`) the plot div as `role="img"` naming what is plotted and that a table follows. Weather's hex colours became design-system tokens read with `getComputedStyle`; its fixed heights became the stylesheet's reserved heights |
+| `app/charts/linked-panels.tsx`, `app/charts/time-series.tsx` | `app/components/linked-plots.tsx` | Linked panels on one cursor (`cursor.sync`), a shading pass in a draw hook, and a CSSOM transform for anything positioned at run time |
 | `app/charts/summary.ts` | `seriesSummary` in `app/components/linked-plots.tsx` | Low and high with when, coverage and the count of intervals without values, rebuilt on `SeriesColumns` (`min`, `max`, `count`) with a count-weighted mean |
 | `app/charts/time-axis.ts` | `plotTime` in `app/lib/format.ts` | The two-line America/Denver label with `longOffset` and `hourCycle: "h23"` (`plotTime` itself stays in `app/lib/format.ts`) |
 

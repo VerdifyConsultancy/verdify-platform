@@ -65,6 +65,25 @@ export class Labels {
   }
 }
 
+/** WCAG relative luminance of a `#rgb` or `#rrggbb` token value; null for anything else. */
+function luminance(color: string): number | null {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim())?.[1];
+  if (!hex) return null;
+  const full = hex.length === 3 ? [...hex].map((digit) => digit + digit).join("") : hex;
+  const [red, green, blue] = [0, 2, 4].map((at) => parseInt(full.slice(at, at + 2), 16) / 255)
+    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+/**
+ * A label's text colour: its mark's colour where that reads at 4.5:1 on white (design system §7: text 4.5:1, chart
+ * lines 3:1), else `fallback`, a darker token of the same meaning (`--warn-text` for a request, `--ink` otherwise).
+ */
+export function labelColor(color: string, fallback: string): string {
+  const light = luminance(color);
+  return light !== null && 1.05 / (light + 0.05) >= 4.5 ? color : fallback;
+}
+
 /** drawClear: the span before `retained_from`, shaded. */
 export function paintRetention(plot: PaintTarget, notes: readonly RetentionNote[], colors: ChartColors) {
   clipToPlot(plot, () => {
@@ -220,7 +239,7 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
   const ahead = input.steps.filter((step) => step.kind === "planned" || step.kind === "superseded");
   const behind = input.steps.filter((step) => step.kind === "requested").reverse().concat(input.steps.filter((step) => step.kind === "device").reverse());
   for (const step of [...ahead, ...behind]) {
-    const color = stepStyle(step.kind, colors, seriesColor, px).stroke;
+    const color = labelColor(stepStyle(step.kind, colors, seriesColor, px).stroke, colors[step.kind === "requested" ? "--warn-text" : "--ink"]);
     const line = y(plot, step.value);
     labels.place(step.label, [
       { at: Math.max(x(plot, step.start), bbox.left) + 4 * px, line, align: "left" },

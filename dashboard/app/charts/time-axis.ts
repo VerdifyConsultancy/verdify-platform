@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type uPlot from "uplot";
-import { TIME_ZONE, repeatedLocalTime } from "../lib/format";
+import { TIME_ZONE, dayTitle, repeatedLocalTime } from "../lib/format";
 
 /**
  * America/Denver time for charts (design system §5.4). X values are UTC epoch seconds; every label is formatted with
@@ -71,10 +71,19 @@ export function localDateMDY(epochSeconds: number): string {
   return `${p.month}/${p.day}/${p.year}`;
 }
 
-/** A span's own start and end, "02:10–02:40"; both carry the date when they fall on different local days. */
+/**
+ * A span's own start and end, "02:10–02:40"; both carry the date when the span ends on another local day, so a span
+ * from midnight to midnight reads "Oct 5, 00:00–Oct 6, 00:00", never "00:00–00:00".
+ */
 export function spanText(start: number, end: number): string {
-  const withDate = localDay(start) !== localDay(end - 1);
+  const withDate = localDay(start) !== localDay(end);
   return `${clockTime(start, withDate)}–${clockTime(end, withDate)}`;
+}
+
+/** Whole local days for daily buckets: "Oct 5", or "Oct 5–Oct 7" with the last day included. */
+export function daySpanText(start: number, end: number): string {
+  const first = dayTitle(localDay(start), "short"), last = dayTitle(localDay(Math.max(start, end - 1)), "short");
+  return first === last ? first : `${first}–${last}`;
 }
 
 /** True when [min, max] reaches the repeated hour, whose labels carry an offset even at phone width. */

@@ -290,7 +290,8 @@ export function dataTables(model: TimeSeriesModel, hidden: ReadonlySet<string>):
         const run = runAt(trace.gaps.runs, index);
         let note: string | null = null;
         if (run && run.first === index) note = run.text;
-        else if (index === 0 && trace.gaps.beyond > 0 && trace.retention) note = trace.retention.text;
+        // The span before retained_from starts the window: beyond retention on a raw series, daily summaries on a daily one.
+        else if (index === 0 && trace.retention) note = trace.retention.text;
         else if (trace.staleness.stale && trace.gaps.lastValued !== null && index === trace.gaps.lastValued + 1) note = trace.staleness.text;
         else if (trace.values[index] === null && trace.columns?.reason?.[index]) note = trace.columns.reason[index];
         if (note && !notes.some((text) => text.endsWith(note!))) notes.push(named(trace, note));

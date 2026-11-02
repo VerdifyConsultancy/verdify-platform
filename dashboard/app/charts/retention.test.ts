@@ -86,6 +86,17 @@ test("400 days of daily summaries say so before retained_from; a metric with no 
   expect(retentionNote(metric("climate.temp_avg"), temp, epoch(CLIMATE_RETAINED_FROM) + 1, to)).toBeNull();
 });
 
+test("on daily buckets a null run and STALE name their days, never 00:00", () => {
+  const series = dailySeries();
+  const temp = series.series["climate.temp_avg"];
+  // 2026-01-06 to 2026-01-08 (indexes 100-102) have no daily summary.
+  for (const index of [100, 101, 102]) { temp.avg[index] = null; temp.count[index] = 0; }
+  temp.avg[150] = null; temp.count[150] = 0;
+  expect(gapsOf(series).runs.map((run) => run.text)).toEqual(["No data Jan 6–Jan 8", "No data Feb 25"]);
+  const lastDay = series.t.length - 10;
+  expect(staleness(metric("climate.temp_avg"), series.t, lastDay, 86_400, epoch(series.to)).text).toBe("STALE · last data Oct 23");
+});
+
 test("a series is stale when its last bucket ends more than twice its cadence, or one bucket, before the data ends", () => {
   const start = epoch("2026-10-30T12:00:00Z");
   const t = Array.from({ length: 30 }, (_, minute) => start + minute * 60);

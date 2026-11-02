@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { MetricDef, SeriesColumns, SeriesGap } from "./types";
-import { clockTime, epochOf, localDateMDY, localDay, spanText } from "./time-axis";
+import { clockTime, daySpanText, epochOf, localDateMDY, localDay, spanText } from "./time-axis";
 
 /**
  * Retention, gaps and staleness (design system §5.4). A null bucket is never 0. Buckets older than a metric's raw
@@ -21,6 +21,7 @@ export function gapReasonText(reason: string | null | undefined): string | null 
 }
 
 export const DAILY_SUMMARY_NOTE = "one point per day · daily summaries";
+const DAY = 86_400;
 
 /** A run of null buckets: indexes `first`–`last`, from the first bucket's start to the next bucket's start. */
 export type NullRun = { first: number; last: number; start: number; end: number; reason: string | null; text: string };
@@ -59,9 +60,12 @@ function runReason(start: number, end: number, gaps: readonly SeriesGap[]): stri
   return words.length ? words.join("; ") : null;
 }
 
-/** "No data 02:10–02:40: controller connection lost", or the run's start and end alone when no reason is known. */
-export function nullRunText(start: number, end: number, reason: string | null): string {
-  return `No data ${spanText(start, end)}${reason ? `: ${reason}` : ""}`;
+/**
+ * "No data 02:10–02:40: controller connection lost", or the run's start and end alone when no reason is known; on daily
+ * buckets the run's days ("No data Oct 5–Oct 7").
+ */
+export function nullRunText(start: number, end: number, reason: string | null, daily = false): string {
+  return `No data ${daily ? daySpanText(start, end) : spanText(start, end)}${reason ? `: ${reason}` : ""}`;
 }
 
 /**
@@ -81,7 +85,7 @@ export function traceGaps(t: readonly number[], values: readonly (number | null)
     if (!empty && first !== null) {
       const start = t[first], end = bucketEnd(t, index - 1, bucketSeconds);
       const reason = runReason(start, end, gaps);
-      runs.push({ first, last: index - 1, start, end, reason, text: nullRunText(start, end, reason) });
+      runs.push({ first, last: index - 1, start, end, reason, text: nullRunText(start, end, reason, bucketSeconds >= DAY) });
       first = null;
     }
   }
@@ -121,11 +125,13 @@ export type Staleness = { stale: boolean; lastAt: number | null; text: string | 
 
 /**
  * Stale when the last valued bucket ends more than twice the metric's cadence (or one bucket, whichever is longer)
- * before the window's data end. The trace stops at its last sample; nothing is extended to now.
+ * before the window's data end. The trace stops at its last sample; nothing is extended to now. A daily bucket names
+ * its day ("STALE · last data Oct 30").
  */
 export function staleness(metric: MetricDef, t: readonly number[], lastValued: number | null, bucketSeconds: number, dataEnd: number): Staleness {
   if (lastValued === null) return { stale: false, lastAt: null, text: null };
   const lastAt = t[lastValued];
   const stale = dataEnd - bucketEnd(t, lastValued, bucketSeconds) > Math.max(2 * metric.cadence_s, bucketSeconds);
-  return { stale, lastAt, text: stale ? `STALE · last data ${clockTime(lastAt, localDay(lastAt) !== localDay(dataEnd))}` : null };
+  const when = bucketSeconds >= DAY ? daySpanText(lastAt, lastAt + 1) : clockTime(lastAt, localDay(lastAt) !== localDay(dataEnd));
+  return { stale, lastAt, text: stale ? `STALE · last data ${when}` : null };
 }

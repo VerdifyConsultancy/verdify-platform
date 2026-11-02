@@ -157,7 +157,26 @@ test("steps: SUPERSEDED muted, the forecast rule never AI, a request dashed ambe
   plot.hover(epoch("2026-11-01T09:50:00Z"), 46);
   expect(tooltip(plot).slice(2)).toEqual([`Band in force · DERIVED ${kpa(String(load<BandTimeline>(bandFixture).band.vpd_low[15]!.toFixed(2)))}–${kpa(load<BandTimeline>(bandFixture).band.vpd_high[15]!.toFixed(2))}`, `mister_engage_kpa device ${kpa("1.50")}`, `mister_engage_kpa REQUESTED ${kpa("1.55")} · jason`]);
   plot.hover(epoch("2026-11-01T19:00:00Z"), 47);
-  expect(tooltip(plot)).toContain(`mister_engage_kpa SUPERSEDED ${kpa("1.80")} · Iris plan · a newer value holds until Iris's next plan`);
+  expect(tooltip(plot)).toContain(`mister_engage_kpa SUPERSEDED ${kpa("1.80")} · Iris plan · ${kpa("1.55")} (jason) holds until a newer plan`);
+});
+
+test("step labels read at 4.5:1: the RH panel's plan in ink, a request in the amber text token", async () => {
+  const history = load<SettingHistory>(historyFixture);
+  const percent = (value: number | null) => (value === null ? null : value * 50);
+  const rh: SettingHistory = {
+    ...history, param: "fog_rh_ceiling_pct", unit: "%", min: 50, max: 95,
+    desired: history.desired.map((row) => ({ ...row, param: "fog_rh_ceiling_pct", value: percent(row.value) })),
+    plan: history.plan.map((waypoint) => ({ ...waypoint, value: percent(waypoint.value) })),
+    readback: history.readback.map((point) => ({ ...point, value: percent(point.value) })),
+  };
+  const { plot } = await mount({ metrics: [metric("climate.rh_avg")], settings: [{ history: rh }] });
+  plot.draw();
+  const label = (text: string) => plot.ctx.texts.find((item) => item.text === text);
+  // The line keeps --c-rh (3:1 for lines); its label does not.
+  expect(plot.ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-rh"] && JSON.stringify(stroke.dash) === "[8,4]")).toBe(true);
+  expect(label("85.0% PLANNED · AI")).toMatchObject({ color: TOKENS["--ink"] });
+  expect(label("77.5% REQUESTED")).toMatchObject({ color: TOKENS["--warn-text"] });
+  expect(plot.ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-requested"] && JSON.stringify(stroke.dash) === "[6,4]")).toBe(true);
 });
 
 test("a bound inside the y range is a dotted line labelled at the right edge", async () => {
@@ -190,6 +209,9 @@ test("400 daily summaries draw one point per day and say so; heap reads kB and i
   temp.plot.draw();
   expect(temp.plot.ctx.texts.some((item) => item.text === "Daily summaries before 11/02/2025: raw data kept 365 days")).toBe(true);
   expect(temp.plot.ctx.rects.some((rect) => rect.color === TOKENS["--field"] && rect.width > 0)).toBe(true);
+  // The data table says so too, on its first row.
+  const table = await openTable(temp.container);
+  expect(table.querySelector("tbody tr")!.lastElementChild!.textContent).toBe("Daily summaries before 11/02/2025: raw data kept 365 days");
   cleanup();
   const heap = await mount({ series, metrics: [metric("diagnostics.heap_free_kb")], now: range.to, xRange: range });
   expect([...heap.container.querySelectorAll(".chart-notes li")].map((note) => note.textContent)).toEqual(["beyond retention (180 days kept)"]);

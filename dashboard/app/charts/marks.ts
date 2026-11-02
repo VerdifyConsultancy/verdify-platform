@@ -118,7 +118,7 @@ const byTime = <T,>(items: readonly T[], at: (item: T) => string) => items
  * Requested: each desired row still requested, not confirmed or held, from its request until it was confirmed, the
  * next desired row or now, whichever comes first; never drawn as the device line. Planned: Iris and forecast-rule
  * waypoints right of now only, each until the next waypoint or the window's end; a waypoint the API marks not
- * effective is SUPERSEDED, never the plan ahead, and a forecast rule never reads AI.
+ * effective is SUPERSEDED, never the plan ahead, and says which value holds it off; a forecast rule never reads AI.
  */
 export function settingSteps(input: SettingSteps, unit: string, now: number, windowEnd: number, prefix = false): StepSegment[] {
   const { history } = input;
@@ -147,6 +147,14 @@ export function settingSteps(input: SettingSteps, unit: string, now: number, win
     steps.push({ kind: "requested", param: history.param, setting, start: at, end, value: item.value, state: item.state, label: named(`${value(item.value)} ${word}`), detail: `${setting} ${word} ${value(item.value)} · ${item.actor.name}${why ? ` · ${why}` : ""}` });
   });
 
+  // What holds a superseded waypoint off (architecture §5.2) is the desired row in force now: a manual one holds until
+  // the setting is written again, whatever plan comes; any other holds until a newer plan.
+  const holder = desired.filter(({ at }) => at <= now).pop()?.item;
+  const heldBy = !holder || holder.value === null
+    ? "a newer or manual value keeps it from applying"
+    : holder.manual
+      ? `manual ${value(holder.value)} (${holder.actor.name}) holds until the setting is written again`
+      : `${value(holder.value)} (${holder.actor.name}) holds until a newer plan`;
   const plan = byTime(history.plan, (waypoint) => waypoint.at);
   plan.forEach(({ item, at }, index) => {
     const end = index + 1 < plan.length ? plan[index + 1].at : windowEnd;
@@ -157,7 +165,7 @@ export function settingSteps(input: SettingSteps, unit: string, now: number, win
     const words = item.effective ? who : SUPERSEDED;
     const detail = item.effective
       ? `${setting} ${who} ${value(item.value)}`
-      : `${setting} ${SUPERSEDED} ${value(item.value)} · ${ai ? "Iris plan" : FORECAST_RULE} · a newer value holds until Iris's next plan`;
+      : `${setting} ${SUPERSEDED} ${value(item.value)} · ${ai ? "Iris plan" : FORECAST_RULE} · ${heldBy}`;
     steps.push({ kind: item.effective ? "planned" : "superseded", param: history.param, setting, start, end, value: item.value, source: item.source, label: named(`${value(item.value)} ${words}`), detail });
   });
   return steps;

@@ -73,7 +73,16 @@ export function LinkedPanels(props: LinkedPanelsProps) {
   const panels = useMemo(() => groupByUnit(metrics), [metrics]);
   const key = syncKey(props.route, props.range);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
-  const [zoomed, setZoomed] = useState(false);
+  // Each panel reports its own zoom: a panel rebuilt with new metrics starts unzoomed while the others stay zoomed, and
+  // "Reset zoom" stays until none is.
+  const [zoomedUnits, setZoomedUnits] = useState<ReadonlySet<string>>(() => new Set());
+  const zoomed = panels.some((panel) => zoomedUnits.has(panel.unit));
+  const onZoom = (unit: string) => (state: boolean) => setZoomedUnits((previous) => {
+    if (previous.has(unit) === state) return previous;
+    const next = new Set(previous);
+    if (state) next.add(unit); else next.delete(unit);
+    return next;
+  });
   const toggle = (metric: string) => setHidden((previous) => {
     const next = new Set(previous);
     if (!next.delete(metric)) next.add(metric);
@@ -91,6 +100,6 @@ export function LinkedPanels(props: LinkedPanelsProps) {
     {panels.map((panel, index) => <TimeSeries key={panel.unit} linked syncKey={key}
       series={chosen[index]} metrics={panel.metrics} unit={panel.unit} band={props.band} settings={props.settings}
       now={props.now} xRange={xRange} title={props.titles?.[panel.unit]} message={props.messages?.[panel.unit]}
-      hidden={hidden} onToggle={toggle} onZoom={setZoomed} zoomControl={false} csv={false} />)}
+      hidden={hidden} onToggle={toggle} onZoom={onZoom(panel.unit)} zoomControl={false} csv={false} />)}
   </section>;
 }

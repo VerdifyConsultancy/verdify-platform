@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type uPlot from "uplot";
 import uplotStyles from "uplot/dist/uPlot.min.css?url";
 import { TIME_ZONE } from "../lib/format";
@@ -20,7 +20,7 @@ export const chartLinks = () => [{ rel: "stylesheet", href: uplotStyles }, { rel
 
 /** Every token a chart reads (design system §2.1 and §2.2). Charts never carry a hex literal. */
 export const CHART_TOKENS = [
-  "--ink", "--muted", "--line", "--field", "--fault",
+  "--ink", "--muted", "--line", "--field", "--fault", "--warn-text",
   "--c-temp", "--c-vpd", "--c-rh", "--c-outdoor", "--c-band-wash", "--c-band-edge", "--c-setpoint", "--c-requested", "--c-bound", "--c-grid",
   "--eq-mister", "--eq-fog", "--eq-fan1", "--eq-fan2", "--eq-vent", "--eq-heat1", "--eq-heat2", "--eq-light-main", "--eq-light-grow",
   "--eq-water", "--eq-fert", "--eq-master",
@@ -55,18 +55,18 @@ export function resetZoom(key: string, range: XRange) {
 export const FINE_POINTER = "(pointer: fine)";
 const finePointer = () => typeof globalThis.matchMedia === "function" && globalThis.matchMedia(FINE_POINTER).matches;
 
-/** True at 860 px and below; follows the viewport. */
+function subscribeNarrow(change: () => void): () => void {
+  if (typeof globalThis.matchMedia !== "function") return () => {};
+  const query = globalThis.matchMedia(NARROW_QUERY);
+  query.addEventListener("change", change);
+  return () => query.removeEventListener("change", change);
+}
+/**
+ * True at 860 px and below; follows the viewport. The server and the hydrating render read the wide value, as the server
+ * has no viewport, so the hydrated markup matches; React then re-renders with the phone value.
+ */
 export function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(narrowViewport);
-  useEffect(() => {
-    if (typeof globalThis.matchMedia !== "function") return;
-    const query = globalThis.matchMedia(NARROW_QUERY);
-    const change = () => setNarrow(query.matches);
-    change();
-    query.addEventListener("change", change);
-    return () => query.removeEventListener("change", change);
-  }, []);
-  return narrow;
+  return useSyncExternalStore(subscribeNarrow, narrowViewport, () => false);
 }
 
 const ids = new WeakMap<object, number>();
@@ -144,8 +144,6 @@ export function UPlotChart(props: UPlotChartProps) {
       if (disposed) return;
       const { options, data, xRange, syncKey, className } = latest.current;
       shown.current = xRange;
-      // A rebuilt chart starts on its window, unzoomed.
-      if (zoomed.current) { zoomed.current = false; latest.current.onZoom?.(false); }
       let xWindow: [number, number] = [xRange.from, xRange.to];
       const fine = finePointer();
       const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow };
@@ -183,6 +181,9 @@ export function UPlotChart(props: UPlotChartProps) {
       observer.disconnect();
       plot?.destroy();
       plotRef.current = null;
+      // A chart that goes away is no longer zoomed, so its caller never keeps a "Reset zoom" for it; a rebuilt chart
+      // starts on its window.
+      if (zoomed.current) { zoomed.current = false; latest.current.onZoom?.(false); }
       latest.current.onPlot?.(null);
     };
   }, [props.structure]);

@@ -2,7 +2,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { plotTime } from "../lib/format";
 import { media } from "./fixtures/uplot-mock";
-import { axisLabel, clockTime, fullTime, isoLocal, localDateMDY, spanText, timeAxis, touchesRepeatedHour } from "./time-axis";
+import { axisLabel, clockTime, daySpanText, fullTime, isoLocal, localDateMDY, spanText, timeAxis, touchesRepeatedHour } from "./time-axis";
 
 afterEach(() => vi.unstubAllGlobals());
 const epoch = (instant: string) => Date.parse(instant) / 1000;
@@ -57,6 +57,12 @@ test("CSV, gap and retention times", () => {
   expect(isoLocal(epoch("2026-11-01T08:30:00Z"))).toBe("2026-11-01T01:30:00-07:00");
   expect(spanText(epoch("2026-11-01T09:10:00Z"), epoch("2026-11-01T09:40:00Z"))).toBe("02:10–02:40");
   expect(spanText(epoch("2026-11-01T05:50:00Z"), epoch("2026-11-01T06:20:00Z"))).toBe("Oct 31, 23:50–Nov 1, 00:20");
+  // A span ending at the next local midnight names both days, never "00:00–00:00" (the 25-hour 2026-11-01 included).
+  expect(spanText(epoch("2026-10-05T06:00:00Z"), epoch("2026-10-06T06:00:00Z"))).toBe("Oct 5, 00:00–Oct 6, 00:00");
+  expect(spanText(epoch("2026-11-01T06:00:00Z"), epoch("2026-11-02T07:00:00Z"))).toBe("Nov 1, 00:00–Nov 2, 00:00");
+  // Daily buckets read as whole days, the last one included.
+  expect(daySpanText(epoch("2026-10-05T06:00:00Z"), epoch("2026-10-06T06:00:00Z"))).toBe("Oct 5");
+  expect(daySpanText(epoch("2026-10-05T06:00:00Z"), epoch("2026-10-08T06:00:00Z"))).toBe("Oct 5–Oct 7");
   expect(clockTime(epoch("2026-11-01T08:20:00Z"))).toBe("01:20 GMT-07:00");
   expect(localDateMDY(epoch("2025-11-02T06:00:00Z"))).toBe("11/02/2025");
   expect(touchesRepeatedHour(epoch("2026-11-01T06:00:00Z"), epoch("2026-11-01T06:30:00Z"))).toBe(false);

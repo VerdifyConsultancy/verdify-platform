@@ -160,7 +160,7 @@ export function media({ narrow = false, fine = true }: { narrow?: boolean; fine?
 
 /** The design-system token values (styles.css §2.1 and §2.2) on :root, as the stylesheet would set them. */
 export const TOKENS: Readonly<Record<string, string>> = {
-  "--ink": "#112231", "--muted": "#626b76", "--line": "#dcede7", "--field": "#f4f7f4", "--fault": "#b3261e",
+  "--ink": "#112231", "--muted": "#626b76", "--line": "#dcede7", "--field": "#f4f7f4", "--fault": "#b3261e", "--warn-text": "#5c4407",
   "--c-temp": "#112231", "--c-vpd": "#7d3ab7", "--c-rh": "#0d98a4", "--c-outdoor": "#6c7278", "--c-band-wash": "#e2ede8",
   "--c-band-edge": "#6e9c8e", "--c-setpoint": "#0e5a43", "--c-requested": "#a77601", "--c-bound": "#626b76", "--c-grid": "#dcede7",
   "--eq-fan2": "#484fa7", "--eq-heat1": "#d47a00", "--eq-vent": "#056190", "--eq-mister": "#9d2398",

@@ -107,6 +107,39 @@ test("a drag zoom on one panel shows Reset zoom, which puts every synced chart b
   await waitFor(() => expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull());
 });
 
+test("Reset zoom stays while any panel is zoomed, also after one panel is rebuilt unzoomed", async () => {
+  const { rerender } = await mount();
+  act(() => { for (const plot of created) plot.setScale("x", { min: RANGE.from + 3600, max: RANGE.from + 7200 }); });
+  await screen.findByRole("button", { name: "Reset zoom" });
+  // A metric picked into the °F panel rebuilds that panel only; it starts on the window, the other three stay zoomed.
+  const south: MetricDef = { ...metric("climate.outdoor_temp_f"), key: "climate.temp_south", label: "South temperature", group: "zones", zone: "south", note: null };
+  rerender(<MemoryRouter><LinkedPanels {...props({ metrics: [...PICKED, south] })} /></MemoryRouter>);
+  await settle();
+  expect(created).toHaveLength(5);
+  expect(created[0].destroyed).toBe(true);
+  expect(created.slice(1, 4).every((plot) => plot.scales.x.min === RANGE.from + 3600)).toBe(true);
+  const reset = screen.getByRole("button", { name: "Reset zoom" });
+  fireEvent.click(reset);
+  expect(created.filter((plot) => !plot.destroyed).map((plot) => plot.scales.x)).toEqual(Array.from({ length: 4 }, () => ({ min: RANGE.from, max: RANGE.to })));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull());
+});
+
+test("a panel removed while zoomed takes its zoom with it, so its unit coming back shows no Reset zoom", async () => {
+  const { rerender } = await mount();
+  act(() => { for (const plot of created) plot.setScale("x", { min: RANGE.from + 3600, max: RANGE.from + 7200 }); });
+  await screen.findByRole("button", { name: "Reset zoom" });
+  // Flow leaves the window while zoomed; the other panels are reset.
+  const withoutFlow = PICKED.filter((item) => item.key !== "climate.flow_gpm");
+  rerender(<MemoryRouter><LinkedPanels {...props({ metrics: withoutFlow })} /></MemoryRouter>);
+  fireEvent.click(screen.getByRole("button", { name: "Reset zoom" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull());
+  // Flow comes back unzoomed: nothing is zoomed, so no Reset zoom.
+  rerender(<MemoryRouter><LinkedPanels {...props()} /></MemoryRouter>);
+  await settle();
+  expect(created.filter((plot) => !plot.destroyed)).toHaveLength(4);
+  expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull();
+});
+
 test("one CSV of the window holds every plotted column; a legend toggle hides a series from the chart and the file", async () => {
   const { container } = await mount();
   expect(screen.getAllByRole("link", { name: "CSV of this window" })).toHaveLength(1);
