@@ -46,6 +46,9 @@ test("a replayed Idempotency-Key returns the stored body once; a reused key with
   expect(first.headers["Idempotency-Replayed"]).toBeUndefined();
   // Applied once: one run, one activity row (a second real run would be line_busy).
   expect((get(api, "/v1/activity?action=irrigation.run").items as Body[]).filter((row) => row.request_id === KEY)).toHaveLength(1);
+  // The same payload with its keys in another order is the same request.
+  const saved = at(api, "PUT", "/v1/settings/mister_engage_kpa", { value: 1.55, manual: true }, OTHER_KEY);
+  expect(at(api, "PUT", "/v1/settings/mister_engage_kpa", JSON.stringify({ manual: true, value: 1.55 }), OTHER_KEY)).toMatchObject({ body: saved.body, headers: { "Idempotency-Replayed": "true" } });
   const reused = at(api, "POST", "/v1/irrigation/lines/L01/run", { minutes: 13 }, KEY);
   expect(reused.status).toBe(422);
   expect(reused.body).toMatchObject({ code: "request_id_reused", request_id: KEY });
@@ -212,8 +215,29 @@ test("each named fixture serves what the table says", () => {
   expect(set("ha-down")["API-13"].items.filter((item: Body) => item.group === "light")).toEqual([
     expect.objectContaining({ state: "unknown", observed_at: minutesAgo(11) }), expect.objectContaining({ state: "unknown", observed_at: minutesAgo(11) }),
   ]);
-  expect(set(["before-engine", "program-rev-42"])["API-IRR-01"].program).toMatchObject({ revision: 42, state: "confirmed" });
+  // before-engine serves a site cap saved before the engine, requested with no_engine since that write.
+  const engineless = set("before-engine");
+  expect(engineless["API-09"].items.find((row: Body) => row.param === "mister_daily_volume_max_gal")).toMatchObject({
+    state: "requested", readback: null, desired: { value: 300, manual: true, state: "requested", state_reason: { code: "no_engine", since: "2026-11-02T16:30:00.000Z" }, created_at: "2026-11-02T16:30:00.000Z" },
+  });
+  expect(engineless["API-17"].items).toEqual(expect.arrayContaining([expect.objectContaining({ action: "setting.write", target: "mister_daily_volume_max_gal", state: "requested" })]));
+  // program-rev-42 is the base's program even after before-engine: the site caps and every line confirmed inside it.
+  const restored = set(["before-engine", "program-rev-42"]);
+  expect(restored["API-IRR-01"].program).toMatchObject({ revision: 42, state: "confirmed" });
+  expect(restored["API-IRR-01"].lines.every((row: Body) => row.sync === "confirmed")).toBe(true);
+  expect(restored["API-09"].items.filter((row: Body) => row.group === "site_water_caps").map((row: Body) => [row.state, (row.readback as Body).value, row.desired]))
+    .toEqual([["confirmed", 360, null], ["confirmed", 90, null], ["confirmed", 15, null]]);
   expect(set("reserved-lines")["API-IRR-01"].lines.filter((row: Body) => row.reserved).map((row: Body) => row.line_id)).toEqual(["L05", "L06"]);
+  // schedules-paused: the week with "Last 7 days" holds the past L02 block, skipped because the line was paused.
+  const week = set("schedules-paused")["API-IRR-02"];
+  expect(week.schedules).toHaveLength(3);
+  expect((week.occurrences as Body[]).filter((row) => row.line_id === "L02" && Date.parse(row.planned_start as string) < NOW))
+    .toEqual([expect.objectContaining({ status: "skipped", reason: "line paused by jason" })]);
+  // The Band in force rows read as API-09 serves them: derived, read-only, no readback path.
+  expect(set("in-band")["API-09"].items.find((row: Body) => row.param === "band_house_temp_low")).toMatchObject({
+    label: "House temp low", group: "band_in_force", control_class: "crop_band", writable: false, readback_via: "none", readback: { value: 62 }, desired: null,
+    plan: null, applied_from: "band", state: "no_readback",
+  });
   const series = set("series-400d")["API-04"];
   expect(series.bucket_s).toBe(86_400);
   expect(Date.parse(series.to) - Date.parse(series.from)).toBe(400 * 86_400_000);
@@ -222,6 +246,22 @@ test("each named fixture serves what the table says", () => {
   expect(stuck["API-02"].writer).toMatchObject({ stuck: true, differing: 4, oldest_since: "2026-11-02T13:10:00.000Z" });
   expect(stuck["API-14"].items).toEqual([expect.objectContaining({ alert_type: "setpoint_delivery_stuck" })]);
   expect(set("iris-unsnapped")["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s")).toMatchObject({ step: 30, plan: { value: 48.75 } });
+});
+
+test("fixture() reads requested-to-confirmed and flow-after-stop after their writes; the fixture API starts before them", () => {
+  const row = (set: Record<string, Body>) => ((set["API-09"] as Body).items as Body[]).find((item) => item.param === "mister_engage_kpa")!;
+  const confirmed = fixture("requested-to-confirmed", { now: NOW });
+  expect(confirmed["API-10"]).toMatchObject({ value: 1.55, snapped_from: 1.53, state: "requested", manual_before: false });
+  expect(row(confirmed)).toMatchObject({ state: "confirmed", applied_from: "manual", readback: { value: 1.55 }, desired: { value: 1.55, state: "confirmed", state_reason: null } });
+  const refused = fixture("requested-to-confirmed", { now: NOW, confirm: false });
+  expect(row(refused)).toMatchObject({ state: "not_confirmed", desired: { state: "not_confirmed", state_reason: { code: "no_match", since: refused["API-10"].created_at } } });
+  expect(refused["API-07"].lanes.find((lane: Body) => lane.param === "mister_engage_kpa")).toMatchObject({ applied_from: "manual", desired: { state: "not_confirmed" } });
+  expect(row({ "API-09": get(handler("requested-to-confirmed", { confirm: false }), "/v1/settings") })).toMatchObject({ state: "confirmed", desired: null });
+  const stopped = fixture("flow-after-stop", { now: NOW });
+  expect(stopped["API-IRR-07"]).toMatchObject({ kind: "stop", line_id: null, status: "pending" });
+  expect(stopped["API-IRR-01"].lines.find((line: Body) => line.line_id === "L01").state).toMatchObject({ code: "idle" });
+  expect(stopped["API-02"]).toMatchObject({ running: [], leak: { active: true, alert_id: 201 } });
+  expect(get(handler("flow-after-stop"), "/v1/now")).toMatchObject({ running: [expect.objectContaining({ line_id: "L01" })], leak: { active: false } });
 });
 
 test("schedules-paused shows three schedules and a past L02 block skipped because the line was paused", () => {

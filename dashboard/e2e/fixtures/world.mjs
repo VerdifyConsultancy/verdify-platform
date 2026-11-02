@@ -99,6 +99,21 @@ function setting(row) {
     applied_from: "default", state: "confirmed", ...row,
   };
 }
+/** The three irrigation_site rows (param, label, unit, min, max, step, value in program rev 42). */
+const SITE_CAPS = [
+  ["mister_daily_volume_max_gal", "SAF-4 daily water ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90],
+  ["climate_yield_min", "Drip climate yield", "min", 5, 30, 1, 15],
+];
+/** Program rev 42 as the controller confirmed it, with the site caps inside it. */
+const programRev42 = (now) => ({
+  state: "confirmed", revision: 42, desired_sha256: PROGRAM_SHA256, applied_revision: 42, applied_hash: PROGRAM_SHA256.slice(0, 16), src: "nvs", reason: null,
+  pushed_at: iso(now - 3 * MINUTE), confirmed_at: iso(now - 2 * MINUTE), reject_code: null, next_retry_at: null,
+});
+/** A site cap row as program rev 42 holds it: confirmed by the program hash, read back from the applied program. */
+const siteCap = (now, [param, label, unit, min, max, step, value]) => setting({
+  param, label, control_class: "irrigation_site", group: "site_water_caps", kind: "numeric", unit, min, max, step, readback_via: "program",
+  readback: reading(value, now - 2 * MINUTE),
+});
 
 /** The base greenhouse, `in-band`: screens SCR-01 with nothing running and nothing open. */
 function inBand(now) {
@@ -196,13 +211,15 @@ function inBand(now) {
       setting({ param: "sw_gl_main_auto_mode", label: "GL Main Auto Mode", control_class: "scheduled_policy", group: "scheduled_policy", kind: "switch", min: 0, max: 1, step: 1, readback: device(1, 5) }),
       setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling (%)", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
       setting({ param: "band_vpd_low_sm", label: "Band VPD low (solar max)", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
-      ...[["mister_daily_volume_max_gal", "SAF-4 daily water ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90], ["climate_yield_min", "Drip climate yield", "min", 5, 30, 1, 15]]
-        .map(([param, label, unit, min, max, step, value]) => setting({ param, label, control_class: "irrigation_site", group: "site_water_caps", kind: "numeric", unit, min, max, step, readback_via: "program", readback: device(value, 2) })),
+      ...SITE_CAPS.map((cap) => siteCap(now, cap)),
       setting({ param: "temp_low", label: "Set Temp Low °F", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
+      // The Band in force rows as API-09 serves them (VD-55): the dispatcher's DERIVED band_<zone>_<role> rows, with
+      // their value and time as the readback, no readback path and no desired or plan row.
       ...[["house", "temp", "°F", 62.0, 70.0], ["house", "vpd", "kPa", 0.45, 0.8], ["center", "vpd", "kPa", 0.5, 0.85], ["south", "vpd", "kPa", 0.45, 0.8], ["west", "vpd", "kPa", 0.45, 0.8]]
         .flatMap(([zone, series, unit, low, high]) => [["low", low], ["high", high]].map(([role, value]) => setting({
-          param: `band_${zone}_${series}_${role}`, label: `Band in force · ${zone} ${series === "temp" ? "temperature" : "VPD"} ${role}`, control_class: "readback_context", group: "band_in_force",
-          kind: "numeric", unit, writable: false, read_only_reason: "derived by the dispatcher from the crop band", readback: device(value, 4), applied_from: "band",
+          param: `band_${zone}_${series}_${role}`, label: `${zone[0].toUpperCase()}${zone.slice(1)} ${series === "temp" ? "temp" : "VPD"} ${role}`, control_class: "crop_band",
+          group: "band_in_force", kind: "numeric", unit, writable: false, read_only_reason: "derived by the dispatcher from the crop band anchors", readback_via: "none",
+          readback: device(value, 4), applied_from: "band", state: "no_readback",
         }))),
     ],
     activity: [
@@ -212,10 +229,7 @@ function inBand(now) {
       { id: 11, ts: iso(at("07:31", -3)), actor: JASON, action: "irrigation.run", target: "L01", detail: { minutes: 12, command_id: "0b6c3f52-1d4e-4a7b-8c9d-2e3f4a5b6c7d" }, reason: "Flush the stagnant line", state: null, confirmed_at: null, experiment_id: null, request_id: "0b6c3f52-1d4e-4a7b-8c9d-2e3f4a5b6c7d" },
     ],
     engine: true,
-    program: {
-      state: "confirmed", revision: 42, desired_sha256: PROGRAM_SHA256, applied_revision: 42, applied_hash: PROGRAM_SHA256.slice(0, 16), src: "nvs", reason: null,
-      pushed_at: iso(now - 3 * MINUTE), confirmed_at: iso(now - 2 * MINUTE), reject_code: null, next_retry_at: null,
-    },
+    program: programRev42(now),
     lines: [
       line("L01", { enabled: true, state: idle(at("07:43", -3)), last_water: { at: iso(at("07:31", -3)), open_s: 720, pulses: null, cause: "run_now" }, last_outcome: { outcome: "ok", at: iso(at("07:43", -3)), reason: null } }),
       line("L02"), line("L03"),
@@ -413,9 +427,10 @@ export const FIXTURES = {
     for (const name of ["grow_light_main", "grow_light_grow"]) Object.assign(itemOf(world, name), { state: "unknown", observed_at: iso(world.now - 11 * MINUTE) });
   },
   "program-rev-42": (world) => {
-    world.engine = true;
-    world.program = { ...world.program, state: "confirmed", revision: 42, applied_revision: 42, applied_hash: PROGRAM_SHA256.slice(0, 16), src: "nvs", reason: null };
-    for (const row of world.settings.filter((row) => row.control_class === "irrigation_site")) row.state = "confirmed";
+    // The base's program, whatever came before it in a list: rev 42 confirmed, the site caps and every line inside it.
+    Object.assign(world, { engine: true, program: programRev42(world.now) });
+    for (const cap of SITE_CAPS) Object.assign(settingOf(world, cap[0]), siteCap(world.now, cap));
+    for (const line of world.lines) line.sync = "confirmed";
   },
   "reserved-lines": (world) => {
     for (const id of ["L05", "L06"]) Object.assign(lineOf(world, id), { reserved: true, enabled: false, state: { ...lineOf(world, id).state, code: "disabled" } });
@@ -428,6 +443,20 @@ export const FIXTURES = {
     };
     for (const row of world.settings.filter((row) => row.control_class === "irrigation_site")) Object.assign(row, { readback: null, state: "requested" });
     for (const line of world.lines) line.sync = "requested";
+    // A site cap saved before the engine: stored, and requested with no_engine since that write until a program
+    // compiled after it is confirmed.
+    const saved = clock(world.now)("09:30");
+    const desired = {
+      id: 90, param: "mister_daily_volume_max_gal", value: 300, snapped_from: null, manual: true, manual_before: false, state: "requested",
+      state_reason: { code: "no_engine", detail: "applies with the irrigation firmware", applied_value: null, since: iso(saved) }, confirmed_at: null, actor: JASON,
+      reason: "Hold the ceiling at 300 gal", created_at: iso(saved),
+    };
+    Object.assign(settingOf(world, desired.param), { desired, applied_from: "manual", state: "requested" });
+    world.activity.push({
+      id: nextId(world.activity), ts: desired.created_at, actor: JASON, action: "setting.write", target: desired.param,
+      detail: { before: 360, value: 300, manual: { before: false, after: true } }, reason: desired.reason, state: "requested", confirmed_at: null, experiment_id: null,
+      request_id: null,
+    });
   },
   "runs-zero-and-unknown": (world) => {
     const at = clock(world.now);

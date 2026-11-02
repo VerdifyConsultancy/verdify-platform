@@ -900,7 +900,8 @@ export const EXAMPLES = {
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": () => get("/v1/water/daily"),
   "API-IRR-01": () => get("/v1/irrigation"),
-  "API-IRR-02": () => get("/v1/irrigation/schedules"),
+  // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
+  "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),
   "API-IRR-03": () => send("POST", "/v1/irrigation/schedules", { line_id: "L01", label: "Wall MWF", days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, manual: true }),
   "API-IRR-04": (world) => send("PUT", `/v1/irrigation/schedules/${world.schedules[0]?.slot_id ?? 1}`, { enabled: false, manual: true }),
   "API-IRR-05": (world) => send("DELETE", `/v1/irrigation/schedules/${world.schedules[0]?.slot_id ?? 1}`),

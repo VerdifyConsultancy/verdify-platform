@@ -21,6 +21,10 @@ const problem = (status, code, title, detail, fields = {}) => ({
   status, headers: { "Content-Type": "application/problem+json", ...NO_STORE }, body: { type: "about:blank", title, status, code, detail, retryable: false, ...fields },
 });
 const MAX_BODY = 16_384;
+/** JSON with every object's keys sorted, so one payload hashes the same whatever order its keys were sent in. */
+const canonical = (value) => JSON.stringify(value ?? null, (_key, item) => (item && typeof item === "object" && !Array.isArray(item)
+  ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+  : item));
 
 /**
  * @typedef {{ method?: string, url: string, headers?: Record<string, string | string[] | undefined>, body?: unknown }} FixtureRequest
@@ -94,7 +98,7 @@ export function createFixtureHandler({ clock = () => Date.now(), ...start } = {}
     let fingerprint = null;
     if (write && key !== undefined) {
       if (!UUID.test(key)) return problem(400, "invalid_request", "Invalid Idempotency-Key", "Idempotency-Key must be a UUID");
-      fingerprint = createHash("sha256").update(`${verb} ${target.pathname}${target.search}\n${raw}`).digest("hex");
+      fingerprint = createHash("sha256").update(`${verb} ${target.pathname}${target.search}\n${canonical(parsed)}`).digest("hex");
       const stored = keys.get(key);
       if (stored && stored.fingerprint === fingerprint) return { ...stored.response, headers: { ...stored.response.headers, "Idempotency-Replayed": "true" } };
       if (stored) return problem(422, "request_id_reused", "Idempotency-Key reused", "This Idempotency-Key was sent with another request", { request_id: key });
