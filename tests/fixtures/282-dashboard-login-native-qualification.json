@@ -1,18 +1,69 @@
 {
   "migration": "282-dashboard-runtime-login.sql",
   "exact_final_migration_sha256": "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a",
-  "final_migration_qualification_pending": true,
-  "before": null,
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
   "projected_successor": {
     "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
     "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
     "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
   },
   "projection": "2026-11-02, before measurement: 282 moves no seal, so its projected successor is its predecessor's, 281's qualified successor. The ordinary digest (217) hashes the api and ingestor roles, their memberships and settings, the database ACL, and the schemas, relations, sequences and functions those logins can use or that carry a PUBLIC, api or ingestor entry; the MCP digest (263) hashes the MCP roles and memberships, the database and public-schema ACLs, and PUBLIC and MCP entries. 282's two roles, its schema, its SECURITY INVOKER attestor and dashboard_session carry none of those entries, and it changes neither the database nor the public ACL. On a throwaway PostgreSQL 16 catalog built with 217's and 263's digest functions and 217's and 259's attestors, scripts/qualify-migration-successor.py measured all three seals unchanged in two probes and the full run with 282's native fixture, although each rolled-back session created the roles with new OIDs; the same file with one grant on an api-readable table to the new duty measured different api and ingestor seals in every probe. The native qualification, with 280 and 281 applied first in the same rolled-back sessions, measures them on production.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false,
-  "native_fixture_sha256": "fc48e1771181b66d913d9d1c6008d0e5660b3d1ee256f3abcc69ce5748b3b158",
-  "native_fixture": null
+  "qualified_successor": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "after_rollback": {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-02T21:00:02Z",
+  "native_probe_source_sha256": "108f5e71bf58579a7b19c9c5e0d1a93024690584c1c39d379337cf4892926321",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "applied_first": [
+    {
+      "migration": "280-desired-state-activity-log.sql",
+      "seq": 280,
+      "sha256": "44531a0c3a9ddd48f64ce639f9f9f1c2d0f948960ba65a68943d5947881b8bfe"
+    },
+    {
+      "migration": "281-irrigation-minutes-by-zone.sql",
+      "seq": 281,
+      "sha256": "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "native_fixture": {
+    "checks": [
+      "roles_settings_membership",
+      "schema_attestor_sessions_acl",
+      "no_grant_on_existing_objects",
+      "reaches_only_its_sessions",
+      "logins_attest",
+      "session_round_trip",
+      "setpoint_changes_insert_denied",
+      "desired_state_read_denied",
+      "control_experiments_read_denied"
+    ],
+    "all_passed": true,
+    "attested": {
+      "api": true,
+      "ingestor": true,
+      "mcp": true,
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "fc48e1771181b66d913d9d1c6008d0e5660b3d1ee256f3abcc69ce5748b3b158"
 }
