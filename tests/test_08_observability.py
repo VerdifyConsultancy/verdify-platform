@@ -818,7 +818,12 @@ class TestSprint18Wiring:
     def test_di1_proportional_dead_band_helper_defined(self):
         body = self._read(self.TASKS_PATH)
         assert "_should_skip" in body, "DI-1 _should_skip() helper must be defined in tasks.py"
-        assert "abs(last - val) / max(abs(val), abs_floor)" in body, (
+        # VD-29: the rule's one copy is verdify_schemas.setting_values.within_relative_deadband.
+        assert "within_relative_deadband(last, val, rel, abs_floor)" in body, (
+            "DI-1 _should_skip() must delegate to the shared relative dead-band"
+        )
+        shared_rule = (REPO_ROOT / "verdify_schemas" / "setting_values.py").read_text()
+        assert "abs(last - val) / max(abs(val), abs_floor)" in shared_rule, (
             "DI-1 helper must compute a relative dead-band (abs(delta)/max(|val|, floor))"
         )
 

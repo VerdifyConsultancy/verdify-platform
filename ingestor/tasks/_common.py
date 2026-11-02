@@ -58,6 +58,7 @@ from verdify_schemas import (
     SetpointChange,
     build_validation_failed_envelope,
 )
+from verdify_schemas.setting_values import SECOND_READBACK_ABS_TOLERANCE_PARAMS
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
     LEGACY_SHARED_LIGHTING_REG,
@@ -142,22 +143,6 @@ IRRIGATION_SCHEDULE_PARAMS = frozenset(
         "irrig_center_fert_days_mask",
         "irrig_center_flush_min",
         "irrig_center_interval_days",
-    }
-)
-
-
-SECOND_READBACK_ABS_TOLERANCE_PARAMS = frozenset(
-    {
-        "mister_engage_delay_s",
-        "mister_all_delay_s",
-        "mister_pulse_on_s",
-        "mister_pulse_gap_s",
-        "min_fog_on_s",
-        "min_fog_off_s",
-        "mist_backoff_s",
-        "mist_max_closed_vent_s",
-        "mist_thermal_relief_s",
-        "vpd_watch_dwell_s",
     }
 )
 
