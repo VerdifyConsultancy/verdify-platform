@@ -292,12 +292,16 @@ bash scripts/gen-config-revision.sh --check
 step "policy consumer manifest drift (Lane E, #586)"
 $PY scripts/gen-policy-consumer-manifest.py --check
 
-step "firmware policy engine native tests + §8.10 recovery-image proof (#586)"
+step "firmware native tests: policy engine + §8.10 recovery-image proof (#586), zone VPD fallback, climate logic, replay invariants"
 # Tranche 2 (#586): the policy engine and its journal are on the control path
 # of every consumer read, and the recovery image must provably not resume or
 # actuate an experiment. Both suites are small native binaries (< 5 s).
+# VD-43: the registry firmware-logic check does not run on this repository's
+# PRs, so the peer-probe zone VPD fallback, the climate logic tests and the
+# replay-corpus invariants run here and gate every firmware PR. Later suites
+# append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi
