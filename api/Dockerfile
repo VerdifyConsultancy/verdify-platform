@@ -81,12 +81,18 @@ COPY --from=builder /install /usr/local
 # shared schema contracts land at /app/verdify_schemas so the repo-root import
 # resolves (the `/app` entry sys.path.insert in main.py covers it), and the
 # service layer the operator API shares with MCP at /app/verdify_services.
+# The operator API (#1148) is the same image run as `uvicorn operator_api:app`
+# on 8090 by Deployment verdify-operator-api; its route modules land at
+# /app/operator_routes, and the import below proves every included one loads.
 COPY api/main.py ./main.py
+COPY api/operator_api.py ./operator_api.py
+COPY api/operator_routes/ ./operator_routes/
 COPY verdify_schemas/ ./verdify_schemas/
 COPY verdify_services/ ./verdify_services/
 RUN python -c "import verdify_services.activity"
 COPY verdify_public/ ./verdify_public/
 RUN python -c "import verdify_public.output_policy"
+RUN python -c "import operator_api"
 COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 
 # Non-root user (uid 1000, matches the homelab NFS/source ownership convention).

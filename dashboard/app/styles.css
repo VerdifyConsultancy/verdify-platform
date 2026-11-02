@@ -221,7 +221,7 @@ main>section>h2,main>section>.section-head{margin:2rem 0 .6rem}
 .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .chips-sm .chip{min-height:2.25rem;font-size:.8rem;padding:0 .7rem}
 .btn-stop:hover{color:#fff;border-color:var(--ink)}
-@media(max-width:600px){.btn-wide{width:100%}}
+@media(max-width:860px){.btn-wide{width:100%}}
 .tag-muted{color:var(--muted)}
 .tag-clean::before,.tag-fert::before{content:"";width:.5rem;height:.5rem;border-radius:50%;flex:none}
 .tag-clean::before{background:var(--eq-water)}
@@ -238,7 +238,7 @@ main>section>h2,main>section>.section-head{margin:2rem 0 .6rem}
 .hero .value-muted{color:var(--ink-muted)}
 .hero .hero-answer{font-size:clamp(1.2rem,2.4vw,1.6rem);font-weight:620;letter-spacing:-.02em;color:inherit}
 .stats-phone,.hero-more-phone{display:none}
-@media(max-width:520px){.stats .stat-more{display:none}.stats-phone{display:grid}.hero-more-phone{display:block}}
+@media(max-width:860px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stats .stat-more{display:none}.stats-phone{display:grid}.hero-more-phone{display:block}}
 .table-group th{font:600 .68rem/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest);background:var(--field)}
 .event-row .event-when{grid-row:auto}
 .event-body{min-width:0}
@@ -343,6 +343,141 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Equipment (screens SCR-07): each board row is the name and state over one line of facts; both wrap, so a row fits from 320 px up. */
+.equipment-rows{list-style:none;margin:0;padding:0}
+.equipment-row{padding:.55rem 0;border-top:1px solid var(--line);min-width:0}
+.equipment-row:first-child{padding-top:0;border-top:0}
+.equipment-row:last-child{padding-bottom:0}
+.equipment-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.15rem .75rem}
+.equipment-name{font-weight:600;min-width:0}
+.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-state{font-size:.85rem;font-variant-numeric:tabular-nums}
+.equipment-facts{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.equipment-note{margin:.75rem 0 0}
+/* Now (SCR-01, VD-09): the answer link, VPD and RH beside the hero value on phones, tile links, the amber Iris tile, the running and occupancy chips, the water card and the alert list. Phones are 860 px and below (screens §1.1). */
+.now-page{display:grid;gap:1.25rem}
+.hero-answer-link{color:inherit;text-decoration:underline;text-underline-offset:.2em}
+.hero-answer-link:hover{color:var(--mint)}
+.hero-beside{display:none;flex-wrap:wrap;gap:.25rem 1rem}
+.hero .skeleton{background:color-mix(in srgb,var(--ink-muted) 16%,transparent)}
+.skeleton-hero-value{min-height:6.5rem;margin-top:.5rem}
+.skeleton-hero-tiles{min-height:10rem}
+.skeleton-chips{min-height:2.75rem}
+.hero .kv dt{color:var(--ink-muted)}
+.hero .kv dd{color:#fff}
+.stats .stat{position:relative}
+.stat-link{color:inherit;text-decoration:none}
+.stat-link::after{content:"";position:absolute;inset:0}
+.stat-warn dd>span:first-child:not(.value-muted){color:var(--amber)}
+.now-page .stat dd{white-space:normal}
+.now-running{display:grid;gap:.5rem}
+.now-running>h2,.now-running>p{margin:0}
+.chip-static{cursor:default;white-space:normal;min-height:2rem}
+.now-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start}
+.card-link-more{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700;text-decoration:none}
+.water-body{display:flex;flex-direction:column;gap:.5rem}
+.water-body p{margin:0}
+.water-details{display:grid;gap:.35rem;font-size:.9rem}
+.water-stop{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
+.water-stop .card-link-more{margin-left:auto}
+.ack{display:grid;gap:.4rem;flex:1 1 16rem;justify-items:start}
+.ack-note{margin:0}
+.ack-note .field{margin:.25rem 0 0}
+.now-alerts:empty{display:none}
+@media(min-width:861px){.water-stop{order:1}}
+/* On a phone the answer, the hero value and Stop all water fit above the fold at 390 × 844 (and the answer at 360 × 740): a tighter hero and gaps. */
+@media(max-width:860px){.now-page{gap:.5rem}.now-page .hero{padding:1rem;gap:.5rem}.now-page .hero-temp{font-size:2.75rem;margin:.15rem 0 .25rem}.now-page .hero-meta{font-size:.8125rem}.now-page .stat{padding:.4rem .6rem}.now-page .stat dd{font-size:1.1rem;margin-top:.15rem}.now-running{gap:.35rem}.now-water .card-head{margin-bottom:.35rem}.now-water .water-minutes{font-size:.9rem}.now-panels{grid-template-columns:minmax(0,1fr)}.hero-beside{display:flex}}
+/* Graphs (SCR-02, VD-10): the resolution line, the custom range, what is on the charts, the pickers and the daily scorecard. The charts themselves are styled in app/charts/charts.css. */
+.resolution-line{font-variant-numeric:tabular-nums}
+.range-form{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0}
+.range-form label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.range-form input[type=date]{min-height:2.25rem;padding:.2rem .45rem;border:1px solid var(--control-border);border-radius:var(--radius-sm);font:inherit;font-size:.85rem}
+.range-form .field-error{flex-basis:100%}
+.graph-on-charts{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;margin:.25rem 0 .75rem}
+.graph-on-label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.graph-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
+.graph-chip{display:inline-flex;align-items:stretch;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:999px;background:#fff;font-size:.8rem;overflow:hidden}
+.graph-chip>a,.graph-chip>span{display:inline-flex;align-items:center;padding:0 .7rem;color:var(--ink);text-decoration:none;white-space:nowrap}
+.graph-chip>a:hover{color:var(--forest)}
+.graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:1rem}
+.graph-scorecard,.graph-back{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700;text-decoration:none}
+.graph-scorecard{margin-left:auto}
+.graph-notices{list-style:none;display:grid;gap:.4rem;margin:0 0 1rem;padding:0}
+.graph-notices .notice{margin:0}
+.picker-dialog .field{margin-bottom:.75rem}
+.picker-cap{margin:0 0 .75rem;font-weight:600;color:var(--warn-text)}
+.picker-group{margin:0 0 1rem}
+.picker-group .eyebrow{margin:0 0 .35rem}
+.picker-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.picker-list li+li{border-top:1px solid var(--line)}
+.picker-item{display:grid;gap:.1rem;padding:.5rem .75rem;color:var(--ink);text-decoration:none}
+a.picker-item:hover{background:var(--field)}
+.picker-item-on,.picker-item-off{color:var(--muted)}
+.picker-item .tag{justify-self:start;margin-top:.2rem}
+.picker-label{font-weight:600}
+.picker-facts,.picker-text{font-size:.8rem;color:var(--muted)}
+.picker-facts .mono{color:var(--ink)}
+.scorecard-tools{display:flex;justify-content:flex-end;margin:0 0 .5rem}
+.scorecard-wrap{max-height:none}
+.scorecard th[scope=row]{white-space:nowrap}
+.scorecard thead th{white-space:nowrap}
+.scorecard td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.scorecard-note{font-size:.75rem;font-weight:400;color:var(--muted)}
+.scorecard-missing{color:var(--muted)}
+.scorecard-reason{font-size:.75rem;white-space:normal}
+@media(max-width:860px){.graph-scorecard{margin-left:0}.range-form{flex-basis:100%}}
+/* Plan (SCR-03): the plan in force, planner health and the lanes' head. Card and health sit in .grid-2, which stacks below 600 px; long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
+.plan-top{margin-bottom:1rem}
+.plan-facts{margin:0 0 .5rem;font-size:.9rem;overflow-wrap:anywhere}
+.plan-hypothesis{margin:0;overflow-wrap:anywhere}
+.plan-none{margin:0}
+.plan-after{margin:.25rem 0 0;font-size:.875rem;color:var(--muted)}
+.plan-detail{overflow-wrap:anywhere}
+.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
+.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
+.plan-detail li+li{margin-top:.25rem}
+.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+.trigger-list{list-style:none;margin:0;padding:0}
+.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
+.trigger-row:first-child{border-top:0}
+.trigger-marked{border-left-color:var(--amber)}
+.trigger-mark{color:var(--warn-text);font-size:.8rem}
+.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
+.trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
+.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.trigger-more{font-weight:400;color:var(--muted)}
+.plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+/* Settings (screens SCR-05, design system §4.6 SettingRow): the catalog's rows, a table at 1440 px and a stacked card each at 860 px and below. */
+.settings-tools{display:grid;gap:.25rem;margin:0 0 1rem}
+.settings-tools .filters{margin:0 0 .5rem}
+.settings-tools .filters label{flex:1 1 18rem;max-width:32rem}
+.chip-count,.table-group-count{font-variant-numeric:tabular-nums}
+.table-group-count{font-weight:400}
+.setting-name{min-width:11rem}
+.setting-label{display:block;font-weight:600}
+.setting-param{display:block;font-size:.78rem;color:var(--muted)}
+.setting-line{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem;margin:0}
+.setting-line+.setting-line,.setting-line+.state-reason,.state-reason+.setting-line{margin-top:.25rem}
+.setting-device-value{font-weight:600;font-variant-numeric:tabular-nums}
+.setting-note{font-size:.85rem;color:var(--muted)}
+.setting-next-text{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem}
+.setting-cell-label{display:none}
+.setting-actions{white-space:nowrap}
+.setting-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.setting-history{margin-left:.6rem}
+.drawer-setting .eyebrow{margin-bottom:.15rem}
+@media(max-width:860px){
+  .settings-table table,.settings-table tbody,.settings-table tr,.settings-table th,.settings-table td{display:block;width:auto}
+  .settings-table thead{display:none}
+  .settings-table .setting-row{padding:.65rem .75rem;border-bottom:1px solid var(--line)}
+  .settings-table .setting-row th,.settings-table .setting-row td{padding:.15rem 0;border:0}
+  .setting-row .setting-device-value{font-size:1.25rem}
+  .setting-cell-label{display:inline;font-size:.78rem;color:var(--muted)}
+  .setting-actions{display:flex;flex-wrap:wrap;gap:.25rem .75rem;white-space:normal;padding-top:.4rem}
+  .setting-actions .setting-edit{flex:1 1 100%}
+  .setting-history{margin-left:0}
+}
 /* Activity and alerts (screens §7): the alert groups and the expanded alert, its runbook as text with its line breaks, and the log's filters and plan changes. */
 .panel-link,.alert-toggle a,.alert-graph a,.log-filters a{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700}
 .event .alert-toggle{margin:0}

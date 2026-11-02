@@ -5,9 +5,13 @@
  * greenhouse; each named fixture patches it, and a list of names applies in order. Clock times in the screens'
  * examples (07:02, 13:00) are kept as offsets from now as they stand at 10:42, so pinning now to 10:42 America/Denver
  * reproduces them exactly. Nothing here reaches a database, MCP, Home Assistant or a device, and no value is a secret.
- * Later issues add the fixtures they need to `FIXTURES`. A setting's `label` and `unit` are its `TunableDef.label` and
- * `unit` (VD-29): an entity's name without its unit, and that unit; the site caps carry their own.
+ * Later issues add the fixtures they need to `FIXTURES`. The settings (API-09) are rendered at test time from
+ * verdify_schemas/tunable_registry.py into `settings.json` beside this file (scripts/gen-dashboard-settings-fixture.py,
+ * `pnpm fixtures:settings`; never committed): one row per registry row with its `TunableDef` label, unit and step, and
+ * the Band in force rows. That file is the base API-09 response, and the named fixtures below patch it.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export const ZONE = "America/Denver";
 export const REVISION = "0123456789abcdef0123456789abcdef01234567";
@@ -53,20 +57,27 @@ export const clock = (now) => (hhmm, days = 0) => {
 const hhmm = (ms) => { const { hour, minute } = local(ms); return `${String(hour).padStart(2, "0")}${String(minute).padStart(2, "0")}`; };
 
 // ---------------------------------------------------------------------------------------------------- the greenhouse
-/** L01-L11 (irrigation §3) with the relay each one drives and the label the board shows. */
+/**
+ * L01-L11 (irrigation §3) with the relay each one drives and the label API-13 and API-05 serve for it:
+ * `EQUIPMENT_LABELS` in verdify_services/labels.py (VD-54), which the client never makes up.
+ */
 export const LINES = [
-  { line_id: "L01", name: "Drip • Wall", equipment: "drip_wall", label: "Wall drip", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
-  { line_id: "L02", name: "Drip • Wall (Fert.)", equipment: "drip_wall_fert", label: "Wall feed", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
-  { line_id: "L03", name: "Valve • Fert. Master", equipment: "fert_master_valve", label: "Fert master", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
-  { line_id: "L04", name: "Mister • Center", equipment: "mister_center", label: "Center mister", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
-  { line_id: "L05", name: "Drip • Center", equipment: "drip_center", label: "Center drip", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
-  { line_id: "L06", name: "Drip • Center (Fert.)", equipment: "drip_center_fert", label: "Center feed", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
-  { line_id: "L07", name: "Mister • South Wall", equipment: "mister_south", label: "South mister", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L08", name: "Mister • South Wall (Fert.)", equipment: "mister_south_fert", label: "South feed", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
-  { line_id: "L09", name: "Mister • West Wall", equipment: "mister_west", label: "West mister", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West feed", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
-  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
+  { line_id: "L01", name: "Drip • Wall", equipment: "drip_wall", label: "Wall drip L01", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
+  { line_id: "L02", name: "Drip • Wall (Fert.)", equipment: "drip_wall_fert", label: "Wall fert drip L02", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
+  { line_id: "L03", name: "Valve • Fert. Master", equipment: "fert_master_valve", label: "Fert master L03", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
+  { line_id: "L04", name: "Mister • Center", equipment: "mister_center", label: "Center mister L04", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
+  { line_id: "L05", name: "Drip • Center", equipment: "drip_center", label: "Center drip L05", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
+  { line_id: "L06", name: "Drip • Center (Fert.)", equipment: "drip_center_fert", label: "Center fert drip L06", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
+  { line_id: "L07", name: "Mister • South Wall", equipment: "mister_south", label: "South mister L07", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L08", name: "Mister • South Wall (Fert.)", equipment: "mister_south_fert", label: "South fert mister L08", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
+  { line_id: "L09", name: "Mister • West Wall", equipment: "mister_west", label: "West mister L09", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West fert mister L10", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
+  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog L11", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
 ];
+/** Fan 1 has been off since this absolute time, so the board reads "10/27 04:26" on any later day (VD-14). */
+const FAN1_OFF_SINCE = Date.parse("2026-10-27T04:26:00-06:00");
+/** Home Assistant re-reads the Lutron switches every 300 s, so their newest row is at most that old; past 600 s it reads unknown. */
+const LUTRON_POLL_AGE = 3 * MINUTE;
 export const MISTERS = ["L04", "L07", "L09"];
 export const lineInfo = (id) => LINES.find((line) => line.line_id === id);
 /** The manifold a line's valve shares (irrigation §4.6, §4.7); the master valve and fog hold none. */
@@ -84,8 +95,17 @@ const METRICS = [
   ["climate.outdoor_temp_f", "Outdoor temperature", "outdoor", "°F", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_rh_pct", "Outdoor relative humidity", "outdoor", "%", 60, 365, "MEASURED", null, false],
   ["diagnostics.heap_free_kb", "Controller free heap", "controller", "kB", 60, 180, "MEASURED", null, false],
-  ["daily.temp_compliance_pct", "Time in band, temperature (whole day)", "daily", "%", 86_400, 3650, "DERIVED", null, true],
-  ["daily.vpd_compliance_pct", "Time in band, VPD (whole day)", "daily", "%", 86_400, 3650, "DERIVED", null, true],
+  // The scorecard keys as VD-56's registry names them (v_daily_scorecard, kept 400 days).
+  ["daily.temp_in_band_pct", "Temperature time in band, whole day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.vpd_in_band_pct", "VPD time in band, whole day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.time_in_band_day_pct", "Time in band, day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.time_in_band_night_pct", "Time in band, night", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.water_gal", "Water used", "daily", "gal", 86_400, 400, "MEASURED", null, true],
+  ["daily.iris_required_written", "Iris required plans written", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.iris_required_missed", "Iris required plans missed", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_critical", "Critical alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_warning", "Warning alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_info", "Info alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
 ].map(([key, label, group, unit, cadence_s, retention_days, provenance, zone, daily]) => ({ key, label, group, unit, cadence_s, retention_days, provenance, zone, daily, note: null }));
 
 const reading = (value, at, reason = null) => ({ value, observed_at: at === null ? null : iso(at), reason });
@@ -94,26 +114,45 @@ export const freshness = (now, ageS, cadenceS, staleAfter = 2 * cadenceS) => ({ 
 const actor = (source, name) => ({ source, name });
 export const JASON = actor("dashboard", "jason");
 
-function setting(row) {
-  return {
-    unit: null, min: null, max: null, step: null, writable: true, read_only_reason: null, readback_via: "cfg", readback: null, desired: null, plan: null,
-    applied_from: "default", state: "confirmed", ...row,
-  };
+// ---------------------------------------------------------------------------------------------------- settings
+// A path, not a URL: under jsdom the global URL is not the one node:fs accepts.
+/** The rendered base API-09 response (scripts/gen-dashboard-settings-fixture.py), never committed. */
+export const SETTINGS_FILE = join(import.meta.dirname, "settings.json");
+let settingsBase = null;
+/** `settings.json`, read once: `{items, server_time}`, every time in it relative to `server_time`. */
+function loadSettings() {
+  if (settingsBase) return settingsBase;
+  let text;
+  try {
+    text = readFileSync(SETTINGS_FILE, "utf8");
+  } catch (error) {
+    throw new Error(`${SETTINGS_FILE} is missing: render it with "pnpm fixtures:settings" (scripts/gen-dashboard-settings-fixture.py)`, { cause: error });
+  }
+  const body = JSON.parse(text);
+  if (!Array.isArray(body?.items) || !Number.isFinite(Date.parse(body.server_time))) throw new Error(`${SETTINGS_FILE} is not an API-09 response; render it again`);
+  settingsBase = body;
+  return body;
 }
-/** The three irrigation_site rows (param, label, unit, min, max, step, value in program rev 42). */
-const SITE_CAPS = [
-  ["mister_daily_volume_max_gal", "SAF-4 ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90],
-  ["climate_yield_min", "Climate yield", "min", 5, 30, 1, 15],
-];
+const TIME_FIELDS = new Set(["observed_at", "created_at", "confirmed_at", "since", "written_at", "at"]);
+/** A deep copy of `value` with every time in it moved by `shift` ms. */
+function rebased(value, shift) {
+  if (Array.isArray(value)) return value.map((item) => rebased(item, shift));
+  if (value === null || typeof value !== "object") return value;
+  const copy = {};
+  for (const [key, item] of Object.entries(value)) copy[key] = TIME_FIELDS.has(key) && typeof item === "string" ? iso(Date.parse(item) + shift) : rebased(item, shift);
+  return copy;
+}
+/** Every setting row as API-09 serves it at `now`: the rendered rows, their times moved from `server_time` to `now`. */
+export function baseSettings(now) {
+  const base = loadSettings();
+  return rebased(base.items, now - Date.parse(base.server_time));
+}
+/** The three irrigation_site rows, the site caps (VD-37): their label, unit and bounds are the registry's. */
+const SITE_CAPS = ["mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"];
 /** Program rev 42 as the controller confirmed it, with the site caps inside it. */
 const programRev42 = (now) => ({
   state: "confirmed", revision: 42, desired_sha256: PROGRAM_SHA256, applied_revision: 42, applied_hash: PROGRAM_SHA256.slice(0, 16), src: "nvs", reason: null,
   pushed_at: iso(now - 3 * MINUTE), confirmed_at: iso(now - 2 * MINUTE), reject_code: null, next_retry_at: null,
-});
-/** A site cap row as program rev 42 holds it: confirmed by the program hash, read back from the applied program. */
-const siteCap = (now, [param, label, unit, min, max, step, value]) => setting({
-  param, label, control_class: "irrigation_site", group: "site_water_caps", kind: "numeric", unit, min, max, step, readback_via: "program",
-  readback: reading(value, now - 2 * MINUTE),
 });
 
 /** The base greenhouse, `in-band`: screens SCR-01 with nothing running and nothing open. */
@@ -122,7 +161,6 @@ function inBand(now) {
   const written = at("07:02");
   const planId = `iris-${local(written).date.replaceAll("-", "")}-${hhmm(written)}`;
   const waypoint = (time, value) => ({ at: iso(time), value, source: "iris", effective: true });
-  const planned = (value, next) => ({ value, plan_id: planId, source: "iris", written_at: iso(written), next });
   const kpaNext = waypoint(at("13:00"), 1.7);
   const gapNext = waypoint(at("16:30"), 55);
   const device = (value, minutes) => reading(value, now - minutes * MINUTE);
@@ -159,18 +197,19 @@ function inBand(now) {
       rssi_dbm: -61, observed_at: iso(now - 45_000),
     },
     occupancy: { occupied: false, seen_at: iso(at("05:10")), hold_enabled: true },
+    // Relays report on change, so a relay's newest row is the start of its run; the Lutron rows are re-read every poll.
     equipment: [
-      item("fan1", "Fan 1", "climate", at("04:26", -6)),
+      item("fan1", "Fan 1", "climate", FAN1_OFF_SINCE),
       item("fan2", "Fan 2", "climate", at("08:31"), { runtime_today_s: 7800, cycles_today: 6 }),
       item("vent", "Vent", "climate", at("08:29"), { runtime_today_s: 3300, cycles_today: 3 }),
-      item("heat1", "Heat 1 (electric)", "climate", at("07:10"), { runtime_today_s: 11_100, cycles_today: 4 }),
-      item("heat2", "Heat 2 (gas)", "climate", at("06:40", -1)),
+      item("heat1", "Heat 1 electric", "climate", at("07:10"), { runtime_today_s: 11_100, cycles_today: 4 }),
+      item("heat2", "Heat 2 gas", "climate", at("06:40", -1)),
       water("L01", at("07:43", -3)), water("L02", at("09:00", -14)), water("L03", at("09:00", -14)),
       water("L04", at("07:12"), { runtime_today_s: 840, cycles_today: 14 }), water("L05", at("06:40", -12)), water("L06", at("06:40", -12)),
       water("L07", at("13:20", -3)), water("L08", at("06:40", -12)), water("L09", at("14:05", -9)), water("L10", at("06:40", -12)),
       water("L11", at("05:10"), { runtime_today_s: 360, cycles_today: 9 }),
-      item("grow_light_main", "Grow light · main", "light", at("19:00", -1), { intent: "off" }),
-      item("grow_light_grow", "Grow light · grow", "light", at("19:00", -1), { intent: "off" }),
+      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
     ],
     reasons: {
       mode_reason: { code: "idle", since: iso(at("09:55")), observed_at: iso(at("09:55")) },
@@ -203,26 +242,9 @@ function inBand(now) {
         resolved_at: outcome === "expected" ? null : iso(expected + 2 * MINUTE), failure_class: null,
       })),
     },
-    settings: [
-      setting({ param: "mister_engage_kpa", label: "VPD Mister Engage", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "kPa", min: 0.5, max: 2.5, step: 0.05, readback: device(1.6, 2), plan: planned(1.6, kpaNext), applied_from: "plan" }),
-      setting({ param: "mister_engage_delay_s", label: "Mister Engage Delay", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 300, step: 30, readback: device(60, 3), plan: planned(60, null), applied_from: "plan" }),
-      setting({ param: "mister_pulse_gap_s", label: "Mister Pulse Gap", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 10, max: 60, step: 5, readback: device(45, 1), plan: planned(45, gapNext), applied_from: "plan" }),
-      setting({ param: "mister_pulse_on_s", label: "Mister Pulse ON", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 90, step: 5, readback: device(60, 1) }),
-      setting({ param: "irrig_wall_duration_min", label: "Irrig Wall Duration", control_class: "scheduled_policy", group: "scheduled_policy", kind: "numeric", unit: "min", min: 1, max: 120, step: 1, readback: device(12, 5) }),
-      setting({ param: "sw_gl_main_auto_mode", label: "GL Main Auto Mode", control_class: "scheduled_policy", group: "scheduled_policy", kind: "switch", min: 0, max: 1, step: 1, readback: device(1, 5) }),
-      setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
-      setting({ param: "band_vpd_low_sm", label: "Band VPD Low SM", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
-      ...SITE_CAPS.map((cap) => siteCap(now, cap)),
-      setting({ param: "temp_low", label: "Set Temp Low", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
-      // The Band in force rows as API-09 serves them (VD-55): the dispatcher's DERIVED band_<zone>_<role> rows, with
-      // their value and time as the readback, no readback path and no desired or plan row.
-      ...[["house", "temp", "°F", 62.0, 70.0], ["house", "vpd", "kPa", 0.45, 0.8], ["center", "vpd", "kPa", 0.5, 0.85], ["south", "vpd", "kPa", 0.45, 0.8], ["west", "vpd", "kPa", 0.45, 0.8]]
-        .flatMap(([zone, series, unit, low, high]) => [["low", low], ["high", high]].map(([role, value]) => setting({
-          param: `band_${zone}_${series}_${role}`, label: `${zone[0].toUpperCase()}${zone.slice(1)} ${series === "temp" ? "temp" : "VPD"} ${role}`, control_class: "crop_band",
-          group: "band_in_force", kind: "numeric", unit, writable: false, read_only_reason: "derived by the dispatcher from the crop band anchors", readback_via: "none",
-          readback: device(value, 4), applied_from: "band", state: "no_readback",
-        }))),
-    ],
+    // Every registry row and the Band in force rows, rendered from the registry (settings.json); Iris's plan rows carry
+    // this world's plan id.
+    settings: baseSettings(now).map((row) => (row.plan?.source === "iris" ? { ...row, plan: { ...row.plan, plan_id: planId } } : row)),
     activity: [
       { id: 14, ts: iso(written), actor: actor("iris", "iris"), action: "plan.write", target: planId, detail: { trigger: "SUNRISE", changes: [{ param: "mister_engage_kpa", at: iso(at("13:00")), value: 1.7 }, { param: "mister_pulse_gap_s", at: iso(at("16:30")), value: 55 }] }, reason: "Hot, dry afternoon: engage misting earlier from 13:00 and widen the pulse gap at dusk.", state: "confirmed", confirmed_at: iso(written + 2 * MINUTE), experiment_id: null, request_id: null },
       { id: 13, ts: iso(at("06:30")), actor: actor("system", "forecast-engine"), action: "setting.write", target: "mister_pulse_gap_s", detail: { before: 45, value: 50 }, reason: "Forecast rule: hot afternoon", state: "confirmed", confirmed_at: iso(at("06:31")), experiment_id: null, request_id: null },
@@ -260,8 +282,49 @@ function inBand(now) {
       { run_id: "run-l01-3", line_id: "L01", zone: "wall", chemistry: "clean", cause: "run_now", slot_id: null, schedule_label: null, command_id: "0b6c3f52-1d4e-4a7b-8c9d-2e3f4a5b6c7d", actor: JASON, started_at: iso(at("07:31", -3)), ended_at: iso(at("07:43", -3)), open_s: 720, pulses: null, gal: 9, outcome: "ok", reason: null },
     ].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at)),
     seriesWindow: null,
+    // The API-04 and API-IRR-10 example requests: the climate keys over 24 h and 7 days of minutes unless a fixture
+    // names others (scorecard-30d asks for the daily keys over 30 days, as the scorecard does).
+    seriesKeys: null,
+    seriesPoints: null,
+    minutesDays: 7,
+    // v_daily_scorecard rows by local date (scorecard-30d); null serves every day's daily.* keys from the waves.
+    scorecard: null,
     notReportingSince: null,
+    // API-05 spans the API marks unknown inside a lane's window: {equipment, start, end} (lanes-unknown).
+    laneGaps: [],
   };
+}
+
+/** The scorecard's `daily.*` keys, in VD-56's registry order. @type {string[]} */
+export const DAILY_KEYS = METRICS.filter((metric) => metric.group === "daily").map((metric) => String(metric.key));
+/** Which scorecard column carries each key's reason (VD-56: band_reason, water_reason; the rest have none). */
+export const SCORECARD_REASON_COLUMNS = { time_in_band_day_pct: "band_reason", time_in_band_night_pct: "band_reason", water_gal: "water_reason" };
+/** The scorecard-30d day with no v_daily_scorecard row, in days before today. */
+export const SCORECARD_NO_ROW_AGO = 12;
+const tenths = (value) => Math.round(value * 10) / 10;
+/**
+ * v_daily_scorecard for the 30 local days ending today (#1130): whole-day time in band on every day; the day and night
+ * split only for the last 3 days, null with 'band grade kept 3 days' before them; gallons whole, except today
+ * (partial_day), one discontinuous day and one 'no meter data' day; one day with no row at all. With now on
+ * 2026-11-02 the 25-hour 2026-11-01 is one of the graded days.
+ */
+function scorecardRows(now) {
+  const today = local(now).date;
+  const rows = new Map();
+  for (let ago = 0; ago < 30; ago += 1) {
+    const date = addDays(today, -ago);
+    if (ago === SCORECARD_NO_ROW_AGO) { rows.set(date, null); continue; }
+    const graded = ago < 3;
+    const [water_gal, water_reason] = ago === 0 ? [null, "partial_day"] : ago === 5 ? [null, "discontinuous"] : ago === 16 ? [null, "no meter data"] : [18 + (ago % 7), null];
+    rows.set(date, {
+      temp_in_band_pct: tenths(91.5 - (ago % 5) * 1.5), vpd_in_band_pct: tenths(84 + (ago % 4) * 2.5),
+      time_in_band_day_pct: graded ? tenths(88.4 - ago * 1.2) : null, time_in_band_night_pct: graded ? tenths(79.6 + ago * 2.1) : null,
+      band_reason: graded ? null : "band grade kept 3 days", water_gal, water_reason,
+      iris_required_written: ago === 0 || ago === 9 ? 2 : 3, iris_required_missed: ago === 9 ? 1 : 0,
+      alerts_critical: ago === 14 ? 1 : 0, alerts_warning: ago % 4 === 1 ? 2 : 1, alerts_info: ago % 3,
+    });
+  }
+  return rows;
 }
 
 // ---------------------------------------------------------------------------------------------------- helpers
@@ -298,10 +361,19 @@ export function openAlert(world, row) {
   world.alerts.push(alert);
   return alert;
 }
-/** Change-only sources hold their newest row only while the controller reports; otherwise they read unknown. */
+/**
+ * Change-only sources hold their newest row only while the controller reports; otherwise they read unknown. As API-13
+ * serves it (VD-54): an unknown state keeps its `observed_at` and has no since, runtime or cycles (the open run's length
+ * is not known), and the controller's grow-light intent reads unknown. As in VD-54's own not-reporting scenario, the
+ * Lutron rows are 12 min old as well (past their 600 s), so every state reads unknown.
+ */
 function notReporting(world, since) {
   world.notReportingSince = since;
-  for (const item of world.equipment) item.state = "unknown";
+  for (const item of world.equipment) {
+    Object.assign(item, { state: "unknown", since: null, runtime_today_s: null, cycles_today: null });
+    if (item.intent !== undefined && item.intent !== null) item.intent = "unknown";
+    if (item.group === "light") item.observed_at = iso(Math.min(Date.parse(item.observed_at), world.now - 12 * MINUTE));
+  }
   for (const line of world.lines) line.state = { ...line.state, code: "unknown", cause: null, reason: "controller not reporting" };
   world.irrFreshness = { ...world.irrFreshness, stale: true };
 }
@@ -417,6 +489,33 @@ export const FIXTURES = {
     Object.assign(sunset, { outcome: "missed", resolved_at: null, failure_class: "no_plan_written" });
     world.iris.required_trigger = "missed";
   },
+  // #1131: no plan in force since 09:30, so band and defaults apply; the lanes hold the device values only.
+  "no-plan": (world) => {
+    world.plan.plan = null;
+    world.plan.no_plan_since = iso(clock(world.now)("09:30"));
+    world.iris = { ...world.iris, plan_id: null, trigger: null, valid_until: null };
+    const unplanned = (from) => (from === "plan" ? "default" : from);
+    for (const lane of world.plan.lanes) Object.assign(lane, { waypoints: [], applied_from: unplanned(lane.applied_from) });
+    for (const row of world.settings.filter((item) => item.plan)) Object.assign(row, { plan: null, applied_from: unplanned(row.applied_from) });
+  },
+  // #1131: Jason took mister_pulse_on_s manual on 10/30, so Iris skips it: API-07 gives it a lane with no waypoints.
+  "manual-lane": (world) => {
+    const at = clock(world.now);
+    const desired = {
+      id: 38, param: "mister_pulse_on_s", value: 60, snapped_from: null, manual: true, manual_before: false, state: "confirmed", state_reason: null,
+      confirmed_at: iso(at("09:01", -3)), actor: JASON, reason: "Hold while the nozzles are cleaned", created_at: iso(at("09:00", -3)),
+    };
+    Object.assign(settingOf(world, desired.param), { desired, applied_from: "manual" });
+    world.plan.lanes.push({ param: desired.param, label: "Mister Pulse ON", unit: "s", device: reading(60, world.now - MINUTE), waypoints: [], desired, applied_from: "manual" });
+  },
+  // #1131 (Q-04): the forecast action engine plans mister_engage_delay_s 90 s from 14:00; it reads "Forecast rule · system", never AI.
+  "forecast-rule": (world) => {
+    const point = { at: iso(clock(world.now)("14:00")), value: 90, source: "preemptive", effective: true };
+    const lane = laneOf(world, "mister_engage_delay_s");
+    lane.waypoints = [...lane.waypoints, point];
+    const row = settingOf(world, "mister_engage_delay_s");
+    if (row.plan) row.plan = { ...row.plan, next: point };
+  },
   "schedules-paused": (world) => {
     const at = clock(world.now);
     const make = (slot_id, line_id, label, days, start, fields) => ({
@@ -438,13 +537,23 @@ export const FIXTURES = {
   "grow-lights-differ": (world) => {
     Object.assign(itemOf(world, "grow_light_grow"), { intent: "on" });
   },
+  // Home Assistant down: the Lutron rows are 11 min old (past 600 s), so both read unknown with no since, runtime or
+  // cycles; the controller's intent keeps its value.
   "ha-down": (world) => {
-    for (const name of ["grow_light_main", "grow_light_grow"]) Object.assign(itemOf(world, name), { state: "unknown", observed_at: iso(world.now - 11 * MINUTE) });
+    for (const name of ["grow_light_main", "grow_light_grow"]) {
+      Object.assign(itemOf(world, name), { state: "unknown", since: null, runtime_today_s: null, cycles_today: null, observed_at: iso(world.now - 11 * MINUTE) });
+    }
+  },
+  // VD-14: one API-05 span the API marks unknown, Fan 1 02:10-02:40 today, inside both the 24 h and 72 h windows.
+  "lanes-unknown": (world) => {
+    const at = clock(world.now);
+    world.laneGaps.push({ equipment: "fan1", start: at("02:10"), end: at("02:40") });
   },
   "program-rev-42": (world) => {
     // The base's program, whatever came before it in a list: rev 42 confirmed, the site caps and every line inside it.
     Object.assign(world, { engine: true, program: programRev42(world.now) });
-    for (const cap of SITE_CAPS) Object.assign(settingOf(world, cap[0]), siteCap(world.now, cap));
+    const base = baseSettings(world.now);
+    for (const param of SITE_CAPS) Object.assign(settingOf(world, param), base.find((row) => row.param === param));
     for (const line of world.lines) line.sync = "confirmed";
   },
   "reserved-lines": (world) => {
@@ -456,7 +565,8 @@ export const FIXTURES = {
       state: "requested", revision: null, desired_sha256: PROGRAM_SHA256, applied_revision: null, applied_hash: null, src: null,
       reason: "engine not on controller", pushed_at: null, confirmed_at: null, reject_code: null, next_retry_at: null,
     };
-    for (const row of world.settings.filter((row) => row.control_class === "irrigation_site")) Object.assign(row, { readback: null, state: "requested" });
+    // No program on the controller: the site caps read no value, with the reason (SCR-05 "—" with readback.reason).
+    for (const param of SITE_CAPS) Object.assign(settingOf(world, param), { readback: reading(null, null, "no irrigation program on the controller yet"), state: "requested" });
     for (const line of world.lines) line.sync = "requested";
     // A site cap saved before the engine: stored, and requested with no_engine since that write until a program
     // compiled after it is confirmed.
@@ -482,6 +592,15 @@ export const FIXTURES = {
     world.runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
   },
   "series-400d": (world) => { world.seriesWindow = { from: world.now - 400 * DAY, to: world.now }; },
+  // The scorecard (#1130): 30 days of daily.* buckets and minutes; the example reads the first 8 keys as the page does.
+  "scorecard-30d": (world) => {
+    const today = local(world.now).date;
+    world.scorecard = scorecardRows(world.now);
+    world.seriesKeys = DAILY_KEYS.slice(0, 8);
+    world.seriesWindow = { from: localInstant(addDays(today, -29)), to: nextMidnight(world.now) };
+    world.seriesPoints = 31;
+    world.minutesDays = 30;
+  },
   "stuck-delivery": (world) => {
     const since = clock(world.now)("06:10");
     world.writer = { last_at: iso(since), age_s: Math.round((world.now - since) / 1000), stuck: true, differing: 4, oldest_since: iso(since) };
@@ -495,6 +614,17 @@ export const FIXTURES = {
     Object.assign(row, { plan: { ...row.plan, value: 48.75 }, readback: reading(48.75, world.now - 3 * MINUTE) });
     laneOf(world, "mister_engage_delay_s").device = reading(48.75, world.now - 3 * MINUTE);
   },
+  // #1129, Now: answer row 5 alone (a fresh 84.1 °F above the 62.0–70.0 °F band), a null RH with its reason, band rows
+  // with no time, and the occupancy chip's states.
+  "too-hot": (world) => {
+    world.indoor.temp_f = reading(84.1, world.now - 20_000);
+    world.band.temp_f = { ...world.band.temp_f, verdict: "above" };
+  },
+  "rh-missing": (world) => { world.indoor.rh_pct = reading(null, world.now - 20_000, "No indoor RH"); },
+  "band-age-unknown": (world) => { world.band = { ...world.band, observed_at: null }; },
+  "occupied": (world) => { world.occupancy = { occupied: true, seen_at: iso(world.now - 4 * MINUTE), hold_enabled: true }; },
+  "occupancy-unknown": (world) => { world.occupancy = { occupied: null, seen_at: null, hold_enabled: true }; },
+  "occupancy-hold-off": (world) => { world.occupancy = { ...world.occupancy, hold_enabled: false }; },
   // #1133: the south fert mister's valve (L08) opened outside its program, so its relay is ON and the breach is open.
   "fence-breach": (world) => {
     const opened = world.now - 3 * MINUTE;

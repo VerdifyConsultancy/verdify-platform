@@ -21,8 +21,9 @@ export const NOW_POLL_MS = POLL_INTERVAL;
 /** "Dashboard API unavailable" after this many API-02 failures in a row. */
 export const API_DOWN_AFTER = 2;
 /**
- * The shared keys of queries.ts: the write hooks read and refresh the same entries, so an Acknowledge lowers the nav
- * count at once (#1133) and Stop notes what the shell's API-02 says is running.
+ * The reads' one keys (`readKey`), so the write hooks share the shell's entries: Stop notes what runs from this API-02
+ * entry and reads it every 5 s while it confirms, and an Acknowledge refetches the count here, so it lowers the nav
+ * count at once (#1133).
  */
 export const ME_QUERY_KEY = readKey("API-01");
 export const NOW_QUERY_KEY = readKey("API-02");
