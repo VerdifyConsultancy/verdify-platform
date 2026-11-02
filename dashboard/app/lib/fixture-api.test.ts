@@ -262,6 +262,22 @@ test("each named fixture serves what the table says", () => {
   expect(set("iris-unsnapped")["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s")).toMatchObject({ step: 30, plan: { value: 48.75 } });
 });
 
+test("#1135's fixtures: south's probe out, a minutes gap inside the week, and the built-in program", () => {
+  const south = fixture("south-peer", { now: NOW });
+  expect((south["API-IRR-01"].lines as Body[]).find((row) => row.line_id === "L07")).toMatchObject({ vpd_member: true, vpd_source: "peer" });
+  expect(south["API-14"].items).toEqual([expect.objectContaining({ alert_type: "sensor_offline", zone: "south", status: "open" })]);
+  // Three days back has no data (a gap, never 0), inside the 7-day window; today is partial.
+  const gap = fixture("minutes-gap", { now: NOW })["API-IRR-10"];
+  expect(gap.periods.map((period: Body) => [period.start, period.coverage])).toEqual([
+    ["2026-10-27", "complete"], ["2026-10-28", "complete"], ["2026-10-29", "complete"], ["2026-10-30", "no_data"], ["2026-10-31", "complete"], ["2026-11-01", "complete"], ["2026-11-02", "partial"],
+  ]);
+  expect((gap.rows as Body[]).filter((row) => row.period === "2026-10-30")).toEqual([]);
+  expect(fixture("in-band", { now: NOW })["API-IRR-10"].periods.every((period: Body) => period.coverage !== "no_data")).toBe(true);
+  const rom = fixture("program-rom", { now: NOW })["API-IRR-01"];
+  expect(rom).toMatchObject({ engine: true, program: { src: "rom", state: "requested", revision: 42, applied_revision: null, applied_hash: "0000000000000000", confirmed_at: null } });
+  expect((rom.lines as Body[]).every((row) => row.sync === "requested")).toBe(true);
+});
+
 test("fixture() reads requested-to-confirmed and flow-after-stop after their writes; the fixture API starts before them", () => {
   const row = (set: Record<string, Body>) => ((set["API-09"] as Body).items as Body[]).find((item) => item.param === "mister_engage_kpa")!;
   const confirmed = fixture("requested-to-confirmed", { now: NOW });

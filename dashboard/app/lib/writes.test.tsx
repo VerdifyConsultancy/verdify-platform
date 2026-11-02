@@ -5,6 +5,7 @@
  * Idempotency-Key, from GET /__requests), the feedback it shows, the 5 s readback cadence, and the Stop result.
  */
 import { useState } from "react";
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { AlertRow } from "../components/alert-row";
@@ -17,10 +18,12 @@ import type { StateReason, Alert as VocabAlert } from "./vocab";
 import type { IrrigationStatus, Setting } from "./operator-api";
 import { readKey, useApiRead, useIrrigationRead, useNowRead, useSchedulesRead, useSettingsRead } from "./queries";
 import { parseDecimal } from "./setting-values";
+import { NOW_POLL_MS, NOW_QUERY_KEY, fetchNow } from "./shell";
 import { NOW, UUID, advance, renderWithApi, requests, sentAt, startFixtureApi, stopFixtureApi, writes } from "./test-fixture-api";
+import { usePolledQuery } from "./use-current";
 import {
-  COMMAND_WINDOW_MS, NOT_STARTED, defaultReadback, errorFor, formError, programBody, programSyncText, readback, settingToast, stopResult, useCommand,
-  useProgramWrite, useRecordWrite, useSettingWrite, useStop,
+  COMMAND_WINDOW_MS, NOT_STARTED, defaultReadback, errorFor, formError, newestNow, programBody, programSyncText, readback, runningLines, settingToast, stopResult,
+  useCommand, useProgramWrite, useRecordWrite, useSettingWrite, useStop,
 } from "./writes";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
@@ -513,6 +516,35 @@ test("Stop is never disabled by the writes flag, carries {line_id} for one line,
   view.unmount();
   renderWithApi(<Stop />, { role: "viewer", writesEnabled: true });
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+test("Stop notes what was running from the shell's own API-02 poll, so a screen with no read of its own still offers Disable (#1135)", async () => {
+  const api = startFixtureApi({ fixture: "l01-running" });
+  // The shell polls API-02 under its own key on every page; Water reads API-IRR-01 and never starts a second API-02 poll.
+  function ShellStop() {
+    usePolledQuery(NOW_QUERY_KEY, fetchNow, NOW_POLL_MS);
+    useIrrigationRead();
+    const { stop, sending } = useStop();
+    return <Button variant="stop" write busy={sending} onClick={() => void stop()}>Stop all water</Button>;
+  }
+  renderWithApi(<ShellStop />);
+  await advance(0);
+  await pressStop();
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-07", body: {} })]);
+  await advance(5000);
+  expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it."]);
+  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+});
+
+test("newestNow takes the newest API-02 answer the page holds, the shell's or a screen's", () => {
+  const client = new QueryClient();
+  expect(newestNow(client)).toBeUndefined();
+  client.setQueryData(NOW_QUERY_KEY, { running: [{ equipment: "drip_wall", line_id: "L01" }] }, { updatedAt: 1000 });
+  expect(runningLines(newestNow(client))).toEqual(["L01"]);
+  client.setQueryData(readKey("API-02"), { running: [] }, { updatedAt: 2000 });
+  expect(runningLines(newestNow(client))).toEqual([]);
+  client.setQueryData(NOW_QUERY_KEY, { running: [{ equipment: "mister_center", line_id: "L04" }] }, { updatedAt: 3000 });
+  expect(runningLines(newestNow(client))).toEqual(["L04"]);
 });
 
 test("the Stop result is the first rule that holds; L03 and fog are never offered Disable", () => {

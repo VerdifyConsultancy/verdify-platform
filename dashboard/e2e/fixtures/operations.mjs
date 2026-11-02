@@ -422,7 +422,7 @@ export function irrigationBody(world) {
   };
 }
 
-/** API-IRR-10: minutes by zone, line or cause per day; today from the lines, a no-data day nine days back. */
+/** API-IRR-10: minutes by zone, line or cause per day; today from the lines, a no-data day nine days back (and `minutes-gap`'s). */
 function minutesBody(world, { query }) {
   const from = day(query, "from", null);
   const to = day(query, "to", null);
@@ -434,7 +434,7 @@ function minutesBody(world, { query }) {
   const sums = new Map();
   for (let date = from; date <= to; date = addDays(date, 1)) {
     const ago = Math.round((localInstant(today(world)) - localInstant(date)) / DAY);
-    const coverage = ago < 0 || ago === NO_DATA_DAYS_AGO ? "no_data" : ago === 0 ? "partial" : "complete";
+    const coverage = ago < 0 || ago === NO_DATA_DAYS_AGO || world.noDataDays.includes(ago) ? "no_data" : ago === 0 ? "partial" : "complete";
     periods.push({ start: date, coverage });
     if (coverage === "no_data") continue;
     const runs = ago === 0

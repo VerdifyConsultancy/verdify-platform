@@ -30,6 +30,7 @@ import {
 } from "./operator-api";
 import { engineFlag, fetchRead, readKey, SETTLING_INTERVAL_MS } from "./queries";
 import { outOfRange, rangeText, settingValueText } from "./setting-values";
+import { NOW_QUERY_KEY } from "./shell";
 import { hasWords, words } from "./words";
 
 /** Every edit form's "Manual: Iris skips this" box starts ticked (Round 2 #8). */
@@ -430,6 +431,17 @@ export function runningLines(now: Pick<Now, "running"> | null | undefined, scope
   return [...new Set(ids)].filter((id) => scope === null || id === scope);
 }
 
+/**
+ * The newest API-02 answer the page holds: the shell's own poll (`NOW_QUERY_KEY`, on every page) or a screen's
+ * `useNowRead()` entry, whichever answered last; undefined before either has.
+ */
+export function newestNow(client: QueryClient): Now | undefined {
+  const held = [client.getQueryState<Now>(NOW_QUERY_KEY), client.getQueryState<Now>(readKey("API-02"))]
+    .filter((state) => state?.data !== undefined)
+    .sort((a, b) => (b?.dataUpdatedAt ?? 0) - (a?.dataUpdatedAt ?? 0));
+  return held[0]?.data;
+}
+
 export type StopReport = {
   /** The wet lines running before the Stop, from API-02. */
   readonly running: readonly string[];
@@ -491,12 +503,13 @@ export function stopToast(result: StopResult): ToastOptions {
  * `{line_id}` or `{}`, one tap, no dialog. It is never disabled by the writes flag: the BFF never blocks it, and before
  * the irrigation firmware the server turns every open wet relay off through the run-now bridge.
  *
- * Before sending it notes the wet lines running in the shell's API-02 entry and the `engine` flag of the shared
- * API-IRR-01 entry (unknown while that read fails or is not served). `stop` resolves at the 202; then it reads API-02
- * every 5 s for up to 30 s until each of those lines has left `running`, takes `freshness` from the same reads, and
- * shows one result toast that stays until dismissed (`stopResult`). With no API-02 data before the Stop, the first
- * read after it says what must go OFF. The check runs on after the screen that pressed Stop goes away, since the
- * toast belongs to the app; a newer Stop from the same control replaces it.
+ * Before sending it notes the wet lines running in the newest API-02 answer the page holds (`newestNow`: the shell's
+ * poll, or a screen's own read) and the `engine` flag of the shared API-IRR-01 entry (unknown while that read fails or
+ * is not served). `stop` resolves at the 202; then it reads API-02 every 5 s for up to 30 s until each of those lines
+ * has left `running`, takes `freshness` from the same reads, and shows one result toast that stays until dismissed
+ * (`stopResult`). With no API-02 data before the Stop, the first read after it says what must go OFF. The check runs on
+ * after the screen that pressed Stop goes away, since the toast belongs to the app; a newer Stop from the same control
+ * replaces it.
  */
 export function useStop() {
   const client = useQueryClient();
@@ -508,7 +521,7 @@ export function useStop() {
     if (inFlight.current) return { ok: false, error: null };
     inFlight.current = true;
     const run = ++generation.current;
-    const before = client.getQueryData<Now>(readKey("API-02"));
+    const before = newestNow(client);
     let running: string[] | null = before ? runningLines(before, lineId) : null;
     const engine = engineFlag(client);
     setPhase("sending");

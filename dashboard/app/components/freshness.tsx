@@ -41,6 +41,16 @@ export function useNow(): number {
   return useSyncExternalStore(subscribe, currentSecond, currentSecond) - skew;
 }
 
+/**
+ * A value worked out from now on the server's clock (`select` gets epoch ms), re-rendering only when it changes: the
+ * local date, or the current minute, where a once-a-second render of a whole view would be waste.
+ */
+export function useClockValue<T extends string | number | boolean>(select: (now: number) => T): T {
+  const skew = useContext(SkewContext);
+  const snapshot = () => select(currentSecond() - skew);
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
 export type FreshnessTone = "ok" | "stale" | "off";
 /**
  * The freshness dot: ok, amber when the API marks the value stale, fault when the source is not reporting. It is never

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-import type { AlertSeverity, LineStateCode, ProblemCode, StateReasonCode } from "./vocab";
+import type { AlertSeverity, LineFault, LineStateCode, ProblemCode, RunOutcomeCode, StateReasonCode, VpdSource } from "./vocab";
 
 /**
  * The one words table (design system §1, rule 3): every code from the API or the controller renders through it, in
  * plain words for someone who knows plants rather than the controller. An unknown code renders raw, so a code added
  * later shows as itself rather than as nothing. `words.test.ts` fails on any OpenAPI `ProblemCode`, `StateReason` or
  * `LineState` code, controller mode or mist stage (`firmware/lib/greenhouse_types.h`) or alert type (`ALERT_TYPES` in
- * `verdify_schemas/alerts.py`) without an entry here, so a PR that adds one adds its words. The `mode_reason` and
+ * `verdify_schemas/alerts.py`) without an entry here, so a PR that adds one adds its words; the Water families (run
+ * outcomes, VPD sources, line faults and program rejects, #1135) are checked the same way. The `mode_reason` and
  * `moisture_block_reason` families come with #1140 and read raw until then.
  */
 const STATE_REASON = {
@@ -63,6 +64,56 @@ const LINE_STATE = {
   disabled: "Disabled",
   unknown: "Unknown",
 } as const satisfies Record<LineStateCode, string>;
+
+/**
+ * Every `RunOutcome`: how an occurrence or run ended, as the week view and the run ledger print it. `unknown` is an
+ * outcome that never reached the platform: a gap, never `missed`.
+ */
+const RUN_OUTCOME = {
+  ok: "ok",
+  short: "short",
+  stopped: "stopped",
+  preempted: "preempted",
+  skipped: "skipped",
+  missed: "missed",
+  cap: "cap",
+  unknown: "no outcome received",
+} as const satisfies Record<RunOutcomeCode, string>;
+
+/** `IrrigationLine.vpd_source` (D-IRP-13): which reading a mister zone's VPD control uses. */
+const VPD_SOURCE = {
+  own: "VPD from its own probe",
+  peer: "VPD from peer probes",
+  house: "VPD from the house average",
+} as const satisfies Record<VpdSource, string>;
+
+/** `IrrigationLine.fault` (D-IRP-19): the mister watchdog's back-off or latch; its end time follows the words. */
+const LINE_FAULT = {
+  backing_off: "Backing off",
+  mister_fault: "Faulted: no misting",
+} as const satisfies Record<LineFault, string>;
+
+/**
+ * `ProgramSync.reject_code`: why the controller refused a pushed program (`RejectCode` in verdify_schemas/irrigation.py),
+ * after "Not confirmed: ".
+ */
+const PROGRAM_REJECT = {
+  bad_length: "the program arrived the wrong size",
+  bad_magic: "the controller did not recognise the program",
+  bad_hash: "the program failed its checksum",
+  bad_header: "the controller refused the program's site limits",
+  bad_line: "the controller refused a line's settings",
+  bad_slot: "the controller refused a schedule",
+} as const;
+
+/**
+ * `Occurrence.reason`, which the API already gives in words: the fixed ones read here as the week view says them; one
+ * that names who or when (a pause: "line paused by jason: rain") reads as sent. #1137 adds its draft's phrases.
+ */
+const OCCURRENCE_REASON = {
+  "only while VPD sensing is degraded": "only if VPD sensing is degraded",
+  paused: "line paused",
+} as const;
 
 /** `MODE_NAMES` in firmware/lib/greenhouse_types.h, in screens SCR-01's words. */
 const MODE = {
@@ -172,8 +223,14 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
   alert_type: ALERT_TYPE,
+  run_outcome: RUN_OUTCOME,
+  vpd_source: VPD_SOURCE,
+  line_fault: LINE_FAULT,
+  program_reject: PROGRAM_REJECT,
+  occurrence_reason: OCCURRENCE_REASON,
 };
-export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type";
+export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type"
+  | "run_outcome" | "vpd_source" | "line_fault" | "program_reject" | "occurrence_reason";
 
 /** True when the table has words for `code` in `family`. */
 export function hasWords(family: string, code: string): boolean {
