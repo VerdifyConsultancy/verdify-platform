@@ -282,6 +282,19 @@ interval:
           if(VPD < 0.0f) VPD = 0.0f;
           if(VPD > 10.0f) VPD = 10.0f;  // cap at physically reasonable max
 
+          // F8 (D-IRP-13): the wall probes for mister zone choice, read once per
+          // tick with their last-callback stamps (lib/zone_vpd.h). A Modbus probe
+          // that stops answering keeps its last value, so zone choice resolves
+          // each zone through zone_vpd_with_fallback(): own probe while fresh and
+          // finite, else the fresh peers' mean, else the house VPD. Center has no
+          // probe. SensorInputs and the FW-9 emergency merge keep their raw reads.
+          const ZoneProbe zp[ZONE_COUNT] = {
+              {NAN, 0u},                                  // ZONE_CENTER
+              {id(vpd_south).state, id(last_south_ms)},   // ZONE_SOUTH
+              {id(vpd_west).state,  id(last_west_ms)},    // ZONE_WEST
+              {id(vpd_east).state,  id(last_east_ms)},    // ZONE_EAST
+          };
+
           float dH = id(enthalpy_diff).state;   // outside - inside
           // Track enthalpy staleness — if no update in 10 min, treat as NaN
           static uint32_t enthalpy_age_ms = 0;
@@ -983,9 +996,11 @@ interval:
             const uint32_t MISTER_ALL_DELAY_MS    =
                 uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL;
 
-            float south_vpd = id(vpd_south).state;
-            float west_vpd  = id(vpd_west).state;
-            float east_vpd  = id(vpd_east).state;
+            // F8: every zone-choice reader below uses these locals, so a stale or
+            // non-finite own probe never feeds zone choice (own → peers → house).
+            float south_vpd = zone_vpd_with_fallback(ZONE_SOUTH, zp, VPD, now_ms).vpd_kpa;
+            float west_vpd  = zone_vpd_with_fallback(ZONE_WEST,  zp, VPD, now_ms).vpd_kpa;
+            float east_vpd  = zone_vpd_with_fallback(ZONE_EAST,  zp, VPD, now_ms).vpd_kpa;
             float avg_vpd   = VPD;
             float south_temp = id(south_wall_temperature).state;
             float west_temp  = id(west_wall_temperature).state;
@@ -1422,7 +1437,8 @@ interval:
                   zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
                   zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
                   zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
-                  const float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+                  float zvpd[ZONE_COUNT];  // F8: same fallback values the relays use
+                  for (int z = 0; z < ZONE_COUNT; z++) zvpd[z] = zone_vpd_with_fallback(ZoneId(z), zp, VPD, now_ms).vpd_kpa;
                   ZoneWetIntent zi[ZONE_COUNT];
                   for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
                   const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
@@ -1787,8 +1803,10 @@ interval:
               zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
               zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
               zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
-              // Zone VPD readings: center has no dedicated sensor → house proxy.
-              float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+              // Zone VPD readings resolved as zone choice resolves them (F8): own
+              // probe while fresh, else peers, else house; center → house.
+              float zvpd[ZONE_COUNT];
+              for (int z = 0; z < ZONE_COUNT; z++) zvpd[z] = zone_vpd_with_fallback(ZoneId(z), zp, VPD, now_ms).vpd_kpa;
               ZoneWetIntent zi[ZONE_COUNT];
               for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
               const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };

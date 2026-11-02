@@ -411,6 +411,16 @@ the outdoor-aware set. Tested at `test_greenhouse_logic.cpp` (s15 gate).
 Fan **lead/lag rotation** balances runtime across fan1/fan2 (verified ~5 % balance
 over 14 d). Fogger and **center** misters are the core humidity tools; **west/south**
 misters are minimized for climate (zone-priority arbiter, `greenhouse_solar.h:236`).
+Zone choice reads each zone's VPD through the **peer-probe fallback**
+(`zone_vpd_with_fallback()`, `firmware/lib/zone_vpd.h`; irrigation F8, D-IRP-13): a
+zone uses its own wall probe while the reading is fresh (a probe callback within
+300 s) and finite, otherwise the mean of the fresh peer probes (south, west, east),
+otherwise the house average; center has no probe and always uses the house average.
+A Modbus probe that stops answering keeps its last value, so a stale reading never
+feeds the stress scores, east's adjacency boost, the fairness watchdog, the S2 pulse
+weight, the rank arbiter or the published `gh_zone_wet_granted` and
+`gh_zone_vpd_delta_*`. `determine_mode()` inputs and the FW-9 emergency merge keep
+the raw probe readings. Tested in `firmware/test/test_zone_vpd.cpp`.
 Vent is coupled to fan behavior per mode (§3.3).
 
 ## 9. 72-hour disconnected / offline-first operation (L2 #344 AC3)

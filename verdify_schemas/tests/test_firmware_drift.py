@@ -591,3 +591,92 @@ def test_heap_recovery_coalesces_diagnostics_and_records_loop_high_water():
     assert "GH_CONTROL_LOOP_WARN_US = 250000u" in heap_header
     assert "gh_take_control_loop_max_us" in heap_header
     assert "gh_take_control_loop_overrun_count" in heap_header
+
+
+def _source_span(text: str, start: str, end: str) -> tuple[int, int]:
+    """Return the [start, end) offsets of the unique `start` marker up to `end`."""
+    assert text.count(start) == 1, f"marker missing or ambiguous: {start!r}"
+    first = text.index(start)
+    return first, text.index(end, first)
+
+
+def test_zone_choice_reads_zone_vpd_through_peer_fallback():
+    """F8 (D-IRP-13, VD-43): a stale or dead wall probe never feeds zone choice.
+
+    A Modbus probe keeps its last value when it stops answering, so a finite
+    reading is not a live one. Zone choice resolves each zone through
+    zone_vpd_with_fallback() (lib/zone_vpd.h): own probe while fresh and finite,
+    else the fresh peers' mean, else the house VPD; center is always the house
+    VPD. The only raw zone VPD reads left in controls.yaml are the
+    determine_mode() inputs (replay unchanged), the FW-9 emergency merge and the
+    per-tick ZoneProbe snapshot the fallback reads.
+    """
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    root_yaml = (REPO_ROOT / "firmware" / "greenhouse.yaml").read_text()
+    raw_reads = ("id(vpd_south).state", "id(vpd_west).state", "id(vpd_east).state")
+
+    # The header ships in the image; greenhouse-recovery.yaml packages this file.
+    includes = re.findall(r"^\s*-\s+(lib/[A-Za-z0-9_]+\.h)\s*$", root_yaml, re.M)
+    assert "lib/zone_vpd.h" in includes
+    assert includes.index("lib/greenhouse_solar.h") < includes.index("lib/zone_vpd.h")
+
+    # One snapshot per tick, beside VPD, pairing each probe with its stamp.
+    snap_start, snap_end = _source_span(controls, "const ZoneProbe zp[ZONE_COUNT] = {", "};")
+    snapshot = controls[snap_start:snap_end]
+    assert "{NAN, 0u}" in snapshot
+    for zone in ("south", "west", "east"):
+        assert re.search(rf"\{{id\(vpd_{zone}\)\.state,\s*id\(last_{zone}_ms\)\}}", snapshot), zone
+    assert controls.index("if(VPD > 10.0f) VPD = 10.0f;") < snap_start
+
+    mister_start, mister_end = _source_span(
+        controls, "/**************** 12 — MISTER STATE MACHINE", "/**************** 14 — Telemetry & debug"
+    )
+    arbiter_start, arbiter_end = _source_span(
+        controls, "auto select_arbiter_zone = [&]() -> int {", "auto select_zone_for_pulse"
+    )
+    diag_start, diag_end = _source_span(
+        controls, "// ── Firmware-v2 EVIDENCE SURFACE", "id(gh_zone_wet_granted).publish_state"
+    )
+    assert snap_end < mister_start < arbiter_start < arbiter_end < mister_end < diag_start
+    mister = controls[mister_start:mister_end]
+    arbiter = controls[arbiter_start:arbiter_end]
+    diag = controls[diag_start:diag_end]
+
+    # The mister block's zone locals come from the fallback, and every
+    # zone-choice reader (stress scores, east adjacency, fairness, S2 weight)
+    # reads those locals.
+    for zone in ("south", "west", "east"):
+        pattern = (
+            rf"float\s+{zone}_vpd\s*=\s*zone_vpd_with_fallback\(ZONE_{zone.upper()},\s*zp,\s*VPD,\s*now_ms\)\.vpd_kpa;"
+        )
+        assert re.search(pattern, mister), zone
+    assert "s_stress = (south_vpd - id(vpd_target_south))" in mister
+    assert "e_stress = max(0.0f, (east_vpd_val - id(vpd_target_east))" in mister
+    zvpd_loop = re.compile(
+        r"for\s*\(int z = 0; z < ZONE_COUNT; z\+\+\)\s*"
+        r"zvpd\[z\]\s*=\s*zone_vpd_with_fallback\(ZoneId\(z\),\s*zp,\s*VPD,\s*now_ms\)\.vpd_kpa;"
+    )
+    # The arbiter and the published gh_zone_wet_granted read the same values
+    # the relays use.
+    assert zvpd_loop.search(arbiter)
+    assert zvpd_loop.search(diag)
+    for name, block in (("mister block", mister), ("select_arbiter_zone", arbiter), ("diagnostic zvpd", diag)):
+        for raw in raw_reads:
+            assert raw not in block, f"{name} reads raw {raw}; use zone_vpd_with_fallback()"
+
+    # Every raw zone VPD read left is a determine_mode() input, an FW-9
+    # emergency merge term, or the snapshot itself.
+    allowed = [
+        _source_span(controls, "SensorInputs sensor_in = {", "};"),
+        _source_span(controls, "// FW-9: VPD emergency override", "static bool leak_water_interlock_prev"),
+        (snap_start, snap_end),
+    ]
+    sensor_inputs = controls[allowed[0][0] : allowed[0][1]]
+    for zone in ("south", "west", "east"):
+        assert f".vpd_{zone} = id(vpd_{zone}).state," in sensor_inputs, zone
+    for raw in raw_reads:
+        for match in re.finditer(re.escape(raw), controls):
+            assert any(lo <= match.start() < hi for lo, hi in allowed), (
+                f"raw {raw} at controls.yaml line {controls.count(chr(10), 0, match.start()) + 1} "
+                "is outside SensorInputs, the FW-9 merge and the ZoneProbe snapshot"
+            )
