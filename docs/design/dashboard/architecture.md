@@ -119,28 +119,44 @@ OIDC sign-in, a same-origin `/api/v1` proxy, and the writes flag.
 |---|---|
 | Runtime and build | Node 24.22.1, pnpm 12.15.0, Vite 8.3.5, TypeScript 6.0.3 |
 | UI | React 19.3.1, React Router 8.5.0 in framework mode with SSR through `@react-router/express` 8.5.0, TanStack Query 5.104.5, zod 4.6.7 (jitless), uPlot 1.6.32, IBM Plex self-hosted |
-| Server | Express 5.2.1, `openid-client` 6 (new) |
+| Server | Express 5.2.1, `openid-client` 6.8.8 (new) |
 | Contract | openapi-typescript 7.13.0 (weather `web/contract-tools/generate.mjs`) |
 | Tests | Vitest 4.1.0, Testing Library, Playwright 1.64.1, `@axe-core/playwright` 4.14.0 |
 
 Code layout, one pnpm package like weather's `web/`: `dashboard/server.mjs` (weather's server plus `/auth/*`,
 the proxy and the writes flag), `security-headers.mjs` (weather's CSP; `form-action` also allows
-`https://auth.vallery.net`), `bff/` (`oidc.mjs`, `session.mjs`, `proxy.mjs`, `origin.mjs`), `app/`,
-`app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and `Dockerfile`. What the BFF does:
+`https://auth.vallery.net`, and `Referrer-Policy` is `same-origin`, see 4), `bff/` (`oidc.mjs`, `session.mjs`,
+`proxy.mjs`, `origin.mjs`), `app/`, `app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and
+`Dockerfile`. What the BFF does:
 
 1. Serves the SSR shell and hashed assets under a per-request nonce CSP (weather `security-headers.mjs`), pins
    `Host: dashboard.verdify.ai`, and caps URL length and header count as weather does.
-2. Runs sign-in, the callback and sign-out (§4) and sets the session cookie.
+2. Runs sign-in, the callback and sign-out (§4) and sets the session cookie. A page GET or HEAD without a
+   well-formed session cookie (43 base64url characters) answers 302 to `/auth/login?returnTo=<path and query>`,
+   or `returnTo=%2F` when the page is longer than BFF-01 keeps or its encoded form would push `/auth/login` past
+   the 4,096-character URL cap. React Router's single-fetch request (`*.data`) gets that redirect in its own
+   form, 204 with `X-Remix-Redirect` and `X-Remix-Reload-Document: true`, because a hydrated client's fetch would
+   follow a 302 to Authentik and fail cross-origin. Hashed assets, fonts and the lazy route manifest
+   (`/__manifest`, route ids and module paths that the public assets already hold) skip the check. Another method
+   on an `/auth` route answers 405, and another `/auth` path 404.
 3. Proxies `/api/v1/*` to `http://verdify-operator-api.verdify-prod.svc:8090/v1/*` with the bearer
    `$OPERATOR_API_TOKEN`, `X-Dashboard-Session: <cookie value>` and `X-Request-Id`. A path with a `.` or `..`
    segment, or containing `%2e`, `%2f`, `%5c` or a backslash (any case), gets 400 before routing; the upstream
-   path is concatenated from the validated one. Timeout 15 s; a non-GET is sent once, never retried. Every `/api`
-   and `/auth` response is `Cache-Control: no-store`.
+   path is concatenated from the validated one. Timeout 15 s, on a new connection per call; a GET is retried once
+   on a connection error, and a non-GET is sent once, never retried. Every `/api` and `/auth` response is
+   `Cache-Control: no-store`.
 4. Requires `Origin: https://dashboard.verdify.ai` exactly on every non-GET/HEAD `/api/*` request and on
-   `POST /auth/logout`; anything else gets 403.
+   `POST /auth/logout`; anything else gets 403. Responses carry `Referrer-Policy: same-origin`, not weather's
+   `no-referrer`: under `no-referrer` a browser sends `Origin: null` on a form POST (Fetch, "append a request
+   Origin header"), so the sign-out form would be refused. `same-origin` sends no referrer to any other origin.
 5. Answers every non-GET `/api/*` request except `POST /api/v1/irrigation/stop` (matched on the validated path)
-   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7).
+   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7). `GET /api/v1/me` reads the
+   flag as `writes_enabled` on any encoding of its path that the operator API routes to API-01.
 6. Serves `/healthz` and `/readyz` (§11).
+
+Settings are read and checked once at start. A missing or malformed value stops the start with one log line that
+names the variable, never its value, except `DASHBOARD_WRITES_ENABLED`: anything but `true` turns writes off
+(§5.7), so a mistyped flag fails safe instead of stopping the rollout that was meant to switch writes off.
 
 What it never does: hold a database, device, MCP or Home Assistant credential; connect to `verdify-db`, MQTT,
 the ESP32 or MCP; re-implement registry rules (min, max and step come from the API); render greenhouse data
@@ -182,7 +198,7 @@ cookie cleared, 302 `/water`.
 | Cookie | Content | Attributes | Lifetime |
 |---|---|---|---|
 | `__Host-verdify_session` | 32 random bytes, base64url; `dashboard_session` stores its sha256 | HttpOnly; Secure; SameSite=Lax; Path=/ | 12 h |
-| `__Host-verdify_login` | `{state, nonce, verifier, returnTo}` sealed with AES-256-GCM (`cookie-secret`) | same | 10 min, cleared at the callback |
+| `__Host-verdify_login` | `{state, nonce, verifier, returnTo}` and a 10-minute expiry, sealed with AES-256-GCM: key from `cookie-secret` by HKDF-SHA256, a fresh 12-byte IV, the cookie name as associated data | same | 10 min, cleared at the callback |
 
 | Authentik group | Role | Can |
 |---|---|---|
@@ -195,6 +211,14 @@ cookie cleared, 302 `/water`.
 - Sign-out (`POST /auth/logout`) deletes the session row, clears the cookie and redirects to Authentik's
   end-session endpoint. A group change applies at the next sign-in (at most 12 h); deleting someone's
   `dashboard_session` rows ends their sessions within 30 s.
+- The callback clears the login cookie on every outcome. A missing, expired or tampered login cookie, a state
+  mismatch, an Authentik `error` or a refused code exchange answers 400 (`failed`); neither group answers 403
+  (`no_access`) and makes no INT-01 call; Authentik unreachable (discovery or the token endpoint) or a failed
+  INT-01 answers 503 (`unavailable`). Each is plain text with that status until #1124's root loader renders the
+  SCR-09 card at the same URL. The BFF leaves `{reason, requestId}` in `res.locals.authError` for it: React Router
+  8's `getLoadContext` must return a `RouterContextProvider`, so the context key that carries it lands with
+  #1124's route. With discovery unavailable, sign-out still deletes the session and clears the cookie, then answers
+  303 to `/`.
 - Trust: only the web pods reach `:8090` (NetworkPolicy), with one shared bearer token; the API trusts the BFF's
   session creation because the BFF verified the ID token, and ignores `X-Authentik-*`. `POST /internal/sessions`
   refuses (403) any request carrying `X-Dashboard-Session`, which the proxy always sends and the session-create
@@ -635,6 +659,14 @@ boundary row and the `expected_mcp` chain. It also adds `sealed_sql_NNN()` to `s
 then recomputes in the same transaction each receipt they change: `fn_runtime_ordinary_boundary_digest` hashes
 every grantee on every relation the api and ingestor logins read, so any grant on a shared relation re-seals both,
 while `fn_mcp_runtime_boundary_digest` moves only with MCP's own grants. Applied migrations are never edited.
+The native qualification is `scripts/qualify-migration-successor.py <file> --fixture <fixture>` (VD-30), run
+against production before the merge: three sessions that each end in ROLLBACK (the file up to its `$successor$`
+block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
+after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
+It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
+live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
+predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
+latter yet).
 
 | # | Issue | Contents |
 |---|---|---|
@@ -739,8 +771,8 @@ rows; VD-32 adds the operator-API rows.
 | Signal | BFF | Operator API |
 |---|---|---|
 | `/healthz` | static 200 | static 200 |
-| `/readyz` | 200 once config is loaded. OIDC discovery is fetched at the first `/auth/login` and retried; Authentik and operator API reachability are reported in the body, not gating, so a restart while Authentik is down keeps existing sessions' reads and Stop. `{status, source_revision}` comes from `SOURCE_REVISION`, baked at build | `SELECT 1` on its pool; each connection attests with `verdify_dashboard_runtime.fn_attest_login()` (§9). `{status, source_revision}` comes from `/etc/verdify/source-revision`, which `api/Dockerfile` already bakes |
-| Logs | JSON: service, route template, status, `duration_ms`, request id, hashed user id; a bounded `failure` when the BFF turns a render away (`overloaded`), cuts it at its deadline (`deadline`) or its render handler fails (`render_error`), and `aborted` when a response closes unfinished. Never cookies, tokens, bodies or query strings. Successful probes are not logged (weather #147) | the same fields, without `failure` and `aborted` |
+| `/readyz` | 200 once config is loaded. OIDC discovery is fetched at the first `/auth/login` and retried; Authentik and operator API reachability (the issuer's discovery document and the operator API's `/healthz`, checked at start and every 30 s) are reported in the body, not gating, so a restart while Authentik is down keeps existing sessions' reads and Stop. `{status, source_revision}` comes from `SOURCE_REVISION`, baked at build | `SELECT 1` on its pool; each connection attests with `verdify_dashboard_runtime.fn_attest_login()` (§9). `{status, source_revision}` comes from `/etc/verdify/source-revision`, which `api/Dockerfile` already bakes |
+| Logs | JSON: service, route template (`/api/v1/*` for every proxied path), status, `duration_ms` and `request_id` on every line; `user` (the first 12 hex characters of the username's SHA-256) on callback lines and `session` (the same of the session token) on proxied and sign-out lines, because the BFF never resolves a session, so sign-out cannot name the user (the operator API's INT-02 line, joined by `request_id`, does); a bounded `failure` when the BFF turns a render away (`overloaded`), cuts it at its deadline (`deadline`) or its render handler fails (`render_error`), and `aborted` when a response closes unfinished. A start stopped by a setting logs `failure: "config"` with the variable's name. Never cookies, tokens, bodies or query strings. Successful probes are not logged (weather #147) | the same fields, without `failure` and `aborted` |
 
 The request id is the `X-Request-Id` the BFF sends on every proxied call; for a write it is the `Idempotency-Key`
 (generated by the BFF when the browser sent none), so it is also `activity_log.request_id` and

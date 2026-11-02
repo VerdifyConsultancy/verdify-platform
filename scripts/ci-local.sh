@@ -86,6 +86,8 @@ $PY -m pytest -q -rs \
   tests/test_component_runtime_probe.py \
   tests/test_275_c0_delivery.py \
   tests/test_277_getter_delivery.py \
+  tests/test_279_source_clock_delivery.py \
+  tests/test_280_desired_state_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
@@ -315,7 +317,7 @@ step "firmware native tests: policy engine + §8.10 recovery-image proof (#586),
 # replay-corpus invariants run here and gate every firmware PR. Later suites
 # append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants test-irrigation-program
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi
