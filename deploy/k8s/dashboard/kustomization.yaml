@@ -1,0 +1,59 @@
+# Namespace verdify-dashboard: the dashboard web tier (the BFF) behind dashboard.verdify.ai.
+#
+# Argo app verdify-dashboard syncs this directory: automated with self-heal, prune off,
+# CreateNamespace=false and ServerSideApply=true. The Application and its AppProject are declared in
+# jvallery/agents#5994; this repository owns what renders here. It never touches verdify-prod or
+# the ingestor; the one dashboard line in overlays/prod is the tier-1 exclusion in
+# traefik/verdify-tier1-apps-forward.yaml, which rides the verdify-prod-dark sync.
+#
+# The AppProject admits Namespace verdify-dashboard, Deployment, Service, ServiceAccount, ConfigMap,
+# NetworkPolicy and IngressRoute, and denies Secret. Secret verdify-dashboard-web comes from the
+# jvallery/agents KSOPS Application verdify-dashboard-secrets (jvallery/agents#5993), and
+# deploy/k8s/SECRETS.md names its keys. tests/test_dashboard_manifests.py checks this render, and
+# docs/runbooks/dashboard.md covers operations.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: verdify-dashboard
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingressroute.yaml
+  - networkpolicy.yaml
+  # network-infra#839, vendored byte-identical from network-infra; the namespace comes from above.
+  - egress-deny-management.yaml
+
+# The one switch (architecture §5.7). The name hash is kept, so any change here renames the
+# ConfigMap and rolls the pod. To turn dashboard writes off, merge a one-line change of
+# DASHBOARD_WRITES_ENABLED to false; reads and irrigation Stop keep working.
+configMapGenerator:
+  - name: verdify-dashboard-web
+    literals:
+      - PUBLIC_ORIGIN=https://dashboard.verdify.ai
+      - OIDC_ISSUER=https://auth.vallery.net/application/o/verdify-dashboard/
+      - OIDC_CLIENT_ID=verdify-dashboard
+      - OPERATOR_API_URL=http://verdify-operator-api.verdify-prod.svc:8090
+      - DASHBOARD_WRITES_ENABLED=false
+
+# The app has prune off, so each superseded ConfigMap stays in the namespace. IgnoreExtraneous keeps
+# it from holding verdify-dashboard OutOfSync after the first flag change.
+generatorOptions:
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: web
+  annotations:
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+
+# The web ships only through a digest-only pin PR to this entry: the digest of the build's
+# sha-<first 12 characters of the commit> tag on registry.vallery.net, or the build step's digest
+# output. No digest and no pod until R1's pin PR (#1143) sets the first digest and count 1.
+images:
+  - name: verdify-dashboard-web
+    newName: registry.vallery.net/verdifyconsultancy/verdify-dashboard-web
+
+replicas:
+  - name: verdify-dashboard-web
+    count: 0

@@ -169,10 +169,6 @@ components:
   # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
   # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
   - ../../components/ingestor-gather-script
-  # HA gap backfill — hourly DB-first reconciliation from Home Assistant recorder
-  # history. Read-only against HA and writes only missing Verdify telemetry rows;
-  # mounted script means enabling the CronJob does NOT roll the live ingestor.
-  - ../../components/ha-gap-backfill
 
 patches:
   - path: source-owned-fields-ssa.patch.yaml
@@ -237,6 +233,8 @@ patches:
   # storage-flaky node6. Applying RESTARTS the single ESP32 writer (gated).
   - path: ingestor-resilience.patch.yaml
   - path: shelly-source-clock.patch.yaml
+  # VD-70: direct read-only YINMIK hydro meter reader; optional Secret mount.
+  - path: hydro-probe.patch.yaml
   # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
   # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
   # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by

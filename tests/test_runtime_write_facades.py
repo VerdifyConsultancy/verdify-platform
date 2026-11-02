@@ -93,9 +93,7 @@ def _enabled_runtime_sources() -> dict[Path, str]:
         for name in (
             "forecast-action-engine.py",
             "greenhouse-quiet-mode.py",
-            "ha-sensor-sync.py",
             "setpoint-server.py",
-            "tempest-sync.py",
         )
     )
     return {path: path.read_text() for path in paths}

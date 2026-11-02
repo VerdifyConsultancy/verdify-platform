@@ -1,0 +1,38 @@
+# Ingress for verdify-dashboard: deny by default, then admit only the traefik-apps Traefik pods to
+# the web pods on 3000. The host reaches the dashboard and nothing else. Egress is the vendored
+# egress-deny-management.yaml.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-from-traefik-apps
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-dashboard-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+              app.kubernetes.io/instance: traefik-apps-traefik-apps
+      ports:
+        - protocol: TCP
+          port: 3000

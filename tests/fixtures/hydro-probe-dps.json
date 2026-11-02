@@ -1,0 +1,52 @@
+{
+  "description": "YINMIK hydroponic meter status() data points (VD-70, #1183) and the climate columns ingestor/hydro_probe.py decodes them to. DPs per the meter's Tuya model: 1 tds_in (ppm), 2 temp_current (degC, scale 1), 7 battery_percentage, 10 ph (scale 2), 11 conductivity_value (mS/cm, scale 3, so raw = uS/cm), 12 orp_value (-1: no ORP probe on this SKU), 107 phmaxlimit (pH alarm limit, scale 2, a setting). Add the dict recorded from the meter at cutover as a new case.",
+  "cases": [
+    {
+      "name": "ha-calibration-note-2026-04-18",
+      "source": "jvallery/homeassistant packages/greenhouse/hydroponic_calibration.yaml: the raw values LocalTuya showed on 2026-04-18 (DP 11 2484, DP 10 621, DP 107 1400) against the YINMIK app's pH 6.22, TDS 1240 and EC 2480. HA's template corrections read them as pH 2484/400, TDS 621x2 and EC 1400x1.77.",
+      "dps": {"10": 621, "11": 2484, "12": -1, "107": 1400},
+      "expected": {"hydro_ph": 6.21, "hydro_ec_us_cm": 2484.0, "hydro_orp_mv": null},
+      "app_reading": {"hydro_ph": 6.22, "hydro_ec_ms_cm": 2.48}
+    },
+    {
+      "name": "full-model-status",
+      "source": "synthetic: every data point of the model, settings included, with the 2026-04-18 measurements",
+      "dps": {
+        "1": 1240,
+        "2": 236,
+        "7": 100,
+        "10": 621,
+        "11": 2484,
+        "12": -1,
+        "101": "AsiaStandard",
+        "102": false,
+        "103": true,
+        "104": true,
+        "105": 20,
+        "106": false,
+        "107": 1400,
+        "108": 0,
+        "109": 200000,
+        "110": 0,
+        "111": 1200,
+        "112": -1200,
+        "113": 248,
+        "114": 55
+      },
+      "expected": {
+        "hydro_ph": 6.21,
+        "hydro_ec_us_cm": 2484.0,
+        "hydro_tds_ppm": 1240.0,
+        "hydro_water_temp_f": 74.48,
+        "hydro_battery_pct": 100.0,
+        "hydro_orp_mv": null
+      }
+    },
+    {
+      "name": "partial-status",
+      "source": "synthetic: a status carrying only some measurements decodes those and leaves the rest unwritten",
+      "dps": {"2": 185, "10": 587, "12": -1},
+      "expected": {"hydro_water_temp_f": 65.3, "hydro_ph": 5.87, "hydro_orp_mv": null}
+    }
+  ]
+}

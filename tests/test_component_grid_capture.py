@@ -1100,6 +1100,7 @@ def test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth():
         "missing_sql",
         "caller_algorithm",
         "previous_source_algorithm",
+        "pre_zone_vpd_source_algorithm",
         "stale_sample",
         "arbitrary_sql",
         "changed_48",
@@ -1140,6 +1141,11 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
         # Retained source revision before the #367 dwell refresh stays historical.
         context["algorithm_revision"] = (
             "served-band-wire-v1:sha256:61f0a9fc80b6f4711af9c94d0dc557604620880185eccb521675ca01f78f0044"
+        )
+    elif mutation == "pre_zone_vpd_source_algorithm":
+        # Retained source revision before the VD-43 zone VPD fallback stays historical.
+        context["algorithm_revision"] = (
+            "served-band-wire-v1:sha256:568ed4c2c1c1a5f65f738f09bce473cce74ed17e3eb01e6f838102679e2db36a"
         )
     elif mutation == "stale_sample":
         context["sample_epoch_callback"]["value"] = str(int(OBSERVED_AT.timestamp()) - 31)

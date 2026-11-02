@@ -5,14 +5,15 @@ The Longmont greenhouse site constants — latitude 40.167, longitude -105.102,
 sunrise/sunset zenith 90.833 — are intentionally triplicated (contract:
 docs/design/firmware-v2-contract-2026-06-10.md §B1):
 
-  * ingestor/solar.py                                  — the editable SSOT
+  * verdify_schemas/solar.py                           — the editable SSOT
+                                                         (ingestor/solar.py re-exports it)
   * firmware/lib/greenhouse_solar.h                    — on-chip NOAA engine
   * db/migrations/186-noaa-solar-phase-parity.sql      — fn_solar_* helper bodies
   * db/schema.sql                                      — dumped fn_solar_* bodies
 
 This guard parses the numeric VALUES out of every surface (formatting-tolerant:
 40.167 == 40.167f == RADIANS(40.167)) and fails if any occurrence diverges from
-the canonical values in ingestor/solar.py. It is deliberately read-only: it
+the canonical values in verdify_schemas/solar.py. It is deliberately read-only: it
 never rewrites firmware or SQL sources.
 
 The SQL patterns scan ALL of db/migrations/*.sql, so a future migration that
@@ -35,10 +36,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-CANONICAL_REL = "ingestor/solar.py"
+CANONICAL_REL = "verdify_schemas/solar.py"
 TOLERANCE = 1e-6
 
-# constant key -> canonical assignment pattern in ingestor/solar.py
+# constant key -> canonical assignment pattern in verdify_schemas/solar.py
 _CANONICAL_PATTERNS = {
     "latitude": re.compile(r"^GREENHOUSE_LAT_DEG\s*=\s*(-?\d+(?:\.\d+)?)\s*$", re.M),
     "longitude": re.compile(r"^GREENHOUSE_LON_DEG\s*=\s*(-?\d+(?:\.\d+)?)\s*$", re.M),
@@ -174,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
         for err in errors:
             print(f"  {err}", file=sys.stderr)
         print(
-            "  fix: edit ingestor/solar.py (the SSOT) and update every mirrored surface "
+            "  fix: edit verdify_schemas/solar.py (the SSOT) and update every mirrored surface "
             "to the same values — see docs/design/firmware-v2-contract-2026-06-10.md §B1",
             file=sys.stderr,
         )

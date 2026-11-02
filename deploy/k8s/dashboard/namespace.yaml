@@ -1,0 +1,12 @@
+# The dashboard web tier only. Pod Security restricted, as deploy/k8s/overlays/prod/namespace.yaml:
+# no privileged pod, hostNetwork or hostPath. The name must equal the Application destination and the
+# target namespace of the agents KSOPS Secret verdify-dashboard-web.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verdify-dashboard
+  labels:
+    app.kubernetes.io/part-of: verdify
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted

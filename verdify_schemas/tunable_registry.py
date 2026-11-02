@@ -33,6 +33,7 @@ for the full roadmap.
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -95,6 +96,25 @@ class TunableDef(BaseModel):
             as fine as the ESPHome entity step, so every value the entity can
             hold round-trips exactly. Choice documented inline per field.
         wire_unit: human unit for the decoded value (ASCII); None for bool.
+        step: the grid the controller holds the value on (VD-29). For a number
+            with an entity in firmware/greenhouse/tunables.yaml (matched by
+            `esp_object_id`, as the fw_clamp guard matches it), that entity's
+            `step:`; 1.0 for a switch with an entity; for the 56 firmware-v2
+            staged rows, which the dispatcher pushes through `set_band_anchor`,
+            the `_round_for_push` quantum of ingestor/tasks/band_anchors.py;
+            None for a row with no entity. Equals `ENTITY_GRIDS[name].step` in
+            component_executor.py for the 48 policy fields (switches: 1.0).
+            `verdify_schemas.setting_values.snap()` rounds to it.
+        label: display name of the setting: the entity `name:` without its
+            unit (`split_entity_name`); for the staged rows, their `cfg_*`
+            readback `name:` in firmware/greenhouse/sensors.yaml without
+            `Cfg • ` and the unit; the registry name for a row with no entity.
+        unit: display unit split from that same name ("°F", "kPa", "s", ...),
+            or None when the name carries none. `wire_unit` stays the policy
+            wire's ASCII unit.
+        Nothing reads the firmware YAML at runtime: step, label and unit are
+        literals (`_ENTITY_STEPS`, `_ENTITY_NAMES`) or, for the staged rows,
+        derived from the row name, and drift-guarded like fw_clamp_lo/hi.
     """
 
     name: str
@@ -115,11 +135,22 @@ class TunableDef(BaseModel):
     wire_kind: Literal["u8", "u16", "i16", "u32", "bool", "enum"] | None = None
     wire_scale: int | None = None
     wire_unit: str | None = None
+    step: float | None = None
+    label: str | None = None
+    unit: str | None = None
 
     @property
     def control_class(
         self,
-    ) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+    ) -> Literal[
+        "planner_policy",
+        "crop_band",
+        "scheduled_policy",
+        "controller_safety",
+        "irrigation_site",
+        "readback_context",
+        "retired",
+    ]:
         """Canonical cleanup class used by planner/MCP/site surfaces."""
         return tunable_control_class(self.name, self)
 
@@ -839,6 +870,106 @@ REGISTRY: dict[str, TunableDef] = {
         notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
     ),
     # ─────────────────────────────────────────────────────────────────────
+    # VD-63: six live firmware tunables that had no row, so Settings could not
+    # list them and setpoint_snapshot rejected their readbacks. Shaped like
+    # sw_arbiter_zone_enabled: tier 2, never planner-pushable, no wire_id.
+    # Bounds and fw_clamp equal the tunables.yaml entity; defaults are the
+    # globals.yaml initial values. The ids are the object_ids the device
+    # reports: the entity or sensor name lower-cased, each character outside
+    # [a-z0-9_-] replaced by "_" (ESPHome keeps hyphens). No plan, band or
+    # default names these rows, so registering them pushes nothing.
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_hysteresis_kpa": TunableDef(
+        name="mister_hysteresis_kpa",
+        kind="numeric",
+        min=0.05,
+        max=0.50,
+        default=0.10,
+        fw_clamp_lo=0.05,
+        fw_clamp_hi=0.50,
+        esp_object_id="mister_hysteresis__kpa_",
+        cfg_readback_object_id="cfg___mister_hysteresis__kpa_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="IRR-2 mister VPD hysteresis floor, kPa. The mister state machine uses max(this, "
+        "mister_engage_kpa x 0.25), capped at the band width, so misting cannot chatter inside a "
+        "tight band. Its cfg_* readback ships with the engine release OTA; until then the native "
+        "number state is the readback.",
+    ),
+    "night_stress_min_dew_margin_f": TunableDef(
+        name="night_stress_min_dew_margin_f",
+        kind="numeric",
+        min=3.0,
+        max=15.0,
+        default=6.0,
+        fw_clamp_lo=3.0,
+        fw_clamp_hi=15.0,
+        esp_object_id="night_stress_min_dew_margin___f_",
+        cfg_readback_object_id="cfg___night_stress_min_dew_margin___f_",
+        push_owner="safety",
+        planner_pushable=False,
+        tier=2,
+        notes="BC-7 night wetting dew margin, °F. At night, wetting and fog need a temperature-dewpoint "
+        "spread of at least max(direct_wet_stress_min_dew_margin_f, this), so no crown condensation. "
+        "The default is the global's initial value (6.0); default_setpoints() in greenhouse_types.h "
+        "says 10.0, but the live global starts at 6.0.",
+    ),
+    "sw_night_econ_heat_suppress_enabled": TunableDef(
+        name="sw_night_econ_heat_suppress_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_econ_heat_suppress_enabled",
+        cfg_readback_object_id="cfg_night_econ_heat_suppress_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="ENV-2 night econ-heat suppression (default ON). Never heat to chase humidity at night: "
+        "the econ-rescue heat (heat1 lifting a low VPD) is suppressed for the whole solar night half; "
+        "safety heat is untouched.",
+    ),
+    "sw_wet_taper_enabled": TunableDef(
+        name="sw_wet_taper_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="wet_taper_enabled",
+        cfg_readback_object_id="cfg_wet_taper_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Wet taper master enable (default ON). Routine wetting stops wet_taper_before_sunset_min "
+        "before the on-chip sunset and stays off through the night half, so foliage dries before dark.",
+    ),
+    "sw_night_stress_wet_enabled": TunableDef(
+        name="sw_night_stress_wet_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_stress_wet_enabled",
+        cfg_readback_object_id="cfg_night_stress_wet_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Night stress wetting master enable (default ON). Lets the stress-wet rule fire at night "
+        "under the stricter night_stress_min_dew_margin_f; the mister machinery and SAF-4 caps bound the water.",
+    ),
+    # Read-only on purpose: no esp_object_id, so no route can push it and
+    # Settings shows it read-only with the reason in notes. Its readback
+    # (cfg_on-chip_band_enabled) still lands in setpoint_snapshot. Label set
+    # here because the row has no entity match (the switch name).
+    "sw_onchip_band_enabled": TunableDef(
+        name="sw_onchip_band_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id=None,
+        cfg_readback_object_id="cfg_on-chip_band_enabled",
+        push_owner="firmware_internal",
+        planner_pushable=False,
+        tier=2,
+        label="On-Chip Band Enabled",
+        notes="Decides which side owns the band. Off hands the band to the dispatcher's legacy wide "
+        "limits, which Settings shows read-only; band_device_db_divergence alerts when it is off.",
+    ),
+    # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
     # profile) + related scoring tunables. Tier=2: visible context, not
     # planner-writable unless promoted in a replay-backed contract PR.
@@ -1172,18 +1303,23 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Fog blocks when indoor temp below this (evap cooling hurts in cold).",
     ),
+    # RETIRED (VD-63): no firmware YAML has the fog_window_start__hr_ /
+    # fog_window_end__hr_ entities or their cfg_* readbacks, so both rows carry
+    # no route. They stay so the setpoint_changes history still validates;
+    # scripts/export-replay-overrides.sh reads only that history.
     "fog_time_window_start": TunableDef(
         name="fog_time_window_start",
         kind="numeric",
         min=5,
         max=12,
         default=6,
-        esp_object_id="fog_window_start__hr_",
-        cfg_readback_object_id="cfg___fog_window_start__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Start hour for fog eligibility window.",
+        notes="Retired: start hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     "fog_time_window_end": TunableDef(
         name="fog_time_window_end",
@@ -1191,12 +1327,13 @@ REGISTRY: dict[str, TunableDef] = {
         min=14,
         max=20,
         default=18,
-        esp_object_id="fog_window_end__hr_",
-        cfg_readback_object_id="cfg___fog_window_end__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="End hour for fog eligibility window.",
+        notes="Retired: end hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     # BC-11 (ADR0003 §6.7): the fog_stress_* clock-window tunables are RETIRED dead
     # registry rows — replaced by the solar-phase curve-only fog gate (no firmware
@@ -3335,6 +3472,66 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
     ),
+    # ─────────────────────────────────────────────────────────────────────
+    # Irrigation site values (VD-37, #1152; irrigation §4.1, architecture §5.3).
+    # Settings stored in desired_state (written through API-10 and MCP
+    # set_setting once those ship) and delivered to the controller only inside
+    # the irrigation program record (verdify_schemas.irrigation.compile_program,
+    # header bytes 4-7), so they have no esp_object_id and no cfg_* readback:
+    # the dispatcher never pushes them, and the program hash confirms them.
+    # control_class "irrigation_site" (IRRIGATION_SITE_PARAMS). With no routed
+    # entity, each row carries its own step, label and unit (today's SAF-4
+    # number, num_mister_daily_volume_max, has no route and is in
+    # RETIRING_TUNABLES).
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_daily_volume_max_gal": TunableDef(
+        name="mister_daily_volume_max_gal",
+        kind="numeric",
+        min=100.0,
+        max=600.0,
+        default=360.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=10.0,
+        label="SAF-4 ceiling",
+        unit="gal",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "sched_mist_rh_max_pct": TunableDef(
+        name="sched_mist_rh_max_pct",
+        kind="numeric",
+        min=75.0,
+        max=98.0,
+        default=90.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Scheduled-mist RH ceiling",
+        unit="%",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "climate_yield_min": TunableDef(
+        name="climate_yield_min",
+        kind="numeric",
+        min=5.0,
+        max=30.0,
+        default=15.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Climate yield",
+        unit="min",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
 }
 
 
@@ -3424,16 +3621,28 @@ _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
 def _esphome_wire_slug(display_name: str) -> str:
     """Apply ESPHome's exact per-character object-id normalization.
 
-    ESPHome lowercases the display name and replaces every non-ASCII
-    alphanumeric character independently.  It does not collapse or trim the
-    resulting underscores.  This is intentionally stricter than a web-style
+    ESPHome lowercases the display name and replaces every character outside
+    ``[a-z0-9_-]`` independently, so hyphens survive ("Cfg On-Chip Band
+    Enabled" is ``cfg_on-chip_band_enabled``).  It does not collapse or trim
+    the resulting underscores.  This is intentionally stricter than a web-style
     slugifier because ``Cfg • X (kPa)`` becomes ``cfg___x__kpa_`` on the API.
     """
-    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
+    return "".join(
+        char if (char.isascii() and char.isalnum()) or char in "-_" else "_" for char in display_name.lower()
+    )
 
 
-def _fw2_cfg_display_name(name: str) -> str:
-    """Return the firmware sensor ``name:`` for one staged readback."""
+# Words the firmware writes in capitals in the staged readback names
+# ("Cfg • Band VPD Low SR (kPa)"); every other word is capitalized.
+_FW2_UPPERCASE_WORDS = frozenset({"sr", "sm", "ss", "vpd"})
+
+
+def _fw2_label_unit(name: str) -> tuple[str, str | None]:
+    """Return the firmware display label and unit for one staged row.
+
+    These are the parts of its ``cfg_*`` readback ``name:`` in
+    firmware/greenhouse/sensors.yaml: ``Cfg • <label> (<unit>)``.
+    """
     unit: str | None = None
     stem = name
     if name.startswith("band_temp_"):
@@ -3443,8 +3652,29 @@ def _fw2_cfg_display_name(name: str) -> str:
     elif name in _FW2_WINDOW_PARAMS:
         stem = name.removesuffix("_min")
         unit = "min"
-    label = stem.replace("_", " ").title()
+    label = " ".join(word.upper() if word in _FW2_UPPERCASE_WORDS else word.capitalize() for word in stem.split("_"))
+    return label, unit
+
+
+def _fw2_cfg_display_name(name: str) -> str:
+    """Return the firmware sensor ``name:`` for one staged readback."""
+    label, unit = _fw2_label_unit(name)
     return f"Cfg • {label}" + (f" ({unit})" if unit else "")
+
+
+def _fw2_push_step(name: str) -> float:
+    """The ``_round_for_push`` quantum (ingestor/tasks/band_anchors.py) as a step.
+
+    The staged rows reach controller globals through the ``set_band_anchor``
+    service, not number entities, rounded to 0.1 °F for ``band_temp_*``, to
+    0.01 kPa for every ``*vpd*`` name and to whole units for the zone
+    priorities and the minute windows.
+    """
+    if name.startswith("band_temp_"):
+        return 0.1
+    if "vpd" in name:
+        return 0.01
+    return 1.0
 
 
 def _fw2_cfg_wire_id(name: str) -> str:
@@ -3453,6 +3683,7 @@ def _fw2_cfg_wire_id(name: str) -> str:
 
 
 def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> TunableDef:
+    label, unit = _fw2_label_unit(name)
     return TunableDef(
         name=name,
         kind="numeric",
@@ -3467,6 +3698,9 @@ def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> Tuna
         planner_pushable=False,
         tier=2,
         notes=f"firmware-v2 staged contract — {note}",
+        step=_fw2_push_step(name),
+        label=label,
+        unit=unit,
     )
 
 
@@ -3557,6 +3791,347 @@ for _name in _INERT_IRRIGATION_COMPAT_TUNABLES:
         }
     )
 
+# ── Step, label and unit from the firmware entities (VD-29) ──────────────────
+# One value grid, display name and unit per setting, from its entity in
+# firmware/greenhouse/tunables.yaml, matched by esp_object_id exactly as the
+# fw_clamp drift guard matches it. They are literals because no image carries
+# the firmware YAML; verdify_schemas/tests/test_tunable_registry.py fails when a
+# step, name or unit here drifts from its entity. The 56 staged rows take theirs
+# in _fw2_def (the four zone priorities also match a number entity with step 1
+# and the same name, so both sources agree). A switch with an entity holds 0 or
+# 1, so its step is 1.0. Every other row keeps step None, its registry name as
+# label and no unit.
+_BRACKETED_UNIT_RE = re.compile(r"^(?P<label>.*?\S)\s*\((?P<unit>[^()]+)\)$")
+_TRAILING_UNIT_RE = re.compile(r"^(?P<label>.*?\S)\s+(?P<unit>°F|kPa|%|F)$")
+
+
+def split_entity_name(name: str) -> tuple[str, str | None]:
+    """Split a firmware entity ``name:`` into its display label and unit.
+
+    The tunables.yaml entities carry no ``unit_of_measurement``; the name holds
+    the unit, as a final bracketed suffix ("Mister Engage Delay (s)", "Site
+    Pressure (hPa)") or a final "°F", "kPa", "%" or bare "F" word ("VPD Mister
+    Engage kPa"). An "F", bare or bracketed, is written "°F". A name with
+    neither keeps the whole name and no unit, as every switch does.
+    """
+    text = name.strip()
+    match = _BRACKETED_UNIT_RE.match(text) or _TRAILING_UNIT_RE.match(text)
+    if match is None:
+        return text, None
+    unit = match.group("unit").strip()
+    return match.group("label").strip(), "°F" if unit == "F" else unit
+
+
+# Number entity ``step:`` per registry row.
+_ENTITY_STEPS: dict[str, float] = {
+    "activity_duration_min": 15.0,
+    "activity_start_hour": 1.0,
+    "activity_start_minute": 1.0,
+    "band_track_fraction": 0.05,
+    "bias_cool": 0.5,
+    "bias_heat": 0.5,
+    "cold_vent_guard_delta_f": 0.5,
+    "cool_exit_hysteresis_f": 0.1,
+    "cool_stage2_exit_hysteresis_f": 0.1,
+    "cool_stage2_over_high_f": 0.1,
+    "d_cool_stage_2": 0.5,
+    "d_heat_stage_2": 0.5,
+    "dehum_aggressive_kpa": 0.05,
+    "direct_wet_center_drydown_before_off_min": 15.0,
+    "direct_wet_center_start_offset_min": 15.0,
+    "direct_wet_min_temp_f": 1.0,
+    "direct_wet_south_drydown_before_off_min": 15.0,
+    "direct_wet_south_start_offset_min": 15.0,
+    "direct_wet_stress_min_dew_margin_f": 0.5,
+    "direct_wet_stress_vpd_margin_kpa": 0.05,
+    "direct_wet_wall_drydown_before_off_min": 15.0,
+    "direct_wet_wall_start_offset_min": 15.0,
+    "direct_wet_west_drydown_before_off_min": 15.0,
+    "direct_wet_west_start_offset_min": 15.0,
+    "dwell_gate_ms": 30000.0,
+    "east_adjacency_factor": 0.1,
+    "econ_heat_margin_f": 0.5,
+    "enthalpy_close": 0.5,
+    "enthalpy_open": 0.5,
+    "fan_burst_min": 1.0,
+    "fog_burst_min": 1.0,
+    "fog_escalation_kpa": 0.1,
+    "fog_min_temp_f": 5.0,
+    "fog_rh_ceiling_pct": 1.0,
+    "gl_dli_target": 1.0,
+    "gl_grow_dli_target": 1.0,
+    "gl_grow_lux_hysteresis": 250.0,
+    "gl_grow_lux_threshold": 500.0,
+    "gl_grow_min_off_s": 30.0,
+    "gl_grow_min_on_s": 30.0,
+    "gl_grow_sunrise_hour": 1.0,
+    "gl_grow_sunrise_offset_min": 15.0,
+    "gl_grow_sunset_hour": 1.0,
+    "gl_grow_sunset_offset_min": 15.0,
+    "gl_grow_target_light_minutes": 15.0,
+    "gl_lux_hysteresis": 250.0,
+    "gl_lux_threshold": 500.0,
+    "gl_main_dli_target": 1.0,
+    "gl_main_lux_hysteresis": 250.0,
+    "gl_main_lux_threshold": 500.0,
+    "gl_main_min_off_s": 30.0,
+    "gl_main_min_on_s": 30.0,
+    "gl_main_sunrise_hour": 1.0,
+    "gl_main_sunrise_offset_min": 15.0,
+    "gl_main_sunset_hour": 1.0,
+    "gl_main_sunset_offset_min": 15.0,
+    "gl_main_target_light_minutes": 15.0,
+    "gl_sunrise_hour": 1.0,
+    "gl_sunset_hour": 1.0,
+    "heat_hysteresis": 0.1,
+    "irrig_center_duration_min": 1.0,
+    "irrig_vpd_boost_pct": 5.0,
+    "irrig_vpd_boost_threshold_hrs": 0.5,
+    "irrig_wall_duration_min": 1.0,
+    "lead_rotate_s": 30.0,
+    "max_relief_cycles": 1.0,
+    "min_fan_off_s": 10.0,
+    "min_fan_on_s": 10.0,
+    "min_fog_off_s": 15.0,
+    "min_fog_on_s": 15.0,
+    "min_heat_off_s": 10.0,
+    "min_heat_on_s": 10.0,
+    "min_vent_off_s": 10.0,
+    "min_vent_on_s": 10.0,
+    "mist_backoff_s": 60.0,
+    "mist_max_closed_vent_s": 60.0,
+    "mist_thermal_relief_s": 30.0,
+    "mist_vent_close_lead_s": 5.0,
+    "mist_vent_reopen_delay_s": 15.0,
+    "mister_all_delay_s": 30.0,
+    "mister_all_kpa": 0.05,
+    "mister_all_off_s": 30.0,
+    "mister_all_on_s": 30.0,
+    "mister_center_penalty": 0.1,
+    "mister_engage_delay_s": 30.0,
+    "mister_engage_kpa": 0.05,
+    "mister_hysteresis_kpa": 0.01,
+    "mister_max_runtime_min": 10.0,
+    "mister_min_off_s": 5.0,
+    "mister_off_s": 30.0,
+    "mister_on_s": 30.0,
+    "mister_pulse_gap_s": 5.0,
+    "mister_pulse_on_s": 5.0,
+    "mister_vpd_weight": 0.5,
+    "mister_water_budget_gal": 10.0,
+    "night_stress_min_dew_margin_f": 0.5,
+    "night_vpd_bias_kpa": 0.01,
+    "outdoor_staleness_max_s": 30.0,
+    "safety_max": 1.0,
+    "safety_max_seal_margin_f": 0.5,
+    "safety_min": 1.0,
+    "safety_vpd_max": 0.05,
+    "safety_vpd_min": 0.05,
+    "site_pressure_hpa": 1.0,
+    "summer_vent_min_runtime_s": 30.0,
+    "temp_high": 0.5,
+    "temp_hysteresis": 0.1,
+    "temp_low": 0.5,
+    "vent_bypass_min": 1.0,
+    "vent_exchange_fraction": 0.05,
+    "vent_latch_timeout_ms": 60000.0,
+    "vent_prefer_dp_delta_f": 0.5,
+    "vent_prefer_temp_delta_f": 0.5,
+    "vpd_high": 0.05,
+    "vpd_hysteresis": 0.05,
+    "vpd_low": 0.05,
+    "vpd_target_center": 0.05,
+    "vpd_target_east": 0.05,
+    "vpd_target_south": 0.05,
+    "vpd_target_west": 0.05,
+    "vpd_watch_dwell_s": 15.0,
+    "wall_commissioning_evidence_mask": 1.0,
+    "wall_commissioning_revision": 1.0,
+    "wall_commissioning_valid_until_epoch_s": 60.0,
+    "wall_feed_liters": 0.1,
+    "wall_flow_lpm": 0.1,
+    "wall_flow_valid_until_epoch_s": 60.0,
+    "wall_flush_liters": 0.1,
+    "wall_prewet_liters": 0.1,
+}
+
+# Number and switch entity ``name:`` per registry row; split_entity_name() of it
+# gives the row's label and unit.
+_ENTITY_NAMES: dict[str, str] = {
+    "activity_duration_min": "Activity Duration (min)",
+    "activity_start_hour": "Activity Start Hour",
+    "activity_start_minute": "Activity Start Min",
+    "band_track_fraction": "Band Track Fraction",
+    "bias_cool": "Bias Cool °F",
+    "bias_heat": "Bias Heat °F",
+    "cold_vent_guard_delta_f": "Cold Vent Guard Delta °F",
+    "cool_exit_hysteresis_f": "Cool Exit Hysteresis °F",
+    "cool_stage2_exit_hysteresis_f": "Cool Stage 2 Exit Hyst °F",
+    "cool_stage2_over_high_f": "Cool Stage 2 Over High °F",
+    "d_cool_stage_2": "Δ Cool Stage‑2 °F",
+    "d_heat_stage_2": "Δ Heat Stage‑2 °F",
+    "dehum_aggressive_kpa": "Dehum Aggressive kPa",
+    "direct_wet_center_drydown_before_off_min": "Direct Wet Center Drydown Before Off (min)",
+    "direct_wet_center_start_offset_min": "Direct Wet Center Start Offset (min)",
+    "direct_wet_min_temp_f": "Direct Wet Min Temp (F)",
+    "direct_wet_south_drydown_before_off_min": "Direct Wet South Drydown Before Off (min)",
+    "direct_wet_south_start_offset_min": "Direct Wet South Start Offset (min)",
+    "direct_wet_stress_min_dew_margin_f": "Direct Wet Stress Min Dew Margin F",
+    "direct_wet_stress_vpd_margin_kpa": "Direct Wet Stress VPD Margin kPa",
+    "direct_wet_wall_drydown_before_off_min": "Direct Wet Wall Drydown Before Off (min)",
+    "direct_wet_wall_start_offset_min": "Direct Wet Wall Start Offset (min)",
+    "direct_wet_west_drydown_before_off_min": "Direct Wet West Drydown Before Off (min)",
+    "direct_wet_west_start_offset_min": "Direct Wet West Start Offset (min)",
+    "dwell_gate_ms": "Dwell Gate (ms)",
+    "east_adjacency_factor": "East Adjacency Factor",
+    "econ_heat_margin_f": "Econ Heat Margin °F",
+    "enthalpy_close": "Enthalpy Close (kJ⁄kg)",
+    "enthalpy_open": "Enthalpy Open (kJ⁄kg)",
+    "fan_burst_min": "Fan Burst (min)",
+    "fog_burst_min": "Fog Burst (min)",
+    "fog_escalation_kpa": "Fog Escalation (kPa)",
+    "fog_min_temp_f": "Fog Min Temp (F)",
+    "fog_rh_ceiling_pct": "Fog RH Ceiling (%)",
+    "gl_dli_target": "GL DLI Target (mol)",
+    "gl_grow_dli_target": "GL Grow DLI Target",
+    "gl_grow_lux_hysteresis": "GL Grow Lux Hysteresis",
+    "gl_grow_lux_threshold": "GL Grow Lux Threshold",
+    "gl_grow_min_off_s": "GL Grow Min Off S",
+    "gl_grow_min_on_s": "GL Grow Min On S",
+    "gl_grow_sunrise_hour": "GL Grow Sunrise Hour",
+    "gl_grow_sunrise_offset_min": "GL Grow Sunrise Offset Min",
+    "gl_grow_sunset_hour": "GL Grow Sunset Hour",
+    "gl_grow_sunset_offset_min": "GL Grow Sunset Offset Min",
+    "gl_grow_target_light_minutes": "GL Grow Target Light Minutes",
+    "gl_lux_hysteresis": "GL Lux Hysteresis",
+    "gl_lux_threshold": "GL Lux Threshold",
+    "gl_main_dli_target": "GL Main DLI Target",
+    "gl_main_lux_hysteresis": "GL Main Lux Hysteresis",
+    "gl_main_lux_threshold": "GL Main Lux Threshold",
+    "gl_main_min_off_s": "GL Main Min Off S",
+    "gl_main_min_on_s": "GL Main Min On S",
+    "gl_main_sunrise_hour": "GL Main Sunrise Hour",
+    "gl_main_sunrise_offset_min": "GL Main Sunrise Offset Min",
+    "gl_main_sunset_hour": "GL Main Sunset Hour",
+    "gl_main_sunset_offset_min": "GL Main Sunset Offset Min",
+    "gl_main_target_light_minutes": "GL Main Target Light Minutes",
+    "gl_sunrise_hour": "GL Start Hour",
+    "gl_sunset_hour": "GL Cutoff Hour",
+    "heat_hysteresis": "Heat Hysteresis °F",
+    "irrig_center_duration_min": "Irrig Center Duration (min)",
+    "irrig_vpd_boost_pct": "Irrig VPD Boost %",
+    "irrig_vpd_boost_threshold_hrs": "Irrig VPD Boost Threshold (hrs)",
+    "irrig_wall_duration_min": "Irrig Wall Duration (min)",
+    "lead_rotate_s": "Lead Rotate (s)",
+    "max_relief_cycles": "Max Relief Cycles",
+    "min_fan_off_s": "Min Fan OFF (s)",
+    "min_fan_on_s": "Min Fan ON (s)",
+    "min_fog_off_s": "Min Fog OFF (s)",
+    "min_fog_on_s": "Min Fog ON (s)",
+    "min_heat_off_s": "Min Heat OFF (s)",
+    "min_heat_on_s": "Min Heat ON (s)",
+    "min_vent_off_s": "Min Vent OFF (s)",
+    "min_vent_on_s": "Min Vent ON (s)",
+    "mist_backoff_s": "Mist Backoff (s)",
+    "mist_max_closed_vent_s": "Mist Max Closed Vent (s)",
+    "mist_thermal_relief_s": "Mist Thermal Relief (s)",
+    "mist_vent_close_lead_s": "Mist Vent Close Lead (s)",
+    "mist_vent_reopen_delay_s": "Mist Vent Reopen Delay (s)",
+    "mister_all_delay_s": "Mister All Delay (s)",
+    "mister_all_kpa": "VPD Mister All kPa",
+    "mister_all_off_s": "Mister All OFF (s)",
+    "mister_all_on_s": "Mister All ON (s)",
+    "mister_center_penalty": "Mister Center Penalty",
+    "mister_engage_delay_s": "Mister Engage Delay (s)",
+    "mister_engage_kpa": "VPD Mister Engage kPa",
+    "mister_hysteresis_kpa": "Mister Hysteresis (kPa)",
+    "mister_max_runtime_min": "Mister Max Runtime (min)",
+    "mister_min_off_s": "Mister Min Off (s)",
+    "mister_off_s": "Mister OFF (s)",
+    "mister_on_s": "Mister ON (s)",
+    "mister_pulse_gap_s": "Mister Pulse Gap (s)",
+    "mister_pulse_on_s": "Mister Pulse ON (s)",
+    "mister_vpd_weight": "Mister VPD Weight",
+    "mister_water_budget_gal": "Mister Water Budget (gal)",
+    "night_stress_min_dew_margin_f": "Night Stress Min Dew Margin (°F)",
+    "night_vpd_bias_kpa": "Night VPD Bias kPa",
+    "outdoor_staleness_max_s": "Outdoor Staleness Max (s)",
+    "safety_max": "Safety Max °F",
+    "safety_max_seal_margin_f": "Safety Seal Margin °F",
+    "safety_min": "Safety Min °F",
+    "safety_vpd_max": "Safety VPD Max kPa",
+    "safety_vpd_min": "Safety VPD Min kPa",
+    "site_pressure_hpa": "Site Pressure (hPa)",
+    "summer_vent_min_runtime_s": "Summer Vent Min Runtime (s)",
+    "sw_arbiter_zone_enabled": "Arbiter Zone Enabled",
+    "sw_cool_all_fans_at_high_enabled": "Cool All Fans At High",
+    "sw_dehum_vent_hold_enabled": "Dehum Vent Hold Enabled",
+    "sw_direct_wet_gate_enabled": "Direct Wet Gate Enabled",
+    "sw_direct_wet_stress_override_enabled": "Direct Wet Stress Override Enabled",
+    "sw_dwell_gate_enabled": "Dwell Gate Enabled",
+    "sw_economiser_enabled": "Economiser Enabled",
+    "sw_fog_closes_vent": "Fog Closes Vent",
+    "sw_fsm_controller_enabled": "FSM Controller Enabled",
+    "sw_gl_auto_mode": "GL Auto Mode",
+    "sw_gl_grow_auto_mode": "GL Grow Auto Mode",
+    "sw_gl_grow_out_of_service": "GL Grow Out Of Service",
+    "sw_gl_grow_solar_phasing": "GL Grow Solar Phasing",
+    "sw_gl_main_auto_mode": "GL Main Auto Mode",
+    "sw_gl_main_out_of_service": "GL Main Out Of Service",
+    "sw_gl_main_solar_phasing": "GL Main Solar Phasing",
+    "sw_irrig_center_enabled": "Irrigation Center Enabled",
+    "sw_irrig_enabled": "Irrigation Enabled",
+    "sw_irrig_south_enabled": "Irrigation South Enabled",
+    "sw_irrig_wall_enabled": "Irrigation Wall Enabled",
+    "sw_irrig_west_enabled": "Irrigation West Enabled",
+    "sw_irrigation_center_enabled": "Irrigation Center Enabled",
+    "sw_irrigation_enabled": "Irrigation Enabled",
+    "sw_irrigation_wall_enabled": "Irrigation Wall Enabled",
+    "sw_irrigation_weather_skip": "Irrigation Weather Skip",
+    "sw_mister_closes_vent": "Mister Closes Vent",
+    "sw_night_econ_heat_suppress_enabled": "Night Econ Heat Suppress Enabled",
+    "sw_night_stress_wet_enabled": "Night Stress Wet Enabled",
+    "sw_occupancy_inhibit": "Occupancy Mist Inhibit",
+    "sw_summer_vent_enabled": "Summer Vent Enabled",
+    "sw_wall_fertigation_commissioned": "Wall Fertigation Commissioned",
+    "sw_wet_taper_enabled": "Wet Taper Enabled",
+    "temp_high": "Set Temp High °F",
+    "temp_hysteresis": "Temp Hysteresis °F",
+    "temp_low": "Set Temp Low °F",
+    "vent_bypass_min": "Vent Bypass (min)",
+    "vent_exchange_fraction": "Vent Exchange Fraction",
+    "vent_latch_timeout_ms": "Vent Latch Timeout (ms)",
+    "vent_prefer_dp_delta_f": "Vent Prefer DP Delta (F)",
+    "vent_prefer_temp_delta_f": "Vent Prefer Temp Delta (F)",
+    "vpd_high": "Set VPD High kPa",
+    "vpd_hysteresis": "VPD Hysteresis kPa",
+    "vpd_low": "Set VPD Low kPa",
+    "vpd_target_center": "VPD Target Center (kPa)",
+    "vpd_target_east": "VPD Target East (kPa)",
+    "vpd_target_south": "VPD Target South (kPa)",
+    "vpd_target_west": "VPD Target West (kPa)",
+    "vpd_watch_dwell_s": "VPD Watch Dwell (s)",
+    "wall_commissioning_evidence_mask": "Wall Commissioning Evidence Mask",
+    "wall_commissioning_revision": "Wall Commissioning Revision",
+    "wall_commissioning_valid_until_epoch_s": "Wall Commissioning Valid Until Epoch S",
+    "wall_feed_liters": "Wall Feed Liters",
+    "wall_flow_lpm": "Wall Calibrated Flow LPM",
+    "wall_flow_valid_until_epoch_s": "Wall Flow Valid Until Epoch S",
+    "wall_flush_liters": "Wall Flush Liters",
+    "wall_prewet_liters": "Wall Prewet Liters",
+}
+
+assert set(_ENTITY_STEPS) <= set(_ENTITY_NAMES), "every _ENTITY_STEPS row needs its entity name"
+assert set(_ENTITY_NAMES) <= set(REGISTRY), f"unknown _ENTITY_NAMES rows: {sorted(set(_ENTITY_NAMES) - set(REGISTRY))}"
+
+for _name, _spec in list(REGISTRY.items()):
+    if _name in _ENTITY_NAMES:
+        _label, _unit = split_entity_name(_ENTITY_NAMES[_name])
+        _step = 1.0 if _spec.kind == "switch" else _ENTITY_STEPS[_name]
+        REGISTRY[_name] = _spec.model_copy(update={"step": float(_step), "label": _label, "unit": _unit})
+    elif _spec.label is None:
+        REGISTRY[_name] = _spec.model_copy(update={"label": _name})
+
 FIRMWARE_V2_STAGED_REG: frozenset[str] = frozenset(_FW2_STAGED_DEFS)
 FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
     name: _FW2_STAGED_DEFS[name].cfg_readback_object_id for name in sorted(FIRMWARE_V2_STAGED_REG)
@@ -3578,6 +4153,9 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "direct_wet_stress_latest_hour",
         "fan_burst_min",
         "fog_burst_min",
+        # VD-63: no firmware entity or readback; the rows carry no route.
+        "fog_time_window_end",
+        "fog_time_window_start",
         "mist_vent_close_lead_s",
         "mist_vent_reopen_delay_s",
         "mister_all_off_s",
@@ -3592,10 +4170,69 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
     }
 )
 
+# tunables.yaml number and switch entity ids (ESPHome ``id:``) that the
+# irrigation engine release removes (irrigation design §5, F12 and F13). The
+# catalog drift test (verdify_schemas/tests/test_tunable_registry.py) accepts
+# an entity listed here even when no REGISTRY row covers it, as for
+# num_post_feed_hold_min (num_mister_daily_volume_max's global is also the
+# program-bound irrigation_site row of that name). #1162 deletes these
+# entities and shrinks the set to the L01 bridge's; the follow-up that ships
+# once the engine firmware is last-good empties it.
+RETIRING_TUNABLES: frozenset[str] = frozenset(
+    {
+        # F12: the HA burst numbers, replaced by manual_override
+        "num_fan_burst",
+        "num_vent_bypass",
+        "num_fog_burst",
+        # F11/F13: caps the irrigation program carries
+        "num_mister_max_runtime",
+        "num_mister_daily_volume_max",
+        # F13: legacy irrigation numbers
+        "num_irrig_wall_duration",
+        "num_irrig_center_duration",
+        "num_irrig_vpd_boost_pct",
+        "num_irrig_vpd_boost_threshold",
+        # F13: weekly wall-feed commissioning numbers and the post-feed hold
+        "num_wall_commissioning_revision",
+        "num_wall_commissioning_evidence_mask",
+        "num_wall_commissioning_valid_until",
+        "num_wall_flow_lpm",
+        "num_wall_flow_valid_until",
+        "num_wall_prewet_liters",
+        "num_wall_feed_liters",
+        "num_wall_flush_liters",
+        "num_post_feed_hold_min",
+        # F13: legacy irrigation switches
+        "sw_irrig_enabled",
+        "sw_irrig_wall_enabled",
+        "sw_irrig_center_enabled",
+        "sw_irrig_south_enabled",
+        "sw_irrig_west_enabled",
+        "sw_irrig_weather_skip",
+        "sw_wall_fertigation_commissioned",
+    }
+)
+
+# The three irrigation site values (VD-37, #1152): settings with no firmware
+# entity that reach the controller only inside the irrigation program record,
+# so the dispatcher never pushes them and the program hash confirms them
+# (irrigation §4.1, architecture §5.3 step 1).
+IRRIGATION_SITE_PARAMS: frozenset[str] = frozenset(
+    {"mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"}
+)
+
 
 def tunable_control_class(
     name: str, spec: TunableDef
-) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+) -> Literal[
+    "planner_policy",
+    "crop_band",
+    "scheduled_policy",
+    "controller_safety",
+    "irrigation_site",
+    "readback_context",
+    "retired",
+]:
     """Classify a tunable for the cleanup contract.
 
     This is the single policy split used by MCP, planner context, and the
@@ -3620,9 +4257,16 @@ def tunable_control_class(
     Kept deliberately distinct from `crop_band` so the schedule layer does not
     leak into `CROP_BAND_REG`/`BAND_OWNED_REG` (which the dispatcher and the
     HTTP/setpoint-server fallbacks treat as the crop temp/VPD band surface).
+
+    `irrigation_site` is the three `IRRIGATION_SITE_PARAMS`: writable settings
+    with no entity, delivered inside the irrigation program rather than pushed
+    by the dispatcher. They are tested before the `esp_object_id is None` rule,
+    which would otherwise call them read-only context.
     """
     if name in RETIRED_TUNABLES_REG:
         return "retired"
+    if name in IRRIGATION_SITE_PARAMS:
+        return "irrigation_site"
     if spec.esp_object_id is None or spec.push_owner == "firmware_internal":
         return "readback_context"
     if spec.planner_pushable:

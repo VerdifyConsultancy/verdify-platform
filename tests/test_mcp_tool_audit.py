@@ -8,6 +8,11 @@ import pytest
 from test_mcp_audience_auth import mcp_server as mcp_server
 
 
+@pytest.fixture(autouse=True)
+def no_agent_keys(monkeypatch, tmp_path):
+    monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(tmp_path / "no-agent-keys"))
+
+
 def setup(monkeypatch, server):
     monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "enforce")
     monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", "private-audit-fixture-token")
@@ -43,6 +48,8 @@ def test_one_completed_event_without_arguments_credentials_or_forged_ip(
     assert len(rows) == 1
     row = rows[0]
     assert row["audience"] == "iris" and row["tool"] == tool
+    # VD-59: the R4 actor source, never a credential.
+    assert row["actor"] == "iris"
     assert row["capability"] == capability and row["result"] == "completed"
     assert row["peer_ip"] == "10.42.1.2" and row["client_ip_source"] == "transport_peer"
     assert row["duration_ms"] >= 0

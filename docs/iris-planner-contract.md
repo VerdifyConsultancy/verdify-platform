@@ -143,11 +143,31 @@ server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
   treatment-revealing reads (`get_setpoints`, `plan_status`, `history`,
   scorecards, lessons) and all ordinary writes denied.
   `policy_template_propose` joins this audience in Lane C/D tranche 2.
+- `agent` — named in-cluster agents (VD-59; architecture §5.6 holds the
+  table): `climate`, `forecast`, `equipment_state`, `history`, `plan_status`,
+  `get_setpoints`, `scorecard`, `topology`, `position_current` and `alerts`;
+  `settings`, `activity`, `set_setting` and the irrigation tools join as they
+  land. Never the planner, lessons, crop or Slack writers. Each agent's key is
+  one entry of Secret `verdify-mcp-agents` (never an environment variable:
+  `VERDIFY_MCP_TOKEN_AGENT` stays unrecognized), mounted read-only and re-read
+  at most every 60 s, so adding or removing a key admits or refuses that agent
+  with no restart. Agents reach MCP in-cluster from a pod labelled
+  `verdify.ai/mcp-agent: "true"` (NetworkPolicy `allow-mcp-from-named-agents`).
 - `admin` — operator/debug credential; all tools.
+- `observer` — protocol-only availability probe; no tools.
+
+Every tool call publishes its caller as the request actor (`current_actor()`):
+`iris` → source `iris`, an agent → `agent:<name>`, `admin` → `agent:admin`;
+`experiment`, `observer` and an unresolved caller have none. Tools take the
+actor only from it, never from arguments: `alerts` records acknowledgements and
+resolutions as the caller and ignores `acknowledged_by` and `resolved_by` in
+`data`, and refuses them when no caller resolved. The `mcp_tool_call` audit
+line carries the same `actor` source.
 
 Config: `VERDIFY_MCP_TOKEN_IRIS` / `VERDIFY_MCP_TOKEN_EXPERIMENT` /
 `VERDIFY_MCP_TOKEN_ADMIN` on the MCP server (the iris value is the same secret
-hermes-config sends as `${VERDIFY_MCP_TOKEN}`), and
+hermes-config sends as `${VERDIFY_MCP_TOKEN}`), the agent key directory
+`VERDIFY_MCP_AGENT_KEYS_DIR` (default `/etc/verdify/mcp-agents`), and
 `VERDIFY_MCP_AUTH_MODE=off|log|enforce` (default `enforce`). Modes and required
 rollout order:
 
@@ -167,7 +187,12 @@ and the names of duplicate, invalid, or unrecognized token environment
 variables (never values), plus `auth_misconfigured`. Any such configuration
 error reports not-ready. In `enforce`, the active `iris` audience is required;
 `admin` alone is not sufficient, while `experiment` remains optional until its
-dark-launch credential is deliberately enabled.
+dark-launch credential is deliberately enabled. It also lists the named agents
+(`auth_agents_configured`) and the rejected agent key names
+(`auth_agent_keys_rejected`: a bad name, the reserved `admin`, a malformed
+token, a token shared by two agents or equal to an environment token); agent
+keys never change readiness, so one bad key cannot take Iris's tool surface out
+of service.
 
 ### D. MCP server → TimescaleDB
 
