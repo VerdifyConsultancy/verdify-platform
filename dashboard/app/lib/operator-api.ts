@@ -1,0 +1,501 @@
+// SPDX-License-Identifier: MIT
+/**
+ * The operator API client (VD-02). Types come only from the generated file, which `pnpm contract:write` renders from
+ * docs/design/dashboard/openapi/dashboard-api.v1.yaml (canonical, R1); nobody edits it by hand. Parsing is lenient
+ * like weather's: each parser drops fields it does not know, keeps `null` as `null` (never 0), maps an enum value
+ * newer than this client to `unknown` (or to the safe value where the UI acts on it: a role reads viewer, a band
+ * verdict unavailable), keeps a code the words table shows as its raw string, and returns `null` when a field the UI
+ * reads is missing or mistyped. Every call is a same-origin browser fetch to `/api/v1/...`, which the BFF proxies to
+ * the operator API's `/v1/...`. A write carries one `Idempotency-Key` and is sent once, never retried; a 401 raises
+ * `SessionEnded` for the shell. Registry bounds and snapping stay on the server.
+ */
+import { z } from "zod";
+import type { components, operations, paths } from "../generated/operator-api";
+// Zod's eval-capability probe violates a strict browser CSP; configure before building schemas.
+z.config({ jitless: true });
+
+type Schemas = components["schemas"];
+type OperationId = keyof operations;
+type Json<K extends OperationId, S extends keyof operations[K]["responses"]> = operations[K]["responses"][S] extends { content: { "application/json": infer T } } ? T : never;
+
+/**
+ * A generated type as the parsers return it. Every string enum also admits a code newer than this client, which the
+ * words table shows raw, and a numeric enum or constant reads as a number. Never narrower than what a parser returns.
+ */
+export type Lenient<T> = unknown extends T ? T
+  : T extends string ? (string extends T ? string : T | (string & {}))
+  : T extends number ? number
+  : T extends boolean | null | undefined ? T
+  : T extends readonly (infer U)[] ? readonly Lenient<U>[]
+  : { readonly [K in keyof T]: Lenient<T[K]> };
+
+export type Actor = Lenient<Schemas["Actor"]>;
+export type Reading = Lenient<Schemas["Reading"]>;
+export type Freshness = Lenient<Schemas["Freshness"]>;
+export type Leak = Lenient<Schemas["Leak"]>;
+export type Occupancy = Lenient<Schemas["Occupancy"]>;
+export type Problem = Lenient<Schemas["Problem"]>;
+export type ReadbackState = Lenient<Schemas["ReadbackState"]>;
+export type StateReason = Lenient<Schemas["StateReason"]>;
+export type DesiredSetting = Lenient<Schemas["DesiredSetting"]>;
+export type Me = Lenient<Schemas["Me"]>;
+export type Now = Lenient<Schemas["Now"]>;
+export type MetricDef = Lenient<Schemas["MetricDef"]>;
+export type Metrics = Lenient<Json<"API-03", 200>>;
+export type Series = Lenient<Schemas["Series"]>;
+export type SeriesColumns = Lenient<Schemas["SeriesColumns"]>;
+export type StateLanes = Lenient<Schemas["StateLanes"]>;
+export type BandTimeline = Lenient<Schemas["BandTimeline"]>;
+export type Plan = Lenient<Schemas["Plan"]>;
+export type PlanLane = Lenient<Schemas["PlanLane"]>;
+export type PlanWaypoint = Lenient<Schemas["PlanWaypoint"]>;
+export type PlannerTrigger = Lenient<Schemas["PlannerTrigger"]>;
+export type Settings = Lenient<Json<"API-09", 200>>;
+export type Setting = Lenient<Schemas["Setting"]>;
+export type SettingHistory = Lenient<Schemas["SettingHistory"]>;
+export type Equipment = Lenient<Schemas["Equipment"]>;
+export type AlertPage = Lenient<Schemas["AlertPage"]>;
+export type Alert = Lenient<Schemas["Alert"]>;
+export type ActivityPage = Lenient<Schemas["ActivityPage"]>;
+export type ActivityEntry = Lenient<Schemas["ActivityEntry"]>;
+export type BandPreview = Lenient<Schemas["BandPreview"]>;
+export type LightCommand = Lenient<Schemas["LightCommand"]>;
+export type WaterUse = Lenient<Schemas["WaterUse"]>;
+export type IrrigationStatus = Lenient<Schemas["IrrigationStatus"]>;
+export type IrrigationLine = Lenient<Schemas["IrrigationLine"]>;
+export type LineState = Lenient<Schemas["LineState"]>;
+export type ScheduleAgenda = Lenient<Schemas["ScheduleAgenda"]>;
+export type Schedule = Lenient<Schemas["Schedule"]>;
+export type Occurrence = Lenient<Schemas["Occurrence"]>;
+export type Command = Lenient<Schemas["Command"]>;
+export type LinesUpdated = Lenient<Json<"API-IRR-08", 200>>;
+export type MinutesReport = Lenient<Schemas["MinutesReport"]>;
+export type RunPage = Lenient<Schemas["RunPage"]>;
+export type Run = Lenient<Schemas["Run"]>;
+export type SessionToken = Lenient<Schemas["SessionToken"]>;
+export type Readiness = Lenient<Schemas["Readiness"]>;
+export type Health = Lenient<Json<"OPS-01", 200>>;
+
+// ---------------------------------------------------------------------------------------------------- field parsers
+const text = z.string();
+const num = z.number();
+const int = z.number().int();
+const flag = z.boolean();
+/** An optional field that may be null: absent reads null. */
+const maybe = <T extends z.ZodType>(schema: T) => schema.nullable().default(null);
+/** A code the words table words (design system §1 rule 3): a code newer than this client stays raw. */
+const code = z.string();
+const record = z.record(z.string(), z.unknown());
+/** Every value of a generated string enum; tsc fails when the contract adds one this list lacks. */
+const members = <T extends string>() => <const V extends readonly [T, ...T[]]>(values: V & ([Exclude<T, V[number]>] extends [never] ? unknown : never)) => values;
+/** An enum the UI acts on: a value newer than this client reads `fallback`. A missing or non-string value fails. */
+function choice<const V extends readonly [string, ...string[]]>(values: V, fallback: V[number]) {
+  const known = new Set<string>(values);
+  return z.string().transform((value) => (known.has(value) ? value : fallback) as V[number]);
+}
+export const CAUSES = members<Schemas["IrrigationCause"]>()(["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]);
+export const OUTCOMES = members<Schemas["RunOutcome"]>()(["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "unknown"]);
+export const LINE_STATES = members<Schemas["LineState"]["code"]>()(["idle", "running", "waiting", "blocked", "paused", "disabled", "unknown"]);
+export const RELAY_STATES = members<Schemas["Equipment"]["items"][number]["state"]>()(["on", "off", "unknown"]);
+export const ROLES = members<Schemas["Me"]["role"]>()(["operator", "viewer"]);
+export const VERDICTS = members<Schemas["BandPosition"]["verdict"]>()(["in", "above", "below", "unavailable"]);
+const cause = choice(CAUSES, "unknown");
+const outcome = choice(OUTCOMES, "unknown");
+const relay = choice(RELAY_STATES, "unknown");
+const nullableNumbers = z.array(num.nullable());
+
+// ---------------------------------------------------------------------------------------------------- schemas
+const actor = z.object({ source: text, name: text });
+const reading = z.object({ value: num.nullable(), observed_at: text.nullable(), reason: maybe(text) });
+const freshness = z.object({ observed_at: text.nullable(), age_s: int.nullable(), cadence_s: int.optional(), stale: flag });
+const timedValue = z.object({ at: text, value: num.nullable() });
+const leak = z.object({
+  active: flag.nullable(), since: maybe(text), flow_gpm: maybe(num), gal_last_10min: maybe(int), alert_id: int.nullable(), stopped_at: text.nullable(),
+});
+const occupancy = z.object({ occupied: flag.nullable(), seen_at: text.nullable(), hold_enabled: maybe(flag) });
+const stateReason = z.object({ code, detail: maybe(text), applied_value: maybe(num), since: maybe(text) });
+const desiredSetting = z.object({
+  id: int, param: text, value: num.nullable(), snapped_from: maybe(num), manual: flag, manual_before: maybe(flag), state: code,
+  state_reason: maybe(stateReason), confirmed_at: maybe(text), actor, reason: maybe(text), created_at: text,
+});
+const problem = z.object({
+  type: text.default("about:blank"), title: text, status: int, detail: text.optional(), code, retryable: flag, field: text.optional(),
+  min: maybe(num), max: maybe(num), current: maybe(z.union([num, text, flag])), retry_after_s: maybe(int), result: code.optional(),
+  request_id: text.optional(),
+});
+const page = { next_cursor: text.nullable() };
+
+const me = z.object({ username: text, display_name: maybe(text), role: choice(ROLES, "viewer"), writes_enabled: flag, source_revision: text });
+const sessionToken = z.object({ token: text, expires_at: text });
+const readiness = z.object({ status: code, source_revision: text, operator_api: code.optional(), authentik: code.optional() });
+const health = z.object({ status: code.optional() });
+
+const bandPosition = z.object({ low: num.nullable(), high: num.nullable(), verdict: choice(VERDICTS, "unavailable") });
+const controller = z.object({
+  firmware_version: maybe(text), uptime_s: maybe(int), reset_reason: maybe(text), heap_free_kb: maybe(num), heap_largest_block_kb: maybe(num),
+  rssi_dbm: maybe(num), observed_at: maybe(text),
+});
+const now = z.object({
+  server_time: text,
+  indoor: z.object({ temp_f: reading, rh_pct: reading, vpd_kpa: reading }),
+  outdoor: z.object({ temp_f: reading, rh_pct: reading }),
+  band: z.object({ temp_f: bandPosition, vpd_kpa: bandPosition, rh_pct: bandPosition.nullable(), observed_at: maybe(text) }),
+  mode: z.object({ code: text, stage: maybe(text), reason: maybe(text), since: maybe(text) }),
+  iris: z.object({ plan_id: text.nullable(), trigger: maybe(text), valid_until: maybe(text), required_trigger: code }),
+  alerts: z.object({ open: int, critical: int, warning: int, info: int }),
+  running: z.array(z.object({ equipment: text, line_id: maybe(text), cause: maybe(cause), since: text.nullable() })),
+  overrides: z.array(z.object({ kind: code, since: text, ends_at: text.nullable(), held_reason: maybe(text) })),
+  leak,
+  freshness: z.object({ climate: freshness, diagnostics: freshness, readback: freshness, ingestor: freshness }),
+  writer: z.object({ last_at: maybe(text), age_s: int.nullable(), stuck: flag, differing: int, oldest_since: maybe(text) }),
+  controller: controller.optional(),
+});
+
+const metricDef = z.object({
+  key: text, label: text, group: text, unit: text, cadence_s: int, retention_days: int, provenance: code, zone: maybe(text), daily: flag,
+  note: maybe(text),
+});
+const metrics = z.object({ items: z.array(metricDef) });
+const seriesColumns = z.object({
+  avg: nullableNumbers, min: nullableNumbers, max: nullableNumbers, count: z.array(int), source: code, retained_from: maybe(text),
+  reason: z.array(text.nullable()).optional(), issued_at: maybe(text),
+});
+const series = z.object({
+  from: text, to: text, bucket_s: int, t: z.array(int), series: z.record(z.string(), seriesColumns), watermark: text.nullable(), server_time: text,
+  gaps: z.array(z.object({ start: text, end: text, reason: text.nullable() })).default([]),
+});
+const stateLanes = z.object({
+  from: text, to: text,
+  lanes: z.array(z.object({
+    equipment: text, label: text.optional(), group: code, line_id: maybe(text),
+    intervals: z.array(z.object({ start: text, end: text, state: relay, cause: maybe(cause) })),
+  })),
+});
+const bandColumns = z.object({ temp_low: nullableNumbers, temp_high: nullableNumbers, vpd_low: nullableNumbers, vpd_high: nullableNumbers });
+const bandTimeline = z.object({ from: text, to: text, step_s: int, t: z.array(int), band: bandColumns, crop: bandColumns });
+const bandCurve = z.object({ low: nullableNumbers, target: nullableNumbers, high: nullableNumbers });
+const bandPreview = z.object({ param: text, unit: text, day: text, step_s: int, t: z.array(int), current: bandCurve, draft: bandCurve });
+
+const planRecord = z.object({
+  plan_id: text, trigger: text, written_at: text, valid_from: maybe(text), valid_until: maybe(text), status: maybe(text), hypothesis: maybe(text),
+  experiment: maybe(text), expected_outcome: maybe(text), conditions_summary: maybe(text), outcome_score: maybe(num), lesson: maybe(text),
+  detail: record.optional(),
+});
+const plannerTrigger = z.object({
+  trigger: text, required: flag, expected_at: text, due_at: text, outcome: code, resolved_at: maybe(text), failure_class: maybe(text),
+});
+const planWaypoint = z.object({ at: text, value: num.nullable(), source: code, effective: flag });
+const planLane = z.object({
+  param: text, label: text, unit: maybe(text), device: reading, waypoints: z.array(planWaypoint), desired: desiredSetting.nullable(), applied_from: code,
+});
+const plan = z.object({
+  plan: planRecord.nullable(), no_plan_since: maybe(text), lanes: z.array(planLane), manual_count: int, health: z.array(plannerTrigger),
+});
+const setting = z.object({
+  param: text, label: text, control_class: code, group: code, kind: code, unit: maybe(text), min: maybe(num), max: maybe(num), step: maybe(num),
+  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text), readback_via: code,
+  readback: reading.nullable(), desired: desiredSetting.nullable(),
+  plan: z.object({ value: num.nullable(), plan_id: text, source: code, written_at: text, next: planWaypoint.nullable() }).nullable(),
+  applied_from: code, state: code,
+});
+const settings = z.object({ items: z.array(setting), server_time: text });
+const settingHistory = z.object({
+  param: text, unit: maybe(text), min: maybe(num), max: maybe(num), from: text, to: text, desired: z.array(desiredSetting),
+  plan: z.array(planWaypoint), readback: z.array(timedValue),
+});
+
+const reasonState = z.object({ code: text.nullable(), since: text.nullable(), observed_at: text.nullable() });
+const equipment = z.object({
+  items: z.array(z.object({
+    equipment: text, label: text, group: code, line_id: maybe(text), state: relay, since: maybe(text), runtime_today_s: maybe(int),
+    cycles_today: maybe(int), intent: maybe(relay), observed_at: text.nullable(),
+  })),
+  mode_reason: reasonState.optional(), fog_block_reason: reasonState.optional(), moisture_block_reason: reasonState.optional(),
+});
+const alert = z.object({
+  id: int, alert_type: text, category: text, severity: code, message: text, zone: maybe(text), metric_value: maybe(num), threshold_value: maybe(num),
+  details: record.optional(), status: code, first_seen_at: text, last_seen_at: maybe(text), count: int.optional(), acknowledged_at: maybe(text),
+  acknowledged_by: maybe(text), notes: maybe(text), resolved_at: maybe(text), resolved_by: maybe(text), resolution: maybe(text), runbook: maybe(text),
+});
+const alertPage = z.object({ ...page, items: z.array(alert) });
+const activityEntry = z.object({
+  id: int, ts: text, actor, action: text, target: text, detail: record.optional(), reason: maybe(text), state: maybe(code), confirmed_at: maybe(text),
+  experiment_id: maybe(text), request_id: maybe(text),
+});
+const activityPage = z.object({ ...page, items: z.array(activityEntry) });
+const lightCommand = z.object({ light: code, state: code, result: code, activity_id: int });
+const gallons = z.record(z.string(), int).nullable();
+const waterUse = z.object({
+  from: text, to: text,
+  days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, no_valve_gal: int.nullable() })),
+});
+
+const lineState = z.object({
+  code: choice(LINE_STATES, "unknown"), cause: maybe(cause), slot_id: maybe(int), reason: maybe(text), ends_at: maybe(text), observed_at: maybe(text),
+});
+const nextRun = z.object({ line_id: text, slot_id: int, start_at: text, label: maybe(text), minutes: maybe(num) });
+const irrigationLine = z.object({
+  line_id: text, name: text, zone: code, kind: code, clean_partner: maybe(text), reserved: flag, enabled: flag,
+  check: z.object({ checked_by: text, checked_at: text, note: maybe(text) }).nullable(), vpd_member: maybe(flag), schedule_member: maybe(flag),
+  vpd_source: maybe(code), daily_cap_min: int, vpd_reserve_min: maybe(int), paused_until: text.nullable(), paused_by: maybe(actor),
+  pause_reason: maybe(text), fault: maybe(code), fault_until: maybe(text), manual: flag, manual_before: maybe(flag), state: lineState,
+  today: z.object({ minutes: maybe(num), pulses: maybe(int), gal: maybe(int) }).optional(), next_run: maybe(nextRun),
+  last_water: maybe(z.object({ at: text, open_s: int, pulses: maybe(int), cause })),
+  last_outcome: maybe(z.object({ outcome, at: text, reason: maybe(text) })), sync: code,
+});
+const programSync = z.object({
+  state: code, revision: maybe(int), desired_sha256: text, applied_revision: maybe(int), applied_hash: maybe(text), src: code.nullable(),
+  reason: maybe(text), pushed_at: maybe(text), confirmed_at: maybe(text), reject_code: maybe(text), next_retry_at: maybe(text),
+});
+const usedOfMax = z.object({ used: num.nullable(), max: num.nullable() });
+const irrigationStatus = z.object({
+  server_time: text, engine: flag, program: programSync, lines: z.array(irrigationLine),
+  active_runs: z.array(z.object({
+    manifold: code, line_id: text, cause, slot_id: maybe(int), started_at: text, ends_at: maybe(text), pulses_done: maybe(int), pulses_total: maybe(int),
+  })),
+  today: z.object({ date: text, zones: z.record(z.string(), num.nullable()) }),
+  limits: z.object({ saf4_gal: usedOfMax, soft_budget_gal: usedOfMax }), leak, occupancy, fallback_active: flag, freshness,
+});
+const schedule = z.object({
+  slot_id: int, line_id: text, label: text.optional(), enabled: flag, days: z.array(code), start: z.object({ kind: code, clock: text.optional(), offset_min: int.default(0) }),
+  on_s: int, count: int, gap_s: int.default(0), prewet_s: int.default(0), flush_s: int.default(0), degraded_only: flag.default(false), manual: flag,
+  reason: text.optional(), manual_before: maybe(flag), sync: code, updated_by: actor, updated_at: text,
+});
+const occurrence = z.object({
+  slot_id: int, line_id: text, planned_start: text, status: code, outcome: maybe(outcome), reason: maybe(text), run_id: maybe(text),
+});
+const scheduleAgenda = z.object({
+  schedules: z.array(schedule), occurrences: z.array(occurrence), counts: z.object({ schedules: int, max_schedules: int }),
+  bounds: z.record(z.string(), z.record(z.string(), z.object({ min: num, max: num }))),
+  solar: z.array(z.object({ date: text, sunrise: text, solar_noon: text, sunset: text })),
+});
+const command = z.object({
+  command_id: text, kind: code, line_id: text.nullable(), args: record.optional(), status: code, actor, reason: maybe(text), created_at: text,
+  sent_at: maybe(text),
+});
+const linesUpdated = z.object({ lines: z.array(irrigationLine) });
+const minutesReport = z.object({
+  from: text, to: text, group_by: code, periods: z.array(z.object({ start: text, coverage: code })),
+  rows: z.array(z.object({ period: text, group: text, cause, chemistry: code, minutes: num, pulses: maybe(int), gal: maybe(int) })),
+});
+const run = z.object({
+  run_id: text, line_id: text, zone: text, chemistry: code, cause, slot_id: maybe(int), schedule_label: maybe(text), command_id: maybe(text),
+  actor: maybe(actor), started_at: text, ended_at: maybe(text), open_s: int, pulses: maybe(int), gal: maybe(int), outcome, reason: maybe(text),
+});
+const runPage = z.object({ ...page, items: z.array(run) });
+
+// ---------------------------------------------------------------------------------------------------- parsers
+export type Parser<T> = (value: unknown) => T | null;
+function parser<T>(schema: z.ZodType<T>): Parser<T> {
+  return (value) => {
+    const parsed = schema.safeParse(value);
+    return parsed.success ? parsed.data : null;
+  };
+}
+// Each annotation makes tsc check the parsed shape against the generated type, so a contract change the parser
+// misses fails the typecheck.
+export const parseProblem: Parser<Problem> = parser(problem);
+export const parseMe: Parser<Me> = parser(me);
+export const parseNow: Parser<Now> = parser(now);
+export const parseMetrics: Parser<Metrics> = parser(metrics);
+export const parseSeries: Parser<Series> = parser(series);
+export const parseStateLanes: Parser<StateLanes> = parser(stateLanes);
+export const parseBandTimeline: Parser<BandTimeline> = parser(bandTimeline);
+export const parsePlan: Parser<Plan> = parser(plan);
+export const parseSettings: Parser<Settings> = parser(settings);
+export const parseDesiredSetting: Parser<DesiredSetting> = parser(desiredSetting);
+export const parseSettingHistory: Parser<SettingHistory> = parser(settingHistory);
+export const parseEquipment: Parser<Equipment> = parser(equipment);
+export const parseAlertPage: Parser<AlertPage> = parser(alertPage);
+export const parseAlert: Parser<Alert> = parser(alert);
+export const parseActivityPage: Parser<ActivityPage> = parser(activityPage);
+export const parseBandPreview: Parser<BandPreview> = parser(bandPreview);
+export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
+export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
+export const parseIrrigationStatus: Parser<IrrigationStatus> = parser(irrigationStatus);
+export const parseScheduleAgenda: Parser<ScheduleAgenda> = parser(scheduleAgenda);
+export const parseSchedule: Parser<Schedule> = parser(schedule);
+export const parseCommand: Parser<Command> = parser(command);
+export const parseLinesUpdated: Parser<LinesUpdated> = parser(linesUpdated);
+export const parseMinutesReport: Parser<MinutesReport> = parser(minutesReport);
+export const parseRunPage: Parser<RunPage> = parser(runPage);
+// The BFF's own calls and the probes; the browser never makes these.
+export const parseSessionToken: Parser<SessionToken> = parser(sessionToken);
+export const parseReadiness: Parser<Readiness> = parser(readiness);
+export const parseHealth: Parser<Health> = parser(health);
+
+// ---------------------------------------------------------------------------------------------------- operations
+type Method = "GET" | "PUT" | "POST" | "DELETE";
+type Entry<M extends Method, P extends keyof paths, F extends Parser<unknown> | null> = { readonly method: M; readonly path: P; readonly parse: F };
+const op = <M extends Method, P extends keyof paths, F extends Parser<unknown> | null>(method: M, path: P, parse: F): Entry<M, P, F> => ({ method, path, parse });
+
+/** Every `/v1` operation the browser calls, by its design id; `parse` reads its success body (null: no body). */
+export const OPERATIONS = {
+  "API-01": op("GET", "/v1/me", parseMe),
+  "API-02": op("GET", "/v1/now", parseNow),
+  "API-03": op("GET", "/v1/metrics", parseMetrics),
+  "API-04": op("GET", "/v1/series", parseSeries),
+  "API-05": op("GET", "/v1/states", parseStateLanes),
+  "API-06": op("GET", "/v1/band", parseBandTimeline),
+  "API-07": op("GET", "/v1/plan", parsePlan),
+  "API-09": op("GET", "/v1/settings", parseSettings),
+  "API-10": op("PUT", "/v1/settings/{param}", parseDesiredSetting),
+  "API-11": op("DELETE", "/v1/settings/{param}", parseDesiredSetting),
+  "API-12": op("GET", "/v1/settings/{param}/history", parseSettingHistory),
+  "API-13": op("GET", "/v1/equipment", parseEquipment),
+  "API-14": op("GET", "/v1/alerts", parseAlertPage),
+  "API-15": op("POST", "/v1/alerts/{id}/ack", parseAlert),
+  "API-16": op("POST", "/v1/alerts/{id}/resolve", parseAlert),
+  "API-17": op("GET", "/v1/activity", parseActivityPage),
+  "API-19": op("GET", "/v1/band/preview", parseBandPreview),
+  "API-20": op("POST", "/v1/equipment/lights/{light}/{state}", parseLightCommand),
+  "API-21": op("GET", "/v1/water/daily", parseWaterUse),
+  "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
+  "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
+  "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),
+  "API-IRR-04": op("PUT", "/v1/irrigation/schedules/{slot_id}", parseSchedule),
+  "API-IRR-05": op("DELETE", "/v1/irrigation/schedules/{slot_id}", null),
+  "API-IRR-06": op("POST", "/v1/irrigation/lines/{line_id}/run", parseCommand),
+  "API-IRR-07": op("POST", "/v1/irrigation/stop", parseCommand),
+  "API-IRR-08": op("PUT", "/v1/irrigation/lines/{line_id}", parseLinesUpdated),
+  "API-IRR-10": op("GET", "/v1/irrigation/minutes", parseMinutesReport),
+  "API-IRR-11": op("GET", "/v1/irrigation/runs", parseRunPage),
+  "API-IRR-12": op("POST", "/v1/equipment/override", parseCommand),
+  "API-IRR-13": op("POST", "/v1/irrigation/clear-fault", parseCommand),
+} as const;
+type Table = typeof OPERATIONS;
+export type ApiOperationId = keyof Table;
+// Each row must be the generated paths entry for its method and path, both ways, or tsc names the row.
+type Declared<P extends keyof paths, M extends Method> = paths[P][Lowercase<M>];
+type Mismatched = { [K in ApiOperationId]: [operations[K]] extends [Declared<Table[K]["path"], Table[K]["method"]>]
+  ? [Declared<Table[K]["path"], Table[K]["method"]>] extends [operations[K]] ? never : K : K }[ApiOperationId];
+const tableMatchesContract: [Mismatched] extends [never] ? true : { mismatched: Mismatched } = true;
+void tableMatchesContract;
+
+type IdsBy<M extends Method> = { [K in ApiOperationId]: Table[K]["method"] extends M ? K : never }[ApiOperationId];
+export type ReadOperationId = IdsBy<"GET">;
+export type WriteOperationId = IdsBy<"PUT" | "POST" | "DELETE">;
+export type Parsed<K extends ApiOperationId> = Table[K]["parse"] extends Parser<infer T> ? T : null;
+type Part<T> = [NonNullable<T>] extends [never] ? Record<never, never> : NonNullable<T>;
+/** Path and query parameters in one object, typed from the generated operation. */
+export type ParamsOf<K extends OperationId> = Part<operations[K]["parameters"]["path"]> & Part<operations[K]["parameters"]["query"]>;
+type RequestBody<K extends OperationId> = NonNullable<operations[K]["requestBody"]> extends { content: { "application/json": infer B } } ? B : never;
+/** The JSON request body, typed from the generated operation; undefined when the operation takes none or it is optional. */
+export type BodyOf<K extends OperationId> = [RequestBody<K>] extends [never] ? undefined
+  : undefined extends operations[K]["requestBody"] ? RequestBody<K> | undefined : RequestBody<K>;
+
+/** The sign-in session ended (a 401 from the BFF): the shell shows its session-ended card. */
+export class SessionEnded extends Error {
+  constructor() {
+    super("Your session ended. Sign in again.");
+    this.name = "SessionEnded";
+  }
+}
+/** A refusal or failure, with its Problem. `status` 0 means the API could not be reached. */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly problem: Problem;
+  constructor(status: number, problem: Problem) {
+    super(problem.detail ?? problem.title);
+    this.name = "ApiError";
+    this.status = status;
+    this.problem = problem;
+  }
+}
+export type Fetcher = (input: string, init: RequestInit) => Promise<Response>;
+export type CallOptions = { signal?: AbortSignal; fetch?: Fetcher };
+export type WriteResult<T> = { status: number; data: T; replayed: boolean };
+
+const synthetic = (status: number, code: string, title: string, retryable: boolean): Problem => ({ type: "about:blank", title, status, code, retryable, min: null, max: null, current: null, retry_after_s: null });
+const UNREACHABLE = synthetic(0, "unavailable", "Dashboard API unavailable", true);
+const TIMED_OUT = synthetic(0, "unavailable", "Dashboard API did not answer in time", true);
+
+/**
+ * A fetch or body read that failed. The caller's own abort (a hidden tab) is rethrown as it is; a timeout signal
+ * (`AbortSignal.timeout`, as `usePolledQuery` passes) or a network failure is an `ApiError` with status 0.
+ */
+function unreachable(error: unknown, signal: AbortSignal | undefined): never {
+  const timedOut = (signal?.reason as { name?: unknown } | undefined)?.name === "TimeoutError";
+  if (signal?.aborted && !timedOut) throw error;
+  throw new ApiError(0, timedOut ? TIMED_OUT : UNREACHABLE);
+}
+
+/** `/api/v1/...` for an operation: path parameters fill its template, the rest become the query (arrays repeat). */
+export function operationPath(operationId: ApiOperationId, params: Readonly<Record<string, unknown>>): string {
+  const used = new Set<string>();
+  const filled = OPERATIONS[operationId].path.replace(/\{([a-z_]+)\}/g, (_match, name: string) => {
+    used.add(name);
+    const value = params[name];
+    if (value === undefined || value === null || value === "") throw new TypeError(`${operationId} needs ${name}`);
+    // The browser would resolve a . or .. segment to another path before the BFF could refuse it.
+    if (value === "." || value === "..") throw new TypeError(`${operationId} ${name} cannot be ${String(value)}`);
+    return encodeURIComponent(String(value));
+  });
+  const query = new URLSearchParams();
+  for (const [name, value] of Object.entries(params)) {
+    if (used.has(name) || value === undefined || value === null) continue;
+    for (const item of Array.isArray(value) ? value : [value]) query.append(name, String(item));
+  }
+  const search = query.toString();
+  return `/api${filled}${search ? `?${search}` : ""}`;
+}
+
+/** The JSON body, or null when it is not JSON. An abort or timeout while it arrives fails like the fetch. */
+async function body(response: Response, signal: AbortSignal | undefined): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (signal?.aborted) unreachable(error, signal);
+    return null;
+  }
+}
+async function call(operationId: ApiOperationId, params: Readonly<Record<string, unknown>>, payload: unknown, idempotencyKey: string | undefined, options: CallOptions) {
+  const { method, parse } = OPERATIONS[operationId];
+  const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
+  if (payload !== undefined) headers["Content-Type"] = "application/json";
+  if (idempotencyKey !== undefined) headers["Idempotency-Key"] = idempotencyKey;
+  const fetcher: Fetcher = options.fetch ?? ((input, init) => fetch(input, init));
+  const path = operationPath(operationId, params);
+  let response: Response;
+  try {
+    response = await fetcher(path, {
+      method, headers, body: payload === undefined ? undefined : JSON.stringify(payload), credentials: "same-origin", cache: "no-store",
+      redirect: "manual", signal: options.signal,
+    });
+  } catch (error) {
+    unreachable(error, options.signal);
+  }
+  // No session: the BFF answers 401 on /api. A redirect to sign in reads the same.
+  if (response.status === 401 || response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) throw new SessionEnded();
+  if (!response.ok) {
+    const problem = parseProblem(await body(response, options.signal));
+    throw new ApiError(response.status, problem ?? synthetic(response.status, `http_${response.status}`, "Dashboard API error", response.status >= 500));
+  }
+  const replayed = response.headers.get("Idempotency-Replayed") === "true";
+  if (parse === null || response.status === 204) return { status: response.status, data: null, replayed };
+  const data = (parse as Parser<unknown>)(await body(response, options.signal));
+  if (data === null) throw new ApiError(response.status, synthetic(response.status, "invalid_response", "Unexpected answer from the dashboard API", false));
+  return { status: response.status, data, replayed };
+}
+
+/**
+ * One read. Throws `SessionEnded` on a 401 and `ApiError` on any other failure, a timeout included, so a poll counts
+ * it; the caller's own abort rethrows as the abort it is.
+ */
+export async function apiGet<K extends ReadOperationId>(operationId: K, params: ParamsOf<K>, options: CallOptions = {}): Promise<Parsed<K>> {
+  const result = await call(operationId, params as Readonly<Record<string, unknown>>, undefined, undefined, options);
+  return result.data as Parsed<K>;
+}
+
+/**
+ * One write with its `Idempotency-Key` (one key per user action, so a double tap or a manual retry applies once). It is
+ * sent exactly once and never retried here. Throws `SessionEnded` on a 401 and `ApiError` (with the field and bounds
+ * of a 422) on any other refusal.
+ */
+export async function apiWrite<K extends WriteOperationId>(operationId: K, params: ParamsOf<K>, payload: BodyOf<K>, idempotencyKey: string, options: CallOptions = {}): Promise<WriteResult<Parsed<K>>> {
+  const result = await call(operationId, params as Readonly<Record<string, unknown>>, payload, idempotencyKey, options);
+  return result as WriteResult<Parsed<K>>;
+}
+
+/** A fresh key for one user action. */
+export const newIdempotencyKey = (): string => crypto.randomUUID();

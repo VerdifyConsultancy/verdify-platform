@@ -627,6 +627,7 @@ paths:
         https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/)
         with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page
         without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik.
+        Error bodies are text/plain with the status until #1124 renders the SCR-09 card (text/html) at the same URL.
       security: []
       parameters:
         - name: returnTo
@@ -639,7 +640,7 @@ paths:
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '503':
           description: 'Sign-in is unavailable: Authentik cannot be reached (existing sessions keep working)'
-          content: {text/html: {schema: {type: string}}}
+          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
   /auth/callback:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -650,7 +651,8 @@ paths:
       description: >-
         Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name,
         groups), maps groups to a role (operators wins), creates the session with INT-01 and sets
-        __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser.
+        __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login
+        cookie is cleared on every outcome; error bodies are text/plain until #1124 renders the SCR-09 card.
       security: []
       parameters:
         - {name: code, in: query, schema: {type: string}}
@@ -661,11 +663,14 @@ paths:
           description: To returnTo, with the session cookie set and the login cookie cleared
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '400':
-          description: 'Sign-in did not complete (state mismatch, expired login cookie or an Authentik error); no session cookie'
-          content: {text/html: {schema: {type: string}}}
+          description: 'Sign-in did not complete (state mismatch, a missing, expired or tampered login cookie, an Authentik error or a refused code exchange); no session cookie'
+          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
         '403':
-          description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers'
-          content: {text/html: {schema: {type: string}}}
+          description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call'
+          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+        '503':
+          description: 'Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie'
+          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
   /auth/logout:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -673,11 +678,14 @@ paths:
       operationId: BFF-03
       tags: [session]
       summary: Sign out
-      description: Needs the exact Origin. Deletes the session (INT-02), clears the cookie and redirects to Authentik's end-session endpoint.
+      description: >-
+        Needs the exact Origin. Deletes the session (INT-02), clears the cookie and redirects to Authentik's
+        end-session endpoint with post_logout_redirect_uri https://dashboard.verdify.ai/. With Authentik's discovery
+        unavailable it still deletes and clears, then redirects to /.
       security: [{sessionCookie: []}, {}]
       responses:
         '303':
-          description: To the Authentik end-session endpoint
+          description: To the Authentik end-session endpoint, or to / while its discovery is unavailable
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '403': {$ref: '#/components/responses/Problem'}
 
