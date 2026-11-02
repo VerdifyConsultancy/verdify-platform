@@ -413,14 +413,12 @@ def sealed_sql_280():
 IRRIGATION_MINUTES_MIGRATION = (
     281,
     "281-irrigation-minutes-by-zone.sql",
-    "cfb55fa846788af183a5fb9d8161a2077cf4e2c165160045f0edae7c9ded7801",
+    "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8",
 )
-# Pending VD-39 measurement: all-zero seals until the rolled-back native
-# qualification measures them; this profile cannot match before then.
 SUCCESSOR_281 = {
-    "api": "0000000000000000000000000000000000000000000000000000000000000000",
-    "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
-    "mcp": "0000000000000000000000000000000000000000000000000000000000000000",
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3",
 }
 
 

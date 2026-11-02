@@ -1,19 +1,22 @@
 {
+  "migration": "281-irrigation-minutes-by-zone.sql",
+  "exact_final_migration_sha256": "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8",
   "final_migration_qualification_pending": true,
-  "pending_reason": "281 is measured against merged 280: its predecessor and its three successor seals come from the production catalog in rolled-back transactions (VD-39 release steps).",
-  "predecessor": {
-    "seq": 280,
-    "filename": "280-desired-state-activity-log.sql"
+  "before": {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
   },
-  "before": null,
+  "projected_successor": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "projection": "2026-11-02, read only, production at 279: the bodies of fn_runtime_ordinary_boundary_digest (217) and fn_mcp_runtime_boundary_digest (263), taken from the live functions and rebuilt as one SELECT under their search_path, reproduced the three live digests above exactly. Adding the entries 280's tables, view, sequences and grants create, and its crop_band_anchors column grant, reproduced 280's qualified seals exactly. Adding the entries 281's two views and fn_irrigation_minutes_daily create (deparsed on PostgreSQL 16 against production's column types, role OIDs and function default ACL) gives these values. The native qualification, with 280 applied first in the same rolled-back sessions, measures them.",
   "qualified_successor": null,
   "after_rollback": null,
-  "rollback_verified": false,
-  "persisted_row_changes": false,
-  "exact_final_migration_sha256": null,
-  "final_migration_rollback_verified": false,
   "inside_transaction_receipts_match": false,
-  "native_fixture_sha256": "d9d72650c7f88135a3cfaa5361a2ea03069dbed45c472edfaef494e8464bb9c9",
-  "native_fixture": null,
-  "native_fixture_rollback_verified": false
+  "final_migration_rollback_verified": false,
+  "native_fixture_sha256": "9e33af79b1664c431ce29052324d7805fbd16b6895486415907517e815b88e84",
+  "native_fixture": null
 }

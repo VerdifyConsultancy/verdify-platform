@@ -1,8 +1,9 @@
 -- Run only inside an explicit rollback-only transaction after exact281, as the
--- superuser owner. Native checks of M4 on production rows: reads only, as the
--- owner and then as each runtime login; the temporary table and the session
--- authorization end with the rollback. Any failed check raises and rolls
--- everything back.
+-- superuser owner: scripts/qualify-migration-successor.py --native-fixture runs
+-- it at the end of its final session. Native checks of M4 on production rows:
+-- reads only, as the owner and then as each runtime login; the temporary table
+-- and the session authorization end with the rollback. Any failed check raises
+-- and rolls everything back; the last line reports the result to the qualifier.
 CREATE TEMP TABLE irrigation_minutes_qualification (name text PRIMARY KEY, value numeric) ON COMMIT DROP;
 DO $fixture$
 DECLARE
@@ -156,7 +157,7 @@ BEGIN
 END $mcp$;
 RESET SESSION AUTHORIZATION;
 
-SELECT json_build_object(
+SELECT 'QUALIFY native_fixture ' || json_build_object(
     'checks', json_build_array('catalog_and_grants', 'reader_equals_view_30d', 'accepted_deltas_within_5_minutes',
                                'gallons_equal_run_accounting_30d', 'wall_drip_2026_05_29', 'today_partial',
                                'no_data_days_without_rows', 'logins_attest', 'login_reads_and_api_denial'),
@@ -165,4 +166,4 @@ SELECT json_build_object(
     'rows_400d', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'rows_400d'),
     'reader_30d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'reader_30d_ms'),
     'reader_400d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'reader_400d_ms'),
-    'view_30d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'view_30d_ms'));
+    'view_30d_ms', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'view_30d_ms'))::text;

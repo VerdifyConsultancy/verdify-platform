@@ -224,16 +224,16 @@ SUCCESSOR_280_DIGESTS = {
     "verdify_ingestor_runtime_login": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
 }
 SUCCESSOR_280_MCP_DIGEST = "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291"
-# Pending281 (VD-39, M4): minutes by zone, measured against merged 280 in a
-# rolled-back production transaction. Until then its seals are all-zero
-# placeholders, which no live boundary or receipt can equal.
+# Exact281 (VD-39, M4) minutes by zone. Its view and reader grants move all
+# three ordinary seals; the rolled-back native qualification, with 280 applied
+# first in the same session, proves each successor.
 SUCCESSOR_281 = "281-irrigation-minutes-by-zone.sql"
-SUCCESSOR_281_SHA256 = "cfb55fa846788af183a5fb9d8161a2077cf4e2c165160045f0edae7c9ded7801"
+SUCCESSOR_281_SHA256 = "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8"
 SUCCESSOR_281_DIGESTS = {
-    "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
-    "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
+    "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
 }
-SUCCESSOR_281_MCP_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000"
+SUCCESSOR_281_MCP_DIGEST = "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.

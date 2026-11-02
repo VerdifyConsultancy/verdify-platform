@@ -1,17 +1,18 @@
-"""Migration M4 (VD-39): exact successor admission, receipt seals and bootstrap authority.
+"""Exact281 (VD-39, M4) delivery: ordered admission, seals, grants and native evidence.
 
-281 is measured against its merged predecessor, 280 (VD-30, M1). Until that
-merges and the rolled-back production measurement runs, the file, the C0
-runner and both bootstraps carry all-zero seals that no live digest can equal,
-and the receipt says ``final_migration_qualification_pending``. The pending
-test checks that state is consistent and inert; the measured tests run once
-the receipt flips, and then every literal must agree with the measurement.
+281 is measured against its merged predecessor 280 (VD-30). Production is still at
+279, so the rolled-back native qualification applies 280 first in the same
+sessions (``--apply-first``) and runs 281's native fixture at the end of the final
+session (``--native-fixture``). Until that evidence is recorded the successor seals
+are a read-only projection and test_native_qualification_is_recorded fails: the
+merge gate.
 """
 
 import hashlib
 import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,13 +20,16 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-ZERO = "0" * 64
-MARKER = "PENDING VD-39"
+FIXTURE = ROOT / "tests/fixtures/281-irrigation-minutes-native-qualification.json"
+NATIVE = ROOT / "db/qualification/281-irrigation-minutes-fixture.sql"
+API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
+SEALS = ("api", "ingestor", "mcp")
 
 
 def load(name, filename):
     spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / filename)
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -33,153 +37,55 @@ def load(name, filename):
 c0 = load("minutes281_delivery", "c0-migration-delivery.py")
 six = load("minutes281_six", "bootstrap-six-runtime-roles.py")
 maintenance = load("minutes281_maintenance", "bootstrap-maintenance-runtime-roles.py")
+qualifier = load("minutes281_qualifier", "qualify-migration-successor.py")
+safety = qualifier._safety()
 MIGRATION = ROOT / "db/migrations" / c0.SUCCESSOR_281
-FIXTURE = ROOT / "db/qualification/281-irrigation-minutes-fixture.sql"
-RECEIPT = json.loads((ROOT / "tests/fixtures/281-irrigation-minutes-native-qualification.json").read_text())
-PENDING = RECEIPT["final_migration_qualification_pending"]
-WAITING = "281 waits for merged 280 and its rolled-back production measurement"
-HEX = "([0-9a-f]{64})"
+PREDECESSOR = ROOT / "db/migrations" / c0.SUCCESSOR_280
+SQL = MIGRATION.read_text()
 
 
-def later():
-    """The reviewed post-254 successors through 281, with 280 once it is on main."""
-    names = [getattr(c0, f"SUCCESSOR_{n}") for n in range(255, 282) if hasattr(c0, f"SUCCESSOR_{n}")]
-    return [c0.SUCCESSOR_254] + names
+def later(last=281):
+    return [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in range(255, last + 1)]
 
 
-def literals():
-    """Every seal literal the file carries, by block."""
-    text = MIGRATION.read_text()
-    predecessor = text[text.index("DO $predecessor$") : text.index("END $predecessor$;")]
-    successor = text[text.index("DO $successor$") :]
+def reviewed(last=281):
+    return {getattr(c0, f"SUCCESSOR_{n}"): getattr(c0, f"SUCCESSOR_{n}_SHA256") for n in range(255, last + 1)}
 
-    def seals(block):
-        return {
-            "api": re.findall(r"'verdify_api_runtime_login'\),'hex'\) IS DISTINCT FROM '" + HEX, block),
-            "ingestor": re.findall(r"'verdify_ingestor_runtime_login'\),'hex'\) IS DISTINCT FROM '" + HEX, block),
-            "mcp": re.findall(r"fn_mcp_runtime_boundary_digest\(\),'hex'\) IS DISTINCT FROM '" + HEX, block),
-        }
 
-    def checked(login):
-        return re.findall(f"login_name='{login}' AND boundary_sha256=decode\\('{HEX}','hex'\\)", predecessor)
+def receipt():
+    return json.loads(FIXTURE.read_text())
 
-    def sealed(login):
-        pattern = f"SET boundary_sha256=decode\\('{HEX}','hex'\\), captured_at=clock_timestamp\\(\\) WHERE login_name='{login}'"
-        return re.findall(pattern, successor)
 
-    receipts = {
-        "api": checked("verdify_api_runtime_login") + sealed("verdify_api_runtime_login"),
-        "ingestor": checked("verdify_ingestor_runtime_login") + sealed("verdify_ingestor_runtime_login"),
-        "mcp": re.findall(
-            r"mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode\('" + HEX, predecessor
-        )
-        + re.findall(r"UPDATE public\.mcp_runtime_boundary_receipt SET boundary_sha256=decode\('" + HEX, successor),
-    }
-    row = re.search(r"seq=(\d+) AND filename='db/migrations/([^']+)'\s+AND sha256='" + HEX + "'", predecessor)
-    return seals(predecessor), seals(successor), receipts, row.groups()
+def registered(n):
+    digests = getattr(c0, f"SUCCESSOR_{n}_DIGESTS")
+    return {"api": digests[API], "ingestor": digests[INGESTOR], "mcp": getattr(c0, f"SUCCESSOR_{n}_MCP_DIGEST")}
 
 
 def test_exact_ordered_source_admission_denies_unknown_changed_and_skipped():
     raw = MIGRATION.read_bytes()
     assert hashlib.sha256(raw).hexdigest() == c0.SUCCESSOR_281_SHA256 == six.IRRIGATION_MINUTES_MIGRATION[2]
     assert six.IRRIGATION_MINUTES_MIGRATION[:2] == (281, c0.SUCCESSOR_281)
-    names = later()
-    files = {name: getattr(c0, f"SUCCESSOR_{name[:3]}_SHA256") for name in names[1:]}
-    c0.reviewed_post_254(names, files)
+    c0.reviewed_post_254(later(), reviewed())
+    c0.reviewed_post_254(later(280), reviewed(280))
     with pytest.raises(c0.DeliveryError, match="281 successor source drift"):
-        c0.reviewed_post_254(names, {**files, c0.SUCCESSOR_281: hashlib.sha256(raw + b"\n").hexdigest()})
-    for invalid in [names + ["282-unknown.sql"], names[:-2] + names[-1:], names[:-1] + ["281-other.sql"]]:
+        c0.reviewed_post_254(later(), {**reviewed(), c0.SUCCESSOR_281: "0" * 64})
+    for invalid in [later() + ["282-unknown.sql"], later()[:-2] + later()[-1:], later()[:-1] + ["281-other.sql"]]:
         with pytest.raises(c0.DeliveryError, match="unreviewed"):
-            c0.reviewed_post_254(invalid, files)
+            c0.reviewed_post_254(invalid, reviewed())
 
 
-def test_every_registration_site_carries_the_same_seals():
-    predecessor, successor, receipts, _ = literals()
-    assert c0.SUCCESSOR_281_DIGESTS == {
-        "verdify_api_runtime_login": six.SUCCESSOR_281["api"],
-        "verdify_ingestor_runtime_login": six.SUCCESSOR_281["ingestor"],
-    }
-    assert c0.SUCCESSOR_281_MCP_DIGEST == six.SUCCESSOR_281["mcp"]
-    for duty in ("api", "ingestor", "mcp"):
-        assert successor[duty] == [six.SUCCESSOR_281[duty]], duty
-        assert len(predecessor[duty]) == 1, duty
-        # The successor block re-seals each receipt the rolled-back measurement
-        # shows moved; while pending, all three carry the zero placeholder.
-        moved = PENDING or six.SUCCESSOR_281[duty] != predecessor[duty][0]
-        resealed = [six.SUCCESSOR_281[duty]] if moved else []
-        assert receipts[duty] == [predecessor[duty][0], *resealed], duty
-    prior = 280 if hasattr(six, "sealed_sql_280") else 279
-    profile = getattr(six, f"SUCCESSOR_{prior}")
-    chained = getattr(six, f"sealed_sql_{prior}")()
-    expected = "(" + chained.replace(
-        six.seal_profile_sql(prior, profile), six.seal_profile_sql(281, six.SUCCESSOR_281), 1
-    )
-    expected += " AND " + six.ledger_row_sql(*six.IRRIGATION_MINUTES_MIGRATION) + ")"
-    assert six.sealed_sql_281() == expected
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_281() + ")")
-    assert maintenance.contract_sql().count(six.sealed_sql_281()) == 1
-    assert '"281-irrigation-minutes-by-zone.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
-    assert "tests/test_281_irrigation_minutes_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
-
-
-def boundary_states(api, ingestor, mcp):
-    ordinary = dict(
-        api=api,
-        api_receipt=api,
-        ingestor=ingestor,
-        ingestor_receipt=ingestor,
-        receipt_count=2,
-        column_update=True,
-        table_update=False,
-    )
-    mcp_state = dict(
-        mcp=mcp,
-        mcp_receipt=mcp,
-        mcp_login=True,
-        mcp_arm_read=False,
-        mcp_experiment_read=False,
-        outcome_scorecard=True,
-        outcome_scorecard_exec=True,
-        outcome_band_exec=True,
-        outcome_season_exec=True,
-        outcome_zone_exec=True,
-        outcome_anchor_read=True,
-        outcome_profile_read=True,
-    )
-    return ordinary, mcp_state
-
-
-def verify(monkeypatch, ordinary, mcp_state, names):
-    outputs = iter(["a" * 64, json.dumps(ordinary), json.dumps(mcp_state)])
-    monkeypatch.setattr(c0, "psql", lambda sql, environment: next(outputs))
-    c0.verify_post_249(
-        {"version": c0.transition.RESOURCE_VERSION, "predecessor_ledger_sha256": "a" * 64}, {}, later=names
-    )
-
-
-def test_post_249_readback_requires_the_281_seals_once_281_is_applied(monkeypatch):
-    seals = six.SUCCESSOR_281
-    verify(monkeypatch, *boundary_states(seals["api"], seals["ingestor"], seals["mcp"]), later())
-    prior = later()[-2]
-    old = getattr(c0, f"SUCCESSOR_{prior[:3]}_DIGESTS")
-    old_mcp = getattr(c0, f"SUCCESSOR_{prior[:3]}_MCP_DIGEST")
-    with pytest.raises(c0.DeliveryError, match="boundary is not exact"):
-        verify(
-            monkeypatch,
-            *boundary_states(old["verdify_api_runtime_login"], old["verdify_ingestor_runtime_login"], old_mcp),
-            later(),
-        )
-    # Before 281 applies, the predecessor's seals still verify.
-    verify(
-        monkeypatch,
-        *boundary_states(old["verdify_api_runtime_login"], old["verdify_ingestor_runtime_login"], old_mcp),
-        later()[:-1],
-    )
+def test_one_changed_byte_in_the_file_is_source_drift():
+    raw = bytearray(MIGRATION.read_bytes())
+    raw[raw.index(b"281 refuses an unqualified successor")] ^= 1
+    changed = hashlib.sha256(bytes(raw)).hexdigest()
+    with pytest.raises(c0.DeliveryError, match="reviewed 281 successor source drift"):
+        c0.reviewed_post_254(later(), {**reviewed(), c0.SUCCESSOR_281: changed})
 
 
 def test_file_is_additive_read_only_and_wrap_safe():
-    text = MIGRATION.read_text()
-    body = text[text.index("END $predecessor$;") : text.index("DO $successor$")]
+    assert not safety.classify(MIGRATION).self_committing
+    qualifier.refuse_transaction_control(SQL)
+    body = SQL[SQL.index("END $predecessor$;") : SQL.index("DO $successor$")]
     statements = re.findall(
         r"^(CREATE|COMMENT|REVOKE|GRANT|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE)\b[^;]*", body, re.M
     )
@@ -204,7 +110,7 @@ def test_file_is_additive_read_only_and_wrap_safe():
         assert not re.search(r"COMMENT\s+ON\s+VIEW\s+" + target, body), view
         assert not re.search(r"(GRANT|REVOKE)[^;]*\bON\b[^;]*" + target, body), view
     for forbidden in ("CREATE TABLE", "CREATE TRIGGER", "CREATE INDEX", "COMMIT", "CONCURRENTLY", "VACUUM"):
-        assert forbidden not in text, forbidden
+        assert forbidden not in SQL, forbidden
     classifier = subprocess.run(
         [sys.executable, str(ROOT / "scripts/check_migration_rollback_safety.py"), "--rollback-wrap", str(MIGRATION)],
         capture_output=True,
@@ -214,52 +120,158 @@ def test_file_is_additive_read_only_and_wrap_safe():
     assert classifier.returncode == 0, classifier.stdout + classifier.stderr
 
 
-@pytest.mark.skipif(not PENDING, reason="281 is natively measured")
-def test_pending_281_is_consistent_and_cannot_apply():
-    predecessor, successor, receipts, (seq, filename, sha) = literals()
-    assert MARKER in MIGRATION.read_text()
-    assert (int(seq), filename) == (RECEIPT["predecessor"]["seq"], RECEIPT["predecessor"]["filename"])
-    assert sha == ZERO
-    for duty in ("api", "ingestor", "mcp"):
-        assert predecessor[duty] == successor[duty] == [ZERO], duty
-        assert receipts[duty] == [ZERO, ZERO], duty
-        assert six.SUCCESSOR_281[duty] == ZERO, duty
-    assert RECEIPT["before"] is RECEIPT["qualified_successor"] is RECEIPT["after_rollback"] is None
-    assert not (RECEIPT["final_migration_rollback_verified"] or RECEIPT["inside_transaction_receipts_match"])
-    assert RECEIPT["native_fixture"] is None
-    assert RECEIPT["native_fixture_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest()
-
-
-@pytest.mark.skipif(PENDING, reason=WAITING)
-def test_native_successor_retains_predecessor_authority_and_exact_ledger():
-    predecessor, successor, _, (seq, filename, sha) = literals()
-    assert MARKER not in MIGRATION.read_text() and ZERO not in MIGRATION.read_text()
-    assert (int(seq), filename, sha) == (280, c0.SUCCESSOR_280, c0.SUCCESSOR_280_SHA256)
-    assert (
-        RECEIPT["before"]
-        == RECEIPT["after_rollback"]
-        == {
-            "api": c0.SUCCESSOR_280_DIGESTS["verdify_api_runtime_login"],
-            "ingestor": c0.SUCCESSOR_280_DIGESTS["verdify_ingestor_runtime_login"],
-            "mcp": c0.SUCCESSOR_280_MCP_DIGEST,
-        }
+def test_predecessor_and_successor_literals_bind_280_and_the_registration():
+    head, successor = qualifier.split_successor(SQL)
+    predecessor = head.split("END $predecessor$;")[0]
+    assert f"seq=280 AND filename='db/migrations/{c0.SUCCESSOR_280}'" in predecessor
+    assert f"sha256='{c0.SUCCESSOR_280_SHA256}'" in predecessor and "stamp_method='runner'" in predecessor
+    assert "seq>=281" in predecessor and "'281 refuses an unqualified predecessor'" in predecessor
+    for digest in registered(280).values():
+        assert predecessor.count(digest) == 2  # the live digest and its receipt
+    expected = registered(281)
+    assert qualifier.successor_literals(SQL) == expected == six.SUCCESSOR_281
+    for login, seal in ((API, "api"), (INGESTOR, "ingestor")):
+        assert (
+            f"boundary_sha256=decode('{expected[seal]}','hex'), captured_at=clock_timestamp() WHERE login_name='{login}'"
+        ) in successor
+    assert f"mcp_runtime_boundary_receipt SET boundary_sha256=decode('{expected['mcp']}','hex') WHERE singleton" in (
+        successor
     )
-    assert {duty: values[0] for duty, values in predecessor.items()} == RECEIPT["before"]
-    assert RECEIPT["qualified_successor"] == six.SUCCESSOR_281
-    assert RECEIPT["rollback_verified"] and RECEIPT["final_migration_rollback_verified"]
-    assert RECEIPT["inside_transaction_receipts_match"] and not RECEIPT["persisted_row_changes"]
-    assert RECEIPT["exact_final_migration_sha256"] == c0.SUCCESSOR_281_SHA256
-    assert hasattr(six, "sealed_sql_280") and later()[-2:] == [c0.SUCCESSOR_280, c0.SUCCESSOR_281]
+    assert successor.count("IF NOT FOUND THEN RAISE EXCEPTION") == 3
+    assert "0" * 64 not in SQL and "PENDING" not in SQL
+
+
+def test_registration_binds_the_recorded_successor_and_moves_all_three_seals():
+    evidence = receipt()
+    assert evidence["migration"] == c0.SUCCESSOR_281
+    assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_281_SHA256
+    successor = evidence["qualified_successor"] or evidence["projected_successor"]
+    assert successor == six.SUCCESSOR_281 == registered(281)
+    assert all(successor[seal] != registered(280)[seal] for seal in SEALS)
+    assert evidence["native_fixture_sha256"] == hashlib.sha256(NATIVE.read_bytes()).hexdigest()
+
+
+def test_sealed_sql_281_chains_from_280_and_binds_the_exact_ledger_row():
+    old = six.seal_profile_sql(280, six.SUCCESSOR_280)
+    expected = "(" + six.sealed_sql_280().replace(old, six.seal_profile_sql(281, six.SUCCESSOR_281), 1)
+    expected += " AND " + six.ledger_row_sql(*six.IRRIGATION_MINUTES_MIGRATION) + ")"
+    assert six.sealed_sql_281() == expected
+    assert "stamp_method='runner'" in six.ledger_row_sql(*six.IRRIGATION_MINUTES_MIGRATION)
+    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_280() + " OR " + expected + ")")
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_281() + ")") == 1
+    assert '"281-irrigation-minutes-by-zone.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
+    assert "tests/test_281_irrigation_minutes_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
+
+
+def states(api, ingestor, mcp):
+    ordinary = dict(
+        api=api,
+        api_receipt=api,
+        ingestor=ingestor,
+        ingestor_receipt=ingestor,
+        receipt_count=2,
+        column_update=True,
+        table_update=False,
+    )
+    exact = dict.fromkeys(
+        (
+            "outcome_scorecard",
+            "outcome_scorecard_exec",
+            "outcome_band_exec",
+            "outcome_season_exec",
+            "outcome_zone_exec",
+            "outcome_anchor_read",
+            "outcome_profile_read",
+        ),
+        True,
+    )
+    return ordinary, dict(
+        mcp=mcp, mcp_receipt=mcp, mcp_login=True, mcp_arm_read=False, mcp_experiment_read=False, **exact
+    )
+
+
+def verify(monkeypatch, ordinary, mcp_state, last=281):
+    outputs = iter(["a" * 64, json.dumps(ordinary), json.dumps(mcp_state)])
+
+    def fake_psql(sql, environment):
+        assert sql.startswith("BEGIN READ ONLY;") and sql.rstrip().endswith("COMMIT;")
+        return next(outputs)
+
+    monkeypatch.setattr(c0, "psql", fake_psql)
+    c0.verify_post_249(
+        {"version": c0.transition.RESOURCE_VERSION, "predecessor_ledger_sha256": "a" * 64}, {}, later=later(last)
+    )
+
+
+def test_post_249_readback_expects_the_281_seals_once_281_is_stamped(monkeypatch):
+    seals = six.SUCCESSOR_281
+    verify(monkeypatch, *states(seals["api"], seals["ingestor"], seals["mcp"]))
+    old = six.SUCCESSOR_280
+    verify(monkeypatch, *states(old["api"], old["ingestor"], old["mcp"]), last=280)
+    for mixed in (
+        states(old["api"], seals["ingestor"], seals["mcp"]),
+        states(seals["api"], old["ingestor"], seals["mcp"]),
+        states(seals["api"], seals["ingestor"], old["mcp"]),
+    ):
+        with pytest.raises(c0.DeliveryError, match="boundary is not exact"):
+            verify(monkeypatch, *mixed)
+
+
+def plan_281():
+    record, block = qualifier.applied_first(PREDECESSOR)
+    return record, qualifier.sessions(SQL, [block], qualifier.native_checks(NATIVE))
+
+
+def test_qualification_applies_280_first_as_the_runner_then_measures_281():
+    record, plan = plan_281()
+    assert record == {"migration": c0.SUCCESSOR_280, "seq": 280, "sha256": c0.SUCCESSOR_280_SHA256}
+    predecessor = PREDECESSOR.read_text()
+    stamp = (
+        f"SELECT public.stamp_migration(\n    'db/migrations/{c0.SUCCESSOR_280}', 'db/migrations', 280, "
+        f"'{c0.SUCCESSOR_280_SHA256}', 'runner',"
+    )
+    head, _ = qualifier.split_successor(SQL)
+    for name, sql in plan.items():
+        assert sql.startswith("BEGIN") and sql.endswith("ROLLBACK;\n"), name
+        assert sql.count("ROLLBACK;") == 1 and "COMMIT" not in sql.upper().replace("ON COMMIT DROP", ""), name
+    assert plan["after"].startswith("BEGIN READ ONLY;") and predecessor not in plan["after"]
+    probe, final = plan["probe"], plan["final"]
+    # The probe: live state, 280 exactly as the runner applies it, its state, then 281 up to its successor block.
+    order = [
+        probe.index("QUALIFY before"),
+        probe.index(qualifier.RUNNER_LOCK),
+        probe.index(predecessor),
+        probe.index(stamp),
+        probe.index("QUALIFY applied"),
+        probe.index(head),
+        probe.index("QUALIFY successor"),
+    ]
+    assert order == sorted(order)
+    assert "281 refuses an unqualified successor" not in probe and "QUALIFY native_fixture" not in probe
+    # The final session: 280 again, the exact 281 file, its receipts, then the native fixture.
+    order = [
+        final.index(predecessor),
+        final.index(stamp),
+        final.index("QUALIFY applied"),
+        final.index(SQL),
+        final.index("QUALIFY inside"),
+        final.index(NATIVE.read_text()),
+    ]
+    assert order == sorted(order)
+    for sql in (probe, final):
+        # The bounds open the session and return after 280, before 281 runs.
+        assert sql.count(qualifier.BOUNDS) == 2
+        assert sql.index(stamp) < sql.rindex(qualifier.BOUNDS) < sql.index(head)
 
 
 def test_native_fixture_attests_every_login_and_reads_as_granted():
     """The rolled-back qualification calls each login's attestor after the re-seal."""
-    text = FIXTURE.read_text()
+    text = NATIVE.read_text()
     blocks = re.findall(
         r"SET SESSION AUTHORIZATION (\w+);\nDO \$(\w+)\$\n(.*?)\nEND \$\2\$;\nRESET SESSION AUTHORIZATION;", text, re.S
     )
     attestors = {login: body for login, _, body in blocks}
-    assert set(attestors) == {f"verdify_{duty}_runtime_login" for duty in ("api", "ingestor", "mcp")}
+    assert set(attestors) == {f"verdify_{duty}_runtime_login" for duty in SEALS}
     for duty, attestor in (
         ("api", "fn_runtime_attest_ordinary_login"),
         ("ingestor", "fn_runtime_attest_ordinary_login"),
@@ -273,21 +285,95 @@ def test_native_fixture_attests_every_login_and_reads_as_granted():
         reader = attestors[f"verdify_{duty}_runtime_login"]
         for target in ("fn_irrigation_minutes_daily", "v_irrigation_minutes_daily", "v_irrigation_day_coverage"):
             assert f"FROM public.{target}" in reader, (duty, target)
-    assert text.rindex("RESET SESSION AUTHORIZATION;") < text.index("SELECT json_build_object(")
+    # One result line for the qualifier, after the last login switch.
+    assert text.rindex("RESET SESSION AUTHORIZATION;") < text.index("SELECT 'QUALIFY native_fixture ' ||")
+    assert qualifier.native_checks(NATIVE) == text
 
 
 def test_native_fixture_proves_the_five_minute_meter_bound():
     """Each run's meter scan stops at run_end + 5 min; the qualification proves no
     accepted delta is longer, so the gallons equal v_water_run_accounting's."""
-    text = MIGRATION.read_text()
-    assert text.count("AND a.ts <= p.run_end + interval '5 minutes'") == 2  # the view and the reader
-    assert "WHERE a.ts - a.prior_ts > interval '5 minutes')" in FIXTURE.read_text()
+    assert SQL.count("AND a.ts <= p.run_end + interval '5 minutes'") == 2  # the view and the reader
+    assert "WHERE a.ts - a.prior_ts > interval '5 minutes')" in NATIVE.read_text()
 
 
-@pytest.mark.skipif(PENDING, reason=WAITING)
-def test_native_fixture_passed_on_production_rows():
-    assert RECEIPT["native_fixture_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest()
-    fixture = RECEIPT["native_fixture"]
-    assert fixture["all_passed"] and RECEIPT["native_fixture_rollback_verified"]
-    assert fixture["attested"] == {"api": True, "ingestor": True, "mcp": True}
-    assert fixture["reader_400d_ms"] < 10_000
+def assert_recorded(evidence):
+    """What the recorded native qualification must show before 281 merges."""
+    assert evidence["final_migration_qualification_pending"] is False, (
+        "281 native qualification pending: run scripts/qualify-migration-successor.py on production (rolled back) "
+        "with --apply-first for 280 while production is at 279, and commit the fixture it writes before merging"
+    )
+    assert evidence["migration"] == c0.SUCCESSOR_281
+    assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_281_SHA256
+    assert evidence["qualified_successor"] == six.SUCCESSOR_281
+    assert evidence["before"] == evidence["after_rollback"]
+    assert evidence["final_migration_rollback_verified"] is True
+    assert evidence["inside_transaction_receipts_match"] is True
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": c0.SUCCESSOR_280, "seq": 280, "sha256": c0.SUCCESSOR_280_SHA256}
+        ]
+        measured_against = evidence["applied_first_seals"]
+    else:
+        measured_against = evidence["before"]
+    assert measured_against == registered(280)
+    assert evidence["native_fixture_sha256"] == hashlib.sha256(NATIVE.read_bytes()).hexdigest()
+    native = evidence["native_fixture"]
+    assert native["all_passed"] is True
+    assert native["attested"] == {"api": True, "ingestor": True, "mcp": True}
+    assert native["reader_400d_ms"] < 10_000
+
+
+def fake_qualification(monkeypatch, *, native=None):
+    """Replay the qualifier's three sessions for 281 with 280 applied first, without a database."""
+    live, pred, new = six.SUCCESSOR_279, six.SUCCESSOR_280, six.SUCCESSOR_281
+
+    def state(seals, receipts, max_seq):
+        return {**seals, **{seal + "_receipt": receipts[seal] for seal in SEALS}, "max_seq": max_seq}
+
+    fixture = {"all_passed": True, "attested": dict.fromkeys(SEALS, True), "reader_400d_ms": 1234}
+    replies = {
+        "probe": {
+            "before": state(live, live, 279),
+            "applied": state(pred, pred, 280),
+            "successor": state(new, pred, 280),
+        },
+        "final": {
+            "applied": state(pred, pred, 280),
+            "inside": state(new, new, 280),
+            "native_fixture": fixture if native is None else native,
+        },
+        "after": {"after": state(live, live, 279)},
+    }
+    seen = []
+
+    def run(psql, sql):
+        name = "probe" if "QUALIFY successor" in sql else "final" if "QUALIFY inside" in sql else "after"
+        seen.append(name)
+        return replies[name]
+
+    monkeypatch.setattr(qualifier, "run", run)
+    return seen
+
+
+def test_qualifier_records_281_measured_against_applied_280(monkeypatch, tmp_path):
+    fixture = tmp_path / "fixture.json"
+    shutil.copy(FIXTURE, fixture)
+    seen = fake_qualification(monkeypatch)
+    report = qualifier.qualify(MIGRATION, fixture, ["psql"], apply_first=[PREDECESSOR], native_fixture=NATIVE)
+    assert seen == ["probe", "final", "after"]
+    written = json.loads(fixture.read_text())
+    assert written == {**written, **report}
+    assert written["projected_successor"] == six.SUCCESSOR_281  # the projection stays beside the measurement
+    assert written["before"] == six.SUCCESSOR_279
+    assert_recorded(written)
+    seen = fake_qualification(monkeypatch, native={"all_passed": False})
+    fixture.unlink()
+    with pytest.raises(qualifier.QualificationError, match="native qualification failed"):
+        qualifier.qualify(MIGRATION, fixture, ["psql"], apply_first=[PREDECESSOR], native_fixture=NATIVE)
+    assert seen == ["probe", "final", "after"] and not fixture.exists()
+
+
+def test_native_qualification_is_recorded():
+    """Merge gate: the rolled-back production qualification must be recorded first."""
+    assert_recorded(receipt())
