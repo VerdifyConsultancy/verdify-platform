@@ -81,6 +81,8 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-mcp-runtime-db` | `password` | production MCP and its dedicated PreSync role bootstrap (`secretKeyRef`; username is migration-owned `verdify_mcp_runtime_login`) | — | — | ✓ |
+| `verdify-dashboard-runtime-db` | `password` | operator API `DB_PASS` (`secretKeyRef`, required; username is migration-owned `verdify_dashboard_runtime_login`) and, from R1's wiring PR, the login's role bootstrap; [operator API](#operator-api-verdify-operator-api-1148) | — | — | ✓ from #1143 |
+| `verdify-operator-api` | `operator-api-token` | operator API `OPERATOR_API_TOKEN` (`secretKeyRef`, required); the same value as `verdify-dashboard-web`'s key; [operator API](#operator-api-verdify-operator-api-1148) | — | — | ✓ from #1143 |
 | `verdify-mcp-agents` | one key per named agent (`<name>`), the value its MCP bearer token | MCP (optional read-only volume at `/etc/verdify/mcp-agents`, no `subPath`; re-read within 60 s, no restart; [named MCP agents](#named-mcp-agents-vd-59)) | — | — | opt |
 | `verdify-hermes` | `OPENAI_API_KEY` | Hermes and v2 OpenAI selector provider adapters (`secretKeyRef`, optional while component capability is off) | — | — | req at activation |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
@@ -346,3 +348,20 @@ until R1's pin PR (#1143). Read it back by key name only:
 `kubectl -n verdify-dashboard describe secret verdify-dashboard-web`. The image-pull Secret
 `zot-origin-cluster-pull` is reflected into the namespace by jvallery/agents#5994. Operations:
 [dashboard runbook](../../docs/runbooks/dashboard.md).
+
+## Operator API (`verdify-operator-api`) (#1148)
+
+The operator API, Deployment `verdify-operator-api` in `verdify-prod` (`deploy/k8s/components/operator-api`), reads
+two Secrets from the jvallery/agents KSOPS lane for `verdify-prod` (jvallery/agents#5993); only Jason seals their
+values. Neither has a placeholder, and `kustomize build deploy/k8s/components/operator-api` emits no Secret. The
+component reaches `overlays/prod` only in R1's wiring PR (#1143), merged once both Secrets exist. The pod refuses to
+start unless `OPERATOR_API_TOKEN` has at least 32 printable characters (the BFF's rule) and `DB_USER` (ConfigMap
+`verdify-operator-api`) is `verdify_dashboard_runtime_login`.
+
+| Secret | Keys | Consumed by | Rotate |
+|---|---|---|---|
+| `verdify-operator-api` | `operator-api-token` | Deployment `verdify-operator-api` (`secretKeyRef`, required: `OPERATOR_API_TOKEN`), the bearer the BFF presents; the same value as `verdify-dashboard-web`'s `operator-api-token` | Jason reseals both copies in one jvallery/agents PR. Once both have synced, delete the web pod and the operator API pod so each restarts with the new value; until both have, the BFF's calls get 401. |
+| `verdify-dashboard-runtime-db` | `password` | Deployment `verdify-operator-api` (`secretKeyRef`, required: `DB_PASS`, user `verdify_dashboard_runtime_login`) and, from R1's wiring PR, that login's role bootstrap (optional `secretKeyRef`) | An owner-run `ALTER ROLE verdify_dashboard_runtime_login PASSWORD …` sets the new value, then Jason reseals it in the KSOPS lane; once synced, restart `verdify-operator-api` (`kubectl -n verdify-prod delete pod -l app.kubernetes.io/component=operator-api`). The role bootstrap never rotates a password. |
+
+A missing Secret or key leaves a new operator API pod in `CreateContainerConfigError`. Read both back by key name
+only: `kubectl -n verdify-prod describe secret verdify-operator-api verdify-dashboard-runtime-db`.

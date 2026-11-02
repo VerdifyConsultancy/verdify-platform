@@ -177,7 +177,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Acknowledge, with an optional note
-         * @description Acknowledges every unacknowledged repeat of the alert's alert_type and zone in one transaction, records the person and note on each and returns the merged row, so the open-alert count drops by one.
+         * @description Acknowledges every unacknowledged repeat of the alert's alert_type and sensor_id in one transaction, records the person and note on each and returns the merged row, so the open-alert count drops by one.
          */
         readonly post: operations["API-15"];
         readonly delete?: never;
@@ -197,7 +197,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Resolve, with an optional note (never blocked)
-         * @description Resolves every unresolved repeat of the alert's alert_type and zone in one transaction, records the person and resolution on each and returns the merged row. An alert whose condition persists re-opens on the next monitor cycle.
+         * @description Resolves every unresolved repeat of the alert's alert_type and sensor_id in one transaction, records the person and resolution on each and returns the merged row. An alert whose condition persists re-opens on the next monitor cycle.
          */
         readonly post: operations["API-16"];
         readonly delete?: never;
@@ -731,7 +731,7 @@ export interface components {
              */
             readonly source: string;
         };
-        /** @description One alert_log row, or one merged row for repeats of one alert_type and zone */
+        /** @description One alert_log row, or one merged row for repeats of one alert_type and sensor_id */
         readonly Alert: {
             /** Format: date-time */
             readonly acknowledged_at?: string | null;
@@ -750,13 +750,13 @@ export interface components {
              * @example system
              */
             readonly category: string;
-            /** @description Repeats of this alert_type and zone merged into the row */
+            /** @description Repeats of this alert_type and sensor_id merged into the row */
             readonly count?: number;
             /** @description As stored, e.g. line_id or equipment */
             readonly details?: Record<string, unknown>;
             /** Format: date-time */
             readonly first_seen_at: string;
-            /** @description The oldest unresolved repeat's id, stable while new repeats merge (a resolved merged row: its oldest repeat's); API-15 and API-16 act on every repeat of its alert_type and zone */
+            /** @description The oldest unresolved repeat's id, stable while new repeats merge (a resolved merged row: its oldest repeat's); API-15 and API-16 act on every repeat of its alert_type and sensor_id */
             readonly id: number;
             /**
              * Format: date-time
@@ -1215,7 +1215,7 @@ export interface components {
             readonly start_at: string;
         };
         readonly Now: {
-            /** @description The one open-alert count every surface shows (nav, Now, Activity, API-14, MCP alerts): the unacknowledged (disposition open) v_open_alerts rows with repeats of one alert_type and zone counted once (a merged row counts while any of its repeats is unacknowledged), by severity. It equals the rows with status open that API-14 returns (verdify_services.alerts.open_count) */
+            /** @description The one open-alert count every surface shows (nav, Now, Activity, API-14, MCP alerts): the unacknowledged (disposition open) v_open_alerts rows with repeats of one alert_type and sensor_id counted once (a merged row counts while any of its repeats is unacknowledged), by severity. It equals the rows with status open that API-14 returns (verdify_services.alerts.open_count) */
             readonly alerts: {
                 readonly critical: number;
                 readonly info: number;
@@ -2249,7 +2249,7 @@ export interface operations {
                 /** @description next_cursor from the previous page */
                 readonly cursor?: components["parameters"]["Cursor"];
                 readonly limit?: components["parameters"]["Limit"];
-                /** @description open (default) = every v_open_alerts row, acknowledged ones included. recent = open plus those resolved in the last 24 h. Repeats of one alert_type and zone come back as one row with count and first and last seen; a merged row has status open while any of its repeats is unacknowledged. The rows with status open are the one open-alert count (API-02 alerts.open) */
+                /** @description open (default) = every v_open_alerts row, acknowledged ones included. recent = open plus those resolved in the last 24 h. Repeats of one alert_type and sensor_id come back as one row with count and first and last seen; a merged row has status open while any of its repeats is unacknowledged. The rows with status open are the one open-alert count (API-02 alerts.open) */
                 readonly status?: "open" | "recent";
             };
             readonly header?: never;

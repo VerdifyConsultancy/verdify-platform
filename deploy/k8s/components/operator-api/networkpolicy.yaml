@@ -1,0 +1,26 @@
+# Only the dashboard BFF reaches the operator API: pods labelled app.kubernetes.io/name: verdify-dashboard-web in
+# namespace verdify-dashboard (deploy/k8s/dashboard/deployment.yaml), on TCP 8090. Namespace and pod selector sit in
+# one `from` entry, so both must match. The namespace's default-deny-ingress refuses everything else.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-operator-api-from-dashboard-web
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: operator-api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: operator-api
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: verdify-dashboard
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-dashboard-web
+      ports:
+        - protocol: TCP
+          port: 8090

@@ -458,6 +458,16 @@ then reads only the latches), and `num_fan_burst`, `num_vent_bypass` and `num_fo
 registry rows and routes. `bs_manual_fan`, `bs_vent_lock` and `bs_manual_fog` stay, reading the
 latches, so `fan_burst_active`, `vent_bypass_active` and `fog_burst_active` confirm each burst.
 
+As built (VD-47): the latch arithmetic is three pure, native-tested helpers in
+`firmware/lib/greenhouse_logic.h` (`manual_override_deadline_ms()`, `manual_latch_active()` and
+`manual_latch_toggle()`), so the push buttons clamp `manual_override_timeout_min` to the same 1-120
+minutes as the service. F13 also deleted the globals #1160 left with no reader (the weekly-feed journal
+`wall_feed_*`, the job machine's cycle and last-day counters, `irrig_vpd_stress_ms` and
+`outdoor_rh_mode`). With no entity in the engine firmware, the L01 bridge's rows carry their own step,
+label and unit, and the two `irrig_*_duration_min` rows drop their firmware clamp (`min` and `max` keep
+1-120); `RETIRING_TUNABLES` keeps the bridge's eight pre-engine entities, which
+`test_retiring_tunables_are_live_or_the_l01_bridge` accepts until the follow-up empties the set.
+
 **Tests and docs pinned to ADR-0007 or the leak interlock** change in the same release (F6 to F10,
 F14): `firmware/test/test_greenhouse_logic.cpp:5263-5298`; invariants #2, #15 and #26 in
 `firmware/test/invariants.h`; `tests/test_12_fidelity.py:2603-2627, 2929-2968, 3037, 3134`;
