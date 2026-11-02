@@ -440,16 +440,12 @@ def sealed_sql_281():
 DASHBOARD_LOGIN_MIGRATION = (
     282,
     "282-dashboard-runtime-login.sql",
-    "4df20310b951b0122313469bae5e3218b7b5679aec567ad69e44a4006a23fee5",
+    "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a",
 )
-# Pending VD-66 measurement: 282 moves no seal, so its profile is its
-# predecessor's (281's qualified successor). All-zero until the rolled-back
-# native qualification measures 282 against merged 281; it cannot match before then.
-SUCCESSOR_282 = {
-    "api": "0000000000000000000000000000000000000000000000000000000000000000",
-    "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
-    "mcp": "0000000000000000000000000000000000000000000000000000000000000000",
-}
+# 282 grants only on the objects it creates, so it moves no seal: its profile is
+# 281's qualified successor, as 276 kept 275's. The rolled-back native
+# qualification, with 280 and 281 applied first, measures it.
+SUCCESSOR_282 = SUCCESSOR_281
 
 
 def sealed_sql_282():

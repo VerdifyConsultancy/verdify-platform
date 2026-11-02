@@ -1,15 +1,21 @@
 -- Run only inside an explicit rollback-only transaction after exact282, as the
--- superuser owner. Native checks of M2 on the production catalog: the two roles,
--- their settings and single membership, the duty's schema, attestor and sessions
--- table, no dashboard grant on any existing object, then every runtime login's
--- attestation under SET SESSION AUTHORIZATION (the dashboard login has no
--- password until the R1 wiring PR seals one). The session row and every
--- authorization change end with the rollback.
+-- superuser owner: scripts/qualify-migration-successor.py --native-fixture runs it
+-- at the end of its final session, after 280 and 281 are applied first and 282
+-- runs. Native checks of M2 on the production catalog: the two roles, their
+-- settings and single membership, the duty's schema, attestor and sessions table,
+-- no dashboard grant on any existing object, and a login that reaches no other
+-- application relation, column, sequence or definer function; then every runtime
+-- login's attestation under SET SESSION AUTHORIZATION (the dashboard login has no
+-- password until the R1 wiring PR seals one). Each session creates the roles anew
+-- with new OIDs, so every check names them and none compares an OID across
+-- sessions. The session row and every authorization change end with the rollback;
+-- the last line reports the result to the qualifier.
 DO $catalog$
 DECLARE
     owner_oid constant oid := (SELECT datdba FROM pg_database WHERE datname = current_database());
     duty constant regrole := 'verdify_dashboard_runtime'::regrole;
     login constant regrole := 'verdify_dashboard_runtime_login'::regrole;
+    reached text[];
 BEGIN
     IF (SELECT count(*) FROM pg_roles WHERE oid = duty
           AND NOT rolcanlogin AND NOT rolinherit AND NOT rolsuper AND NOT rolcreatedb
@@ -66,12 +72,50 @@ BEGIN
        OR EXISTS (SELECT 1 FROM pg_default_acl d CROSS JOIN LATERAL aclexplode(d.defaclacl) a
                   WHERE a.grantee IN (duty, login) OR d.defaclrole IN (duty, login))
     THEN RAISE EXCEPTION '282 granted on an existing object'; END IF;
+
+    -- Reads and writes only its sessions until M2b: through its own grants or
+    -- PUBLIC's, the login reaches no other relation, column or sequence and can
+    -- call no SECURITY DEFINER function outside an extension (217 removed PUBLIC
+    -- from every one). A failure names what it reaches.
+    reached := ARRAY(
+        SELECT object FROM (
+            SELECT 'relation ' || c.oid::regclass::text AS object
+              FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+               AND c.oid <> 'public.dashboard_session'::regclass
+               AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+               AND NOT EXISTS (SELECT 1 FROM pg_depend d
+                   WHERE d.classid = 'pg_namespace'::regclass AND d.objid = n.oid
+                     AND d.refclassid = 'pg_extension'::regclass AND d.deptype = 'e')
+               AND NOT EXISTS (SELECT 1 FROM pg_depend d
+                   WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e')
+               AND CASE WHEN c.relkind = 'S'
+                        THEN has_sequence_privilege(login, c.oid, 'USAGE,SELECT,UPDATE')
+                        ELSE has_table_privilege(login, c.oid,
+                                 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                             OR has_any_column_privilege(login, c.oid, 'SELECT,INSERT,UPDATE,REFERENCES')
+                   END
+            UNION ALL
+            SELECT 'function ' || p.oid::regprocedure::text
+              FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+             WHERE p.prosecdef
+               AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+               AND NOT EXISTS (SELECT 1 FROM pg_depend d
+                   WHERE d.classid = 'pg_namespace'::regclass AND d.objid = n.oid
+                     AND d.refclassid = 'pg_extension'::regclass AND d.deptype = 'e')
+               AND NOT EXISTS (SELECT 1 FROM pg_depend d
+                   WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e')
+               AND has_function_privilege(login, p.oid, 'EXECUTE')
+        ) reach ORDER BY object LIMIT 10);
+    IF cardinality(reached) > 0 THEN
+        RAISE EXCEPTION '282 dashboard login reaches %', array_to_string(reached, ', ');
+    END IF;
 END $catalog$;
 
 -- With 282's objects in place the api, ingestor and MCP logins still attest, and
 -- the dashboard login attests, keeps its sessions and is refused the setpoint
--- fast path and the experiment table. SET SESSION AUTHORIZATION needs the
--- superuser owner; the rollback undoes it.
+-- fast path, 280's desired state (M2b grants its reads) and the experiment table.
+-- SET SESSION AUTHORIZATION needs the superuser owner; the rollback undoes it.
 SET SESSION AUTHORIZATION verdify_api_runtime_login;
 DO $api$
 BEGIN
@@ -118,6 +162,11 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
     BEGIN
+        PERFORM 1 FROM public.desired_state LIMIT 1;
+        RAISE EXCEPTION '282 dashboard login read desired_state';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    BEGIN
         PERFORM 1 FROM public.control_experiments LIMIT 1;
         RAISE EXCEPTION '282 dashboard login read control_experiments';
     EXCEPTION WHEN insufficient_privilege THEN NULL;
@@ -125,9 +174,10 @@ BEGIN
 END $dashboard$;
 RESET SESSION AUTHORIZATION;
 
-SELECT json_build_object(
+SELECT 'QUALIFY native_fixture ' || json_build_object(
     'checks', json_build_array('roles_settings_membership', 'schema_attestor_sessions_acl',
-                               'no_grant_on_existing_objects', 'logins_attest', 'session_round_trip',
-                               'setpoint_changes_insert_denied', 'control_experiments_read_denied'),
+                               'no_grant_on_existing_objects', 'reaches_only_its_sessions', 'logins_attest',
+                               'session_round_trip', 'setpoint_changes_insert_denied',
+                               'desired_state_read_denied', 'control_experiments_read_denied'),
     'all_passed', true,
-    'attested', json_build_object('api', true, 'ingestor', true, 'mcp', true, 'dashboard', true));
+    'attested', json_build_object('api', true, 'ingestor', true, 'mcp', true, 'dashboard', true))::text;

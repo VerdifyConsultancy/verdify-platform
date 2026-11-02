@@ -234,18 +234,14 @@ SUCCESSOR_281_DIGESTS = {
     "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
 }
 SUCCESSOR_281_MCP_DIGEST = "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
-# Pending282 (VD-66, M2): the dashboard login and its sessions. It grants only on
-# the objects it creates, so all three seals stay its predecessor's, as 276's
-# duties kept 275's. Measured against merged 281 (VD-39) in a rolled-back
-# production transaction; until then all-zero placeholders, which no live
-# boundary or receipt can equal. Then they are SUCCESSOR_281's.
+# Exact282 (VD-66, M2): the dashboard login and its sessions. It grants only on
+# the objects it creates, so all three seals stay 281's, as 276's duties kept
+# 275's; the rolled-back native qualification, with 280 and 281 applied first in
+# the same session, proves it.
 SUCCESSOR_282 = "282-dashboard-runtime-login.sql"
-SUCCESSOR_282_SHA256 = "4df20310b951b0122313469bae5e3218b7b5679aec567ad69e44a4006a23fee5"
-SUCCESSOR_282_DIGESTS = {
-    "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
-    "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
-}
-SUCCESSOR_282_MCP_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000"
+SUCCESSOR_282_SHA256 = "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a"
+SUCCESSOR_282_DIGESTS = SUCCESSOR_281_DIGESTS
+SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_281_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.

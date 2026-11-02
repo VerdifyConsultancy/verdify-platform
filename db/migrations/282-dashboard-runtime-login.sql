@@ -10,7 +10,9 @@
 -- allocated in a rolled-back qualification is never reused (258's note), so the
 -- reads and writes on existing objects follow in a successor measured once this
 -- file is applied, as 259 followed 258. No grant here reaches setpoint_changes.
--- PENDING VD-66: predecessor 281 and the three seals are all-zero placeholders.
+-- Its predecessor is exact281 (VD-39) with 281's qualified seals, and its successor
+-- block asserts the same three seals; the rolled-back native qualification, with 280
+-- and 281 applied first in the same sessions, proves them.
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
     public.mcp_runtime_boundary_receipt IN SHARE ROW EXCLUSIVE MODE;
@@ -18,17 +20,17 @@ DO $predecessor$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
         AND seq=281 AND filename='db/migrations/281-irrigation-minutes-by-zone.sql'
-        AND sha256='0000000000000000000000000000000000000000000000000000000000000000'
+        AND sha256='45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8'
         AND stamp_method='runner')
         OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>=282)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000' OR
-        encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000'
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('0000000000000000000000000000000000000000000000000000000000000000','hex'))
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('0000000000000000000000000000000000000000000000000000000000000000','hex'))
-        OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode('0000000000000000000000000000000000000000000000000000000000000000','hex'))
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db' OR
+        encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3'
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode('9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3','hex'))
         OR EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname IN ('verdify_dashboard_runtime','verdify_dashboard_runtime_login'))
         OR to_regnamespace('verdify_dashboard_runtime') IS NOT NULL
         OR to_regclass('public.dashboard_session') IS NOT NULL
@@ -101,9 +103,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.dashboard_session TO verdify_dash
 -- No receipt moves: the digests and receipts must still equal the predecessor's.
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000' OR
-        encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '0000000000000000000000000000000000000000000000000000000000000000'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db' OR
+        encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
