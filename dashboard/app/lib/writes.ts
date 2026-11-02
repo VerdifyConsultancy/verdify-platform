@@ -306,14 +306,15 @@ export type CommandOperationId = "API-IRR-06" | "API-IRR-07" | "API-IRR-12" | "A
 export type CommandPhase = "idle" | "sending" | "waiting" | "done" | "late" | "failed";
 /** The words for a command whose readback has not changed within 30 s and gives no reason. */
 export const NOT_STARTED = "Not started";
-const MISTERS = ["L04", "L07", "L09"];
 
 const lineIn = (status: IrrigationStatus, id: string): IrrigationLine | undefined => status.lines.find((line) => line.line_id === id);
 const lineReason = (status: IrrigationStatus, ids: readonly string[]) => ids.map((id) => lineIn(status, id)?.state.reason).find((reason) => Boolean(reason)) ?? null;
 /**
  * The default readback: API-IRR-01 and the line's relay edge, RUNNING after a run and OFF after a stop (every line for
- * a stop with no `line_id`); a cleared fault, the mister zones' latch. Overrides (API-IRR-12) and lights (API-20) have
- * none: their screens pass API-02 `overrides` or API-13.
+ * a stop with no `line_id`); a cleared fault, the watchdog latch (`mister_fault`) gone from that line, or from every
+ * line for a clear with no `line_id`, which clears every latch (the fertilizer misters L08 and L10 latch too,
+ * irrigation F10; a back-off is no latch). Overrides (API-IRR-12) and lights (API-20) have none: their screens pass
+ * API-02 `overrides` or API-13.
  */
 export function defaultReadback(operation: CommandOperationId, params: Record<string, unknown>, body: Record<string, unknown>): Readback | null {
   const target = typeof params.line_id === "string" ? params.line_id : typeof body.line_id === "string" ? body.line_id : null;
@@ -325,8 +326,8 @@ export function defaultReadback(operation: CommandOperationId, params: Record<st
     return readback({ operationId: "API-IRR-01", done: (status) => ids(status).every((id) => lineIn(status, id)?.state.code !== "running"), reason: (status) => lineReason(status, ids(status)) });
   }
   if (operation === "API-IRR-13") {
-    const ids = target ? [target] : MISTERS;
-    return readback({ operationId: "API-IRR-01", done: (status) => ids.every((id) => !lineIn(status, id)?.fault), reason: (status) => lineReason(status, ids) });
+    const latched = (status: IrrigationStatus) => status.lines.filter((line) => (target === null || line.line_id === target) && line.fault === "mister_fault").map((line) => line.line_id);
+    return readback({ operationId: "API-IRR-01", done: (status) => latched(status).length === 0, reason: (status) => lineReason(status, latched(status)) });
   }
   return null;
 }

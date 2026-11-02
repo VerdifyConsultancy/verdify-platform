@@ -6,7 +6,7 @@
  * examples (07:02, 13:00) are kept as offsets from now as they stand at 10:42, so pinning now to 10:42 America/Denver
  * reproduces them exactly. Nothing here reaches a database, MCP, Home Assistant or a device, and no value is a secret.
  * Later issues add the fixtures they need to `FIXTURES`. A setting's `label` and `unit` are its `TunableDef.label` and
- * `unit` (VD-29): the entity name without its unit, and that unit.
+ * `unit` (VD-29): an entity's name without its unit, and that unit; the site caps carry their own.
  */
 
 export const ZONE = "America/Denver";
@@ -102,8 +102,8 @@ function setting(row) {
 }
 /** The three irrigation_site rows (param, label, unit, min, max, step, value in program rev 42). */
 const SITE_CAPS = [
-  ["mister_daily_volume_max_gal", "SAF-4 daily water ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90],
-  ["climate_yield_min", "Drip climate yield", "min", 5, 30, 1, 15],
+  ["mister_daily_volume_max_gal", "SAF-4 ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90],
+  ["climate_yield_min", "Climate yield", "min", 5, 30, 1, 15],
 ];
 /** Program rev 42 as the controller confirmed it, with the site caps inside it. */
 const programRev42 = (now) => ({
@@ -211,7 +211,7 @@ function inBand(now) {
       setting({ param: "irrig_wall_duration_min", label: "Irrig Wall Duration", control_class: "scheduled_policy", group: "scheduled_policy", kind: "numeric", unit: "min", min: 1, max: 120, step: 1, readback: device(12, 5) }),
       setting({ param: "sw_gl_main_auto_mode", label: "GL Main Auto Mode", control_class: "scheduled_policy", group: "scheduled_policy", kind: "switch", min: 0, max: 1, step: 1, readback: device(1, 5) }),
       setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
-      setting({ param: "band_vpd_low_sm", label: "Band VPD low (solar max)", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
+      setting({ param: "band_vpd_low_sm", label: "Band VPD Low SM", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
       ...SITE_CAPS.map((cap) => siteCap(now, cap)),
       setting({ param: "temp_low", label: "Set Temp Low", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
       // The Band in force rows as API-09 serves them (VD-55): the dispatcher's DERIVED band_<zone>_<role> rows, with

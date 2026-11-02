@@ -14,13 +14,13 @@ import { EditDrawer, ManualToggle, MANUAL_DEFAULT, NumberField, Reason } from ".
 import { StateReasonLine } from "../components/state-reason-line";
 import { text } from "../components/test-render";
 import type { StateReason, Alert as VocabAlert } from "./vocab";
-import type { Setting } from "./operator-api";
+import type { IrrigationStatus, Setting } from "./operator-api";
 import { readKey, useApiRead, useIrrigationRead, useNowRead, useSchedulesRead, useSettingsRead } from "./queries";
 import { parseDecimal } from "./setting-values";
 import { NOW, UUID, advance, renderWithApi, requests, sentAt, startFixtureApi, stopFixtureApi, writes } from "./test-fixture-api";
 import {
-  COMMAND_WINDOW_MS, NOT_STARTED, errorFor, formError, programBody, programSyncText, readback, settingToast, stopResult, useCommand, useProgramWrite,
-  useRecordWrite, useSettingWrite, useStop,
+  COMMAND_WINDOW_MS, NOT_STARTED, defaultReadback, errorFor, formError, programBody, programSyncText, readback, settingToast, stopResult, useCommand,
+  useProgramWrite, useRecordWrite, useSettingWrite, useStop,
 } from "./writes";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
@@ -346,6 +346,47 @@ test("C: Clear fault sends one API-IRR-13 request with no manual; before the eng
   fireEvent.click(screen.getByRole("button", { name: "Clear fault" }));
   await advance(0);
   expect(screen.getByTestId("clear").textContent).toBe("failed · arrives with the irrigation firmware");
+});
+
+test("C: a clear with no line_id waits for every latch, the fertilizer misters' included; a back-off is no latch", () => {
+  const status = (faults: Record<string, string>) => ({
+    lines: ["L04", "L07", "L08", "L09", "L10"].map((id) => ({ line_id: id, fault: faults[id] ?? null, state: { code: faults[id] ? "blocked" : "idle", reason: faults[id] ? `${id} faulted` : null } })),
+  }) as unknown as IrrigationStatus;
+  const all = defaultReadback("API-IRR-13", {}, {})!;
+  expect(all.done(status({ L08: "mister_fault" }))).toBe(false);
+  expect(all.reason?.(status({ L08: "mister_fault" }))).toBe("L08 faulted");
+  expect(all.done(status({ L04: "backing_off" }))).toBe(true);
+  expect(all.done(status({}))).toBe(true);
+  const one = defaultReadback("API-IRR-13", {}, { line_id: "L07" })!;
+  expect(one.done(status({ L08: "mister_fault" }))).toBe(true);
+  expect(one.done(status({ L07: "mister_fault" }))).toBe(false);
+});
+
+test("two presses before a render send one request with one key: Save, Run and Stop", async () => {
+  const api = startFixtureApi();
+  function Presses() {
+    const settings = useSettingsRead();
+    useNowRead();
+    const row = settings.data?.items.find((item) => item.param === "mister_engage_kpa");
+    const write = useSettingWrite(row ?? { param: "mister_engage_kpa", label: "VPD Mister Engage", kind: "numeric", unit: "kPa", step: 0.05, min: 0.5, max: 2.5 });
+    const run = useCommand({ operation: "API-IRR-06" });
+    const { stop } = useStop();
+    // Each handler presses twice in one event, so the second press finds no busy state rendered yet.
+    return <div>
+      <button type="button" onClick={() => { void write.save({ value: 1.6 }); void write.save({ value: 1.6 }); }}>Save twice</button>
+      <button type="button" onClick={() => { void run.send({ line_id: "L01" }, { minutes: 5 }); void run.send({ line_id: "L01" }, { minutes: 5 }); }}>Run twice</button>
+      <button type="button" onClick={() => { void stop(); void stop(); }}>Stop twice</button>
+    </div>;
+  }
+  renderWithApi(<Presses />);
+  await advance(0);
+  for (const name of ["Save twice", "Run twice", "Stop twice"]) {
+    fireEvent.click(screen.getByRole("button", { name }));
+    await advance(0);
+  }
+  const sent = writes(api);
+  expect(sent.map((row) => row.operationId)).toEqual(["API-10", "API-IRR-06", "API-IRR-07"]);
+  expect(new Set(sent.map((row) => row.idempotency_key)).size).toBe(3);
 });
 
 // ---------------------------------------------------------------------------------------------------- R
