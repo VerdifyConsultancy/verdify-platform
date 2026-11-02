@@ -670,6 +670,17 @@ Acceptance:
    `src=nvs` with the same hash after the reconnect.
 5. Viewers see the board and the lanes with no burst, clear or restart control.
 
+As built (VD-14, `dashboard/app/routes/equipment.tsx`), where the board settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Row | The API's label and state (ON, OFF or UNKNOWN; the vent OPEN or CLOSED) over one line of facts in words: "since 08:31 · on today 2 h 10 min · cycles 6 · reported 2 h ago" (the vent "open today"). A null since, time on or cycle count reads "—" |
+| Unknown | "UNKNOWN · last report 14 min ago" beside the name, and the facts read "since — · on today — · cycles —", because API-13 serves none of them while the state is unknown |
+| Grow lights | "OFF (controller) · Lutron OFF", with "▲ DIFFER" in an amber tag when both are known and differ; an unknown Lutron state reads "Lutron UNKNOWN · 11 min ago"; a null intent reads "— (controller)". A note in the Light card calls the Lutron state sensed and says since, time on and cycles follow it |
+| Omitted actuator | Its `equipment_state` key, with "—" and "no data", never a made-up name or OFF. An item outside the fixed list follows its group's fixed rows; an `_intent` key is never a row |
+| Errors | A failed API-13 read replaces the three groups with one "Couldn't load equipment." and Retry; a failed API-05 read shows "Couldn't load equipment lanes." and Retry in the lanes panel |
+| Lanes | The panel reads "Last 24 h" or "Last 72 h" with "Updated N s ago". Each 60 s read asks API-05 for the window ending at that moment on the server's clock (API-02's skew), and the lanes draw the window it answered for, on the sync key `verdify:equipment:<range>` |
+
 ## 9. SCR-08 Plants (Later) · `/plants`
 
 **Purpose:** what grows where, observations with photos, and the latest camera frames. Not in the first build and not
