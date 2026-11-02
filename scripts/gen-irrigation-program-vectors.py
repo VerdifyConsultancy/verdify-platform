@@ -21,13 +21,21 @@ Every slot stays inside its line kind's bounds (irrigation §4.3), which the fir
 checks too. Each text sample carries its parsed form. Never edit the JSON by hand: change the
 inputs below and regenerate. Run with --check to verify the committed fixture matches
 regeneration (scripts/ci-local.sh does).
+
+It also renders firmware/test/irrigation_program_vectors_generated.inc (VD-44, #1159) from the
+JSON: the vector bytes, hashes and decoded programs, the text samples, the fixed codes of
+verdify_schemas/irrigation.py, and REJECT_CASES, golden vectors with bytes patched and the code
+unpack_program() gives each, so the C++ decoder is checked against the Python one. --check
+covers the include too; never edit it by hand.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import struct
 import sys
+from datetime import date
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -49,6 +57,7 @@ from verdify_schemas.irrigation import (  # noqa: E402
 )
 
 FIXTURE_PATH = REPO_ROOT / "verdify_schemas" / "tests" / "fixtures" / "irrigation_program_vectors.json"
+INC_PATH = REPO_ROOT / "firmware" / "test" / "irrigation_program_vectors_generated.inc"
 
 MON, TUE, WED, THU, FRI, SAT, SUN = (1 << bit for bit in range(7))
 EVERY_DAY = 0x7F
@@ -234,6 +243,72 @@ EVENT_SAMPLES = (
 )
 
 
+def _u8(value: int) -> bytes:
+    return struct.pack("<B", value)
+
+
+def _u16(value: int) -> bytes:
+    return struct.pack("<H", value)
+
+
+def _i16(value: int) -> bytes:
+    return struct.pack("<h", value)
+
+
+_LINE = irr.PROGRAM_LINES_OFFSET  # line i at _LINE + 8 * i: cap +0, reserve +2, paused_until +4
+_SLOT = irr.PROGRAM_SLOTS_OFFSET  # slot i at _SLOT + 20 * i: id +0, line +2, days +3, kind +4, flags +5,
+#                                   start +6, on_s +8, gap_s +10, prewet_s +12, flush_s +14, count +16
+
+# Golden vectors with one or two byte spans patched, and the code unpack_program() must give each
+# (checked here at generation time). The firmware decoder (#1159) must agree on every one.
+REJECT_CASES: tuple[tuple[str, str, tuple[tuple[int, bytes], ...], str], ...] = (
+    ("magic", "seed", ((0, b"X"),), "bad_magic"),
+    ("magic_version_2", "seed", ((3, b"2"),), "bad_magic"),
+    ("header_reserved_13", "seed", ((13, _u8(1)),), "bad_header"),
+    ("header_reserved_15", "empty", ((15, _u8(0x80)),), "bad_header"),
+    ("slot_count_25", "empty", ((12, _u8(25)),), "bad_header"),
+    ("saf4_99", "seed", ((4, _u16(99)),), "bad_header"),
+    ("saf4_601", "seed", ((4, _u16(601)),), "bad_header"),
+    ("rh_ceiling_74", "seed", ((6, _u8(74)),), "bad_header"),
+    ("rh_ceiling_99", "seed", ((6, _u8(99)),), "bad_header"),
+    ("climate_yield_4", "seed", ((7, _u8(4)),), "bad_header"),
+    ("climate_yield_31", "seed", ((7, _u8(31)),), "bad_header"),
+    ("enabled_mask_bit_11", "seed", ((8, _u16(0x0809)),), "bad_header"),
+    ("vpd_member_mask_bit_3", "seed", ((10, _u8(0x09)),), "bad_header"),
+    ("schedule_member_mask_bit_3", "seed", ((11, _u8(0x08)),), "bad_header"),
+    ("line_cap_481", "seed", ((_LINE, _u16(481)),), "bad_line"),
+    ("line_reserve_over_cap", "seed", ((_LINE + 8 * 3 + 2, _u16(121)),), "bad_line"),
+    ("line_reserve_without_cap", "empty", ((_LINE + 8 * 10 + 2, _u16(1)),), "bad_line"),
+    ("unused_slot_not_zero", "seed", ((_SLOT + 20 * 3 + 19, _u8(1)),), "bad_slot"),
+    ("slot_reserved_byte", "seed", ((_SLOT + 18, _u8(1)),), "bad_slot"),
+    ("slot_flag_bit_1", "seed", ((_SLOT + 5, _u8(0x03)),), "bad_slot"),
+    ("slot_id_0", "seed", ((_SLOT, _u16(0)),), "bad_slot"),
+    ("slot_id_repeated", "seed", ((_SLOT + 20, _u16(1)),), "bad_slot"),
+    ("slot_id_descending", "full", ((_SLOT + 20 * 23, _u16(65533)),), "bad_slot"),
+    ("slot_on_l03", "full", ((_SLOT + 2, _u8(2)),), "bad_slot"),
+    ("slot_on_l11", "full", ((_SLOT + 2, _u8(10)),), "bad_slot"),
+    ("slot_line_11", "full", ((_SLOT + 2, _u8(11)),), "bad_slot"),
+    ("weekday_mask_0", "seed", ((_SLOT + 3, _u8(0)),), "bad_slot"),
+    ("weekday_mask_bit_7", "seed", ((_SLOT + 3, _u8(0xFF)),), "bad_slot"),
+    ("start_kind_4", "seed", ((_SLOT + 4, _u8(4)),), "bad_slot"),
+    ("clock_start_1440", "full", ((_SLOT + 6, _i16(1440)),), "bad_slot"),
+    ("clock_start_minus_1", "full", ((_SLOT + 6, _i16(-1)),), "bad_slot"),
+    ("solar_offset_241", "seed", ((_SLOT + 6, _i16(241)),), "bad_slot"),
+    ("solar_offset_minus_241", "seed", ((_SLOT + 6, _i16(-241)),), "bad_slot"),
+    ("degraded_only_on_l01", "full", ((_SLOT + 5, _u8(1)),), "bad_slot"),
+    ("on_s_9", "seed", ((_SLOT + 8, _u16(9)),), "bad_slot"),
+    ("on_s_7201", "full", ((_SLOT + 8, _u16(7201)),), "bad_slot"),
+    ("gap_s_601", "seed", ((_SLOT + 10, _u16(601)),), "bad_slot"),
+    ("prewet_s_1801", "full", ((_SLOT + 20 * 2 + 12, _u16(1801)),), "bad_slot"),
+    ("flush_s_1801", "full", ((_SLOT + 20 * 2 + 14, _u16(1801)),), "bad_slot"),
+    ("count_0", "seed", ((_SLOT + 16, _u8(0)),), "bad_slot"),
+    ("count_61", "seed", ((_SLOT + 16, _u8(61)),), "bad_slot"),
+    ("magic_before_header", "seed", ((0, b"X"), (4, _u16(99))), "bad_magic"),
+    ("header_before_slot", "seed", ((4, _u16(99)), (_SLOT + 16, _u8(0))), "bad_header"),
+    ("line_before_slot", "seed", ((_LINE, _u16(481)), (_SLOT + 16, _u8(0))), "bad_line"),
+)
+
+
 def _fail(message: str) -> None:
     raise SystemExit(f"gen-irrigation-program-vectors: {message}")
 
@@ -308,21 +383,244 @@ def build_fixture() -> dict:
     }
 
 
+# ── The firmware include (VD-44, #1159) ──────────────────────────────────────
+
+
+def _c_string(text: str) -> str:
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _byte_lines(data: bytes, indent: str, per_line: int = 16) -> list[str]:
+    return [
+        indent + ", ".join(f"0x{b:02x}" for b in data[start : start + per_line]) + ","
+        for start in range(0, len(data), per_line)
+    ]
+
+
+def _mask(indexes: frozenset[int]) -> str:
+    return f"0x{sum(1 << i for i in indexes):04x}"
+
+
+def _reject_rows(by_name: dict[str, bytes]) -> list[str]:
+    rows = []
+    for name, base, patches, expected in REJECT_CASES:
+        if not 1 <= len(patches) <= 2 or any(not 1 <= len(span) <= 4 for _, span in patches):
+            _fail(f"reject case {name!r}: one or two patches of 1-4 bytes")
+        data = bytearray(by_name[base])
+        for offset, span in patches:
+            data[offset : offset + len(span)] = span
+        if bytes(data) == by_name[base]:
+            _fail(f"reject case {name!r} does not change its {base} vector")
+        try:
+            irr.unpack_program(bytes(data))
+        except irr.ProgramRecordError as exc:
+            if exc.code != expected:
+                _fail(f"reject case {name!r}: unpack_program() says {exc.code}, expected {expected}")
+        else:
+            _fail(f"reject case {name!r}: unpack_program() accepted it")
+        base_index = [vector_name for vector_name, _ in PROGRAMS].index(base)
+        offsets = ", ".join(str(offset) for offset, _ in patches)
+        lens = ", ".join(str(len(span)) for _, span in patches)
+        spans = ", ".join("{" + ", ".join(f"0x{b:02x}" for b in span) + "}" for _, span in patches)
+        rows.append(
+            f"    {{{_c_string(name)}, {base_index}, {len(patches)}, {{{offsets}}}, {{{lens}}}, {{{spans}}}, "
+            f"{_c_string(expected)}}},"
+        )
+    return rows
+
+
+def render_include(fixture: dict) -> str:
+    """The C++ include for firmware/test/test_irrigation_program.cpp, rendered from the fixture JSON."""
+    vectors = fixture["vectors"]
+    by_name = {vector["name"]: bytes.fromhex(vector["hex"]) for vector in vectors}
+    out: list[str] = [
+        "// AUTOGENERATED by scripts/gen-irrigation-program-vectors.py - DO NOT EDIT.",
+        "// Rendered from verdify_schemas/tests/fixtures/irrigation_program_vectors.json and the fixed",
+        "// codes of verdify_schemas/irrigation.py, for firmware/test/test_irrigation_program.cpp (VD-44).",
+        "// Regenerate with: python3 scripts/gen-irrigation-program-vectors.py",
+        "",
+        "// ── Fixed codes (verdify_schemas/irrigation.py) ──",
+        f"static const size_t kPyRecordLen = {fixture['record_len']};",
+        f"static const size_t kPyChunkMax = {fixture['chunk_max']};",
+        f"static const size_t kPyLinesOffset = {irr.PROGRAM_LINES_OFFSET};",
+        f"static const size_t kPySlotsOffset = {irr.PROGRAM_SLOTS_OFFSET};",
+        f"static const size_t kPyMaxSlots = {irr.PROGRAM_MAX_SLOTS};",
+        f"static const size_t kPyLineCount = {irr.PROGRAM_LINE_COUNT};",
+        f"static const char kPyMagic[] = {_c_string(irr.PROGRAM_MAGIC.decode())};",
+        f"static const uint8_t kPySlotFlagDegradedOnly = {irr.SLOT_FLAG_DEGRADED_ONLY};",
+        "static const char* const kPyLineIds[] = {" + ", ".join(_c_string(x) for x in irr.LINE_IDS) + "};",
+        "// MISTER_MASK_BIT as {device_idx, bit}.",
+        "static const uint8_t kPyMisterMaskBit[][2] = {"
+        + ", ".join(f"{{{irr.DEVICE_IDX[line_id]}, {bit}}}" for line_id, bit in irr.MISTER_MASK_BIT.items())
+        + "};",
+        "static const char* const kPyStartKinds[] = {"
+        + ", ".join(_c_string(kind) for kind, _ in sorted(irr.START_KIND.items(), key=lambda item: item[1]))
+        + "};",
+        "static const int16_t kPyStartRange[][2] = {"
+        + ", ".join(f"{{{lo}, {hi}}}" for _, (lo, hi) in sorted(irr.START_RANGE.items()))
+        + "};",
+        f"static const uint16_t kPySchedulableMask = {_mask(irr.SCHEDULABLE_IDX)};",
+        f"static const uint16_t kPyDripManifoldMask = {_mask(irr.DRIP_MANIFOLD_IDX)};",
+        f"static const uint16_t kPyMistManifoldMask = {_mask(irr.MIST_MANIFOLD_IDX)};",
+        f"static const uint16_t kPyDegradedOnlyMask = {_mask(irr.DEGRADED_ONLY_IDX)};",
+        "static const char* const kPyCauses[] = {"
+        + ", ".join(_c_string(cause.value) for cause in irr.IrrigationCause if cause is not irr.IrrigationCause.UNKNOWN)
+        + "};",
+        "// OUTCOME_CODES, in RunOutcome order.",
+        "static const char* const kPyOutcomeCodes[] = {"
+        + ", ".join(
+            _c_string(code)
+            for outcome in irr.RunOutcome
+            for code, value in irr.OUTCOME_CODES.items()
+            if value is outcome
+        )
+        + "};",
+        "static const char* const kPyReasonCodes[] = {" + ", ".join(_c_string(x) for x in irr.REASON_WORDS) + "};",
+        "static const char* const kPyRejectCodes[] = {" + ", ".join(_c_string(x) for x in irr.REJECT_CODES) + "};",
+        f"static const char kPyRomHash16[] = {_c_string(irr.ROM_HASH16)};",
+        f"static const size_t kPyEventsMax = {irr.IRR_EVENTS_MAX};",
+        f"static const size_t kPyTextMaxLen = {irr.IRR_TEXT_MAX_LEN};",
+        "",
+        "// ── Golden vectors ──",
+        f"static const size_t kGoldenVectorCount = {len(vectors)};",
+        "static const char* const kGoldenVectorNames[] = {" + ", ".join(_c_string(v["name"]) for v in vectors) + "};",
+        f"static const uint8_t kGoldenVectorBytes[][{fixture['record_len']}] = {{",
+    ]
+    for vector in vectors:
+        out.append(f"    {{  // {vector['name']}")
+        out.extend(_byte_lines(bytes.fromhex(vector["hex"]), "        "))
+        out.append("    },")
+    out.append("};")
+    out.append("static const uint8_t kGoldenVectorSha256[][32] = {")
+    for vector in vectors:
+        out.append(f"    {{  // {vector['name']}")
+        out.extend(_byte_lines(bytes.fromhex(vector["sha256"]), "        "))
+        out.append("    },")
+    out.append("};")
+    chunk_count = max(len(vector["chunks"]) for vector in vectors)
+    out.append(f"static const size_t kGoldenChunkCount = {chunk_count};")
+    out.append("// irr_program_chunk (offset, length) pairs.")
+    out.append(f"static const uint16_t kGoldenChunks[][{chunk_count}][2] = {{")
+    for vector in vectors:
+        pairs = ", ".join(f"{{{offset}, {len(chunk) // 2}}}" for offset, chunk in vector["chunks"])
+        out.append(f"    {{{pairs}}},  // {vector['name']}")
+    out.append("};")
+    out.extend(
+        [
+            "struct GoldenLine { uint16_t daily_cap_min; uint16_t vpd_reserve_min; uint32_t paused_until; };",
+            "struct GoldenSlot {",
+            "  uint16_t slot_id; uint8_t line; uint8_t weekday_mask; uint8_t start_kind; bool degraded_only;",
+            "  int16_t start; uint16_t on_s; uint16_t gap_s; uint16_t prewet_s; uint16_t flush_s; uint8_t count;",
+            "};",
+            "struct GoldenProgram {",
+            "  uint16_t saf4_gal; uint8_t rh_ceiling_pct; uint8_t climate_yield_min; uint16_t enabled_mask;",
+            "  uint8_t vpd_member_mask; uint8_t schedule_member_mask; uint8_t slot_count;",
+            f"  GoldenLine lines[{irr.PROGRAM_LINE_COUNT}];",
+            f"  GoldenSlot slots[{irr.PROGRAM_MAX_SLOTS}];",
+            "};",
+            "// Each vector's ProgramRecord, as the decoder must return it.",
+            "static const GoldenProgram kGoldenPrograms[] = {",
+        ]
+    )
+    for vector in vectors:
+        program = vector["program"]
+        out.append(f"    {{  // {vector['name']}")
+        out.append(
+            f"        {program['saf4_gal']}, {program['rh_ceiling_pct']}, {program['climate_yield_min']}, "
+            f"0x{program['enabled_mask']:04x}, 0x{program['vpd_member_mask']:02x}, "
+            f"0x{program['schedule_member_mask']:02x}, {len(program['slots'])},"
+        )
+        lines = ", ".join(
+            f"{{{line['daily_cap_min']}, {line['vpd_reserve_min']}, {line['paused_until']}u}}"
+            for line in program["lines"]
+        )
+        out.append(f"        {{{lines}}},")
+        out.append("        {")
+        for slot in program["slots"]:
+            out.append(
+                f"            {{{slot['slot_id']}, {slot['line']}, 0x{slot['weekday_mask']:02x}, {slot['start_kind']}, "
+                f"{'true' if slot['degraded_only'] else 'false'}, {slot['start']}, {slot['on_s']}, {slot['gap_s']}, "
+                f"{slot['prewet_s']}, {slot['flush_s']}, {slot['count']}}},"
+            )
+        out.append("        },")
+        out.append("    },")
+    out.append("};")
+    out.extend(
+        [
+            "",
+            "// ── Reject cases: a golden vector, one or two byte spans patched, and unpack_program()'s code ──",
+            "struct RejectCase {",
+            "  const char* name; uint8_t base; uint8_t patch_count; uint16_t offset[2]; uint8_t len[2];",
+            "  uint8_t bytes[2][4]; const char* code;",
+            "};",
+            "static const RejectCase kRejectCases[] = {",
+        ]
+    )
+    out.extend(_reject_rows(by_name))
+    out.append("};")
+    out.append(f"static const size_t kRejectCaseCount = {len(REJECT_CASES)};")
+
+    text = fixture["text"]
+    out.extend(
+        ["", "// ── Text samples (#1151's grammars) ──", "struct TextSample { const char* name; const char* text; };"]
+    )
+    for sensor, label in (("irr_program_id", "ProgramId"), ("irr_state", "State"), ("irr_events", "Events")):
+        samples = text[sensor]
+        out.append(f"static const size_t k{label}SampleCount = {len(samples)};")
+        out.append(f"static const TextSample k{label}Samples[] = {{")
+        for sample in samples:
+            out.append(f"    {{{_c_string(sample['name'])}, {_c_string(sample['text'])}}},")
+        out.append("};")
+    code_of = {outcome: code for code, outcome in irr.OUTCOME_CODES.items()}
+    out.extend(
+        [
+            "struct GoldenEvent {",
+            "  uint16_t seq; uint8_t line; uint16_t slot_id; uint16_t local_day; const char* outcome; const char* reason;",
+            "};",
+            "// Each irr_events sample's parsed entries, oldest first.",
+            f"static const GoldenEvent kEventsParsed[][{irr.IRR_EVENTS_MAX}] = {{",
+        ]
+    )
+    counts = []
+    for sample in text["irr_events"]:
+        entries = []
+        for event in sample["parsed"]:
+            day = (date.fromisoformat(event["local_day"]) - irr.EVENT_DAY_EPOCH).days
+            entries.append(
+                f"{{{event['seq']}, {irr.DEVICE_IDX[event['line_id']]}, {event['slot_id'] or 0}, {day}, "
+                f"{_c_string(code_of[irr.RunOutcome(event['outcome'])])}, {_c_string(event['reason'] or '')}}}"
+            )
+        counts.append(str(len(entries)))
+        out.append(
+            f"    {{{', '.join(entries)}}},  // {sample['name']}" if entries else f"    {{}},  // {sample['name']}"
+        )
+    out.append("};")
+    out.append(f"static const uint8_t kEventsParsedCount[] = {{{', '.join(counts)}}};")
+    return "\n".join(out) + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="verify the committed fixture matches regeneration")
     args = parser.parse_args()
 
     content = json.dumps(build_fixture(), indent=2) + "\n"
+    include = render_include(json.loads(content))
     if args.check:
-        current = FIXTURE_PATH.read_text() if FIXTURE_PATH.exists() else None
-        if current != content:
-            print("DRIFT: regenerate with python3 scripts/gen-irrigation-program-vectors.py")
+        drift = []
+        for path, expected in ((FIXTURE_PATH, content), (INC_PATH, include)):
+            current = path.read_text() if path.exists() else None
+            if current != expected:
+                drift.append(str(path.relative_to(REPO_ROOT)))
+        if drift:
+            print("DRIFT: regenerate with python3 scripts/gen-irrigation-program-vectors.py:", ", ".join(drift))
             return 1
-        print("irrigation program vectors fixture is up to date")
+        print("irrigation program vectors fixture and firmware include are up to date")
         return 0
     FIXTURE_PATH.write_text(content)
+    INC_PATH.write_text(include)
     print(f"wrote {FIXTURE_PATH.relative_to(REPO_ROOT)}")
+    print(f"wrote {INC_PATH.relative_to(REPO_ROOT)}")
     return 0
 
 

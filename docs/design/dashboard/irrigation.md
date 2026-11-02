@@ -285,7 +285,8 @@ and centi-gallons), so they are never NaN, and SAF-4 still trips after a power c
   `line_faulted` while a mister zone is latched (§5 F10). On a mister, run-now is a one-off window and
   needs `schedule_member` (`not_schedule_member`; D-IRP-11). The API refuses what it can see in the
   stored lines and the newest `irr_state` (422). The device may still refuse, for example mist in
-  SENSOR_FAULT; the line then shows its `irr_state` reason in words.
+  SENSOR_FAULT; every refusal but `line_busy` then ends the request `skipped` in `irr_events` (slot 0)
+  with its reason, which the line shows in words (§4.8).
 - **Stop.** Stop closes what is open now on one line or on every line, and it is never heap-deferred.
   It disables nothing: VPD misting, survival fog and the next scheduled run can still start on their
   own, and the Stop result says so. To keep a line off, disable it. Verdify has no main shutoff.
@@ -306,6 +307,51 @@ and centi-gallons), so they are never NaN, and SAF-4 still trips after a power c
   platform returns.
 - **ROM default.** If the program is missing or unreadable, the device does exactly what it does
   today: L04 VPD only, L01 enabled for run-now, no schedules, fertilizer lines off.
+
+### 4.8 What the engine core settles (VD-44)
+
+`firmware/lib/irrigation_program.h` implements §4.5 to §4.7. These are the points the design left open,
+as the core settles them:
+
+- **One engine run at a time.** Drips never overlap mist or fog, so the engine runs one occurrence or
+  run-now at a time across both manifolds, first come first served by planned start. Climate VPD pulses
+  are the climate path's: they ask for the mist manifold through `irr_vpd_request()` (grant, served,
+  wait or refuse) and hand it back with `irr_vpd_release()`. A run-now while another run holds the
+  water is `manifold_busy`.
+- **Claims cover every outcome.** An occurrence is claimed, saved and then synced, before its first
+  relay opens and also before an outcome that opened nothing (`skipped`, `missed`, `cap`) is published,
+  so a reboot never repeats a run or an outcome; still at most 24 a day. A claim that cannot be saved is
+  retried each tick and dropped unpublished 10 min past its deadline.
+- **Fertilizer runs.** The outcome is published when the feed ends. The flush then runs as the run's
+  tail, journaled in the claims record, so a reset repeats the flush and never the outcome. Prewet and
+  flush open the clean partner whatever the partner's enable, caps, budgets or occupancy: they belong
+  to the fertilizer run, which only its own line's state stops. Their minutes and water still count. A
+  mist flush waits out SENSOR_FAULT, a drip flush pauses for SAFETY_COOL and a VPD emergency, and a
+  flush that cannot run for 60 min is dropped. L03 opens with every feed; its own enable bit is not
+  read. SAFETY_COOL ending a prewet or feed reads `preempted`, with no reason.
+- **SAF-5 on mister feeds.** L03 opens only with each feed pulse of L08 and L10. A feed pulse waits
+  until fog reads OFF, and the engine's `l03_hold` asks the climate path to stop fog first.
+- **Mist windows.** Pulses are planned from the window's first pulse, and a blocked pulse waits rather
+  than being dropped. A window whose first pulse cannot open within 60 min of its planned start is
+  `missed`; once started, it ends 60 min after its last planned pulse, `short` with the last blocking
+  reason. SENSOR_FAULT, confirmed occupancy, a latch or a cap cuts a pulse at once; a cut pulse is
+  delivered again later.
+- **Caps at the start.** An occurrence whose cap is already reached ends `cap` at once, with `cap`,
+  `res`, `saf` or `bud`. Run-now is refused `cap_reached` when the requested valve time is more than is
+  left under the line's cap (for mist, the zone's cap less its reserve), or when SAF-4 or the soft budget
+  is reached.
+- **Run-now refusals are outcomes.** Every refusal but `line_busy` (a repeated send) ends the request
+  `skipped` in `irr_events`, slot 0, with its reason: `dis`, `pau`, `flt`, `nsm`, `sf`, `cap`, `res`,
+  `saf`, `bud` or `man`. A fertilizer run-now during SAFETY_COOL is `manifold_busy`.
+- **`degraded_only`.** Outside daylight such an occurrence ends `skipped` with no reason. One that
+  never fires ends `skipped` with its last waiting reason: `vok` while VPD sensing stayed healthy,
+  `sf` in SENSOR_FAULT.
+- **Drip yield.** A yield ends after one VPD pulse, after 120 s of fog, or after 60 s in which no
+  climate relay turned on.
+- **Counting.** Runtime accrues at each engine tick from the relay states the caller samples, so a VPD
+  pulse is counted to the tick. Every mister relay counts toward its zone (L08 south, L10 west). The
+  engine reports the commanded length of each mister it opens (`mist_cmd_s`) for the D-IRP-19
+  watchdog, since a prewet or flush on a mister can run up to 1800 s.
 
 ## 5. Firmware changes
 
