@@ -72,6 +72,7 @@ class BootstrapError(RuntimeError):
 # before psql starts. The sealed profile gains an alternative per successor
 # migration and passed that limit at 280, so longer SQL goes through --file on the
 # Job's private /tmp. psql runs --command and --file actions in the order given.
+# bootstrap-maintenance-runtime-roles.py shares this helper.
 # No command carries a credential: values stay in environment and stdin.
 COMMAND_ARG_MAX_BYTES = 64 * 1024
 
