@@ -168,7 +168,7 @@ Polling (weather `polling.ts`: paused while the tab is hidden, backing off from 
 |---|---|
 | Now, the alert count in the nav and the open alerts (API-14) | 15 s |
 | Water status (API-IRR-01) and the Equipment board (API-13, API-02 `overrides`) | 15 s |
-| A setting or irrigation write still REQUESTED, or a command still pending | 5 s until it settles |
+| A setting or irrigation write still REQUESTED, or a command still pending | 5 s until it settles; an item that waits for the irrigation firmware (`no_engine`, or `engine: false`) keeps its slow cadence, since no poll can settle it before that firmware ships |
 | Graph windows that end at "now" | 60 s |
 | Plan, settings, schedules, minutes, runs, the activity log and `/v1/me` | 60 s |
 | Closed graph windows | never |

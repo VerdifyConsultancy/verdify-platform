@@ -5,7 +5,8 @@
  * greenhouse; each named fixture patches it, and a list of names applies in order. Clock times in the screens'
  * examples (07:02, 13:00) are kept as offsets from now as they stand at 10:42, so pinning now to 10:42 America/Denver
  * reproduces them exactly. Nothing here reaches a database, MCP, Home Assistant or a device, and no value is a secret.
- * Later issues add the fixtures they need to `FIXTURES`.
+ * Later issues add the fixtures they need to `FIXTURES`. A setting's `label` and `unit` are its `TunableDef.label` and
+ * `unit` (VD-29): the entity name without its unit, and that unit.
  */
 
 export const ZONE = "America/Denver";
@@ -142,7 +143,7 @@ function inBand(now) {
   const water = (id, since, fields = {}) => item(lineInfo(id).equipment, lineInfo(id).label, "water", since, { line_id: id, ...fields });
   return {
     now,
-    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false },
+    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false },
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
@@ -188,9 +189,9 @@ function inBand(now) {
       },
       no_plan_since: null,
       lanes: [
-        { param: "mister_engage_kpa", label: "VPD Mister Engage kPa", unit: "kPa", device: device(1.6, 2), waypoints: [kpaNext], desired: null, applied_from: "plan" },
-        { param: "mister_pulse_gap_s", label: "Mister Pulse Gap (s)", unit: "s", device: device(45, 1), waypoints: [gapNext], desired: null, applied_from: "plan" },
-        { param: "mister_engage_delay_s", label: "Mister Engage Delay (s)", unit: "s", device: device(60, 3), waypoints: [], desired: null, applied_from: "plan" },
+        { param: "mister_engage_kpa", label: "VPD Mister Engage", unit: "kPa", device: device(1.6, 2), waypoints: [kpaNext], desired: null, applied_from: "plan" },
+        { param: "mister_pulse_gap_s", label: "Mister Pulse Gap", unit: "s", device: device(45, 1), waypoints: [gapNext], desired: null, applied_from: "plan" },
+        { param: "mister_engage_delay_s", label: "Mister Engage Delay", unit: "s", device: device(60, 3), waypoints: [], desired: null, applied_from: "plan" },
       ],
       manual_count: 0,
       health: [
@@ -203,16 +204,16 @@ function inBand(now) {
       })),
     },
     settings: [
-      setting({ param: "mister_engage_kpa", label: "VPD Mister Engage kPa", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "kPa", min: 0.5, max: 2.5, step: 0.05, readback: device(1.6, 2), plan: planned(1.6, kpaNext), applied_from: "plan" }),
-      setting({ param: "mister_engage_delay_s", label: "Mister Engage Delay (s)", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 300, step: 30, readback: device(60, 3), plan: planned(60, null), applied_from: "plan" }),
-      setting({ param: "mister_pulse_gap_s", label: "Mister Pulse Gap (s)", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 10, max: 60, step: 5, readback: device(45, 1), plan: planned(45, gapNext), applied_from: "plan" }),
-      setting({ param: "mister_pulse_on_s", label: "Mister Pulse ON (s)", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 90, step: 5, readback: device(60, 1) }),
-      setting({ param: "irrig_wall_duration_min", label: "Irrig Wall Duration (min)", control_class: "scheduled_policy", group: "scheduled_policy", kind: "numeric", unit: "min", min: 1, max: 120, step: 1, readback: device(12, 5) }),
+      setting({ param: "mister_engage_kpa", label: "VPD Mister Engage", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "kPa", min: 0.5, max: 2.5, step: 0.05, readback: device(1.6, 2), plan: planned(1.6, kpaNext), applied_from: "plan" }),
+      setting({ param: "mister_engage_delay_s", label: "Mister Engage Delay", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 300, step: 30, readback: device(60, 3), plan: planned(60, null), applied_from: "plan" }),
+      setting({ param: "mister_pulse_gap_s", label: "Mister Pulse Gap", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 10, max: 60, step: 5, readback: device(45, 1), plan: planned(45, gapNext), applied_from: "plan" }),
+      setting({ param: "mister_pulse_on_s", label: "Mister Pulse ON", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 90, step: 5, readback: device(60, 1) }),
+      setting({ param: "irrig_wall_duration_min", label: "Irrig Wall Duration", control_class: "scheduled_policy", group: "scheduled_policy", kind: "numeric", unit: "min", min: 1, max: 120, step: 1, readback: device(12, 5) }),
       setting({ param: "sw_gl_main_auto_mode", label: "GL Main Auto Mode", control_class: "scheduled_policy", group: "scheduled_policy", kind: "switch", min: 0, max: 1, step: 1, readback: device(1, 5) }),
-      setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling (%)", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
+      setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
       setting({ param: "band_vpd_low_sm", label: "Band VPD low (solar max)", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
       ...SITE_CAPS.map((cap) => siteCap(now, cap)),
-      setting({ param: "temp_low", label: "Set Temp Low °F", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
+      setting({ param: "temp_low", label: "Set Temp Low", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
       // The Band in force rows as API-09 serves them (VD-55): the dispatcher's DERIVED band_<zone>_<role> rows, with
       // their value and time as the readback, no readback path and no desired or plan row.
       ...[["house", "temp", "°F", 62.0, 70.0], ["house", "vpd", "kPa", 0.45, 0.8], ["center", "vpd", "kPa", 0.5, 0.85], ["south", "vpd", "kPa", 0.45, 0.8], ["west", "vpd", "kPa", 0.45, 0.8]]
@@ -376,6 +377,11 @@ export const FIXTURES = {
   "l01-running": (world) => {
     runLine(world, "L01", { cause: "run_now", started: world.now - 12 * MINUTE, ends: world.now + 3 * MINUTE });
     lineOf(world, "L01").today = { minutes: 12, pulses: null, gal: 8 };
+  },
+  // #1125: a running L01 whose relay never reads OFF after a Stop, so it stays in API-02 `running` (and API-IRR-01).
+  "stop-unconfirmed": (world) => {
+    if (lineOf(world, "L01").state.code !== "running") FIXTURES["l01-running"](world);
+    world.flags.stopUnconfirmed = true;
   },
   "mister-fault": (world) => {
     const line = lineOf(world, "L04");

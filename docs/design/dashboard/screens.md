@@ -100,7 +100,7 @@ is hidden, backing off from 15 s to 120 s on errors; a chart whose window has cl
   write storing the flag it carries (MCP's default is off), and Activity says so.
 - **Stop result.** Stop and Stop all water leave one toast until dismissed: "Stopped every running valve. VPD misting,
   fog and the next scheduled run can still start on their own; to keep a line off, disable it", with Disable for each
-  line that was running. Before the irrigation firmware it reads "Stopped every running valve. VPD misting and fog can
+  line that was running (never L03 or fog L11, which have no enable on the board). Before the irrigation firmware it reads "Stopped every running valve. VPD misting and fog can
   still start on their own", with no Disable (a disable applies only with that firmware). While the firmware state is
   unknown (water status not served yet, as at R1, or failing), the toast reads "Stopped every running valve. VPD
   misting, fog and the next scheduled run can still start on their own", also with no Disable. Verdify has no main shutoff:
