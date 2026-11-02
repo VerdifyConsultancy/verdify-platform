@@ -220,6 +220,19 @@ export function createOperatorClient({ url, token, timeoutMs = UPSTREAM_TIMEOUT_
 }
 
 /**
+ * The path the operator API routes on: uvicorn percent-decodes the request path before Starlette matches it, so
+ * /api/v1/%6De reaches API-01 as /v1/me. null when it does not decode.
+ * @param {string} path
+ */
+function routedPath(path) {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * API-01: the operator API always answers writes_enabled true, and the BFF's flag replaces it.
  * @param {import("node:http").IncomingMessage} incoming
  * @param {import("express").Response} res
@@ -292,7 +305,8 @@ export function apiPipeline({ publicOrigin, writesEnabled, operator }) {
       if (value !== undefined) res.setHeader(name, value);
     }
     res.setHeader("Cache-Control", "no-store");
-    if (req.method === "GET" && target.path === ME_PATH && incoming.statusCode === 200) return sendMe(incoming, res, writesEnabled);
+    // Matched on the routed path, so no encoding of /me reads the operator API's writes_enabled: true.
+    if (req.method === "GET" && routedPath(target.path) === ME_PATH && incoming.statusCode === 200) return sendMe(incoming, res, writesEnabled);
     pipeline(incoming, res, (error) => { if (error) res.destroy(); });
   };
 }

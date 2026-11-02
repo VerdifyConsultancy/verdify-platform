@@ -125,8 +125,9 @@ OIDC sign-in, a same-origin `/api/v1` proxy, and the writes flag.
 
 Code layout, one pnpm package like weather's `web/`: `dashboard/server.mjs` (weather's server plus `/auth/*`,
 the proxy and the writes flag), `security-headers.mjs` (weather's CSP; `form-action` also allows
-`https://auth.vallery.net`), `bff/` (`oidc.mjs`, `session.mjs`, `proxy.mjs`, `origin.mjs`), `app/`,
-`app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and `Dockerfile`. What the BFF does:
+`https://auth.vallery.net`, and `Referrer-Policy` is `same-origin`, see 4), `bff/` (`oidc.mjs`, `session.mjs`,
+`proxy.mjs`, `origin.mjs`), `app/`, `app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and
+`Dockerfile`. What the BFF does:
 
 1. Serves the SSR shell and hashed assets under a per-request nonce CSP (weather `security-headers.mjs`), pins
    `Host: dashboard.verdify.ai`, and caps URL length and header count as weather does.
@@ -144,9 +145,12 @@ the proxy and the writes flag), `security-headers.mjs` (weather's CSP; `form-act
    on a connection error, and a non-GET is sent once, never retried. Every `/api` and `/auth` response is
    `Cache-Control: no-store`.
 4. Requires `Origin: https://dashboard.verdify.ai` exactly on every non-GET/HEAD `/api/*` request and on
-   `POST /auth/logout`; anything else gets 403.
+   `POST /auth/logout`; anything else gets 403. Responses carry `Referrer-Policy: same-origin`, not weather's
+   `no-referrer`: under `no-referrer` a browser sends `Origin: null` on a form POST (Fetch, "append a request
+   Origin header"), so the sign-out form would be refused. `same-origin` sends no referrer to any other origin.
 5. Answers every non-GET `/api/*` request except `POST /api/v1/irrigation/stop` (matched on the validated path)
-   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7).
+   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7). `GET /api/v1/me` reads the
+   flag as `writes_enabled` on any encoding of its path that the operator API routes to API-01.
 6. Serves `/healthz` and `/readyz` (§11).
 
 Settings are read and checked once at start. A missing or malformed value stops the start with one log line that

@@ -669,7 +669,7 @@ paths:
           description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call'
           content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
         '503':
-          description: 'Sign-in is unavailable: Authentik (discovery or the token endpoint) or INT-01 cannot be reached; no session cookie'
+          description: 'Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie'
           content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
   /auth/logout:
     x-served-by: bff

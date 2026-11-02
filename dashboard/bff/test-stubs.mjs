@@ -68,7 +68,8 @@ export async function closedOrigin() {
  * The stub issuer at /application/o/verdify-dashboard/, shaped like Authentik's provider: discovery, an authorize
  * step the test plays (`authorize`), a token endpoint that checks the client secret, the code, the redirect URI and
  * the PKCE verifier, and RS256 ID tokens. `mode: "down"` drops every connection; `tokenMode` makes the token
- * endpoint refuse ("error") or drop ("hangup"). Every token it hands out is in `issued`.
+ * endpoint refuse ("error"), fail as a proxy in front of it would ("5xx", 502) or drop ("hangup"). Every token it
+ * hands out is in `issued`.
  */
 export async function startIssuer() {
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -129,6 +130,7 @@ export async function startIssuer() {
     if (req.method === "POST" && path === "/application/o/token/") {
       if (stub.tokenMode === "hangup") return void req.socket.destroy();
       if (stub.tokenMode === "error") return json(res, 400, { error: "invalid_grant", error_description: "The code was already used." });
+      if (stub.tokenMode === "5xx") return void res.writeHead(502, { "Content-Type": "text/plain" }).end("Bad Gateway");
       const form = new URLSearchParams(body);
       const code = form.get("code") ?? "";
       const grant = codes.get(code);
@@ -158,8 +160,9 @@ export async function startIssuer() {
 /**
  * The stub operator API, with VD-32's rules: the bearer on every route but /healthz; INT-01 refuses a request that
  * carries X-Dashboard-Session; /v1 resolves the session (401 when unknown) and lets only operators write (403).
- * `hold` leaves requests unanswered and `drop` destroys the next n connections. API-01 answers writes_enabled true,
- * and API-02 sends headers the BFF must not pass back.
+ * Like uvicorn and Starlette, it routes on the percent-decoded path (dot segments stay as sent) and records the
+ * request target as sent. `hold` leaves requests unanswered and `drop` destroys the next n connections. API-01
+ * answers writes_enabled true, and API-02 sends headers the BFF must not pass back.
  */
 export async function startOperatorApi() {
   const stub = {
@@ -188,29 +191,33 @@ export async function startOperatorApi() {
       return void req.socket.destroy();
     }
     if (stub.hold) return;
-    if (url === "/healthz" && req.method === "GET") return json(res, 200, { status: "ok" });
+    const mark = url.indexOf("?");
+    const sent = mark === -1 ? url : url.slice(0, mark);
+    let path = sent;
+    try { path = decodeURIComponent(sent); } catch { /* left as sent, as Python's unquote leaves a bad escape */ }
+    if (path === "/healthz" && req.method === "GET") return json(res, 200, { status: "ok" });
     if (req.headers.authorization !== `Bearer ${OPERATOR_API_TOKEN}`) return problemJson(res, 401, "unauthenticated");
     const session = typeof req.headers["x-dashboard-session"] === "string" ? req.headers["x-dashboard-session"] : undefined;
-    if (url === "/internal/sessions" && req.method === "POST") {
+    if (path === "/internal/sessions" && req.method === "POST") {
       if (session !== undefined) return problemJson(res, 403, "forbidden");
       const created = JSON.parse(body);
       const token = newToken();
       stub.sessions.set(token, created);
       return json(res, 201, { token, expires_at: new Date(Date.now() + 43_200_000).toISOString() });
     }
-    if (url === "/internal/sessions/current" && req.method === "DELETE") {
+    if (path === "/internal/sessions/current" && req.method === "DELETE") {
       stub.sessions.delete(session ?? "");
       res.writeHead(204).end();
       return;
     }
     const row = session === undefined ? undefined : stub.sessions.get(session);
-    if (!url.startsWith("/v1/")) return problemJson(res, 404, "not_found");
+    if (!path.startsWith("/v1/")) return problemJson(res, 404, "not_found");
     if (!row) return problemJson(res, 401, "unauthenticated");
     const read = req.method === "GET" || req.method === "HEAD";
     if (!read && row.role !== "operator") return problemJson(res, 403, "forbidden");
-    if (url === "/v1/me") return json(res, 200, { username: row.username, display_name: row.display_name, role: row.role, writes_enabled: true, source_revision: REVISION });
-    if (url.startsWith("/v1/now")) return json(res, 200, { server_time: new Date().toISOString(), indoor: { temp_f: 72.4 } }, { "Set-Cookie": "upstream=1; Path=/", "X-Upstream-Detail": "internal", "Cache-Control": "max-age=60" });
-    if (url === "/v1/irrigation/stop") return json(res, 202, { command_id: 1, state: "pending" }, { "Idempotency-Replayed": "false" });
+    if (path === "/v1/me") return json(res, 200, { username: row.username, display_name: row.display_name, role: row.role, writes_enabled: true, source_revision: REVISION });
+    if (path === "/v1/now") return json(res, 200, { server_time: new Date().toISOString(), indoor: { temp_f: 72.4 } }, { "Set-Cookie": "upstream=1; Path=/", "X-Upstream-Detail": "internal", "Cache-Control": "max-age=60" });
+    if (path === "/v1/irrigation/stop") return json(res, 202, { command_id: 1, state: "pending" }, { "Idempotency-Replayed": "false" });
     json(res, read ? 200 : 202, { ok: true });
   });
   stub.url = await listen(server);

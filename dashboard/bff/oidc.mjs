@@ -21,7 +21,8 @@ const OIDC_TIMEOUT_S = 10;
 const MAX_RETURN_TO = 2048;
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
-const MAX_SEALED = 4096;
+// Browsers drop a cookie whose name and value pass 4,096 bytes, and the login cookie must survive the round trip.
+const MAX_SEALED = 4096 - LOGIN_COOKIE.length - 1;
 // SCR-09's words; #1124 renders them as cards at the same URL and status, with res.locals.authError as the hint.
 const REFUSALS = {
   failed: { status: 400, text: "Sign-in didn't complete. Try again." },
@@ -214,7 +215,10 @@ export function authRoutes({ publicOrigin, provider, seal, operator }) {
     } catch {
       return refuse(res, "unavailable");
     }
-    res.cookie(LOGIN_COOKIE, seal.seal({ state, nonce, verifier, returnTo }), { ...COOKIE_ATTRIBUTES, maxAge: LOGIN_MAX_AGE_S * 1000 });
+    let sealed = seal.seal({ state, nonce, verifier, returnTo });
+    // A returnTo that JSON escaping or UTF-8 makes too long for the cookie returns to /, like any other it cannot keep.
+    if (sealed.length > MAX_SEALED) sealed = seal.seal({ state, nonce, verifier, returnTo: "/" });
+    res.cookie(LOGIN_COOKIE, sealed, { ...COOKIE_ATTRIBUTES, maxAge: LOGIN_MAX_AGE_S * 1000 });
     res.location(authorize.href).status(302).end();
   }
 

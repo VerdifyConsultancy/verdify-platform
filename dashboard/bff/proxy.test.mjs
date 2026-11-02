@@ -140,6 +140,18 @@ test("with DASHBOARD_WRITES_ENABLED false every write gets 503 writes_disabled e
   expect(me.body).toEqual({ username: "jason", display_name: null, role: "operator", writes_enabled: false, source_revision: REVISION });
 });
 
+test("/api/v1/me reports the BFF's flag however the path is encoded", async () => {
+  const { app } = bffWith({ writes: "false" });
+  const token = api.session("viewer");
+  for (const path of ["/api/v1/me", "/api/v1/%6De", "/api/v1/m%65", "/api/v1/me?fields=role"]) {
+    const me = await browser(app, "get", path, token);
+    expect(me.status, path).toBe(200);
+    expect(me.body, path).toMatchObject({ role: "viewer", writes_enabled: false });
+  }
+  // Each one reached API-01, which answers writes_enabled true.
+  expect(forwarded().map((call) => call.url)).toEqual(["/v1/me", "/v1/%6De", "/v1/m%65", "/v1/me?fields=role"]);
+});
+
 test("with DASHBOARD_WRITES_ENABLED true writes reach the operator API; any other value is off", async () => {
   const on = bffWith({ writes: "true" });
   const token = api.session("operator");

@@ -99,6 +99,18 @@ test.each(["//evil.example", "https://evil.example", "/\\evil.example", "\\/evil
   },
 );
 
+test("a returnTo that escaping makes too long for the login cookie lands on /, and the cookie fits in 4,096 bytes", async () => {
+  // 2,001 characters, so safeReturnTo keeps it, but JSON escapes each quote and the sealed value would pass 4 KiB,
+  // which a browser drops: the callback would then fail for want of the cookie.
+  const returnTo = `/${'"'.repeat(1000)}${"a".repeat(1000)}`;
+  expect(safeReturnTo(returnTo)).toBe(returnTo);
+  const { login, callback } = await signIn(bff.app, issuer, { claims: { groups: [VIEWERS] }, returnTo });
+  const cookie = setCookies(login).get(LOGIN_COOKIE);
+  expect(Buffer.byteLength(`${LOGIN_COOKIE}=${cookie?.value}`)).toBeLessThanOrEqual(4096);
+  expect(callback.status).toBe(302);
+  expect(callback.headers.location).toBe("/");
+});
+
 test("safeReturnTo keeps a same-origin path of at most 2,048 characters and nothing else", () => {
   for (const kept of ["/", "/water", "/water?line=L01&from=2026-11-01", "/graphs#plot", `/${"a".repeat(2047)}`, "/%2F%2Fevil.example"]) expect(safeReturnTo(kept)).toBe(kept);
   for (const refused of [undefined, null, 7, ["/water"], "", "water", "//evil.example", "/\\evil.example", "/a\\b", "https://evil.example", "/a\nb", "/a\u0000b", "/a\u007fb", "/a\u0085b", `/${"a".repeat(2048)}`]) {
@@ -174,6 +186,9 @@ test("Authentik refusing the code answers 400; Authentik or the operator API unr
   const dropped = await signIn(bff.app, issuer, { claims: { groups: [OPERATORS] } });
   expect(dropped.callback.status).toBe(503);
   expect(dropped.callback.text).toBe("Sign-in is unavailable. Try again in a minute.");
+  issuer.tokenMode = "5xx";
+  const failing = await signIn(bff.app, issuer, { claims: { groups: [OPERATORS] } });
+  expect(failing.callback.status).toBe(503);
   expect(sessionCalls()).toEqual([]);
   issuer.tokenMode = "ok";
   api.drop = 1;
@@ -181,7 +196,7 @@ test("Authentik refusing the code answers 400; Authentik or the operator API unr
   expect(apiDown.callback.status).toBe(503);
   // INT-01 is a write: sent once, never retried.
   expect(sessionCalls()).toHaveLength(1);
-  for (const { callback } of [refused, dropped, apiDown]) expect([...setCookies(callback).keys()]).toEqual([LOGIN_COOKIE]);
+  for (const { callback } of [refused, dropped, failing, apiDown]) expect([...setCookies(callback).keys()]).toEqual([LOGIN_COOKIE]);
 });
 
 test("no access, ID or refresh token reaches a response or a log line; sign-in replaces the previous session", async () => {

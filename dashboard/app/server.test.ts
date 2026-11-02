@@ -77,7 +77,7 @@ test("every response carries the security headers with a fresh nonce that reache
   expect(first.status).toBe(200);
   expect(second.status).toBe(404);
   for (const response of [first, second]) {
-    expect(response.headers).toMatchObject({ "x-frame-options": "DENY", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "cache-control": "no-store" });
+    expect(response.headers).toMatchObject({ "x-frame-options": "DENY", "x-content-type-options": "nosniff", "referrer-policy": "same-origin", "cache-control": "no-store" });
     expect(response.headers["content-security-policy"]).toMatch(/frame-ancestors 'none'$/);
     expect(response.headers["x-powered-by"]).toBeUndefined();
   }
