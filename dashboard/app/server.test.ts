@@ -8,7 +8,10 @@ import { join } from "node:path";
 import type { NextFunction, Request, Response } from "express";
 import request from "supertest";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { createApp, createServer, readSourceRevision, start } from "../server.mjs";
+import { createApp, createServer, pageLoadContext, readSourceRevision, start } from "../server.mjs";
+import * as entryServer from "./entry.server";
+import { pageContext } from "./lib/page-context";
+import { loader } from "./root";
 
 const REVISION = "0123456789abcdef0123456789abcdef01234567";
 const OTHER = "fedcba9876543210fedcba9876543210fedcba98";
@@ -149,18 +152,22 @@ test("one JSON line per request: route template, status, duration and request id
   const cookie = `__Host-verdify_session=${"S".repeat(20)}synthetic${"S".repeat(14)}`;
   await request(app).get("/?returnTo=%2Fwater&token=synthetic-secret").set("Host", HOST).set("Cookie", cookie);
   await request(app).get("/water/schedules?line=L01").set("Host", HOST).set("Cookie", cookie);
+  await request(app).get("/plants/synthetic-L02").set("Host", HOST).set("Cookie", cookie);
   await request(app).get("/assets/entry.client-x1.js").set("Host", HOST);
+  await request(app).get("/favicon.svg").set("Host", HOST);
   await request(app).post("/healthz").set("Host", HOST);
   await request(app).get("/water?line=L01").set("Host", HOST);
-  expect(lines).toHaveLength(4);
+  expect(lines).toHaveLength(5);
   expect(lines[0]).toEqual({ service: "verdify-dashboard-web", route: "/", status: 200, duration_ms: expect.any(Number), request_id: expect.stringMatching(/^[0-9a-f-]{36}$/) });
-  expect(lines[1]).toMatchObject({ service: "verdify-dashboard-web", route: "/other", status: 404 });
+  // A screen's route logs as its template (#1124); any other path as /other.
+  expect(lines[1]).toMatchObject({ service: "verdify-dashboard-web", route: "/water/schedules", status: 404 });
+  expect(lines[2]).toMatchObject({ service: "verdify-dashboard-web", route: "/other", status: 404 });
   // A failing probe is still logged.
-  expect(lines[2]).toMatchObject({ route: "/healthz", status: 404 });
-  // A page without a session goes to sign-in; the line has no returnTo.
-  expect(lines[3]).toMatchObject({ route: "/other", status: 302 });
-  expect(new Set(lines.map((line) => line.request_id)).size).toBe(4);
-  expect(JSON.stringify(lines)).not.toMatch(/synthetic|returnTo|token|water|L01|cookie/i);
+  expect(lines[3]).toMatchObject({ route: "/healthz", status: 404 });
+  // A page without a session goes to sign-in; the line has its template and no returnTo.
+  expect(lines[4]).toMatchObject({ route: "/water", status: 302 });
+  expect(new Set(lines.map((line) => line.request_id)).size).toBe(5);
+  expect(JSON.stringify(lines)).not.toMatch(/synthetic|returnTo|token|L01|L02|plants|cookie/i);
 });
 
 test("four renders at once; the fifth gets 503 busy with Retry-After, and the route manifest never waits", async () => {
@@ -242,4 +249,23 @@ test("one listener on PORT (3000) with weather's limits; no metrics port and no 
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
   expect({ ...pkg.dependencies, ...pkg.devDependencies }).not.toHaveProperty("prom-client");
   expect(readFileSync(new URL("../server.mjs", import.meta.url), "utf8")).not.toMatch(/METRICS_PORT|prom-client/);
+});
+
+test("getLoadContext sets the server build's pageContext: the root loader reads the build, the request id and #1141's refusal", () => {
+  // The server build exposes entry.server.tsx as build.entry.module, which re-exports the very key the root reads.
+  const build = { entry: { module: entryServer } };
+  expect(entryServer.pageContext).toBe(pageContext);
+  const requestId = "4f9d2c1e-7b8a-4c3d-9e2f-1a2b3c4d5e6f";
+  const read = (locals: Record<string, unknown>) => {
+    const context = pageLoadContext(build, { locals }, REVISION);
+    const request = new Request(`https://${HOST}/auth/callback`, { headers: { "x-dashboard-csp-nonce": "n0nce" } });
+    return loader({ request, context, params: {}, url: new URL(request.url), pattern: "/auth/*" } as unknown as Parameters<typeof loader>[0]) as unknown as { data?: unknown; init?: { status: number } };
+  };
+  expect(read({ requestId })).toEqual({ nonce: "n0nce", sourceRevision: REVISION, requestId, authError: null });
+  const refused = read({ requestId, authError: { reason: "no_access", requestId } });
+  expect(refused.init?.status).toBe(403);
+  expect(refused.data).toMatchObject({ sourceRevision: REVISION, authError: { reason: "no_access", requestId } });
+  // A build without the key (none yet) still gets a context, and the root loader falls back to its defaults.
+  const bare = pageLoadContext({ entry: { module: {} } }, { locals: {} }, REVISION);
+  expect(bare.get(pageContext)).toEqual({ sourceRevision: "unknown", requestId: null, authError: null });
 });

@@ -9,6 +9,7 @@ import { createServer, request as httpRequest } from "node:http";
 import { URLSearchParams } from "node:url";
 import { allowInsecureRequests } from "openid-client";
 import request from "supertest";
+import { SIGN_IN_REFUSALS, signInRefusal } from "../app/lib/page-context.ts";
 import { createApp } from "../server.mjs";
 
 export const HOST = "dashboard.verdify.ai";
@@ -243,9 +244,17 @@ export function bffEnv({ issuer, api, writes = "false" }) {
   };
 }
 
-/** Stands in for the React Router handler: the real one needs a production build. */
+/**
+ * Stands in for the React Router handler: the real one needs a production build. As the root loader does (#1124), a
+ * sign-in that /auth/* refused (res.locals.authError, read through the same signInRefusal) answers its status with
+ * SCR-09's card at the same URL, naming the reason and the request id it was handed.
+ */
 export const page = (/** @type {import("express").Request} */ req, /** @type {import("express").Response} */ res) => {
-  if (req.path === "/") res.type("html").send("<!doctype html><title>Now · Verdify dashboard</title><h1>Now</h1>");
+  const refusal = signInRefusal(res.locals.authError);
+  if (refusal) {
+    const card = SIGN_IN_REFUSALS[refusal.reason];
+    res.status(card.status).type("html").send(`<!doctype html><title>${card.title} · Verdify dashboard</title><h1>${card.title}</h1><p data-reason="${refusal.reason}">Request id ${refusal.requestId}</p>`);
+  } else if (req.path === "/") res.type("html").send("<!doctype html><title>Now · Verdify dashboard</title><h1>Now</h1>");
   else res.status(404).type("text").send("Not found");
 };
 

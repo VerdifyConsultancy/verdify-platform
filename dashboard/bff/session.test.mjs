@@ -27,7 +27,9 @@ test("anonymous GET / answers 302 to /auth/login?returnTo=%2F, and a page keeps 
   // A URL too long to carry as returnTo returns to /.
   expect((await get(`/graphs?${"q".repeat(2100)}`)).headers.location).toBe("/auth/login?returnTo=%2F");
   expect(bff.lines[0]).toEqual({ service: "verdify-dashboard-web", route: "/", status: 302, duration_ms: expect.any(Number), request_id: expect.any(String) });
-  expect(JSON.stringify(bff.lines)).not.toMatch(/returnTo|L01|water/);
+  // Each line names the route template, a screen's included (#1124), never the query or returnTo.
+  expect(bff.lines.map((line) => line.route)).toEqual(["/", "/", "/water", "/graphs"]);
+  expect(JSON.stringify(bff.lines)).not.toMatch(/returnTo|L01|2026-11-01|qqq/);
 });
 
 test("a page whose encoded form would make /auth/login too long to serve returns to /", async () => {
@@ -59,6 +61,17 @@ test("/healthz, /readyz, /auth/*, hashed assets, fonts and the route manifest sk
     expect(response.status, path).toBe(404);
     expect(response.headers.location, path).toBeUndefined();
   }
+});
+
+test("a sign-in that /auth/* refused goes through the gate to the page renderer, never back to sign-in", async () => {
+  // Authentik is down here: sign-in gets SCR-09's unavailable card, and a callback without its login cookie the failed one.
+  const login = await get("/auth/login?returnTo=%2Fwater");
+  expect([login.status, login.headers.location]).toEqual([503, undefined]);
+  expect(login.text).toContain("<h1>Sign-in is unavailable</h1>");
+  const callback = await get("/auth/callback?code=synthetic&state=synthetic");
+  expect([callback.status, callback.headers.location]).toEqual([400, undefined]);
+  expect(callback.text).toContain("<h1>Sign-in didn't complete</h1>");
+  expect(bff.lines.map((line) => [line.route, line.status])).toEqual([["/auth/login", 503], ["/auth/callback", 400]]);
 });
 
 test("React Router's single-fetch data request gets the redirect as 204 X-Remix-Redirect with a document reload", async () => {

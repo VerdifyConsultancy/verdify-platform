@@ -97,13 +97,16 @@ function pageOfDataRequest(path, query) {
  * single-fetch data request (*.data) gets the same redirect in its own form (204 with X-Remix-Redirect and
  * X-Remix-Reload-Document), because a hydrated client's fetch would follow a 302 to Authentik and fail
  * cross-origin. Hashed assets, fonts and the lazy route manifest skip the check: the manifest carries only route ids
- * and module paths, which the public assets already hold.
+ * and module paths, which the public assets already hold. So does a sign-in that /auth/* refused (it carries
+ * res.locals.authError): React Router renders its SCR-09 card at the same URL (#1124), where a redirect to sign-in
+ * would loop.
  * @returns {import("express").RequestHandler}
  */
 export function pageGate() {
   return (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     if (req.path.startsWith("/assets/") || req.path.startsWith("/fonts/") || req.path === "/__manifest") return next();
+    if (res.locals.authError) return next();
     if (sessionToken(req)) return next();
     if (req.path.endsWith(".data")) {
       const mark = req.originalUrl.indexOf("?");

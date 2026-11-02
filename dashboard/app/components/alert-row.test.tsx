@@ -27,9 +27,9 @@ test("critical, warning and info rows carry a severity-coloured rule and the sev
   }
 });
 
-test("plain title (raw until #1124 adds the alert types), place, first seen with its age, and the message", () => {
+test("plain title from the words table (raw for a type it lacks), place, first seen with its age, and the message", () => {
   const { container } = row();
-  expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("relay_stuck");
+  expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("Relay stuck");
   expect(text(container.querySelector(".alert-facts"))).toBe("fan2 · since 06:02 (40 min)");
   expect(text(container)).toContain("Fan 2 relay on with no command");
   cleanup();
@@ -62,12 +62,12 @@ test("the Acknowledge slot shows for an operator and never for a viewer; Open is
   const acknowledge = <Button write wide>Acknowledge</Button>;
   row({ acknowledge, openTo: "/activity?alert=41" });
   expect(screen.getByRole("button", { name: "Acknowledge" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Open relay_stuck" }).getAttribute("href")).toBe("/activity?alert=41");
+  expect(screen.getByRole("link", { name: "Open Relay stuck" }).getAttribute("href")).toBe("/activity?alert=41");
   cleanup();
   const { container } = row({ acknowledge, openTo: "/activity?alert=41" }, "viewer");
   expect(screen.queryByRole("button")).toBeNull();
   expect(container.querySelector("[data-write-control]")).toBeNull();
-  expect(screen.getByRole("link", { name: "Open relay_stuck" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Open Relay stuck" })).toBeTruthy();
   cleanup();
   // A viewer with nothing else to act on gets no empty action row.
   expect(row({ acknowledge }, "viewer").container.querySelector(".actions")).toBeNull();
