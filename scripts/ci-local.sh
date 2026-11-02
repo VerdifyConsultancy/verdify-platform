@@ -317,7 +317,7 @@ step "firmware native tests: policy engine + §8.10 recovery-image proof (#586),
 # replay-corpus invariants run here and gate every firmware PR. Later suites
 # append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants test-irrigation-program
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi
