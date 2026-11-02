@@ -618,6 +618,10 @@ The native qualification is `scripts/qualify-migration-successor.py <file> --fix
 against production before the merge: three sessions that each end in ROLLBACK (the file up to its `$successor$`
 block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
 after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
+It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
+live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
+predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
+latter yet).
 
 | # | Issue | Contents |
 |---|---|---|
