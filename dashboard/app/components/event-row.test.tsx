@@ -27,7 +27,7 @@ test("a row: mono time, bold title with badges, muted attribution and detail, th
   expect(time.textContent).toBe("07:41");
   expect(time.getAttribute("dateTime")).toBe(denver("07:41"));
   expect(time.getAttribute("title")).toContain("GMT-07:00");
-  expect(text(screen.getByRole("heading", { level: 3 }))).toBe("VPD Mister Engage 1.60 → 1.55 kPaConfirmed");
+  expect(text(screen.getByRole("heading", { level: 3 }))).toBe("VPD Mister Engage 1.60 → 1.55 kPa Confirmed");
   const lines = [...item.querySelectorAll(".event-body p")].map(text);
   expect(lines).toEqual(["Jason · dashboard · manual", "“Vandas drying”"]);
   expect(item.querySelector("[data-badge=ai]")).toBeNull();

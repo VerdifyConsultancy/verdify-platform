@@ -166,10 +166,11 @@ VPD Mister Engage    1.10 kPa  CONFIRMED · 12 s ago                            
 ```
 The device value (readback and age) is the large number; the request sits under it until confirmed. For a value the
 irrigation program carries, it is the program's value on the controller ("On controller · rev 42: 360 gal"). The API
-returns the state (the UI never compares binary32 readbacks) and, once a request is 60 s old, its reason in words:
-clamped (with the applied value), controller heap low, push failed, ingestor not running, controller not reporting or
-held by an experiment; else "Sent 06:02; no matching readback yet". REQUESTED rows poll every 5 s; no Send again, as
-the dispatcher re-sends.
+returns the state (the UI never compares binary32 readbacks) and its reason in words, under HELD and NOT CONFIRMED
+always and under REQUESTED once the request is 60 s old ("Applies with the irrigation firmware" at once): clamped
+(with the applied value), controller heap low, push failed, ingestor not running, controller not reporting or held by
+an experiment; else "Sent 06:02; no matching readback yet". REQUESTED rows poll every 5 s; no Send again, as the
+dispatcher re-sends.
 
 ### 4.3 Form controls and the edit drawer
 

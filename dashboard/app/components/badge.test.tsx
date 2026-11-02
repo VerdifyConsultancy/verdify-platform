@@ -33,6 +33,13 @@ test("ReadbackState renders its badge; NO READBACK also when readback_via is non
   }
   expect(badgeIn(renderUi(<ReadbackBadge state="requested" readbackVia="none" />).container)?.getAttribute("data-badge")).toBe("no_readback");
   cleanup();
+  // With no readback, HELD and Iris's override still say who or what applies; released still has no badge.
+  expect(badgeIn(renderUi(<ReadbackBadge state="held" readbackVia="none" />).container)?.getAttribute("data-badge")).toBe("held");
+  cleanup();
+  expect(text(renderUi(<ReadbackBadge state="overridden" readbackVia="none" overriddenAt={denver("14:05")} />).container)).toBe("AI Iris changed this at 14:05");
+  cleanup();
+  expect(renderUi(<ReadbackBadge state="released" readbackVia="none" />).container.textContent).toBe("");
+  cleanup();
   expect(renderUi(<ReadbackBadge state="released" />).container.textContent).toBe("");
   cleanup();
   expect(text(renderUi(<ReadbackBadge state="pending_review" />).container)).toBe("pending_review");

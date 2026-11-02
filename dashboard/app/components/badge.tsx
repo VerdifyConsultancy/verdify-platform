@@ -42,14 +42,15 @@ export function Badge({ kind, children, title }: { kind: BadgeKind; children?: R
 
 const READBACK_BADGES: Readonly<Record<string, BadgeKind>> = { requested: "requested", confirmed: "confirmed", not_confirmed: "not_confirmed", held: "held", no_readback: "no_readback" };
 /**
- * A setting's or program item's `ReadbackState` (architecture §5.5). NO READBACK also shows when the API says the
- * setting has none (`readback_via: none`). `overridden` is AI with "Iris changed this at HH:MM" (the time of the
- * plan that won, when known); `released` has no badge; a state this build does not know shows raw.
+ * A setting's or program item's `ReadbackState` (architecture §5.5). `overridden` is AI with "Iris changed this at
+ * HH:MM" (the time of the plan that won, when known); `released` has no badge. HELD, the override and released follow
+ * the state, because they say who or what applies; otherwise NO READBACK also shows when the API says the setting has
+ * none (`readback_via: none`). A state this build does not know shows raw.
  */
 export function ReadbackBadge({ state, readbackVia, overriddenAt }: { state: string; readbackVia?: ReadbackVia | (string & {}) | null; overriddenAt?: string | null }) {
-  if (readbackVia === "none" || state === "no_readback") return <Badge kind="no_readback" />;
   if (state === "released") return null;
   if (state === "overridden") return <><Badge kind="ai" /> <span className="state-note">Iris changed this{overriddenAt ? <> at <LocalTime at={overriddenAt} /></> : null}</span></>;
+  if (state !== "held" && (readbackVia === "none" || state === "no_readback")) return <Badge kind="no_readback" />;
   const kind = Object.hasOwn(READBACK_BADGES, state) ? READBACK_BADGES[state] : undefined;
   return kind ? <Badge kind={kind} /> : <span className="tag" data-badge="raw">{state}</span>;
 }

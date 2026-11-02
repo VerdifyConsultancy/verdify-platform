@@ -29,6 +29,9 @@ test("re-rendering 64.8 as null shows \"—\" and its reason: never 0, off or th
   // With no reason given it still says why there is nothing.
   rerender(tile({ label: "Indoor", value: undefined, unit: "°F" }));
   expect(text(container.querySelector("dd"))).toBe("—No reading");
+  // A verdict the screen still passes never sits beside "—".
+  rerender(tile({ label: "Indoor", value: null, unit: "°F", reason: "probe offline", verdict: "in band" }));
+  expect(text(container.querySelector("dd"))).toBe("—probe offline");
 });
 
 test("a value in words wins over a number, and an empty one is missing", () => {

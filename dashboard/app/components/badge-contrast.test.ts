@@ -64,6 +64,13 @@ test("every other badge, its neutral form while the API is down, and the Stop bu
   for (const token of ["--fault", "--warn-text", "--muted"]) expect(ratio("#fff", resolve(`var(${token})`)), token).toBeGreaterThanOrEqual(4.5);
 });
 
+test("AlertRow's 3px rule takes its severity colour from the row's own classes, whatever list holds it", () => {
+  const rule = (name: string) => rules.filter((item) => item.selectors.includes(`.${name}`)).flatMap((item) => item.declarations);
+  expect(rule("alert-row")).toContainEqual(["border-left", "3px solid var(--muted)"]);
+  expect(rule("alert-critical")).toContainEqual(["border-left-color", "var(--fault)"]);
+  expect(rule("alert-warning")).toContainEqual(["border-left-color", "var(--amber)"]);
+});
+
 test("the components use tokens only: no colour literal but white in their stylesheet section, and no hex or inline style in their source", () => {
   const raw = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   const start = raw.indexOf("/* Dashboard components");

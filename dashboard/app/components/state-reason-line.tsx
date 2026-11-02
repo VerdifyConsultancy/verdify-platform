@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { formatValue } from "../lib/format";
+import { formatNumber, formatValue } from "../lib/format";
 import type { StateReason } from "../lib/vocab";
 import { hasWords, words } from "../lib/words";
 import { LocalTime } from "./common";
@@ -11,9 +11,8 @@ export const REASON_AFTER_MS = 60_000;
 export type ReasonPart = string | { readonly time: string };
 const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 const validTime = (value: string | null | undefined): string | null => (value && Number.isFinite(Date.parse(value)) ? value : null);
-// An applied value with no unit keeps its digits rather than the 1 dp a unitless reading gets.
-const PLAIN = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 });
-const applied = (value: number, unit: string | null | undefined) => (unit ? formatValue(value, unit) : PLAIN.format(value).replace("-", "−"));
+// An applied value with no unit keeps its digits (formatNumber) rather than the 1 dp a unitless reading gets.
+const applied = (value: number, unit: string | null | undefined) => (unit ? formatValue(value, unit) : formatNumber(value));
 
 /**
  * The reason in words, as parts: text, and the times, which are always `state_reason.since` (when the reason began).

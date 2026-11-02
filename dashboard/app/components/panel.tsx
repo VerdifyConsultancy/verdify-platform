@@ -58,7 +58,10 @@ export type PanelProps = {
   state: PanelState;
   /** The skeleton's reserved height while loading. */
   reserve?: "sm" | "md" | "lg";
-  /** stale: when the newest data was observed. */
+  /**
+   * When the panel's newest data was observed. Given, a ready or busy panel shows "Updated N s ago" (its tiles show an
+   * age only when theirs differs), and a stale one "Last data N min ago (HH:MM)".
+   */
   observedAt?: string | null;
   /** ingestor_down: the newest heartbeat; controller_not_reporting: the newest climate row. */
   since?: string | null;
@@ -74,9 +77,10 @@ export type PanelProps = {
 };
 
 /**
- * A card that loads one thing and says honestly how it is: a skeleton at its reserved height while loading; the empty
- * words; STALE with "Last data N min ago (HH:MM)" and no verdict; the ingestor or controller line with device values
- * STALE; its own error and Retry; "Busy, retrying in N s" over the old render. A render failure inside stays here.
+ * A card that loads one thing and says honestly how it is: a skeleton at its reserved height while loading; its age
+ * when ready; the empty words; STALE with "Last data N min ago (HH:MM)" and no verdict; the ingestor or controller
+ * line with device values STALE; its own error and Retry; "Busy, retrying in N s" over the old render. A render
+ * failure inside stays here.
  */
 export function Panel({ title, eyebrow, headingLevel = 2, id, actions, thing, state, reserve = "md", observedAt, since, retryInS, onRetry, errorText, empty, children }: PanelProps) {
   const headingId = useId();
@@ -84,9 +88,12 @@ export function Panel({ title, eyebrow, headingLevel = 2, id, actions, thing, st
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const stale = DEVICE_STALE.includes(state);
   const info: PanelInfo = { stale, observedAt, verdict: !stale && !apiDown };
-  const line = state === "stale" ? <><FreshnessDot stale /><Badge kind="stale" /><AgeLabel observedAt={observedAt} stale /></>
-    : state === "ingestor_down" || state === "controller_not_reporting" ? <><FreshnessDot stale notReporting /><Badge kind="stale" /><ReasonSince code={state === "ingestor_down" ? "writer_down" : "controller_not_reporting"} since={since} /></>
-    : state === "busy" ? <span>Busy, retrying {retryInS !== null && retryInS !== undefined && Number.isFinite(retryInS) ? <>in {duration(Math.max(0, retryInS))}</> : "shortly"}</span>
+  // The words are separate elements in a flex row; the spaces keep them apart for a screen reader too.
+  const age = observedAt === undefined ? null : <><FreshnessDot stale={false} /><AgeLabel observedAt={observedAt} stale={false} /></>;
+  const line = state === "stale" ? <><FreshnessDot stale /><Badge kind="stale" /> <AgeLabel observedAt={observedAt} stale /></>
+    : state === "ingestor_down" || state === "controller_not_reporting" ? <><FreshnessDot stale notReporting /><Badge kind="stale" /> <ReasonSince code={state === "ingestor_down" ? "writer_down" : "controller_not_reporting"} since={since} /></>
+    : state === "busy" ? <><span>Busy, retrying {retryInS !== null && retryInS !== undefined && Number.isFinite(retryInS) ? <>in {duration(Math.max(0, retryInS))}</> : "shortly"}</span>{age && <> {age}</>}</>
+    : state === "ready" ? age
     : null;
   const body = state === "loading" ? <><div className={`skeleton skeleton-${reserve}`} aria-hidden="true" /><p className="screen-reader">Loading {thing}</p></>
     : state === "error" ? <PanelError thing={thing} text={errorText} onRetry={onRetry} />

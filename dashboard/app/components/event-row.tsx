@@ -45,7 +45,7 @@ export function EventRow({ at, showDate = false, title, badges, actor, detail, r
   return <li className="event event-row" id={id}>
     <span className="event-when"><LocalTime at={at} date={showDate} /></span>
     <div className="event-body">
-      <h3>{title}{badges}</h3>
+      <h3>{title}{badges ? <> {badges}</> : null}</h3>
       {(actor || detail) && <p>{actor && <Attribution actor={actor} />}{actor && detail && " · "}{detail}</p>}
       {reason && <p className="event-reason">{reason}</p>}
       {children}

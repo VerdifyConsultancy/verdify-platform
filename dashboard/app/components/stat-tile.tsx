@@ -25,7 +25,7 @@ export type StatTileProps = {
   /** Why the value is missing (`Reading.reason`). */
   reason?: string | null;
   sub?: ReactNode;
-  /** A judgement on the value ("in band"): never shown on stale data. */
+  /** A judgement on the value ("in band"): never shown on stale or missing data. */
   verdict?: ReactNode;
   /** This tile's source time, when it is not the panel's. */
   observedAt?: string | null;
@@ -48,7 +48,7 @@ const sameInstant = (a: string | null | undefined, b: string | null | undefined)
 /**
  * One tile: eyebrow label, value and unit, sub-line. A missing value is "—" with its reason: never 0, "off" or the
  * value it showed before (nothing is remembered between renders). Freshness and STALE show only when they differ from
- * the panel's, and a verdict only while the data is fresh.
+ * the panel's, and a verdict only on a value that is there and fresh.
  */
 export function StatTile({ label, value, unit, text, reason, sub, verdict, observedAt, stale, badge, name, id, className }: StatTileProps) {
   const variant = useContext(VariantContext);
@@ -63,7 +63,7 @@ export function StatTile({ label, value, unit, text, reason, sub, verdict, obser
     <dd>
       <span className={ownStale ? "value-muted" : undefined}>{hasText ? text : formatValue(missing ? null : value, unit)}</span>
       {missing && <small>{reason || "No reading"}</small>}
-      {verdict && !ownStale && panel.verdict && !apiDown && <small>{verdict}</small>}
+      {verdict && !missing && !ownStale && panel.verdict && !apiDown && <small>{verdict}</small>}
       {sub && <small>{sub}</small>}
       {showAge && <small className="fresh"><FreshnessDot stale={ownStale} /><AgeLabel observedAt={observedAt} stale={ownStale} /></small>}
       {ownStale && !panel.stale && <Badge kind="stale" />}

@@ -25,6 +25,16 @@ test("ready shows its content under its heading; loading is a skeleton at the re
   expect(text(container)).toBe("Runs todayLoading runs");
 });
 
+test("a ready panel given its data's time shows its age, which its tiles then leave out", () => {
+  const { container } = renderUi(panel({ observedAt: denver("06:15", 40), children: <StatList><StatTile label="Wall" value={12} unit="min" observedAt={denver("06:15", 40)} /></StatList> }));
+  expect(stateLine(container)).toBe("Updated 20 s ago");
+  expect(container.querySelector(".panel-state .dot")?.getAttribute("data-fresh")).toBe("ok");
+  expect(container.querySelector("[data-tile] .age")).toBeNull();
+  cleanup();
+  // Without a time it shows no line at all.
+  expect(renderUi(panel({})).container.querySelector(".panel-state")).toBeNull();
+});
+
 test("empty says what would appear and links to a wider range", () => {
   let { container } = renderUi(panel({ state: "empty", empty: <EmptyState message="No runs today." detail="A run shows here when a line waters." widen={{ to: "/water/history?range=7d", label: "Show the last 7 days" }} /> }));
   expect(text(container)).toContain("No runs today.A run shows here when a line waters.");
@@ -36,7 +46,7 @@ test("empty says what would appear and links to a wider range", () => {
 
 test("stale: a muted value, STALE, \"Last data 14 min ago (06:02)\" and no verdict", () => {
   const { container } = renderUi(panel({ state: "stale", observedAt: denver("06:02") }));
-  expect(stateLine(container)).toBe("StaleLast data 14 min ago (06:02)");
+  expect(stateLine(container)).toBe("Stale Last data 14 min ago (06:02)");
   expect(container.querySelector(".panel-state .dot")?.getAttribute("data-fresh")).toBe("stale");
   expect(container.querySelector(".panel-muted")).not.toBeNull();
   expect(text(container)).not.toContain("on schedule");
@@ -44,15 +54,15 @@ test("stale: a muted value, STALE, \"Last data 14 min ago (06:02)\" and no verdi
 
 test("ingestor not running and controller not reporting: device values STALE, no verdict, the line names the side", () => {
   let { container } = renderUi(panel({ state: "ingestor_down", since: denver("06:10") }));
-  expect(stateLine(container)).toBe("StaleIngestor not running since 06:10");
+  expect(stateLine(container)).toBe("Stale Ingestor not running since 06:10");
   expect(container.querySelector(".panel-state .dot")?.getAttribute("data-fresh")).toBe("off");
   expect(text(container)).not.toContain("on schedule");
   cleanup();
   ({ container } = renderUi(panel({ state: "controller_not_reporting", since: denver("06:10") })));
-  expect(stateLine(container)).toBe("StaleController not reporting since 06:10");
+  expect(stateLine(container)).toBe("Stale Controller not reporting since 06:10");
   expect(text(container)).not.toMatch(/offline/i);
   cleanup();
-  expect(stateLine(renderUi(panel({ state: "controller_not_reporting", since: null })).container)).toBe("StaleController not reporting");
+  expect(stateLine(renderUi(panel({ state: "controller_not_reporting", since: null })).container)).toBe("Stale Controller not reporting");
 });
 
 test("error: \"Couldn't load runs.\" and Retry in that panel only", () => {
@@ -71,6 +81,9 @@ test("busy keeps the old render with \"Busy, retrying in N s\"", () => {
   expect(stateLine(container)).toBe("Busy, retrying in 5 s");
   expect(text(container)).toContain("12 min");
   expect(text(container)).toContain("on schedule");
+  cleanup();
+  // The old render keeps aging while the panel waits.
+  expect(stateLine(renderUi(panel({ state: "busy", retryInS: 5, observedAt: denver("06:14") })).container)).toBe("Busy, retrying in 5 s Updated 2 min ago");
 });
 
 test("a panel that fails to render says so alone, and Retry renders it again", () => {

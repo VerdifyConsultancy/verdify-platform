@@ -21,7 +21,7 @@ export type HeroProps = {
   value: number | null | undefined;
   unit: string;
   reason?: string | null;
-  /** The value's verdict against the band; shown only while the data is fresh and the API is up. */
+  /** The value's verdict against the band; shown only on a value that is there, fresh and with the API up. */
   verdict?: ReactNode;
   sub?: ReactNode;
   /** The hero source's newest observation, whether the API marks it stale, and whether its source is not reporting. */
@@ -61,9 +61,9 @@ export function Hero({ eyebrow, title, headingLevel = 1, value, unit, reason, ve
         <Heading id={headingId} className="hero-answer">{title}</Heading>
         <p className={cls("hero-temp", panelStale && "value-muted")} data-hero-value="">{formatValue(missing ? null : value, unit)}</p>
         {missing && <p className="hero-meta">{reason || "No reading"}</p>}
-        {verdict && info.verdict && <p className="hero-meta">{verdict}</p>}
+        {verdict && !missing && info.verdict && <p className="hero-meta">{verdict}</p>}
         {sub && <p className="hero-meta">{sub}</p>}
-        <p className="hero-meta"><FreshnessDot stale={stale} notReporting={notReporting} /><AgeLabel observedAt={observedAt} stale={panelStale} />{panelStale && <Badge kind="stale" />}</p>
+        <p className="hero-meta"><FreshnessDot stale={stale} notReporting={notReporting} /><AgeLabel observedAt={observedAt} stale={panelStale} />{panelStale && <> <Badge kind="stale" /></>}</p>
       </div>
       <StatList variant="ink">{tiles.map((tile, index) => <StatTile key={tile.name} {...tile} className={cls(tile.className, !kept.has(index) && "stat-more")} />)}</StatList>
       {(readings || moved.length > 0) && <details className={readings ? undefined : "hero-more-phone"}>

@@ -55,16 +55,17 @@ test("eight tiles 4 × 2; on phones four stay and the rest move into \"All readi
   expect([...plain.querySelectorAll(".hero > dl.stats > .stat-more")].map((tile) => tile.getAttribute("data-tile"))).toEqual(["iris", "water", "alerts", "data"]);
 });
 
-test("a null hero value is \"—\" with its reason", () => {
+test("a null hero value is \"—\" with its reason, and no verdict beside it", () => {
   const { container } = renderUi(hero({ value: null, reason: "Indoor probe not reporting" }));
   expect(text(container.querySelector(".hero-temp"))).toBe("—");
   expect(text(container)).toContain("Indoor probe not reporting");
   expect(text(container.querySelector(".hero-temp"))).not.toContain("0");
+  expect([...container.querySelectorAll(".hero-meta")].map(text)).not.toContain("in band");
 });
 
 test("stale or not reporting: STALE with the last data time, muted values and no verdict", () => {
   let { container } = renderUi(hero({ observedAt: denver("06:02"), stale: true }));
-  expect(text(container.querySelector(".hero-meta:last-of-type"))).toBe("Last data 14 min ago (06:02)Stale");
+  expect(text(container.querySelector(".hero-meta:last-of-type"))).toBe("Last data 14 min ago (06:02) Stale");
   expect(container.querySelector(".hero-temp")?.className).toBe("hero-temp value-muted");
   expect(text(container)).not.toContain("in band");
   expect(container.querySelector(".hero-meta .dot")?.getAttribute("data-fresh")).toBe("stale");

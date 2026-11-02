@@ -243,9 +243,9 @@ main>section>h2,main>section>.section-head{margin:2rem 0 .6rem}
 .event-row .event-when{grid-row:auto}
 .event-body{min-width:0}
 .event-body h3+p{margin-top:.15rem}
-.events .alert-row{border-left:3px solid var(--muted)}
-.events .alert-critical{border-left-color:var(--fault)}
-.events .alert-warning{border-left-color:var(--amber)}
+.alert-row{border-left:3px solid var(--muted)}
+.alert-critical{border-left-color:var(--fault)}
+.alert-warning{border-left-color:var(--amber)}
 .alert-severity{font:600 .72rem/1.45 var(--mono);text-transform:uppercase;letter-spacing:.08em}
 .alert-critical .alert-severity{color:var(--fault)}
 .alert-warning .alert-severity{color:var(--warn-text)}
