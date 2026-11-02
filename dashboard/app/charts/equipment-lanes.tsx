@@ -65,16 +65,18 @@ const SENSED = new Set(["grow_light_main", "grow_light_grow", "water_flowing"]);
 export const isIntentKey = (equipment: string) => equipment.endsWith("_intent");
 
 const STATES: readonly LaneState[] = ["on", "off", "unknown"];
+/** A state the lanes draw; a newer one from the API is dropped, never drawn as off. */
+const isLaneState = (state: string): state is LaneState => (STATES as readonly string[]).includes(state);
 
 function laneRow(lane: StateLane, from: number, to: number): LaneRow {
   const line = (lane.line_id ? lineById(lane.line_id) : undefined) ?? lineByEquipment(lane.equipment);
   const spans: LaneSpan[] = [];
   for (const interval of lane.intervals) {
-    const start = epochOf(interval.start), end = epochOf(interval.end);
-    if (start === null || end === null || !STATES.includes(interval.state)) continue;
+    const start = epochOf(interval.start), end = epochOf(interval.end), state = interval.state;
+    if (start === null || end === null || !isLaneState(state)) continue;
     const clipped = { start: Math.max(start, from), end: Math.min(end, to) };
     if (clipped.end <= clipped.start) continue;
-    spans.push({ ...clipped, state: interval.state, cause: interval.cause ?? null });
+    spans.push({ ...clipped, state, cause: interval.cause ?? null });
   }
   spans.sort((a, b) => a.start - b.start);
   let runtime = 0, starts = 0;
