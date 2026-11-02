@@ -5,11 +5,13 @@ tests/test_dashboard_db_*.py file and sets VERDIFY_ISOLATED_TEST_DSN; without
 it this file skips. It builds a private schema from db/schema.sql's own DDL
 for every table and view the reads touch, migration 280's desired_state and
 v_desired_state_current, and migration 259's fn_mcp_armed_assignment_context()
-over stand-ins for the two experiment tables db/schema.sql predates. The reads
-run as a role holding only SELECT on those relations and EXECUTE on that
-function (a subset of what M2, #1179, grants the dashboard login), so a read of
-anything else fails here. The reads measure every age from the server's now(),
-so each fixture is placed relative to it.
+over stand-ins for the two experiment tables db/schema.sql predates (with a
+public stand-in that answers from it, because verdify_services.settings names
+the public function). The reads run as a role holding only SELECT on those
+relations and EXECUTE on that function (a subset of what M2, #1179, grants the
+dashboard login), so a read of anything else fails here. Since VD-55 the alert
+count and the leak rows read alert_log, not v_open_alerts. The reads measure
+every age from the server's now(), so each fixture is placed relative to it.
 """
 
 from __future__ import annotations
@@ -84,9 +86,33 @@ READ_TABLES = (
     "setpoint_changes",
     "setpoint_clamps",
     "water_meter_events",
+    "alert_log",  # VD-55: alerts.open_count and the leak rows read alert_log under v_open_alerts' predicate
 )
-READ_VIEWS = ("v_open_alerts", "v_active_plan", "v_desired_state_current")
-ALL_TABLES = (*READ_TABLES, "alert_log", "desired_state", "control_experiments", "control_assignments")
+READ_VIEWS = ("v_active_plan", "v_desired_state_current")
+ALL_TABLES = (*READ_TABLES, "desired_state", "control_experiments", "control_assignments")
+# verdify_services.settings (API-07's lanes, VD-55) checks for an armed experiment through
+# activity.ARMED_EXPERIMENT_SQL, which names public.fn_mcp_armed_assignment_context(): a
+# stand-in there answers from this schema's copy, and remove() drops only the stand-in.
+STAND_IN = "vd54 reads stand-in"
+PUBLIC_ARMED_CONTEXT = f"""
+DO $stand_in$ BEGIN
+    IF to_regprocedure('public.fn_mcp_armed_assignment_context()') IS NULL THEN
+        CREATE FUNCTION public.fn_mcp_armed_assignment_context()
+        RETURNS TABLE (experiment_id uuid, greenhouse_id text, assignment_id uuid)
+        LANGUAGE sql STABLE AS $body$ SELECT * FROM {SCHEMA}.fn_mcp_armed_assignment_context() $body$;
+        COMMENT ON FUNCTION public.fn_mcp_armed_assignment_context() IS '{STAND_IN}';
+        REVOKE ALL ON FUNCTION public.fn_mcp_armed_assignment_context() FROM PUBLIC;
+    END IF;
+END $stand_in$;
+GRANT EXECUTE ON FUNCTION public.fn_mcp_armed_assignment_context() TO {ROLE};
+"""
+DROP_STAND_IN = f"""
+DO $stand_in$ BEGIN
+    IF obj_description(to_regprocedure('public.fn_mcp_armed_assignment_context()'), 'pg_proc') = '{STAND_IN}' THEN
+        DROP FUNCTION public.fn_mcp_armed_assignment_context();
+    END IF;
+END $stand_in$;
+"""
 
 
 def extract(text: str, start: str, end: str) -> str:
@@ -116,10 +142,12 @@ async def install(conn) -> None:
         GRANT EXECUTE ON FUNCTION {SCHEMA}.fn_mcp_armed_assignment_context() TO {ROLE};
         """
     )
+    await conn.execute(PUBLIC_ARMED_CONTEXT)
 
 
 async def remove(conn) -> None:
-    await conn.execute(f"RESET ROLE; DROP SCHEMA IF EXISTS {SCHEMA} CASCADE")
+    await conn.execute(f"RESET ROLE; {DROP_STAND_IN}")
+    await conn.execute(f"DROP SCHEMA IF EXISTS {SCHEMA} CASCADE")
     await conn.execute(
         f"DO $$ BEGIN DROP OWNED BY {ROLE}; DROP ROLE {ROLE}; EXCEPTION WHEN undefined_object THEN NULL; END $$"
     )

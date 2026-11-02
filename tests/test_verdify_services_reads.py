@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import os
 import re
+import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -24,7 +26,8 @@ from verdify_schemas import alerts as schema_alerts
 from verdify_schemas.irrigation import LINE_IDS
 from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.tunable_registry import REGISTRY
-from verdify_services import reads
+from verdify_services import activity, alerts, reads, settings
+from verdify_services.actor import ActorRef
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -243,7 +246,7 @@ def test_the_leak_block_reads_nothing_as_clear_while_the_controller_is_not_repor
     assert (leak.active, leak.flow_gpm, leak.gal_last_10min, leak.since) == (False, 0.0, 0, None)
 
 
-# ── applied_from, waypoints' effective and the interim desired state ───────
+# ── applied_from and waypoints' effective ───────────────────────────────────
 
 
 def desired_row(param="mister_engage_kpa", value=1.55, manual=False, created_at=None, **extra):
@@ -264,19 +267,20 @@ def plan_row(value=1.70, created_at=None, ts=None):
     return {"value": value, "created_at": created_at or den(2, 7, 2), "ts": ts or den(2, 7, 2)}
 
 
-def test_applied_from_follows_the_dispatcher_rule():
-    param = "mister_engage_kpa"
-    assert reads.applied_from(param, desired_row(manual=True), plan_row(created_at=den(2, 9))) == "manual"
+def test_lane_applied_from_is_the_settings_rule():
+    """API-07's lanes take applied_from from settings.status (VD-55), the dispatcher's §5.2 order."""
+    spec = REGISTRY["mister_engage_kpa"]
+    assert settings.applied_from(spec, desired_row(manual=True), plan_row(created_at=den(2, 9))) == "manual"
     # A plan written 07:02 and a non-manual desired row at 08:00: the desired row applies.
-    assert reads.applied_from(param, desired_row(), plan_row()) == "desired"
-    assert reads.applied_from(param, desired_row(), plan_row(created_at=den(2, 9))) == "plan"
-    assert reads.applied_from(param, desired_row(value=None), plan_row()) == "plan"
-    assert reads.applied_from(param, None, plan_row()) == "plan"
+    assert settings.applied_from(spec, desired_row(), plan_row()) == "desired"
+    assert settings.applied_from(spec, desired_row(), plan_row(created_at=den(2, 9))) == "plan"
+    assert settings.applied_from(spec, desired_row(value=None), plan_row()) == "plan"
+    assert settings.applied_from(spec, None, plan_row()) == "plan"
     assert REGISTRY["temp_low"].push_owner == "band"
-    assert reads.applied_from("temp_low", None, None) == "band"
+    assert settings.applied_from(REGISTRY["temp_low"], None, None) == "band"
     assert REGISTRY["gl_main_lux_threshold"].push_owner == "schedule"
-    assert reads.applied_from("gl_main_lux_threshold", None, None) == "band"
-    assert reads.applied_from(param, None, None) == "default"
+    assert settings.applied_from(REGISTRY["gl_main_lux_threshold"], None, None) == "band"
+    assert settings.applied_from(spec, None, None) == "default"
 
 
 def test_waypoint_effective_is_resolve_effective_picking_the_plan_row():
@@ -287,29 +291,19 @@ def test_waypoint_effective_is_resolve_effective_picking_the_plan_row():
     assert resolve_effective(desired_row(manual=True, created_at=den(1, 8)), waypoint).applied_from == "desired"
     newer = {"value": 1.70, "created_at": den(2, 9)}
     assert resolve_effective(desired_row(), newer).applied_from == "plan"  # effective true
+    param = "mister_engage_kpa"
+    assert reads.waypoint_effective(param, desired_row(), waypoint) is False
+    assert reads.waypoint_effective(param, desired_row(manual=True, created_at=den(1, 8)), newer) is False
+    assert reads.waypoint_effective(param, desired_row(), newer) is True
+    assert reads.waypoint_effective(param, desired_row(value=None), waypoint) is True  # released
+    assert reads.waypoint_effective(param, None, waypoint) is True
+    assert reads.waypoint_effective(param, None, newer, superseded=True) is False
+    # The dispatcher skips a desired row of a setting that is not writable now, and so does effective.
+    assert reads.waypoint_effective("temp_low", desired_row(param="temp_low", manual=True), waypoint) is True
 
 
-def facts(newest=None, first=None, last=None, clamped=False, newest_at=None):
-    return reads.ReadbackFacts(
-        newest_value=newest, newest_at=newest_at, first_match_at=first, last_match_at=last, clamped=clamped
-    )
-
-
-def test_interim_desired_state():
-    at = den(2, 8, 10)
-    assert reads.desired_state(desired_row(value=None), None, None, at) == ("released", None)
-    assert reads.desired_state(desired_row(), plan_row(created_at=den(2, 9)), None, den(2, 9, 5))[0] == "overridden"
-    confirmed = reads.desired_state(desired_row(), plan_row(), facts(1.55, first=den(2, 8, 1)), at)
-    assert confirmed == ("confirmed", den(2, 8, 1))
-    assert reads.desired_state(desired_row(), None, facts(1.60), den(2, 8, 4))[0] == "requested"
-    assert reads.desired_state(desired_row(), None, facts(1.60), den(2, 8, 5))[0] == "not_confirmed"
-    assert reads.desired_state(desired_row(), None, facts(None), den(2, 8, 6))[0] == "not_confirmed"
-    # It matched, then the newest readback disagrees: not confirmed, even inside 5 min.
-    assert reads.desired_state(desired_row(), None, facts(1.60, first=den(2, 8, 1)), den(2, 8, 2))[0] == (
-        "not_confirmed"
-    )
-    # Matching is the grid-aware comparator: 1.5500000238 (binary32) confirms 1.55.
-    assert reads.desired_state(desired_row(), None, facts(1.5500000238418579), at)[0] == "confirmed"
+def facts(newest=None, last=None, clamped=False, newest_at=None):
+    return reads.ReadbackFacts(newest_value=newest, newest_at=newest_at, last_match_at=last, clamped=clamped)
 
 
 # ── writer.differing ──────────────────────────────────────────────────────
@@ -577,7 +571,16 @@ def test_the_routes_are_the_committed_operations():
     from operator_routes import reads as routes
 
     served = {(route.path, method, route.operation_id) for route in routes.router.routes for method in route.methods}
-    assert served == {("/now", "GET", "API-02"), ("/plan", "GET", "API-07"), ("/equipment", "GET", "API-13")}
+    assert served == {
+        ("/now", "GET", "API-02"),
+        ("/plan", "GET", "API-07"),
+        ("/equipment", "GET", "API-13"),
+        # VD-55 (tests/test_operator_routes_reads.py covers these four).
+        ("/settings", "GET", "API-09"),
+        ("/settings/{param}/history", "GET", "API-12"),
+        ("/alerts", "GET", "API-14"),
+        ("/activity", "GET", "API-17"),
+    }
     for path, method, operation_id in served:
         assert spec[f"/v1{path}"][method.lower()]["operationId"] == operation_id
 
@@ -703,3 +706,454 @@ def test_every_hypertable_query_is_bounded_by_ts():
                 unbounded.append(f"{name}: {match.group(1)}")
     assert unbounded == ["_CLOCK_SQL: setpoint_changes"]
     assert "SELECT ts FROM setpoint_changes ORDER BY ts DESC LIMIT 1" in reads._CLOCK_SQL
+
+
+# ── VD-55: the settings, history and activity compositions ──────────────────
+
+
+class _Tx:
+    def __init__(self, conn):
+        self.conn = conn
+
+    async def __aenter__(self):
+        self.conn.depth += 1
+
+    async def __aexit__(self, *exc):
+        self.conn.depth -= 1
+        return False
+
+
+class ReadsConn:
+    """Answers each statement a read sends from ``answers``, keyed by the module's SQL constant."""
+
+    def __init__(self, answers, at=AT):
+        self.answers = answers
+        self.at = at
+        self.depth = 0
+        self.sent = []
+
+    def is_in_transaction(self):
+        return self.depth > 0
+
+    def transaction(self, **_kwargs):
+        return _Tx(self)
+
+    def _rows(self, sql, args):
+        assert self.depth > 0, "every read runs in its snapshot"
+        self.sent.append((sql, args))
+        answer = self.answers[sql]
+        return answer(*args) if callable(answer) else answer
+
+    async def fetch(self, sql, *args):
+        return self._rows(sql, args)
+
+    async def fetchrow(self, sql, *args):
+        rows = self._rows(sql, args)
+        return rows[0] if rows else None
+
+    async def fetchval(self, sql, *args):
+        if sql == "SELECT now()":
+            assert self.depth > 0
+            return self.at
+        rows = self._rows(sql, args)
+        return next(iter(rows[0].values())) if rows else None
+
+
+def catalog_row(param, **update):
+    spec = REGISTRY[param]
+    row = settings.Setting(
+        param=param,
+        label=spec.label,
+        control_class=spec.control_class,
+        group=spec.control_class,
+        kind=spec.kind,
+        unit=spec.unit,
+        writable=True,
+        readback_via="cfg",
+        readback=None,
+        desired=None,
+        applied_from="plan",
+        state="confirmed",
+    )
+    return row.model_copy(update=update)
+
+
+def plan_db_row(parameter, value, ts, created_at, plan_id="iris-20261102-0634", source="iris"):
+    return {
+        "parameter": parameter,
+        "value": value,
+        "ts": ts,
+        "plan_id": plan_id,
+        "created_at": created_at,
+        "source": source,
+        "is_active": True,
+    }
+
+
+@pytest.mark.parametrize(
+    ("zone", "role", "label", "unit"),
+    [
+        ("house", "temp_low", "House temp low", "°F"),
+        ("house", "temp_target", "House temp target", "°F"),
+        ("center", "temp_high", "Center temp high", "°F"),
+        ("south", "vpd_low", "South VPD low", "kPa"),
+        ("east", "vpd_target", "East VPD target", "kPa"),
+        ("west", "vpd_high", "West VPD high", "kPa"),
+    ],
+)
+def test_a_band_in_force_row_is_read_only_derived_with_its_own_label_and_unit(zone, role, label, unit):
+    row = reads.band_in_force_row(zone, role, 1.067, AT - timedelta(minutes=2))
+    assert (row.param, row.label, row.unit) == (f"band_{zone}_{role}", label, unit)
+    assert (row.group, row.control_class, row.kind) == ("band_in_force", "crop_band", "numeric")
+    assert (row.writable, row.read_only_reason) == (False, "derived by the dispatcher from the crop band anchors")
+    assert (row.readback_via, row.desired, row.plan, row.applied_from, row.state) == (
+        "none",
+        None,
+        None,
+        "band",
+        "no_readback",
+    )
+    assert row.readback == settings.Reading(value=1.067, observed_at=AT - timedelta(minutes=2))
+    assert (row.min, row.max, row.step, row.options) == (None, None, None, [])
+    missing = reads.band_in_force_row(zone, role, None, None).readback
+    assert (missing.value, missing.observed_at, missing.reason) == (None, None, reads.NO_BAND_ROW)
+
+
+def test_the_band_in_force_names_are_the_dispatchers_and_never_a_registry_row():
+    names = [f"band_{zone}_{role}" for zone in reads.BAND_ZONES for role in reads.BAND_ROLES]
+    assert reads.BAND_ZONES == ("house", "center", "south", "west", "east") and len(reads.BAND_ROLES) == 6
+    assert len(names) == 30 and not set(names) & set(REGISTRY)
+    assert reads.BAND_ROLES == ("temp_low", "temp_target", "temp_high", "vpd_low", "vpd_target", "vpd_high")
+
+
+def test_the_plan_block_keeps_iris_values_as_stored():
+    row = plan_db_row("mister_engage_delay_s", 48.75, AT - timedelta(hours=2), AT - timedelta(hours=2))
+    later = [reads.PlanWaypoint(at=AT + timedelta(hours=3), value=60.0, source="iris", effective=True)]
+    block = reads.setting_plan(row, later)
+    assert block.model_dump() == {
+        "value": 48.75,  # never snapped to the 30 s step
+        "plan_id": "iris-20261102-0634",
+        "source": "iris",
+        "written_at": AT - timedelta(hours=2),
+        "next": later[0].model_dump(),
+    }
+    assert reads.setting_plan({**row, "source": "preemptive"}, []).next is None
+    assert reads.setting_plan({**row, "source": "operator"}, later) is None  # not a value a plan applies
+
+
+def test_a_full_plan_row_is_superseded_once_a_newer_full_plan_was_written_by_its_time():
+    full_plans = [AT - timedelta(hours=8), AT - timedelta(hours=5)]
+    row = plan_db_row("mister_engage_kpa", 1.5, AT - timedelta(hours=6), AT - timedelta(hours=8))
+    assert reads.superseded_at(row, full_plans) is False  # written 8 h ago, its 6 h ago row: still in force
+    assert reads.superseded_at({**row, "ts": AT - timedelta(hours=5)}, full_plans) is True  # at the newer write
+    assert reads.superseded_at({**row, "ts": AT + timedelta(hours=1)}, full_plans) is True
+    newest = {**row, "created_at": AT - timedelta(hours=5), "ts": AT + timedelta(hours=1)}
+    assert reads.superseded_at(newest, full_plans) is False
+    for other in (
+        {"plan_id": "iris-oneshot-20261102-1347"},
+        {"plan_id": "preemptive-20261102", "source": "preemptive"},
+    ):
+        assert reads.superseded_at({**row, "ts": AT + timedelta(hours=1), **other}, full_plans) is False
+
+
+def test_plan_history_marks_superseded_and_overridden_waypoints():
+    param = "mister_engage_kpa"
+    plan_a, plan_b = AT - timedelta(hours=8), AT - timedelta(hours=5)
+    rows = [
+        plan_db_row(param, 1.40, AT - timedelta(hours=8), plan_a, "iris-a"),
+        plan_db_row(param, 1.60, AT - timedelta(hours=5), plan_b, "iris-b"),
+        plan_db_row(param, 1.70, AT - timedelta(hours=1), AT - timedelta(hours=1), "preemptive-x", "preemptive"),
+        plan_db_row(param, 1.50, AT + timedelta(hours=1), plan_a, "iris-a"),
+        plan_db_row(param, 1.65, AT + timedelta(hours=3), plan_b, "iris-b"),
+    ]
+    desired = [
+        settings.DesiredSetting(
+            id=3,
+            param=param,
+            value=1.55,
+            manual=False,
+            state="overridden",
+            actor=ActorRef(source="agent:steward", name="steward"),
+            created_at=AT - timedelta(hours=2),
+        )
+    ]
+    conn = ReadsConn(
+        {
+            reads._PLAN_HISTORY_SQL: rows,
+            reads._FULL_PLANS_SQL: [{"created_at": plan_b}],
+        }
+    )
+
+    async def run():
+        async with conn.transaction():
+            return await reads.plan_history(conn, param, AT - timedelta(hours=10), AT + timedelta(hours=6), desired)
+
+    waypoints = asyncio.run(run())
+    assert [(point.at, point.value, point.source, point.effective) for point in waypoints] == [
+        (AT - timedelta(hours=8), 1.40, "iris", True),
+        (AT - timedelta(hours=5), 1.60, "iris", True),
+        (AT - timedelta(hours=1), 1.70, "preemptive", True),  # written after the desired row: it wins
+        (AT + timedelta(hours=1), 1.50, "iris", False),  # plan A was superseded by plan B
+        (AT + timedelta(hours=3), 1.65, "iris", False),  # the non-manual desired row is newer than plan B
+    ]
+    (_, history_args), (_, plans_args) = conn.sent
+    assert history_args == (param, AT - timedelta(hours=10), AT + timedelta(hours=6), ["iris", "preemptive"])
+    assert plans_args == (plan_a, AT + timedelta(hours=3))  # only plans written after the oldest row, up to the newest
+
+
+def test_plan_history_of_an_empty_window_sends_one_statement():
+    conn = ReadsConn({reads._PLAN_HISTORY_SQL: []})
+
+    async def run():
+        async with conn.transaction():
+            return await reads.plan_history(conn, "mister_engage_kpa", AT - timedelta(hours=1), AT, [])
+
+    assert asyncio.run(run()) == [] and len(conn.sent) == 1
+
+
+def test_settings_rows_adds_the_plan_block_the_next_waypoint_and_the_band_in_force(monkeypatch):
+    delay = "mister_engage_delay_s"
+    written = AT - timedelta(hours=2)
+
+    async def fake_catalog(conn):
+        assert conn.is_in_transaction()  # the catalog reads inside the same snapshot
+        return [catalog_row(delay), catalog_row("mister_engage_kpa", applied_from="default", state="no_readback")]
+
+    monkeypatch.setattr(settings, "catalog", fake_catalog)
+    band = [
+        {"zone": zone, "role": role, "value": 75.0 if role.startswith("temp") else 1.0, "ts": AT - timedelta(minutes=2)}
+        for zone in reads.BAND_ZONES
+        for role in reads.BAND_ROLES
+        if (zone, role) != ("west", "vpd_high")
+    ]
+    conn = ReadsConn(
+        {
+            reads._SETTING_PLANS_SQL: [plan_db_row(delay, 48.75, written, written)],
+            reads._PLAN_WAYPOINTS_SQL: [
+                plan_db_row(delay, 48.75, AT, written),  # at now: not next
+                plan_db_row(delay, 60.0, AT + timedelta(hours=3), written),
+                plan_db_row(delay, 90.0, AT + timedelta(hours=9), written),
+            ],
+            reads._DESIRED_SQL: [],
+            reads._BAND_IN_FORCE_SQL: band,
+        }
+    )
+    result = asyncio.run(reads.settings_rows(conn))
+    assert result.server_time == AT
+    rows = {item.param: item for item in result.items}
+    assert rows[delay].plan == settings.SettingPlan(
+        value=48.75,
+        plan_id="iris-20261102-0634",
+        source="iris",
+        written_at=written,
+        next=settings.PlanWaypoint(at=AT + timedelta(hours=3), value=60.0, source="iris", effective=True),
+    )
+    assert rows["mister_engage_kpa"].plan is None
+    assert [item.param for item in result.items[2:]] == [
+        f"band_{zone}_{role}" for zone in reads.BAND_ZONES for role in reads.BAND_ROLES
+    ]
+    assert rows["band_west_vpd_high"].readback.reason == reads.NO_BAND_ROW
+    assert rows["band_house_temp_low"].readback.value == 75.0
+    sent = dict(conn.sent)
+    assert sent[reads._PLAN_WAYPOINTS_SQL] == (AT, AT + reads.NEXT_WAYPOINT_HORIZON, [delay])
+    zones, roles, params, window = sent[reads._BAND_IN_FORCE_SQL]
+    assert (len(zones), params[0], params[-1], window) == (
+        30,
+        "band_house_temp_low",
+        "band_east_vpd_high",
+        timedelta(hours=1),
+    )
+    assert _compare_model(reads.SettingRows, response_schema_of("/v1/settings")) == []
+
+
+def test_setting_history_adds_the_plan_values_over_the_same_window(monkeypatch):
+    start, end = AT - timedelta(days=1), AT + timedelta(hours=12)
+    calls = []
+
+    async def fake_history(conn, param, from_, to):
+        calls.append((param, from_, to))
+        return settings.SettingHistory.model_validate(
+            {
+                "param": param,
+                "unit": "kPa",
+                "min": 0.5,
+                "max": 2.5,
+                "from": from_,
+                "to": to,
+                "desired": [],
+                "readback": [],
+            }
+        )
+
+    monkeypatch.setattr(settings, "history", fake_history)
+    row = plan_db_row(
+        "mister_engage_kpa", 1.7, AT - timedelta(hours=3), AT - timedelta(hours=3), "preemptive-x", "preemptive"
+    )
+    conn = ReadsConn({reads._PLAN_HISTORY_SQL: [row], reads._FULL_PLANS_SQL: []})
+    result = asyncio.run(reads.setting_history(conn, "mister_engage_kpa", start, end))
+    assert calls == [("mister_engage_kpa", start, end)]
+    assert result.plan == [
+        settings.PlanWaypoint(at=AT - timedelta(hours=3), value=1.7, source="preemptive", effective=True)
+    ]
+    assert (result.from_, result.to) == (start, end)
+
+
+def test_activity_page_fills_the_readback_state_of_setting_writes_only(monkeypatch):
+    def entry(entry_id, action, detail):
+        return activity.ActivityEntry(
+            id=entry_id,
+            ts=AT - timedelta(minutes=entry_id),
+            actor=ActorRef(source="agent:steward", name="steward"),
+            action=action,
+            target="mister_engage_kpa",
+            detail=detail,
+        )
+
+    page = activity.ActivityPage(
+        items=[
+            entry(1, "setting.write", {"desired_id": 41}),
+            entry(2, "setting.release", {"desired_id": 40}),
+            entry(3, "setting.write", {"desired_id": True}),  # not an id
+            entry(4, "alert.ack", {"desired_id": 41}),  # not a setting write
+            entry(5, "setting.write", {"desired_id": 7}),  # names no row
+        ],
+        next_cursor="next",
+    )
+    listed, named = [], []
+
+    async def fake_list(conn, **filters):
+        listed.append(filters)
+        return page
+
+    async def fake_states(conn, ids):
+        named.append(ids)
+        confirmed = settings.DesiredSetting(
+            id=41,
+            param="mister_engage_kpa",
+            value=1.55,
+            manual=False,
+            state="confirmed",
+            confirmed_at=AT - timedelta(minutes=1),
+            actor=ActorRef(source="agent:steward", name="steward"),
+            created_at=AT - timedelta(minutes=3),
+        )
+        return {
+            41: confirmed,
+            40: confirmed.model_copy(update={"id": 40, "value": None, "state": "released", "confirmed_at": None}),
+        }
+
+    monkeypatch.setattr(activity, "list", fake_list)
+    monkeypatch.setattr(settings, "desired_states", fake_states)
+    conn = ReadsConn({})
+    result = asyncio.run(reads.activity_page(conn, source="agent:steward", limit=5, cursor="c"))
+    assert listed == [
+        {
+            "source": "agent:steward",
+            "actor": None,
+            "action": None,
+            "target": None,
+            "from_": None,
+            "to": None,
+            "limit": 5,
+            "cursor": "c",
+        }
+    ]
+    assert named == [[7, 40, 41]]
+    assert [(item.id, item.state, item.confirmed_at) for item in result.items] == [
+        (1, "confirmed", AT - timedelta(minutes=1)),
+        (2, "released", None),
+        (3, None, None),
+        (4, None, None),
+        (5, None, None),
+    ]
+    assert result.next_cursor == "next"
+
+
+def test_plan_lanes_take_applied_from_and_the_desired_state_from_settings(monkeypatch):
+    held = settings.SettingStatus(
+        param="site_pressure_hpa",
+        applied_from="manual",
+        state="held",
+        state_reason=settings.StateReason(code="clamped", applied_value=840.0, since=AT - timedelta(minutes=9)),
+        readback_via="cfg",
+        readback=None,
+        desired=settings.DesiredSetting(
+            id=12,
+            param="site_pressure_hpa",
+            value=845.0,
+            manual=True,
+            state="held",
+            state_reason=settings.StateReason(code="clamped", applied_value=840.0, since=AT - timedelta(minutes=9)),
+            actor=ActorRef(source="dashboard", name="jason"),
+            created_at=AT - timedelta(minutes=10),
+        ),
+    )
+    asked = []
+
+    async def fake_statuses(conn, params):
+        asked.append(list(params))
+        return {"site_pressure_hpa": held}
+
+    monkeypatch.setattr(settings, "statuses", fake_statuses)
+    manual_row = {
+        "id": 12,
+        "param": "site_pressure_hpa",
+        "value": 845.0,
+        "manual": True,
+        "source": "dashboard",
+        "actor": "jason",
+        "reason": None,
+        "created_at": AT - timedelta(minutes=10),
+    }
+    conn = ReadsConn(
+        {
+            reads._PLAN_IN_FORCE_SQL: [],
+            reads._NO_PLAN_SINCE_SQL: [{"max": AT - timedelta(hours=1)}],
+            reads._ACTIVE_PLAN_SQL: [
+                plan_db_row("not_a_tunable", 1.0, AT - timedelta(hours=1), AT - timedelta(hours=1))
+            ],
+            reads._DESIRED_SQL: [manual_row],
+            reads._PLAN_WAYPOINTS_SQL: [],
+            reads._DEVICE_READBACKS_SQL: [],
+            reads._HEALTH_SQL: [],
+        }
+    )
+    result = asyncio.run(reads.plan(conn))
+    lanes = {lane.param: lane for lane in result.lanes}
+    assert asked == [["not_a_tunable", "site_pressure_hpa"]]
+    assert lanes["site_pressure_hpa"].desired is held.desired and lanes["site_pressure_hpa"].applied_from == "manual"
+    assert (lanes["not_a_tunable"].applied_from, lanes["not_a_tunable"].desired) == ("plan", None)
+    assert result.manual_count == 1
+
+
+def test_the_one_open_alert_count_is_alerts_open_count():
+    assert reads.AlertCounts is alerts.AlertCounts
+    assert reads.Now.model_fields["alerts"].annotation is alerts.AlertCounts
+    assert "v_open_alerts" not in reads._ALERT_FACTS_SQL and alerts.OPEN_PREDICATE in reads._ALERT_FACTS_SQL
+    assert not hasattr(reads, "_ALERTS_SQL")
+
+
+def test_one_model_per_openapi_schema():
+    assert reads.DesiredSetting is settings.DesiredSetting and reads.PlanWaypoint is settings.PlanWaypoint
+    assert reads.PlanLane.model_fields["desired"].annotation == settings.DesiredSetting | None
+    assert reads.ActorRef is ActorRef
+
+
+@pytest.mark.parametrize("first", ["settings", "reads", "alerts", "activity"])
+def test_the_services_import_in_any_order(first):
+    """reads imports settings and settings calls reads.reporting(): neither import order may break (VD-58's MCP)."""
+    code = f"import verdify_services.{first}; import verdify_services.reads, verdify_services.settings"
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True, env={**os.environ, "PYTHONPATH": str(ROOT)})
+
+
+def response_schema_of(path):
+    spec = yaml.safe_load(OPENAPI.read_text())
+    return spec, spec["paths"][path]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
+
+
+def _compare_model(model, spec_and_schema):
+    spec_root, schema = spec_and_schema
+    model_root = model.model_json_schema()
+    problems: list[str] = []
+    _compare(model_root, model_root, schema, spec_root, model.__name__, problems)
+    return problems
