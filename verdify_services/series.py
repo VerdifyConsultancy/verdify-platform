@@ -300,6 +300,7 @@ _TARGETS = "targets"
 _CONTROLLER = "controller"
 _TEMPEST = "Tempest weather station, received by the controller over UDP"
 _ON_CHIP = "The controller's on-chip value"
+_FROM_TARGET = "Measured value minus the controller's on-chip target; negative is below it"
 
 _REGISTRY: tuple[MetricBinding, ...] = (
     # house climate
@@ -424,7 +425,8 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     _climate("temp_intake", "Intake temperature", _OUTDOOR, "°F", note="Exterior intake probe"),
     _climate("intake_rh", "Intake relative humidity", _OUTDOOR, "%", note="Exterior intake probe"),
     _climate("intake_vpd", "Intake VPD", _OUTDOOR, "kPa", provenance="DERIVED", note="Exterior intake probe"),
-    # targets: the controller's own band, a cross-check for API-06
+    # targets: the controller's on-chip targets, a cross-check for API-06, and how far the
+    # measured value sits from each (the firmware publishes Tin - target and VPD - target)
     _climate(
         "house_temp_target_f",
         "House temperature target",
@@ -436,24 +438,24 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     ),
     _climate(
         "house_temp_delta_f",
-        "House temperature band half-width",
+        "House temperature minus target",
         _TARGETS,
         "°F",
         provenance="DERIVED",
         zone="house",
-        note=_ON_CHIP,
+        note=_FROM_TARGET,
     ),
     _climate(
         "house_vpd_target", "House VPD target", _TARGETS, "kPa", provenance="DERIVED", zone="house", note=_ON_CHIP
     ),
     _climate(
         "house_vpd_delta",
-        "House VPD band half-width",
+        "House VPD minus target",
         _TARGETS,
         "kPa",
         provenance="DERIVED",
         zone="house",
-        note=_ON_CHIP,
+        note=_FROM_TARGET,
     ),
     *(
         _climate(
@@ -470,12 +472,12 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     *(
         _climate(
             f"vpd_delta_{zone}",
-            f"{zone.capitalize()} VPD band half-width",
+            f"{zone.capitalize()} VPD minus target",
             _TARGETS,
             "kPa",
             provenance="DERIVED",
             zone=zone,
-            note=_ON_CHIP,
+            note=_FROM_TARGET,
         )
         for zone in ("center", "south", "west", "east")
     ),

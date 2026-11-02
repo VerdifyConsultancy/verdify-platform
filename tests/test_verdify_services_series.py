@@ -387,6 +387,16 @@ def test_registry_bindings_follow_the_issue():
     } <= targets
 
 
+def test_target_deltas_read_as_the_distance_from_target():
+    # The firmware publishes each *_delta as the measured value minus its target, not a band width.
+    controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
+    assert "id(gh_house_temp_delta).publish_state(Tin - setpts.temp_target);" in controls
+    assert "id(gh_house_vpd_delta).publish_state(VPD - setpts.vpd_target);" in controls
+    assert "id(gh_zone_vpd_delta_center).publish_state(zvpd[ZONE_CENTER] - zb[ZONE_CENTER].target);" in controls
+    deltas = {key: b.label for key, b in s.METRICS.items() if b.group == "targets" and "_delta" in key}
+    assert len(deltas) == 6 and all(label.endswith("minus target") for label in deltas.values()), deltas
+
+
 def test_the_scorecard_view_has_every_bound_column():
     sql = (ROOT / "db/migrations/282-daily-scorecard-view.sql").read_text()
     body = sql.split("CREATE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
