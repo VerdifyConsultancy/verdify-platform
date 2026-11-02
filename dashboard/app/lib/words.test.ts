@@ -7,15 +7,17 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ALERT_SEVERITIES, BAND_VERDICTS, BURST_KINDS, LINE_STATE_CODES, PROBLEM_CODES, REQUIRED_TRIGGERS, STATE_REASON_CODES, TRIGGER_OUTCOMES } from "./vocab";
+import { OUTCOMES } from "./operator-api";
+import { ALERT_SEVERITIES, ALERT_STATUSES, BAND_VERDICTS, BURST_KINDS, LINE_FAULTS, LINE_STATE_CODES, PROBLEM_CODES, REQUIRED_TRIGGERS, STATE_REASON_CODES, TRIGGER_OUTCOMES, VPD_SOURCES } from "./vocab";
 import { WORDS, hasWords, modeWords, words } from "./words";
 
 const repo = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
-type Schema = { enum?: string[]; properties?: Record<string, Schema> };
+type Schema = { enum?: (string | null)[]; properties?: Record<string, Schema> };
 const SCHEMAS = (parseYaml(repo("docs/design/dashboard/openapi/dashboard-api.v1.yaml")) as { components: { schemas: Record<string, Schema> } }).components.schemas;
+/** A schema's enum without its null (a nullable enum lists null as a value). */
 const enumOf = (schema: Schema | undefined): string[] => {
   if (!schema?.enum?.length) throw new Error("no enum");
-  return schema.enum;
+  return schema.enum.filter((value): value is string => value !== null);
 };
 
 /** The quoted names of a C array initialiser in firmware/lib/greenhouse_types.h, e.g. `MODE_NAMES[] = {...};`. */
@@ -43,6 +45,12 @@ function stressWindowLiteral(field: "kind" | "severity"): string[] {
   if (!literal) throw new Error(`no StressWindow.${field} Literal in verdify_schemas/plan.py`);
   return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
 }
+/** `RejectCode` in verdify_schemas/irrigation.py: why the controller refused a pushed program. */
+function rejectCodes(): string[] {
+  const literal = /^RejectCode = Literal\[([^\]]*)\]/m.exec(repo("verdify_schemas/irrigation.py"));
+  if (!literal) throw new Error("no RejectCode in verdify_schemas/irrigation.py");
+  return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
+}
 /** The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, `fog_safety_block_reason`'s included). */
 const FOG_BLOCK_REASONS = [
   "none", "served", "leak_detected", "occupancy", "irrigation", "resource_budget", "time_invalid", "time_window", "dew_margin", "wet_taper", "rh_ceiling",
@@ -59,7 +67,7 @@ function expectWorded(family: string, codes: readonly string[]) {
   }
 }
 
-test("every ProblemCode, StateReason code and line-state code in the OpenAPI file has words", () => {
+test("every ProblemCode, StateReason code, line-state code and alert status in the OpenAPI file has words", () => {
   const problemCodes = enumOf(SCHEMAS.ProblemCode);
   const stateReasons = enumOf(SCHEMAS.StateReason?.properties?.code);
   const lineStates = enumOf(SCHEMAS.LineState?.properties?.code);
@@ -72,6 +80,9 @@ test("every ProblemCode, StateReason code and line-state code in the OpenAPI fil
   expect([...LINE_STATE_CODES].sort()).toEqual([...lineStates].sort());
   expect([...ALERT_SEVERITIES].sort()).toEqual([...enumOf(SCHEMAS.Alert?.properties?.severity)].sort());
   expect(ALERT_SEVERITIES.map((severity) => words("alert_severity", severity))).toEqual(["Critical", "Warning", "Info"]);
+  const statuses = enumOf(SCHEMAS.Alert?.properties?.status);
+  expectWorded("alert_status", statuses);
+  expect([...ALERT_STATUSES].sort()).toEqual([...statuses].sort());
 });
 
 test("every mode and mist stage in firmware/lib/greenhouse_types.h has words, in screens SCR-01's", () => {
@@ -173,11 +184,59 @@ test("every stress window kind and severity in verdify_schemas/plan.py has words
   expect(words("stress_severity", "high")).toBe("high severity");
 });
 
+test("every activity action the services write has words, each one an action the server can log", () => {
+  const source = /ACTIVITY_ACTION_PATTERN = \(\s*r"([^"]+)"\s*\)/.exec(repo("verdify_schemas/activity.py"));
+  if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
+  const server = new RegExp(source[1]);
+  // The fixed actions (architecture §9) and the irrigation ones #1156 writes; light.on and light.off come with #1140.
+  const actions = [
+    "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
+    "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update",
+  ];
+  expectWorded("activity_action", actions);
+  expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());
+  for (const action of actions) expect(server.test(action), action).toBe(true);
+  expect(words("activity_action", "plan.write")).toBe("Plan");
+  // An action this build does not know reads raw.
+  expect(words("activity_action", "equipment.override")).toBe("equipment.override");
+});
+
+test("every schedule, line and run field an irrigation write carries has words", () => {
+  const props = (name: string) => Object.keys(SCHEMAS[name]?.properties ?? {});
+  // line_id is the row's target, and manual and reason have their own words in the row.
+  const fields = [...new Set(["ScheduleInput", "LineUpdate", "RunRequest"].flatMap(props))].filter((field) => !["line_id", "manual", "reason"].includes(field));
+  expect(fields.length).toBeGreaterThanOrEqual(17);
+  expectWorded("irrigation_field", fields);
+  expect(Object.keys(WORDS.irrigation_field).sort()).toEqual([...fields].sort());
+});
+
 test("the existing families keep their words", () => {
   expect(Object.keys(WORDS.state_reason).sort()).toEqual([...STATE_REASON_CODES].sort());
   expect(words("state_reason", "no_match")).toBe("No matching readback yet");
   expect(words("state_reason", "no_engine")).toBe("Applies with the irrigation firmware");
   expect(words("problem_code", "writes_disabled")).toBe("Changes are switched off; reading still works");
+});
+
+test("the Water families (#1135): every run outcome, VPD source, line fault and program reject has words", () => {
+  const outcomes = enumOf(SCHEMAS.RunOutcome);
+  expect(Object.keys(WORDS.run_outcome).sort()).toEqual([...outcomes].sort());
+  expect([...OUTCOMES].sort()).toEqual([...outcomes].sort());
+  // The outcome words are the outcomes, except the gap: an outcome that never reached the platform.
+  expect(outcomes.map((outcome) => words("run_outcome", outcome))).toEqual(["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "no outcome received"]);
+  const sources = enumOf(SCHEMAS.IrrigationLine?.properties?.vpd_source);
+  expect([...VPD_SOURCES].sort()).toEqual([...sources].sort());
+  expectWorded("vpd_source", sources);
+  expect(sources.map((source) => words("vpd_source", source))).toEqual(["VPD from its own probe", "VPD from peer probes", "VPD from the house average"]);
+  const faults = enumOf(SCHEMAS.IrrigationLine?.properties?.fault);
+  expect([...LINE_FAULTS].sort()).toEqual([...faults].sort());
+  expectWorded("line_fault", faults);
+  const rejects = rejectCodes();
+  expect(rejects).toEqual(["bad_length", "bad_magic", "bad_hash", "bad_header", "bad_line", "bad_slot"]);
+  expectWorded("program_reject", rejects);
+  expect(Object.keys(WORDS.program_reject).sort()).toEqual([...rejects].sort());
+  // Occurrence reasons arrive in words: the fixed ones read as the week view says them, the rest as sent.
+  expect(words("occurrence_reason", "only while VPD sensing is degraded")).toBe("only if VPD sensing is degraded");
+  expect(words("occurrence_reason", "line paused by jason: rain")).toBe("line paused by jason: rain");
 });
 
 test("an unknown code or family renders raw, prototype names included", () => {

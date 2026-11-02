@@ -32,6 +32,14 @@ export const PROBLEM_CODES = everyMember<ProblemCode>()([
 export type LineStateCode = Schemas["LineState"]["code"];
 export const LINE_STATE_CODES = everyMember<LineStateCode>()(["idle", "running", "waiting", "blocked", "paused", "disabled", "unknown"]);
 
+/** `RunOutcome`: how an occurrence or run ended; `unknown` never reached the platform. */
+export type RunOutcomeCode = Schemas["RunOutcome"];
+/** `IrrigationLine.vpd_source` (D-IRP-13) and `IrrigationLine.fault` (D-IRP-19), without their null. */
+export type VpdSource = NonNullable<Schemas["IrrigationLine"]["vpd_source"]>;
+export const VPD_SOURCES = everyMember<VpdSource>()(["own", "peer", "house"]);
+export type LineFault = NonNullable<Schemas["IrrigationLine"]["fault"]>;
+export const LINE_FAULTS = everyMember<LineFault>()(["backing_off", "mister_fault"]);
+
 /** `Alert.severity` and `Alert.status` (the disposition). */
 export type AlertSeverity = Schemas["Alert"]["severity"];
 export const ALERT_SEVERITIES = everyMember<AlertSeverity>()(["critical", "warning", "info"]);

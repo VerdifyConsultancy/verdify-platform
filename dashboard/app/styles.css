@@ -448,6 +448,109 @@ a.picker-item:hover{background:var(--field)}
 .trigger-more{font-weight:400;color:var(--muted)}
 .plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
 .plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+/* Settings (screens SCR-05, design system §4.6 SettingRow): the catalog's rows, a table at 1440 px and a stacked card each at 860 px and below. */
+.settings-tools{display:grid;gap:.25rem;margin:0 0 1rem}
+.settings-tools .filters{margin:0 0 .5rem}
+.settings-tools .filters label{flex:1 1 18rem;max-width:32rem}
+.chip-count,.table-group-count{font-variant-numeric:tabular-nums}
+.table-group-count{font-weight:400}
+.setting-name{min-width:11rem}
+.setting-label{display:block;font-weight:600}
+.setting-param{display:block;font-size:.78rem;color:var(--muted)}
+.setting-line{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem;margin:0}
+.setting-line+.setting-line,.setting-line+.state-reason,.state-reason+.setting-line{margin-top:.25rem}
+.setting-device-value{font-weight:600;font-variant-numeric:tabular-nums}
+.setting-note{font-size:.85rem;color:var(--muted)}
+.setting-next-text{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem}
+.setting-cell-label{display:none}
+.setting-actions{white-space:nowrap}
+.setting-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.setting-history{margin-left:.6rem}
+.drawer-setting .eyebrow{margin-bottom:.15rem}
+@media(max-width:860px){
+  .settings-table table,.settings-table tbody,.settings-table tr,.settings-table th,.settings-table td{display:block;width:auto}
+  .settings-table thead{display:none}
+  .settings-table .setting-row{padding:.65rem .75rem;border-bottom:1px solid var(--line)}
+  .settings-table .setting-row th,.settings-table .setting-row td{padding:.15rem 0;border:0}
+  .setting-row .setting-device-value{font-size:1.25rem}
+  .setting-cell-label{display:inline;font-size:.78rem;color:var(--muted)}
+  .setting-actions{display:flex;flex-wrap:wrap;gap:.25rem .75rem;white-space:normal;padding-top:.4rem}
+  .setting-actions .setting-edit{flex:1 1 100%}
+  .setting-history{margin-left:0}
+}
+/* Activity and alerts (screens §7): the alert groups and the expanded alert, its runbook as text with its line breaks, and the log's filters and plan changes. */
+.panel-link,.alert-toggle a,.alert-graph a,.log-filters a{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700}
+.event .alert-toggle{margin:0}
+.alert-linked,.alert-group{margin:1rem 0 0}
+.alert-linked>h3,.alert-group>h3{margin:0 0 .5rem;font-size:.875rem}
+.alert-empty{margin:0}
+.event .alert-guidance{color:var(--ink);font-weight:600}
+.alert-detail{display:grid;gap:.5rem;margin:.25rem 0 0;min-width:0}
+.alert-detail h4{margin:.25rem 0 0}
+.event .runbook{white-space:pre-line;color:var(--ink)}
+.kv-nested{font-size:.82rem}
+.alert-respond{max-width:36rem}
+.alert-respond .field{margin:0}
+.card-head .log-filters{margin:0}
+.plan-changes{margin:.25rem 0 0;padding-left:1.1rem;font-size:.85rem;color:var(--muted)}
+/* Water (SCR-04, design system §4.6): the tabs with Stop all water (one sticky row under the header at phone width, where Stop reads "■ Stop all"; on a phone too narrow for both, Stop wraps below the tabs inside that row, never widening the page), the program banner, the board's limits strip, mister zones and line cards, the schedule week with its phone day switcher, and History's controls. */
+.water-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;margin:0 0 .75rem}
+.water-tabs .chips{flex-wrap:nowrap}
+.water-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.program-banner{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0 0 1rem}
+.program-banner-loading{min-height:2.5rem}
+.water-board{display:grid;gap:1.25rem}
+.water-section{margin:0 0 1.25rem}
+.water-board .water-section{margin:0}
+.limits-strip{display:flex;flex-wrap:wrap;gap:.35rem 1.25rem;list-style:none;margin:0;padding:.75rem 1rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--field);font-size:.875rem}
+.limit-fault{color:var(--fault);font-weight:600}
+.limit-warn{color:var(--warn-text);font-weight:600}
+.mister-zone p,.line-card p{margin:.3rem 0;font-size:.875rem}
+.mister-flags{margin:.25rem 0 .5rem}
+.mister-flags dd{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem}
+.mister-off{font-weight:600}
+.line-card-head h3{font-size:1rem}
+.line-card-tags{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.3rem}
+.line-state{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .4rem}
+.line-note{color:var(--muted)}
+.line-fault{font-weight:600}
+.line-fault-warn{color:var(--warn-text)}
+.line-subrow{margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--line-strong)}
+.line-card-actions{margin-bottom:0}
+.line-card-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.water-fold{margin:0;padding:0 1rem;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+.water-fold[open]{padding-bottom:1rem}
+.week-head{align-items:center}
+.week-count{margin:0;font-weight:600}
+.week-days{display:none}
+.week-table{table-layout:fixed}
+.table-wrap .week-table{width:100%;min-width:52rem}
+.week-table th[scope=row]{width:9.5rem}
+.week-table td,.week-table th{padding:.4rem}
+.week-table thead .week-today{box-shadow:inset 0 2px 0 var(--forest)}
+.week-today-word{text-transform:none;letter-spacing:0}
+.week-blocks{display:grid;gap:.3rem;list-style:none;margin:0;padding:0}
+.week-block{display:grid;gap:.1rem;padding:.3rem .4rem;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;font-size:.78rem;line-height:1.35}
+.week-block-head{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .35rem;font-weight:600}
+.week-block-label,.week-block-detail,.week-block-iris{color:var(--muted)}
+.week-block-note{font-weight:500}
+.week-block-past{border-color:var(--line)}
+.week-block-hatched{border-style:dashed;color:var(--muted);background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
+.week-none{color:var(--muted)}
+.week-key{margin:.5rem 0 0}
+.history-head{align-items:center}
+.history-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
+.chips-label{font-size:.8rem;font-weight:600;color:var(--muted)}
+@media(max-width:860px){
+  .water-bar{position:sticky;top:calc(4.3rem + 1px);z-index:5;margin-inline:calc(-1*var(--gutter));padding:.4rem var(--gutter);background:#fff;border-bottom:1px solid var(--line)}
+  .water-tabs .chips a{padding:0 .6rem}
+  .stop-all{flex:none;padding-inline:.6rem}
+  .stop-all-rest{display:none}
+  .week-days{display:block;margin:0 0 .5rem}
+  .table-wrap .week-table{min-width:0}
+  .week-table th[scope=row]{width:40%}
+  .week-table [data-day]:not(.is-day){display:none}
+}
 
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
