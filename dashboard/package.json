@@ -13,7 +13,9 @@
     "start": "node server.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "contract:write": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --write",
+    "contract:check": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --check"
   },
   "dependencies": {
     "@react-router/express": "8.5.0",
