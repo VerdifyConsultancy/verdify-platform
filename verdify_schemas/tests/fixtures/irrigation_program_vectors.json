@@ -849,150 +849,160 @@
       },
       {
         "name": "overflow_drops_waiting",
-        "text": "d=5,feed,12345,1793628000,1793629800 m=8,fallback,40000,1793646000,1793646600 w=0,man,1793629800 w=1,man,1793629800 w=4,man,1793629800 w=3,occ,1793629800 f=3,b,1793630400 f=6,b,1793630400 f=7,b,1793630400 f=9,b,1793630400 v=hpp j=bad_header",
+        "text": "d=0,schedule,65535,1793628000,1793629845 m=3,vpd,0,1793628900,1793628945 w=1,man,1793629845 w=4,man,1793629845 w=5,man,1793629845 w=6,bof,1793629200 w=7,flt,1793689200 f=6,b,1793629200 f=7,l,1793689200 f=8,b,1793630700 f=9,l,1793689200 v=hpo j=bad_header",
         "parsed": {
           "runs": [
             {
-              "line_id": "L06",
-              "cause": "feed",
-              "slot_id": 12345,
+              "line_id": "L01",
+              "cause": "schedule",
+              "slot_id": 65535,
               "start_epoch": 1793628000,
-              "end_epoch": 1793629800
+              "end_epoch": 1793629845
             },
             {
-              "line_id": "L09",
-              "cause": "fallback",
-              "slot_id": 40000,
-              "start_epoch": 1793646000,
-              "end_epoch": 1793646600
+              "line_id": "L04",
+              "cause": "vpd",
+              "slot_id": null,
+              "start_epoch": 1793628900,
+              "end_epoch": 1793628945
             }
           ],
           "waiting": [
             {
-              "line_id": "L01",
-              "reason": "man",
-              "until_epoch": 1793629800
-            },
-            {
               "line_id": "L02",
               "reason": "man",
-              "until_epoch": 1793629800
+              "until_epoch": 1793629845
             },
             {
               "line_id": "L05",
               "reason": "man",
-              "until_epoch": 1793629800
+              "until_epoch": 1793629845
             },
             {
-              "line_id": "L04",
-              "reason": "occ",
-              "until_epoch": 1793629800
+              "line_id": "L06",
+              "reason": "man",
+              "until_epoch": 1793629845
+            },
+            {
+              "line_id": "L07",
+              "reason": "bof",
+              "until_epoch": 1793629200
+            },
+            {
+              "line_id": "L08",
+              "reason": "flt",
+              "until_epoch": 1793689200
             }
           ],
           "faults": [
             {
-              "line_id": "L04",
-              "fault": "backing_off",
-              "until_epoch": 1793630400
-            },
-            {
               "line_id": "L07",
               "fault": "backing_off",
-              "until_epoch": 1793630400
+              "until_epoch": 1793629200
             },
             {
               "line_id": "L08",
+              "fault": "mister_fault",
+              "until_epoch": 1793689200
+            },
+            {
+              "line_id": "L09",
               "fault": "backing_off",
-              "until_epoch": 1793630400
+              "until_epoch": 1793630700
             },
             {
               "line_id": "L10",
-              "fault": "backing_off",
-              "until_epoch": 1793630400
+              "fault": "mister_fault",
+              "until_epoch": 1793689200
             }
           ],
           "vpd_source": {
             "center": "house",
             "south": "peer",
-            "west": "peer"
+            "west": "own"
           },
           "reject": "bad_header"
         },
         "formatted_from": {
           "runs": [
             {
-              "line_id": "L06",
-              "cause": "feed",
-              "slot_id": 12345,
+              "line_id": "L01",
+              "cause": "schedule",
+              "slot_id": 65535,
               "start_epoch": 1793628000,
-              "end_epoch": 1793629800
+              "end_epoch": 1793629845
             },
             {
-              "line_id": "L09",
-              "cause": "fallback",
-              "slot_id": 40000,
-              "start_epoch": 1793646000,
-              "end_epoch": 1793646600
+              "line_id": "L04",
+              "cause": "vpd",
+              "slot_id": null,
+              "start_epoch": 1793628900,
+              "end_epoch": 1793628945
             }
           ],
           "waiting": [
             {
-              "line_id": "L01",
-              "reason": "man",
-              "until_epoch": 1793629800
-            },
-            {
               "line_id": "L02",
               "reason": "man",
-              "until_epoch": 1793629800
+              "until_epoch": 1793629845
             },
             {
               "line_id": "L05",
               "reason": "man",
-              "until_epoch": 1793629800
+              "until_epoch": 1793629845
             },
             {
-              "line_id": "L04",
-              "reason": "occ",
-              "until_epoch": 1793629800
+              "line_id": "L06",
+              "reason": "man",
+              "until_epoch": 1793629845
             },
             {
               "line_id": "L07",
-              "reason": "dew",
-              "until_epoch": 1793629800
+              "reason": "bof",
+              "until_epoch": 1793629200
             },
             {
               "line_id": "L08",
-              "reason": "rh",
-              "until_epoch": null
+              "reason": "flt",
+              "until_epoch": 1793689200
+            },
+            {
+              "line_id": "L09",
+              "reason": "bof",
+              "until_epoch": 1793630700
+            },
+            {
+              "line_id": "L10",
+              "reason": "flt",
+              "until_epoch": 1793689200
             }
           ],
           "faults": [
             {
-              "line_id": "L04",
-              "fault": "backing_off",
-              "until_epoch": 1793630400
-            },
-            {
               "line_id": "L07",
               "fault": "backing_off",
-              "until_epoch": 1793630400
+              "until_epoch": 1793629200
             },
             {
               "line_id": "L08",
+              "fault": "mister_fault",
+              "until_epoch": 1793689200
+            },
+            {
+              "line_id": "L09",
               "fault": "backing_off",
-              "until_epoch": 1793630400
+              "until_epoch": 1793630700
             },
             {
               "line_id": "L10",
-              "fault": "backing_off",
-              "until_epoch": 1793630400
+              "fault": "mister_fault",
+              "until_epoch": 1793689200
             }
           ],
           "vpd_source": {
             "center": "house",
             "south": "peer",
-            "west": "peer"
+            "west": "own"
           },
           "reject": "bad_header"
         }

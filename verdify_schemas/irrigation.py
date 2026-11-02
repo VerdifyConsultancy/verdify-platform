@@ -50,11 +50,20 @@ epochs are UTC seconds (u32)::
 
 In a run token ``<idx>`` is the line whose relay is open (a fertilizer run names its clean partner
 during prewet and flush and the fertilizer line during the feed) and ``<end_epoch>`` is the planned
-end; slot 0 means no slot (run-now, or a VPD pulse) in run tokens too, and parses to ``None``.
-Past 255 characters the ``irr_state`` formatter drops ``w=`` tokens, latest due first; eight full
-events fit in 223. Every parser raises ``ValueError`` on text outside the grammar, an unknown
-token, cause, outcome or reason code included, and callers treat that as no reading. Nothing
-parses to ``unknown``: ``IrrigationCause.UNKNOWN`` and ``RunOutcome.UNKNOWN`` are the platform's.
+end; a ``degraded_only`` run carries cause ``fallback``; slot 0 means no slot (run-now, or a VPD
+pulse) in run tokens too, and parses to ``None``. Past 255 characters the ``irr_state`` formatter
+drops ``w=`` tokens, latest due first; eight full events fit in 223. Every parser raises
+``ValueError`` on text outside the grammar, an unknown token, cause, outcome or reason code
+included, and callers treat that as no reading. Nothing parses to ``unknown``:
+``IrrigationCause.UNKNOWN`` and ``RunOutcome.UNKNOWN`` are the platform's.
+
+The parsers also reject the following, so the controller's formatters (#1159, #1160) never write
+it: anything but exactly one space between tokens or entries (none leading or trailing); a ``d=``
+naming a line other than L01, L02, L05 or L06, or an ``m=`` naming one other than L04 or L07-L10;
+more than one ``d=``, ``m=``, ``v=`` or ``j=``; an ``<end_epoch>`` before its ``<start_epoch>``; a
+``w=`` token or ``irr_events`` entry naming L03 or L11; an ``f=`` naming a line other than the
+misters L04 and L07-L10, or naming one line twice; and an ``irr_events`` entry that is not newer than
+the one before it by ``seq_newer``.
 """
 
 from __future__ import annotations

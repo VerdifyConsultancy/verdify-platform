@@ -177,22 +177,33 @@ STATE_SAMPLES = (
     ),
 )
 
-# A state too long for 255 characters: formatting drops the latest-due w= tokens.
+# A state too long for 255 characters: formatting drops the latest-due w= tokens. It is one the engine
+# can publish, at 07:15: L01's 30 min scheduled drip paused after 15 min for one 45 s VPD pulse on L04
+# (§4.7: the only way a drip and a mist run share a moment; its planned end moves by the pause); the
+# other drips waiting for the manifold; L07 and L09, VPD members, backing off; and L08 and L10, the
+# fertilizer misters, latched until midnight (F10: they latch on their first fault, never back off).
+DRIP_END = DAY_0700 + 1800 + 45
 OVERFLOW_STATE = IrrState(
     runs=(
-        IrrRun(line_id="L06", cause="feed", slot_id=12345, start_epoch=DAY_0700, end_epoch=DAY_0700 + 1800),
-        IrrRun(line_id="L09", cause="fallback", slot_id=40000, start_epoch=DAY_1200, end_epoch=DAY_1200 + 600),
+        IrrRun(line_id="L01", cause="schedule", slot_id=65535, start_epoch=DAY_0700, end_epoch=DRIP_END),
+        IrrRun(line_id="L04", cause="vpd", slot_id=None, start_epoch=DAY_0700 + 900, end_epoch=DAY_0700 + 945),
     ),
-    waiting=tuple(
-        IrrWaiting(line_id=line_id, reason=reason, until_epoch=DAY_0700 + 1800)
-        for line_id, reason in (("L01", "man"), ("L02", "man"), ("L05", "man"), ("L04", "occ"), ("L07", "dew"))
-    )
-    + (IrrWaiting(line_id="L08", reason="rh"),),
-    faults=tuple(
-        IrrFault(line_id=line_id, fault="backing_off", until_epoch=DAY_0700 + 2400)
-        for line_id in ("L04", "L07", "L08", "L10")
+    waiting=(
+        IrrWaiting(line_id="L02", reason="man", until_epoch=DRIP_END),
+        IrrWaiting(line_id="L05", reason="man", until_epoch=DRIP_END),
+        IrrWaiting(line_id="L06", reason="man", until_epoch=DRIP_END),
+        IrrWaiting(line_id="L07", reason="bof", until_epoch=DAY_0700 + 1200),
+        IrrWaiting(line_id="L08", reason="flt", until_epoch=NEXT_MIDNIGHT),
+        IrrWaiting(line_id="L09", reason="bof", until_epoch=DAY_0700 + 2700),
+        IrrWaiting(line_id="L10", reason="flt", until_epoch=NEXT_MIDNIGHT),
     ),
-    vpd_source=VpdSources(center="house", south="peer", west="peer"),
+    faults=(
+        IrrFault(line_id="L07", fault="backing_off", until_epoch=DAY_0700 + 1200),
+        IrrFault(line_id="L08", fault="mister_fault", until_epoch=NEXT_MIDNIGHT),
+        IrrFault(line_id="L09", fault="backing_off", until_epoch=DAY_0700 + 2700),
+        IrrFault(line_id="L10", fault="mister_fault", until_epoch=NEXT_MIDNIGHT),
+    ),
+    vpd_source=VpdSources(center="house", south="peer", west="own"),
     reject="bad_header",
 )
 
