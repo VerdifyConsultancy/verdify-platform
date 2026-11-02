@@ -7,6 +7,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { useIrrigationRead } from "../../lib/queries";
 import { UUID, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../../lib/test-fixture-api";
+import { hasWords, words } from "../../lib/words";
 import { useCommand } from "../../lib/writes";
 import { Button } from "../button";
 import { text } from "../test-render";
@@ -16,6 +17,11 @@ afterEach(() => { cleanup(); stopFixtureApi(); });
 const dialog = () => document.querySelector("dialog")!;
 /** The refusal inside the dialog (the toast stack is an alert region too). */
 const refusal = () => within(dialog()).getByRole("alert");
+/**
+ * A refusal's words as `problemMessage` gives them: the `problem_code` words once #1124's table has the code, else the
+ * Problem's own detail. Either way the test holds, whichever of #1124 and #1125 lands first.
+ */
+const refusalWords = (code: string, detail: string) => (hasWords("problem_code", code) ? words("problem_code", code) : detail);
 
 /** A line card's Run…: the dialog, sent through the C hook, closed when the server takes the run. */
 function Run({ lineId, fixed, bounds, today }: { lineId: string; fixed?: number; bounds?: ConfirmDialogProps["bounds"]; today?: number }) {
@@ -93,7 +99,7 @@ test("FERT in the title on a fertilizer line; drips add prewet and flush, mister
   await advance(0);
   // L07's Schedule is off: refused in words with the form, and the dialog stays open.
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: { on_s: 45, count: 3, gap_s: 60 } })]);
-  expect(refusal().textContent).toBe("L07 takes run-now only with Schedule on");
+  expect(refusal().textContent).toBe(refusalWords("not_schedule_member", "L07 takes run-now only with Schedule on"));
   expect(dialog().hasAttribute("open")).toBe(true);
 });
 
@@ -130,7 +136,7 @@ test("out of bounds reads beside the field and sends nothing; the server's 422 d
   fireEvent.click(screen.getByRole("button", { name: "Run 10 min" }));
   await advance(0);
   expect(writes(busy)).toHaveLength(1);
-  expect(refusal().textContent).toBe("L01 is already running");
+  expect(refusal().textContent).toBe(refusalWords("line_busy", "L01 is already running"));
   expect(dialog().hasAttribute("open")).toBe(true);
 });
 
