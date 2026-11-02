@@ -276,6 +276,14 @@ def test_native_fixture_attests_every_login_and_reads_as_granted():
     assert text.rindex("RESET SESSION AUTHORIZATION;") < text.index("SELECT json_build_object(")
 
 
+def test_native_fixture_proves_the_five_minute_meter_bound():
+    """Each run's meter scan stops at run_end + 5 min; the qualification proves no
+    accepted delta is longer, so the gallons equal v_water_run_accounting's."""
+    text = MIGRATION.read_text()
+    assert text.count("AND a.ts <= p.run_end + interval '5 minutes'") == 2  # the view and the reader
+    assert "WHERE a.ts - a.prior_ts > interval '5 minutes')" in FIXTURE.read_text()
+
+
 @pytest.mark.skipif(PENDING, reason=WAITING)
 def test_native_fixture_passed_on_production_rows():
     assert RECEIPT["native_fixture_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest()

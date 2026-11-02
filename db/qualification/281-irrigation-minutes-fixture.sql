@@ -48,6 +48,13 @@ BEGIN
                   EXCEPT SELECT * FROM public.v_irrigation_minutes_daily WHERE local_day BETWEEN today - 29 AND today)
     THEN RAISE EXCEPTION '281 reader differs from the view'; END IF;
 
+    -- Each run's meter scan stops at run_end + 5 minutes, which equals
+    -- v_water_run_accounting's unbounded overlap only while no accepted delta
+    -- spans more than 5 minutes (194's materializer flags longer ones source_gap).
+    IF EXISTS (SELECT 1 FROM public.v_water_event_attribution a
+               WHERE a.ts - a.prior_ts > interval '5 minutes')
+    THEN RAISE EXCEPTION '281 found an accepted meter delta longer than 5 minutes'; END IF;
+
     -- Gallons equal v_water_run_accounting's per start day and line.
     IF EXISTS (
         WITH accounting AS (
@@ -150,9 +157,9 @@ END $mcp$;
 RESET SESSION AUTHORIZATION;
 
 SELECT json_build_object(
-    'checks', json_build_array('catalog_and_grants', 'reader_equals_view_30d', 'gallons_equal_run_accounting_30d',
-                               'wall_drip_2026_05_29', 'today_partial', 'no_data_days_without_rows',
-                               'logins_attest', 'login_reads_and_api_denial'),
+    'checks', json_build_array('catalog_and_grants', 'reader_equals_view_30d', 'accepted_deltas_within_5_minutes',
+                               'gallons_equal_run_accounting_30d', 'wall_drip_2026_05_29', 'today_partial',
+                               'no_data_days_without_rows', 'logins_attest', 'login_reads_and_api_denial'),
     'all_passed', true,
     'attested', json_build_object('api', true, 'ingestor', true, 'mcp', true),
     'rows_400d', (SELECT value FROM irrigation_minutes_qualification WHERE name = 'rows_400d'),
