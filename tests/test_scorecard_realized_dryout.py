@@ -236,7 +236,8 @@ def test_authorized_inventory_unchanged_and_doc_exposes_honest_opt_in():
     registry = next(n for n in tree.body if isinstance(n, ast.AnnAssign) and ast.unparse(n.target) == "TOOL_AUDIENCES")
     namespace = {}
     exec(compile(ast.Module(body=[registry], type_ignores=[]), "audiences", "exec"), namespace)  # noqa: S102 - repository registry only
-    assert namespace["TOOL_AUDIENCES"]["scorecard"] == frozenset({"iris", "admin"})
+    # VD-59 adds the named-agent audience to scorecard (architecture §5.6).
+    assert namespace["TOOL_AUDIENCES"]["scorecard"] == frozenset({"iris", "agent", "admin"})
     assert namespace["TOOL_AUDIENCES"]["outcome_kpi"] == frozenset({"admin"})
     assert sum("iris" in value for value in namespace["TOOL_AUDIENCES"].values()) == 23
     node = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "scorecard")

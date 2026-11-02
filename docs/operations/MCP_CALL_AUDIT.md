@@ -1,6 +1,6 @@
 # MCP dispatch audit (#1010)
 
-Each authorized dispatch produces one `mcp_tool_call` JSON event after completion, exception or cancellation, with the authenticated audience, registered tool, conservative read/write-capable classification, result class, duration and transport peer. Mixed-action tools remain write-capable even for their read actions. A completed dispatch is not a claim that a requested business action succeeded. Existing authorization denials remain separate and do not produce an allowed-call event.
+Each authorized dispatch produces one `mcp_tool_call` JSON event after completion, exception or cancellation, with the authenticated audience, the request actor (`actor`: `iris`, `agent:<name>`, `agent:admin` or null; VD-59), registered tool, conservative read/write-capable classification, result class, duration and transport peer. Mixed-action tools remain write-capable even for their read actions. A completed dispatch is not a claim that a requested business action succeeded. Existing authorization denials remain separate (`mcp_tool_authz_denial`; a named agent's denial also carries `agent`, its name) and do not produce an allowed-call event.
 
 Tokens, arguments, results, exception messages, session identifiers and forwarded-header values are excluded. The production entry point installs one dedicated JSON handler; the root/Uvicorn logging level cannot silence or duplicate these events. Existing authorization, tool bodies, inputs and outputs are unchanged.
 

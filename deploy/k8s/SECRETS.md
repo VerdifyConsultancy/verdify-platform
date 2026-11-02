@@ -81,6 +81,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-mcp-runtime-db` | `password` | production MCP and its dedicated PreSync role bootstrap (`secretKeyRef`; username is migration-owned `verdify_mcp_runtime_login`) | — | — | ✓ |
+| `verdify-mcp-agents` | one key per named agent (`<name>`), the value its MCP bearer token | MCP (optional read-only volume at `/etc/verdify/mcp-agents`, no `subPath`; re-read within 60 s, no restart; [named MCP agents](#named-mcp-agents-vd-59)) | — | — | opt |
 | `verdify-hermes` | `OPENAI_API_KEY` | Hermes and v2 OpenAI selector provider adapters (`secretKeyRef`, optional while component capability is off) | — | — | req at activation |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY` | MCP semantic retrieval (`secretKeyRef`, required) | — | — | ✓ |
@@ -149,6 +150,30 @@ in the owning KSOPS lane in `jvallery/agents`. Provision and read back the exact
 provider/callback/group boundary before deploying this configuration. Never
 print the provider secret or store it in this repository.
 
+## Named MCP agents (VD-59)
+
+`verdify-mcp-agents` lives in the jvallery/agents KSOPS lane for `verdify-prod`
+(jvallery/agents#5993), and only Jason seals its values. Each key is one agent's
+name (`^[a-z0-9][a-z0-9_-]{0,62}$`, never `admin`) and its value is that agent's
+bearer token: an RFC 6750 token distinct from every other agent's and from every
+`VERDIFY_MCP_TOKEN_*` value. MCP mounts the Secret as an optional read-only
+volume and re-reads it at most every 60 s; until the Secret exists no agent is
+admitted and MCP runs unchanged. `/readyz` lists names only
+(`auth_agents_configured`, `auth_agent_keys_rejected`); a rejected key admits
+nothing and never makes MCP not ready. Values never appear in logs, errors,
+`/readyz`, Git or a browser.
+
+- **Onboard:** Jason names the agent and seals key `<name>` into the
+  jvallery/agents KSOPS lane for `verdify-prod`; once delivered, MCP admits
+  `agent:<name>` within 3 min with no restart, and the agent's pod carries the
+  label `verdify.ai/mcp-agent: "true"` and reads its own key (a pod in
+  `verdify-prod` mounts only that key, with `items`, never the whole Secret).
+- **Revoke:** delete the key the same way; MCP refuses the agent within 3 min of
+  the Secret syncing.
+- **Rotate:** Jason replaces the value; within 3 min MCP accepts only the new
+  value, with no restart; the agent picks it up from its mounted key file, or on
+  restart if it reads the key from an environment variable.
+
 ## Protected secret-source ownership (Root delivers; Iris specifies)
 
 The current fleet-owned source and delivery entry point are:
@@ -180,7 +205,8 @@ reconciliation.
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
 
-`verdify-hermes-slack` (optional, non-secret channel config) and
+`verdify-hermes-slack` (optional, non-secret channel config),
+`verdify-mcp-agents` (optional volume) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
 placeholder — the workloads reference them as `optional` / `imagePullSecrets`, so
 `kustomize build` is complete without an in-repo stand-in. The required
