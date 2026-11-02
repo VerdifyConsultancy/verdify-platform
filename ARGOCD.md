@@ -1,6 +1,6 @@
 # Verdify Platform ArgoCD
 
-Last updated: 2026-10-21
+Last updated: 2026-11-02
 
 Agent name: `verdify-platform`
 
@@ -34,16 +34,28 @@ revive the old branch model.
 | App | Namespace | Source path | Sync policy | Notes |
 |---|---|---|---|---|
 | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync uses the release preflight and rollback checks. |
+| `verdify-dashboard` | `verdify-dashboard` | `deploy/k8s/dashboard` | Automated, self-heal, prune off | The dashboard web tier, declared in jvallery/agents (jvallery/agents#5994). The web ships when its digest-pin PR to `deploy/k8s/dashboard/kustomization.yaml` merges, and the app never touches `verdify-prod`. Runbook: `docs/runbooks/dashboard.md`. |
 
 The live production Application declaration is owned by [jvallery/agents](https://github.com/jvallery/agents/blob/main/platform/gitops/applications/local-prod/verdify-prod-dark.yaml) and reconciled by `agent-fleet-local-prod-apps`. Adoption preserved its UID, full spec, manual sync and storage ignores. Change its policy in that owner; this repo owns `deploy/k8s/overlays/prod` and its rendered resources. The inactive product-side declaration was removed after live parenting verification. The former
 `verdify-platform-lab-stage` Application/AppProject and its source overlay were
 retired with the abandoned alternate Lab generator on 2026-08-30.
+
+`verdify-dashboard` and its AppProject are declared in jvallery/agents
+(`platform/gitops/applications/local-prod/verdify-dashboard.yaml`, with
+`CreateNamespace=false` and `ServerSideApply=true`). The AppProject admits only
+Namespace `verdify-dashboard`, Deployment, Service, ServiceAccount, ConfigMap,
+NetworkPolicy and IngressRoute, and denies Secret: Secret `verdify-dashboard-web`
+comes from the agents KSOPS Application `verdify-dashboard-secrets`. Prune is
+off, so a superseded generated ConfigMap stays; its `IgnoreExtraneous`
+annotation keeps the app Synced. The tier-1 exclusion for `dashboard.verdify.ai`
+lives in `overlays/prod` and ships with the `verdify-prod-dark` sync.
 
 ## Owned Desired State
 
 - Base app workloads and policies: `deploy/k8s/base/`.
 - Optional app components: `deploy/k8s/components/`.
 - Prod overlay: `deploy/k8s/overlays/prod`.
+- Dashboard web tier: `deploy/k8s/dashboard/` (Argo app `verdify-dashboard`).
 - Secret names and key contracts: `deploy/k8s/SECRETS.md` plus placeholder
   manifests marked local-config.
 - CNPG/migration runbooks and experimental manifests: `deploy/k8s/cnpg/`.
@@ -81,6 +93,8 @@ Quartz cache PVC.
 
 - Render prod manifests before PRs that touch desired state:
   `kustomize build deploy/k8s/overlays/prod`.
+- Render the dashboard manifests before PRs that touch them:
+  `kustomize build deploy/k8s/dashboard` (checked by `tests/test_dashboard_manifests.py`).
 - CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
   checks.
 - Promotion follows the Promotion Model above: a digest-only release-pin
