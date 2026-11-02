@@ -17,6 +17,7 @@ import sys
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -36,10 +37,11 @@ for key, value in {
 import esp32_push  # noqa: E402
 import shared  # noqa: E402
 import tasks  # noqa: E402
-from entity_map import EQUIPMENT_SWITCH_MAP  # noqa: E402
+from entity_map import EQUIPMENT_SWITCH_MAP, SETPOINT_MAP  # noqa: E402
 from tasks import irrigation as bridge  # noqa: E402
 
 from verdify_schemas.irrigation import IrrigationCommandRow  # noqa: E402
+from verdify_schemas.tunable_registry import _esphome_wire_slug  # noqa: E402
 
 REAL_SLEEP = asyncio.sleep
 GENERATION = 7
@@ -71,12 +73,14 @@ def relay(equipment: str, on: bool, *, at: datetime | None = None, generation: i
 
 
 def irrig_enabled(on: bool | None) -> None:
+    """The switch's native state, which reaches cfg_readback at once (see the on_state_change test below)."""
+    param = esp32_push.IRRIGATION_ENABLED_PARAM
     if on is None:
-        shared.cfg_readback.pop("sw_irrig_enabled", None)
-        shared.cfg_readback_generation.pop("sw_irrig_enabled", None)
+        shared.cfg_readback.pop(param, None)
+        shared.cfg_readback_generation.pop(param, None)
         return
-    shared.cfg_readback["sw_irrig_enabled"] = 1.0 if on else 0.0
-    shared.cfg_readback_generation["sw_irrig_enabled"] = shared.transport_generation
+    shared.cfg_readback[param] = 1.0 if on else 0.0
+    shared.cfg_readback_generation[param] = shared.transport_generation
 
 
 class FakeClient:
@@ -319,7 +323,7 @@ def test_a_stop_covering_l01_toggles_the_job_off_for_one_tick_then_restores_it(c
     ]
     assert esp32_push.BRIDGE_JOB_TICK_WAIT_S >= 6
     assert outcome.sent == (f"{ENABLED}=off", "drip___wall=off", f"{ENABLED}=on")
-    assert shared.current_cfg_readbacks()["sw_irrig_enabled"] == 1.0  # left as it was
+    assert esp32_push.irrigation_enabled_reading() is True  # left as it was
 
 
 @pytest.mark.parametrize("reading", [False, None])
@@ -385,7 +389,9 @@ def test_a_failed_restore_record_skips_the_toggle_but_still_closes_the_relays(cl
 
 
 def test_the_bridge_object_ids_are_the_firmware_entity_names():
-    """ESPHome derives object ids from names; the switch map's ids were read from the live controller."""
+    """ESPHome derives object ids from names; the switch map's ids were read from the live controller. The relays
+    stay in hardware.yaml. The button and the master switch exist only on the pre-engine firmware the bridge drives
+    (the engine release, VD-47, removed them from the YAML), so their names are pinned here."""
     hardware = (ROOT / "firmware/greenhouse/hardware.yaml").read_text()
     names = dict(re.findall(r"\n    id: (\w+)\n    name: \"([^\"]+)\"", hardware))
     for relay_id in (
@@ -400,15 +406,30 @@ def test_the_bridge_object_ids_are_the_firmware_entity_names():
         "west_wall_mister",
         "west_wall_mister_fertilized",
     ):
-        assert esp32_push._esphome_object_id(names[relay_id]) in EQUIPMENT_SWITCH_MAP, relay_id
+        assert _esphome_wire_slug(names[relay_id]) in EQUIPMENT_SWITCH_MAP, relay_id
     assert set(RELAY_OF) == set(shared.WET_RELAYS) and len(shared.WET_RELAYS) == 10
     assert set(esp32_push.BRIDGE_STOP_ORDER) == set(shared.WET_RELAYS)
     assert esp32_push.BRIDGE_STOP_ORDER[-1] == "fert_master_valve"
-    tunables = (ROOT / "firmware/greenhouse/tunables.yaml").read_text()
-    assert f'id: btn_wall_clean\n    name: "{esp32_push.WALL_CLEAN_BUTTON_NAME}"' in tunables
-    assert BUTTON == "wall_drips_-_run_clean"
-    assert re.search(r"id: sw_irrig_enabled\n    name: \"Irrigation Enabled\"", tunables)
+    assert BUTTON == _esphome_wire_slug("Wall Drips - RUN CLEAN") == "wall_drips_-_run_clean"
+    assert ENABLED == _esphome_wire_slug("Irrigation Enabled") == "irrigation_enabled"
     assert EQUIPMENT_SWITCH_MAP[ENABLED] == "irrigation_enabled"
+    # The switch's native state reaches cfg_readback under this name, which irrigation_enabled_reading reads.
+    assert SETPOINT_MAP[ENABLED] == esp32_push.IRRIGATION_ENABLED_PARAM == "sw_irrigation_enabled"
+
+
+def test_each_line_stops_the_relay_migration_283_seeds_for_it():
+    """A wrong row here closes the wrong valve: L01-L10 and their equipment are irrigation_line's seed."""
+    seeds = dict(
+        re.findall(
+            r"\('(L\d{2})', '[^']*', '[a-z]+', '[a-z_]+', '[a-z_]+',\s+'([a-z_]+)'",
+            (ROOT / "db/migrations/283-irrigation-tables.sql").read_text(),
+        )
+    )
+    assert seeds.pop("L11") == "fog"
+    assert seeds == bridge.LINE_RELAYS
+    assert tuple(bridge.LINE_RELAYS.values()) == shared.WET_RELAYS
+    assert bridge.stop_scope(None) == shared.WET_RELAYS
+    assert bridge.stop_scope("L11") == () and bridge.stop_scope("L04") == ("mister_center",)
 
 
 # ── shared: the live wet relays ─────────────────────────────────────────────────
@@ -428,6 +449,54 @@ def test_wet_relays_are_mirrored_with_their_generation_and_last_off(monkeypatch)
     for ignored in (("fog", True, GENERATION), ("drip_wall", 1, GENERATION), ("drip_wall", False, 0)):
         shared.note_wet_relay(*ignored, t0)
     assert set(shared.wet_relays) == {"drip_wall"} and shared.live_wet_relays() == {"drip_wall": True}
+
+
+def test_the_switch_reading_is_the_native_state_and_never_the_30_s_cfg_sensor(client, monkeypatch):
+    """The real callback path. cfg_irrig_enabled (sw_irrig_enabled) publishes every 30 s, so around a toggle it reads
+    the old value; only the native switch state may decide a toggle or a restore."""
+    import ingestor
+
+    monkeypatch.setattr(ingestor, "state", ingestor.State())
+    monkeypatch.setattr(shared, "transport_expected_cfg_readbacks", frozenset())
+    monkeypatch.setattr(shared, "cfg_drift_versions", {})
+    ingestor.state.key_to_object_id = {1: ENABLED, 2: "cfg_irrig_enabled", 3: RELAY_OF["drip_wall"]}
+    ingestor.state.key_to_type = {1: "switch", 2: "sensor", 3: "switch"}
+
+    irrig_enabled(None)
+    assert esp32_push.irrigation_enabled_reading() is None
+    ingestor.on_state_change(SimpleNamespace(key=2, state=1.0))  # the sensor's last publish
+    assert esp32_push.irrigation_enabled_reading() is None  # the sensor alone says nothing about the switch
+    ingestor.on_state_change(SimpleNamespace(key=1, state=False))  # switched off; the sensor has not caught up
+    assert esp32_push.irrigation_enabled_reading() is False
+    assert shared.current_cfg_readbacks()["sw_irrig_enabled"] == 1.0
+    ingestor.on_state_change(SimpleNamespace(key=1, state=True))
+    ingestor.on_state_change(SimpleNamespace(key=2, state=0.0))  # the sensor published inside the toggle
+    assert esp32_push.irrigation_enabled_reading() is True
+
+    ingestor.on_state_change(SimpleNamespace(key=3, state=True))  # and the wet relays come the same way
+    assert shared.live_wet_relays() == {"drip_wall": True}
+
+
+def test_a_toggle_cut_short_while_the_cfg_sensor_still_reads_on_is_restored(client, store, events):
+    """The cut-short toggle's whole point: the switch is off although sw_irrig_enabled's readback still reads on."""
+    irrig_enabled(False)
+    shared.cfg_readback["sw_irrig_enabled"] = 1.0
+    shared.cfg_readback_generation["sw_irrig_enabled"] = GENERATION
+    cut = store.add(
+        "stop", "L01", status="sent", age_s=9, sent_age_s=8, args={"relays_on": [], "restore_irrig_enabled": True}
+    )
+    sync(store)
+    assert calls(events) == [("switch", ENABLED, True)] and store.row(cut).args["restored"] is True
+
+
+def test_a_second_stop_ends_the_job_while_the_cfg_sensor_still_reads_off(client, store, events):
+    """Stop, run, Stop within 30 s: the first toggle's off may still be on the sensor; the job must end again."""
+    shared.cfg_readback["sw_irrig_enabled"] = 0.0
+    shared.cfg_readback_generation["sw_irrig_enabled"] = GENERATION
+    relay("drip_wall", False)
+    store.add("stop", "L01")
+    sync(store)
+    assert calls(events) == [("switch", ENABLED, False), ("switch", ENABLED, True)]
 
 
 def test_the_equipment_callback_mirrors_wet_relays_before_any_dedupe(monkeypatch):
@@ -579,13 +648,12 @@ def test_a_stop_fails_every_pending_run_in_its_scope_and_ends_the_job(client, st
         ("switch", "drip___wall", False),
         ("switch", ENABLED, True),
     ]
-    assert shared.current_cfg_readbacks()["sw_irrig_enabled"] == 1.0
+    assert esp32_push.irrigation_enabled_reading() is True
 
 
 def test_stop_all_closes_every_open_wet_relay_of_l01_to_l10(client, store, events):
-    for equipment in ("drip_wall", "mister_center", "mister_west"):
-        relay(equipment, True)
-    relay("mister_south", False)
+    for equipment in shared.WET_RELAYS:
+        relay(equipment, equipment in {"drip_wall", "mister_center", "mister_west"})
     stop = store.add("stop", None)
     sync(store)
     assert store.row(stop).args["relays_on"] == ["drip_wall", "mister_center", "mister_west"]
@@ -596,12 +664,46 @@ def test_stop_all_closes_every_open_wet_relay_of_l01_to_l10(client, store, event
         ("mister___west_wall", False),
         (ENABLED, True),
     ]
-    assert shared.live_wet_relays() == {
-        "drip_wall": False,
-        "mister_center": False,
-        "mister_west": False,
-        "mister_south": False,
-    }
+    assert not any(shared.live_wet_relays().values()) and len(shared.live_wet_relays()) == 10
+
+
+def test_a_stop_in_the_state_burst_after_a_reconnect_closes_the_relays_not_read_yet(client, store, events):
+    """L01 was running when the connection dropped and this connection has read nothing yet: the Stop must not be
+    marked sent with nothing closed. OFF is harmless on a relay that turns out to be closed."""
+    irrig_enabled(None)
+    relay("drip_wall", True, generation=GENERATION - 1)
+    stop = store.add("stop", "L01")
+    sync(store)
+    sent = store.row(stop)
+    assert sent.status == "sent" and sent.args["relays_on"] == ["drip_wall"]
+    assert calls(events) == [("switch", "drip___wall", False)]
+    assert "restore_irrig_enabled" not in sent.args  # never toggled unread: a restore could flip it on
+    sync(store)  # it read OFF after the Stop: done
+    assert len(calls(events)) == 1
+
+
+def test_stop_all_on_a_connection_that_has_read_nothing_switches_all_ten_off_master_last(client, store, events):
+    irrig_enabled(None)
+    relay("mister_center", False)  # the one relay the burst has reached already reads closed
+    stop = store.add("stop", None)
+    sync(store)
+    expected = [equipment for equipment in esp32_push.BRIDGE_STOP_ORDER if equipment != "mister_center"]
+    assert store.row(stop).args["relays_on"] == [e for e in shared.WET_RELAYS if e != "mister_center"]
+    assert calls(events) == [("switch", RELAY_OF[equipment], False) for equipment in expected]
+    assert calls(events)[-1] == ("switch", "valve___fert__master", False)
+
+
+def test_a_relay_not_read_yet_is_resent_until_it_reads_off(client, store, events):
+    irrig_enabled(None)
+    client.stuck.add("mister_center")  # the OFF has no echo yet
+    stop = store.add("stop", "L04")
+    sync(store)
+    sync(store)
+    assert store.row(stop).args["relays_on"] == ["mister_center"]
+    assert calls(events) == [("switch", "mister___center", False)] * 2
+    relay("mister_center", False)  # the burst reads it
+    sync(store)
+    assert len(calls(events)) == 2
 
 
 def test_a_stop_on_l11_alone_is_stored_and_closes_nothing(client, store, events):
@@ -651,43 +753,49 @@ def test_a_cut_short_toggle_gets_sw_irrig_enabled_back(client, store, events):
 # ── registration, the engine row and the store ─────────────────────────────────
 
 
+class FakeConnection:
+    def __init__(self, records=()):
+        self.records = list(records)
+        self.executed: list[tuple] = []
+
+    async def fetch(self, _sql, *_args):
+        return self.records
+
+    async def execute(self, sql, *args):
+        self.executed.append((sql, args))
+
+
+class FakePool:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def acquire(self):
+        conn = self.conn
+
+        class Lend:
+            async def __aenter__(self):
+                return conn
+
+            async def __aexit__(self, *exc):
+                return False
+
+        return Lend()
+
+
 def test_irr_engine_is_true_only_with_both_engine_services():
-    class Conn:
-        def __init__(self):
-            self.rows = []
-
-        async def execute(self, sql, *args):
-            self.rows.append((sql, args))
-
-    class Pool:
-        def __init__(self):
-            self.conn = Conn()
-
-        def acquire(self):
-            conn = self.conn
-
-            class Ctx:
-                async def __aenter__(self):
-                    return conn
-
-                async def __aexit__(self, *exc):
-                    return False
-
-            return Ctx()
-
-    pool = Pool()
+    conn = FakeConnection()
     results = [
-        asyncio.run(bridge.record_engine_capability(pool, services))
+        asyncio.run(bridge.record_engine_capability(FakePool(conn), services))
         for services in ({"set_band_anchor": 1}, {"irr_command": 1}, {"irr_command": 1, "irr_program_begin": 1}, None)
     ]
     assert results == [False, False, True, False]
-    assert [args[1:] for _sql, args in pool.conn.rows] == [
+    assert [args[1:] for _sql, args in conn.executed] == [
         ("irr_engine", "false"),
         ("irr_engine", "false"),
         ("irr_engine", "true"),
         ("irr_engine", "false"),
     ]
-    assert {sql for sql, _ in pool.conn.rows} == {
+    assert {sql for sql, _ in conn.executed} == {
         "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES ($1, $2, $3)"
     }
 
@@ -714,12 +822,53 @@ def test_the_task_loop_runs_irrigation_sync_every_5_s_with_a_30_s_timeout_and_fo
     assert tasks.record_engine_capability is bridge.record_engine_capability
 
 
-def test_the_connect_writes_the_engine_row_after_caching_the_services():
+def test_the_connect_writes_the_engine_row_only_after_the_generation_advance():
+    """Nothing may await between sharing the new client and advancing the transport generation: a task woken in
+    that gap would write to the new client against the old generation's readbacks and the old relay states."""
     source = (INGESTOR / "ingestor.py").read_text()
+    client_shared = source.index('shared.esp32["client"] = client')
     cached = source.index('shared.esp32["services"] = {s.name: s for s in (services or [])}')
-    written = source.index('record_engine_capability(pool, shared.esp32["services"])')
     generation = source.index("connection_generation = shared.note_transport_connected(")
-    assert cached < written < generation
+    written = source.index('record_engine_capability(pool, shared.esp32["services"])')
+    assert client_shared < cached < generation < written
+    assert "await " not in source[client_shared:generation]
+
+
+def stored_row(**changes) -> dict:
+    row = {
+        "command_id": uuid.uuid4(),
+        "greenhouse_id": "vallery",
+        "kind": "stop",
+        "line_id": None,
+        "args": "{}",
+        "status": "pending",
+        "fail_reason": None,
+        "source": "agent:steward",
+        "actor": "steward",
+        "reason": None,
+        "created_at": now(),
+        "sent_at": None,
+    }
+    return {**row, **changes}
+
+
+def test_a_row_the_model_refuses_is_logged_and_dropped_and_never_keeps_a_stop_from_going_out(caplog):
+    good = stored_row()
+    bad = stored_row(source="typed by hand", reason="not for the log")
+    assert [row.command_id for row in bridge._rows([bad, good])] == [good["command_id"]]
+    assert str(bad["command_id"]) in caplog.text and "source" in caplog.text
+    assert "typed by hand" not in caplog.text and "not for the log" not in caplog.text
+
+
+def test_a_row_the_model_refuses_still_expires():
+    good, bad = stored_row(kind="run", line_id="L01"), stored_row(source="typed by hand")
+    conn = FakeConnection([bad, good])
+    failed = asyncio.run(bridge.CommandStore(FakePool(conn)).expire())
+    assert [(row.command_id, row.status, row.fail_reason) for row in failed] == [
+        (good["command_id"], "failed", "too old")
+    ]
+    [(sql, args)] = conn.executed
+    assert sql == bridge._FAIL_SQL and args == ([bad["command_id"], good["command_id"]], "too old", "pending")
 
 
 def test_the_store_updates_only_the_columns_the_ingestor_may_and_guards_each_status():

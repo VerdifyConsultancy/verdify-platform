@@ -335,6 +335,37 @@ def test_a_stop_is_stored_while_l01_runs_and_while_the_engine_is_on():
     assert stored == (2, 2)
 
 
+def test_a_recent_bridge_toggle_explains_an_off_sw_irrig_enabled_reading():
+    """Only a sent Stop that recorded its toggle in the last 2 min does: the SQL behind ``stop_toggled``."""
+    insert_stop = (
+        "INSERT INTO public.irrigation_command (kind, line_id, args, status, source, actor, sent_at) "
+        "VALUES ('stop', 'L01', $1::text::jsonb, 'sent', 'agent:steward', 'steward', now() - $2::interval)"
+    )
+    toggled = '{"relays_on": [], "restore_irrig_enabled": true}'
+
+    async def attempt():
+        try:
+            return (await as_login(MCP, lambda conn: writes.run(conn, ACTORS[MCP], "L01"))).value.status
+        except ServiceError as refused:
+            return refused.problem.code
+
+    async def check():
+        await admin(
+            "INSERT INTO public.setpoint_snapshot (ts, parameter, value, greenhouse_id) "
+            "VALUES (now(), 'sw_irrig_enabled', 0, 'vallery')"
+        )
+        outcomes = [await attempt()]  # no Stop: the switch reads off
+        await admin(insert_stop, toggled, dt.timedelta(minutes=3))
+        outcomes.append(await attempt())  # toggled too long ago
+        await admin(insert_stop, '{"relays_on": []}', dt.timedelta(seconds=30))
+        outcomes.append(await attempt())  # a recent Stop that never toggled
+        await admin(insert_stop, toggled, dt.timedelta(seconds=30))
+        outcomes.append(await attempt())
+        return outcomes
+
+    assert run(check()) == ["line_disabled", "line_disabled", "line_disabled", "pending"]
+
+
 def test_two_concurrent_runs_store_one_command_under_the_irrigation_lock():
     async def attempt(login):
         try:
@@ -407,3 +438,31 @@ def test_the_ingestor_login_expires_sends_stops_and_records_through_command_stor
     assert rows[before.value.command_id] == ("failed", "stopped")  # requested before the Stop: never pressed
     assert rows[after.value.command_id] == ("failed", "entity_key_unavailable")
     assert sorted(rows.values()).count(("failed", "too old")) == 1
+
+
+def test_a_row_the_model_refuses_never_keeps_the_ingestor_login_from_sending_a_stop():
+    """A hand-typed row passes the table's checks but not the model: it must not wedge the pass, and it expires."""
+    task = load_command_store()
+    insert = (
+        "INSERT INTO public.irrigation_command (kind, line_id, args, source, actor, created_at) "
+        "VALUES ('stop', NULL, '{}', 'typed by hand', 'someone', now() - interval %r)"
+    )
+
+    async def check():
+        stop = await as_login(MCP, lambda conn: writes.stop(conn, ACTORS[MCP], "L04"))
+        await admin(insert % "10 seconds")
+        await admin(insert % "3 minutes")
+        conn = await connect(INGESTOR)
+        try:
+            store = task["CommandStore"](OnePool(conn))
+            expired = await store.expire()
+            pending = await store.pending("stop")
+        finally:
+            await conn.close()
+        statuses = await admin("SELECT status, count(*) AS n FROM public.irrigation_command GROUP BY status")
+        return stop, expired, pending, {row["status"]: row["n"] for row in statuses}
+
+    stop, expired, pending, statuses = run(check())
+    assert expired == []  # the only expired row is the refused one: failed, and not returned
+    assert [row.command_id for row in pending] == [stop.value.command_id]
+    assert statuses == {"pending": 2, "failed": 1}

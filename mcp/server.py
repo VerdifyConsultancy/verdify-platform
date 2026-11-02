@@ -5800,10 +5800,11 @@ async def irrigation_run(
     only in the activity log.
 
     Refusals return the Problem JSON with isError: unavailable (a line other than L01 before the irrigation
-    firmware; not retryable), out_of_range (minutes is not irrig_wall_duration_min; min and max give it),
-    line_disabled (L01 is disabled, or the controller's sw_irrig_enabled or sw_irrig_wall_enabled is off; the
-    detail names which), line_paused, line_busy (L01 is already running; retry_after_s when known),
-    unknown_target, invalid_request, request_id_reused and forbidden."""
+    firmware, not retryable; the database out of reach, retryable with the same request_id), out_of_range
+    (minutes is not irrig_wall_duration_min; min and max give it), line_disabled (L01 is disabled, or the
+    controller's sw_irrig_enabled or sw_irrig_wall_enabled is off; the detail names which), line_paused,
+    line_busy (L01 is already running; retry_after_s when known), unknown_target, invalid_request,
+    request_id_reused and forbidden."""
     from verdify_services.irrigation import writes
 
     async def write(conn, actor):
@@ -5846,7 +5847,8 @@ async def irrigation_stop(
 
     Run and stop never carry manual. request_id (a UUID) makes a retry safe: the same request_id with the same
     arguments returns the stored command with replayed: true. Refusals return the Problem JSON with isError:
-    unknown_target, invalid_request, request_id_reused and forbidden."""
+    unknown_target, invalid_request, request_id_reused and forbidden; unavailable means the database is out of
+    reach, so retry with the same request_id."""
     from verdify_services.irrigation import writes
 
     async def write(conn, actor):

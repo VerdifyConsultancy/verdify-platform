@@ -4204,13 +4204,6 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 len(shared.esp32["services"]),
                 ", ".join(sorted(shared.esp32["services"])) or "none",
             )
-            # VD-64: whether this connection has the irrigation engine, as one irr_engine row on every
-            # connect; the services read it to choose the L01 bridge, also after a firmware rollback.
-            if pool is not None:
-                try:
-                    await asyncio.wait_for(record_engine_capability(pool, shared.esp32["services"]), timeout=10)
-                except Exception as e:
-                    log.warning("irr_engine capability row not written: %s", type(e).__name__)
 
             # Advance the transport generation exactly once for this successful
             # API connect. Reconciliation remains blocked until the native API
@@ -4245,6 +4238,14 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 observed_at=datetime.now(UTC),
             )
             if pool is not None:
+                # VD-64: whether this connection has the irrigation engine, as one irr_engine row on every
+                # connect; the services read it to choose the L01 bridge, also after a firmware rollback.
+                # Only after the generation advance above: nothing may await between sharing the new client
+                # and that advance, or a task would write to it against the old generation's readbacks.
+                try:
+                    await asyncio.wait_for(record_engine_capability(pool, shared.esp32["services"]), timeout=10)
+                except Exception as e:
+                    log.warning("irr_engine capability row not written: %s", type(e).__name__)
                 try:
                     await refresh_latest_occupancy_state(pool, "esp32_reconnect")
                 except Exception as e:
@@ -4570,8 +4571,8 @@ async def task_loop(
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),
-        # VD-64 (irrigation §6.1): run-now and stop commands every 5 s, and at once on NOTIFY
-        # irrigation_changed (forced below at most every 30 s, so the 5 s cadence bounds latency).
+        # VD-64 (irrigation §6.1): run-now and stop commands every 5 s. NOTIFY irrigation_changed forces
+        # a pass below, at most every 30 s (_FORCED_TASK_RETRY_MIN_S), so the 5 s cadence bounds latency.
         ("irrigation_sync", 5, irrigation_sync),
         ("forecast_sync", 3600, forecast_sync),
         ("forecast_actions", 900, forecast_action_engine),

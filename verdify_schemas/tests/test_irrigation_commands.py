@@ -115,7 +115,6 @@ def test_a_row_outside_the_table_contract_is_refused(change):
 
 def test_the_bridge_constants():
     assert irr.BRIDGE_RUN_LINE == "L01"
-    assert irr.BRIDGE_STOP_LINES == tuple(f"L{index:02d}" for index in range(1, 11))
     assert irr.COMMAND_SEND_WINDOW_S == irr.STOP_RESEND_WINDOW_S == 120
     assert json.loads(json.dumps(irr.Command.model_json_schema()))["properties"]["line_id"]["anyOf"][0]["enum"] == list(
         irr.LINE_IDS

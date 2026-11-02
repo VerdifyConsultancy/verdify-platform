@@ -14,7 +14,6 @@ import asyncio
 import inspect
 import logging
 import os
-import re
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
@@ -1425,17 +1424,16 @@ async def push_occupancy_to_esp32(occupied: bool, source: str) -> int:
 # it has already marked sent.
 
 
-def _esphome_object_id(name: str) -> str:
-    """ESPHome's object_id for an entity name: snake case, then every character outside [a-zA-Z0-9_-] to '_'."""
-    return re.sub(r"[^a-zA-Z0-9_-]", "_", name.replace(" ", "_").lower())
-
-
-WALL_CLEAN_BUTTON_NAME = "Wall Drips - RUN CLEAN"  # btn_wall_clean, firmware/greenhouse/tunables.yaml
-WALL_CLEAN_BUTTON = _esphome_object_id(WALL_CLEAN_BUTTON_NAME)
+# btn_wall_clean, named "Wall Drips - RUN CLEAN": ESPHome's object id keeps the hyphen. Only the pre-engine
+# firmware has this button; the engine release removed it from the YAML (VD-47).
+WALL_CLEAN_BUTTON = "wall_drips_-_run_clean"
 # sw_irrig_enabled: off for one job tick runs the legacy job machine's cancel_all,
 # which closes the irrigation valves and clears the job, its queue and its timer.
 IRRIGATION_ENABLED_SWITCH = "irrigation_enabled"
-IRRIGATION_ENABLED_PARAM = "sw_irrig_enabled"
+# The native switch state reaches cfg_readback at once under this alias row of sw_irrig_enabled (SETPOINT_MAP).
+# sw_irrig_enabled itself comes from the cfg_irrig_enabled sensor, which publishes only every 30 s, so around a
+# toggle it reads the old value: never decide a toggle or a restore from it.
+IRRIGATION_ENABLED_PARAM = "sw_irrigation_enabled"
 # The legacy irrigation job machine ticks every 5 s; wait out one tick and a margin.
 BRIDGE_JOB_TICK_WAIT_S = 6.0
 # The order a Stop switches relays off: line order, except that the fertilizer
@@ -1514,7 +1512,7 @@ def bridge_preflight_failure() -> str | None:
 
 
 def irrigation_enabled_reading() -> bool | None:
-    """sw_irrig_enabled as read on the current transport generation, or None before its readback arrives."""
+    """The sw_irrig_enabled switch's own state on the current transport generation, or None before it arrives."""
     reading = shared.current_cfg_readbacks().get(IRRIGATION_ENABLED_PARAM)
     return None if reading is None else reading >= 0.5
 
@@ -1615,7 +1613,7 @@ async def bridge_stop(
        ``args.restore_irrig_enabled`` on the stop row, committed), switch it off, and wait out one 5 s job tick
        (``BRIDGE_JOB_TICK_WAIT_S``) so the legacy ``cancel_all`` closes the valves and clears the job, its
        queue and its timer.
-    2. Switch each relay in ``relays`` (equipment names, the open wet relays in scope) off by its
+    2. Switch each relay in ``relays`` (equipment names, the wet relays in scope not read OFF) off by its
        EQUIPMENT_SWITCH_MAP object id, the fertilizer relays before the master valve.
     3. Switch sw_irrig_enabled back on if step 1 turned it off: ``restored`` once that call returned.
 

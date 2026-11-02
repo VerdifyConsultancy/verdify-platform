@@ -12,7 +12,8 @@ code that turns them into device calls, through ``esp32_push`` under the writer 
    reports a reason (no transport, no writer lease, device writes off, shadow mode), the pass marks nothing
    ``sent``: commands stay pending and expire, so a ``sent`` row always reached a live connection.
 3. Stops first, oldest first, never heap-deferred: in one committed transaction mark the row ``sent`` with
-   ``sent_at`` and ``args.relays_on`` (the open wet relays in its scope) and mark every pending run in its scope
+   ``sent_at`` and ``args.relays_on`` (the wet relays in its scope that this connection has not read OFF: open
+   ones, and in the state burst after a reconnect the ones not read yet) and mark every pending run in its scope
    ``failed`` ("stopped"), so a run requested just before a Stop is never pressed after it;
    then ``esp32_push.bridge_stop``, which records ``args.restore_irrig_enabled`` before it toggles
    ``sw_irrig_enabled``; ``args.restored`` once the switch is back.
@@ -44,6 +45,7 @@ from uuid import UUID
 import asyncpg
 import esp32_push
 import shared
+from pydantic import ValidationError
 
 from verdify_schemas.irrigation import (
     BRIDGE_RUN_LINE,
@@ -144,7 +146,16 @@ def _transition(row: IrrigationCommandRow, **changes: Any) -> IrrigationCommandR
 
 
 def _rows(records: Iterable[Any]) -> list[IrrigationCommandRow]:
-    return [IrrigationCommandRow.from_row(record) for record in records]
+    """The rows the model accepts. One it refuses is logged and dropped, like any row the ingestor cannot
+    validate, so it can never keep a Stop from going out."""
+    rows = []
+    for record in records:
+        try:
+            rows.append(IrrigationCommandRow.from_row(record))
+        except ValidationError as exc:
+            problems = ",".join(str(error["loc"][0]) for error in exc.errors() if error["loc"])
+            log.error("irrigation_command row %s dropped: invalid %s", record["command_id"], problems or "row")
+    return rows
 
 
 def engine_services_present(services: Iterable[str] | Mapping[str, object] | None) -> bool:
@@ -193,13 +204,13 @@ class CommandStore:
         self.pool = pool
 
     async def expire(self) -> list[IrrigationCommandRow]:
-        """Pending commands older than 2 min: ``failed`` ("too old"), never sent."""
+        """Pending commands older than 2 min: ``failed`` ("too old"), never sent. A row the model refuses
+        expires too, so it stops being read."""
         async with self.pool.acquire() as conn:
-            rows = _rows(await conn.fetch(_EXPIRED_SQL, SEND_WINDOW))
-            failed = [_transition(row, status="failed", fail_reason=TOO_OLD) for row in rows]
-            if failed:
-                await conn.execute(_FAIL_SQL, [row.command_id for row in failed], TOO_OLD, "pending")
-        return failed
+            records = await conn.fetch(_EXPIRED_SQL, SEND_WINDOW)
+            if records:
+                await conn.execute(_FAIL_SQL, [record["command_id"] for record in records], TOO_OLD, "pending")
+        return [_transition(row, status="failed", fail_reason=TOO_OLD) for row in _rows(records)]
 
     async def pending(self, kind: str) -> list[IrrigationCommandRow]:
         """Pending commands of one kind still inside the send window, oldest first."""
@@ -275,7 +286,9 @@ async def _send_stop(store: CommandStore, stop: IrrigationCommandRow) -> None:
     # sent_at first, then the relay snapshot, so any OFF read after the snapshot counts as read since sent_at.
     sent_at = datetime.now(UTC)
     live = shared.live_wet_relays()
-    relays_on = [relay for relay in stop_scope(stop.line_id) if live.get(relay) is True]
+    # Only a relay read OFF on this connection is left out: one not read yet (the state burst after a reconnect)
+    # may be open, and OFF is harmless on a closed relay.
+    relays_on = [relay for relay in stop_scope(stop.line_id) if live.get(relay) is not False]
     covers_l01 = stop.line_id in (None, BRIDGE_RUN_LINE)
     if not await store.mark_stop_sent(stop, sent_at, relays_on):
         return

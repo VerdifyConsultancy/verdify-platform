@@ -59,6 +59,7 @@ ENGINE_ENTITY = "irr_engine"
 DURATION_PARAM = "irrig_wall_duration_min"
 # The controller switches the legacy job machine needs on to take the press, in the order they are checked.
 BRIDGE_SWITCHES = ("sw_irrig_enabled", "sw_irrig_wall_enabled")
+STOP_TOGGLED_SWITCH = "sw_irrig_enabled"  # the one a bridge Stop switches off for one job tick
 NO_ENGINE_DETAIL = "arrives with the irrigation firmware"
 AUDIT_MAX_LENGTH = 64  # trigger_id and planner_instance, kept only in the activity detail
 
@@ -75,9 +76,14 @@ _ENGINE_SQL = (
     "ORDER BY ts DESC LIMIT 1"
 )
 # L01's line row, its newest relay edge, and the controller readbacks the bridge depends on: the newest
-# setpoint_snapshot value of each (the cfg_* readback of the duration and the two switches).
+# setpoint_snapshot value of each (the cfg_* readback of the duration and the two switches). stop_toggled: a bridge
+# Stop switched sw_irrig_enabled off for one job tick within the last 2 min. A snapshot taken during that tick reads
+# it off for a minute (the readback publishes every 30 s and the snapshot every 60 s), and that off is not a refusal.
 _L01_SQL = f"""
 SELECT now() AS now, l.enabled, l.paused_until, l.relay_on, l.relay_at,
+       EXISTS (SELECT 1 FROM public.irrigation_command AS c
+                WHERE c.greenhouse_id = l.greenhouse_id AND c.kind = 'stop' AND c.status = 'sent'
+                  AND c.sent_at > now() - interval '2 minutes' AND c.args ? 'restore_irrig_enabled') AS stop_toggled,
        (SELECT s.value FROM public.setpoint_snapshot AS s
          WHERE s.parameter = '{DURATION_PARAM}' AND COALESCE(s.greenhouse_id, 'vallery') = l.greenhouse_id
          ORDER BY s.ts DESC LIMIT 1) AS duration_min,
@@ -159,6 +165,7 @@ class _L01:
     relay_at: datetime | None
     duration_min: int
     switches: Mapping[str, float | None]
+    stop_toggled: bool
 
 
 def _invalid(exc: ValidationError) -> ServiceError:
@@ -255,6 +262,7 @@ async def _l01(conn: asyncpg.Connection) -> _L01:
         relay_at=row["relay_at"],
         duration_min=_duration_min(row["duration_min"]),
         switches={name: row[name] for name in BRIDGE_SWITCHES},
+        stop_toggled=bool(row["stop_toggled"]),
     )
 
 
@@ -305,6 +313,8 @@ async def _check_bridge_run(conn: asyncpg.Connection, body: RunRequest) -> int:
     if not state.enabled:
         raise ServiceError(problem("line_disabled", "L01 is disabled; enable the line to run it", field="line_id"))
     for switch in BRIDGE_SWITCHES:
+        if switch == STOP_TOGGLED_SWITCH and state.stop_toggled:
+            continue
         reading = state.switches.get(switch)
         if reading is not None and reading < 0.5:
             label = REGISTRY[switch].label or switch

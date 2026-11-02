@@ -90,6 +90,7 @@ class BridgeDB:
             "duration_min": 10.0,
             "sw_irrig_enabled": 1.0,
             "sw_irrig_wall_enabled": 1.0,
+            "stop_toggled": False,
         }
         self.commands: list[dict] = []
         self.activity: list[dict] = []
@@ -336,6 +337,21 @@ def test_a_disabled_line_or_switch_is_line_disabled_naming_it(change, names):
     problem = refused(excinfo)
     assert (problem.code, problem.status, problem.retryable) == ("line_disabled", 422, False)
     assert names in problem.detail and db.stored() == (0, 0, 0)
+
+
+def test_a_bridge_stops_own_toggle_is_not_a_disabled_switch():
+    """A snapshot taken during the Stop's one job tick reads sw_irrig_enabled off for a minute; a run then is fine."""
+    db = BridgeDB()
+    db.l01.update(sw_irrig_enabled=0.0, stop_toggled=True)
+    assert do_run(db).value.status == "pending"
+
+
+def test_the_wall_switch_still_refuses_after_a_stops_toggle():
+    db = BridgeDB()
+    db.l01.update(sw_irrig_wall_enabled=0.0, stop_toggled=True)
+    with pytest.raises(ServiceError) as excinfo:
+        do_run(db)
+    assert refused(excinfo).code == "line_disabled" and "sw_irrig_wall_enabled" in refused(excinfo).detail
 
 
 def test_unread_switches_never_refuse_the_run():

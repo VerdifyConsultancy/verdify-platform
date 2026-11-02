@@ -134,7 +134,6 @@ from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS, REGISTRY
 __all__ = [
     "BOUNDS_BY_KIND",
     "BRIDGE_RUN_LINE",
-    "BRIDGE_STOP_LINES",
     "CAP_NOTE",
     "CLEAN_PARTNER",
     "COMMAND_KINDS",
@@ -2116,10 +2115,8 @@ COMMAND_STATUSES: tuple[str, ...] = get_args(CommandStatus)
 # again for at most this long after it was sent (irrigation §6.1).
 COMMAND_SEND_WINDOW_S = 120
 STOP_RESEND_WINDOW_S = 120
-# Before the engine firmware only L01 runs (the btn_wall_clean bridge, irrigation §6.5), and a
-# Stop closes the open wet relays of L01-L10; L11's fog_rly is internal to the controller.
+# Before the engine firmware only L01 runs (the btn_wall_clean bridge, irrigation §6.5).
 BRIDGE_RUN_LINE = "L01"
-BRIDGE_STOP_LINES: tuple[str, ...] = LINE_IDS[:10]
 
 
 class CommandActor(BaseModel):
