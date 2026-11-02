@@ -493,6 +493,36 @@ def sealed_sql_283():
     )
 
 
+DASHBOARD_GRANTS_MIGRATION = (
+    284,
+    "284-dashboard-runtime-grants.sql",
+    "5ee3c9bda4905de3739eb1ec98d56ce5a770026f6329260016716d23acaf05c5",
+)
+# 284's grants move both ordinary seals, which hash the dashboard duty's production
+# OID, and leave the MCP seal at 283's; the rolled-back native qualification, run
+# once 282 is applied, measures them.
+SUCCESSOR_284 = {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": SUCCESSOR_283["mcp"],
+}
+
+
+def sealed_sql_284():
+    # Keep every 283 predicate and bind the exact 284 runner stamp with the two
+    # ordinary seals its dashboard grants move.
+    predecessor = sealed_sql_283()
+    current = seal_profile_sql(283, SUCCESSOR_283)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(284, SUCCESSOR_284), 1)
+        + " AND "
+        + ledger_row_sql(*DASHBOARD_GRANTS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -515,6 +545,8 @@ def sealed_sql():
         + sealed_sql_282()
         + " OR "
         + sealed_sql_283()
+        + " OR "
+        + sealed_sql_284()
         + ")"
     )
 

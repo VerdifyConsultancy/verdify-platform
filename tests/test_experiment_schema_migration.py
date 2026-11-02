@@ -343,6 +343,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "282-dashboard-runtime-login.sql",
         # Irrigation tables, seeds and grants (M3) and their receipt re-seals run forward (VD-38).
         "283-irrigation-tables.sql",
+        # The dashboard login's grants on existing objects (M2b) and their receipt re-seals run forward (VD-74).
+        "284-dashboard-runtime-grants.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

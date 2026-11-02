@@ -439,8 +439,9 @@ def test_sealed_sql_283_chains_from_282_and_binds_the_exact_ledger_row():
     assert six.sealed_sql_283() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=283" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.IRRIGATION_TABLES_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_282() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_283() + ")") == 1
+    # 283 follows 282 in both ORs; a later successor (284) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_282() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_283()) == 1
     assert '"283-irrigation-tables.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_283_irrigation_tables_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 
