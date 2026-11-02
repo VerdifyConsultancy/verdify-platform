@@ -27,6 +27,7 @@ from collections.abc import Mapping
 import pytest
 
 from verdify_schemas.tunable_registry import (
+    _ENTITY_NAMES,
     FIRMWARE_V2_STAGED_REG,
     PLANNER_PUSHABLE_REG,
     REGISTRY,
@@ -781,12 +782,21 @@ def _parse_entities(text: str) -> tuple[dict[str, tuple[str, float | None]], dic
     return numbers, switches
 
 
+def _lost_entity(name: str, spec: TunableDef) -> str:
+    return (
+        f"{name}: copied from a tunables.yaml entity (_ENTITY_NAMES), but no {spec.kind} entity "
+        f"matches esp_object_id {spec.esp_object_id!r}"
+    )
+
+
 def _step_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) -> list[str]:
     """Rows whose step disagrees with their tunables.yaml entity; empty when clean.
 
-    A number's step must equal its entity's ``step:``; a switch with a switch
-    entity must have step 1.0; a row with no entity keeps step None, except the
-    56 staged anchors (``test_anchor_steps_use_push_quanta``).
+    A number's step must equal its entity's ``step:``, and a switch with a
+    switch entity must have step 1.0. The guard skips every row without an
+    entity: the staged anchors (``test_anchor_steps_use_push_quanta``) and rows
+    that set their own step. A row copied from an entity (``_ENTITY_NAMES``)
+    whose entity is gone fails, as the fw_clamp guard fails a missing entity.
     """
     numbers, switches = _parse_entities(tunables_text)
     mismatches: list[str] = []
@@ -799,8 +809,8 @@ def _step_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) -> 
         elif spec.kind == "switch" and key in switches:
             if spec.step != 1.0:
                 mismatches.append(f"{name}: a switch entity holds 0/1, so step must be 1.0, registry step={spec.step}")
-        elif name not in FIRMWARE_V2_STAGED_REG and spec.step is not None:
-            mismatches.append(f"{name}: no tunables.yaml entity, so step must be None, registry step={spec.step}")
+        elif name in _ENTITY_NAMES:
+            mismatches.append(_lost_entity(name, spec))
     return mismatches
 
 
@@ -808,8 +818,9 @@ def _label_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) ->
     """Rows whose label or unit disagrees with their entity name; empty when clean.
 
     A row with a number or switch entity carries ``split_entity_name()`` of the
-    entity ``name:``; a row with no entity carries its registry name and no
-    unit, except the 56 staged anchors (``test_anchor_labels_match_readback_names``).
+    entity ``name:``. The guard skips every row without an entity, like the step
+    guard: the staged anchors (``test_anchor_labels_match_readback_names``) and
+    rows that set their own label and unit.
     """
     numbers, switches = _parse_entities(tunables_text)
     mismatches: list[str] = []
@@ -819,10 +830,10 @@ def _label_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) ->
             expected = split_entity_name(numbers[key][0])
         elif spec.kind == "switch" and key in switches:
             expected = split_entity_name(switches[key])
-        elif name in FIRMWARE_V2_STAGED_REG:
-            continue
         else:
-            expected = (name, None)
+            if name in _ENTITY_NAMES:
+                mismatches.append(_lost_entity(name, spec))
+            continue
         if (spec.label, spec.unit) != expected:
             mismatches.append(f"{name}: registry (label, unit)={(spec.label, spec.unit)!r}, expected {expected!r}")
     return mismatches
@@ -848,12 +859,32 @@ class TestStepLabelUnitDriftGuard:
             ("site_pressure_hpa", 5.0),  # number entity, wrong step
             ("mister_engage_kpa", None),  # number entity, step missing
             ("sw_fog_closes_vent", None),  # switch entity, step not 1.0
-            ("fog_time_window_start", 1.0),  # no entity, step must stay None
         ],
     )
     def test_step_guard_fails_on_a_patched_row(self, tunables_yaml: str, name: str, step: float | None) -> None:
         patched = {**REGISTRY, name: REGISTRY[name].model_copy(update={"step": step})}
         assert any(m.startswith(f"{name}:") for m in _step_mismatches(patched, tunables_yaml))
+
+    @pytest.mark.parametrize(
+        ("name", "entity_name"),
+        [("site_pressure_hpa", "Site Pressure (hPa)"), ("sw_fog_closes_vent", "Fog Closes Vent")],
+    )
+    def test_guards_fail_when_a_copied_entity_is_gone(self, tunables_yaml: str, name: str, entity_name: str) -> None:
+        """A renamed or removed entity leaves a stale literal: both guards fail on it."""
+        line = f'name: "{entity_name}"'
+        assert tunables_yaml.count(line) == 1
+        renamed = tunables_yaml.replace(line, f'name: "{entity_name} Renamed"')
+        assert any(m.startswith(f"{name}:") for m in _step_mismatches(REGISTRY, renamed))
+        assert any(m.startswith(f"{name}:") for m in _label_mismatches(REGISTRY, renamed))
+
+    def test_guards_skip_rows_without_an_entity(self, tunables_yaml: str) -> None:
+        """A row with no entity may set its own step, label and unit (#1152's irrigation_site rows)."""
+        own = REGISTRY["fog_time_window_start"].model_copy(
+            update={"step": 1.0, "label": "Fog Window Start", "unit": "h"}
+        )
+        patched = {**REGISTRY, "fog_time_window_start": own}
+        assert not _step_mismatches(patched, tunables_yaml)
+        assert not _label_mismatches(patched, tunables_yaml)
 
     def test_policy_steps_match_entity_grids(self) -> None:
         """The 48 policy fields snap to the deployed entity grid (switches: 1.0)."""
@@ -909,7 +940,6 @@ class TestStepLabelUnitDriftGuard:
             ("mister_engage_kpa", "unit", "°F"),
             ("fog_min_temp_f", "unit", None),
             ("sw_fog_closes_vent", "label", "sw_fog_closes_vent"),
-            ("fog_time_window_start", "label", "Fog Window Start"),
         ],
     )
     def test_label_guard_fails_on_a_patched_row(
