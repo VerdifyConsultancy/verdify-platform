@@ -613,10 +613,13 @@ operation ids are canonical (R1); API-08, API-18, API-IRR-09 and OPS-03 are rese
 
 Conventions: JSON; ISO 8601 times with an offset and `observed_at` on every reading; canonical units (°F, %, kPa,
 gal, min); `null` means unavailable; `application/problem+json` errors (§5.3). Every write takes an optional
-`Idempotency-Key`. Setting writes return 200 with the stored row and state; run, stop and clear-fault return 202
-and a `command_id`. [`openapi/dashboard-api.v1.yaml`](openapi/dashboard-api.v1.yaml) is hand-maintained and
-canonical: new operations land there first, every FastAPI route sets `operation_id` to its id, and a test checks
-each served method, path, `operationId` and schema against it (unserved committed operations are allowed).
+`Idempotency-Key`. A request the contract cannot read is 400 `invalid_request`: a wrong JSON type, a body key it does
+not list, a path id that is not an integer, a key that is not a uuid, text holding a NUL character. §5.3's codes judge
+what it can read, so `{"value": NaN}` is `out_of_range`. Setting writes return 200 with the stored row and state; run,
+stop and clear-fault return 202 and a `command_id`. [`openapi/dashboard-api.v1.yaml`](openapi/dashboard-api.v1.yaml)
+is hand-maintained and canonical: new operations land there first, every FastAPI route sets `operation_id` to its id,
+and a test checks each served method, path, `operationId` and schema against it (unserved committed operations are
+allowed).
 
 Roles: V = viewer, O = operator. Screens follow [screens](screens.md).
 

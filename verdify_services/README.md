@@ -66,7 +66,7 @@ result = await activity.recorded_write(
     target=param,
     request=body,  # every input of `op` that `target` does not carry, as validated JSON (or its model)
     request_id=idempotency_key,  # Idempotency-Key (REST) or request_id (MCP); None when not sent
-    reason=reason,  # at most 500 characters
+    reason=reason,  # at most 500 characters, no NUL (400 invalid_request)
     perform=perform,  # async (conn) -> (value, detail): validate and write the domain row
     load=load,  # async (conn, ActivityLogRow) -> value: read the stored object back
 )

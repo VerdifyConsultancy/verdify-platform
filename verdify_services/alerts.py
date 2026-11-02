@@ -380,6 +380,8 @@ async def _act(
     sql: str,
 ) -> WriteResult[Alert]:
     key = _alert_id(alert_id)
+    if text is not None and "\x00" in text:  # PostgreSQL text cannot hold it, so no retry could store it
+        raise ServiceError(problem("invalid_request", f"{field} holds a NUL character", field=field))
 
     async def perform(tx: asyncpg.Connection) -> tuple[Alert, dict[str, Any]]:
         row = await _row(tx, key)
