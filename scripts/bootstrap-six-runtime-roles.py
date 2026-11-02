@@ -410,6 +410,33 @@ def sealed_sql_280():
     )
 
 
+IRRIGATION_MINUTES_MIGRATION = (
+    281,
+    "281-irrigation-minutes-by-zone.sql",
+    "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8",
+)
+SUCCESSOR_281 = {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3",
+}
+
+
+def sealed_sql_281():
+    # Keep every 280 predicate and bind the exact 281 runner stamp with the three
+    # seals its minutes-by-zone view and reader grants move.
+    predecessor = sealed_sql_280()
+    current = seal_profile_sql(280, SUCCESSOR_280)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(281, SUCCESSOR_281), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_MINUTES_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -426,6 +453,8 @@ def sealed_sql():
         + sealed_sql_279()
         + " OR "
         + sealed_sql_280()
+        + " OR "
+        + sealed_sql_281()
         + ")"
     )
 

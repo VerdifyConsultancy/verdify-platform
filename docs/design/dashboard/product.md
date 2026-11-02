@@ -460,7 +460,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 #### US-WAT-03 · Watering minutes by zone and cause
 *P1, P2 · MVP · Water.* As the owner-operator, I want watering minutes per zone per day split by cause and chemistry, so that I know each zone got the water I intended.
 - `v_irrigation_minutes_daily` (API-IRR-10) gives valve-open minutes, pulses and gallons per America/Denver day for wall, center, south and west (fog on its own), stacked by cause (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`, `fallback`, `unknown`) with clean below fertilizer and each zone's cap as a tick; today, 7 and 30 days.
-- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2024-11-17 (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
+- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2025-08-05, the first wet-relay row (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
 - Today and any day with an ingestor outage are marked partial; an outage shows as a gap, never as zero, and nothing is back-filled.
 
 #### US-WAT-04 · Run ledger

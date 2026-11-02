@@ -88,6 +88,8 @@ $PY -m pytest -q -rs \
   tests/test_277_getter_delivery.py \
   tests/test_279_source_clock_delivery.py \
   tests/test_280_desired_state_delivery.py \
+  tests/test_281_irrigation_minutes_delivery.py \
+  tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
