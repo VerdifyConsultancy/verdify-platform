@@ -466,7 +466,7 @@ def sealed_sql_282():
 IRRIGATION_TABLES_MIGRATION = (
     283,
     "283-irrigation-tables.sql",
-    "7570dbc9e603df7ccbec68450da88e1d60fc6cd5c93bd3454ef3911e16ab3e57",
+    "d38a1bfc62c326521c70e53143a14791d024821888f17b25c10cccfdb1dc8c78",
 )
 # 283's grants reach 282's dashboard duty on relations the ingestor reads, so its
 # ordinary seals hash that duty's production OID; the rolled-back native

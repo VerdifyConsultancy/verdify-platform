@@ -420,7 +420,7 @@ JOIN coverage c
 WHERE c.coverage <> 'no_data';
 
 COMMENT ON VIEW public.v_irrigation_minutes_daily IS
-'Valve-open minutes (0.1), pulses (runs starting that day) and whole gallons per America/Denver day by greenhouse, zone, line, cause, chemistry and slot. Cause and slot_id come from the irrigation_ledger row whose span contains a run''s start; an unmatched L01 run within 30 s after a sent run command reads run_now; other runs keep the line''s topology cause and a NULL slot_id. gal is NULL for L03, and when a row''s runs had no accepted delta it is 0 if the meter recorded one that day and NULL if not. partial marks a day whose coverage is not complete; no_data days have no rows.';
+'Valve-open minutes (0.1), pulses (runs starting that day) and whole gallons per America/Denver day by greenhouse, zone, line, cause, chemistry and slot. Cause and slot_id come from the newest irrigation_ledger row on the run''s line that started at most 24 hours before it and whose span (to now while open) contains its start; an unmatched L01 run starting 0-30 s after the sent_at of a sent L01 run command reads run_now; other runs keep the line''s topology cause and a NULL slot_id. gal is NULL for L03, and when a row''s runs had no accepted delta it is 0 if the meter recorded one that day and NULL if not. partial marks a day whose coverage is not complete; no_data days have no rows.';
 
 -- The view's rows for local days p_from..p_to, with the equipment_state scan bounded by the day
 -- range: seeded with each relay's state at p_from's local midnight (read as v_water_relay_runs

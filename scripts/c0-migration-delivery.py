@@ -248,7 +248,7 @@ SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_281_MCP_DIGEST
 # once 282 is applied measures them (no --apply-first). Its fixture records
 # whether these values are that measurement or still the pre-R0 projection.
 SUCCESSOR_283 = "283-irrigation-tables.sql"
-SUCCESSOR_283_SHA256 = "7570dbc9e603df7ccbec68450da88e1d60fc6cd5c93bd3454ef3911e16ab3e57"
+SUCCESSOR_283_SHA256 = "d38a1bfc62c326521c70e53143a14791d024821888f17b25c10cccfdb1dc8c78"
 SUCCESSOR_283_DIGESTS = {
     "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
     "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",

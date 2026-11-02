@@ -131,7 +131,8 @@ BEGIN
        OR EXISTS (SELECT 1 FROM pg_attribute t JOIN pg_class c ON c.oid = t.attrelid
                   CROSS JOIN LATERAL aclexplode(t.attacl) a
                   WHERE c.relnamespace = 'public'::regnamespace AND t.attnum > 0 AND a.privilege_type <> 'UPDATE'
-                    AND c.relname LIKE 'irrigation%')
+                    AND c.relname IN ('irrigation_line', 'irrigation_slot', 'irrigation_command', 'irrigation_push',
+                                      'irrigation_ledger'))
        OR (SELECT array_agg(a.grantee::regrole::text ORDER BY a.grantee::regrole::text COLLATE "C")
            FROM pg_proc p CROSS JOIN LATERAL aclexplode(p.proacl) a
            WHERE p.oid = 'public.fn_mcp_armed_assignment_context()'::regprocedure AND a.grantee <> p.proowner)
