@@ -642,7 +642,7 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
 
 
 def test_verdify_services_imports_only_schemas_asyncpg_and_pydantic():
-    # pydantic_core ships inside pydantic; activity.py uses it (tests/test_verdify_services_core.py allows it too).
+    # pydantic_core is pydantic's own core package (verdify_services.activity uses to_jsonable_python).
     allowed = {"verdify_schemas", "verdify_services", "asyncpg", "pydantic", "pydantic_core"} | set(
         sys.stdlib_module_names
     )

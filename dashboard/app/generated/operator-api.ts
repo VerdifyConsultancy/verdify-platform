@@ -10,7 +10,7 @@ export interface paths {
         };
         /**
          * Finish sign-in
-         * @description Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name, groups), maps groups to a role (operators wins), creates the session with INT-01 and sets __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login cookie is cleared on every outcome; error bodies are text/plain until #1124 renders the SCR-09 card.
+         * @description Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name, groups), maps groups to a role (operators wins), creates the session with INT-01 and sets __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login cookie is cleared on every outcome; a refusal answers its status with the SCR-09 card (text/html) at the same URL.
          */
         readonly get: operations["BFF-02"];
         readonly put?: never;
@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Start sign-in
-         * @description Sets the sealed __Host-verdify_login cookie (state, nonce, PKCE verifier and returnTo; AES-256-GCM; 10 min) and redirects to the authorization_endpoint discovered from issuer https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/) with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik. Error bodies are text/plain with the status until #1124 renders the SCR-09 card (text/html) at the same URL.
+         * @description Sets the sealed __Host-verdify_login cookie (state, nonce, PKCE verifier and returnTo; AES-256-GCM; 10 min) and redirects to the authorization_endpoint discovered from issuer https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/) with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik. A refusal answers its status with the SCR-09 card (text/html) at the same URL.
          */
         readonly get: operations["BFF-01"];
         readonly put?: never;
@@ -2038,7 +2038,6 @@ export interface operations {
                 };
                 content: {
                     readonly "text/html": string;
-                    readonly "text/plain": string;
                 };
             };
             /** @description No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call */
@@ -2048,7 +2047,6 @@ export interface operations {
                 };
                 content: {
                     readonly "text/html": string;
-                    readonly "text/plain": string;
                 };
             };
             /** @description Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie */
@@ -2058,7 +2056,6 @@ export interface operations {
                 };
                 content: {
                     readonly "text/html": string;
-                    readonly "text/plain": string;
                 };
             };
         };
@@ -2091,7 +2088,6 @@ export interface operations {
                 };
                 content: {
                     readonly "text/html": string;
-                    readonly "text/plain": string;
                 };
             };
         };

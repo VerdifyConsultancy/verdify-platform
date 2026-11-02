@@ -627,7 +627,7 @@ paths:
         https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/)
         with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page
         without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik.
-        Error bodies are text/plain with the status until #1124 renders the SCR-09 card (text/html) at the same URL.
+        A refusal answers its status with the SCR-09 card (text/html) at the same URL.
       security: []
       parameters:
         - name: returnTo
@@ -640,7 +640,7 @@ paths:
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '503':
           description: 'Sign-in is unavailable: Authentik cannot be reached (existing sessions keep working)'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
   /auth/callback:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -652,7 +652,8 @@ paths:
         Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name,
         groups), maps groups to a role (operators wins), creates the session with INT-01 and sets
         __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login
-        cookie is cleared on every outcome; error bodies are text/plain until #1124 renders the SCR-09 card.
+        cookie is cleared on every outcome; a refusal answers its status with the SCR-09 card (text/html) at the same
+        URL.
       security: []
       parameters:
         - {name: code, in: query, schema: {type: string}}
@@ -664,13 +665,13 @@ paths:
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '400':
           description: 'Sign-in did not complete (state mismatch, a missing, expired or tampered login cookie, an Authentik error or a refused code exchange); no session cookie'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
         '403':
           description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
         '503':
           description: 'Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
   /auth/logout:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]

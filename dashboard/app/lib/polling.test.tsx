@@ -4,7 +4,7 @@ import { StrictMode } from "react";
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { usePolledQuery } from "./use-current";
+import { PollingPaused, usePolledQuery } from "./use-current";
 import { MAX_POLL_DELAY, POLL_INTERVAL, nextPollDelay } from "./polling";
 
 type Reading = { observed_at: string };
@@ -17,8 +17,9 @@ async function fetchReading(signal: AbortSignal): Promise<Reading> {
 }
 function Probe({ intervalMs }: { intervalMs: number }) {
   const result = usePolledQuery(KEY, fetchReading, intervalMs);
-  return <p data-testid="source">{result.data?.observed_at ?? "no data"} · {result.isError ? "API unavailable" : "available"}</p>;
+  return <p data-testid="source" data-failures={result.consecutiveFailures}>{result.data?.observed_at ?? "no data"} · {result.isError ? "API unavailable" : "available"}</p>;
 }
+const failures = () => Number(screen.getByTestId("source").getAttribute("data-failures"));
 // Each call gets its own Response: a body can be read only once.
 const answers = () => vi.fn(() => Promise.resolve(new Response(JSON.stringify(reading))));
 let client: QueryClient;
@@ -33,7 +34,9 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
 afterEach(() => { cleanup(); client.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); focusManager.setFocused(undefined); });
-function mount(intervalMs = POLL_INTERVAL) { render(<StrictMode><QueryClientProvider client={client}><Probe intervalMs={intervalMs} /></QueryClientProvider></StrictMode>); }
+function mount(intervalMs = POLL_INTERVAL, paused = false) {
+  return render(<StrictMode><QueryClientProvider client={client}><PollingPaused.Provider value={paused}><Probe intervalMs={intervalMs} /></PollingPaused.Provider></QueryClientProvider></StrictMode>);
+}
 async function advance(milliseconds: number) { await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds); }); }
 
 test("nextPollDelay doubles the base interval per failure up to 120 s", () => {
@@ -126,4 +129,34 @@ test("a tab opened hidden waits, and repeated visibility events refresh only onc
   await act(async () => { setVisibility("hidden"); });
   await act(async () => { setVisibility("visible"); setVisibility("visible"); });
   expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+test("consecutiveFailures counts failed polls in a row; a success resets it and a hidden tab's abort is not one", async () => {
+  const fetch = vi.fn((): Promise<Response> => Promise.resolve(new Response("unavailable", { status: 503 })));
+  vi.stubGlobal("fetch", fetch);
+  mount(); await advance(1);
+  expect(failures()).toBe(1);
+  await advance(30_000); await advance(1);
+  expect(failures()).toBe(2);
+  fetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(reading))));
+  await advance(60_000); await advance(1);
+  expect(failures()).toBe(0);
+  // A request still in flight when the tab hides is aborted, which counts for nothing.
+  fetch.mockImplementation(() => new Promise<Response>(() => {}));
+  await advance(15_000);
+  await act(async () => { setVisibility("hidden"); });
+  await advance(1);
+  expect(failures()).toBe(0);
+});
+
+test("PollingPaused stops the poll: nothing is fetched while it is true", async () => {
+  const fetch = answers(); vi.stubGlobal("fetch", fetch);
+  const { rerender } = mount(POLL_INTERVAL, true); await advance(60_000);
+  expect(fetch).not.toHaveBeenCalled();
+  rerender(<StrictMode><QueryClientProvider client={client}><PollingPaused.Provider value={false}><Probe intervalMs={POLL_INTERVAL} /></PollingPaused.Provider></QueryClientProvider></StrictMode>);
+  await advance(0);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  rerender(<StrictMode><QueryClientProvider client={client}><PollingPaused.Provider value={true}><Probe intervalMs={POLL_INTERVAL} /></PollingPaused.Provider></QueryClientProvider></StrictMode>);
+  await advance(120_000);
+  expect(fetch).toHaveBeenCalledTimes(1);
 });

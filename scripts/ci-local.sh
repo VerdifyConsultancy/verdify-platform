@@ -89,6 +89,7 @@ $PY -m pytest -q -rs \
   tests/test_279_source_clock_delivery.py \
   tests/test_280_desired_state_delivery.py \
   tests/test_281_irrigation_minutes_delivery.py \
+  tests/test_282_dashboard_login_delivery.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
@@ -150,6 +151,7 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_dashboard_dockerfile.py \
+  tests/test_ci_validate_dockerfile.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \

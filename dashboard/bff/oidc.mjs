@@ -23,12 +23,9 @@ const IV_BYTES = 12;
 const TAG_BYTES = 16;
 // Browsers drop a cookie whose name and value pass 4,096 bytes, and the login cookie must survive the round trip.
 const MAX_SEALED = 4096 - LOGIN_COOKIE.length - 1;
-// SCR-09's words; #1124 renders them as cards at the same URL and status, with res.locals.authError as the hint.
-const REFUSALS = {
-  failed: { status: 400, text: "Sign-in didn't complete. Try again." },
-  no_access: { status: 403, text: "No access. Your account doesn't have dashboard access. Ask Jason to add you to a dashboard group." },
-  unavailable: { status: 503, text: "Sign-in is unavailable. Try again in a minute." },
-};
+// Why a sign-in was refused. The root loader (#1124) answers each with its status (failed 400, no_access 403,
+// unavailable 503) and SCR-09's card, in the words of app/lib/page-context.ts.
+/** @typedef {"failed" | "no_access" | "unavailable"} RefusalReason */
 
 /** @param {string} value */
 function hasControlCharacter(value) {
@@ -172,19 +169,21 @@ function sameValue(value, expected) {
 }
 
 /**
- * Answers a failed sign-in with its status and SCR-09's words as plain text, and leaves {reason, requestId} in
- * res.locals.authError for #1124, which renders the card at the same URL.
+ * A refused sign-in: leaves {reason, requestId} in res.locals.authError and hands the request on, past the page gate,
+ * to React Router, whose root loader (#1124) answers the refusal's status with SCR-09's card at the same URL. The
+ * response keeps this route's Cache-Control: no-store and, at the callback, the cleared login cookie.
  * @param {import("express").Response} res
- * @param {keyof typeof REFUSALS} reason
+ * @param {import("express").NextFunction} next
+ * @param {RefusalReason} reason
  */
-function refuse(res, reason) {
+function refuse(res, next, reason) {
   res.locals.authError = { reason, requestId: res.locals.requestId };
-  res.status(REFUSALS[reason].status).type("text").send(REFUSALS[reason].text);
+  next();
 }
 
 /**
  * GET /auth/login (BFF-01), GET /auth/callback (BFF-02) and POST /auth/logout (BFF-03). Every /auth response is
- * Cache-Control: no-store.
+ * Cache-Control: no-store; a refused sign-in is rendered by React Router (see refuse).
  * @param {{
  *   publicOrigin: string,
  *   provider: () => Promise<client.Configuration>,
@@ -197,12 +196,12 @@ export function authRoutes({ publicOrigin, provider, seal, operator }) {
   const redirectUri = `${publicOrigin}/auth/callback`;
 
   /** @type {import("express").RequestHandler} */
-  async function login(req, res) {
+  async function login(req, res, next) {
     let configuration;
     try {
       configuration = await provider();
     } catch {
-      return refuse(res, "unavailable");
+      return refuse(res, next, "unavailable");
     }
     const returnTo = safeReturnTo(req.query.returnTo);
     const state = client.randomState();
@@ -213,7 +212,7 @@ export function authRoutes({ publicOrigin, provider, seal, operator }) {
     try {
       authorize = client.buildAuthorizationUrl(configuration, { redirect_uri: redirectUri, scope: SCOPE, state, nonce, code_challenge: challenge, code_challenge_method: "S256" });
     } catch {
-      return refuse(res, "unavailable");
+      return refuse(res, next, "unavailable");
     }
     let sealed = seal.seal({ state, nonce, verifier, returnTo });
     // A returnTo that JSON escaping or UTF-8 makes too long for the cookie returns to /, like any other it cannot keep.
@@ -223,18 +222,18 @@ export function authRoutes({ publicOrigin, provider, seal, operator }) {
   }
 
   /** @type {import("express").RequestHandler} */
-  async function callback(req, res) {
+  async function callback(req, res, next) {
     const sealed = readCookie(req, LOGIN_COOKIE);
     // Single use: cleared on every outcome.
     res.clearCookie(LOGIN_COOKIE, COOKIE_ATTRIBUTES);
     const pending = seal.open(sealed);
     const currentUrl = new URL(req.originalUrl, publicOrigin);
-    if (!pending || currentUrl.searchParams.has("error") || !sameValue(currentUrl.searchParams.get("state"), pending.state)) return refuse(res, "failed");
+    if (!pending || currentUrl.searchParams.has("error") || !sameValue(currentUrl.searchParams.get("state"), pending.state)) return refuse(res, next, "failed");
     let configuration;
     try {
       configuration = await provider();
     } catch {
-      return refuse(res, "unavailable");
+      return refuse(res, next, "unavailable");
     }
     let claims;
     try {
@@ -244,19 +243,19 @@ export function authRoutes({ publicOrigin, provider, seal, operator }) {
       // The tokens go no further than this block: only these claims are kept.
       claims = tokens.claims();
     } catch (error) {
-      return refuse(res, unreachable(error) ? "unavailable" : "failed");
+      return refuse(res, next, unreachable(error) ? "unavailable" : "failed");
     }
     const username = claims?.preferred_username;
-    if (typeof username !== "string" || !username) return refuse(res, "failed");
+    if (typeof username !== "string" || !username) return refuse(res, next, "failed");
     res.locals.logFields.user = shortHash(username);
     const role = roleFor(claims?.groups);
-    if (!role) return refuse(res, "no_access");
+    if (!role) return refuse(res, next, "no_access");
     const displayName = typeof claims?.name === "string" && claims.name ? claims.name : null;
     let token;
     try {
       token = await operator.createSession({ username, display_name: displayName, role }, res.locals.requestId);
     } catch {
-      return refuse(res, "unavailable");
+      return refuse(res, next, "unavailable");
     }
     setSessionCookie(res, token);
     const previous = sessionToken(req);

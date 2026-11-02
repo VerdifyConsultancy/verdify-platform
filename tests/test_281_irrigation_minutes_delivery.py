@@ -157,8 +157,9 @@ def test_sealed_sql_281_chains_from_280_and_binds_the_exact_ledger_row():
     expected += " AND " + six.ledger_row_sql(*six.IRRIGATION_MINUTES_MIGRATION) + ")"
     assert six.sealed_sql_281() == expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.IRRIGATION_MINUTES_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_280() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_281() + ")") == 1
+    # 281 follows 280 in both ORs; a later successor (282) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_280() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_281()) == 1
     assert '"281-irrigation-minutes-by-zone.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_281_irrigation_minutes_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 
