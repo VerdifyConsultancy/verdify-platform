@@ -1,7 +1,7 @@
 {
   "migration": "280-desired-state-activity-log.sql",
   "exact_final_migration_sha256": "44531a0c3a9ddd48f64ce639f9f9f1c2d0f948960ba65a68943d5947881b8bfe",
-  "final_migration_qualification_pending": true,
+  "final_migration_qualification_pending": false,
   "before": {
     "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
     "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
@@ -13,8 +13,19 @@
     "mcp": "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291"
   },
   "projection": "2026-11-02, read only: the bodies of fn_runtime_ordinary_boundary_digest (217) and fn_mcp_runtime_boundary_digest (263), byte-identical to the live functions, rebuilt as one SELECT under their search_path reproduced all three live digests above exactly; the entries the 280 tables, view, trigger and grants add, and the crop_band_anchors column grant, were then added to give these values. The native qualification below measures them.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false
+  "qualified_successor": {
+    "api": "af3647c841270c17097fd00c5d27d8dd6b46413a15838f08fd5b6cbbcda343d7",
+    "ingestor": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
+    "mcp": "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291"
+  },
+  "after_rollback": {
+    "api": "9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e",
+    "ingestor": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
+    "mcp": "1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-02T17:56:04Z",
+  "native_probe_source_sha256": "c0de8186161e74e9f043fcbc42d7a6692ab27a5d7948cb9e39cf38c1c7de889d",
+  "qualification_source_sha256": "89180f5a03d3667abb07c90f8a741316af83cf9954e9c572227c8a557e4eafab"
 }
