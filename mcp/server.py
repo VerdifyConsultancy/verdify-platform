@@ -18,9 +18,12 @@ import logging
 import math
 import os
 import re
+import stat
 import sys
 import time
 import urllib.parse
+from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -499,13 +502,20 @@ def _json(obj):
 # Invalid and duplicate entries are excluded from the registry. Token values
 # are never logged, never echoed in errors, and never surfaced by /readyz
 # (environment-variable names only).
+#
+# Named agents (VD-59, architecture §5.6) are the fifth audience, `agent`. Their
+# keys never come from the environment: each agent is one file in the mounted
+# Secret verdify-mcp-agents (agent_key_registry below), so VERDIFY_MCP_TOKEN_AGENT
+# stays an unrecognized variable and a nameless agent cannot exist.
 
 VERDIFY_MCP_AUTH_MODE_ENV = "VERDIFY_MCP_AUTH_MODE"
 VERDIFY_MCP_AUTH_MODES = ("off", "log", "enforce")
 _AUDIENCE_TOKEN_ENV_PREFIX = "VERDIFY_MCP_TOKEN_"
-KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin", "observer"})
+AGENT_AUDIENCE = "agent"
+KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin", "observer", AGENT_AUDIENCE})
+# The environment-token parser keeps its four audiences.
 _AUDIENCE_TOKEN_ENV_NAMES = {
-    f"{_AUDIENCE_TOKEN_ENV_PREFIX}{audience.upper()}": audience for audience in KNOWN_AUDIENCES
+    f"{_AUDIENCE_TOKEN_ENV_PREFIX}{audience.upper()}": audience for audience in KNOWN_AUDIENCES - {AGENT_AUDIENCE}
 }
 # RFC 6750 b64token. Besides empty/whitespace/control values, this rejects
 # characters that cannot be represented as one unambiguous Bearer credential.
@@ -596,6 +606,199 @@ def resolve_token_audience(token: str | None, registry: dict[str, str]) -> str |
     return matched
 
 
+# ── Named agent keys (VD-59) ──
+# Secret verdify-mcp-agents holds one key per named in-cluster agent: the key is
+# the agent's name and its value the agent's bearer token. The Deployment mounts
+# it read-only and optional, without subPath (a subPath mount never sees Secret
+# updates), so the kubelet's atomic `..data` swap delivers every add, removal or
+# rotation into the running pods. MCP re-reads the directory at most every
+# AGENT_KEYS_REFRESH_SECONDS: no restart and no device-gated sync admits or cuts
+# off one agent. Names and values are validated here; values never leave the
+# returned registry.
+VERDIFY_MCP_AGENT_KEYS_DIR_ENV = "VERDIFY_MCP_AGENT_KEYS_DIR"
+DEFAULT_MCP_AGENT_KEYS_DIR = "/etc/verdify/mcp-agents"
+AGENT_KEYS_REFRESH_SECONDS = 60.0
+# The OpenAPI Actor source pattern (agent:<name>), capped at 63 characters.
+_AGENT_NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]{0,62}")
+# `admin` is the environment admin credential's actor name (agent:admin).
+_RESERVED_AGENT_NAMES = frozenset({"admin"})
+_AGENT_KEY_MAX_BYTES = 4096
+_AGENT_KEY_WHITESPACE = " \t\n\r\x0b\x0c"
+
+
+@dataclass(frozen=True)
+class _AgentKeyScan:
+    directory: str
+    loaded_at: float
+    keys: dict[str, str]
+    rejected: frozenset[str]
+
+
+_agent_key_scan: _AgentKeyScan | None = None
+
+
+def _agent_keys_clock() -> float:
+    """The agent-key cache clock: time.monotonic(), a seam for the cache tests."""
+    return time.monotonic()
+
+
+def _read_agent_key(path: str) -> str | None:
+    """One key file's token, or None when the file is not one bearer token.
+
+    Raises FileNotFoundError for a name that vanished: between the kubelet's
+    `..data` swap and its cleanup, a removed key's top-level link dangles.
+    """
+    info = os.stat(path)  # follows the kubelet's `<name> -> ..data/<name>` link
+    if not stat.S_ISREG(info.st_mode) or info.st_size > _AGENT_KEY_MAX_BYTES:
+        return None
+    with open(path, "rb") as handle:
+        raw = handle.read(_AGENT_KEY_MAX_BYTES + 1)
+    if len(raw) > _AGENT_KEY_MAX_BYTES:
+        return None
+    try:
+        token = raw.decode("ascii").strip(_AGENT_KEY_WHITESPACE)
+    except UnicodeDecodeError:
+        return None
+    return token if _BEARER_TOKEN_PATTERN.fullmatch(token) else None
+
+
+def _scan_agent_key_directory(directory: str) -> tuple[dict[str, str], set[str]]:
+    """Read every agent key file in ``directory``; reject by name, never by value."""
+    try:
+        names = sorted(os.listdir(directory))
+    except (FileNotFoundError, NotADirectoryError):
+        return {}, set()  # no Secret mounted: no agents
+    except OSError as exc:
+        _TOOL_AUTH_LOGGER.warning(
+            "%s", _json({"event": "mcp_agent_keys_unreadable", "error_class": type(exc).__name__})
+        )
+        return {}, set()
+    tokens: dict[str, str] = {}
+    rejected: set[str] = set()
+    for name in names:
+        if name.startswith("."):
+            continue  # the kubelet's `..data` link and its timestamped payload directory
+        if _AGENT_NAME_PATTERN.fullmatch(name) is None or name in _RESERVED_AGENT_NAMES:
+            rejected.add(name)
+            continue
+        try:
+            token = _read_agent_key(os.path.join(directory, name))
+        except FileNotFoundError:
+            continue  # removed mid-swap: absent, not rejected
+        except OSError:
+            token = None
+        if token is None:
+            rejected.add(name)
+        else:
+            tokens[name] = token
+    names_by_token: dict[str, list[str]] = {}
+    for name, token in tokens.items():
+        names_by_token.setdefault(token, []).append(name)
+    shared = {name for sharing in names_by_token.values() if len(sharing) > 1 for name in sharing}
+    return {name: token for name, token in tokens.items() if name not in shared}, rejected | shared
+
+
+def agent_key_registry() -> tuple[dict[str, str], list[str]]:
+    """Named agent keys: (agent name → token, rejected agent names).
+
+    Reads the directory in VERDIFY_MCP_AGENT_KEYS_DIR (default
+    /etc/verdify/mcp-agents) and caches the scan for 60 s on time.monotonic(),
+    so a key added to or removed from the mounted Secret is seen within a minute
+    of its file changing. One file per agent: the file name is the agent name,
+    the content its token with surrounding whitespace stripped; names starting
+    with `.` are skipped and a missing or empty directory means no agents.
+
+    Rejected by name only, never touching the environment audiences: names
+    outside the Actor source pattern, the reserved name admin, a token that is
+    not one RFC 6750 bearer credential, a token shared by two names (both
+    dropped) and a token equal to an environment audience's token (the agent
+    key dropped). Rejections never change readiness.
+    """
+    global _agent_key_scan
+    directory = os.environ.get(VERDIFY_MCP_AGENT_KEYS_DIR_ENV, "").strip() or DEFAULT_MCP_AGENT_KEYS_DIR
+    now = _agent_keys_clock()
+    scan = _agent_key_scan
+    if scan is None or scan.directory != directory or now - scan.loaded_at >= AGENT_KEYS_REFRESH_SECONDS:
+        keys, scan_rejected = _scan_agent_key_directory(directory)
+        scan = _AgentKeyScan(directory=directory, loaded_at=now, keys=keys, rejected=frozenset(scan_rejected))
+        _agent_key_scan = scan
+    environment_registry, _unrecognized, _duplicates, _invalid = audience_token_configuration()
+    environment_tokens = [token.encode() for token in environment_registry.values()]
+    registry: dict[str, str] = {}
+    rejected = set(scan.rejected)
+    for name, token in scan.keys.items():
+        token_bytes = token.encode()
+        collides = False
+        for environment_token in environment_tokens:
+            collides = hmac.compare_digest(token_bytes, environment_token) or collides
+        if collides:
+            rejected.add(name)
+        else:
+            registry[name] = token
+    return registry, sorted(rejected)
+
+
+def resolve_caller(token: str | None) -> tuple[str | None, str | None]:
+    """Map a presented bearer token to (audience, agent name), or (None, None).
+
+    The environment audiences resolve first through resolve_token_audience,
+    then the named agent keys through the same full-scan hmac.compare_digest
+    loop. Both registries are always scanned in full, so timing does not reveal
+    which side (if any) matched; agent_key_registry() drops an agent key equal
+    to an environment token, so at most one side can match. A removed key
+    resolves to nothing once the cache refreshes, at the transport and at
+    dispatch alike.
+    """
+    registry, _unrecognized, _duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+    agents, _rejected = agent_key_registry()
+    audience = resolve_token_audience(token, registry)
+    agent_name = resolve_token_audience(token, agents)
+    if audience is not None:
+        return audience, None
+    if agent_name is not None:
+        return AGENT_AUDIENCE, agent_name
+    return None, None
+
+
+# ── Request actor (VD-59, architecture §5.6) ──
+@dataclass(frozen=True)
+class McpActor:
+    """Who called: the R4 source string and the actor's name.
+
+    iris → (iris, iris); a named agent → (agent:<name>, <name>); the admin
+    credential → (agent:admin, admin). Writes build verdify_services.Actor
+    (source, name, None) from it.
+    """
+
+    source: str
+    name: str
+
+
+_REQUEST_ACTOR: ContextVar[McpActor | None] = ContextVar("verdify_mcp_request_actor", default=None)
+
+
+def request_actor(audience: str | None, agent_name: str | None = None) -> McpActor | None:
+    """The actor a resolved caller writes as; None for experiment, observer or no caller."""
+    if audience == "iris":
+        return McpActor(source="iris", name="iris")
+    if audience == AGENT_AUDIENCE and agent_name:
+        return McpActor(source=f"agent:{agent_name}", name=agent_name)
+    if audience == "admin":
+        return McpActor(source="agent:admin", name="admin")
+    return None
+
+
+def current_actor() -> McpActor | None:
+    """The in-flight tool call's actor, or None (auth mode off, or no resolved caller).
+
+    The only way a tool learns who called: no tool argument sets a source, an
+    actor or a *_by column. A write that records an actor refuses with
+    `forbidden` when this is None (Iris's unchanged set_plan and set_tunable
+    excepted).
+    """
+    return _REQUEST_ACTOR.get()
+
+
 def _bearer_token_from_authorization(value: str | None) -> str | None:
     """Parse one Authorization header without ever retaining or logging it."""
     scheme, separator, credential = (value or "").partition(" ")
@@ -605,11 +808,11 @@ def _bearer_token_from_authorization(value: str | None) -> str | None:
 
 
 def _transport_request_denial(token: str | None) -> dict[str, str | None] | None:
-    """Return a transport-authentication denial, or None for a known audience."""
-    registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+    """Return a transport-authentication denial, or None for a known caller."""
+    _registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
     if duplicate_env_names:
         return {"audience": None, "reason": "duplicate_token_configuration"}
-    audience = resolve_token_audience(token, registry)
+    audience, _agent_name = resolve_caller(token)
     if audience is not None:
         return None
     return {
@@ -693,39 +896,45 @@ class MCPTransportAuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def _tool_call_denial(name: str, token: str | None) -> dict | None:
-    """Return a denial record for this (tool, token), or None when allowed."""
-    registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+def _tool_call_denial(name: str, token: str | None, caller: tuple[str | None, str | None] | None = None) -> dict | None:
+    """Return a denial record for this (tool, token), or None when allowed.
+
+    ``caller`` is the token's resolve_caller() result when the dispatcher
+    already holds it, so authorization and attribution share one resolution.
+    """
+    _registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
     if duplicate_env_names:
         return {
             "tool": name,
             "audience": None,
             "reason": "duplicate_token_configuration",
         }
-    audience = resolve_token_audience(token, registry)
+    audience, agent_name = resolve_caller(token) if caller is None else caller
     if audience is None:
         return {
             "tool": name,
             "audience": None,
             "reason": "missing_token" if not token else "unknown_token",
         }
+    # A named agent's denial also names the agent (never its token).
+    caller_fields = {"audience": audience, **({"agent": agent_name} if agent_name else {})}
     allowed_audiences = TOOL_AUDIENCES.get(name)
     if allowed_audiences is None:
         # A tool outside the inventory is never authorizable — the startup
         # assertion makes this unreachable in a correctly built image, but a
         # denial here keeps the layer fail-closed regardless.
-        return {"tool": name, "audience": audience, "reason": "tool_not_in_audience_registry"}
+        return {"tool": name, **caller_fields, "reason": "tool_not_in_audience_registry"}
     if audience not in allowed_audiences:
-        return {"tool": name, "audience": audience, "reason": "tool_not_in_audience"}
+        return {"tool": name, **caller_fields, "reason": "tool_not_in_audience"}
     return None
 
 
-def authorize_tool_call(name: str, token: str | None) -> None:
+def authorize_tool_call(name: str, token: str | None, caller: tuple[str | None, str | None] | None = None) -> None:
     """Gatekeeper for every tool dispatch. Raises ToolAccessDenied in enforce mode."""
     mode = auth_mode()
     if mode == "off":
         return
-    denial = _tool_call_denial(name, token)
+    denial = _tool_call_denial(name, token, caller)
     if denial is None:
         return
     # Structured, grep-able denial record. Contains audience/tool/reason —
@@ -811,18 +1020,24 @@ class AudienceAuthorizedFastMCP(FastMCP):
     26-decorator / ASGI-middleware fallback). A raised ToolAccessDenied is
     converted by the low-level server into an isError tool result with this
     message — the session stays healthy.
+
+    The caller is resolved once per call (resolve_caller) and drives both the
+    authorization decision and the request actor (current_actor), which is set
+    for the duration of the tool body and reset afterwards (VD-59).
     """
 
     async def call_tool(self, name, arguments):
         token = _request_bearer_token(self)
-        authorize_tool_call(name, token)
-        audience = None
+        caller: tuple[str | None, str | None] = (None, None)
         if auth_mode() != "off":
-            registry, _unknown = audience_token_registry()
-            audience = resolve_token_audience(token, registry)
+            caller = resolve_caller(token)
+        authorize_tool_call(name, token, caller)
+        audience, agent_name = caller
+        actor = request_actor(audience, agent_name)
         peer = _tool_transport_peer(self)
         started = time.monotonic()
         outcome = "exception"
+        actor_reset = _REQUEST_ACTOR.set(actor)
         try:
             result = await super().call_tool(name, arguments)
             # Completed is a dispatch outcome, never a claim that a business action succeeded.
@@ -832,12 +1047,15 @@ class AudienceAuthorizedFastMCP(FastMCP):
             outcome = "cancelled"
             raise
         finally:
+            _REQUEST_ACTOR.reset(actor_reset)
             _TOOL_AUDIT_LOGGER.info(
                 "%s",
                 _json(
                     {
                         "event": "mcp_tool_call",
                         "audience": audience,
+                        # The R4 source string only; never a token.
+                        "actor": actor.source if actor is not None else None,
                         "tool": name if name in TOOL_AUDIENCES else "unregistered",
                         "capability": "read" if name in _TOOL_READ_ONLY else "write_capable",
                         "result": outcome,
@@ -859,10 +1077,10 @@ class AudienceAuthorizedFastMCP(FastMCP):
         mode = auth_mode()
         if mode == "off":
             return tools
-        registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+        _registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
         if duplicate_env_names:
             return []
-        audience = resolve_token_audience(_request_bearer_token(self), registry)
+        audience, _agent_name = resolve_caller(_request_bearer_token(self))
         if audience is None:
             return []
         allowed = audience_allowlist(audience)
@@ -945,18 +1163,26 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                (get_setpoints, plan_status, history, scorecard, outcome_kpi,
 #                lessons*) and all ordinary writes are denied. Wired but
 #                unused until Lane C/D tranche 2 issues its credential.
-#   admin      — operator/debug credential; every tool.
+#   agent      — named in-cluster agents (VD-59, architecture §5.6), one key
+#                each in Secret verdify-mcp-agents (agent_key_registry). The
+#                live greenhouse reads plus alerts; settings, activity,
+#                set_setting and the eight irrigation tools join this column
+#                with #1171, #1173, #1174 and #1177. Never the planner, lessons,
+#                crop or Slack writers. Calls are attributed agent:<name>.
+#   admin      — operator/debug credential; every tool. Its writes are
+#                attributed agent:admin.
+#   observer   — protocol-only availability probe; no tools.
 TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # Monitoring
-    "climate": frozenset({"iris", "experiment", "admin"}),
-    "scorecard": frozenset({"iris", "admin"}),
+    "climate": frozenset({"iris", "experiment", "agent", "admin"}),
+    "scorecard": frozenset({"iris", "agent", "admin"}),
     "outcome_kpi": frozenset({"admin"}),
-    "equipment_state": frozenset({"iris", "admin"}),
-    "forecast": frozenset({"iris", "experiment", "admin"}),
-    "get_setpoints": frozenset({"iris", "admin"}),
-    "plan_status": frozenset({"iris", "admin"}),
-    "history": frozenset({"iris", "admin"}),
-    "alerts": frozenset({"iris", "admin"}),
+    "equipment_state": frozenset({"iris", "agent", "admin"}),
+    "forecast": frozenset({"iris", "experiment", "agent", "admin"}),
+    "get_setpoints": frozenset({"iris", "agent", "admin"}),
+    "plan_status": frozenset({"iris", "agent", "admin"}),
+    "history": frozenset({"iris", "agent", "admin"}),
+    "alerts": frozenset({"iris", "agent", "admin"}),
     "slack_ops": frozenset({"iris", "admin"}),
     # Knowledge
     "lessons": frozenset({"iris", "admin"}),
@@ -966,8 +1192,8 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # action-verb crops/observations tools carry writes, so they are not)
     "crops": frozenset({"iris", "admin"}),
     "observations": frozenset({"iris", "admin"}),
-    "topology": frozenset({"iris", "experiment", "admin"}),
-    "position_current": frozenset({"iris", "experiment", "admin"}),
+    "topology": frozenset({"iris", "experiment", "agent", "admin"}),
+    "position_current": frozenset({"iris", "experiment", "agent", "admin"}),
     "crop_history": frozenset({"iris", "experiment", "admin"}),
     "crop_lifecycle": frozenset({"iris", "experiment", "admin"}),
     # Writes
@@ -1107,6 +1333,10 @@ async def mcp_ready(_request):
     auth_misconfigured = bool(unrecognized_token_envs or duplicate_token_envs or invalid_token_envs) or (
         mode == "enforce" and "iris" not in token_registry
     )
+    # VD-59: named agents are reported by name only and never change `ready`.
+    # The readiness probe's failureThreshold is 1, and one bad agent key must
+    # not take Iris's tool surface out of service.
+    agent_keys, rejected_agent_keys = agent_key_registry()
     ready = not missing and db_error is None and not auth_misconfigured
     return JSONResponse(
         {
@@ -1121,6 +1351,8 @@ async def mcp_ready(_request):
             "auth_duplicate_token_envs": duplicate_token_envs,
             "auth_invalid_token_envs": invalid_token_envs,
             "auth_misconfigured": auth_misconfigured,
+            "auth_agents_configured": sorted(agent_keys),
+            "auth_agent_keys_rejected": rejected_agent_keys,
         },
         status_code=200 if ready else 503,
     )
@@ -4788,8 +5020,10 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
 async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str:
     """Manage greenhouse alerts. Actions: list, acknowledge, resolve.
     list: active/recent alerts (last 24h by default)
-    acknowledge: mark as seen by Iris
-    resolve: close with resolution notes (data can be JSON or plain text)"""
+    acknowledge: mark as seen
+    resolve: close with resolution notes (data can be JSON or plain text)
+    acknowledge and resolve are recorded as the calling credential (iris,
+    agent:<name> or agent:admin); acknowledged_by and resolved_by in data are ignored."""
     if data:
         try:
             d = json.loads(data)
@@ -4814,8 +5048,12 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
             return _json([dict(r) for r in rows])
 
         elif action == "acknowledge" and alert_id:
+            # VD-59: the actor comes only from the request, never from data.
+            actor = current_actor()
+            if actor is None:
+                return json.dumps({"error": "forbidden: no resolved caller"})
             try:
-                ack = AlertAckPayload.model_validate({"acknowledged_by": d.get("acknowledged_by") or "iris"})
+                ack = AlertAckPayload.model_validate({"acknowledged_by": actor.source})
             except ValidationError as e:
                 return json.dumps({"error": "AlertAckPayload validation failed", "details": json.loads(e.json())})
             row = await conn.fetchrow(
@@ -4845,11 +5083,17 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
                 return json.dumps(
                     {"error": "semantic dependency alerts resolve only after successful same-tool retrieval"}
                 )
+            # VD-59: after the retrieval check, so a semantic dependency alert
+            # keeps its own refusal; the actor never comes from data.
+            actor = current_actor()
+            if actor is None:
+                return json.dumps({"error": "forbidden: no resolved caller"})
+            default_resolution = "Resolved by Iris" if actor.source == "iris" else f"Resolved by {actor.source}"
             try:
                 res = AlertResolvePayload.model_validate(
                     {
-                        "resolved_by": d.get("resolved_by") or "iris",
-                        "resolution": d.get("resolution") or "Resolved by Iris",
+                        "resolved_by": actor.source,
+                        "resolution": d.get("resolution") or default_resolution,
                     }
                 )
             except ValidationError as e:

@@ -185,8 +185,10 @@ check "tempest-sync: ${ta}s ago (<600s)" "$([ -n "$ta" ] && [ "$ta" -lt 600 ] &&
 ea=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM energy WHERE ts > now() - interval '1 hour';" | tr -d ' ')
 check "shelly-sync: ${ea}s ago (<600s)" "$([ -n "$ea" ] && [ "$ea" -lt 600 ] && echo true || echo "stale: ${ea:-no data}s")"
 
-ha=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate WHERE hydro_ph IS NOT NULL AND ts > now() - interval '1 day';" | tr -d ' ')
-check "ha-sensor-sync: ${ha:-no data}s ago (<1800s)" "$([ -n "$ha" ] && [ "$ha" -lt 1800 ] && echo true || echo "stale: ${ha:-no data}s")"
+# Hydro columns: hydro_probe_sync's direct YINMIK read every 300s (VD-70); HA's
+# ha_sensor_sync relay fills them until the direct reader's Secret is sealed.
+hy=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate WHERE hydro_ph IS NOT NULL AND ts > now() - interval '1 day';" | tr -d ' ')
+check "hydro-probe-sync: ${hy:-no data}s ago (<600s)" "$([ -n "$hy" ] && [ "$hy" -lt 600 ] && echo true || echo "stale: ${hy:-no data}s")"
 
 # Alert monitor: check if ingestor is running (it contains the alert task)
 ia=$(systemctl is-active verdify-ingestor 2>/dev/null)

@@ -60,6 +60,9 @@ $PY -m pytest -q tests/test_verdify_traefik_file.py tests/test_public_camera_cac
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
 
+step "irrigation program record golden vectors (#1151)"
+$PY scripts/gen-irrigation-program-vectors.py --check
+
 step "ClimateIntent controller contract audit"
 $PY scripts/audit-climate-intent-contract.py
 
@@ -161,6 +164,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -220,6 +224,7 @@ $PY -m pytest -q -rs \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
   tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -230,6 +235,7 @@ $PY -m pytest -q -rs \
   tests/test_lab_serving_cache.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
+  tests/test_mcp_named_agents.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \

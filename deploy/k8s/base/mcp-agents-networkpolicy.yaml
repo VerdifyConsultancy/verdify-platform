@@ -1,0 +1,32 @@
+# allow-mcp-from-named-agents (VD-59, architecture §5.6 and §10): named
+# in-cluster agents reach the MCP tool surface at
+# http://verdify-mcp.verdify-prod.svc:8000/mcp from a pod labelled
+# `verdify.ai/mcp-agent: "true"` in any namespace.
+#
+# Additive and ingress-only: allow-mcp-internal (networkpolicy.yaml) is
+# unchanged, and verdify-mcp-egress stays the only egress policy on MCP. The
+# bearer key in Secret verdify-mcp-agents is the agent's identity; this label
+# only narrows the network path, so there is deliberately no ipBlock fallback,
+# which would admit unlabelled pods. The CNI can refuse a brand-new pod for its
+# first seconds (the 2026-06-14 note on allow-db-from-app), so an agent retries
+# its first connect for up to 30 s.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mcp-from-named-agents
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: mcp
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              verdify.ai/mcp-agent: "true"
+      ports:
+        - protocol: TCP
+          port: 8000

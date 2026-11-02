@@ -11,6 +11,8 @@ Covers, with no live DB or MCP runtime:
   readyz HERMES_REQUIRED_TOOLS set, and the server "iris" audience in
   lockstep;
 - TOOL_AUDIENCES completeness against the actual @mcp.tool registrations;
+- the `agent` column of architecture §5.6 (VD-59; named agent keys themselves
+  are covered by tests/test_mcp_named_agents.py);
 - stateless two-replica GitOps rendering, call_tool dispatch wiring, and the
   /readyz auth surface.
 
@@ -41,6 +43,70 @@ HERMES_EXPERIMENT_CONFIG_PATH = (
 MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.yaml"
 BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
+
+# Architecture §5.6, the whole `agent` column (VD-59). The reads and alerts are
+# registered now; settings, activity and set_setting (#1171) and the eight
+# irrigation tools (#1173, #1174, #1177) join by registering with `agent`.
+AGENT_TOOLS = frozenset(
+    {
+        "climate",
+        "forecast",
+        "equipment_state",
+        "history",
+        "plan_status",
+        "get_setpoints",
+        "scorecard",
+        "topology",
+        "position_current",
+        "alerts",
+        "settings",
+        "activity",
+        "set_setting",
+        "irrigation_status",
+        "irrigation_schedule",
+        "irrigation_history",
+        "irrigation_schedule_set",
+        "irrigation_run",
+        "irrigation_stop",
+        "irrigation_line_set",
+        "irrigation_clear_fault",
+    }
+)
+# Agents never get the planner, lessons, crop or Slack writers, nor the admin-only tools.
+AGENT_NEVER_TOOLS = frozenset(
+    {
+        "set_plan",
+        "set_tunable",
+        "acknowledge_trigger",
+        "plan_evaluate",
+        "policy_template_propose",
+        "lessons",
+        "lessons_search",
+        "lessons_manage",
+        "knowledge_search",
+        "crops",
+        "observations",
+        "crop_history",
+        "crop_lifecycle",
+        "slack_ops",
+        "plan_run",
+        "query",
+        "outcome_kpi",
+    }
+)
+EXPERIMENT_TOOLS = frozenset(
+    {
+        "climate",
+        "forecast",
+        "topology",
+        "position_current",
+        "crop_history",
+        "crop_lifecycle",
+        "acknowledge_trigger",
+        "policy_template_propose",
+    }
+)
+ADMIN_ONLY_TOOLS = frozenset({"plan_run", "query", "outcome_kpi"})
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
@@ -109,13 +175,15 @@ def mcp_server():
 
 
 @pytest.fixture(autouse=True)
-def clean_auth_env(monkeypatch):
+def clean_auth_env(monkeypatch, tmp_path):
     """No ambient auth config may leak into (or out of) any test."""
     monkeypatch.delenv("VERDIFY_MCP_AUTH_MODE", raising=False)
     import os
 
     for key in [k for k in os.environ if k.startswith("VERDIFY_MCP_TOKEN_")]:
         monkeypatch.delenv(key, raising=False)
+    # No named agent keys unless a test mounts some (tests/test_mcp_named_agents.py).
+    monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(tmp_path / "no-agent-keys"))
 
 
 def _configure(monkeypatch, mode: str | None = None, **tokens: str) -> None:
@@ -294,6 +362,7 @@ class TestAuthModes:
             raise AssertionError("off mode must not consult the token registry")
 
         monkeypatch.setattr(mcp_server, "audience_token_registry", boom)
+        monkeypatch.setattr(mcp_server, "agent_key_registry", boom)
         for tool in mcp_server.TOOL_AUDIENCES:
             mcp_server.authorize_tool_call(tool, None)
             mcp_server.authorize_tool_call(tool, "garbage")
@@ -432,6 +501,39 @@ class TestAudienceMatrix:
         assert "policy_template_propose" not in mcp_server.PENDING_TOOL_AUDIENCES
         assert not set(mcp_server.PENDING_TOOL_AUDIENCES) & set(mcp_server.TOOL_AUDIENCES)
 
+    def test_agent_audience_is_the_architecture_agent_column(self, mcp_server):
+        """VD-59: the agent column of architecture §5.6, for the tools registered so far.
+
+        settings, activity, set_setting and the irrigation tools pass this test
+        by registering with `agent` (#1171, #1173, #1174, #1177).
+        """
+        registered = {tool.name for tool in mcp_server.mcp._registered_tools}
+        assert mcp_server.AGENT_AUDIENCE == "agent" and "agent" in mcp_server.KNOWN_AUDIENCES
+        assert mcp_server.audience_allowlist("agent") == AGENT_TOOLS & registered
+        assert AGENT_NEVER_TOOLS & registered, "expected the planner and Slack writers to be registered"
+        assert not mcp_server.audience_allowlist("agent") & AGENT_NEVER_TOOLS
+
+    def test_agent_matrix_needs_a_named_key(self, mcp_server, monkeypatch, tmp_path):
+        keys = tmp_path / "agent-keys"
+        keys.mkdir()
+        (keys / "steward").write_text("tok-steward\n")
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(keys))
+        allowed = mcp_server.audience_allowlist("agent")
+        for tool in allowed:
+            mcp_server.authorize_tool_call(tool, "tok-steward")
+        for tool in set(mcp_server.TOOL_AUDIENCES) - allowed:
+            with pytest.raises(mcp_server.ToolAccessDenied, match="audience: agent"):
+                mcp_server.authorize_tool_call(tool, "tok-steward")
+
+    def test_existing_audience_rows_are_unchanged_by_the_agent_audience(self, mcp_server):
+        assert mcp_server.audience_allowlist("experiment") == EXPERIMENT_TOOLS
+        assert mcp_server.audience_allowlist("observer") == frozenset()
+        assert mcp_server.audience_allowlist("iris") == mcp_server.HERMES_REQUIRED_TOOLS
+        assert mcp_server.audience_allowlist("admin") == set(mcp_server.TOOL_AUDIENCES)
+        for tool in ADMIN_ONLY_TOOLS:
+            assert mcp_server.TOOL_AUDIENCES[tool] == frozenset({"admin"}), tool
+
 
 # ─── Inventory completeness + hermes-config drift guard ──────────────────
 
@@ -559,6 +661,7 @@ class TestCallToolWiring:
             raise AssertionError("off mode must not consult the token registry")
 
         monkeypatch.setattr(mcp_server, "audience_token_registry", boom)
+        monkeypatch.setattr(mcp_server, "agent_key_registry", boom)
         assert _run(mcp_server.mcp.call_tool("query", {})) is _CALL_TOOL_SENTINEL
 
     def test_enforce_dispatch_denies_without_request_context(self, mcp_server, monkeypatch):
