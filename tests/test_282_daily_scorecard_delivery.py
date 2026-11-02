@@ -102,7 +102,9 @@ def test_native_qualification_receipt_matches_the_registration():
     assert RECEIPT["predecessor"] == getattr(c0, f"SUCCESSOR_{PREDECESSOR}")
     assert RECEIPT["exact_final_migration_sha256"] == c0.SUCCESSOR_282_SHA256
     assert RECEIPT["qualified_successor"] == six.SUCCESSOR_282
-    assert (ROOT / RECEIPT["qualification_fixture"]).is_file()
+    # The recorded native run is bound to the exact fixture text it ran.
+    fixture = (ROOT / RECEIPT["qualification_fixture"]).read_bytes()
+    assert hashlib.sha256(fixture).hexdigest() == RECEIPT["qualification_fixture_sha256"]
 
 
 @pytest.mark.skipif(

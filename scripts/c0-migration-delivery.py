@@ -218,7 +218,7 @@ SUCCESSOR_279_MCP_DIGEST = SUCCESSOR_278_MCP_DIGEST
 # VD-56 M6 adds one verdify-owned view with no grant (M2 grants it to the dashboard login),
 # so all three runtime seals keep their merged predecessor's exact values; the file proves it.
 SUCCESSOR_282 = "282-daily-scorecard-view.sql"
-SUCCESSOR_282_SHA256 = "b9138a55b671a4b99eb1ade476b9f8d43b905239556037b74347396aabdc2f13"
+SUCCESSOR_282_SHA256 = "cbe42b56747ec0dfc12746cabb964ad9b39c6cecc2d4ed3e4e9b67128e017fc1"
 SUCCESSOR_282_DIGESTS = SUCCESSOR_279_DIGESTS
 SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_279_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this

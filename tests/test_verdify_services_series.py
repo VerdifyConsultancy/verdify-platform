@@ -356,8 +356,8 @@ def test_registry_bindings_follow_the_issue():
     }
     reasons = {key: b.daily.reason for key, b in s.METRICS.items() if key.startswith("daily.")}
     assert reasons == {
-        "daily.time_in_band_temp_pct": None,
-        "daily.time_in_band_vpd_pct": None,
+        "daily.temp_in_band_pct": None,
+        "daily.vpd_in_band_pct": None,
         "daily.time_in_band_day_pct": "band_reason",
         "daily.time_in_band_night_pct": "band_reason",
         "daily.water_gal": "water_reason",
@@ -608,8 +608,21 @@ def test_the_2026_11_01_band_reads_74_92_to_84_92_with_the_crop_band():
     assert result.crop.temp_low == [74.97] * 24
     band_sql, band_args = next(call for call in conn.fetches if "time_bucket_gapfill" in call[0])
     assert "zone = 'house'" in band_sql and band_args == (from_, to, timedelta(seconds=300))
+    # Both band reads use the parameter index, never a scan of every readback row.
+    indexed = (
+        "parameter IN ('band_house_temp_low', 'band_house_temp_high', 'band_house_vpd_low', 'band_house_vpd_high')"
+    )
+    seed_sql = next(sql for sql, _ in conn.fetches if "DISTINCT ON (band_role)" in sql)
+    assert indexed in band_sql and indexed in seed_sql
     payload = result.model_dump(mode="json", by_alias=True)
     assert set(payload) == {"from", "to", "step_s", "t", "band", "crop"}
+
+
+def test_band_parameters_are_the_names_emit_band_audit_writes():
+    source = (ROOT / "ingestor/tasks/band_anchors.py").read_text()
+    emit = source.split("async def emit_band_audit", 1)[1].split("\n\n\n", 1)[0]
+    assert '(f"band_{zone}_{role}", value, zone, role, value)' in emit
+    assert s.BAND_PARAMETERS == tuple(f"band_house_{role}" for role in s.BAND_ROLES)
 
 
 def test_band_skips_the_rows_query_past_retention_and_still_reconstructs_the_crop_band():

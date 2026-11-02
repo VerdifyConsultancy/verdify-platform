@@ -12,8 +12,8 @@ BEGIN
       <> (SELECT count(*) FROM public.daily_summary
            WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 29)
   OR EXISTS(SELECT 1 FROM scorecard_fixture f JOIN public.daily_summary s USING (date)
-             WHERE f.time_in_band_temp_pct IS DISTINCT FROM s.temp_compliance_pct
-                OR f.time_in_band_vpd_pct IS DISTINCT FROM s.vpd_compliance_pct
+             WHERE f.temp_in_band_pct IS DISTINCT FROM s.temp_compliance_pct
+                OR f.vpd_in_band_pct IS DISTINCT FROM s.vpd_compliance_pct
                 OR f.water_gal IS DISTINCT FROM s.water_used_gal)
   OR EXISTS(SELECT 1 FROM scorecard_fixture
              WHERE band_reason IS DISTINCT FROM NULL AND band_reason <> 'band grade kept 3 days')

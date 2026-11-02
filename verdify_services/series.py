@@ -488,13 +488,13 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     _diagnostic("uptime_s", "uptime_s", "Uptime", "s"),
     # daily: the scorecard (v_daily_scorecard, one row per America/Denver day)
     _scorecard(
-        "time_in_band_temp_pct",
+        "temp_in_band_pct",
         "Temperature time in band, whole day",
         "%",
         note="Share of the day's readings inside the band (daily_summary)",
     ),
     _scorecard(
-        "time_in_band_vpd_pct",
+        "vpd_in_band_pct",
         "VPD time in band, whole day",
         "%",
         note="Share of the day's readings inside the band (daily_summary)",
@@ -1122,6 +1122,17 @@ async def states(
 
 
 # ─────────────────────────────────────────────────────────────── API-06 band
+# emit_band_audit names each row band_<zone>_<role>. Filtering on that parameter lets
+# idx_snapshot_param (parameter, ts DESC) read only the band rows; zone and band_role alone
+# would scan every readback row in the window (about 400,000 a day).
+BAND_PARAMETERS = tuple(f"band_house_{role}" for role in BAND_ROLES)
+_BAND_ROWS = (
+    "FROM public.setpoint_snapshot WHERE parameter IN ("
+    + ", ".join(f"'{name}'" for name in BAND_PARAMETERS)
+    + ") AND zone = 'house' AND band_role IN ("
+    + ", ".join(f"'{role}'" for role in BAND_ROLES)
+    + ") AND ts >= $1::timestamptz AND ts < $2::timestamptz"
+)
 BAND_SQL = (
     "SELECT time_bucket_gapfill($3::interval, ts, $1::timestamptz, $2::timestamptz) AS bucket, "
     + ", ".join(
@@ -1129,15 +1140,9 @@ BAND_SQL = (
         f"max(ts) FILTER (WHERE band_role = '{role}') AS {role}_ts"
         for role in BAND_ROLES
     )
-    + " FROM public.setpoint_snapshot WHERE zone = 'house' "
-    "AND band_role IN ('temp_low', 'temp_high', 'vpd_low', 'vpd_high') "
-    "AND ts >= $1::timestamptz AND ts < $2::timestamptz GROUP BY 1 ORDER BY 1"
+    + f" {_BAND_ROWS} GROUP BY 1 ORDER BY 1"
 )
-BAND_SEED_SQL = (
-    "SELECT DISTINCT ON (band_role) band_role, value, ts FROM public.setpoint_snapshot "
-    "WHERE zone = 'house' AND band_role IN ('temp_low', 'temp_high', 'vpd_low', 'vpd_high') "
-    "AND ts >= $1::timestamptz AND ts < $2::timestamptz ORDER BY band_role, ts DESC"
-)
+BAND_SEED_SQL = f"SELECT DISTINCT ON (band_role) band_role, value, ts {_BAND_ROWS} ORDER BY band_role, ts DESC"
 # fn_band_timeline's crop columns: fn_band_setpoints evaluates the same house curves of
 # fn_crop_band_value, without the timeline's per-step telemetry joins.
 CROP_SQL = (

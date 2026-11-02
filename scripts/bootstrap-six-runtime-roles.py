@@ -386,7 +386,7 @@ def sealed_sql_279():
 DAILY_SCORECARD_MIGRATION = (
     282,
     "282-daily-scorecard-view.sql",
-    "b9138a55b671a4b99eb1ade476b9f8d43b905239556037b74347396aabdc2f13",
+    "cbe42b56747ec0dfc12746cabb964ad9b39c6cecc2d4ed3e4e9b67128e017fc1",
 )
 # One verdify-owned view and no grant: all three seals stay exactly the predecessor's.
 SUCCESSOR_282 = SUCCESSOR_279

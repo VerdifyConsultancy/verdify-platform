@@ -427,8 +427,8 @@ def test_the_scorecard_returns_every_day_with_its_reasons_inside_the_timeout(db)
     assert cell("daily.water_gal", db.today - timedelta(days=2)) == (10.0, 1, None)
     for key in keys:  # a day with no summary row is a gap with no reason
         assert cell(key, db.missing_day) == (None, 0, None)
-    assert cell("daily.time_in_band_temp_pct", db.today - timedelta(days=3)) == (33.0, 1, None)
-    assert cell("daily.time_in_band_vpd_pct", db.today - timedelta(days=3)) == (63.0, 1, None)
+    assert cell("daily.temp_in_band_pct", db.today - timedelta(days=3)) == (33.0, 1, None)
+    assert cell("daily.vpd_in_band_pct", db.today - timedelta(days=3)) == (63.0, 1, None)
     assert cell("daily.iris_required_written", db.missed_day)[0] == 1.0
     assert cell("daily.iris_required_missed", db.missed_day)[0] == 2.0
     assert cell("daily.iris_required_written", db.today - timedelta(days=4))[0] == 3.0

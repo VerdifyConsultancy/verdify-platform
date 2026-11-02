@@ -41,8 +41,8 @@ WITH band_cover AS MATERIALIZED (
 )
 SELECT
     d.date,
-    d.temp_compliance_pct AS time_in_band_temp_pct,
-    d.vpd_compliance_pct AS time_in_band_vpd_pct,
+    d.temp_compliance_pct AS temp_in_band_pct,
+    d.vpd_compliance_pct AS vpd_in_band_pct,
     (SELECT round((100.0 * sum(g.sum_zone_score) / nullif(sum(g.n), 0))::numeric, 1)::double precision
        FROM public.mv_zone_band_grade g
       WHERE g.zone = 'center' AND g.bucket >= d.day_start AND g.bucket < d.day_end
