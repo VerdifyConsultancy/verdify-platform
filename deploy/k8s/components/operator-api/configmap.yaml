@@ -1,0 +1,13 @@
+# The operator API's database identity: migration 282's login, which api/operator_api.py requires (it refuses to
+# start with any other DB_USER). DB_PASS and OPERATOR_API_TOKEN come from Secrets (deployment.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-operator-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: operator-api
+data:
+  DB_HOST: verdify-db
+  DB_NAME: verdify
+  DB_USER: verdify_dashboard_runtime_login

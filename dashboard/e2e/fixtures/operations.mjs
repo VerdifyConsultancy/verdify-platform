@@ -215,8 +215,24 @@ function seriesBody(world, { query }) {
   return { from: iso(from), to: iso(to), bucket_s: bucket, t, series: columns, watermark: watermark === null ? null : iso(watermark), server_time: iso(world.now), gaps: [] };
 }
 
-const FLAGS = [["occupancy", "Occupancy"], ["leak_detected", "Unexplained flow"], ["water_flowing", "Water flowing"]];
-/** API-05: each relay's spans from its newest row, seeded before the window; unknown while the controller does not report. */
+/** The API-05 flags with their `EQUIPMENT_LABELS` (verdify_services/labels.py). */
+const FLAGS = [["occupancy", "Occupancy"], ["leak_detected", "Water flowing, valves closed"], ["water_flowing", "Water flowing"]];
+/** `spans` with each of `gaps` cut out of them and read unknown in their place, in time order. */
+function withGaps(spans, gaps, span) {
+  let out = spans;
+  for (const gap of gaps) {
+    out = out.flatMap((part) => (gap.end <= part.start || gap.start >= part.end ? [part] : [
+      ...(part.start < gap.start ? [{ ...part, end: gap.start }] : []),
+      ...(part.end > gap.end ? [{ ...part, start: gap.end }] : []),
+    ]));
+    out.push(span(gap.start, gap.end, "unknown"));
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+/**
+ * API-05: each relay's spans from its newest row, seeded before the window; unknown while the controller does not
+ * report, and over a `laneGaps` span (lanes-unknown).
+ */
 function statesBody(world, { query }) {
   const { from, to } = window(query);
   if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "Equipment lanes cover at most 31 days", { field: "from" });
@@ -236,6 +252,7 @@ function statesBody(world, { query }) {
       const ran = (item.runtime_today_s ?? 0) * 1000;
       spans = ran > 0 ? [span(from, since - ran, "off"), span(since - ran, since, "on", line?.last_water?.cause ?? null), span(since, end, "off")] : [span(from, end, "off")];
     }
+    spans = withGaps(spans, world.laneGaps.filter((gap) => gap.equipment === item.equipment), span);
     return { equipment: item.equipment, label: item.label, group: item.group, line_id: item.line_id ?? null, spans };
   });
   const flowing = world.lines.filter((line) => line.state.code === "running").map((line) => Date.parse(line.state.observed_at));

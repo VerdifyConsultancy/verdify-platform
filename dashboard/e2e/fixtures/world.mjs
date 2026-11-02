@@ -53,20 +53,27 @@ export const clock = (now) => (hhmm, days = 0) => {
 const hhmm = (ms) => { const { hour, minute } = local(ms); return `${String(hour).padStart(2, "0")}${String(minute).padStart(2, "0")}`; };
 
 // ---------------------------------------------------------------------------------------------------- the greenhouse
-/** L01-L11 (irrigation §3) with the relay each one drives and the label the board shows. */
+/**
+ * L01-L11 (irrigation §3) with the relay each one drives and the label API-13 and API-05 serve for it:
+ * `EQUIPMENT_LABELS` in verdify_services/labels.py (VD-54), which the client never makes up.
+ */
 export const LINES = [
-  { line_id: "L01", name: "Drip • Wall", equipment: "drip_wall", label: "Wall drip", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
-  { line_id: "L02", name: "Drip • Wall (Fert.)", equipment: "drip_wall_fert", label: "Wall feed", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
-  { line_id: "L03", name: "Valve • Fert. Master", equipment: "fert_master_valve", label: "Fert master", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
-  { line_id: "L04", name: "Mister • Center", equipment: "mister_center", label: "Center mister", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
-  { line_id: "L05", name: "Drip • Center", equipment: "drip_center", label: "Center drip", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
-  { line_id: "L06", name: "Drip • Center (Fert.)", equipment: "drip_center_fert", label: "Center feed", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
-  { line_id: "L07", name: "Mister • South Wall", equipment: "mister_south", label: "South mister", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L08", name: "Mister • South Wall (Fert.)", equipment: "mister_south_fert", label: "South feed", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
-  { line_id: "L09", name: "Mister • West Wall", equipment: "mister_west", label: "West mister", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West feed", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
-  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
+  { line_id: "L01", name: "Drip • Wall", equipment: "drip_wall", label: "Wall drip L01", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
+  { line_id: "L02", name: "Drip • Wall (Fert.)", equipment: "drip_wall_fert", label: "Wall fert drip L02", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
+  { line_id: "L03", name: "Valve • Fert. Master", equipment: "fert_master_valve", label: "Fert master L03", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
+  { line_id: "L04", name: "Mister • Center", equipment: "mister_center", label: "Center mister L04", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
+  { line_id: "L05", name: "Drip • Center", equipment: "drip_center", label: "Center drip L05", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
+  { line_id: "L06", name: "Drip • Center (Fert.)", equipment: "drip_center_fert", label: "Center fert drip L06", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
+  { line_id: "L07", name: "Mister • South Wall", equipment: "mister_south", label: "South mister L07", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L08", name: "Mister • South Wall (Fert.)", equipment: "mister_south_fert", label: "South fert mister L08", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
+  { line_id: "L09", name: "Mister • West Wall", equipment: "mister_west", label: "West mister L09", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West fert mister L10", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
+  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog L11", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
 ];
+/** Fan 1 has been off since this absolute time, so the board reads "10/27 04:26" on any later day (VD-14). */
+const FAN1_OFF_SINCE = Date.parse("2026-10-27T04:26:00-06:00");
+/** Home Assistant re-reads the Lutron switches every 300 s, so their newest row is at most that old; past 600 s it reads unknown. */
+const LUTRON_POLL_AGE = 3 * MINUTE;
 export const MISTERS = ["L04", "L07", "L09"];
 export const lineInfo = (id) => LINES.find((line) => line.line_id === id);
 /** The manifold a line's valve shares (irrigation §4.6, §4.7); the master valve and fog hold none. */
@@ -168,18 +175,19 @@ function inBand(now) {
       rssi_dbm: -61, observed_at: iso(now - 45_000),
     },
     occupancy: { occupied: false, seen_at: iso(at("05:10")), hold_enabled: true },
+    // Relays report on change, so a relay's newest row is the start of its run; the Lutron rows are re-read every poll.
     equipment: [
-      item("fan1", "Fan 1", "climate", at("04:26", -6)),
+      item("fan1", "Fan 1", "climate", FAN1_OFF_SINCE),
       item("fan2", "Fan 2", "climate", at("08:31"), { runtime_today_s: 7800, cycles_today: 6 }),
       item("vent", "Vent", "climate", at("08:29"), { runtime_today_s: 3300, cycles_today: 3 }),
-      item("heat1", "Heat 1 (electric)", "climate", at("07:10"), { runtime_today_s: 11_100, cycles_today: 4 }),
-      item("heat2", "Heat 2 (gas)", "climate", at("06:40", -1)),
+      item("heat1", "Heat 1 electric", "climate", at("07:10"), { runtime_today_s: 11_100, cycles_today: 4 }),
+      item("heat2", "Heat 2 gas", "climate", at("06:40", -1)),
       water("L01", at("07:43", -3)), water("L02", at("09:00", -14)), water("L03", at("09:00", -14)),
       water("L04", at("07:12"), { runtime_today_s: 840, cycles_today: 14 }), water("L05", at("06:40", -12)), water("L06", at("06:40", -12)),
       water("L07", at("13:20", -3)), water("L08", at("06:40", -12)), water("L09", at("14:05", -9)), water("L10", at("06:40", -12)),
       water("L11", at("05:10"), { runtime_today_s: 360, cycles_today: 9 }),
-      item("grow_light_main", "Grow light · main", "light", at("19:00", -1), { intent: "off" }),
-      item("grow_light_grow", "Grow light · grow", "light", at("19:00", -1), { intent: "off" }),
+      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
     ],
     reasons: {
       mode_reason: { code: "idle", since: iso(at("09:55")), observed_at: iso(at("09:55")) },
@@ -277,6 +285,8 @@ function inBand(now) {
     // v_daily_scorecard rows by local date (scorecard-30d); null serves every day's daily.* keys from the waves.
     scorecard: null,
     notReportingSince: null,
+    // API-05 spans the API marks unknown inside a lane's window: {equipment, start, end} (lanes-unknown).
+    laneGaps: [],
   };
 }
 
@@ -346,10 +356,19 @@ export function openAlert(world, row) {
   world.alerts.push(alert);
   return alert;
 }
-/** Change-only sources hold their newest row only while the controller reports; otherwise they read unknown. */
+/**
+ * Change-only sources hold their newest row only while the controller reports; otherwise they read unknown. As API-13
+ * serves it (VD-54): an unknown state keeps its `observed_at` and has no since, runtime or cycles (the open run's length
+ * is not known), and the controller's grow-light intent reads unknown. As in VD-54's own not-reporting scenario, the
+ * Lutron rows are 12 min old as well (past their 600 s), so every state reads unknown.
+ */
 function notReporting(world, since) {
   world.notReportingSince = since;
-  for (const item of world.equipment) item.state = "unknown";
+  for (const item of world.equipment) {
+    Object.assign(item, { state: "unknown", since: null, runtime_today_s: null, cycles_today: null });
+    if (item.intent !== undefined && item.intent !== null) item.intent = "unknown";
+    if (item.group === "light") item.observed_at = iso(Math.min(Date.parse(item.observed_at), world.now - 12 * MINUTE));
+  }
   for (const line of world.lines) line.state = { ...line.state, code: "unknown", cause: null, reason: "controller not reporting" };
   world.irrFreshness = { ...world.irrFreshness, stale: true };
 }
@@ -477,8 +496,17 @@ export const FIXTURES = {
   "grow-lights-differ": (world) => {
     Object.assign(itemOf(world, "grow_light_grow"), { intent: "on" });
   },
+  // Home Assistant down: the Lutron rows are 11 min old (past 600 s), so both read unknown with no since, runtime or
+  // cycles; the controller's intent keeps its value.
   "ha-down": (world) => {
-    for (const name of ["grow_light_main", "grow_light_grow"]) Object.assign(itemOf(world, name), { state: "unknown", observed_at: iso(world.now - 11 * MINUTE) });
+    for (const name of ["grow_light_main", "grow_light_grow"]) {
+      Object.assign(itemOf(world, name), { state: "unknown", since: null, runtime_today_s: null, cycles_today: null, observed_at: iso(world.now - 11 * MINUTE) });
+    }
+  },
+  // VD-14: one API-05 span the API marks unknown, Fan 1 02:10-02:40 today, inside both the 24 h and 72 h windows.
+  "lanes-unknown": (world) => {
+    const at = clock(world.now);
+    world.laneGaps.push({ equipment: "fan1", start: at("02:10"), end: at("02:40") });
   },
   "program-rev-42": (world) => {
     // The base's program, whatever came before it in a list: rev 42 confirmed, the site caps and every line inside it.
@@ -543,6 +571,17 @@ export const FIXTURES = {
     Object.assign(row, { plan: { ...row.plan, value: 48.75 }, readback: reading(48.75, world.now - 3 * MINUTE) });
     laneOf(world, "mister_engage_delay_s").device = reading(48.75, world.now - 3 * MINUTE);
   },
+  // #1129, Now: answer row 5 alone (a fresh 84.1 °F above the 62.0–70.0 °F band), a null RH with its reason, band rows
+  // with no time, and the occupancy chip's states.
+  "too-hot": (world) => {
+    world.indoor.temp_f = reading(84.1, world.now - 20_000);
+    world.band.temp_f = { ...world.band.temp_f, verdict: "above" };
+  },
+  "rh-missing": (world) => { world.indoor.rh_pct = reading(null, world.now - 20_000, "No indoor RH"); },
+  "band-age-unknown": (world) => { world.band = { ...world.band, observed_at: null }; },
+  "occupied": (world) => { world.occupancy = { occupied: true, seen_at: iso(world.now - 4 * MINUTE), hold_enabled: true }; },
+  "occupancy-unknown": (world) => { world.occupancy = { occupied: null, seen_at: null, hold_enabled: true }; },
+  "occupancy-hold-off": (world) => { world.occupancy = { ...world.occupancy, hold_enabled: false }; },
 };
 
 /**

@@ -59,6 +59,16 @@ from solar import (
     solar_phase,
 )
 
+from verdify_schemas.band_rows import (
+    ANCHOR_KEYS,
+    HOUSE_CROP,
+    HOUSE_SERIES,
+    ZONE_CROP,  # noqa: F401 - re-exported: band_anchors.ZONE_CROP is this module's zone wiring
+    ZONES,
+)
+from verdify_schemas.band_rows import CROP_TO_ZONE as _CROP_TO_ZONE
+from verdify_schemas.band_rows import WIDTH_COLUMN_CANDIDATES as _WIDTH_COLUMN_CANDIDATES
+from verdify_schemas.band_rows import row_season_score as _row_season_score
 from verdify_schemas.setting_values import within_relative_deadband
 from verdify_schemas.tunable_registry import FIRMWARE_V2_STAGED_REG, REGISTRY
 
@@ -70,32 +80,11 @@ BAND_SOURCE_LEGACY = "legacy"
 BAND_SOURCE_ANCHORS = "anchors"
 
 # ── Zone / crop / series shape (§B2, §B7) ────────────────────────────────────
-ZONES = ("center", "south", "west", "east")
+# The zones, anchors, series, crop maps (ZONE_CROP, _CROP_TO_ZONE), width
+# columns and season score live in verdify_schemas/band_rows.py (VD-67), so the
+# settings services write exactly the crop_band_anchors rows this module reads.
 AUDIT_ZONES = ("house",) + ZONES
-ANCHOR_KEYS = ("sr", "sm", "ss", "mid")
-HOUSE_SERIES = ("temp_low", "temp_target", "temp_high", "vpd_low", "vpd_target", "vpd_high")
 BAND_ROLES = HOUSE_SERIES
-HOUSE_CROP = "house"
-
-# zone → crop_type in crop_band_anchors. center→orchid, south→cannabis,
-# west→citrus, east→pepper; the house curve rides crop_type='house'.
-ZONE_CROP = {"center": "orchid", "south": "cannabis", "west": "citrus", "east": "pepper"}
-
-# Tolerated crop_type aliases (contract/docs use vanda/lime/cannabis-veg).
-_CROP_TO_ZONE = {
-    "orchid": "center",
-    "vanda": "center",
-    "cannabis": "south",
-    "cannabis-veg": "south",
-    "citrus": "west",
-    "lime": "west",
-    "pepper": "east",
-}
-
-_WIDTH_COLUMN_CANDIDATES = {
-    "below": ("width_below", "vpd_width_below", "half_width_below"),
-    "above": ("width_above", "vpd_width_above", "half_width_above"),
-}
 
 _TZ = ZoneInfo("America/Denver")
 
@@ -221,15 +210,6 @@ def anchor_push_allowed(anchors_mode: bool, supported: bool, origin: str) -> boo
 def registry_default_anchor_values() -> dict[str, float]:
     """Contract-§B2 researched envelopes, straight from the tunable registry."""
     return {name: float(REGISTRY[name].default) for name in ANCHOR_SYNC_PARAMS}
-
-
-def _row_season_score(record: dict, current_season: str | None) -> int:
-    season = str(record.get("season") or "").strip().lower()
-    if current_season and season == current_season:
-        return 2
-    if season in ("", "all", "any"):
-        return 1
-    return 0 if current_season else 1
 
 
 def _overlay_anchor_row(values: dict[str, float], record: dict) -> None:

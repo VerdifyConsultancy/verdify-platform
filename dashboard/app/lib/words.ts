@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-import type { AlertSeverity, LineStateCode, ProblemCode, StateReasonCode } from "./vocab";
+import type { AlertSeverity, BandVerdict, BurstKind, LineStateCode, ProblemCode, RequiredTrigger, StateReasonCode } from "./vocab";
 
 /**
  * The one words table (design system §1, rule 3): every code from the API or the controller renders through it, in
  * plain words for someone who knows plants rather than the controller. An unknown code renders raw, so a code added
  * later shows as itself rather than as nothing. `words.test.ts` fails on any OpenAPI `ProblemCode`, `StateReason` or
- * `LineState` code, controller mode or mist stage (`firmware/lib/greenhouse_types.h`) or alert type (`ALERT_TYPES` in
- * `verdify_schemas/alerts.py`) without an entry here, so a PR that adds one adds its words. The `mode_reason` and
+ * `LineState` code, band verdict, required-trigger state or burst kind, controller mode or mist stage
+ * (`firmware/lib/greenhouse_types.h`), alert type (`ALERT_TYPES` in `verdify_schemas/alerts.py`) or actuator of the
+ * fixed list (architecture §7) without an entry here, so a PR that adds one adds its words. The `mode_reason` and
  * `moisture_block_reason` families come with #1140 and read raw until then.
  */
 const STATE_REASON = {
@@ -64,7 +65,10 @@ const LINE_STATE = {
   unknown: "Unknown",
 } as const satisfies Record<LineStateCode, string>;
 
-/** `MODE_NAMES` in firmware/lib/greenhouse_types.h, in screens SCR-01's words. */
+/**
+ * `MODE_NAMES` in firmware/lib/greenhouse_types.h, in screens SCR-01's words, plus `UNKNOWN`, which API-02 serves when
+ * no `greenhouse_state` row is in reach (`verdify_services.reads.mode_code_and_stage`).
+ */
 const MODE = {
   SENSOR_FAULT: "Sensor fault: equipment off",
   SAFETY_COOL: "Emergency cooling",
@@ -74,7 +78,45 @@ const MODE = {
   VENTILATE: "Venting to cool",
   DEHUM_VENT: "Venting to dry the air",
   IDLE: "In band, holding",
+  UNKNOWN: "Mode unknown",
 } as const;
+
+/**
+ * The fixed actuator list (architecture §7) by `equipment_state` key, as Now's running chips name it: the climate
+ * relays, the eleven wet relays L01-L11, the Lutron grow-light readback and the controller's own grow-light switches
+ * (`_intent`, Q-09).
+ */
+const EQUIPMENT = {
+  fan1: "Fan 1",
+  fan2: "Fan 2",
+  vent: "Vent",
+  heat1: "Heat 1 (electric)",
+  heat2: "Heat 2 (gas)",
+  drip_wall: "Wall drip",
+  drip_wall_fert: "Wall feed",
+  fert_master_valve: "Fert master",
+  mister_center: "Center mister",
+  drip_center: "Center drip",
+  drip_center_fert: "Center feed",
+  mister_south: "South mister",
+  mister_south_fert: "South feed",
+  mister_west: "West mister",
+  mister_west_fert: "West feed",
+  fog: "Fog",
+  grow_light_main: "Grow light · main",
+  grow_light_grow: "Grow light · grow",
+  grow_light_main_intent: "Grow light · main (controller)",
+  grow_light_grow_intent: "Grow light · grow (controller)",
+} as const;
+
+/** API-02 `overrides[].kind`: a burst the controller reads back as running. */
+const BURST = { fans: "Fans burst", humidify: "Humidify burst", vent_bypass: "Vent bypass" } as const satisfies Record<BurstKind, string>;
+
+/** API-02 `iris.required_trigger`: the newest required MIDNIGHT, SUNRISE or SUNSET trigger, as Now's Iris tile reads it. */
+const REQUIRED_TRIGGER = { ok: "OK", late: "Late", missed: "Missed", failed: "Failed" } as const satisfies Record<RequiredTrigger, string>;
+
+/** `BandPosition.verdict`: a reading against the band in force. */
+const BAND_VERDICT = { in: "in band", above: "above band", below: "below band", unavailable: "band unavailable" } as const satisfies Record<BandVerdict, string>;
 
 /** `MIST_NAMES`: the stages of `SEALED_MIST`, which `modeWords` reads in its place. */
 const MIST_STAGE = {
@@ -185,9 +227,14 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
   alert_type: ALERT_TYPE,
+  equipment: EQUIPMENT,
+  burst: BURST,
+  required_trigger: REQUIRED_TRIGGER,
+  band_verdict: BAND_VERDICT,
   scorecard_reason: SCORECARD_REASON,
 };
-export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type" | "scorecard_reason";
+export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type"
+  | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason";
 
 /** True when the table has words for `code` in `family`. */
 export function hasWords(family: string, code: string): boolean {

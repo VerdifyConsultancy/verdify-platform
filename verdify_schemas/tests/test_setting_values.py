@@ -105,7 +105,7 @@ def test_snap_rejects_non_finite_values_and_bad_steps(value: float, step: float 
         ("site_pressure_hpa", 845.4, 845.0),
         ("mister_engage_delay_s", 48.75, 60.0),
         ("gl_lux_threshold", 120, 100.0),  # off-grid min stays reachable
-        ("mister_max_runtime_min", 5, 5.0),  # 0.5 steps → 0, clamped up to the min 5
+        ("gl_grow_lux_threshold", 250, 100.0),  # 0.5 steps → 0, clamped up to the min 100
         ("band_vpd_low_sr", 0.734, 0.73),  # anchors snap to the push quanta
         ("band_temp_low_sr", 61.26, 61.3),
         ("zone_priority_center", 2.4, 2.0),

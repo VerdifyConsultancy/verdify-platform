@@ -18,6 +18,12 @@ test("24 h, 72 h, 7 d and 30 d are links on weather's chips, the current one mar
   expect(RANGES.map((range) => range.seconds)).toEqual([86_400, 259_200, 604_800, 2_592_000]);
 });
 
+test("only keeps a subset of the chips in their order: Equipment offers 24 h and 72 h", () => {
+  render(<MemoryRouter><RangeChips current="72h" only={["24h", "72h"]} href={(range) => `?range=${range}`} /></MemoryRouter>);
+  const links = within(screen.getByRole("list", { name: "Range" })).getAllByRole("link");
+  expect(links.map((link) => [link.textContent, link.getAttribute("aria-current")])).toEqual([["24 h", null], ["72 h", "page"]]);
+});
+
 test("a custom window marks no chip", () => {
   render(<MemoryRouter><RangeChips current={null} href={(range) => `?range=${range}`} /></MemoryRouter>);
   expect(screen.getAllByRole("link").every((link) => !link.hasAttribute("aria-current"))).toBe(true);
