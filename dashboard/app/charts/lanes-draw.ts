@@ -79,19 +79,6 @@ const NBSP = "\u00a0";
 
 export const laneFont = (px: number) => `${Math.round(11 * px)}px ${LABEL_FONT}`;
 
-/** `text` cut with an ellipsis to fit `maxWidth` canvas px; null when not even one character and the ellipsis fit. */
-export function fitText(ctx: Pick<CanvasRenderingContext2D, "measureText">, text: string, maxWidth: number): string | null {
-  if (maxWidth <= 0) return null;
-  if (ctx.measureText(text).width <= maxWidth) return text;
-  let low = 1, high = text.length - 1, best: string | null = null;
-  while (low <= high) {
-    const middle = (low + high) >> 1;
-    const candidate = `${text.slice(0, middle).trimEnd()}…`;
-    if (ctx.measureText(candidate).width <= maxWidth) { best = candidate; low = middle + 1; } else high = middle - 1;
-  }
-  return best;
-}
-
 /**
  * Labels inside rows. A label is placed whole at `x` on its row's middle when it ends before `limit` and overlaps no
  * label already on that row; otherwise it is dropped, and its words stay in the tooltip and the data table.

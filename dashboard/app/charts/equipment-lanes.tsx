@@ -223,7 +223,7 @@ export function lanesTable(model: LanesModel): DataTableBlock {
   };
 }
 
-/** The key: each cause on a wet line, unknown's hatch and the sensed outline, in words. */
+/** The key: each cause on a wet line, unknown's hatch and the sensed outline, in words; only marks that are drawn. */
 export function lanesKey(model: LanesModel): KeyItem[] {
   const causes = new Set<string>();
   let unknown = false, sensed = false;
@@ -231,8 +231,9 @@ export function lanesKey(model: LanesModel): KeyItem[] {
     for (const span of row.spans) {
       if (span.state === "unknown") unknown = true;
       if (row.wet && span.state === "on" && span.cause) causes.add(span.cause);
+      // A sensed row draws its outline only around an ON span; unknown alone is hatched.
+      if (row.sensed && span.state === "on") sensed = true;
     }
-    if (row.sensed && !row.idle) sensed = true;
   }
   return [
     ...[...causes].sort((a, b) => causeRank(a) - causeRank(b)).map((cause): KeyItem => ({ key: cause, label: causeWords(cause), token: causeToken(cause), kind: "fill" })),

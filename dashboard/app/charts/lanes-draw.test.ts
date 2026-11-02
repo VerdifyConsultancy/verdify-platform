@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
 import { RecordingContext } from "./fixtures/uplot-mock";
-import { RowLabels, fitText, intervalText, paintHatch, rowBand, spanDuration } from "./lanes-draw";
+import { RowLabels, intervalText, paintHatch, rowBand, spanDuration } from "./lanes-draw";
 
 const NBSP = " ";
 const epoch = (instant: string) => Date.parse(instant) / 1000;
@@ -29,15 +29,6 @@ test("the hatch is diagonals in its colour, clipped to the span, and restores th
   expect(stroke.path.length / 2).toBe(Math.ceil((60 + 14) / 6));
   paintHatch(ctx, 100, 20, 0, 14, "#626b76", 1);
   expect(ctx.strokes).toHaveLength(1);
-});
-
-test("label fitting: whole when it fits, cut with an ellipsis when asked, and nothing when not even a letter fits", () => {
-  const ctx = context();
-  // The stand-in measures 6 px a character.
-  expect(fitText(ctx, "holds until Iris's next plan", 600)).toBe("holds until Iris's next plan");
-  expect(fitText(ctx, "holds until Iris's next plan", 60)).toBe("holds unt…");
-  expect(fitText(ctx, "holds", 11)).toBeNull();
-  expect(fitText(ctx, "holds", 0)).toBeNull();
 });
 
 test("row labels never overlap a span or another label on their row, and never pass their limit", () => {

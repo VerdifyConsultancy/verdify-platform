@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { EquipmentLanes, buildLanes, type EquipmentLanesProps } from "./equipment-lanes";
+import { EquipmentLanes, buildLanes, lanesKey, type EquipmentLanesProps } from "./equipment-lanes";
 import metricsFixture from "./fixtures/metrics.json";
 import holeFixture from "./fixtures/series-hole.json";
 import statesFixture from "./fixtures/states.json";
@@ -141,6 +141,19 @@ test("the Lutron rows draw the readback outlined as sensed, and the controller's
   plot.hover(at("06:40"), null, 7 * 20 + 10);
   // 08:00Z is the fall-back instant: 02:00 MDT becomes 01:00 MST.
   expect(tooltip(plot)).toEqual(["Grow light (Lutron)", "on · sensed", "11/01/2026 00:30 GMT-06:00–01:00 GMT-07:00", `90${NBSP}min`]);
+});
+
+test("the key names only marks that are drawn: no sensed outline for a Lutron row that is never on", () => {
+  const states = load<StateLanes>(statesFixture);
+  // Every sensed row unknown or off for the whole window: hatched, never outlined.
+  for (const lane of states.lanes) {
+    if (lane.equipment === "grow_light_main" || lane.equipment === "grow_light_grow") lane.intervals = [{ start: states.from, end: states.to, state: "unknown" }];
+    if (lane.equipment === "water_flowing") lane.intervals = [{ start: states.from, end: states.to, state: "off" }];
+  }
+  const key = lanesKey(buildLanes(states)).map((item) => item.key);
+  expect(key).toContain("unknown-span");
+  expect(key).not.toContain("sensed");
+  expect(lanesKey(buildLanes(load<StateLanes>(statesFixture))).map((item) => item.key)).toContain("sensed");
 });
 
 test("a wet line's schedule interval names \"schedule\"; a null cause draws in the line's colour with no cause word", async () => {

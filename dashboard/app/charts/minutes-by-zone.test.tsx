@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import minutesFixture from "./fixtures/minutes.json";
 import { FakeResizeObserver, MockPlot, TOKENS, created, load, media, setTokens } from "./fixtures/uplot-mock";
-import { MinutesByZone, buildMinutes, type MinutesByZoneProps } from "./minutes-by-zone";
+import { MinutesByZone, buildMinutes, minutesKey, type MinutesByZoneProps } from "./minutes-by-zone";
 import type { MinutesReport } from "./types";
 
 vi.mock("uplot", async () => ({ default: (await import("./fixtures/uplot-mock")).MockPlot }));
@@ -146,6 +146,17 @@ test("rows share one cursor, have no drag zoom, and only the last shows the day 
   expect(model.days[29].day).toBe("2026-11-02");
   expect(model.xRange).toEqual({ from: epoch("2026-10-04T06:00:00Z") - 43_200, to: epoch("2026-11-02T07:00:00Z") + 43_200 });
   expect(model.zones[1].days[29].total).toBe(46);
+});
+
+test("a no-data today is hatched with no planned outline, and the key does not list one", async () => {
+  const report = load<MinutesReport>(minutesFixture);
+  report.periods[6].coverage = "no_data";
+  report.rows = report.rows.filter((row) => row.period !== "2026-11-02");
+  const { container, center } = await mount({ report });
+  expect(center.ctx.outlines).toEqual([]);
+  expect(container.querySelector("[data-zone=center] .minutes-today")!.textContent).toBe("today — · cap 120");
+  expect(minutesKey(buildMinutes({ report, caps: CAPS, planned: { center: 20 }, now: NOW })).map((item) => item.key)).not.toContain("planned");
+  expect(minutesKey(buildMinutes({ report: load<MinutesReport>(minutesFixture), caps: CAPS, planned: { center: 20 }, now: NOW })).map((item) => item.key)).toContain("planned");
 });
 
 test("a report grouped by cause has no zones to draw, and the server markup has no style attribute", async () => {

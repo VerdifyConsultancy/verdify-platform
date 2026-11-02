@@ -271,7 +271,8 @@ export function minutesKey(model: MinutesModel): KeyItem[] {
   const items = [...causes.values()].sort((a, b) => causeRank(a.key) - causeRank(b.key));
   if (model.days.some((day) => day.coverage === "no_data")) items.push({ key: "no-data", label: "no data", token: "--muted", kind: "hatch" });
   if (model.days.some((day) => day.coverage === "partial")) items.push({ key: "partial", label: "partial day", token: "--ink", kind: "dashed" });
-  if (model.zones.some((zone) => zone.planned !== null && zone.today >= 0)) items.push({ key: "planned", label: "still planned today", token: "--muted", kind: "dashed" });
+  // The outline sits on today's bar, so a no-data today (hatched) draws none.
+  if (model.zones.some((zone) => zone.planned !== null && zone.today >= 0 && zone.days[zone.today].total !== null)) items.push({ key: "planned", label: "still planned today", token: "--muted", kind: "dashed" });
   if (model.zones.some((zone) => zone.cap !== null)) items.push({ key: "cap", label: "daily cap", token: "--c-bound", kind: "dotted" });
   return items;
 }
