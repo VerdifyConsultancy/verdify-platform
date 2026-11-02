@@ -87,6 +87,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     submit_policy_proposal,
 )
 from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
+from verdify_schemas.irrigation import LineId  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
@@ -1015,8 +1016,8 @@ class AudienceAuthorizedFastMCP(FastMCP):
     """FastMCP with server-side audience authorization at the dispatch choke point.
 
     FastMCP.call_tool is the single public method the low-level MCP server
-    invokes for every tool call, so overriding it covers all 27 registered
-    tools without touching any tool body or signature (and without the
+    invokes for every tool call, so overriding it covers every registered
+    tool without touching any tool body or signature (and without the
     26-decorator / ASGI-middleware fallback). A raised ToolAccessDenied is
     converted by the low-level server into an isError tool result with this
     message — the session stays healthy.
@@ -1208,6 +1209,10 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # Operator-only surfaces (never in the Hermes include list)
     "plan_run": frozenset({"admin"}),
     "query": frozenset({"admin"}),
+    # Irrigation writes (VD-64, #1177): run L01 now and stop any wet line, through the L01 bridge
+    # before the irrigation firmware. #1174 adds iris and the other irrigation writes.
+    "irrigation_run": frozenset({"agent", "admin"}),
+    "irrigation_stop": frozenset({"agent", "admin"}),
 }
 
 # Registry entries for tools that are DESIGNED but not yet registered. Each
@@ -5700,6 +5705,154 @@ async def knowledge_search(
             }
         )
     return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# IRRIGATION WRITES (VD-64, #1177)
+# ═══════════════════════════════════════════════════════════════
+# Thin adapters over verdify_services.irrigation.writes: the same validation,
+# refusal codes and activity row as the operator API's API-IRR-06 and -07, and
+# the same Command JSON. verdify_services and mcp.types are imported inside the
+# functions: CI loads this module under a FastMCP stub without the MCP runtime.
+
+
+def _tool_ok(model, replayed: bool = False):
+    """A write tool's answer: one TextContent holding the REST JSON (``model.model_dump(mode="json")``), plus a
+    top-level ``replayed: true`` on a replay (MCP has no headers). The tools that use it carry no return
+    annotation, so FastMCP passes the CallToolResult through unchanged. Shared by the irrigation tools and the
+    other dashboard write tools (#1171, #1173, #1174)."""
+    from mcp import types as mcp_types
+
+    body = model.model_dump(mode="json")
+    if replayed:
+        body = {**body, "replayed": True}
+    return mcp_types.CallToolResult(content=[mcp_types.TextContent(type="text", text=json.dumps(body))])
+
+
+def _tool_problem(problem):
+    """A refusal: the same Problem JSON the REST twin answers with (``problem.body()``), with ``isError`` set."""
+    from mcp import types as mcp_types
+
+    return mcp_types.CallToolResult(
+        content=[mcp_types.TextContent(type="text", text=json.dumps(problem.body()))],
+        isError=True,
+    )
+
+
+async def _irrigation_write(tool: str, write):
+    """Run one irrigation write as the request's actor (current_actor(), never an argument) on its own
+    connection: the Command JSON, or the Problem JSON with isError."""
+    from verdify_services.actor import Actor
+    from verdify_services.problems import ServiceError, problem
+
+    caller = current_actor()
+    if caller is None:
+        return _tool_problem(problem("forbidden", "A water write needs a resolved caller: a named agent or admin"))
+    actor = Actor(source=caller.source, name=caller.name)
+    conn = None
+    try:
+        conn = await _db()
+        result = await write(conn, actor)
+    except ServiceError as refused:
+        return _tool_problem(refused.problem)
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.{tool}] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(
+            problem(
+                "unavailable",
+                "The irrigation service could not answer. Retry with the same request_id: it stores the "
+                "command once and returns it if it was stored",
+            )
+        )
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_ok(result.value, replayed=result.replayed)
+
+
+@mcp.tool()
+async def irrigation_run(
+    line_id: Annotated[LineId, Field(description="The line to run, L01-L11. Before the irrigation firmware: L01.")],
+    minutes: Annotated[
+        int | None,
+        Field(description="Optional. Before the irrigation firmware it must equal irrig_wall_duration_min."),
+    ] = None,
+    reason: Annotated[str | None, Field(description="Why, at most 500 characters; shown in Activity.")] = None,
+    request_id: Annotated[
+        str | None, Field(description="A UUID that makes a retry safe: the same one replays the stored command.")
+    ] = None,
+    trigger_id: Annotated[str | None, Field(description="Optional audit trigger id; activity log only.")] = None,
+    planner_instance: Annotated[str | None, Field(description="Optional planner instance; activity log only.")] = None,
+):
+    """Changes watering only; it does not count as your plan for this trigger.
+
+    Run one irrigation line now. REST twin: API-IRR-06 (POST /v1/irrigation/lines/{line_id}/run). Returns the
+    same Command JSON: command_id, kind run, line_id, args, status (pending, then sent, or failed when it was
+    not sent within 2 min), actor and created_at. Whether water started shows on the line's relay in
+    equipment_state within about 30 s, not in this reply.
+
+    Before the irrigation firmware, run works on L01 only: the controller's "Wall Drips - RUN CLEAN" press,
+    which runs the wall drip for the controller's irrig_wall_duration_min. Leave minutes out, or send exactly
+    that value. irrigation_stop always works and ends a run early.
+
+    Run and stop never carry manual. request_id (a UUID) makes a retry safe: the same request_id with the same
+    arguments returns the stored command with replayed: true. trigger_id and planner_instance are recorded
+    only in the activity log.
+
+    Refusals return the Problem JSON with isError: unavailable (a line other than L01 before the irrigation
+    firmware; not retryable), out_of_range (minutes is not irrig_wall_duration_min; min and max give it),
+    line_disabled (L01 is disabled, or the controller's sw_irrig_enabled or sw_irrig_wall_enabled is off; the
+    detail names which), line_paused, line_busy (L01 is already running; retry_after_s when known),
+    unknown_target, invalid_request, request_id_reused and forbidden."""
+    from verdify_services.irrigation import writes
+
+    async def write(conn, actor):
+        return await writes.run(
+            conn,
+            actor,
+            line_id,
+            minutes=minutes,
+            reason=reason,
+            request_id=request_id,
+            trigger_id=trigger_id,
+            planner_instance=planner_instance,
+        )
+
+    return await _irrigation_write("irrigation_run", write)
+
+
+@mcp.tool()
+async def irrigation_stop(
+    line_id: Annotated[
+        LineId | None, Field(description="The line to stop, L01-L11; leave it out to stop every wet line.")
+    ] = None,
+    reason: Annotated[str | None, Field(description="Why, at most 500 characters; shown in Activity.")] = None,
+    request_id: Annotated[
+        str | None, Field(description="A UUID that makes a retry safe: the same one replays the stored command.")
+    ] = None,
+):
+    """Changes watering only; it does not count as your plan for this trigger.
+
+    Stop one irrigation line, or every wet line when line_id is left out. REST twin: API-IRR-07 (POST
+    /v1/irrigation/stop). Returns the same Command JSON (kind stop; line_id null for every line).
+
+    irrigation_stop always works: it is never refused for the firmware, the controller's heap or a writes
+    switch, and it goes out ahead of any run. Before the irrigation firmware it ends the wall drip job and
+    switches every open wet relay in its scope (L01-L10) off; L11 fog stays with the climate controller.
+    Whether water stopped shows on the relays in equipment_state within about 30 s.
+
+    After a Stop, VPD misting may pulse again. A Stop disables nothing: VPD misting and fog can still start on
+    their own.
+
+    Run and stop never carry manual. request_id (a UUID) makes a retry safe: the same request_id with the same
+    arguments returns the stored command with replayed: true. Refusals return the Problem JSON with isError:
+    unknown_target, invalid_request, request_id_reused and forbidden."""
+    from verdify_services.irrigation import writes
+
+    async def write(conn, actor):
+        return await writes.stop(conn, actor, line_id, reason=reason, request_id=request_id)
+
+    return await _irrigation_write("irrigation_stop", write)
 
 
 # ═══════════════════════════════════════════════════════════════

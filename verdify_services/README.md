@@ -10,6 +10,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
+| `irrigation/writes.py` | `run` and `stop` (API-IRR-06 and API-IRR-07, MCP `irrigation_run` and `irrigation_stop`) through the L01 bridge before the engine firmware (VD-64), with the `RunRequest` and `LineCommand` bodies |
 
 Later modules (`settings`, `alerts`, `reads`, `series`, `irrigation`) follow the same rules.
 

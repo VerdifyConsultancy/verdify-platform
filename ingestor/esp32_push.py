@@ -14,6 +14,7 @@ import asyncio
 import inspect
 import logging
 import os
+import re
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
@@ -22,7 +23,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 import shared
-from entity_map import SETPOINT_MAP
+from entity_map import EQUIPMENT_SWITCH_MAP, SETPOINT_MAP
 
 log = logging.getLogger("esp32_push")
 
@@ -1410,3 +1411,295 @@ async def push_occupancy_to_esp32(occupied: bool, source: str) -> int:
     except Exception as exc:
         log.debug("Occupancy ESP32 push skipped via %s: %s", source, exc)
         return 0
+
+
+# ── L01 run-now bridge (VD-64, irrigation §6.5) ──────────────────────────────
+# Until the irrigation engine firmware is on the controller, run-now on L01
+# presses the existing ESPHome button btn_wall_clean ("Wall Drips - RUN CLEAN")
+# and a Stop switches the open wet relays off, over this single native-API
+# session and never through Home Assistant (D-IRP-24). Every call holds
+# _PUSH_LOCK, paces with _pace_command() and re-checks the writer preflight
+# (device-write gate, shadow mode, writer lease, transport) plus the generation
+# and client fence before each native-API call, as push_policy_transaction does.
+# Only tasks.irrigation.irrigation_sync calls these, from irrigation_command rows
+# it has already marked sent.
+
+
+def _esphome_object_id(name: str) -> str:
+    """ESPHome's object_id for an entity name: snake case, then every character outside [a-zA-Z0-9_-] to '_'."""
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", name.replace(" ", "_").lower())
+
+
+WALL_CLEAN_BUTTON_NAME = "Wall Drips - RUN CLEAN"  # btn_wall_clean, firmware/greenhouse/tunables.yaml
+WALL_CLEAN_BUTTON = _esphome_object_id(WALL_CLEAN_BUTTON_NAME)
+# sw_irrig_enabled: off for one job tick runs the legacy job machine's cancel_all,
+# which closes the irrigation valves and clears the job, its queue and its timer.
+IRRIGATION_ENABLED_SWITCH = "irrigation_enabled"
+IRRIGATION_ENABLED_PARAM = "sw_irrig_enabled"
+# The legacy irrigation job machine ticks every 5 s; wait out one tick and a margin.
+BRIDGE_JOB_TICK_WAIT_S = 6.0
+# The order a Stop switches relays off: line order, except that the fertilizer
+# master valve goes last, because its off-guard re-opens it while the wall
+# fertilizer relay is on in a feed. Off always passes the relay guards, which
+# block only turn-on.
+BRIDGE_STOP_ORDER: tuple[str, ...] = (
+    "drip_wall",
+    "drip_wall_fert",
+    "mister_center",
+    "drip_center",
+    "drip_center_fert",
+    "mister_south",
+    "mister_south_fert",
+    "mister_west",
+    "mister_west_fert",
+    "fert_master_valve",
+)
+BRIDGE_RELAY_OBJECT_IDS: dict[str, str] = {
+    equipment: object_id for object_id, equipment in EQUIPMENT_SWITCH_MAP.items() if equipment in shared.WET_RELAYS
+}
+_BRIDGE_UNSENT_REASONS = frozenset(
+    {
+        "lifecycle_persistence_unavailable",
+        "shadow_mode",
+        "device_writes_disabled",
+        "writer_lease_not_held",
+        "transport_disconnected",
+        "transport_generation_changed",
+        "transport_client_changed",
+        "entity_key_unavailable",
+        "restore_record_failed",
+    }
+)
+_BRIDGE_FENCE_REASONS = _BRIDGE_UNSENT_REASONS - {"entity_key_unavailable", "restore_record_failed"}
+
+
+@dataclass(frozen=True)
+class BridgeOutcome:
+    """What a bridge call sent: each native-API call that returned, in order (``"<object_id>=<state>"``),
+    and the first failure. ``unsent`` is true when nothing reached the transport, so the request can
+    honestly be marked failed. A Stop also says whether it switched ``sw_irrig_enabled`` off
+    (``toggled``) and back on (``restored``)."""
+
+    sent: tuple[str, ...] = ()
+    failure: str | None = None
+    unsent: bool = False
+    toggled: bool = False
+    restored: bool = False
+
+    @property
+    def ok(self) -> bool:
+        return self.failure is None
+
+
+class _BridgeFence:
+    """The generation and client accepted at the start of one bridge call, checked before every call."""
+
+    def __init__(self) -> None:
+        self.generation = int(shared.transport_generation)
+        self.client = shared.esp32.get("client")
+
+    def failure(self) -> str | None:
+        if failure := _preflight_failure():
+            return failure
+        if self.generation != int(shared.transport_generation):
+            return "transport_generation_changed"
+        if self.client is not shared.esp32.get("client"):
+            return "transport_client_changed"
+        return None
+
+
+def bridge_preflight_failure() -> str | None:
+    """Why no bridge call can go out right now (the writer preflight), or None."""
+    return _preflight_failure()
+
+
+def irrigation_enabled_reading() -> bool | None:
+    """sw_irrig_enabled as read on the current transport generation, or None before its readback arrives."""
+    reading = shared.current_cfg_readbacks().get(IRRIGATION_ENABLED_PARAM)
+    return None if reading is None else reading >= 0.5
+
+
+async def _bridge_call(fence: _BridgeFence, object_id: str, state: bool | None) -> str | None:
+    """One paced, fenced native-API call while the caller holds _PUSH_LOCK: a button press when ``state``
+    is None, else a switch command. Returns None once the call returned, else the failure reason."""
+    await _pace_command()
+    if failure := fence.failure():
+        return failure
+    key = (shared.esp32.get("keys") or {}).get(object_id)
+    if key is None:
+        return "entity_key_unavailable"
+    client = shared.esp32["client"]
+    action = "press" if state is None else ("on" if state else "off")
+    try:
+        result = client.button_command(key) if state is None else client.switch_command(key, state)
+        if inspect.isawaitable(result):
+            await asyncio.wait_for(result, timeout=_COMMAND_TIMEOUT_S)
+    except asyncio.CancelledError:
+        raise
+    except TimeoutError:
+        log.error(
+            "writer_bridge phase=transport status=failed reason=command_timeout_outcome_unknown "
+            "entity=%s action=%s generation=%d",
+            object_id,
+            action,
+            fence.generation,
+        )
+        return "command_timeout_outcome_unknown"
+    except Exception as exc:
+        log.warning(
+            "writer_bridge phase=transport status=failed reason=command_error entity=%s action=%s "
+            "generation=%d error=%s",
+            object_id,
+            action,
+            fence.generation,
+            type(exc).__name__,
+        )
+        return f"command_error:{type(exc).__name__}"
+    log.info(
+        "writer_bridge phase=transport status=sent entity=%s action=%s generation=%d",
+        object_id,
+        action,
+        fence.generation,
+    )
+    return None
+
+
+def _ordered_relays(relays: Sequence[str]) -> list[str]:
+    unknown = sorted(set(relays) - set(BRIDGE_RELAY_OBJECT_IDS))
+    if unknown:
+        raise ValueError(f"not wet relays a Stop can switch: {unknown}")
+    wanted = set(relays)
+    return [relay for relay in BRIDGE_STOP_ORDER if relay in wanted]
+
+
+async def _relays_off(fence: _BridgeFence, ordered: Sequence[str], sent: list[str]) -> str | None:
+    """Switch each relay off in order while the caller holds _PUSH_LOCK; appends what returned to ``sent``.
+    A fence failure ends the loop (nothing more can go out); a command error on one relay does not."""
+    first_failure: str | None = None
+    for relay in ordered:
+        object_id = BRIDGE_RELAY_OBJECT_IDS[relay]
+        failure = await _bridge_call(fence, object_id, False)
+        if failure is None:
+            sent.append(f"{object_id}=off")
+            continue
+        first_failure = first_failure or failure
+        if failure in _BRIDGE_FENCE_REASONS:
+            break
+    return first_failure
+
+
+async def press_wall_clean() -> BridgeOutcome:
+    """Press "Wall Drips - RUN CLEAN" once: the legacy job machine queues one clean L01 run of
+    irrig_wall_duration_min (refused on the device while sw_irrig_enabled or sw_irrig_wall_enabled is
+    off, or while a leak cancels irrigation)."""
+    _reset_queue_for_loop(asyncio.get_running_loop())
+    if failure := _preflight_failure():
+        return BridgeOutcome(failure=failure, unsent=True)
+    fence = _BridgeFence()
+    async with _PUSH_LOCK:
+        failure = await _bridge_call(fence, WALL_CLEAN_BUTTON, None)
+    if failure is not None:
+        return BridgeOutcome(failure=failure, unsent=failure in _BRIDGE_UNSENT_REASONS)
+    return BridgeOutcome(sent=(f"{WALL_CLEAN_BUTTON}=press",))
+
+
+async def bridge_stop(
+    relays: Sequence[str],
+    covers_l01: bool,
+    *,
+    record_restore: Callable[[bool], Awaitable[object]] | None = None,
+) -> BridgeOutcome:
+    """A bridge Stop, all under one hold of _PUSH_LOCK (irrigation §6.5).
+
+    1. When the scope covers L01 and sw_irrig_enabled reads on: ``record_restore(True)`` (the caller stores
+       ``args.restore_irrig_enabled`` on the stop row, committed), switch it off, and wait out one 5 s job tick
+       (``BRIDGE_JOB_TICK_WAIT_S``) so the legacy ``cancel_all`` closes the valves and clears the job, its
+       queue and its timer.
+    2. Switch each relay in ``relays`` (equipment names, the open wet relays in scope) off by its
+       EQUIPMENT_SWITCH_MAP object id, the fertilizer relays before the master valve.
+    3. Switch sw_irrig_enabled back on if step 1 turned it off: ``restored`` once that call returned.
+
+    A fence failure stops the sequence (nothing more can be sent); a command error on one relay does not
+    stop the others. Without step 1, the job's timer would keep fog and the misters off, and
+    sw_irrig_wall_enabled cancels only a weekly feed.
+    """
+    ordered = _ordered_relays(relays)
+    _reset_queue_for_loop(asyncio.get_running_loop())
+    if failure := _preflight_failure():
+        return BridgeOutcome(failure=failure, unsent=True)
+    fence = _BridgeFence()
+    sent: list[str] = []
+    first_failure: str | None = None
+    toggled = restored = False
+    async with _PUSH_LOCK:
+        if covers_l01 and irrigation_enabled_reading() is True:
+            recorded = True
+            if record_restore is not None:
+                try:
+                    await record_restore(True)
+                except Exception as exc:
+                    # Never toggle without the record that restores it; the relays still go off.
+                    log.error(
+                        "writer_bridge phase=record status=failed reason=restore_record_failed error=%s",
+                        type(exc).__name__,
+                    )
+                    recorded = False
+                    first_failure = "restore_record_failed"
+            if recorded:
+                failure = await _bridge_call(fence, IRRIGATION_ENABLED_SWITCH, False)
+                if failure in _BRIDGE_FENCE_REASONS:
+                    return BridgeOutcome(failure=failure, unsent=True)
+                first_failure = failure
+                if failure != "entity_key_unavailable":
+                    # Sent, or an outcome the transport could not confirm: the switch may be off either way.
+                    toggled = True
+                    if failure is None:
+                        sent.append(f"{IRRIGATION_ENABLED_SWITCH}=off")
+                    await asyncio.sleep(BRIDGE_JOB_TICK_WAIT_S)
+        relay_failure = await _relays_off(fence, ordered, sent)
+        first_failure = first_failure or relay_failure
+        if toggled:
+            failure = await _bridge_call(fence, IRRIGATION_ENABLED_SWITCH, True)
+            if failure is None:
+                restored = True
+                sent.append(f"{IRRIGATION_ENABLED_SWITCH}=on")
+            else:
+                first_failure = first_failure or failure
+    return BridgeOutcome(
+        sent=tuple(sent),
+        failure=first_failure,
+        unsent=not sent and first_failure in _BRIDGE_UNSENT_REASONS,
+        toggled=toggled,
+        restored=restored,
+    )
+
+
+async def bridge_switch_off(relays: Sequence[str]) -> BridgeOutcome:
+    """A Stop's re-send: switch these wet relays off again (fertilizer relays before the master valve)."""
+    ordered = _ordered_relays(relays)
+    _reset_queue_for_loop(asyncio.get_running_loop())
+    if failure := _preflight_failure():
+        return BridgeOutcome(failure=failure, unsent=True)
+    if not ordered:
+        return BridgeOutcome()
+    fence = _BridgeFence()
+    sent: list[str] = []
+    async with _PUSH_LOCK:
+        first_failure = await _relays_off(fence, ordered, sent)
+    return BridgeOutcome(
+        sent=tuple(sent), failure=first_failure, unsent=not sent and first_failure in _BRIDGE_UNSENT_REASONS
+    )
+
+
+async def bridge_set_irrigation_enabled(value: bool) -> BridgeOutcome:
+    """Set sw_irrig_enabled back to ``value``: the restore of a Stop whose toggle a restart or a transport
+    change cut short."""
+    _reset_queue_for_loop(asyncio.get_running_loop())
+    if failure := _preflight_failure():
+        return BridgeOutcome(failure=failure, unsent=True)
+    fence = _BridgeFence()
+    async with _PUSH_LOCK:
+        failure = await _bridge_call(fence, IRRIGATION_ENABLED_SWITCH, bool(value))
+    if failure is not None:
+        return BridgeOutcome(failure=failure, unsent=failure in _BRIDGE_UNSENT_REASONS)
+    return BridgeOutcome(sent=(f"{IRRIGATION_ENABLED_SWITCH}={'on' if value else 'off'}",), restored=True)

@@ -659,6 +659,25 @@ because until then a rollback flashes pre-engine firmware (§5 Ship). Its regist
 switch routes) retire in VD-47's follow-up, merged after that promotion. L01 is the first line
 scheduled once the engine runs.
 
+**As built (VD-64).** `verdify_services.irrigation.writes` stores the commands; step 0 of
+`irrigation_sync` (`ingestor/tasks/irrigation.py`) sends them through `esp32_push.press_wall_clean`,
+`bridge_stop`, `bridge_switch_off` and `bridge_set_irrigation_enabled`. Where the build settles what this
+section leaves open:
+
+- While `irr_engine` reads true, run-now is 503 `unavailable` (not retryable) until #1156 adds the engine
+  path, and Stop is still stored.
+- `line_busy` lasts to the planned end of the newest pending or sent L01 run, or less when a later Stop
+  covering L01 was requested; with only the relay ON, `retry_after_s` counts from its ON edge plus
+  `irrig_wall_duration_min`.
+- The ingestor also refuses a press (`line_busy`) while an earlier bridge run has not reached its planned
+  end. A press that never reached the transport ends `failed` with its reason; one whose outcome is
+  unknown stays `sent`.
+- `args.relays_on` holds the relays read ON on the current connection (one not read yet is left out),
+  and `sw_irrig_enabled` is toggled only when it reads on. A cut-short toggle is restored for up to a day
+  after the Stop.
+- On L01 a run body with mister or rinse fields is 400 `invalid_request`; `trigger_id` and
+  `planner_instance` are 1-64 characters.
+
 ## 7. Home Assistant decommission
 
 Home Assistant keeps occupancy data, Lutron switch control and, until a direct reader with no Home
