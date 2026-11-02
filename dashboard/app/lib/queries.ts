@@ -84,6 +84,14 @@ export function useIrrigationRead() {
 export function useSettingsRead() {
   return useApiRead("API-09", {}, { intervalMs: READ_INTERVAL_MS.settings, settling: settingsSettling });
 }
+/**
+ * API-IRR-01 for Settings' site caps (SCR-05): `Setting.readback` carries no program revision, so the "Site water
+ * caps" group reads the engine flag and `program.applied_revision` here, every 60 s while that group is on screen. It
+ * shares the one API-IRR-01 entry, so a page that also shows water keeps that read's faster cadence.
+ */
+export function useProgramRevisionRead() {
+  return useApiRead("API-IRR-01", {}, { intervalMs: READ_INTERVAL_MS.settings });
+}
 /** API-IRR-02, schedules and the week (60 s; 5 s while a schedule reads REQUESTED and the engine is not known missing). */
 export function useSchedulesRead(params: ParamsOf<"API-IRR-02"> = {}) {
   const client = useQueryClient();
