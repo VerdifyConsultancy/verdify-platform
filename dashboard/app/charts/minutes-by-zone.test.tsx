@@ -138,9 +138,10 @@ test("rows share one cursor, have no drag zoom, and only the last shows the day 
   expect(values(null, [epoch("2026-10-27T06:00:00Z"), epoch("2026-11-02T07:00:00Z")])).toEqual(["10/27", "11/02"]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "run now", "feed", "prewet", "flush", "cause unknown", "no data", "partial day", "still planned today", "daily cap"]);
   // 30 days, oldest first: one bar slot per day and the window half a day past each end.
-  const month = load<MinutesReport>(minutesFixture);
-  month.from = "2026-10-04";
-  month.periods = Array.from({ length: 30 }, (_, day) => ({ start: new Date(Date.UTC(2026, 9, 4 + day)).toISOString().slice(0, 10), coverage: day === 29 ? "partial" : "complete" }));
+  const month: MinutesReport = {
+    ...load<MinutesReport>(minutesFixture), from: "2026-10-04",
+    periods: Array.from({ length: 30 }, (_, day) => ({ start: new Date(Date.UTC(2026, 9, 4 + day)).toISOString().slice(0, 10), coverage: day === 29 ? "partial" : "complete" })),
+  };
   const model = buildMinutes({ report: month, now: NOW });
   expect(model.days).toHaveLength(30);
   expect(model.days[29].day).toBe("2026-11-02");
@@ -149,9 +150,12 @@ test("rows share one cursor, have no drag zoom, and only the last shows the day 
 });
 
 test("a no-data today is hatched with no planned outline, and the key does not list one", async () => {
-  const report = load<MinutesReport>(minutesFixture);
-  report.periods[6].coverage = "no_data";
-  report.rows = report.rows.filter((row) => row.period !== "2026-11-02");
+  const fixture = load<MinutesReport>(minutesFixture);
+  const report: MinutesReport = {
+    ...fixture,
+    periods: fixture.periods.map((period) => (period.start === "2026-11-02" ? { ...period, coverage: "no_data" } : period)),
+    rows: fixture.rows.filter((row) => row.period !== "2026-11-02"),
+  };
   const { container, center } = await mount({ report });
   expect(center.ctx.outlines).toEqual([]);
   expect(container.querySelector("[data-zone=center] .minutes-today")!.textContent).toBe("today — · cap 120");

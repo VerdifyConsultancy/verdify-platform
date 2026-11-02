@@ -137,9 +137,11 @@ test("the device value sits at the left, a missing one reads — with its reason
 });
 
 test("with no plan in force the lanes hold the device values to the horizon; 72 h widens the window", async () => {
-  const plan = load<Plan>(planFixture);
-  plan.plan = null;
-  plan.lanes = plan.lanes.map((lane) => ({ ...lane, waypoints: [], applied_from: lane.applied_from === "manual" ? "manual" : "default", desired: lane.applied_from === "manual" ? lane.desired : null }));
+  const fixture = load<Plan>(planFixture);
+  const plan: Plan = {
+    ...fixture, plan: null,
+    lanes: fixture.lanes.map((lane) => ({ ...lane, waypoints: [], applied_from: lane.applied_from === "manual" ? "manual" : "default", desired: lane.applied_from === "manual" ? lane.desired : null })),
+  };
   const { plot, container } = await mount({ plan, hours: 72 });
   expect(container.querySelector("figcaption")!.textContent).toBe("Next 72 h · one lane per planned setting");
   expect(plot.opts.scales!.x).toMatchObject({ min: NOW, max: NOW + 72 * 3600 });

@@ -144,12 +144,12 @@ test("the Lutron rows draw the readback outlined as sensed, and the controller's
 });
 
 test("the key names only marks that are drawn: no sensed outline for a Lutron row that is never on", () => {
-  const states = load<StateLanes>(statesFixture);
+  const fixture = load<StateLanes>(statesFixture);
   // Every sensed row unknown or off for the whole window: hatched, never outlined.
-  for (const lane of states.lanes) {
-    if (lane.equipment === "grow_light_main" || lane.equipment === "grow_light_grow") lane.intervals = [{ start: states.from, end: states.to, state: "unknown" }];
-    if (lane.equipment === "water_flowing") lane.intervals = [{ start: states.from, end: states.to, state: "off" }];
-  }
+  const whole = (state: "off" | "unknown") => [{ start: fixture.from, end: fixture.to, state }];
+  const states: StateLanes = { ...fixture, lanes: fixture.lanes.map((lane) => (
+    lane.equipment === "grow_light_main" || lane.equipment === "grow_light_grow" ? { ...lane, intervals: whole("unknown") }
+      : lane.equipment === "water_flowing" ? { ...lane, intervals: whole("off") } : lane)) };
   const key = lanesKey(buildLanes(states)).map((item) => item.key);
   expect(key).toContain("unknown-span");
   expect(key).not.toContain("sensed");
@@ -248,8 +248,8 @@ test("a drag zoom on the lanes offers Reset zoom, which puts every chart on the 
 });
 
 test("labels are the API's, never made up; a message stands in for the lanes; the server markup has no style attribute", async () => {
-  const states = load<StateLanes>(statesFixture);
-  delete states.lanes.find((lane) => lane.equipment === "vent")!.label;
+  const fixture = load<StateLanes>(statesFixture);
+  const states: StateLanes = { ...fixture, lanes: fixture.lanes.map((lane) => (lane.equipment === "vent" ? { equipment: lane.equipment, group: lane.group, line_id: lane.line_id, intervals: lane.intervals } : lane)) };
   expect(buildLanes(states).rows.find((row) => row.equipment === "vent")!.label).toBe("vent");
   expect(renderToString(<EquipmentLanes {...props()} />)).not.toMatch(/style=/);
   const { container } = render(<EquipmentLanes {...props({ message: "Equipment lanes cover at most 31 days. Narrow the range to see them" })} />);
