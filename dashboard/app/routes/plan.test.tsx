@@ -14,6 +14,7 @@ import { FakeResizeObserver, MockPlot, TOKENS, created, media, setTokens, type S
 import { FORECAST_RULE, PLANNED_AI } from "../charts/marks";
 import { loadUPlot } from "../charts/uplot-chart";
 import { AppShell } from "../components/app-shell";
+import { ServerClockProvider } from "../components/freshness";
 import { PlanCard, planDetail, timeLeft } from "../components/plan-card";
 import { NEWEST_SHOWN, PlannerHealth, healthRows, isLate, needsAttention } from "../components/planner-health";
 import { NBSP, denver, renderUi, text } from "../components/test-render";
@@ -276,8 +277,9 @@ test("the ▲ rule: a required trigger missed, timed out or not delivered, or st
   expect(needsAttention(trigger({ outcome: "expected" }), NOW)).toBe(true);
   expect(needsAttention(trigger({ outcome: "delivered" }), NOW)).toBe(true);
   expect(isLate(trigger({ outcome: "delivered" }), NOW)).toBe(true);
-  // Not yet due, or optional (SOLAR_MAX): no ▲, even when missed.
+  // Not yet due, or optional (SOLAR_MAX): no ▲, even when missed. An unreadable due time is unknown, never late.
   expect(needsAttention(trigger({ outcome: "expected", due_at: denver("11:00") }), NOW)).toBe(false);
+  expect([isLate(trigger({ outcome: "expected", due_at: "not a time" }), NOW), needsAttention(trigger({ outcome: "delivered", due_at: "" }), NOW)]).toEqual([false, false]);
   expect(needsAttention(trigger({ trigger: "SOLAR_MAX", required: false, outcome: "missed" }), NOW)).toBe(false);
   expect(isLate(trigger({ trigger: "SOLAR_MAX", required: false, outcome: "expected" }), NOW)).toBe(true);
   // A late or unknown outcome renders with its words, "late" after them, and an unknown status raw.
@@ -308,6 +310,7 @@ test("the 72 h chip sets ?hours=72 and reads 72 h, and loading /plan?hours=72 ke
   const lanes = region("Planned settings");
   expect(requests(api, "API-07").map((row) => row.path)).toEqual(["/api/v1/plan?hours=24"]);
   expect(within(lanes).getByRole("link", { name: "24 h" }).getAttribute("aria-current")).toBe("true");
+  expect(within(lanes).getByRole("link", { name: "72 h" }).getAttribute("href")).toBe("/plan?hours=72");
   expect(text(lanes.querySelector("figcaption"))).toBe("Next 24 h · one lane per planned setting");
   fireEvent.click(within(lanes).getByRole("link", { name: "72 h" }));
   await settle();
@@ -399,6 +402,21 @@ test("while the controller is not reporting the banner shows, the plan still ren
   // Fresh readback: nothing reads STALE.
   await open("/plan");
   expect(document.querySelector(".chart-note-stale, .plan-device-stale")).toBeNull();
+});
+
+test("the time left and the lanes' window count on the server's clock, not a device clock running ahead of it", async () => {
+  // The device clock reads 10:42 and runs 50 min ahead of the server's (the shell's API-02 skew): the page reads as of 09:52.
+  startFixtureApi({ fixture: "in-band" });
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  vi.stubGlobal("matchMedia", media({ narrow: false, fine: true }));
+  const ahead = () => <ServerClockProvider skewMs={50 * 60_000}><Plan /></ServerClockProvider>;
+  const Stub = createRoutesStub([{ path: "/", Component: () => <AppShell build={BUILD} authError={null} />, children: [{ path: "plan", Component: ahead }] }]);
+  render(<Stub initialEntries={["/plan"]} />);
+  await settle();
+  const plot = paint();
+  // 17:30 is 7 h 38 min after 09:52 (6 h 48 min after the device's 10:42).
+  expect(text(region("Plan in force").querySelector(".plan-facts"))).toBe("iris-20261102-0702 · SUNRISE · written 07:02 · to 17:30 (7 h left)");
+  expect(plot.opts.scales!.x).toMatchObject({ min: START - 3000, max: START - 3000 + 24 * 3600 });
 });
 
 test("API-07 is polled every 60 s, paused while the tab is hidden; API-02 stays the shell's one poll; nothing is ever written", async () => {

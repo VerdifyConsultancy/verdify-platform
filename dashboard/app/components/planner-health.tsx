@@ -16,9 +16,10 @@ const epoch = (instant: string): number => {
   return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
 };
 
-/** Still due or delivered after its `due_at`: late, whether required or not. */
+/** Still due or delivered after its `due_at`: late, whether required or not. An unreadable due time is never late. */
 export function isLate(row: PlannerTrigger, nowMs: number): boolean {
-  return (row.outcome === "expected" || row.outcome === "delivered") && epoch(row.due_at) < nowMs;
+  const due = Date.parse(row.due_at);
+  return (row.outcome === "expected" || row.outcome === "delivered") && Number.isFinite(due) && due < nowMs;
 }
 
 /**

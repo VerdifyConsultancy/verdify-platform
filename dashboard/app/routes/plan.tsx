@@ -4,6 +4,7 @@ import { PlanLanes, type PlanRow } from "../charts/plan-lanes";
 import { chartLinks } from "../charts/uplot-chart";
 import { Chips } from "../components/chips";
 import { PageHead } from "../components/common";
+import { useServerClockSkew } from "../components/freshness";
 import { Panel, type PanelState } from "../components/panel";
 import { PlanCard } from "../components/plan-card";
 import { PlannerHealth } from "../components/planner-health";
@@ -46,12 +47,14 @@ export default function Plan() {
   const hours = planHours(search);
   const read = useApiRead("API-07", { hours }, { intervalMs: PLAN_POLL_MS });
   const shellNow = useShellNow();
+  const skew = useServerClockSkew();
   // While the newest read failed, the last answer is not shown: nothing on the page may read as current.
   const data = read.isError ? null : read.data ?? null;
   const state: PanelState = data ? "ready" : read.isError ? "error" : "loading";
   const retry = () => { void read.refetch(); };
-  // Everything reads as of the answer: the lanes start there, and the time left and lateness count from it.
-  const now = read.dataUpdatedAt;
+  // Everything reads as of the answer, on the server's clock as every age does: the lanes start there, and the time
+  // left and lateness count from it, so a device clock running ahead never marks a trigger late too early.
+  const now = read.dataUpdatedAt - skew;
   const stale = shellNow.data?.freshness.readback.stale === true;
   const manual = data ? manualCount(data.manual_count) : null;
   const chips = [

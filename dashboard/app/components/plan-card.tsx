@@ -50,10 +50,10 @@ export function planDetail(detail: Json | null | undefined): PlanDetailText {
   const structured = object(detail?.hypothesis_structured) ?? {};
   const stress: StressLine[] = [];
   for (const item of list(structured.stress_windows ?? detail?.stress_windows)) {
-    const window = object(item);
-    const kind = text(window?.kind);
-    if (!window || !kind) continue;
-    stress.push({ kind, severity: text(window.severity), start: text(window.start), end: text(window.end), mitigation: text(window.mitigation) });
+    const span = object(item);
+    const kind = text(span?.kind);
+    if (!span || !kind) continue;
+    stress.push({ kind, severity: text(span.severity), start: text(span.start), end: text(span.end), mitigation: text(span.mitigation) });
   }
   const rationale: RationaleLine[] = [];
   for (const item of list(structured.rationale)) {
