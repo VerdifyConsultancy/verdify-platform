@@ -640,9 +640,11 @@ against production before the merge: three sessions that each end in ROLLBACK (t
 block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
 after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
 It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
-live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
-predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
-latter yet).
+live ledger row and receipts. A file whose merged predecessors are not applied yet names each one with
+`--apply-first <file>` (VD-39), in filename order: both write sessions apply and stamp it first, as
+`db/apply-migrations.sh` would, under the same bounds, and the fixture records the files (`applied_first`) and the
+seals they leave (`applied_first_seals`). `--native-fixture <file>` runs a migration's own checks at the end of the
+final session; M4's calls each login's attestor after the re-seal.
 
 | # | Issue | Contents |
 |---|---|---|
