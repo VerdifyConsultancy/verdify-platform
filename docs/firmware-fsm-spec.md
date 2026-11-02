@@ -117,8 +117,9 @@ hold-reheat on the same cycle it forces the vent).
 ### 3.3 Per-mode relay map (`resolve_equipment`, `greenhouse_logic.h:2006-2122`)
 
 `resolve_equipment` is pure: `(mode, inputs, setpoints, state, lead_is_fan1) →
-RelayOutputs{vent, fan1, fan2, fog, heat1, heat2}`. Misters are driven from
-`controls.yaml` off `mist_stage`. Exact outputs:
+RelayOutputs{vent, fan1, fan2, fog, heat1, heat2}`. Climate VPD misters are driven from
+`controls.yaml` off `mist_stage` (mist path below); scheduled, run-now and fertilizer mist are
+the irrigation engine's own runs. Exact outputs:
 
 | Mode | vent | fan1 / fan2 | fog | heat1 / heat2 |
 |------|------|-------------|-----|---------------|
@@ -142,6 +143,28 @@ RelayOutputs{vent, fan1, fan2, fog, heat1, heat2}`. Misters are driven from
   and inhibit is set, forces `fan1/fan2/fog` off — **except** `SAFETY_COOL`,
   `SAFETY_HEAT`, `SENSOR_FAULT`, which are exempt (people-comfort never overrides
   the temperature/fault rails).
+- **Fog force-off** (`fog_force_off_reason()`, `greenhouse_logic.h`; irrigation F9, #1161):
+  the one rule `controls.yaml`'s fog gate, fog relay and `fog_block_reason` ladder share. In
+  every mode it holds fog for the SENSOR_FAULT lock, confirmed occupancy, L03 open or about
+  to open (SAF-5), a drip relay reading ON and an invalid clock; outside `SAFETY_COOL` also
+  for an engine drip run, the soft water budget and SAF-4. **Survival fog** in `SAFETY_COOL`
+  runs past those three (its water still counts, D-IRP-04). `leak_detected` is not a term
+  (Q-05): it raises the leak alert only.
+
+**The mist path** (`controls.yaml` section 12; irrigation F6, F10, #1161). Each mister zone
+(L04 center, L07 south, L09 west) takes climate VPD pulses by one rule,
+`irr_vpd_zone_allowed()` (`irrigation_program.h`): climate demand and its safety gate, an
+effective VPD member of the irrigation program (VPD-member bit and line enable), no watchdog
+back-off or latch, the zone's duty cap (`daily_cap_min`, every mister second on the zone) and
+SAF-4. With no program the ROM default makes L04 the only member, so center misting runs as
+before. With more than one zone allowed the rank arbiter (`arbitrate_wet_zone()`, center rank 1)
+picks the zone after the 10 min fairness override; the retired `sw_arbiter_zone_enabled` decides
+nothing. Each pulse asks the engine for its zone's grant (`irr_vpd_grant()`), which alternates
+VPD and scheduled pulses at the boundary and puts VPD first in an emergency. The D-IRP-19
+watchdog (`irr_watchdog_step()`) forces OFF a wet relay ON without its grant and a mister ON
+past its commanded length + 30 s (300 s unknown): a VPD-member zone backs off 10 then 30 min
+and latches on its third fault of the day; any other mister, L08 and L10 included, latches on
+its first. A latch holds until local midnight or `clear_fault`; `irr_state` carries each end.
 
 ### 3.4 Auditability — `mode_reason`
 
@@ -167,7 +190,7 @@ override through the **pure, unit-tested `apply_manual_overrides()`**
 |---|---|---|
 | **FANS** | both fans ON, vent OPEN | fans, vent |
 | **VENT-BYPASS** | both fans ON, vent **CLOSED** (winter house-air pull); *implies fans* | fans |
-| **HUMID** | fogger ON, unless a genuine fog safety block (dew/RH/temp/time/leak) | fog |
+| **HUMID** | fogger ON, unless a genuine fog safety block (dew/RH/temp/time) or the fog force-off (§3.3) holds it | fog |
 
 **Precedence: absolute safety wins.** `apply_manual_overrides()` is a no-op in
 `SENSOR_FAULT` / `SAFETY_COOL` / `SAFETY_HEAT` — a press never fights a safety rail
@@ -202,7 +225,9 @@ post-deploy sensor-health sweep 27/0/0. Closes #289, #290.
 | VPD over-wet | `vpd_kpa < vpd_min_safe` (default 0.3 kPa) | forced `DEHUM_VENT` | determine_mode |
 | Dew-margin veto | every wetting path gated on `temp_f − dew_point_f` | no crown condensation | inv #2/#24 |
 | Relay protection | min-on/min-off (heat 300/300 s, fan 60/30, fog 60/60, vent 30/30), heat2 anti-chatter latch | wear/chatter limit | `controls.yaml` |
-| Daily water ceiling | SAF-4 per-zone duty cap | immune to VPD emergencies | inv #21/#22 |
+| Daily water ceiling | SAF-4 (`mister_daily_volume_max_gal` in the irrigation program) and each mister zone's duty cap | immune to VPD emergencies; survival fog runs past SAF-4 and the soft budget, still counted | `irr_vpd_zone_allowed()`, `fog_force_off_reason()` native tests |
+| Mister watchdog (D-IRP-19) | a mister ON past its commanded pulse + 30 s (300 s unknown), or any wet relay ON without its engine grant | forced OFF; the zone backs off 10/30 min, then latches (a non-member, L08 or L10 at once) | `test_irrigation_program.cpp` watchdog traces |
+| Leak signal | flow with every Verdify valve closed (one site meter: hose, sink, hydro) | the leak alert only; no force-off, no cancel (Q-05) | `test_12_fidelity.py`, the fog consumer scenarios |
 
 The rails preempt **before** any AI-influenced candidate is considered
 (`greenhouse_logic.h:683-691`). The cold rail and the all-off fault were previously
@@ -232,7 +257,10 @@ and the native suite.
 `make firmware-invariants` runs property invariants #1–#26 over the replay corpus
 (193,525 rows); first breach fails. They are the executable form of this spec:
 fog/vent and fog/heat exclusivity (#1/#11), heat-off-when-hot (#3), the hot/cold/
-fault rails (#7/#25/#26), mode↔relay consistency (#15), heat2-requires-heat1 (#16),
+fault rails (#7/#25/#26: every climate and mister relay off in SENSOR_FAULT, L08 and L10
+included; drips outside it), mode↔relay consistency (#15; #2 and #15 exempt a mister whose
+irrigation-engine cause is schedule, run_now, fallback, feed, prewet or flush),
+heat2-requires-heat1 (#16),
 the ≥10 °F day/night drop (#17), the fertilizer/feed interlocks (#18–#22), and the
 curve-only fog gate (#24). `make test-firmware` adds 222 native unit tests of the
 same code.
@@ -409,8 +437,10 @@ the outdoor-aware set. Tested at `test_greenhouse_logic.cpp` (s15 gate).
 ### 8.3 Equipment roles
 
 Fan **lead/lag rotation** balances runtime across fan1/fan2 (verified ~5 % balance
-over 14 d). Fogger and **center** misters are the core humidity tools; **west/south**
-misters are minimized for climate (zone-priority arbiter, `greenhouse_solar.h:236`).
+over 14 d). Fogger and **center** misters are the core humidity tools. A mister zone takes
+climate VPD pulses only while it is a VPD member of the irrigation program (center in the ROM
+default); with more than one member the zone-priority arbiter (`greenhouse_solar.h:236`, via
+`irr_rank_vpd_zone()`) picks, center at rank 1.
 Zone choice reads each zone's VPD through the **peer-probe fallback**
 (`zone_vpd_with_fallback()`, `firmware/lib/zone_vpd.h`; irrigation F8, D-IRP-13): a
 zone uses its own wall probe while the reading is fresh (a probe callback within
@@ -485,10 +515,14 @@ named here so they are not mistaken for leaks:
   controller). Both key off the same `gl_main_*`/`gl_grow_*` tunables, so they cannot
   diverge in thresholds. (Hardening this with an explicit auto-vs-manual write test
   is a tracked follow-up.)
-- **Irrigation↔climate** — the `feed_hold` global + shared center misters + the
-  salt-to-fogger interlock couple fertigation and climate wetting deliberately
-  (invariants #18–#22 enforce that fertilizer never reaches the fogger and that no
-  clean wetting fires during the post-feed absorption hold).
+- **Irrigation↔climate** — one mist manifold, shared by climate VPD pulses and the
+  irrigation engine's windows and feeds: every wet relay opens only with the engine's grant,
+  the climate asks for it per pulse (`irr_vpd_grant()`), the zone's VPD membership comes from
+  the irrigation program (`irr_vpd_zone_allowed()`), occupancy is one rule for all mist and fog
+  (drips ignore it), and the D-IRP-19 watchdog's faults hold both sides. The salt-to-fogger
+  interlock (SAF-5) and the shared caps (SAF-4, the soft budget, each zone's duty cap) couple
+  fertigation and climate wetting deliberately (invariants #18–#22 enforce that fertilizer never
+  reaches the fogger and that no clean wetting fires during the post-feed absorption hold).
 
 ## 11. Acceptance-criteria traceability
 

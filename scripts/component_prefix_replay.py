@@ -466,7 +466,8 @@ def _remaining_consumer_requirements(fields: Sequence[Mapping[str, Any]]) -> lis
                 "target_temp_low_f/target_temp_high_f and Tin",
                 "east_adjacency_factor",
                 "wet-allowed zone mask",
-                "sw_arbiter_zone_enabled, fairness/last_fire state and source-selected zone path",
+                "the allowed-zone count (one zone: the stress score; more: the rank arbiter, #1161), "
+                "fairness/last_fire state and source-selected zone path",
             ],
         ),
         "mister_engage_delay_s": (

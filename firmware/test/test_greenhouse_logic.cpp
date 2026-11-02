@@ -6,7 +6,7 @@
  */
 
 #include "greenhouse_logic.h"
-#include "irrigation_policy.h"
+#include "irrigation_program.h"
 #include "sntp_acquisition.h"
 #include "probe_validity.h"
 #include "invariants.h"
@@ -5244,111 +5244,253 @@ TEST(f7_vpd_min_safe_rescue_heats_on_cold_day) {
     PASS();
 }
 
-// ── Wet-request routing (center-only; the weekly wall-feed gate went with the job machine in
-//    #1160, and #1161 removes these with the resolver) ─────────────────────────────────────
-TEST(irrigation_climate_origins_always_resolve_center_mist_only) {
-    WetTopologyPolicy policy{};
-    for (WetZone stale_hint : {
-            WetZone::NONE, WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
-            WetZone::SOUTH_MIST, WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
-        const auto resolution = resolve_wet_request(
-            {WetCommandOrigin::CLIMATE_VPD, stale_hint, WetChemistry::CLEAN}, policy);
-        ASSERT_TRUE(resolution.admitted);
-        ASSERT_EQ(resolution.relay, WetRelay::CENTER_MISTER);
+// ── The mist path (irrigation F6, F9, F14; #1161) ─────────────────────────────────────────────
+// Center-only routing (ADR-0007's resolve_wet_request() and its pins) is gone: a climate VPD
+// pulse may use a mister zone only while irr_vpd_zone_allowed() says so, the rank arbiter picks
+// among several, and one fog force-off rule lets survival fog past the water caps.
+
+static verdify_irr::IrrVpdZoneGate mist_gate() {
+    return verdify_irr::IrrVpdZoneGate{true, true, false, 0, 0};
+}
+
+static verdify_irr::IrrRtcBlock mist_rtc() {
+    verdify_irr::IrrRtcBlock rtc{};
+    verdify_irr::irr_rtc_validate(rtc, true, 20759);
+    return rtc;
+}
+
+static void mist_member(verdify_irr::IrrProgram& p, uint8_t line, bool vpd, bool enabled) {
+    using namespace verdify_irr;
+    const uint8_t b = uint8_t(1u << kMisterMaskBit[line]);
+    p.vpd_member_mask = uint8_t(vpd ? (p.vpd_member_mask | b) : (p.vpd_member_mask & ~b));
+    p.enabled_mask = enabled ? uint16_t(p.enabled_mask | irr_bit(line)) : uint16_t(p.enabled_mask & ~irr_bit(line));
+}
+
+TEST(mist_vpd_pulse_only_on_an_effective_vpd_member) {
+    using namespace verdify_irr;
+    const IrrRtcBlock rtc = mist_rtc();
+    IrrProgram p = irr_rom_default();
+    // ROM default: L04 is the only VPD member, so center VPD misting behaves as before.
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL04, mist_gate()));
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, mist_gate()));
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL09, mist_gate()));
+    ASSERT_EQ(irr_vpd_member_lines(p), irr_bit(kL04));
+    // The VPD-member bit alone is not enough: the line's enable bit must be set too.
+    mist_member(p, kL07, true, false);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, mist_gate()));
+    mist_member(p, kL07, true, true);
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL07, mist_gate()));
+    // Enabled but schedule-only: never a climate pulse.
+    mist_member(p, kL09, false, true);
+    p.schedule_member_mask = uint8_t(1u << kMisterMaskBit[kL09]);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL09, mist_gate()));
+    ASSERT_EQ(irr_vpd_member_lines(p), uint16_t(irr_bit(kL04) | irr_bit(kL07)));
+    // Disabling L04 stops center VPD misting too.
+    mist_member(p, kL04, true, false);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL04, mist_gate()));
+    // Only the clean misters are ever members.
+    p.vpd_member_mask = 0x07;
+    p.enabled_mask = 0x07FF;
+    for (uint8_t line : {kL01, kL02, kL03, kL05, kL06, kL08, kL10, kL11}) {
+        ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, line, mist_gate()));
     }
-    const auto fertilizer = resolve_wet_request(
-        {WetCommandOrigin::CLIMATE_VPD, WetZone::CENTER_MIST, WetChemistry::FERTILIZER}, policy);
-    ASSERT_FALSE(fertilizer.admitted);
-    ASSERT_EQ(fertilizer.relay, WetRelay::NONE);
     PASS();
 }
 
-TEST(irrigation_center_mist_rejects_every_non_climate_origin) {
-    WetTopologyPolicy policy{true, true, true, true, true};
-    for (WetCommandOrigin origin : {
-            WetCommandOrigin::EXPLICIT_IRRIGATION,
-            WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED,
-            WetCommandOrigin::MANUAL_FEED,
-            WetCommandOrigin::PLANNER_FEED,
-            WetCommandOrigin::LEGACY_SCHEDULE,
-            WetCommandOrigin::RETRY_REPLAY,
-            WetCommandOrigin::REPAIR}) {
-        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
-            const auto resolution = resolve_wet_request(
-                {origin, WetZone::CENTER_MIST, chemistry}, policy);
-            ASSERT_FALSE(resolution.admitted);
-            ASSERT_EQ(resolution.relay, WetRelay::NONE);
+TEST(mist_vpd_pulse_never_on_a_backed_off_latched_or_capped_zone) {
+    using namespace verdify_irr;
+    IrrRtcBlock rtc = mist_rtc();
+    IrrProgram p = irr_rom_default();
+    mist_member(p, kL07, true, true);
+    IrrVpdZoneGate g = mist_gate();
+    // D-IRP-19: a back-off holds the zone, and only the zone.
+    g.backoff_mask = irr_bit(kL07);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    // A fault on the zone's fertilizer mister (L08) holds L07's VPD pulses as well.
+    g.backoff_mask = irr_bit(kL08);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    g.backoff_mask = 0;
+    g.latch_mask = irr_bit(kL04);
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    g.latch_mask = 0;
+    // The duty cap: L04's daily_cap_min (120 in the ROM default) against every center mister
+    // second today, whatever opened it.
+    rtc.zone_pulse_s[0] = 120u * 60u - 1u;
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    rtc.zone_pulse_s[0] = 120u * 60u;
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    p.lines[kL04].daily_cap_min = 0;  // 0 = no cap
+    ASSERT_TRUE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    rtc.zone_pulse_s[1] = 45u * 60u;  // south's own 45 min
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    rtc.zone_pulse_s[1] = 0;
+    // SAF-4 (even in a VPD emergency), the demand and the safety gate hold every zone.
+    g.saf4_tripped = true;
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    g.saf4_tripped = false;
+    g.demand = false;
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL04, g));
+    g.demand = true;
+    g.safety_ok = false;
+    ASSERT_FALSE(irr_vpd_zone_allowed(p, rtc, kL07, g));
+    PASS();
+}
+
+TEST(mist_arbiter_picks_center_at_rank_1_whatever_the_retired_switch) {
+    // L04, L07 and L09 are VPD members and all want water: arbitrate_wet_zone() picks center at
+    // rank 1 (zone_priority_center), even when south's VPD is further above its band.
+    const ZoneBand band{1.0f, 0.8f, 1.2f};
+    ZoneWetIntent zi[ZONE_COUNT];
+    for (int z = 0; z < ZONE_COUNT; ++z) zi[z] = zone_wet_intent(1.4f, band);
+    zi[ZONE_SOUTH] = zone_wet_intent(1.9f, band);
+    const int rank[ZONE_COUNT] = {1, 2, 3, 4};
+    const bool all[ZONE_COUNT] = {true, true, true, false};
+    ASSERT_EQ(arbitrate_wet_zone(zi, rank, all), int(ZONE_CENTER));
+    // irr_rank_vpd_zone() is the zone choice with more than one zone allowed; it has no switch.
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(all, zi, rank), int(ZONE_CENTER));
+    // Center at its target: the next rank that wants water (south).
+    ZoneWetIntent at_target[ZONE_COUNT];
+    for (int z = 0; z < ZONE_COUNT; ++z) at_target[z] = zi[z];
+    at_target[ZONE_CENTER] = zone_wet_intent(1.0f, band);
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(all, at_target, rank), int(ZONE_SOUTH));
+    // Center not allowed (backing off): south.
+    const bool no_center[ZONE_COUNT] = {false, true, true, false};
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(no_center, zi, rank), int(ZONE_SOUTH));
+    // No allowed zone above its target (the house-level stress asked for the pulse): the
+    // best-ranked allowed zone, not the stress score's pick.
+    ZoneWetIntent calm[ZONE_COUNT];
+    for (int z = 0; z < ZONE_COUNT; ++z) calm[z] = zone_wet_intent(0.9f, band);
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(all, calm, rank), int(ZONE_CENTER));
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(no_center, calm, rank), int(ZONE_SOUTH));
+    // The owner's ranks decide: west at rank 1 wins.
+    const int west_first[ZONE_COUNT] = {2, 3, 1, 4};
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(all, zi, west_first), int(ZONE_WEST));
+    // One zone allowed (the ROM default): -1, the caller keeps today's single-zone path.
+    const bool center_only[ZONE_COUNT] = {true, false, false, false};
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(center_only, zi, rank), -1);
+    // East has no mister and never counts.
+    const bool center_east[ZONE_COUNT] = {true, false, false, true};
+    ASSERT_EQ(verdify_irr::irr_rank_vpd_zone(center_east, zi, rank), -1);
+    PASS();
+}
+
+// F9: survival fog. In SAFETY_COOL the fog force-off drops the engine's drip, the soft budget and
+// SAF-4 (D-IRP-03, D-IRP-04); every mode keeps SENSOR_FAULT's lock, confirmed occupancy, SAF-5
+// (L03), a drip relay reading ON and a valid clock. There is no leak input (Q-05).
+TEST(survival_fog_runs_past_the_drip_the_soft_budget_and_saf4) {
+    FogForceOffInputs in{false, true, false, false, false, true, true, true};
+    ASSERT_FALSE(fog_forced_off(SAFETY_COOL, in));
+    ASSERT_EQ(std::string(fog_force_off_reason(SAFETY_COOL, in)), std::string(""));
+    // Outside SAFETY_COOL each one still holds fog, in the ladder's order.
+    for (Mode m : {IDLE, SEALED_MIST, VENTILATE, THERMAL_RELIEF, DEHUM_VENT, SAFETY_HEAT}) {
+        ASSERT_EQ(std::string(fog_force_off_reason(m, in)), std::string("irrigation"));
+    }
+    in.irrigation_water_conflict = false;
+    ASSERT_EQ(std::string(fog_force_off_reason(SEALED_MIST, in)), std::string("resource_budget"));
+    in.climate_water_budget_block = false;
+    ASSERT_EQ(std::string(fog_force_off_reason(SEALED_MIST, in)), std::string("water_ceiling"));
+    in.mister_volume_hard_block = false;
+    ASSERT_FALSE(fog_forced_off(SEALED_MIST, in));
+    PASS();
+}
+
+TEST(survival_fog_still_waits_for_l03_occupancy_a_drip_relay_the_clock_and_sensor_fault) {
+    struct Term { const char* word; void (*set)(FogForceOffInputs&); };
+    const Term terms[] = {
+        {"sensor_fault", [](FogForceOffInputs& i) { i.sensor_fault_relay_lock = true; }},
+        {"occupancy", [](FogForceOffInputs& i) { i.occupancy_block = true; }},
+        {"fert_master", [](FogForceOffInputs& i) { i.fert_master_on = true; }},
+        {"irrigation", [](FogForceOffInputs& i) { i.drip_relay_open = true; }},
+        {"time_invalid", [](FogForceOffInputs& i) { i.controller_time_valid = false; }},
+    };
+    for (const Term& t : terms) {
+        for (Mode m : {SAFETY_COOL, IDLE, SEALED_MIST, VENTILATE}) {
+            FogForceOffInputs in{false, true, false, false, false, false, false, false};
+            t.set(in);
+            ASSERT_TRUE(fog_forced_off(m, in));
+            ASSERT_EQ(std::string(fog_force_off_reason(m, in)), std::string(t.word));
         }
     }
+    // Survival fog with every water cap reached still stops for confirmed occupancy and L03.
+    FogForceOffInputs capped{false, true, true, false, false, true, true, true};
+    ASSERT_EQ(std::string(fog_force_off_reason(SAFETY_COOL, capped)), std::string("occupancy"));
+    capped.occupancy_block = false;
+    capped.fert_master_on = true;
+    ASSERT_EQ(std::string(fog_force_off_reason(SAFETY_COOL, capped)), std::string("fert_master"));
     PASS();
 }
 
-TEST(irrigation_dormant_clean_paths_are_disabled_by_default_and_explicit_when_enabled) {
-    WetTopologyPolicy disabled{};
-    for (WetZone zone : {WetZone::CENTER_DRIP, WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
-        const auto resolution = resolve_wet_request(
-            {WetCommandOrigin::EXPLICIT_IRRIGATION, zone, WetChemistry::CLEAN}, disabled);
-        ASSERT_FALSE(resolution.admitted);
-    }
+template <typename T, typename = void>
+struct FogInputsHaveLeak : std::false_type {};
+template <typename T>
+struct FogInputsHaveLeak<T, std::void_t<decltype(&T::leak_block)>> : std::true_type {};
+static_assert(!FogInputsHaveLeak<FogForceOffInputs>::value,
+              "leak_detected raises the leak alert only; it never forces fog off (Q-05, F14)");
 
-    WetTopologyPolicy enabled{true, true, true, false, false};
-    ASSERT_EQ(resolve_wet_request(
-        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::CENTER_DRIP, WetChemistry::CLEAN}, enabled).relay,
-        WetRelay::CENTER_DRIP);
-    ASSERT_EQ(resolve_wet_request(
-        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::SOUTH_MIST, WetChemistry::CLEAN}, enabled).relay,
-        WetRelay::SOUTH_MISTER);
-    ASSERT_EQ(resolve_wet_request(
-        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::WEST_MIST, WetChemistry::CLEAN}, enabled).relay,
-        WetRelay::WEST_MISTER);
+TEST(fog_force_off_reasons_keep_the_ladder_order) {
+    // Everything at once: SENSOR_FAULT's lock first; then occupancy, SAF-5, a drip, the
+    // engine's drip, the soft budget, SAF-4 and the clock, as the published ladder reads.
+    FogForceOffInputs in{true, false, true, true, true, true, true, true};
+    const char* order[] = {"sensor_fault", "occupancy", "fert_master", "irrigation", "irrigation",
+                           "resource_budget", "water_ceiling", "time_invalid"};
+    for (const char* expected : order) {
+        ASSERT_EQ(std::string(fog_force_off_reason(IDLE, in)), std::string(expected));
+        if (in.sensor_fault_relay_lock) in.sensor_fault_relay_lock = false;
+        else if (in.occupancy_block) in.occupancy_block = false;
+        else if (in.fert_master_on) in.fert_master_on = false;
+        else if (in.drip_relay_open) in.drip_relay_open = false;
+        else if (in.irrigation_water_conflict) in.irrigation_water_conflict = false;
+        else if (in.climate_water_budget_block) in.climate_water_budget_block = false;
+        else if (in.mister_volume_hard_block) in.mister_volume_hard_block = false;
+        else in.controller_time_valid = true;
+    }
+    ASSERT_FALSE(fog_forced_off(IDLE, in));
     PASS();
 }
 
-TEST(irrigation_fertilizer_is_wall_only_commissioned_and_exact_origin) {
-    WetTopologyPolicy commissioned{false, false, false, true, true};
-    for (WetZone forbidden : {
-            WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
-            WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
-        const auto resolution = resolve_wet_request(
-            {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, forbidden, WetChemistry::FERTILIZER},
-            commissioned);
-        ASSERT_FALSE(resolution.admitted);
-    }
-    for (WetCommandOrigin forbidden_origin : {
-            WetCommandOrigin::EXPLICIT_IRRIGATION,
-            WetCommandOrigin::MANUAL_FEED,
-            WetCommandOrigin::PLANNER_FEED,
-            WetCommandOrigin::LEGACY_SCHEDULE,
-            WetCommandOrigin::RETRY_REPLAY,
-            WetCommandOrigin::REPAIR}) {
-        const auto resolution = resolve_wet_request(
-            {forbidden_origin, WetZone::WALL_DRIP, WetChemistry::FERTILIZER}, commissioned);
-        ASSERT_FALSE(resolution.admitted);
-    }
-    const auto allowed = resolve_wet_request(
-        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
-        commissioned);
-    ASSERT_TRUE(allowed.admitted);
-    ASSERT_EQ(allowed.relay, WetRelay::WALL_DRIP_FERTILIZED);
-
-    commissioned.wall_fertigation_commissioned = false;
-    ASSERT_FALSE(resolve_wet_request(
-        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
-        commissioned).admitted);
+// Invariants #2, #15 and #26 (firmware/test/invariants.h) after #1161.
+TEST(invariant_2_and_15_exempt_engine_mist) {
+    invariants::TraceRow r{};
+    r.greenhouse_state = "IDLE";
+    r.eq_mister_south = 1;  // a scheduled window on L07 in IDLE
+    ASSERT_FALSE(invariants::check_2_mister_only_sealed(r, silent_report));
+    ASSERT_FALSE(invariants::check_15_mode_equipment_consistent(r, silent_report));
+    r.mister_engine_cause = true;  // its cause is schedule, run_now, fallback, feed, prewet or flush
+    ASSERT_TRUE(invariants::check_2_mister_only_sealed(r, silent_report));
+    ASSERT_TRUE(invariants::check_15_mode_equipment_consistent(r, silent_report));
+    // The exemption covers the mister only: a fan in IDLE still breaches #15.
+    r.eq_fan1 = 1;
+    ASSERT_FALSE(invariants::check_15_mode_equipment_consistent(r, silent_report));
+    r.eq_fan1 = 0;
+    // A climate VPD pulse (no engine cause) still runs only in SEALED_MIST or the VENTILATE assist.
+    r.mister_engine_cause = false;
+    r.greenhouse_state = "SEALED_MIST_S1";
+    ASSERT_TRUE(invariants::check_2_mister_only_sealed(r, silent_report));
     PASS();
 }
 
-TEST(irrigation_fixed_1030_legacy_schedule_is_ineligible) {
-    WetTopologyPolicy all_enabled{true, true, true, true, true};
-    for (WetZone zone : {
-            WetZone::CENTER_MIST, WetZone::CENTER_DRIP, WetZone::SOUTH_MIST,
-            WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
-        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
-            const auto resolution = resolve_wet_request(
-                {WetCommandOrigin::LEGACY_SCHEDULE, zone, chemistry}, all_enabled);
-            ASSERT_FALSE(resolution.admitted);
-        }
-    }
+TEST(invariant_26_every_mister_off_in_sensor_fault_drips_outside_it) {
+    invariants::TraceRow r{};
+    r.greenhouse_state = "SENSOR_FAULT";
+    ASSERT_TRUE(invariants::check_26_sensor_fault_all_off(r, silent_report));
+    r.eq_mister_south_fert = 1;  // L08
+    ASSERT_FALSE(invariants::check_26_sensor_fault_all_off(r, silent_report));
+    r.eq_mister_south_fert = 0;
+    r.eq_mister_west_fert = 1;  // L10
+    ASSERT_FALSE(invariants::check_26_sensor_fault_all_off(r, silent_report));
+    r.eq_mister_west_fert = 0;
+    r.eq_mister_center = 1;
+    r.mister_engine_cause = true;  // no cause exempts a mister in SENSOR_FAULT
+    ASSERT_FALSE(invariants::check_26_sensor_fault_all_off(r, silent_report));
+    r.eq_mister_center = 0;
+    r.mister_engine_cause = false;
+    // Drips are outside #26 (D-IRP-02): the row has no drip column, and fertilizer master alone
+    // is the SAF-5 invariants' concern.
+    r.eq_fertilizer_master = 1;
+    ASSERT_TRUE(invariants::check_26_sensor_fault_all_off(r, silent_report));
     PASS();
 }
 

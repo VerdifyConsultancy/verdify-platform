@@ -795,7 +795,7 @@ def test_zone_choice_reads_zone_vpd_through_peer_fallback():
     # emergency merge term, or the snapshot itself.
     allowed = [
         _source_span(controls, "SensorInputs sensor_in = {", "};"),
-        _source_span(controls, "// FW-9: VPD emergency override", "static bool leak_water_interlock_prev"),
+        _source_span(controls, "// FW-9: VPD emergency override", "static bool occupancy_water_interlock_prev"),
         (snap_start, snap_end),
     ]
     sensor_inputs = controls[allowed[0][0] : allowed[0][1]]

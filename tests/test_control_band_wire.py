@@ -56,6 +56,8 @@ def test_source_revision_bound_to_actual_owning_files():
         "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
         # pre-VD-43 (peer-probe VPD fallback in zone choice)
         "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+        # pre-VD-46 (the VD-45 engine wiring, before the mist path rework)
+        "ccbe44a8c6e6530478011a35895f6c95e498b5da777f96b20c07a10a685e37b2",
     ],
 )
 def test_previous_controls_declaration_rejects_current_source(monkeypatch, previous):

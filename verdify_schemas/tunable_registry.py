@@ -867,7 +867,9 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
+        # VD-46 (#1161): retired (RETIRED_TUNABLES_REG); the switch and its
+        # cfg_arbiter_zone_enabled readback stay on the device, read by nothing.
+        notes="Retired: the engine ranks zones whenever more than one is a VPD member.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # VD-63: six live firmware tunables that had no row, so Settings could not
@@ -4163,6 +4165,9 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "mister_max_runtime_min",
         "mister_off_s",
         "mister_on_s",
+        # VD-46 (#1161): the rank arbiter picks the mister zone whenever more than
+        # one zone is a VPD member, so the switch decides nothing.
+        "sw_arbiter_zone_enabled",
         "sw_fsm_controller_enabled",
         "summer_vent_min_runtime_s",
         "vent_bypass_min",
