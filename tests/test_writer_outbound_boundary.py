@@ -91,6 +91,8 @@ def test_hydro_meter_admits_nothing_beyond_tuya_tcp(rendered, address, port, pro
         ("1.1.1.1", 443),
         ("10.43.0.1", 6443),
         ("192.168.30.31", 443),
+        # VD-48: the writer no longer reaches the Home Assistant (HAOS) MQTT broker.
+        ("192.168.30.107", 1883),
     ],
 )
 def test_writer_other_vlan_hosts_ports_nas_and_direct_internet_denied(rendered, address, port):

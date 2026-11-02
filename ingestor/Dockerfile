@@ -3,8 +3,8 @@
 # Verdify ingestor — device-touching setpoint dispatcher (k3s)
 #
 # Net-new containerization of the host systemd `verdify-ingestor.service`. Runs
-# the SINGLE-PROCESS 5-async-loop worker (ingestor/ingestor.py main():
-# esp32_loop, flush_loop, task_loop, mqtt_loop, setpoint_listener). It holds the
+# the SINGLE-PROCESS async-loop worker (ingestor/ingestor.py main():
+# esp32_loop, flush_loop, task_loop, setpoint_listener). It holds the
 # ONE persistent aioesphomeapi connection to the ESP32 and owns all setpoint /
 # occupancy pushes.
 #

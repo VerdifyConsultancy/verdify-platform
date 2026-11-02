@@ -179,8 +179,10 @@ check "Health score: $hs/100 (≥50)" "$([ "$hs" -ge 50 ] && echo true || echo "
 
 # ── Pipeline tasks (absorbed into ingestor task_loop) ──
 echo "Pipeline tasks:"
+# Outdoor weather comes from the ESP32 Tempest UDP listener (port 50222) over the
+# native API; the HA tempest_sync task was removed with VD-48.
 ta=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate WHERE outdoor_temp_f IS NOT NULL AND ts > now() - interval '1 hour';" | tr -d ' ')
-check "tempest-sync: ${ta}s ago (<600s)" "$([ -n "$ta" ] && [ "$ta" -lt 600 ] && echo true || echo "stale: ${ta:-no data}s")"
+check "outdoor (ESP32 Tempest UDP): ${ta}s ago (<600s)" "$([ -n "$ta" ] && [ "$ta" -lt 600 ] && echo true || echo "stale: ${ta:-no data}s")"
 
 ea=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM energy WHERE ts > now() - interval '1 hour';" | tr -d ' ')
 check "shelly-sync: ${ea}s ago (<600s)" "$([ -n "$ea" ] && [ "$ea" -lt 600 ] && echo true || echo "stale: ${ea:-no data}s")"
