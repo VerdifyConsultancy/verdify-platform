@@ -438,7 +438,7 @@
     "historical_template_sha256": "73bc9c885930e2fb978901bfc89b9d284f8c8bb4d55b7a9e785691433476d63b",
     "running_device_entity_grid_verified": false,
     "source_entity_grid_path": "firmware/greenhouse/tunables.yaml",
-    "source_entity_grid_sha256": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
+    "source_entity_grid_sha256": "ab09cbb1f2276e5c320b3e6835d6ba32e277a1fc6af6946fdd12264b91d51ecc",
     "source_vs_audited_firmware_grid_comparison": "all 48 candidate values were checked against the source entity grid associated with the audited firmware path; six off-grid historical inputs were replaced only by the explicit decisions above"
   },
   "status": "SOURCE-GRID CANDIDATE \u2014 running-device grid and multidisciplinary physical approval still required",
