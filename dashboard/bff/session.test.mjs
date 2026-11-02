@@ -63,6 +63,17 @@ test("/healthz, /readyz, /auth/*, hashed assets, fonts and the route manifest sk
   }
 });
 
+test("a sign-in that /auth/* refused goes through the gate to the page renderer, never back to sign-in", async () => {
+  // Authentik is down here: sign-in gets SCR-09's unavailable card, and a callback without its login cookie the failed one.
+  const login = await get("/auth/login?returnTo=%2Fwater");
+  expect([login.status, login.headers.location]).toEqual([503, undefined]);
+  expect(login.text).toContain("<h1>Sign-in is unavailable</h1>");
+  const callback = await get("/auth/callback?code=synthetic&state=synthetic");
+  expect([callback.status, callback.headers.location]).toEqual([400, undefined]);
+  expect(callback.text).toContain("<h1>Sign-in didn't complete</h1>");
+  expect(bff.lines.map((line) => [line.route, line.status])).toEqual([["/auth/login", 503], ["/auth/callback", 400]]);
+});
+
 test("React Router's single-fetch data request gets the redirect as 204 X-Remix-Redirect with a document reload", async () => {
   const data = await get("/water.data?_routes=root%2Croutes%2Fwater&line=L01");
   expect(data.status).toBe(204);

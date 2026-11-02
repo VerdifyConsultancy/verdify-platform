@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import { createLoginSeal, roleFor, safeReturnTo } from "./oidc.mjs";
 import { shortHash } from "./session.mjs";
 import {
-  bffEnv, CLIENT_SECRET, COOKIE_SECRET, HOST, LOGIN_COOKIE, OPERATOR_API_TOKEN, ORIGIN, SESSION_COOKIE, setCookies, signIn, startBff, startIssuer,
-  startOperatorApi,
+  bffEnv, CLIENT_SECRET, COOKIE_SECRET, HOST, LOGIN_COOKIE, newToken, OPERATOR_API_TOKEN, ORIGIN, page, SESSION_COOKIE, setCookies, signIn, startBff,
+  startIssuer, startOperatorApi,
 } from "./test-stubs.mjs";
 
 const OPERATORS = "verdify-dashboard-operators";
@@ -75,12 +75,12 @@ test.each([
   expect(cookies.get(LOGIN_COOKIE)?.attributes).toEqual(expect.arrayContaining([EXPIRED, "httponly", "secure", "samesite=lax", "path=/"]));
 });
 
-test("neither dashboard group answers 403 No access and makes no INT-01 call", async () => {
+test("neither dashboard group answers 403 with the No dashboard access card and makes no INT-01 call", async () => {
   for (const groups of [[], ["authentik Admins"], "verdify-dashboard-operators", undefined]) {
     const { callback } = await signIn(bff.app, issuer, { claims: { groups } });
     expect(callback.status).toBe(403);
-    expect(callback.text).toMatch(/^No access\. /);
-    expect(callback.headers["content-type"]).toMatch(/^text\/plain/);
+    expect(callback.text).toContain("<h1>No dashboard access</h1>");
+    expect(callback.headers["content-type"]).toMatch(/^text\/html/);
     expect(callback.headers["cache-control"]).toBe("no-store");
     expect([...setCookies(callback).keys()]).toEqual([LOGIN_COOKIE]);
   }
@@ -88,6 +88,43 @@ test("neither dashboard group answers 403 No access and makes no INT-01 call", a
   expect(bff.lines.filter((line) => line.route === "/auth/callback")).toEqual(Array.from({ length: 4 }, () => ({
     service: "verdify-dashboard-web", route: "/auth/callback", status: 403, duration_ms: expect.any(Number), request_id: expect.any(String), user: shortHash("jason"),
   })));
+});
+
+test("a refused sign-in goes on to the page renderer at the same URL with its reason and request id, never back to sign-in", async () => {
+  /** @type {{ path: string, authError: unknown }[]} */
+  const seen = [];
+  const watched = startBff(bffEnv({ issuer: issuer.issuer, api: api.url }), {
+    render: (req, res, next) => { seen.push({ path: req.path, authError: res.locals.authError }); page(req, res, next); },
+  });
+  try {
+    issuer.mode = "down";
+    const login = await request(watched.app).get("/auth/login?returnTo=%2Fwater").set("Host", HOST);
+    issuer.mode = "up";
+    // No session cookie, which would otherwise send a page to sign-in; a stale one changes nothing.
+    const { callback } = await signIn(watched.app, issuer, { claims: { groups: [] } });
+    const stale = await signIn(watched.app, issuer, { claims: { groups: [] }, cookie: `${SESSION_COOKIE}=${newToken()}` });
+    for (const [response, status, title] of [[login, 503, "Sign-in is unavailable"], [callback, 403, "No dashboard access"], [stale.callback, 403, "No dashboard access"]]) {
+      expect(response.status).toBe(status);
+      expect(response.headers.location).toBeUndefined();
+      expect(response.headers["content-type"]).toMatch(/^text\/html/);
+      expect(response.headers["cache-control"]).toBe("no-store");
+      expect(response.text).toContain(`<h1>${title}</h1>`);
+    }
+    const lines = watched.lines.filter((line) => line.route === "/auth/login" || line.route === "/auth/callback");
+    expect(lines.map((line) => [line.route, line.status])).toEqual([["/auth/login", 503], ["/auth/login", 302], ["/auth/callback", 403], ["/auth/login", 302], ["/auth/callback", 403]]);
+    const refused = lines.filter((line) => line.status !== 302);
+    expect(seen).toEqual([
+      { path: "/auth/login", authError: { reason: "unavailable", requestId: refused[0].request_id } },
+      { path: "/auth/callback", authError: { reason: "no_access", requestId: refused[1].request_id } },
+      { path: "/auth/callback", authError: { reason: "no_access", requestId: refused[2].request_id } },
+    ]);
+    expect(callback.text).toContain(`Request id ${refused[1].request_id}`);
+    // A sign-in that goes through never reaches the renderer.
+    expect((await signIn(watched.app, issuer, { claims: { groups: [VIEWERS] } })).callback.status).toBe(302);
+    expect(seen).toHaveLength(3);
+  } finally {
+    watched.app.locals.close();
+  }
 });
 
 test.each(["//evil.example", "https://evil.example", "/\\evil.example", "\\/evil.example", "/\t/evil.example", "water", "", `/${"a".repeat(2048)}`])(
@@ -169,7 +206,7 @@ test("a missing, tampered, expired or foreign login cookie, a state mismatch or 
   for (const [cookie, query] of cases) {
     const response = await request(bff.app).get(`/auth/callback?${query}`).set("Host", HOST).set("Cookie", cookie);
     expect(response.status).toBe(400);
-    expect(response.text).toBe("Sign-in didn't complete. Try again.");
+    expect(response.text).toContain("<h1>Sign-in didn't complete</h1>");
     const cookies = setCookies(response);
     expect([...cookies.keys()]).toEqual([LOGIN_COOKIE]);
     expect(cookies.get(LOGIN_COOKIE)?.attributes).toContain(EXPIRED);
@@ -185,7 +222,7 @@ test("Authentik refusing the code answers 400; Authentik or the operator API unr
   issuer.tokenMode = "hangup";
   const dropped = await signIn(bff.app, issuer, { claims: { groups: [OPERATORS] } });
   expect(dropped.callback.status).toBe(503);
-  expect(dropped.callback.text).toBe("Sign-in is unavailable. Try again in a minute.");
+  expect(dropped.callback.text).toContain("<h1>Sign-in is unavailable</h1>");
   issuer.tokenMode = "5xx";
   const failing = await signIn(bff.app, issuer, { claims: { groups: [OPERATORS] } });
   expect(failing.callback.status).toBe(503);
@@ -261,7 +298,7 @@ test("while discovery fails, sign-in answers 503 and sign-out still deletes and 
   issuer.mode = "down";
   const unavailable = await request(bff.app).get("/auth/login").set("Host", HOST);
   expect(unavailable.status).toBe(503);
-  expect(unavailable.text).toBe("Sign-in is unavailable. Try again in a minute.");
+  expect(unavailable.text).toContain("<h1>Sign-in is unavailable</h1>");
   expect(unavailable.headers["cache-control"]).toBe("no-store");
   expect(setCookies(unavailable).size).toBe(0);
   const token = api.session("viewer");

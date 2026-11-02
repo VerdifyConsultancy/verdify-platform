@@ -10,7 +10,7 @@ export interface paths {
         };
         /**
          * Finish sign-in
-         * @description Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name, groups), maps groups to a role (operators wins), creates the session with INT-01 and sets __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser.
+         * @description Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name, groups), maps groups to a role (operators wins), creates the session with INT-01 and sets __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login cookie is cleared on every outcome; a refusal answers its status with the SCR-09 card (text/html) at the same URL.
          */
         readonly get: operations["BFF-02"];
         readonly put?: never;
@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Start sign-in
-         * @description Sets the sealed __Host-verdify_login cookie (state, nonce, PKCE verifier and returnTo; AES-256-GCM; 10 min) and redirects to the authorization_endpoint discovered from issuer https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/) with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik.
+         * @description Sets the sealed __Host-verdify_login cookie (state, nonce, PKCE verifier and returnTo; AES-256-GCM; 10 min) and redirects to the authorization_endpoint discovered from issuer https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/) with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik. A refusal answers its status with the SCR-09 card (text/html) at the same URL.
          */
         readonly get: operations["BFF-01"];
         readonly put?: never;
@@ -52,7 +52,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Sign out
-         * @description Needs the exact Origin. Deletes the session (INT-02), clears the cookie and redirects to Authentik's end-session endpoint.
+         * @description Needs the exact Origin. Deletes the session (INT-02), clears the cookie and redirects to Authentik's end-session endpoint with post_logout_redirect_uri https://dashboard.verdify.ai/. With Authentik's discovery unavailable it still deletes and clears, then redirects to /.
          */
         readonly post: operations["BFF-03"];
         readonly delete?: never;
@@ -1342,7 +1342,7 @@ export interface components {
             readonly outcome?: components["schemas"]["RunOutcome"] | null;
             /** Format: date-time */
             readonly planned_start: string;
-            /** @description Why skipped, blocked or missed, in words, e.g. line disabled. A pause reads 'line paused by <name>: <reason>', the reason left out when none was given */
+            /** @description Why skipped, blocked or missed, in words, e.g. line disabled. A pause reads 'line paused by <name>: <reason>', the reason left out when none was given. A planned one may carry a note: only while VPD sensing is degraded, ends at the daily cap */
             readonly reason?: string | null;
             readonly run_id?: string | null;
             readonly slot_id: number;
@@ -1628,7 +1628,7 @@ export interface components {
             /** @description By planned start; the week view draws them per line and day */
             readonly occurrences: readonly components["schemas"]["Occurrence"][];
             readonly schedules: readonly components["schemas"]["Schedule"][];
-            /** @description Per local day in the window, from ingestor/solar.py, for previews */
+            /** @description Per local day in the window, from verdify_schemas/solar.py, for previews */
             readonly solar: readonly {
                 /** Format: date */
                 readonly date: string;
@@ -2031,7 +2031,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sign-in did not complete (state mismatch, expired login cookie or an Authentik error); no session cookie */
+            /** @description Sign-in did not complete (state mismatch, a missing, expired or tampered login cookie, an Authentik error or a refused code exchange); no session cookie */
             readonly 400: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -2040,8 +2040,17 @@ export interface operations {
                     readonly "text/html": string;
                 };
             };
-            /** @description No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers */
+            /** @description No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call */
             readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/html": string;
+                };
+            };
+            /** @description Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie */
+            readonly 503: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -2092,7 +2101,7 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description To the Authentik end-session endpoint */
+            /** @description To the Authentik end-session endpoint, or to / while its discovery is unavailable */
             readonly 303: {
                 headers: {
                     readonly Location?: string;

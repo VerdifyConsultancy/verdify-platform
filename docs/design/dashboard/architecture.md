@@ -214,11 +214,11 @@ cookie cleared, 302 `/water`.
 - The callback clears the login cookie on every outcome. A missing, expired or tampered login cookie, a state
   mismatch, an Authentik `error` or a refused code exchange answers 400 (`failed`); neither group answers 403
   (`no_access`) and makes no INT-01 call; Authentik unreachable (discovery or the token endpoint) or a failed
-  INT-01 answers 503 (`unavailable`). Each is plain text with that status until #1124's root loader renders the
-  SCR-09 card at the same URL. The BFF leaves `{reason, requestId}` in `res.locals.authError` for it: React Router
-  8's `getLoadContext` must return a `RouterContextProvider`, so the context key that carries it lands with
-  #1124's route. With discovery unavailable, sign-out still deletes the session and clears the cookie, then answers
-  303 to `/`.
+  INT-01 answers 503 (`unavailable`). The BFF leaves `{reason, requestId}` in `res.locals.authError` and hands the
+  request on, past the page gate, to React Router: `getLoadContext` puts it in the page context (a
+  `RouterContextProvider`, as React Router 8 requires), and the root loader answers that status with the SCR-09
+  card at the same URL. With discovery unavailable, sign-out still deletes the session and clears the cookie, then
+  answers 303 to `/`.
 - Trust: only the web pods reach `:8090` (NetworkPolicy), with one shared bearer token; the API trusts the BFF's
   session creation because the BFF verified the ID token, and ignores `X-Authentik-*`. `POST /internal/sessions`
   refuses (403) any request carrying `X-Dashboard-Session`, which the proxy always sends and the session-create
