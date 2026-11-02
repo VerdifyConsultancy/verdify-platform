@@ -481,6 +481,11 @@ is pending, and every 60 s in full:
 - Both new types go in `verdify_schemas/alerts.py`. Nothing else is new: the leak and heap alerts
   already exist, and with no leak latch (Round 2 #3) and no leak force-off in the engine (F14), the
   leak alert is the whole leak response.
+- **The leak alert outlives the flag (VD-72).** While `leak_detected` is on it reads "Water flowing
+  with every Verdify valve closed since HH:MM". Once the flag clears the row stays open: after two
+  meter readings under 0.1 gal/min it reads "Flow stopped at HH:MM" (America/Denver;
+  `details.stopped_at`), flow that starts again puts the flowing text back on the same row, and only
+  a person or agent resolve (API-16, MCP `alerts` or Slack) closes it. It stays `critical`.
 
 ### 6.4 Iris context
 
