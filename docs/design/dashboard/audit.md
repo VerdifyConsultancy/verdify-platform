@@ -235,9 +235,9 @@ From the plan fixer, re-run for this record against the fixed docs: all pass. Th
 | Docs agree with each other and with [decisions](decisions.md) | Yes | Round 3 (§11): the Q-01 to Q-10 defaults applied and the nine cross-doc conflicts resolved |
 | Open decisions settled | Yes | Q-01 to Q-14 carry applied defaults (2026-11-02) that the docs and the plan follow; Jason may change any |
 | No local paths or secrets in the package | Yes | grep over this folder and both ADRs: none |
-| Design-docs PR open, so issues can link its head commit (Round 2 #12) | No | Docs not committed yet; the merge waits for the B-POWER freeze to clear and green CI |
-| Issues filed | No | VD-E0 and the issues in execution plan §10, linking the docs PR's head commit; filing does not wait for the merge |
-| Jason's W1 inputs | No | Seal the Secrets and name the first agent (VD-23); enrol the viewer check passkey |
+| Design-docs PR open, so issues can link its head commit (Round 2 #12) | Yes | PR [#1119](https://github.com/VerdifyConsultancy/verdify-platform/pull/1119), head `af8fe5db0`; it merges once CI is green |
+| Issues filed | Yes | Epic [VerdifyConsultancy/verdify-platform#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120) and 71 issues (2026-11-02); verdify-platform issues are its sub-issues, the five cross-repo issues name it; 147 blocked-by links |
+| Jason's W1 inputs | No | Seal the Secrets and name the first agent (VD-23) |
 | CI runs the new code | No | W1 work: VD-24 adds the web build, the Node and Playwright checks and the new test paths |
 
 ## 11. Round 3 (2026-11-02)

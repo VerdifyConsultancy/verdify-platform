@@ -157,7 +157,6 @@ API, program record and golden vectors, `desired_state`, `verdify_services` conv
 
 **Answer:** Draft v2, written to the charter with Jason's Round 2 and 2b answers applied. All 27 irrigation decisions
 are answered; ADR-0011 and ADR-0012 are accepted; the open decisions carry applied defaults
-([decisions](decisions.md) Q-01 to Q-14), which Jason may change. Next: file the program epic and the 71 issues from
-[execution plan](execution-plan.md) §10 with What, Why and How bodies, linking the design at the docs PR's head commit
-(Round 2 #12), and start the 13 unblocked W1 issues. Filing does not wait for the merge: the PR merges once the B-POWER
-freeze clears and its CI is green, after it gains the issue numbers.
+([decisions](decisions.md) Q-01 to Q-14), which Jason may change. Filed on 2026-11-02: the program epic is [VerdifyConsultancy/verdify-platform#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120), with 71 issues whose design links point at the docs
+PR [#1119](https://github.com/VerdifyConsultancy/verdify-platform/pull/1119) head commit `af8fe5db0`; [execution plan](execution-plan.md) §10 links each one. Next: start the 13
+unblocked W1 issues. The PR merges once its CI is green.

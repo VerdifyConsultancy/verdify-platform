@@ -433,6 +433,8 @@ stories. The 9 Later stories have none.
 
 ## 10. Work items
 
+Filed 2026-11-02: the program epic is [#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120); the Issue column links every issue.
+
 One epic, `VD-E0` (Program: dashboard.verdify.ai and the irrigation program). Every verdify-platform issue is its
 sub-issue; the cross-repo issues (VD-23, VD-24, VD-25, VD-27 and VD-53) name it in their header and appear in its
 list, because GitHub sub-issues need the same owner. Its body carries §2, §4, §6 and §8. Lanes and waves are labels.
@@ -442,76 +444,76 @@ through the ESP32, Round 2 item 6) and the lane epics VD-E1 to VD-E7 (replaced b
 doc section each issue builds; the issue bodies follow the issue template (What, Why it matters, User stories,
 Technical design, Architecture requirements, Acceptance criteria, Dependencies, References, Definition of done).
 
-| Id | Title | Repo | Lane | Wave | Size | Depends on | Design |
-|---|---|---|---|---|---|---|---|
-| VD-01 | Scaffold dashboard/ from weather.vallery.net | verdify-platform | L1 | W1 | L | none | design-system §8, design-system §2, architecture §3, architecture §10 |
-| VD-02 | Generate the typed API client and a fixture API from the committed OpenAPI | verdify-platform | L1 | W1 | M | VD-01 | architecture §8, architecture §12, screens §1.5 |
-| VD-03 | Build the content components and the state vocabulary | verdify-platform | L1 | W1 | M | VD-01 | design-system §4, design-system §4.1, design-system §4.2, design-system §4.5 |
-| VD-04 | Build the app shell, navigation, global status and sign-in pages | verdify-platform | L1 | W1 | L | VD-02, VD-03 | screens §1.1, screens §1.2, screens §1.3, screens SCR-09, design-system §3, design-system §6 |
-| VD-05 | Build the form controls, edit drawer, water confirm dialog and write hooks | verdify-platform | L1 | W1 | M | VD-02, VD-03 | design-system §4.3, design-system §4.4, design-system §4.5, screens §1.4 |
-| VD-06 | Build the uPlot chart foundation and the TimeSeries chart | verdify-platform | L1 | W1 | L | VD-01 | design-system §5, design-system §5.1, design-system §5.2, design-system §5.3, design-system §5.4 |
-| VD-07 | Add the equipment and plan lanes and the minutes-by-zone bars | verdify-platform | L1 | W1 | M | VD-06 | design-system §5.2 |
-| VD-08 | Run Playwright and axe against the fixture API in in-cluster CI | verdify-platform | L1 | W2 | M | VD-04, VD-24 | design-system §7, architecture §12 |
-| VD-09 | Build the Now screen (SCR-01) | verdify-platform | L1 | W2 | M | VD-04, VD-05 | screens SCR-01, design-system §4 |
-| VD-10 | Build the Graphs screen (SCR-02) with the metric picker and the daily scorecard | verdify-platform | L1 | W2 | L | VD-04, VD-07 | screens SCR-02, design-system §5.2 |
-| VD-11 | Build the Plan screen (SCR-03) | verdify-platform | L1 | W2 | M | VD-04, VD-07 | screens SCR-03 |
-| VD-12 | Build the Settings screen (SCR-05) with the edit drawer | verdify-platform | L1 | W2 | L | VD-04, VD-05, VD-29, VD-37 | screens SCR-05, design-system §4.2, design-system §4.6 |
-| VD-13 | Build the Activity and alerts screen (SCR-06) | verdify-platform | L1 | W2 | M | VD-04, VD-05 | screens SCR-06 |
-| VD-14 | Build the Equipment board (SCR-07) | verdify-platform | L1 | W2 | M | VD-04, VD-07 | screens SCR-07 |
-| VD-15 | Build the Water screen (SCR-04): read views and Stop all water | verdify-platform | L1 | W2 | L | VD-04, VD-05, VD-07 | screens SCR-04, irrigation §9, design-system §4.6 |
-| VD-16 | Add Run now, Stop, Clear fault, bursts and restart | verdify-platform | L1 | W3 | M | VD-08, VD-09, VD-14, VD-15 | screens SCR-04, screens SCR-07, screens SCR-01, screens §1.4 |
-| VD-17 | Build the schedule editor with the week-view preview | verdify-platform | L1 | W3 | L | VD-05, VD-15 | screens SCR-04, irrigation §4.3 |
-| VD-18 | Add Now and Graphs depth: coming up, zones and outdoor | verdify-platform | L1 | W4 | M | VD-08, VD-09, VD-10, VD-57 | screens SCR-01, screens SCR-02 |
-| VD-19 | Add Settings depth: setting history, revert and the band preview | verdify-platform | L1 | W4 | M | VD-06, VD-12, VD-57 | screens SCR-05 |
-| VD-20 | Add Equipment and water depth: why, grow lights and daily water use | verdify-platform | L1 | W4 | M | VD-08, VD-13, VD-14, VD-15, VD-57 | screens SCR-07, screens SCR-04 |
-| VD-21 | Add BFF sign-in, sessions, the Origin check, the writes flag and the /api/v1 proxy | verdify-platform | L2 | W1 | L | VD-01 | architecture §3, architecture §4, architecture §11 |
-| VD-22 | Add deploy/k8s/dashboard/ and exclude dashboard.verdify.ai from the tier-1 route | verdify-platform | L2 | W1 | M | none | architecture §10, architecture §5.7 |
-| VD-23 | Add the Authentik application, dashboard groups and sealed Secrets in jvallery/agents | jvallery/agents | L2 | W1 | M | none | architecture §4, architecture §10 |
-| VD-24 | Register the web image, its checks and the verdify-dashboard Argo app in jvallery/agents | jvallery/agents | L2 | W1 | L | VD-01, VD-22 | architecture §10, architecture §12 |
-| VD-25 | Add dashboard.verdify.ai to the verdify.ai zone in jvallery/network-infra | jvallery/network-infra | L2 | W1 | S | none | architecture §10 |
-| VD-26 | Ship R1: put the read-only dashboard live at dashboard.verdify.ai | verdify-platform | L2 | W2 | M | VD-09, VD-21, VD-23, VD-24, VD-25, VD-32, VD-55, VD-64 | architecture §10, product J8 |
-| VD-27 | Add dashboard.verdify.ai to the route-coverage probe in jvallery/monitoring-stack | jvallery/monitoring-stack | L2 | W2 | S | VD-26 | architecture §10, architecture §11 |
-| VD-28 | Ship R2: turn on dashboard setting writes and verify agent writes | verdify-platform | L2 | W3 | M | VD-12, VD-13, VD-26, VD-34, VD-58, VD-62, VD-65 | architecture §5.7, architecture §10 |
-| VD-29 | Add the registry step, snapping and the grid-aware readback comparator | verdify-platform | L3 | W1 | M | none | architecture §5.3, architecture §5.5 |
-| VD-30 | Add migration M1: desired state and the activity log | verdify-platform | L3 | W1 | M | none | architecture §5.1, architecture §9 |
-| VD-31 | Create verdify_services with Actor, activity and the shared write conventions | verdify-platform | L3 | W1 | S | VD-30 | architecture §6, architecture §5.3 |
-| VD-32 | Stand up the operator API on :8090 with sessions, roles and its verdify-prod manifests | verdify-platform | L3 | W1 | L | VD-31, VD-66 | architecture §2, architecture §8, architecture §10, architecture §11 |
-| VD-33 | Apply desired state in the dispatcher and wake it on desired_state_changed | verdify-platform | L3 | W2 | L | VD-29, VD-30, VD-62 | architecture §5.2 |
-| VD-34 | Add the setting and alert write endpoints (API-10, -11, -15, -16) | verdify-platform | L3 | W3 | M | VD-32, VD-67 | architecture §5.4, architecture §8 |
-| VD-36 | Freeze the irrigation program record: layout, packer, parsers and golden vectors | verdify-platform | L4 | W1 | M | none | irrigation §5, irrigation §6.2 |
-| VD-37 | Write the irrigation compiler, bounds and agenda | verdify-platform | L4 | W1 | M | VD-29, VD-36 | irrigation §4.1, irrigation §4.2, irrigation §4.3 |
-| VD-38 | Add migration M3: irrigation tables, seeds and grants | verdify-platform | L4 | W1 | M | VD-39, VD-66 | irrigation §4.1, irrigation §3, architecture §9 |
-| VD-39 | Add migration M4: minutes by zone from today's relay runs | verdify-platform | L4 | W1 | M | none | irrigation §6.2, irrigation §4.1 |
-| VD-40 | Serve the irrigation reads (API-IRR-01, -02, -10, -11) | verdify-platform | L4 | W2 | L | VD-37, VD-38, VD-67 | irrigation §8.1, irrigation §6.2, architecture §5.5, architecture §7 |
-| VD-41 | Add the irrigation write services and API-IRR-03 to -08, -12 and -13 | verdify-platform | L4 | W3 | L | VD-37, VD-40, VD-64 | irrigation §8.3, irrigation §4.7, irrigation §8.1 |
-| VD-42 | Compile, push and command from the ingestor, and add the irrigation alerts | verdify-platform | L4 | W3 | L | VD-33, VD-37, VD-64 | irrigation §6.1, irrigation §6.2, irrigation §6.3 |
-| VD-43 | Add the peer-probe VPD fallback to the firmware | verdify-platform | L5 | W1 | M | none | irrigation §5, irrigation §4.4 |
-| VD-44 | Write the engine core header irrigation_program.h with native tests | verdify-platform | L5 | W1 | L | VD-36 | irrigation §4.5, irrigation §4.6, irrigation §4.7, irrigation §5 |
-| VD-45 | Wire the engine: irrigation_engine.yaml, services, published state, NVS and relay grants | verdify-platform | L5 | W2 | L | VD-43, VD-44 | irrigation §5, irrigation §4.7 |
-| VD-46 | Rework the mist path: membership, scheduled pulses, occupancy, survival fog and the D-IRP-19 watchdog | verdify-platform | L5 | W2 | L | VD-43, VD-45 | irrigation §5, irrigation §4.4, irrigation §4.6, irrigation §4.7 |
-| VD-47 | Remove the Home Assistant buttons, add manual_override and retire the old irrigation entities | verdify-platform | L5 | W2 | L | VD-45, VD-63 | irrigation §5, irrigation §7 |
-| VD-48 | Trim Home Assistant on the platform side to occupancy, Lutron and the hydro probe | verdify-platform | L5 | W1 | M | none | irrigation §7, decisions Round 2 |
-| VD-50 | Ship R3: deploy the irrigation platform and flash the engine firmware | verdify-platform | L5 | W3 | M | VD-16, VD-26, VD-28, VD-42, VD-46, VD-47, VD-61 | irrigation §5, architecture §10 |
-| VD-51 | Bring the clean lines online: L01 first, then L04, L07 and L09 | verdify-platform | L5 | W3 | S | VD-17, VD-50, VD-69 | irrigation §3, decisions Round 2 |
-| VD-52 | Bring the fertilizer lines online: L02 with L03, then L08 and L10 | verdify-platform | L5 | W3 | M | VD-51 | irrigation §3, decisions Round 2 |
-| VD-53 | Remove the greenhouse controls from Home Assistant | jvallery/homeassistant | L5 | W3 | S | VD-50 | irrigation §7 |
-| VD-54 | Serve the Now, plan and equipment reads (API-02, -07, -13) and the ingestor heartbeat | verdify-platform | L6 | W1 | L | VD-29, VD-30 | architecture §7, architecture §8 |
-| VD-55 | Serve the settings, alerts and activity reads (API-09, -12, -14, -17) | verdify-platform | L6 | W2 | M | VD-54, VD-67 | architecture §8, architecture §5.5, architecture §7 |
-| VD-56 | Serve graphs: metric registry, series, equipment states, band and the scorecard view (API-03 to -06) | verdify-platform | L6 | W1 | L | none | architecture §7, architecture §9 |
-| VD-57 | Serve the Next screens' reads and the grow-light switch | verdify-platform | L6 | W4 | M | VD-32, VD-38, VD-54, VD-56, VD-67 | screens SCR-01, screens SCR-02, screens SCR-04, screens SCR-05, screens SCR-07 |
-| VD-58 | Add set_setting, settings and activity to MCP | verdify-platform | L7 | W3 | L | VD-55, VD-59, VD-67 | architecture §5.6, architecture §6 |
-| VD-59 | Add the agent audience: named agent keys, request actors and the MCP network path | verdify-platform | L7 | W1 | M | none | architecture §5.6, architecture §10 |
-| VD-60 | Add the irrigation read tools and Iris's irrigation context | verdify-platform | L7 | W2 | M | VD-40, VD-64 | irrigation §8.2, irrigation §6.4, irrigation §7 |
-| VD-61 | Add the irrigation write tools for every agent | verdify-platform | L7 | W3 | M | VD-41, VD-60 | irrigation §8.2, irrigation §8.3, architecture §5.6 |
-| VD-62 | Replace the bounded-reconcile halt gate with plain convergence | verdify-platform | L3 | W1 | M | none | architecture §5.2, decisions Round 2 |
-| VD-63 | Register or retire the firmware tunables outside the registry, and add the tunables drift test | verdify-platform | L5 | W1 | S | VD-29 | architecture §5.3 |
-| VD-64 | Run L01 now and stop any wet line through the bridge, ahead of the engine | verdify-platform | L4 | W1 | M | VD-31, VD-38, VD-59 | irrigation §6.5, irrigation §6.1, architecture §5.8, decisions Round 2 |
-| VD-65 | Attribute the forecast action engine and take it off the fast path | verdify-platform | L3 | W2 | S | VD-31, VD-33 | architecture §5.2 |
-| VD-66 | Add migration M2: the dashboard login and sessions | verdify-platform | L3 | W1 | M | VD-30 | architecture §9, architecture §7 |
-| VD-67 | Add the settings and alerts services | verdify-platform | L3 | W1 | L | VD-29, VD-31 | architecture §5.3, architecture §5.5, architecture §5.2, architecture §6 |
-| VD-68 | Ship R1.1: put every read screen, the water reads and the MCP irrigation reads live | verdify-platform | L2 | W2 | M | VD-10, VD-11, VD-12, VD-13, VD-14, VD-15, VD-26, VD-56, VD-60 | architecture §10, architecture §8 |
-| VD-69 | Add line enables, mister switches, caps and pause | verdify-platform | L1 | W3 | M | VD-05, VD-15 | screens SCR-04, design-system §4.6 |
-| VD-70 | Read the YINMIK hydroponic probe directly, without Home Assistant | verdify-platform | L5 | W3 | M | none | irrigation §7, decisions Round 2 |
-| VD-71 | Add a PAR light meter: hardware, firmware, ingest and DLI | verdify-platform | L5 | W4 | L | VD-56, VD-66 | decisions Round 2, architecture §7 |
-| VD-72 | Clean up alert noise, and keep the leak alert open until someone resolves it | verdify-platform | L6 | W2 | M | none | decisions Round 2, architecture §7, product J6 |
-| VD-73 | Ship R4: put the Next screens live | verdify-platform | L2 | W4 | M | VD-18, VD-19, VD-20, VD-28, VD-57 | architecture §10, screens SCR-01, screens SCR-05, screens SCR-07 |
+| Id | Issue | Title | Repo | Lane | Wave | Size | Depends on | Design |
+|---|---|---|---|---|---|---|---|---|
+| VD-01 | [#1121](https://github.com/VerdifyConsultancy/verdify-platform/issues/1121) | Scaffold dashboard/ from weather.vallery.net | verdify-platform | L1 | W1 | L | none | design-system §8, design-system §2, architecture §3, architecture §10 |
+| VD-02 | [#1122](https://github.com/VerdifyConsultancy/verdify-platform/issues/1122) | Generate the typed API client and a fixture API from the committed OpenAPI | verdify-platform | L1 | W1 | M | VD-01 | architecture §8, architecture §12, screens §1.5 |
+| VD-03 | [#1123](https://github.com/VerdifyConsultancy/verdify-platform/issues/1123) | Build the content components and the state vocabulary | verdify-platform | L1 | W1 | M | VD-01 | design-system §4, design-system §4.1, design-system §4.2, design-system §4.5 |
+| VD-04 | [#1124](https://github.com/VerdifyConsultancy/verdify-platform/issues/1124) | Build the app shell, navigation, global status and sign-in pages | verdify-platform | L1 | W1 | L | VD-02, VD-03 | screens §1.1, screens §1.2, screens §1.3, screens SCR-09, design-system §3, design-system §6 |
+| VD-05 | [#1125](https://github.com/VerdifyConsultancy/verdify-platform/issues/1125) | Build the form controls, edit drawer, water confirm dialog and write hooks | verdify-platform | L1 | W1 | M | VD-02, VD-03 | design-system §4.3, design-system §4.4, design-system §4.5, screens §1.4 |
+| VD-06 | [#1126](https://github.com/VerdifyConsultancy/verdify-platform/issues/1126) | Build the uPlot chart foundation and the TimeSeries chart | verdify-platform | L1 | W1 | L | VD-01 | design-system §5, design-system §5.1, design-system §5.2, design-system §5.3, design-system §5.4 |
+| VD-07 | [#1127](https://github.com/VerdifyConsultancy/verdify-platform/issues/1127) | Add the equipment and plan lanes and the minutes-by-zone bars | verdify-platform | L1 | W1 | M | VD-06 | design-system §5.2 |
+| VD-08 | [#1128](https://github.com/VerdifyConsultancy/verdify-platform/issues/1128) | Run Playwright and axe against the fixture API in in-cluster CI | verdify-platform | L1 | W2 | M | VD-04, VD-24 | design-system §7, architecture §12 |
+| VD-09 | [#1129](https://github.com/VerdifyConsultancy/verdify-platform/issues/1129) | Build the Now screen (SCR-01) | verdify-platform | L1 | W2 | M | VD-04, VD-05 | screens SCR-01, design-system §4 |
+| VD-10 | [#1130](https://github.com/VerdifyConsultancy/verdify-platform/issues/1130) | Build the Graphs screen (SCR-02) with the metric picker and the daily scorecard | verdify-platform | L1 | W2 | L | VD-04, VD-07 | screens SCR-02, design-system §5.2 |
+| VD-11 | [#1131](https://github.com/VerdifyConsultancy/verdify-platform/issues/1131) | Build the Plan screen (SCR-03) | verdify-platform | L1 | W2 | M | VD-04, VD-07 | screens SCR-03 |
+| VD-12 | [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132) | Build the Settings screen (SCR-05) with the edit drawer | verdify-platform | L1 | W2 | L | VD-04, VD-05, VD-29, VD-37 | screens SCR-05, design-system §4.2, design-system §4.6 |
+| VD-13 | [#1133](https://github.com/VerdifyConsultancy/verdify-platform/issues/1133) | Build the Activity and alerts screen (SCR-06) | verdify-platform | L1 | W2 | M | VD-04, VD-05 | screens SCR-06 |
+| VD-14 | [#1134](https://github.com/VerdifyConsultancy/verdify-platform/issues/1134) | Build the Equipment board (SCR-07) | verdify-platform | L1 | W2 | M | VD-04, VD-07 | screens SCR-07 |
+| VD-15 | [#1135](https://github.com/VerdifyConsultancy/verdify-platform/issues/1135) | Build the Water screen (SCR-04): read views and Stop all water | verdify-platform | L1 | W2 | L | VD-04, VD-05, VD-07 | screens SCR-04, irrigation §9, design-system §4.6 |
+| VD-16 | [#1136](https://github.com/VerdifyConsultancy/verdify-platform/issues/1136) | Add Run now, Stop, Clear fault, bursts and restart | verdify-platform | L1 | W3 | M | VD-08, VD-09, VD-14, VD-15 | screens SCR-04, screens SCR-07, screens SCR-01, screens §1.4 |
+| VD-17 | [#1137](https://github.com/VerdifyConsultancy/verdify-platform/issues/1137) | Build the schedule editor with the week-view preview | verdify-platform | L1 | W3 | L | VD-05, VD-15 | screens SCR-04, irrigation §4.3 |
+| VD-18 | [#1138](https://github.com/VerdifyConsultancy/verdify-platform/issues/1138) | Add Now and Graphs depth: coming up, zones and outdoor | verdify-platform | L1 | W4 | M | VD-08, VD-09, VD-10, VD-57 | screens SCR-01, screens SCR-02 |
+| VD-19 | [#1139](https://github.com/VerdifyConsultancy/verdify-platform/issues/1139) | Add Settings depth: setting history, revert and the band preview | verdify-platform | L1 | W4 | M | VD-06, VD-12, VD-57 | screens SCR-05 |
+| VD-20 | [#1140](https://github.com/VerdifyConsultancy/verdify-platform/issues/1140) | Add Equipment and water depth: why, grow lights and daily water use | verdify-platform | L1 | W4 | M | VD-08, VD-13, VD-14, VD-15, VD-57 | screens SCR-07, screens SCR-04 |
+| VD-21 | [#1141](https://github.com/VerdifyConsultancy/verdify-platform/issues/1141) | Add BFF sign-in, sessions, the Origin check, the writes flag and the /api/v1 proxy | verdify-platform | L2 | W1 | L | VD-01 | architecture §3, architecture §4, architecture §11 |
+| VD-22 | [#1142](https://github.com/VerdifyConsultancy/verdify-platform/issues/1142) | Add deploy/k8s/dashboard/ and exclude dashboard.verdify.ai from the tier-1 route | verdify-platform | L2 | W1 | M | none | architecture §10, architecture §5.7 |
+| VD-23 | [jvallery/agents#5993](https://github.com/jvallery/agents/issues/5993) | Add the Authentik application, dashboard groups and sealed Secrets in jvallery/agents | jvallery/agents | L2 | W1 | M | none | architecture §4, architecture §10 |
+| VD-24 | [jvallery/agents#5994](https://github.com/jvallery/agents/issues/5994) | Register the web image, its checks and the verdify-dashboard Argo app in jvallery/agents | jvallery/agents | L2 | W1 | L | VD-01, VD-22 | architecture §10, architecture §12 |
+| VD-25 | [jvallery/network-infra#933](https://github.com/jvallery/network-infra/issues/933) | Add dashboard.verdify.ai to the verdify.ai zone in jvallery/network-infra | jvallery/network-infra | L2 | W1 | S | none | architecture §10 |
+| VD-26 | [#1143](https://github.com/VerdifyConsultancy/verdify-platform/issues/1143) | Ship R1: put the read-only dashboard live at dashboard.verdify.ai | verdify-platform | L2 | W2 | M | VD-09, VD-21, VD-23, VD-24, VD-25, VD-32, VD-55, VD-64 | architecture §10, product J8 |
+| VD-27 | [jvallery/monitoring-stack#1371](https://github.com/jvallery/monitoring-stack/issues/1371) | Add dashboard.verdify.ai to the route-coverage probe in jvallery/monitoring-stack | jvallery/monitoring-stack | L2 | W2 | S | VD-26 | architecture §10, architecture §11 |
+| VD-28 | [#1144](https://github.com/VerdifyConsultancy/verdify-platform/issues/1144) | Ship R2: turn on dashboard setting writes and verify agent writes | verdify-platform | L2 | W3 | M | VD-12, VD-13, VD-26, VD-34, VD-58, VD-62, VD-65 | architecture §5.7, architecture §10 |
+| VD-29 | [#1145](https://github.com/VerdifyConsultancy/verdify-platform/issues/1145) | Add the registry step, snapping and the grid-aware readback comparator | verdify-platform | L3 | W1 | M | none | architecture §5.3, architecture §5.5 |
+| VD-30 | [#1146](https://github.com/VerdifyConsultancy/verdify-platform/issues/1146) | Add migration M1: desired state and the activity log | verdify-platform | L3 | W1 | M | none | architecture §5.1, architecture §9 |
+| VD-31 | [#1147](https://github.com/VerdifyConsultancy/verdify-platform/issues/1147) | Create verdify_services with Actor, activity and the shared write conventions | verdify-platform | L3 | W1 | S | VD-30 | architecture §6, architecture §5.3 |
+| VD-32 | [#1148](https://github.com/VerdifyConsultancy/verdify-platform/issues/1148) | Stand up the operator API on :8090 with sessions, roles and its verdify-prod manifests | verdify-platform | L3 | W1 | L | VD-31, VD-66 | architecture §2, architecture §8, architecture §10, architecture §11 |
+| VD-33 | [#1149](https://github.com/VerdifyConsultancy/verdify-platform/issues/1149) | Apply desired state in the dispatcher and wake it on desired_state_changed | verdify-platform | L3 | W2 | L | VD-29, VD-30, VD-62 | architecture §5.2 |
+| VD-34 | [#1150](https://github.com/VerdifyConsultancy/verdify-platform/issues/1150) | Add the setting and alert write endpoints (API-10, -11, -15, -16) | verdify-platform | L3 | W3 | M | VD-32, VD-67 | architecture §5.4, architecture §8 |
+| VD-36 | [#1151](https://github.com/VerdifyConsultancy/verdify-platform/issues/1151) | Freeze the irrigation program record: layout, packer, parsers and golden vectors | verdify-platform | L4 | W1 | M | none | irrigation §5, irrigation §6.2 |
+| VD-37 | [#1152](https://github.com/VerdifyConsultancy/verdify-platform/issues/1152) | Write the irrigation compiler, bounds and agenda | verdify-platform | L4 | W1 | M | VD-29, VD-36 | irrigation §4.1, irrigation §4.2, irrigation §4.3 |
+| VD-38 | [#1153](https://github.com/VerdifyConsultancy/verdify-platform/issues/1153) | Add migration M3: irrigation tables, seeds and grants | verdify-platform | L4 | W1 | M | VD-39, VD-66 | irrigation §4.1, irrigation §3, architecture §9 |
+| VD-39 | [#1154](https://github.com/VerdifyConsultancy/verdify-platform/issues/1154) | Add migration M4: minutes by zone from today's relay runs | verdify-platform | L4 | W1 | M | none | irrigation §6.2, irrigation §4.1 |
+| VD-40 | [#1155](https://github.com/VerdifyConsultancy/verdify-platform/issues/1155) | Serve the irrigation reads (API-IRR-01, -02, -10, -11) | verdify-platform | L4 | W2 | L | VD-37, VD-38, VD-67 | irrigation §8.1, irrigation §6.2, architecture §5.5, architecture §7 |
+| VD-41 | [#1156](https://github.com/VerdifyConsultancy/verdify-platform/issues/1156) | Add the irrigation write services and API-IRR-03 to -08, -12 and -13 | verdify-platform | L4 | W3 | L | VD-37, VD-40, VD-64 | irrigation §8.3, irrigation §4.7, irrigation §8.1 |
+| VD-42 | [#1157](https://github.com/VerdifyConsultancy/verdify-platform/issues/1157) | Compile, push and command from the ingestor, and add the irrigation alerts | verdify-platform | L4 | W3 | L | VD-33, VD-37, VD-64 | irrigation §6.1, irrigation §6.2, irrigation §6.3 |
+| VD-43 | [#1158](https://github.com/VerdifyConsultancy/verdify-platform/issues/1158) | Add the peer-probe VPD fallback to the firmware | verdify-platform | L5 | W1 | M | none | irrigation §5, irrigation §4.4 |
+| VD-44 | [#1159](https://github.com/VerdifyConsultancy/verdify-platform/issues/1159) | Write the engine core header irrigation_program.h with native tests | verdify-platform | L5 | W1 | L | VD-36 | irrigation §4.5, irrigation §4.6, irrigation §4.7, irrigation §5 |
+| VD-45 | [#1160](https://github.com/VerdifyConsultancy/verdify-platform/issues/1160) | Wire the engine: irrigation_engine.yaml, services, published state, NVS and relay grants | verdify-platform | L5 | W2 | L | VD-43, VD-44 | irrigation §5, irrigation §4.7 |
+| VD-46 | [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161) | Rework the mist path: membership, scheduled pulses, occupancy, survival fog and the D-IRP-19 watchdog | verdify-platform | L5 | W2 | L | VD-43, VD-45 | irrigation §5, irrigation §4.4, irrigation §4.6, irrigation §4.7 |
+| VD-47 | [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162) | Remove the Home Assistant buttons, add manual_override and retire the old irrigation entities | verdify-platform | L5 | W2 | L | VD-45, VD-63 | irrigation §5, irrigation §7 |
+| VD-48 | [#1163](https://github.com/VerdifyConsultancy/verdify-platform/issues/1163) | Trim Home Assistant on the platform side to occupancy, Lutron and the hydro probe | verdify-platform | L5 | W1 | M | none | irrigation §7, decisions Round 2 |
+| VD-50 | [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) | Ship R3: deploy the irrigation platform and flash the engine firmware | verdify-platform | L5 | W3 | M | VD-16, VD-26, VD-28, VD-42, VD-46, VD-47, VD-61 | irrigation §5, architecture §10 |
+| VD-51 | [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) | Bring the clean lines online: L01 first, then L04, L07 and L09 | verdify-platform | L5 | W3 | S | VD-17, VD-50, VD-69 | irrigation §3, decisions Round 2 |
+| VD-52 | [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166) | Bring the fertilizer lines online: L02 with L03, then L08 and L10 | verdify-platform | L5 | W3 | M | VD-51 | irrigation §3, decisions Round 2 |
+| VD-53 | [jvallery/homeassistant#1096](https://github.com/jvallery/homeassistant/issues/1096) | Remove the greenhouse controls from Home Assistant | jvallery/homeassistant | L5 | W3 | S | VD-50 | irrigation §7 |
+| VD-54 | [#1167](https://github.com/VerdifyConsultancy/verdify-platform/issues/1167) | Serve the Now, plan and equipment reads (API-02, -07, -13) and the ingestor heartbeat | verdify-platform | L6 | W1 | L | VD-29, VD-30 | architecture §7, architecture §8 |
+| VD-55 | [#1168](https://github.com/VerdifyConsultancy/verdify-platform/issues/1168) | Serve the settings, alerts and activity reads (API-09, -12, -14, -17) | verdify-platform | L6 | W2 | M | VD-54, VD-67 | architecture §8, architecture §5.5, architecture §7 |
+| VD-56 | [#1169](https://github.com/VerdifyConsultancy/verdify-platform/issues/1169) | Serve graphs: metric registry, series, equipment states, band and the scorecard view (API-03 to -06) | verdify-platform | L6 | W1 | L | none | architecture §7, architecture §9 |
+| VD-57 | [#1170](https://github.com/VerdifyConsultancy/verdify-platform/issues/1170) | Serve the Next screens' reads and the grow-light switch | verdify-platform | L6 | W4 | M | VD-32, VD-38, VD-54, VD-56, VD-67 | screens SCR-01, screens SCR-02, screens SCR-04, screens SCR-05, screens SCR-07 |
+| VD-58 | [#1171](https://github.com/VerdifyConsultancy/verdify-platform/issues/1171) | Add set_setting, settings and activity to MCP | verdify-platform | L7 | W3 | L | VD-55, VD-59, VD-67 | architecture §5.6, architecture §6 |
+| VD-59 | [#1172](https://github.com/VerdifyConsultancy/verdify-platform/issues/1172) | Add the agent audience: named agent keys, request actors and the MCP network path | verdify-platform | L7 | W1 | M | none | architecture §5.6, architecture §10 |
+| VD-60 | [#1173](https://github.com/VerdifyConsultancy/verdify-platform/issues/1173) | Add the irrigation read tools and Iris's irrigation context | verdify-platform | L7 | W2 | M | VD-40, VD-64 | irrigation §8.2, irrigation §6.4, irrigation §7 |
+| VD-61 | [#1174](https://github.com/VerdifyConsultancy/verdify-platform/issues/1174) | Add the irrigation write tools for every agent | verdify-platform | L7 | W3 | M | VD-41, VD-60 | irrigation §8.2, irrigation §8.3, architecture §5.6 |
+| VD-62 | [#1175](https://github.com/VerdifyConsultancy/verdify-platform/issues/1175) | Replace the bounded-reconcile halt gate with plain convergence | verdify-platform | L3 | W1 | M | none | architecture §5.2, decisions Round 2 |
+| VD-63 | [#1176](https://github.com/VerdifyConsultancy/verdify-platform/issues/1176) | Register or retire the firmware tunables outside the registry, and add the tunables drift test | verdify-platform | L5 | W1 | S | VD-29 | architecture §5.3 |
+| VD-64 | [#1177](https://github.com/VerdifyConsultancy/verdify-platform/issues/1177) | Run L01 now and stop any wet line through the bridge, ahead of the engine | verdify-platform | L4 | W1 | M | VD-31, VD-38, VD-59 | irrigation §6.5, irrigation §6.1, architecture §5.8, decisions Round 2 |
+| VD-65 | [#1178](https://github.com/VerdifyConsultancy/verdify-platform/issues/1178) | Attribute the forecast action engine and take it off the fast path | verdify-platform | L3 | W2 | S | VD-31, VD-33 | architecture §5.2 |
+| VD-66 | [#1179](https://github.com/VerdifyConsultancy/verdify-platform/issues/1179) | Add migration M2: the dashboard login and sessions | verdify-platform | L3 | W1 | M | VD-30 | architecture §9, architecture §7 |
+| VD-67 | [#1180](https://github.com/VerdifyConsultancy/verdify-platform/issues/1180) | Add the settings and alerts services | verdify-platform | L3 | W1 | L | VD-29, VD-31 | architecture §5.3, architecture §5.5, architecture §5.2, architecture §6 |
+| VD-68 | [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181) | Ship R1.1: put every read screen, the water reads and the MCP irrigation reads live | verdify-platform | L2 | W2 | M | VD-10, VD-11, VD-12, VD-13, VD-14, VD-15, VD-26, VD-56, VD-60 | architecture §10, architecture §8 |
+| VD-69 | [#1182](https://github.com/VerdifyConsultancy/verdify-platform/issues/1182) | Add line enables, mister switches, caps and pause | verdify-platform | L1 | W3 | M | VD-05, VD-15 | screens SCR-04, design-system §4.6 |
+| VD-70 | [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183) | Read the YINMIK hydroponic probe directly, without Home Assistant | verdify-platform | L5 | W3 | M | none | irrigation §7, decisions Round 2 |
+| VD-71 | [#1184](https://github.com/VerdifyConsultancy/verdify-platform/issues/1184) | Add a PAR light meter: hardware, firmware, ingest and DLI | verdify-platform | L5 | W4 | L | VD-56, VD-66 | decisions Round 2, architecture §7 |
+| VD-72 | [#1185](https://github.com/VerdifyConsultancy/verdify-platform/issues/1185) | Clean up alert noise, and keep the leak alert open until someone resolves it | verdify-platform | L6 | W2 | M | none | decisions Round 2, architecture §7, product J6 |
+| VD-73 | [#1186](https://github.com/VerdifyConsultancy/verdify-platform/issues/1186) | Ship R4: put the Next screens live | verdify-platform | L2 | W4 | M | VD-18, VD-19, VD-20, VD-28, VD-57 | architecture §10, screens SCR-01, screens SCR-05, screens SCR-07 |
