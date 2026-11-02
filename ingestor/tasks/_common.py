@@ -58,6 +58,7 @@ from verdify_schemas import (
     SetpointChange,
     build_validation_failed_envelope,
 )
+from verdify_schemas.alerts import flow_stopped_at
 from verdify_schemas.setting_values import SECOND_READBACK_ABS_TOLERANCE_PARAMS
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
@@ -186,6 +187,30 @@ SUPPRESSIBLE_ALERT_TYPES = frozenset(
         "soil_sensor_offline",  # unpotted/empty-zone probe (occupancy-aware; S1)
     }
 )
+
+
+# VD-72 (Round 2b C): one alert_log row per offline probe. A probe that keeps
+# failing re-opens or refreshes its row (details.count, details.last_seen_at)
+# instead of inserting a new unacknowledged row each time, and the row resolves
+# by itself once the probe has been offline longer than the configured period.
+# The forecast feed's sensor_offline row (_FORECAST_STALE_SENSOR_ID) keeps the
+# ordinary lifecycle.
+PROBE_OFFLINE_ALERT_TYPES = frozenset({"soil_sensor_offline", "sensor_offline"})
+
+
+def _probe_offline_resolve_days(raw: str | None) -> int:
+    """Whole days a probe may stay offline before its alert resolves (default 7)."""
+    try:
+        days = int(raw) if raw not in (None, "") else 7
+    except ValueError:
+        days = 0
+    if days < 1:
+        log.warning("VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS=%r is not a positive whole number; using 7", raw)
+        return 7
+    return days
+
+
+PROBE_OFFLINE_RESOLVE_DAYS = _probe_offline_resolve_days(os.environ.get("VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS"))
 
 
 # G6 / B19 §7.4: VPD-high stress alert threshold (hours/day).
@@ -766,36 +791,13 @@ _SHELLY_ENTITIES = {
 
 
 # ═════════════════════════════════════════════════════════════════
-# 4. TEMPEST WEATHER SYNC (every 300s)
-# ═════════════════════════════════════════════════════════════════
-_TEMPEST_MAP = {
-    "sensor.panorama_temperature": ("outdoor_temp_f", None),
-    "sensor.panorama_humidity": ("outdoor_rh_pct", None),
-    "sensor.panorama_wind_speed": ("wind_speed_mph", None),
-    "sensor.panorama_wind_direction": ("wind_direction_deg", None),
-    "sensor.panorama_illuminance": ("outdoor_lux", None),
-    "sensor.panorama_irradiance": ("solar_irradiance_w_m2", None),
-    "sensor.panorama_air_pressure": ("pressure_hpa", lambda v: v * 33.8639),
-    "sensor.panorama_precipitation": ("precip_in", None),
-    "sensor.panorama_uv_index": ("uv_index", None),
-    "sensor.panorama_wind_gust": ("wind_gust_mph", None),
-    "sensor.panorama_wind_lull": ("wind_lull_mph", None),
-    "sensor.panorama_wind_speed_average": ("wind_speed_avg_mph", None),
-    "sensor.panorama_wind_direction_average": ("wind_direction_avg_deg", None),
-    "sensor.panorama_feels_like": ("feels_like_f", None),
-    "sensor.panorama_wet_bulb_temperature": ("wet_bulb_temp_f", None),
-    "sensor.panorama_vapor_pressure": ("vapor_pressure_inhg", None),
-    "sensor.panorama_air_density": ("air_density_kg_m3", None),
-    "sensor.panorama_precipitation_intensity": ("precip_intensity_in_h", None),
-    "sensor.panorama_lightning_count": ("lightning_count", lambda v: int(v)),
-    "sensor.panorama_lightning_average_distance": ("lightning_avg_dist_mi", None),
-}
-
-
-# ═════════════════════════════════════════════════════════════════
-# 5. HA SENSOR SYNC — hydro, lights, switches, occupancy (every 300s)
+# 5. HA SENSOR SYNC — Lutron lights, Frigate occupancy, YINMIK hydro (every 300s)
+#    Home Assistant keeps only these reads (D-IRP-24, irrigation §7). Outdoor
+#    weather comes from the ESP32 Tempest UDP listener (entity_map.CLIMATE_MAP).
 # ═════════════════════════════════════════════════════════════════
 _HYDRO_MAP = {
+    # Stays until a direct reader with no Home Assistant replaces it (#1183,
+    # decisions Round 2 item 5).
     # Read from HA template sensors that apply empirical scaling corrections
     # for the YINMIK meter's non-standard Tuya DP encoding (pH × 400, TDS × ½,
     # EC × 0.565). Corrections are defined in HA's
@@ -811,64 +813,12 @@ _HYDRO_MAP = {
 }
 
 
-_CENTER_FEEDBACK_MAP = {
-    # Pending physical center feedback. Keep HA entity aliases broad so a
-    # sensor added outside the ESP32 path can begin populating climate rows
-    # without another deploy.
-    "sensor.greenhouse_center_soil_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_soil_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_rootzone_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_vwc": ("moisture_center", None),
-    "sensor.greenhouse_center_substrate_vwc": ("moisture_center", None),
-    "sensor.greenhouse_center_substrate_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_vwc": ("moisture_center", None),
-    "sensor.greenhouse_middle_substrate_vwc": ("moisture_center", None),
-    "sensor.greenhouse_middle_substrate_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_runoff_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_runoff_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_run_off_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drain_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drain_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drainage_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_leachate_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_effluent_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_tray_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_u_s_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_conductivity": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_electrical_conductivity": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_u_s_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drainage_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_leachate_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_effluent_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_tray_ec": ("ec_runoff_center", None),
-}
-
-
+# The Lutron readback is the only source of the grow_light_main/_grow equipment
+# rows. The controller's own grow-light switches record grow_light_*_intent
+# (entity_map.EQUIPMENT_SWITCH_MAP, decisions Q-09).
 _LIGHT_ENTITIES = {
     "switch.greenhouse_main": "grow_light_main",
     "switch.greenhouse_grow": "grow_light_grow",
-}
-
-
-_HA_SWITCHES = {
-    "switch.greenhouse_economiser_enabled": "economiser_enabled",
-    "switch.greenhouse_fog_closes_vent": "fog_closes_vent",
-    "switch.greenhouse_irrigation_enabled": "irrigation_enabled",
-    "switch.greenhouse_irrigation_wall_enabled": "irrigation_wall_enabled",
-    "switch.greenhouse_irrigation_center_enabled": "irrigation_center_enabled",
-    "switch.greenhouse_irrigation_weather_skip": "irrigation_weather_skip",
 }
 
 
@@ -1401,6 +1351,7 @@ __all__ = [
     "format_runbook",
     "AlertEnvelope",
     "build_validation_failed_envelope",
+    "flow_stopped_at",
     "ClimateRow",
     "EnergySample",
     "EquipmentStateEvent",
@@ -1439,6 +1390,8 @@ __all__ = [
     "HOUSE_VPD_LOW_MARGIN_KPA",
     "AIR_EXCHANGE_RELAY_STUCK_MODES",
     "SUPPRESSIBLE_ALERT_TYPES",
+    "PROBE_OFFLINE_ALERT_TYPES",
+    "PROBE_OFFLINE_RESOLVE_DAYS",
     "VPD_STRESS_FLOOR_H",
     "VPD_STRESS_LEGACY_THRESHOLD_H",
     "SOIL_DRYOUT_MIN_DURATION_H",
@@ -1490,11 +1443,8 @@ __all__ = [
     "_POPULATE_SITE_CONTENT_SCRIPT",
     "_SHELLY_PREFIX",
     "_SHELLY_ENTITIES",
-    "_TEMPEST_MAP",
     "_HYDRO_MAP",
-    "_CENTER_FEEDBACK_MAP",
     "_LIGHT_ENTITIES",
-    "_HA_SWITCHES",
     "_OCCUPANCY_ENTITIES",
     "_ha_prev_state",
     "_HA_STATE_FILE",

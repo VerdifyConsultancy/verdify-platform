@@ -396,8 +396,7 @@ def test_ingestor_climate_route_targets_declared_by_schema_and_db():
 
     mapped_columns = set(entity_map.CLIMATE_MAP.values())
     mapped_columns.update(entity_map.ESPHOME_FEEDBACK_MAP.values())
-    mapped_columns.update(entity_map.MQTT_FEEDBACK_MAP.values())
-    mapped_columns.update(_tasks_route_target_columns(repo_root, "_TEMPEST_MAP", "_HYDRO_MAP", "_CENTER_FEEDBACK_MAP"))
+    mapped_columns.update(_tasks_route_target_columns(repo_root, "_HYDRO_MAP"))
     mapped_columns.update(_hydro_probe_target_columns(repo_root))
 
     schema_fields = set(ClimateRow.model_fields)

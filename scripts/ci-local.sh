@@ -86,6 +86,8 @@ $PY -m pytest -q -rs \
   tests/test_component_runtime_probe.py \
   tests/test_275_c0_delivery.py \
   tests/test_277_getter_delivery.py \
+  tests/test_279_source_clock_delivery.py \
+  tests/test_280_desired_state_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
@@ -157,6 +159,8 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_executor.py \
   tests/test_component_experiment_observability.py \
   tests/test_component_alert_scope.py \
+  tests/test_alert_probe_offline_lifecycle.py \
+  tests/test_alert_leak_lifecycle.py \
   tests/test_264_facility_safe_closure_delivery.py \
   tests/test_component_experiment_source.py \
   tests/test_native_transport_liveness.py \
@@ -223,8 +227,8 @@ $PY -m pytest -q -rs \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
-  tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_ha_trim.py \
   tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
@@ -313,7 +317,7 @@ step "firmware native tests: policy engine + §8.10 recovery-image proof (#586),
 # replay-corpus invariants run here and gate every firmware PR. Later suites
 # append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants test-irrigation-program
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi

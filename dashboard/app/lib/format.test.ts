@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { TIME_UNAVAILABLE, ageSeconds, duration, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime, unitDecimals } from "./format";
+import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime, unitDecimals } from "./format";
 
 const NBSP = " ";
 const MINUS = "−";
@@ -88,4 +88,14 @@ test("run time reads in whole minutes, and as hours and minutes from 120", () =>
   expect(formatValue(125, "min")).toBe(`2${NBSP}h${NBSP}5${NBSP}min`);
   expect(formatValue(0, "min")).toBe(`0${NBSP}min`);
   expect(formatValue(-5, "min")).toBe(`${MINUS}5${NBSP}min`);
+});
+
+test("a number with no unit keeps up to 3 decimals, a true minus and no negative zero", () => {
+  expect(formatNumber(0.25)).toBe("0.25");
+  expect(formatNumber(1.15)).toBe("1.15");
+  expect(formatNumber(1.23456)).toBe("1.235");
+  expect(formatNumber(-0.4)).toBe(`${MINUS}0.4`);
+  expect(formatNumber(-0.0001)).toBe("0");
+  expect(formatNumber(1200)).toBe("1,200");
+  for (const missing of [null, undefined, Number.NaN]) expect(formatNumber(missing)).toBe("—");
 });

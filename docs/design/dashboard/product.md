@@ -335,7 +335,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1 · Next · Now.* As the owner-operator, I want the next plan transition, the next Iris trigger, the next run per line and sunrise and sunset in one list, so that I anticipate instead of react.
 - The next transition shows its time, the settings it changes and an AI label; manual settings are left out.
 - The next occurrence per line shows time, minutes and schedule; a paused one says so, and by whom.
-- Sunrise and sunset come from `ingestor/solar.py`, which mirrors the firmware's solar code.
+- Sunrise and sunset come from `verdify_schemas/solar.py` (re-exported by `ingestor/solar.py`), which mirrors the firmware's solar code.
 
 #### US-NOW-06 · Honest degraded states
 *P1, P2 · MVP · every page.* As the owner-operator, I want "API unavailable", "ingestor not running", "controller not reporting" and "data stale" told apart and each panel to fail alone, so that I never mistake an outage for an all-clear or act on old numbers.
@@ -592,7 +592,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1, P3 · MVP · Settings.* As the owner-operator, I want each setting to show the device value next to any pending request, so that I never mistake a request for a fact.
 - The device value is the newest `cfg_*` readback in `setpoint_snapshot`, in canonical decimals (float32 1.6 shows as 1.6), with its age; a readback matches within half a grid step, not a percentage dead-band, so `site_pressure_hpa` 840 → 845 reads REQUESTED until the device reports 845.
 - A request reads REQUESTED, then CONFIRMED, or NOT CONFIRMED with no match within 5 minutes, and a late readback turns it CONFIRMED by itself; the dispatcher re-sends a differing value on every pass, so there is no "Send again". The requested value never replaces the device value until confirmed.
-- A REQUESTED row older than 60 s, or a NOT CONFIRMED one, shows the platform's reason when it has one: "Clamped to 2.00 kPa: <guard>" (`setpoint_clamps`), "Waiting: controller heap low" or "Push failed: <status>" (`setpoint_changes.delivery_status`), "Sent HH:MM", "Held by experiment <id> until it ends", or "Ingestor not running since HH:MM"; otherwise "No matching readback yet".
+- A REQUESTED row older than 60 s, or a NOT CONFIRMED one, shows the platform's reason when it has one: "Clamped to 2.00 kPa: <guard>" (`setpoint_clamps`), "Sent HH:MM; waiting: controller heap low" or "Sent HH:MM; push failed: <status>" (`setpoint_changes.delivery_status`), "Held by experiment <id>: applies when it ends", "Ingestor not running since HH:MM" or "Controller not reporting since HH:MM"; otherwise "Sent HH:MM; no matching readback yet", or "No matching readback yet" when the send time is not known.
 
 #### US-SET-03 · Change a setting
 *P1 · MVP · Settings.* As the owner-operator, I want to change any editable setting from the dashboard, so that I never need SQL, ESPHome or Home Assistant for it.

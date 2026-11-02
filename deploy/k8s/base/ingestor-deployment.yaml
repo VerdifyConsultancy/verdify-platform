@@ -1,6 +1,6 @@
 # Verdify ingestor + setpoint dispatcher — the DEVICE-TOUCHING workload
-# (handoff §3.3). Runs 5 concurrent async loops (esp32_loop, flush_loop,
-# task_loop, mqtt_loop, setpoint_listener) and holds ONE persistent
+# (handoff §3.3). Runs concurrent async loops (esp32_loop, flush_loop,
+# task_loop, setpoint_listener) and holds ONE persistent
 # aioesphomeapi connection to the ESP32, pacing pushes (min 2s) to avoid heap
 # pressure. Net-new containerization — it runs as a host systemd unit off a
 # shared .venv today.
@@ -182,7 +182,9 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: ESP32_API_KEY
-            # MQTT credentials for the HAOS broker (anonymous disabled).
+            # HAOS broker login, unused since VD-48 removed the ingestor's HAOS
+            # MQTT client. It stays mounted until decisions Q-14 retires the
+            # login on the broker.
             - name: MQTT_USER
               valueFrom:
                 secretKeyRef:
@@ -208,11 +210,11 @@ spec:
             - name: tmp
               mountPath: /tmp
             # HA token mounted at the path the HA_TOKEN_FILE env above names,
-            # which config.py load_token() reads. The ha_sensor_sync /
-            # tempest_sync ingestor tasks (lights, occupancy, switches, weather,
-            # and the hydro_* columns until VD-70's direct reader takes over)
-            # fetch from Home Assistant with this token; without it they fail
-            # every run ("[Errno 2] ... ha_token.txt") and those columns go stale
+            # which config.py load_token() reads. The ha_sensor_sync ingestor task
+            # (Lutron light readback, Frigate occupancy, and the hydro_* columns
+            # until VD-70's direct reader takes over) fetches from Home Assistant
+            # with this token; without it the task fails every run
+            # ("[Errno 2] ... ha_token.txt") and those columns go stale
             # (the 2026-06-07 cutover regression). shelly_sync reads the meter
             # over Modbus and hydro_probe_sync the YINMIK meter over Tuya local;
             # neither uses this token.

@@ -154,7 +154,7 @@ Text always; colour is the second channel. AI is ink and mint, not weather's war
 | SUPERSEDED | A plan waypoint that will not apply, because a newer value holds until Iris's next plan (the API marks it) | New `.badge-superseded`: `.tag` base, muted text (5.01:1); its chart segment is muted too |
 | STALE | Older than its limit, or from a controller that is not reporting (§4.5) | `.status-stale` |
 | CLEAN / FERT | Water type of a line or run | `.tag` with a leading dot in `--eq-water` / `--eq-fert` |
-| RUNNING / IDLE / DISABLED | Line or equipment state; L05 and L06 read "Reserved" with DISABLED until a person enables them | Ok family / base / base with muted text |
+| RUNNING / IDLE / DISABLED | Line state; L05 and L06 read "Reserved" with DISABLED until a person enables them. Equipment reads ON / OFF / UNKNOWN in the same families, exactly as the API sends it ([screens](screens.md) SCR-07) | Ok family / base / base with muted text |
 
 ### 4.2 Requested → confirmed
 
@@ -162,14 +162,15 @@ Text always; colour is the second channel. AI is ink and mint, not weather's war
 VPD Mister Engage    1.10 kPa  CONFIRMED · 12 s ago                                  [Edit]
                      → 1.20 kPa  REQUESTED · 40 s
                      → 1.20 kPa  NOT CONFIRMED · Sent 06:02; no matching readback yet
-                     → 1.20 kPa  HELD · Clamped to 1.15 kPa by the VPD-high moisture guardrail
+                     → 1.20 kPa  HELD · Clamped to 1.15 kPa: VPD-high moisture guardrail
 ```
 The device value (readback and age) is the large number; the request sits under it until confirmed. For a value the
 irrigation program carries, it is the program's value on the controller ("On controller · rev 42: 360 gal"). The API
-returns the state (the UI never compares binary32 readbacks) and, once a request is 60 s old, its reason in words:
-clamped (with the applied value), controller heap low, push failed, ingestor not running, controller not reporting or
-held by an experiment; else "Sent 06:02; no matching readback yet". REQUESTED rows poll every 5 s; no Send again, as
-the dispatcher re-sends.
+returns the state (the UI never compares binary32 readbacks) and its reason in words, under HELD and NOT CONFIRMED
+always and under REQUESTED once the request is 60 s old ("Applies with the irrigation firmware" at once): clamped
+(with the applied value), controller heap low, push failed, ingestor not running, controller not reporting or held by
+an experiment; else "Sent 06:02; no matching readback yet". REQUESTED rows poll every 5 s; no Send again, as the
+dispatcher re-sends.
 
 ### 4.3 Form controls and the edit drawer
 
@@ -215,7 +216,7 @@ are one tap with no dialog; settings and schedule saves never confirm. Values ar
 |---|---|---|
 | Toast | After a write | Bottom right, 24rem (on phones full width, above the bottom bar). Success is polite, 5 s ("Requested 1.20 kPa for VPD Mister Engage"); failure is `role="alert"`; both failures and results that carry guidance or buttons (Stop's) stay until dismissed. Activity keeps the record |
 | Loading | First fetch | Skeleton at the panel's reserved height; a refetch keeps the old render; no spinner or shimmer |
-| Empty | Query ok, no rows | "No runs today." plus what would appear here and a link that widens the range. An alert list says "No open alerts" only while the ingestor heartbeat and `climate` are fresh; otherwise "In-app alerts may be missing: ingestor not running since 06:10" (heartbeat stale) or "… no data since 06:10" (controller not reporting) |
+| Empty | Query ok, no rows | "No runs today." plus what would appear here and a link that widens the range. An alert list says "No open alerts" only while the ingestor heartbeat and `climate` are fresh; otherwise "In-app alerts may be missing: ingestor not running since 06:10" (heartbeat stale) or "… no data since 06:10" (controller not reporting); "Alerts unavailable" when the read failed; and "… can't reach the greenhouse data" once API-02 has answered and then gives no freshness |
 | Stale | Sensor values: age > 2 × `expected_interval_s` (the `v_sensor_staleness` rule, migration 198). Equipment and `irr_state` report only on change, so they read unknown only while the controller is not reporting (the API decides) | Value in muted, STALE badge, "Last data 14 min ago (06:02)"; the dot turns amber |
 | Not reporting | The ingestor heartbeat (`system_state`, every 60 s) older than 180 s; or, with it fresh, the newest `climate` row older than 300 s (the `GET /health` threshold in `api/main.py`) | Fault banner on every page ([screens](screens.md) §1.2): "Ingestor not running since 06:10. The controller keeps running on its own.", else "Controller not reporting since 06:10"; device values STALE and no verdict; never "Controller offline". Writes still save and apply once both are back |
 | Panel error | One query fails | "Couldn't load runs. Retry" in that panel only (per-panel error boundary) |

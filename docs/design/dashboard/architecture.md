@@ -528,8 +528,15 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
   merged row counted once (a merged row is unacknowledged while any of its rows is). It always equals the
   unacknowledged rows API-14 returns, and the nav, Now, Activity, API-02, API-14 and the MCP `alerts` adapter all
   show it. API-14 returns the merged rows (count, first and last seen); "recent" means resolved in the last 24 h.
-  VD-72 auto-resolves alerts for long-offline probes and keeps one open row per offline probe. Severities are
-  `critical`, `warning` and `info` (R6).
+  VD-72 keeps one row per offline probe (`soil_sensor_offline`, keyed on the probe, and every `v_sensor_staleness`
+  `sensor_offline` but the forecast feed's): a probe that stays offline refreshes its open row, a repeat failure
+  re-opens the row the system closed (bumping `details.count` and `details.last_seen_at`, keeping its first `ts`
+  and any acknowledgement), and neither posts anything new to Slack; a silent soil probe stays open at night, and an
+  unpotted zone raises nothing. The row resolves by itself once `details.last_seen_at` (else `ts`) is older than
+  `VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS` (default 7; marked `details.long_offline` until the probe reports again).
+  The leak alert never auto-resolves: after the flag clears it reads "Flow stopped at HH:MM" (America/Denver) with
+  `details.stopped_at` once the meter reads under 0.1 gal/min twice, goes back to the flowing text if flow starts
+  again, and stays open until a person or agent resolves it. Severities are `critical`, `warning` and `info` (R6).
 - **Banners**, worst first: API down; "Ingestor not running since HH:MM. The controller keeps running on its
   own." (heartbeat stale); "Controller not reporting since HH:MM" (heartbeat fresh, newest `climate` row older
   than 300 s); then the leak banner.
@@ -628,6 +635,14 @@ boundary row and the `expected_mcp` chain. It also adds `sealed_sql_NNN()` to `s
 then recomputes in the same transaction each receipt they change: `fn_runtime_ordinary_boundary_digest` hashes
 every grantee on every relation the api and ingestor logins read, so any grant on a shared relation re-seals both,
 while `fn_mcp_runtime_boundary_digest` moves only with MCP's own grants. Applied migrations are never edited.
+The native qualification is `scripts/qualify-migration-successor.py <file> --fixture <fixture>` (VD-30), run
+against production before the merge: three sessions that each end in ROLLBACK (the file up to its `$successor$`
+block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
+after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
+It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
+live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
+predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
+latter yet).
 
 | # | Issue | Contents |
 |---|---|---|

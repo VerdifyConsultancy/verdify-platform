@@ -383,6 +383,33 @@ def sealed_sql_279():
     )
 
 
+DESIRED_STATE_MIGRATION = (
+    280,
+    "280-desired-state-activity-log.sql",
+    "44531a0c3a9ddd48f64ce639f9f9f1c2d0f948960ba65a68943d5947881b8bfe",
+)
+SUCCESSOR_280 = {
+    "api": "af3647c841270c17097fd00c5d27d8dd6b46413a15838f08fd5b6cbbcda343d7",
+    "ingestor": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
+    "mcp": "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291",
+}
+
+
+def sealed_sql_280():
+    # Keep every279 predicate and bind the exact280 runner stamp with the three
+    # natively qualified seals its desired-state and activity-log grants move.
+    predecessor = sealed_sql_279()
+    current = seal_profile_sql(279, SUCCESSOR_279)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(280, SUCCESSOR_280), 1)
+        + " AND "
+        + ledger_row_sql(*DESIRED_STATE_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -397,6 +424,8 @@ def sealed_sql():
         + sealed_sql_278()
         + " OR "
         + sealed_sql_279()
+        + " OR "
+        + sealed_sql_280()
         + ")"
     )
 

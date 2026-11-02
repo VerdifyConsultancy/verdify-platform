@@ -343,6 +343,8 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
         return "Planner-policy tunable. Use only when forecast or previous-plan evidence points directly to this control path."
     if control_class == "crop_band":
         return "Do not push from the AI planning agent. Crop profiles and dispatcher own this value; use planner-policy bias/staging knobs instead."
+    if control_class == "irrigation_site":
+        return "Irrigation site value: it reaches the controller only inside the irrigation program, confirmed by its hash. Never emit it in set_plan or set_tunable."
     if control_class == "readback_context":
         return "Read-only context. Use it to explain firmware decisions; never emit it in set_plan or set_tunable."
     if control_class == "retired":
@@ -351,7 +353,9 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
 
 
 def _implementation_summary(name: str, spec: TunableDef, plan_required: set[str]) -> str:
-    if spec.esp_object_id is None:
+    if spec.control_class == "irrigation_site":
+        route = "irrigation program record (header); no SETPOINT_MAP route"
+    elif spec.esp_object_id is None:
         route = "readback-only; no SETPOINT_MAP route"
     else:
         route = f"ESPHome `{spec.esp_object_id}` via SETPOINT_MAP"
@@ -670,6 +674,8 @@ def _planner_status(name: str, spec: TunableDef, plan_required: set[str]) -> str
         return "set_tunable allowed; planner may write with a hypothesis"
     if spec.control_class == "crop_band":
         return "MCP rejects planner writes; dispatcher/crop-band owned"
+    if spec.control_class == "irrigation_site":
+        return "MCP rejects planner writes; irrigation site value, delivered in the irrigation program"
     if spec.control_class == "readback_context":
         return "MCP rejects planner writes; readback context only"
     if spec.control_class == "controller_safety":
@@ -697,7 +703,14 @@ def _render_summary(summary: dict[str, Any], plan_required: set[str]) -> list[st
     embedding_counts = summary.get("embedding_counts") or {}
     class_counts = {
         control_class: sum(1 for value in TUNABLE_CONTRACT_CLASSES_REG.values() if value == control_class)
-        for control_class in ("planner_policy", "crop_band", "controller_safety", "readback_context", "retired")
+        for control_class in (
+            "planner_policy",
+            "crop_band",
+            "controller_safety",
+            "irrigation_site",
+            "readback_context",
+            "retired",
+        )
     }
     overrides = summary.get("overrides_7d") or {}
     plan_dispatch = summary.get("plan_dispatch_30m") or 0
@@ -1103,7 +1116,14 @@ def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[st
         "contract_classes="
         + ", ".join(
             f"{control_class}:{sum(1 for value in TUNABLE_CONTRACT_CLASSES_REG.values() if value == control_class)}"
-            for control_class in ("planner_policy", "crop_band", "controller_safety", "readback_context", "retired")
+            for control_class in (
+                "planner_policy",
+                "crop_band",
+                "controller_safety",
+                "irrigation_site",
+                "readback_context",
+                "retired",
+            )
         ),
         f"future_active_rows={summary.get('future_rows', '-')} future_active_params={summary.get('future_params', '-')} reserved_active_rows={summary.get('reserved_active_rows', '-')}",
         "Full-plan surface: emit bounded `climate_intent` per transition. MCP materializes it once into the 39 Tier 1 rows below and audits the semantic intent.",
