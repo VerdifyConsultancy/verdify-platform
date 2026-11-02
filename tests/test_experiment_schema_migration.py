@@ -335,6 +335,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "278-grafana-public-saved-query-bounds.sql",
         # Authentic source-clock consumers and successor seals must run forward.
         "279-authentic-meter-source-clock-consumers.sql",
+        # The daily scorecard view and its unchanged-seal checks must run forward (VD-56).
+        "282-daily-scorecard-view.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

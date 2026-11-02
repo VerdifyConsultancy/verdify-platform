@@ -383,6 +383,29 @@ def sealed_sql_279():
     )
 
 
+DAILY_SCORECARD_MIGRATION = (
+    282,
+    "282-daily-scorecard-view.sql",
+    "b9138a55b671a4b99eb1ade476b9f8d43b905239556037b74347396aabdc2f13",
+)
+# One verdify-owned view and no grant: all three seals stay exactly the predecessor's.
+SUCCESSOR_282 = SUCCESSOR_279
+
+
+def sealed_sql_282():
+    # Keep every279 authority predicate and seal; bind the exact282 runner stamp.
+    predecessor = sealed_sql_279()
+    current = seal_profile_sql(279, SUCCESSOR_279)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(282, SUCCESSOR_282), 1)
+        + " AND "
+        + ledger_row_sql(*DAILY_SCORECARD_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -397,6 +420,8 @@ def sealed_sql():
         + sealed_sql_278()
         + " OR "
         + sealed_sql_279()
+        + " OR "
+        + sealed_sql_282()
         + ")"
     )
 
