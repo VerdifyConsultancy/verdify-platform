@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
+import { once } from "node:events";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { Server } from "node:http";
+import { Server, request as httpRequest } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { NextFunction, Request, Response } from "express";
@@ -138,6 +140,35 @@ test("four renders at once; the fifth gets 503 busy with Retry-After, and the ro
     held[4].type("text").send("released");
     expect(await next).toBe(200);
     expect(lines.filter((line) => line.failure === "overloaded")).toHaveLength(2);
+  } finally {
+    server.closeAllConnections();
+    server.close();
+  }
+});
+
+test("a client that leaves mid-render frees its slot, and its line says aborted", async () => {
+  const held: Response[] = [];
+  const { app, lines } = setup(undefined, (_req, res) => { held.push(res); });
+  const server = createServer(app).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const { port } = server.address() as AddressInfo;
+    // Four visitors leave before their pages render, which would fill every slot if a closed response kept its slot.
+    for (let left = 1; left <= 4; left += 1) {
+      const client = httpRequest({ host: "127.0.0.1", port, path: "/", headers: { Host: HOST } });
+      client.on("error", () => {});
+      client.end();
+      await vi.waitFor(() => expect(held).toHaveLength(left));
+      client.destroy();
+      await vi.waitFor(() => expect(lines).toHaveLength(left));
+    }
+    expect(lines).toEqual(Array.from({ length: 4 }, () => ({ service: "verdify-dashboard-web", route: "/", status: null, duration_ms: expect.any(Number), aborted: true })));
+    const next = request(server).get("/").set("Host", HOST).then((response) => response.status);
+    await vi.waitFor(() => expect(held).toHaveLength(5));
+    held[4].type("text").send("released");
+    expect(await next).toBe(200);
+    await vi.waitFor(() => expect(lines).toHaveLength(5));
+    expect(lines[4]).toEqual({ service: "verdify-dashboard-web", route: "/", status: 200, duration_ms: expect.any(Number) });
   } finally {
     server.closeAllConnections();
     server.close();
