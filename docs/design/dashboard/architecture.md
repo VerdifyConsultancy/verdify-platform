@@ -132,12 +132,13 @@ the proxy and the writes flag), `security-headers.mjs` (weather's CSP; `form-act
 1. Serves the SSR shell and hashed assets under a per-request nonce CSP (weather `security-headers.mjs`), pins
    `Host: dashboard.verdify.ai`, and caps URL length and header count as weather does.
 2. Runs sign-in, the callback and sign-out (§4) and sets the session cookie. A page GET or HEAD without a
-   well-formed session cookie (43 base64url characters) answers 302 to `/auth/login?returnTo=<path and query>`.
-   React Router's single-fetch request (`*.data`) gets that redirect in its own form, 204 with `X-Remix-Redirect`
-   and `X-Remix-Reload-Document: true`, because a hydrated client's fetch would follow a 302 to Authentik and fail
-   cross-origin. Hashed assets, fonts and the lazy route manifest (`/__manifest`, route ids and module paths that
-   the public assets already hold) skip the check. Another method on an `/auth` route answers 405, and another
-   `/auth` path 404.
+   well-formed session cookie (43 base64url characters) answers 302 to `/auth/login?returnTo=<path and query>`,
+   or `returnTo=%2F` when the page is longer than BFF-01 keeps or its encoded form would push `/auth/login` past
+   the 4,096-character URL cap. React Router's single-fetch request (`*.data`) gets that redirect in its own
+   form, 204 with `X-Remix-Redirect` and `X-Remix-Reload-Document: true`, because a hydrated client's fetch would
+   follow a 302 to Authentik and fail cross-origin. Hashed assets, fonts and the lazy route manifest
+   (`/__manifest`, route ids and module paths that the public assets already hold) skip the check. Another method
+   on an `/auth` route answers 405, and another `/auth` path 404.
 3. Proxies `/api/v1/*` to `http://verdify-operator-api.verdify-prod.svc:8090/v1/*` with the bearer
    `$OPERATOR_API_TOKEN`, `X-Dashboard-Session: <cookie value>` and `X-Request-Id`. A path with a `.` or `..`
    segment, or containing `%2e`, `%2f`, `%5c` or a backslash (any case), gets 400 before routing; the upstream

@@ -30,6 +30,15 @@ test("anonymous GET / answers 302 to /auth/login?returnTo=%2F, and a page keeps 
   expect(JSON.stringify(bff.lines)).not.toMatch(/returnTo|L01|water/);
 });
 
+test("a page whose encoded form would make /auth/login too long to serve returns to /", async () => {
+  // 1,508 characters, under BFF-01's 2,048, but each "&" encodes to three, past the 4,096 that server.mjs serves.
+  const crowded = await get(`/graphs?${"&".repeat(1500)}`);
+  expect(crowded.status).toBe(302);
+  expect(crowded.headers.location).toBe("/auth/login?returnTo=%2F");
+  // /auth/login itself answers (503 here, with Authentik down), not 414.
+  expect((await get(crowded.headers.location)).status).toBe(503);
+});
+
 test("a well-formed session cookie (43 base64url characters) reaches the page; anything else goes to sign-in", async () => {
   const token = newToken();
   const page = await get("/", `theme=dark; ${SESSION_COOKIE}=${token}`);

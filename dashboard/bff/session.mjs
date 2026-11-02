@@ -16,6 +16,8 @@ export const COOKIE_ATTRIBUTES = Object.freeze({ httpOnly: true, secure: true, s
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 // The longest page URL carried as returnTo; a longer one returns to "/" (BFF-01 keeps at most 2,048 characters).
 const MAX_RETURN_TO = 2048;
+// The longest request target server.mjs serves (414 past it), which the sign-in redirect must stay within.
+const MAX_TARGET = 4096;
 
 /**
  * The first cookie named `name` in the Cookie header, as sent; undefined when there is none.
@@ -66,11 +68,13 @@ export function clearSessionCookie(res) {
 }
 
 /**
- * Sign-in for a page: /auth/login with the page's path and query as returnTo.
+ * Sign-in for a page: /auth/login with the page's path and query as returnTo, or "/" when the page is longer than
+ * BFF-01 keeps or its encoded form would make /auth/login itself too long to serve.
  * @param {string} pathAndQuery
  */
 export function loginLocation(pathAndQuery) {
-  return `/auth/login?returnTo=${encodeURIComponent(pathAndQuery.length <= MAX_RETURN_TO ? pathAndQuery : "/")}`;
+  const location = `/auth/login?returnTo=${encodeURIComponent(pathAndQuery)}`;
+  return pathAndQuery.length <= MAX_RETURN_TO && location.length <= MAX_TARGET ? location : "/auth/login?returnTo=%2F";
 }
 
 /**
