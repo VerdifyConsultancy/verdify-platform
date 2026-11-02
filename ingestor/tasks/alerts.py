@@ -41,6 +41,7 @@ from ._common import (
     json,
     log,
     registry_value_error,
+    shared,
     should_post_alert,
 )
 from .daily import (
@@ -52,6 +53,67 @@ from .daily import (
 from .heartbeat import (
     _expire_planner_trigger_slas,
 )
+
+# Plain convergence (VD-62): a setting whose outgoing value has differed from
+# the controller for longer than this is not reaching it.
+SETPOINT_DELIVERY_STUCK_AFTER = _td(minutes=15)
+SETPOINT_DELIVERY_STUCK_MAX_PARAMS = 20
+
+
+def _setpoint_delivery_stuck_alert(
+    differing: Mapping[str, datetime],
+    dispatcher_stage: str | None,
+    now: datetime,
+) -> dict[str, object] | None:
+    """One envelope while any setting has differed for more than 15 minutes.
+
+    ``differing`` is ``shared.delivery_differing_since``, which already leaves
+    out clamped and experiment-policy-held settings. Nothing is raised while
+    the C1 qualification overlay holds the pass on purpose (``held:c1``).
+    Heap deferral and a lost Lease still count: then settings really are not
+    reaching the controller.
+    """
+    if dispatcher_stage == "held:c1":
+        return None
+    stuck = sorted((since, param) for param, since in differing.items() if now - since > SETPOINT_DELIVERY_STUCK_AFTER)
+    if not stuck:
+        return None
+    oldest = stuck[0][0]
+    count = len(stuck)
+    noun = "setting" if count == 1 else "settings"
+    return {
+        "alert_type": "setpoint_delivery_stuck",
+        "severity": "warning",
+        "category": "system",
+        "sensor_id": "dispatcher",
+        "zone": None,
+        "message": f"{count} {noun} not reaching the controller since {oldest.astimezone(UTC):%H:%M} UTC",
+        "details": {
+            "differing": count,
+            "params": [param for _since, param in stuck[:SETPOINT_DELIVERY_STUCK_MAX_PARAMS]],
+            "oldest_since": oldest.astimezone(UTC).isoformat(),
+        },
+        "metric_value": round((now - oldest).total_seconds(), 1),
+        "threshold_value": SETPOINT_DELIVERY_STUCK_AFTER.total_seconds(),
+    }
+
+
+def _setpoint_delivery_stuck_preserved(
+    differing: Mapping[str, datetime],
+    dispatcher_stage: str | None,
+) -> frozenset[str]:
+    """Alert types ``_sync_monitor_alerts`` keeps open without a fresh envelope.
+
+    ``setpoint_delivery_stuck`` is raised once a setting has differed for more
+    than 15 minutes and resolves when none differs. An open one therefore stays
+    open while any setting still differs, even when this process has tracked
+    them for less than 15 minutes (after an ingestor restart, for example), and
+    before this process's first dispatcher pass, when the state is unknown. It
+    resolves, and is not kept, while the C1 overlay holds the pass on purpose.
+    """
+    if dispatcher_stage is None or (dispatcher_stage != "held:c1" and differing):
+        return frozenset({"setpoint_delivery_stuck"})
+    return frozenset()
 
 
 def _component_experiment_integrity_alert(
@@ -2308,11 +2370,26 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
 
         # Reactive trigger marker removed in Sprint 5 P6 — deviation monitor handles replans
 
+        # 15. Setpoint delivery stuck (VD-62). The dispatcher converges in
+        # paced passes; this says when settings stop reaching the controller.
+        stuck_alert = _setpoint_delivery_stuck_alert(
+            shared.delivery_differing_since,
+            shared.dispatcher_stage,
+            datetime.now(UTC),
+        )
+        if stuck_alert is not None:
+            alerts.append(stuck_alert)
+
         await _sync_monitor_alerts(
             conn,
             alerts,
             component_status_available=component_status_available,
             component_closure_resolutions=component_closure_resolutions,
+            # An open stuck alert resolves only when no setting differs (and
+            # stays open while this process's delivery state is unknown).
+            preserve_open_types=_setpoint_delivery_stuck_preserved(
+                shared.delivery_differing_since, shared.dispatcher_stage
+            ),
         )
 
 
@@ -2326,12 +2403,15 @@ async def _sync_monitor_alerts(
     scope_greenhouse_id=None,
     post_message=None,
     message_prefix="",
+    preserve_open_types=frozenset(),
 ):
     """Persist, deduplicate, deliver and resolve the same producer envelopes.
 
     A supplied scope restricts both input envelopes and existing open rows.
     Transport injection is allowed only with that exact scope. Normal monitor
     calls retain the existing token custody, policy, runbook and thread route.
+    Open alerts whose type is in ``preserve_open_types`` stay open when their
+    producer's state is unknown this cycle; they are neither refreshed nor resolved.
     """
     # Validate the complete scope before the first database or transport mutation.
     if scope is not None:
@@ -2365,6 +2445,7 @@ async def _sync_monitor_alerts(
         # A missing/denied status function is unknown state, never evidence
         # that a previously actionable experiment condition recovered.
         active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
+    active_keys.update(key for key in open_keys if key[0] in preserve_open_types)
 
     slack_token = None
 

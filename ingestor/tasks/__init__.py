@@ -75,6 +75,7 @@ from ._common import (  # noqa: F401
     _iter_prometheus_samples,
     _last_forecast_fetch,
     _last_pushed,
+    _last_sent_at,
     _leak_counter,
     _leak_state,
     _load_token,

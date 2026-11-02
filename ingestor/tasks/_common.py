@@ -924,6 +924,10 @@ from quiet_mode import (
 
 # In-memory cache of last pushed values — prevents re-pushing unchanged setpoints
 _last_pushed: dict[str, float] = {}
+# param -> (sent at, connection generation, value) of the last physically sent
+# command. Plain convergence (VD-62) does not send the same value again on the
+# same connection while its readback is pending (SENT_READBACK_WAIT_S).
+_last_sent_at: dict[str, tuple[datetime, int, float]] = {}
 
 
 SWITCH_CONFIRM_EQUIPMENT = {
@@ -1505,6 +1509,7 @@ __all__ = [
     "quiet_expired_needs_restore",
     "quiet_is_active",
     "_last_pushed",
+    "_last_sent_at",
     "SWITCH_CONFIRM_EQUIPMENT",
     "FIRMWARE_READBACK_PARAMS",
     "FIRMWARE_HAS_PER_CIRCUIT_LIGHTING",

@@ -82,7 +82,10 @@ spec:
       containers:
         - name: ingestor
           env:
-            # Source/generation-bound stages retain the global 12-command cap.
+            # Read only by ingestor images released before VD-62 (plain
+            # convergence), which staged broad deltas autonomously; VD-62
+            # images ignore it. Remove it once the release pin carries VD-62,
+            # so a sync of main before that promotion keeps old-image delivery.
             - name: VERDIFY_AUTONOMOUS_POLICY_STAGING
               value: "1"
             # Prepend the copied psql to PATH so the gather script's bare `psql`
