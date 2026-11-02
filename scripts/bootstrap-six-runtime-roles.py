@@ -410,6 +410,38 @@ def sealed_sql_280():
     )
 
 
+DASHBOARD_LOGIN_MIGRATION = (
+    282,
+    "282-dashboard-runtime-login.sql",
+    "de4c8af5d54786c13232b5bfd3185799a588bedb5e769df6cdcf0952a5bd53d4",
+)
+# Pending VD-66 measurement: 282 moves no seal, so its profile is its
+# predecessor's (281's qualified successor). All-zero until 281 merges and the
+# rolled-back native qualification measures 282; it cannot match before then.
+SUCCESSOR_282 = {
+    "api": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
+    "mcp": "0000000000000000000000000000000000000000000000000000000000000000",
+}
+
+
+def sealed_sql_282():
+    # Keep every predecessor predicate and bind the exact282 runner stamp; the
+    # dashboard duty and its sessions table change no seal. Chains from the
+    # newest merged profile; re-chain it from sealed_sql_281() once 281 is on
+    # main (VD-66 measurement step).
+    predecessor = sealed_sql_280()
+    current = seal_profile_sql(280, SUCCESSOR_280)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(282, SUCCESSOR_282), 1)
+        + " AND "
+        + ledger_row_sql(*DASHBOARD_LOGIN_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -426,6 +458,8 @@ def sealed_sql():
         + sealed_sql_279()
         + " OR "
         + sealed_sql_280()
+        + " OR "
+        + sealed_sql_282()
         + ")"
     )
 

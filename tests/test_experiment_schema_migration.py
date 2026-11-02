@@ -337,6 +337,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "279-authentic-meter-source-clock-consumers.sql",
         # Desired state, the activity log and their successor seals run forward (VD-30).
         "280-desired-state-activity-log.sql",
+        # The dashboard roles' OIDs must come from the forward hook, never baseline history (VD-66).
+        "282-dashboard-runtime-login.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

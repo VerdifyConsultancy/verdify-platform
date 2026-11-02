@@ -1,0 +1,20 @@
+{
+  "migration": "282-dashboard-runtime-login.sql",
+  "final_migration_qualification_pending": true,
+  "pending_reason": "282 is measured against merged 281 (VD-39, M4): its predecessor literals and its three seals come from the production catalog in rolled-back transactions once 281's seals are qualified (VD-66 release steps).",
+  "predecessor": {
+    "seq": 281,
+    "filename": "281-irrigation-minutes-by-zone.sql"
+  },
+  "projected_successor": null,
+  "projection": "282 moves no seal, so its qualified successor equals its predecessor's seals (281's qualified successor). It grants only on the objects it creates: the ordinary digest covers the relations, sequences, schemas and functions the api or ingestor login can use or that carry a PUBLIC, api or ingestor ACL entry, and the MCP digest hashes only PUBLIC and MCP entries plus the database and public ACLs; 282 creates a schema, an attestor and a table outside all three and leaves the database and public ACLs alone (PUBLIC already has CONNECT on the database and USAGE on public). Read only on 2026-11-02: production at ledger 279, no default ACL but verdify's EXECUTE revoke on functions, no dashboard role.",
+  "before": null,
+  "qualified_successor": null,
+  "after_rollback": null,
+  "exact_final_migration_sha256": null,
+  "final_migration_rollback_verified": false,
+  "inside_transaction_receipts_match": false,
+  "native_fixture_sha256": "0e721c8819c6887f5f55501f7729087085100289579dd1deb085a0203fa3c144",
+  "native_fixture": null,
+  "native_fixture_rollback_verified": false
+}
