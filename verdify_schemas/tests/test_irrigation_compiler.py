@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import random
+import subprocess
 import sys
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
@@ -1253,6 +1255,23 @@ def test_ingestor_solar_reexports_the_moved_ephemeris(monkeypatch: pytest.Monkey
         assert not hasattr(schemas_solar, name), name
     times = solar.compute_solar_times(172, 2026, utc_offset_min=-360)
     assert 0.0 <= solar.solar_phase(times.solar_noon_min, times) < 4.0
+
+
+def test_ingestor_solar_imports_with_only_the_ingestor_dir_on_the_path(tmp_path: Path) -> None:
+    """``ingestor/solar.py`` stays importable as before: a caller that adds only ``ingestor/`` to
+    ``sys.path`` (research/planner-efficacy/sep4_fixed_panel_counterfactual.py does) still gets it."""
+    code = (
+        "import sys; "
+        f"sys.path.insert(0, {str(REPO_ROOT / 'ingestor')!r}); "
+        "import solar; "
+        "print(solar.compute_solar_times(172, 2026, utc_offset_min=-360).sunrise_min)"
+    )
+    env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+    result = subprocess.run(  # noqa: S603 - this interpreter, fixed arguments
+        [sys.executable, "-c", code], cwd=tmp_path, env=env, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert int(result.stdout) == compute_solar_times(172, 2026, utc_offset_min=-360).sunrise_min
 
 
 SCHEDULE_REEXPORTED = (

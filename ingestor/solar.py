@@ -17,15 +17,22 @@ Pure stdlib + verdify_schemas on purpose: `astral` is NOT in
 ingestor/requirements.txt (it only exists in the container image closure for
 the planner path), and the firmware implements the NOAA approximation directly,
 so a dependency-free port keeps one replay-testable implementation on both
-sides of the wire.
+sides of the wire. Like `entity_map.py`, it puts the repo root on `sys.path`
+itself, so a caller that adds only `ingestor/` can still import it.
 """
 
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
-from verdify_schemas.solar import (
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from verdify_schemas.solar import (  # noqa: E402
     _ZENITH_DEG,
     GREENHOUSE_LAT_DEG,
     GREENHOUSE_LON_DEG,
