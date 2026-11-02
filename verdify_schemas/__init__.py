@@ -4,6 +4,8 @@ The database is the source of truth; every other layer (MCP tools, ingestor
 tasks, ESP32 readback, vault writers, website renderer) validates through
 these schemas so malformed data fails at the boundary instead of
 partial-writing.
+
+Migration 282 (M2) creates verdify_dashboard_runtime, the duty of the operator API's login.
 """
 
 from .activity import ACTOR_SOURCE_PATTERN, ActivityLogRow, DesiredStateRow

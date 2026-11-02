@@ -437,6 +437,32 @@ def sealed_sql_281():
     )
 
 
+DASHBOARD_LOGIN_MIGRATION = (
+    282,
+    "282-dashboard-runtime-login.sql",
+    "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a",
+)
+# 282 grants only on the objects it creates, so it moves no seal: its profile is
+# 281's qualified successor, as 276 kept 275's. The rolled-back native
+# qualification, with 280 and 281 applied first, measures it.
+SUCCESSOR_282 = SUCCESSOR_281
+
+
+def sealed_sql_282():
+    # Keep every 281 predicate and bind the exact 282 runner stamp; the dashboard
+    # duty, its schema and its sessions table change no seal.
+    predecessor = sealed_sql_281()
+    current = seal_profile_sql(281, SUCCESSOR_281)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(282, SUCCESSOR_282), 1)
+        + " AND "
+        + ledger_row_sql(*DASHBOARD_LOGIN_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -455,6 +481,8 @@ def sealed_sql():
         + sealed_sql_280()
         + " OR "
         + sealed_sql_281()
+        + " OR "
+        + sealed_sql_282()
         + ")"
     )
 
