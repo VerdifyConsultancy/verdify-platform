@@ -202,6 +202,12 @@ data.
 ### Firmware internal (1 tunable)
 - `fallback_window_s` — sensor staleness → firmware reboot threshold
 
+### Firmware-v2 operator controls and the band owner (VD-63)
+- Controller safety, never planner-pushable: `mister_hysteresis_kpa`, `night_stress_min_dew_margin_f` (a safety rail), `sw_night_econ_heat_suppress_enabled`, `sw_wet_taper_enabled`, `sw_night_stress_wet_enabled`. Settings and MCP `set_setting` will write them within bounds once those ship; until then no plan, band or default pushes them, and the rows only route their readbacks.
+- Read-only: `sw_onchip_band_enabled` has no push route; it decides whether the on-chip curve or the dispatcher's legacy limits own the band. Its readback is `cfg_on-chip_band_enabled` (ESPHome keeps the hyphen).
+- Retired with no route: `fog_time_window_start`, `fog_time_window_end` (no firmware entity; the rows stay for history).
+- `test_every_tunables_number_and_switch_is_registered_or_retiring` fails when a `tunables.yaml` number or switch has no registry row and is not in `RETIRING_TUNABLES`, the entities the irrigation engine release removes.
+
 ### Economiser (3 tunables)
 - `enthalpy_open`, `enthalpy_close`, `site_pressure_hpa`
 
