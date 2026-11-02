@@ -38,6 +38,12 @@ export const ALERT_SEVERITIES = everyMember<AlertSeverity>()(["critical", "warni
 export type AlertStatus = Schemas["Alert"]["status"];
 export const ALERT_STATUSES = everyMember<AlertStatus>()(["open", "acknowledged", "resolved", "false_positive", "suppressed"]);
 
+/** `PlannerTrigger.outcome`: a `planner_trigger_ledger` status, verbatim (its status check in db/schema.sql). */
+export type TriggerOutcome = Schemas["PlannerTrigger"]["outcome"];
+export const TRIGGER_OUTCOMES = everyMember<TriggerOutcome>()([
+  "expected", "delivered", "acked", "plan_written", "action_completed", "neutral_fallback", "wrong_action", "delivery_failed", "timed_out", "missed",
+]);
+
 /** `Actor.source`: who wrote (R4). `system` is the platform itself, for example the forecast action engine. */
 export const ACTOR_SOURCE_PATTERN = /^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$/;
 export type ActorSource = "dashboard" | "iris" | "system" | `agent:${string}`;

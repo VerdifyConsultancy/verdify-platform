@@ -343,6 +343,29 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Plan (SCR-03): the plan in force, planner health and the lanes' head. Card and health sit in .grid-2, which stacks below 600 px; long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
+.plan-top{margin-bottom:1rem}
+.plan-facts{margin:0 0 .5rem;font-size:.9rem;overflow-wrap:anywhere}
+.plan-hypothesis{margin:0;overflow-wrap:anywhere}
+.plan-none{margin:0}
+.plan-after{margin:.25rem 0 0;font-size:.875rem;color:var(--muted)}
+.plan-detail{overflow-wrap:anywhere}
+.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
+.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
+.plan-detail li+li{margin-top:.25rem}
+.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+.trigger-list{list-style:none;margin:0;padding:0}
+.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
+.trigger-row:first-child{border-top:0}
+.trigger-marked{border-left-color:var(--amber)}
+.trigger-mark{color:var(--warn-text);font-size:.8rem}
+.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
+.trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
+.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.trigger-more{font-weight:400;color:var(--muted)}
+.plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;

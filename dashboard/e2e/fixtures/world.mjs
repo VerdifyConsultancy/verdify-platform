@@ -408,6 +408,33 @@ export const FIXTURES = {
     Object.assign(sunset, { outcome: "missed", resolved_at: null, failure_class: "no_plan_written" });
     world.iris.required_trigger = "missed";
   },
+  // #1131: no plan in force since 09:30, so band and defaults apply; the lanes hold the device values only.
+  "no-plan": (world) => {
+    world.plan.plan = null;
+    world.plan.no_plan_since = iso(clock(world.now)("09:30"));
+    world.iris = { ...world.iris, plan_id: null, trigger: null, valid_until: null };
+    const unplanned = (from) => (from === "plan" ? "default" : from);
+    for (const lane of world.plan.lanes) Object.assign(lane, { waypoints: [], applied_from: unplanned(lane.applied_from) });
+    for (const row of world.settings.filter((item) => item.plan)) Object.assign(row, { plan: null, applied_from: unplanned(row.applied_from) });
+  },
+  // #1131: Jason took mister_pulse_on_s manual on 10/30, so Iris skips it: API-07 gives it a lane with no waypoints.
+  "manual-lane": (world) => {
+    const at = clock(world.now);
+    const desired = {
+      id: 38, param: "mister_pulse_on_s", value: 60, snapped_from: null, manual: true, manual_before: false, state: "confirmed", state_reason: null,
+      confirmed_at: iso(at("09:01", -3)), actor: JASON, reason: "Hold while the nozzles are cleaned", created_at: iso(at("09:00", -3)),
+    };
+    Object.assign(settingOf(world, desired.param), { desired, applied_from: "manual" });
+    world.plan.lanes.push({ param: desired.param, label: "Mister Pulse ON", unit: "s", device: reading(60, world.now - MINUTE), waypoints: [], desired, applied_from: "manual" });
+  },
+  // #1131 (Q-04): the forecast action engine plans mister_engage_delay_s 90 s from 14:00; it reads "Forecast rule · system", never AI.
+  "forecast-rule": (world) => {
+    const point = { at: iso(clock(world.now)("14:00")), value: 90, source: "preemptive", effective: true };
+    const lane = laneOf(world, "mister_engage_delay_s");
+    lane.waypoints = [...lane.waypoints, point];
+    const row = settingOf(world, "mister_engage_delay_s");
+    if (row.plan) row.plan = { ...row.plan, next: point };
+  },
   "schedules-paused": (world) => {
     const at = clock(world.now);
     const make = (slot_id, line_id, label, days, start, fields) => ({

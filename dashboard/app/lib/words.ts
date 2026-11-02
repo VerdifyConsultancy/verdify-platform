@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
-import type { AlertSeverity, LineStateCode, ProblemCode, StateReasonCode } from "./vocab";
+import type { AlertSeverity, LineStateCode, ProblemCode, StateReasonCode, TriggerOutcome } from "./vocab";
 
 /**
  * The one words table (design system §1, rule 3): every code from the API or the controller renders through it, in
  * plain words for someone who knows plants rather than the controller. An unknown code renders raw, so a code added
  * later shows as itself rather than as nothing. `words.test.ts` fails on any OpenAPI `ProblemCode`, `StateReason` or
  * `LineState` code, controller mode or mist stage (`firmware/lib/greenhouse_types.h`) or alert type (`ALERT_TYPES` in
- * `verdify_schemas/alerts.py`) without an entry here, so a PR that adds one adds its words. The `mode_reason` and
- * `moisture_block_reason` families come with #1140 and read raw until then.
+ * `verdify_schemas/alerts.py`), planner trigger outcome (`planner_trigger_ledger`'s status check) or stress window
+ * kind or severity (`StressWindow` in `verdify_schemas/plan.py`) without an entry here, so a PR that adds one adds its
+ * words. The `mode_reason` and `moisture_block_reason` families come with #1140 and read raw until then; a trigger's
+ * `failure_class` is open-ended text the ledger writers choose, with no family yet, so it reads raw.
  */
 const STATE_REASON = {
   clamped: "Clamped",
@@ -163,6 +165,27 @@ const ALERT_TYPE = {
   irrigation_line_faulted: "A mister zone faulted",
 } as const;
 
+/**
+ * Every `PlannerTrigger.outcome` (a `planner_trigger_ledger` status), as Plan's planner health reads it (screens
+ * SCR-03). Whether a required trigger is late or needs someone comes from its row, not from these words.
+ */
+const TRIGGER_OUTCOME = {
+  expected: "due",
+  delivered: "delivered",
+  acked: "acknowledged",
+  plan_written: "plan written",
+  action_completed: "setting changed",
+  neutral_fallback: "fallback",
+  wrong_action: "wrong action",
+  delivery_failed: "delivery failed",
+  timed_out: "timed out",
+  missed: "missed",
+} as const satisfies Record<TriggerOutcome, string>;
+
+/** `StressWindow.kind` and `severity` (verdify_schemas/plan.py): a plan's stress windows in Plan's Details. */
+const STRESS_KIND = { heat: "Heat", cold: "Cold", vpd_high: "VPD high", vpd_low: "VPD low" } as const;
+const STRESS_SEVERITY = { low: "low severity", medium: "medium severity", high: "high severity" } as const;
+
 export const WORDS: { readonly [family: string]: { readonly [code: string]: string } } = {
   state_reason: STATE_REASON,
   alert_severity: ALERT_SEVERITY,
@@ -172,8 +195,12 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
   alert_type: ALERT_TYPE,
+  trigger_outcome: TRIGGER_OUTCOME,
+  stress_kind: STRESS_KIND,
+  stress_severity: STRESS_SEVERITY,
 };
-export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type";
+export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type"
+  | "trigger_outcome" | "stress_kind" | "stress_severity";
 
 /** True when the table has words for `code` in `family`. */
 export function hasWords(family: string, code: string): boolean {

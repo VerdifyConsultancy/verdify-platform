@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
-// The one words table is complete: every code the OpenAPI file, the controller header and the alert schema define has
-// words, so a PR that adds a ProblemCode, a StateReason or line-state code, a mode, a mist stage or an alert type
-// fails here until it adds them. jvallery/agents#5994's dashboard step runs this file when any of those sources change.
+// The one words table is complete: every code the OpenAPI file, the controller header, the alert schema, the trigger
+// ledger's status check (db/schema.sql) and the plan schema (verdify_schemas/plan.py) define has words, so a PR that
+// adds a ProblemCode, a StateReason or line-state code, a mode, a mist stage, an alert type, a trigger outcome or a
+// stress window kind or severity fails here until it adds them. jvallery/agents#5994's dashboard step runs this file
+// when any of those sources change.
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ALERT_SEVERITIES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES } from "./vocab";
+import { ALERT_SEVERITIES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES, TRIGGER_OUTCOMES } from "./vocab";
 import { WORDS, hasWords, modeWords, words } from "./words";
 
 const repo = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
@@ -27,6 +29,19 @@ function alertTypes(): string[] {
   const block = /^ALERT_TYPES: tuple\[str, \.\.\.\] = \(([\s\S]*?)^\)/m.exec(repo("verdify_schemas/alerts.py"));
   if (!block) throw new Error("no ALERT_TYPES in verdify_schemas/alerts.py");
   return [...block[1].matchAll(/"([a-z0-9_]+)"/g)].map((match) => match[1]);
+}
+/** The statuses `planner_trigger_ledger_status_check` allows in db/schema.sql. */
+function ledgerStatuses(): string[] {
+  const check = /CONSTRAINT planner_trigger_ledger_status_check CHECK \(\(status = ANY \(ARRAY\[([^\]]*)\]\)\)\)/.exec(repo("db/schema.sql"));
+  if (!check) throw new Error("no planner_trigger_ledger_status_check in db/schema.sql");
+  return [...check[1].matchAll(/'([a-z_]+)'::text/g)].map((match) => match[1]);
+}
+/** A `Literal[...]` field of `StressWindow` in verdify_schemas/plan.py. */
+function stressWindowLiteral(field: "kind" | "severity"): string[] {
+  const model = /^class StressWindow\(BaseModel\):([\s\S]*?)^class /m.exec(repo("verdify_schemas/plan.py"));
+  const literal = model && new RegExp(`^\\s+${field}: Literal\\[([^\\]]*)\\]`, "m").exec(model[1]);
+  if (!literal) throw new Error(`no StressWindow.${field} Literal in verdify_schemas/plan.py`);
+  return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
 }
 /** The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, `fog_safety_block_reason`'s included). */
 const FOG_BLOCK_REASONS = [
@@ -88,6 +103,31 @@ test("the table has words for every code gh_fog_block_reason publishes", () => {
   expect(FOG_BLOCK_REASONS).toHaveLength(14);
   expectWorded("fog_block_reason", FOG_BLOCK_REASONS);
   expect(Object.keys(WORDS.fog_block_reason).sort()).toEqual([...FOG_BLOCK_REASONS].sort());
+});
+
+test("every planner trigger outcome has its words, from the OpenAPI enum and the ledger's status check alike", () => {
+  const outcomes = enumOf(SCHEMAS.PlannerTrigger?.properties?.outcome);
+  expect([...TRIGGER_OUTCOMES].sort()).toEqual([...outcomes].sort());
+  expect([...ledgerStatuses()].sort()).toEqual([...outcomes].sort());
+  expect(Object.keys(WORDS.trigger_outcome).sort()).toEqual([...outcomes].sort());
+  // "delivered" and "missed" are their own words, so the words may equal the code but never keep an underscore.
+  for (const outcome of outcomes) expect(words("trigger_outcome", outcome), outcome).not.toMatch(/_/);
+  expect(TRIGGER_OUTCOMES.map((outcome) => words("trigger_outcome", outcome))).toEqual([
+    "due", "delivered", "acknowledged", "plan written", "setting changed", "fallback", "wrong action", "delivery failed", "timed out", "missed",
+  ]);
+  expect(words("trigger_outcome", "rescheduled")).toBe("rescheduled");
+});
+
+test("every stress window kind and severity in verdify_schemas/plan.py has words", () => {
+  const kinds = stressWindowLiteral("kind");
+  const severities = stressWindowLiteral("severity");
+  expect(kinds).toEqual(["heat", "cold", "vpd_high", "vpd_low"]);
+  expectWorded("stress_kind", kinds);
+  expectWorded("stress_severity", severities);
+  expect(Object.keys(WORDS.stress_kind).sort()).toEqual([...kinds].sort());
+  expect(Object.keys(WORDS.stress_severity).sort()).toEqual([...severities].sort());
+  expect(words("stress_kind", "vpd_high")).toBe("VPD high");
+  expect(words("stress_severity", "high")).toBe("high severity");
 });
 
 test("the existing families keep their words", () => {

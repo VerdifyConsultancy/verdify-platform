@@ -224,6 +224,25 @@ test("each named fixture serves what the table says", () => {
   expect(missed["API-02"].iris.required_trigger).toBe("missed");
   expect(missed["API-07"].health.find((row: Body) => row.outcome === "missed")).toMatchObject({ trigger: "SUNSET", required: true });
   expect(Date.parse(missed["API-07"].health.find((row: Body) => row.outcome === "missed").due_at)).toBeLessThan(NOW);
+  // #1131: no plan in force since 09:30, with device values only; one manual lane, counted; a forecast rule's waypoint.
+  const unplanned = set("no-plan");
+  expect(unplanned["API-07"]).toMatchObject({ plan: null, no_plan_since: "2026-11-02T16:30:00.000Z", manual_count: 0 });
+  expect((unplanned["API-07"].lanes as Body[]).map((row) => [row.param, row.waypoints, row.applied_from])).toEqual([
+    ["mister_engage_kpa", [], "default"], ["mister_pulse_gap_s", [], "default"], ["mister_engage_delay_s", [], "default"],
+  ]);
+  expect(unplanned["API-02"].iris).toMatchObject({ plan_id: null, trigger: null, valid_until: null });
+  expect((unplanned["API-09"].items as Body[]).filter((row) => row.plan !== null)).toEqual([]);
+  const manualLane = set("manual-lane")["API-07"];
+  expect(manualLane.manual_count).toBe(1);
+  expect((manualLane.lanes as Body[]).find((row) => row.param === "mister_pulse_on_s")).toMatchObject({
+    applied_from: "manual", waypoints: [], desired: { value: 60, manual: true, actor: { source: "dashboard", name: "jason" }, created_at: "2026-10-30T16:00:00.000Z" },
+  });
+  expect(set("manual-lane")["API-09"].items.find((row: Body) => row.param === "mister_pulse_on_s")).toMatchObject({ applied_from: "manual", desired: { manual: true } });
+  const rule = set("forecast-rule");
+  expect(rule["API-07"].lanes.find((row: Body) => row.param === "mister_engage_delay_s").waypoints).toEqual([
+    { at: "2026-11-02T21:00:00.000Z", value: 90, source: "preemptive", effective: true },
+  ]);
+  expect(rule["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s").plan).toMatchObject({ source: "iris", next: { source: "preemptive", value: 90 } });
   const lights = set("grow-lights-differ")["API-13"].items.find((item: Body) => item.equipment === "grow_light_grow");
   expect(lights).toMatchObject({ state: "off", intent: "on" });
   expect(set("ha-down")["API-13"].items.filter((item: Body) => item.group === "light")).toEqual([
