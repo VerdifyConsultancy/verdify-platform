@@ -35,6 +35,8 @@ export function serverClockSkew(serverTime: string | null | undefined, receivedA
   const offset = receivedAt - server;
   return Math.abs(offset) > 2000 ? offset : 0;
 }
+/** The device clock's lead over the server's in ms (0 until API-02 first answers), for a read that asks up to now. */
+export const useServerSkew = (): number => useContext(SkewContext);
 /** Now on the server's clock, in epoch ms, re-rendering once a second. */
 export function useNow(): number {
   const skew = useContext(SkewContext);

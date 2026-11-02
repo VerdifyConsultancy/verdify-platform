@@ -3,7 +3,7 @@
 # grants, publishing) is lib/irrigation_engine_esphome.h, the way policy_engine.yaml serves the
 # policy engine.
 #
-# Heap budget (#428): four api services with tight argument surfaces, three text sensors
+# Heap budget (#428): five api services with tight argument surfaces, three text sensors
 # published on change only (update_interval: never), static buffers (the 584 B staging record,
 # a 192 B chunk, a 256 B state text). No per-field entities: enables, flags and schedules are
 # not echoed, the program hash proves them.
@@ -15,6 +15,9 @@
 #                                       tick; on a reject keep the old program and show j=<token>
 #   irr_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s)
 #                                       run | stop | clear_fault; line = device_idx, or 255 for all
+#   manual_override(kind, minutes)      fans | humidify | vent_bypass | clear | restart (F12, VD-47):
+#                                       the burst latches the panel push buttons toggle, for
+#                                       API-IRR-12's override command rows
 #
 # Published state (#1151's grammars, verdify_schemas/irrigation.py):
 #   irr_program_id  h=<16 hex> src=nvs, or h=0000000000000000 src=rom for the ROM default
@@ -60,6 +63,42 @@ api:
       then:
         - lambda: |-
             irr_esp_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s);
+
+    # The replacement for the Home Assistant burst and restart buttons (irrigation F12, HA-02,
+    # HA-03; VD-47). fans, humidify and vent_bypass set manual_fans_until_ms, manual_fog_until_ms
+    # or vent_bypass_until_ms to now + minutes (clamped to 1-120, as OverrideRequest bounds it;
+    # a deadline that wraps to 0 is stored as 1, because 0 means no burst); clear zeroes all
+    # three; restart reboots. Nothing else is written: no relay (controls.yaml's override layer
+    # reads the latches, below the safety rails) and never occupancy, so a burst leaves mist and
+    # fog held while someone is inside. Any other kind logs and changes nothing.
+    - service: manual_override
+      variables:
+        kind: string
+        minutes: int
+      then:
+        - lambda: |-
+            const uint32_t now_ms = millis();
+            if (kind == "fans") {
+              id(manual_fans_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+            } else if (kind == "humidify") {
+              id(manual_fog_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+            } else if (kind == "vent_bypass") {
+              id(vent_bypass_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+            } else if (kind == "clear") {
+              id(manual_fans_until_ms) = 0;
+              id(manual_fog_until_ms) = 0;
+              id(vent_bypass_until_ms) = 0;
+              ESP_LOGW("manual", "manual_override clear: every burst latch cleared");
+              return;
+            } else if (kind == "restart") {
+              ESP_LOGW("manual", "manual_override restart: rebooting");
+              App.safe_reboot();
+              return;
+            } else {
+              ESP_LOGW("manual", "manual_override: unknown kind '%s', nothing changed", kind.c_str());
+              return;
+            }
+            ESP_LOGW("manual", "manual_override %s latched for %d min", kind.c_str(), manual_override_minutes(minutes));
 
 text_sensor:
   - platform: template

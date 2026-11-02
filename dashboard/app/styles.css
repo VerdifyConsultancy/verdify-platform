@@ -343,6 +343,17 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Equipment (screens SCR-07): each board row is the name and state over one line of facts; both wrap, so a row fits from 320 px up. */
+.equipment-rows{list-style:none;margin:0;padding:0}
+.equipment-row{padding:.55rem 0;border-top:1px solid var(--line);min-width:0}
+.equipment-row:first-child{padding-top:0;border-top:0}
+.equipment-row:last-child{padding-bottom:0}
+.equipment-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.15rem .75rem}
+.equipment-name{font-weight:600;min-width:0}
+.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-state{font-size:.85rem;font-variant-numeric:tabular-nums}
+.equipment-facts{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.equipment-note{margin:.75rem 0 0}
 /* Now (SCR-01, VD-09): the answer link, VPD and RH beside the hero value on phones, tile links, the amber Iris tile, the running and occupancy chips, the water card and the alert list. Phones are 860 px and below (screens §1.1). */
 .now-page{display:grid;gap:1.25rem}
 .hero-answer-link{color:inherit;text-decoration:underline;text-underline-offset:.2em}
