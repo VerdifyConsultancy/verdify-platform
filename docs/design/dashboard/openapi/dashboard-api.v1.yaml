@@ -1,0 +1,1846 @@
+# Verdify operator dashboard API (OpenAPI 3.1)
+#
+# The private operator API (verdify-operator-api, /v1) and the BFF sign-in and session routes behind
+# dashboard.verdify.ai. One write path for people and agents: validation on submit, last write wins, a manual
+# flag that Iris skips, and requested -> confirmed from device readback. No holds, dry runs or step-up.
+#
+# Status: Draft v2 (2026-11-02, decisions Q-01 to Q-14 applied)
+# Docs: ../README.md · ../product.md · ../screens.md · ../architecture.md · ../irrigation.md ·
+#       ../design-system.md · ../execution-plan.md · dashboard-api.v1.yaml (this file)
+openapi: 3.1.0
+info:
+  title: Verdify operator dashboard API
+  version: 1.0.0-draft.4
+  summary: Private operator API and BFF session routes for dashboard.verdify.ai
+  description: |
+    The browser signs in through the BFF (native Authentik OIDC) and calls `/api/v1/...`. The BFF forwards each call
+    to `verdify-operator-api` (`/v1/...`, ClusterIP :8090, never routed) with the shared bearer token, the session in
+    `X-Dashboard-Session` and `X-Request-Id`. The operator API reads `verdify-db` and writes through
+    `verdify_services`, the functions MCP also uses, so people and agents get the same validation, attribution and
+    readback.
+
+    Status: Draft v2 (2026-11-02, decisions Q-01 to Q-14 applied). This file is hand-maintained and canonical
+    (R1): new operations land here first, every FastAPI route sets `operation_id` to its id, and a test checks each
+    served method, path, operationId and schema against this file (committed operations not yet served are allowed). Docs:
+    [README](../README.md) · [product](../product.md) · [screens](../screens.md) · [architecture](../architecture.md) ·
+    [irrigation](../irrigation.md) · [design system](../design-system.md) · [execution plan](../execution-plan.md).
+
+    | Topic | Rule |
+    |---|---|
+    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01 and OPS-02. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
+    | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
+    | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
+    | Idempotency | Every write takes an optional `Idempotency-Key` (MCP `request_id`). The same key and payload return the stored result again with `Idempotency-Replayed: true`; the same key with a different payload is 422 `request_id_reused` |
+    | Readback | Setting and program writes return the stored object with `state: requested`; later reads show `confirmed`, `held` or `not_confirmed`. Display only, never a gate. Commands return 202 and a `Command` (`pending`, then `sent` or `failed`); relay edges and `irr_state` show what happened |
+    | BFF | Non-GET `/api/*` needs `Origin: https://dashboard.verdify.ai` exactly (403 `origin_mismatch`). A path with a `.` or `..` segment, or containing `%2e`, `%2f`, `%5c` or a backslash, gets 400 `invalid_request`. While `DASHBOARD_WRITES_ENABLED` is not `true`, every non-GET `/api/*` except API-IRR-07 (Stop) gets 503 `writes_disabled`. `/api` and `/auth` responses are `Cache-Control: no-store`. Paths with `x-served-by` are served by the BFF (or by both tiers) |
+    | Errors | `application/problem+json`: 400 `invalid_request`, 401 `unauthenticated`, 403 `forbidden` or `origin_mismatch`, 404 `not_found` (unknown id on a read), 422 validation and refusal codes (`unknown_target` on a write, as on MCP), 503 `writes_disabled`, `query_timeout` (narrow the window) or `unavailable`. `retryable` is true only for `line_busy`, `manifold_busy`, `query_timeout` and `unavailable`. Until the engine firmware is on the controller, an operation that needs it is 503 `unavailable` with `retryable: false` and the detail "arrives with the irrigation firmware" |
+servers:
+  - url: https://dashboard.verdify.ai/api
+    description: Browser, through the BFF with the session cookie; /api/v1/* is proxied to the operator API /v1/*
+  - url: http://verdify-operator-api.verdify-prod.svc:8090
+    description: Operator API, in-cluster; only verdify-dashboard-web pods reach it (NetworkPolicy)
+tags:
+  - {name: session, description: 'Who am I, sign-in, sign-out and the BFF-only session routes'}
+  - {name: now, description: The Now hero}
+  - {name: graphs, description: 'Metric registry, series, equipment states and band ribbons'}
+  - {name: plan, description: 'Iris plan in force, lanes and planner health'}
+  - {name: settings, description: 'Every registry setting, writes and history'}
+  - {name: equipment, description: Equipment board}
+  - {name: alerts, description: 'In-app alerts (alert_log); Slack is unchanged'}
+  - {name: activity, description: 'activity_log: every write by people, Iris, agents and the system'}
+  - {name: irrigation, description: 'Lines L01-L11, schedules, runs, minutes by zone and commands'}
+  - {name: ops, description: Health and readiness}
+security:
+  - sessionCookie: []
+  - operatorToken: []
+    dashboardSession: []
+
+paths:
+  # ---------------------------------------------------------------- core (architecture §8)
+  /v1/me:
+    get:
+      operationId: API-01
+      tags: [session]
+      summary: Signed-in user, role, writes flag and API revision
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Me'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/now:
+    get:
+      operationId: API-02
+      tags: [now]
+      summary: Now hero
+      description: >-
+        Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict
+        per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the
+        open-alert count, source freshness with the ingestor heartbeat, and the device writer. Polled every 15 s; the
+        shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Now'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/metrics:
+    get:
+      operationId: API-03
+      tags: [graphs]
+      summary: Metric registry over every numeric climate column, controller vitals and the daily scorecard keys
+      description: Column names never come from the browser. DLI keys return with the PAR meter (Round 2 #10).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties: {items: {type: array, items: {$ref: '#/components/schemas/MetricDef'}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/series:
+    get:
+      operationId: API-04
+      tags: [graphs]
+      summary: Downsampled series for uPlot
+      description: >-
+        time_bucket_gapfill over [from, to). The bucket is the smallest of 1 min, 5 min, 15 min, 1 h, 3 h and 1 d that
+        gives at most `points` buckets. Over 31 days, or when `from` is older than the raw retention of a requested
+        metric that has a daily binding, the bucket is 1 d and every metric with a daily binding reads `daily_summary` (its
+        `source` says so, and so does the chart); `daily.*` keys read `v_daily_scorecard`. Windows up to 400 days
+        (else 422 `window_too_large`); buckets before a metric's `retained_from` are beyond its retention, not gaps.
+        An unknown key is 422 `unknown_target`; the 10 s statement timeout is 503 `query_timeout`.
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          description: Metric key from API-03; repeat for up to 8
+          schema: {type: array, minItems: 1, maxItems: 8, items: {type: string}}
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: points
+          in: query
+          schema: {type: integer, minimum: 10, maximum: 2000, default: 1500}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Series'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/states:
+    get:
+      operationId: API-05
+      tags: [graphs]
+      summary: Equipment on/off intervals for the lanes
+      description: >-
+        From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run
+        ledger. Unknown stays unknown. Windows up to 31 days.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: equipment
+          in: query
+          description: Only these lanes; default all
+          schema: {type: array, items: {type: string}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/StateLanes'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/band:
+    get:
+      operationId: API-06
+      tags: [graphs]
+      summary: Band in force and the reconstructed crop band, for the house or one zone
+      description: >-
+        band is the history of the dispatcher's band rows for `zone` (setpoint_snapshot band_role): DERIVED from
+        crop_band_anchors with the controller's formula, kept 90 days, null before that. crop is reconstructed from
+        today's anchors over the whole window: for house, fn_band_setpoints(ts) over the step series, which gives the
+        same crop values as fn_band_timeline; for another zone, the house temperature crop band with
+        fn_zone_vpd_targets(ts) ∓ the zone crop's crop_band_anchors widths. The step matches the window: at least 5
+        min and at most 2,000 points.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: zone
+          in: query
+          description: North has no zone band and is not offered
+          schema: {type: string, enum: [house, center, south, west, east], default: house}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandTimeline'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/plan:
+    get:
+      operationId: API-07
+      tags: [plan]
+      summary: Plan in force, one lane per planned setting, manual settings and planner health
+      description: >-
+        Each lane says whose value applies now (applied_from) and marks waypoints that will not apply (effective
+        false), for example while a newer non-manual desired row holds until Iris's next plan. Waypoints carry their
+        source: iris, or preemptive for the forecast action engine (a forecast rule, never shown as AI). health is
+        planner_trigger_ledger: the rows expected in the last 36 h and the expected rows ahead.
+      parameters:
+        - name: hours
+          in: query
+          description: Lane horizon; live waypoints rarely reach past a few hours
+          schema: {type: integer, enum: [24, 72], default: 24}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Plan'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/settings:
+    get:
+      operationId: API-09
+      tags: [settings]
+      summary: Every registry row with its device value, desired row, plan value and state, and the Band in force rows
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, server_time]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Setting'}}
+                  server_time: {type: string, format: date-time}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/settings/{param}:
+    parameters: [{$ref: '#/components/parameters/Param'}]
+    put:
+      operationId: API-10
+      tags: [settings]
+      summary: Write a setting
+      description: >-
+        Validates (known and writable, type and range, snap), then appends one desired_state row and one activity_log
+        row in one transaction and wakes the dispatcher. Codes: unknown_target, read_only, out_of_range,
+        request_id_reused. A crop_band anchor write also updates its crop_band_anchors rows; an irrigation_site setting
+        is delivered in the irrigation program, not by the dispatcher (R12). Before the engine firmware an
+        irrigation_site write is stored and reads requested with state_reason no_engine until a program compiled
+        after it is confirmed.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/SettingWrite'}}}
+      responses:
+        '200':
+          description: 'Stored, with state requested (or no_readback); snapped_from when snapping changed the value, manual_before when the flag changed'
+          content: {application/json: {schema: {$ref: '#/components/schemas/DesiredSetting'}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+    delete:
+      operationId: API-11
+      tags: [settings]
+      summary: Release to auto
+      description: >-
+        Appends a value = null row. The plan, the band or the dispatcher's default applies again; a writable setting
+        with none of these returns to its registry default (TunableDef.default). manual is cleared.
+      parameters: [{$ref: '#/components/parameters/Reason'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      responses:
+        '200':
+          description: 'The release row (value null, state released)'
+          content: {application/json: {schema: {$ref: '#/components/schemas/DesiredSetting'}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/settings/{param}/history:
+    get:
+      operationId: API-12
+      tags: [settings]
+      summary: Desired rows, plan values and readback steps over a window (also the Graphs setting steps)
+      parameters: [{$ref: '#/components/parameters/Param'}, {$ref: '#/components/parameters/From'}, {$ref: '#/components/parameters/To'}]
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SettingHistory'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/equipment:
+    get:
+      operationId: API-13
+      tags: [equipment]
+      summary: Equipment now, runtime and cycles today, the grow lights' Lutron state and controller intent, and why
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Equipment'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/alerts:
+    get:
+      operationId: API-14
+      tags: [alerts]
+      summary: Open alerts by severity then age, or recently resolved ones, repeats merged, each with its runbook
+      parameters:
+        - name: status
+          in: query
+          description: >-
+            open (default) = every v_open_alerts row, acknowledged ones included. recent = open plus those resolved in
+            the last 24 h. Repeats of one alert_type and zone come back as one row with count and first and last seen;
+            a merged row has status open while any of its repeats is unacknowledged. The rows with status open are the
+            one open-alert count (API-02 alerts.open)
+          schema: {type: string, enum: [open, recent], default: open}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/AlertPage'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/alerts/{id}/ack:
+    post:
+      operationId: API-15
+      tags: [alerts]
+      summary: Acknowledge, with an optional note
+      description: >-
+        Acknowledges every unacknowledged repeat of the alert's alert_type and zone in one transaction, records the
+        person and note on each and returns the merged row, so the open-alert count drops by one.
+      parameters: [{$ref: '#/components/parameters/AlertId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {note: {type: string, maxLength: 500}}
+      responses:
+        '200': {description: The acknowledged alert, content: {application/json: {schema: {$ref: '#/components/schemas/Alert'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/alerts/{id}/resolve:
+    post:
+      operationId: API-16
+      tags: [alerts]
+      summary: Resolve, with an optional note (never blocked)
+      description: >-
+        Resolves every unresolved repeat of the alert's alert_type and zone in one transaction, records the person
+        and resolution on each and returns the merged row. An alert whose condition persists re-opens on the next
+        monitor cycle.
+      parameters: [{$ref: '#/components/parameters/AlertId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {resolution: {type: string, maxLength: 500}}
+      responses:
+        '200': {description: The resolved alert, content: {application/json: {schema: {$ref: '#/components/schemas/Alert'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/activity:
+    get:
+      operationId: API-17
+      tags: [activity]
+      summary: Every write by people, Iris, agents and the system, newest first
+      parameters:
+        - name: source
+          in: query
+          description: dashboard, iris, system, agent (any agent) or agent:<name>
+          schema: {type: string}
+        - {name: actor, in: query, schema: {type: string}}
+        - name: action
+          in: query
+          description: Prefix match, e.g. irrigation. or setting.write
+          schema: {type: string}
+        - name: target
+          in: query
+          description: Exact target, e.g. L01 or mister_engage_kpa
+          schema: {type: string}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ActivityPage'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- Next: band preview, grow lights, daily water use
+  /v1/band/preview:
+    get:
+      operationId: API-19
+      tags: [settings]
+      summary: Preview a crop-band edit as the day's diurnal curve, before Save
+      description: >-
+        Read-only; Save stays API-10. Overlays the draft value on the crop_band_anchors rows fn_crop_band_value reads
+        and returns the current and draft curves at 10-min steps with its four-anchor harmonic. A house temperature or
+        VPD param returns that axis's low, target and high; a zone param returns the zone's VPD target and the target
+        ∓ its widths. Codes: unknown_target (not a crop-band anchor or width), out_of_range (outside
+        planner_effective_bounds).
+      parameters:
+        - name: param
+          in: query
+          required: true
+          description: 'A crop-band anchor or width: band_<series>_<anchor>, zone_vpd_target_<zone>_<anchor>, zone_vpd_width_below_<zone> or zone_vpd_width_above_<zone>'
+          schema: {type: string, pattern: '^[a-z][a-z0-9_]*$', examples: [band_vpd_low_sm, zone_vpd_target_center_sm]}
+        - name: value
+          in: query
+          required: true
+          description: The draft value, in the setting's unit
+          schema: {type: number}
+        - name: day
+          in: query
+          description: America/Denver day; default today
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandPreview'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/equipment/lights/{light}/{state}:
+    post:
+      operationId: API-20
+      tags: [equipment]
+      summary: Turn a grow light on or off through verdify-setpoint-server (Lutron)
+      description: >-
+        Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row:
+        light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result}. 200 when
+        setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable,
+        retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state
+        comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or
+        sw_gl_grow_auto_mode. The writes flag gates it like every write, and it never touches the ESP32.
+      parameters:
+        - {name: light, in: path, required: true, schema: {type: string, enum: [main, grow]}}
+        - {name: state, in: path, required: true, schema: {type: string, enum: ['on', 'off']}}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {reason: {type: string, maxLength: 500}}
+      responses:
+        '200': {description: Lutron reached the state, content: {application/json: {schema: {$ref: '#/components/schemas/LightCommand'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/water/daily:
+    get:
+      operationId: API-21
+      tags: [irrigation]
+      summary: Daily water use from the site meter by line and cause, with no-valve water apart
+      description: >-
+        One entry per America/Denver day, in whole gallons: the meter's day total, Verdify-valve water by line and by
+        cause, and the water that ran while no Verdify valve was open (the hose, sink, hydro or a leak). The parts are
+        attributed per run and can sit a gallon off the total; nothing is rescaled. A no_data day is null, never 0.
+        There is no rate and no flow flag.
+      parameters:
+        - name: days
+          in: query
+          description: Days ending today, today included
+          schema: {type: integer, enum: [30, 90], default: 30}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/WaterUse'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- irrigation (irrigation.md §8.1)
+  /v1/irrigation:
+    get:
+      operationId: API-IRR-01
+      tags: [irrigation]
+      summary: Lines, active runs, program sync and the engine flag, minutes today, limits, leak and occupancy
+      description: >-
+        Polled every 15 s, and every 5 s while a program write is requested or a command is pending. Before the engine
+        firmware, engine is false, program.src is null with its reason, and line states come from relay edges only.
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/IrrigationStatus'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/schedules:
+    get:
+      operationId: API-IRR-02
+      tags: [irrigation]
+      summary: Schedules with sync state, the 7-day week planned against actual, bounds per line kind and solar times
+      parameters:
+        - name: days
+          in: query
+          description: Days ahead from the start of today
+          schema: {type: integer, minimum: 1, maximum: 7, default: 7}
+        - name: past_days
+          in: query
+          description: Past days of occurrences with their outcomes
+          schema: {type: integer, minimum: 0, maximum: 7, default: 0}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ScheduleAgenda'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+    post:
+      operationId: API-IRR-03
+      tags: [irrigation]
+      summary: Create a schedule
+      description: >-
+        Codes: out_of_range, too_close (30 min on one line), too_many_schedules (24), unknown_target,
+        request_id_reused. A schedule on a disabled line, one over the line's daily cap, and a mist
+        schedule on a zone with schedule_member off are all accepted; their occurrences end skipped or cap, with the
+        reason in words.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ScheduleCreate'}}}
+      responses:
+        '201':
+          description: 'Created, sync requested until the controller''s program hash matches'
+          content: {application/json: {schema: {$ref: '#/components/schemas/Schedule'}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/schedules/{slot_id}:
+    parameters: [{$ref: '#/components/parameters/SlotId'}]
+    put:
+      operationId: API-IRR-04
+      tags: [irrigation]
+      summary: Edit, enable or disable a schedule; set manual
+      description: >-
+        Omitted fields keep their value, except manual: a REST edit that omits it stores true (R3). Same codes as
+        API-IRR-03; Iris only, on a manual schedule, manual.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ScheduleInput'}}}
+      responses:
+        '200': {description: 'Stored, sync requested', content: {application/json: {schema: {$ref: '#/components/schemas/Schedule'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+    delete:
+      operationId: API-IRR-05
+      tags: [irrigation]
+      summary: Delete a schedule (its slot_id is never reused)
+      parameters: [{$ref: '#/components/parameters/Reason'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      responses:
+        '204': {description: Deleted; the program banner shows the push}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/lines/{line_id}/run:
+    post:
+      operationId: API-IRR-06
+      tags: [irrigation]
+      summary: Run now
+      description: >-
+        Starts at once or is refused: line_busy, manifold_busy, cap_reached, line_disabled, line_paused, line_faulted,
+        not_schedule_member (mist). The API refuses what it can see in the newest irr_state (422); otherwise the
+        line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the
+        btn_wall_clean bridge, for its configured irrig_wall_duration_min (minutes, if sent, must equal it); any other
+        line is 503 unavailable and nothing is stored.
+      parameters: [{$ref: '#/components/parameters/LineId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RunRequest'}}}
+      responses:
+        '202': {$ref: '#/components/responses/Accepted'}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/stop:
+    post:
+      operationId: API-IRR-07
+      tags: [irrigation]
+      summary: Stop one line, or every line when line_id is omitted
+      description: >-
+        Never blocked, including by DASHBOARD_WRITES_ENABLED; never heap-deferred; sent ahead of any program push and
+        re-sent until the relays read OFF (at most 2 min). Ends what is running now and disables nothing: VPD misting,
+        survival fog and the next scheduled run can still start (disable the line to keep it off), and the dashboard's
+        Stop result toast (VD-05) and the MCP tool description (VD-64, VD-61) say so. Before the engine firmware it
+        works on one line or every line through the run-now bridge: it ends the
+        legacy drip job (the sw_irrig_* enables) and turns the open wet relays off; their guards block only turn-on,
+        so VPD misting may pulse again.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content: {application/json: {schema: {$ref: '#/components/schemas/LineCommand'}}}
+      responses:
+        '202': {$ref: '#/components/responses/Accepted'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/lines/{line_id}:
+    put:
+      operationId: API-IRR-08
+      tags: [irrigation]
+      summary: Enable or disable a line with its check; VPD and Schedule flags on misters; caps; pause or resume; manual
+      description: >-
+        line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for
+        L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs
+        checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD
+        misting included. Pause, resume and the check never change manual; any other edit that omits it stores true
+        (R3). Codes: out_of_range, check_required,
+        unknown_target, request_id_reused; Iris only, on a manual line, manual.
+      parameters:
+        - name: line_id
+          in: path
+          required: true
+          schema: {type: string, pattern: '^(L(0[1-9]|1[01])|all)$'}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/LineUpdate'}}}
+      responses:
+        '200':
+          description: The changed lines, sync requested
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lines]
+                properties: {lines: {type: array, items: {$ref: '#/components/schemas/IrrigationLine'}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/minutes:
+    get:
+      operationId: API-IRR-10
+      tags: [irrigation]
+      summary: Minutes, pulses and gallons per day by zone, line or cause (v_irrigation_minutes_daily), up to 400 days
+      parameters:
+        - {name: from, in: query, required: true, schema: {type: string, format: date}}
+        - {name: to, in: query, required: true, description: Inclusive local day, schema: {type: string, format: date}}
+        - {name: group_by, in: query, schema: {type: string, enum: [zone, line, cause], default: zone}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MinutesReport'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/runs:
+    get:
+      operationId: API-IRR-11
+      tags: [irrigation]
+      summary: Run ledger, newest first; windows up to 31 days
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - {name: line, in: query, schema: {$ref: '#/components/schemas/LineId'}}
+        - {name: cause, in: query, schema: {$ref: '#/components/schemas/IrrigationCause'}}
+        - {name: outcome, in: query, schema: {$ref: '#/components/schemas/RunOutcome'}}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RunPage'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/equipment/override:
+    post:
+      operationId: API-IRR-12
+      tags: [irrigation, equipment]
+      summary: Bursts and restart through manual_override (replaces the Home Assistant buttons)
+      description: >-
+        fans, humidify and vent_bypass set only the controller's deadline latch for that burst to now + minutes; clear
+        zeroes them; restart reboots the controller safely. It never changes occupancy. Now shows a burst from the
+        controller's readback, not from this command. No MCP tool in MVP. Before the engine firmware: 503 unavailable.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/OverrideRequest'}}}
+      responses:
+        '202': {$ref: '#/components/responses/Accepted'}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/irrigation/clear-fault:
+    post:
+      operationId: API-IRR-13
+      tags: [irrigation]
+      summary: Clear a mister watchdog latch (irr_command clear_fault)
+      description: >-
+        With line_id (L04, L07 or L09), clears that zone's D-IRP-19 latch; without it, every latch. There is no drip
+        leak latch (Round 2 #3). Before the engine firmware: 503 unavailable.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content: {application/json: {schema: {$ref: '#/components/schemas/LineCommand'}}}
+      responses:
+        '202': {$ref: '#/components/responses/Accepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- BFF sign-in (served by the Express BFF)
+  /auth/login:
+    x-served-by: bff
+    servers: [{url: 'https://dashboard.verdify.ai'}]
+    get:
+      operationId: BFF-01
+      tags: [session]
+      summary: Start sign-in
+      description: >-
+        Sets the sealed __Host-verdify_login cookie (state, nonce, PKCE verifier and returnTo; AES-256-GCM; 10 min) and
+        redirects to the authorization_endpoint discovered from issuer
+        https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/)
+        with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page
+        without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik.
+      security: []
+      parameters:
+        - name: returnTo
+          in: query
+          description: Same-origin relative path; anything else becomes /
+          schema: {type: string}
+      responses:
+        '302':
+          description: To Authentik
+          headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
+        '503':
+          description: 'Sign-in is unavailable: Authentik cannot be reached (existing sessions keep working)'
+          content: {text/html: {schema: {type: string}}}
+  /auth/callback:
+    x-served-by: bff
+    servers: [{url: 'https://dashboard.verdify.ai'}]
+    get:
+      operationId: BFF-02
+      tags: [session]
+      summary: Finish sign-in
+      description: >-
+        Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name,
+        groups), maps groups to a role (operators wins), creates the session with INT-01 and sets
+        __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser.
+      security: []
+      parameters:
+        - {name: code, in: query, schema: {type: string}}
+        - {name: state, in: query, schema: {type: string}}
+        - {name: error, in: query, schema: {type: string}}
+      responses:
+        '302':
+          description: To returnTo, with the session cookie set and the login cookie cleared
+          headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
+        '400':
+          description: 'Sign-in did not complete (state mismatch, expired login cookie or an Authentik error); no session cookie'
+          content: {text/html: {schema: {type: string}}}
+        '403':
+          description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers'
+          content: {text/html: {schema: {type: string}}}
+  /auth/logout:
+    x-served-by: bff
+    servers: [{url: 'https://dashboard.verdify.ai'}]
+    post:
+      operationId: BFF-03
+      tags: [session]
+      summary: Sign out
+      description: Needs the exact Origin. Deletes the session (INT-02), clears the cookie and redirects to Authentik's end-session endpoint.
+      security: [{sessionCookie: []}, {}]
+      responses:
+        '303':
+          description: To the Authentik end-session endpoint
+          headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
+        '403': {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- BFF-only session routes (operator API, never proxied)
+  /internal/sessions:
+    servers: [{url: 'http://verdify-operator-api.verdify-prod.svc:8090'}]
+    post:
+      operationId: INT-01
+      tags: [session]
+      summary: Create a session after the BFF verified the ID token
+      description: >-
+        Returns the token once; dashboard_session keeps only its sha256. X-Authentik-* headers are ignored. A request
+        that carries X-Dashboard-Session is refused (403): the proxy always sends that header and the BFF's
+        session-create call never does, so no proxied user request can reach this route.
+      security: [{operatorToken: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/SessionCreate'}}}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/SessionToken'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /internal/sessions/current:
+    servers: [{url: 'http://verdify-operator-api.verdify-prod.svc:8090'}]
+    delete:
+      operationId: INT-02
+      tags: [session]
+      summary: Delete the session named by X-Dashboard-Session
+      security: [{operatorToken: [], dashboardSession: []}]
+      responses:
+        '204': {description: Deleted}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- health and readiness (both tiers, unauthenticated)
+  /healthz:
+    x-served-by: bff+operator-api
+    servers:
+      - {url: 'https://dashboard.verdify.ai', description: BFF}
+      - {url: 'http://verdify-operator-api.verdify-prod.svc:8090', description: Operator API}
+    get:
+      operationId: OPS-01
+      tags: [ops]
+      summary: Liveness, static 200 (successful probes are not logged)
+      security: []
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}}}}}
+  /readyz:
+    x-served-by: bff+operator-api
+    servers:
+      - {url: 'https://dashboard.verdify.ai', description: 'BFF: config loaded; Authentik and operator API reachability reported, not gating'}
+      - {url: 'http://verdify-operator-api.verdify-prod.svc:8090', description: 'Operator API: SELECT 1 on its attested pool'}
+    get:
+      operationId: OPS-02
+      tags: [ops]
+      summary: Readiness with the source revision
+      security: []
+      responses:
+        '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
+        '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-verdify_session
+      description: Browser session from BFF-02 (12 h). The BFF sends it on as X-Dashboard-Session with the bearer token.
+    operatorToken:
+      type: http
+      scheme: bearer
+      description: Shared BFF-to-API token (Secret verdify-operator-api, key operator-api-token)
+    dashboardSession:
+      type: apiKey
+      in: header
+      name: X-Dashboard-Session
+      description: The session cookie value; resolved to a dashboard_session row (by sha256, cached 30 s) for user and role
+
+  parameters:
+    From: {name: from, in: query, required: true, description: Window start (inclusive), schema: {type: string, format: date-time}}
+    To: {name: to, in: query, required: true, description: Window end (exclusive), schema: {type: string, format: date-time}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+    Cursor: {name: cursor, in: query, description: next_cursor from the previous page, schema: {type: string}}
+    Reason: {name: reason, in: query, schema: {type: string, maxLength: 500}}
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: >-
+        Optional on every write; stored as request_id on the write's activity_log row and logged as the request id.
+        The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key
+        with a different payload is 422 request_id_reused.
+      schema: {type: string, format: uuid}
+    Param:
+      name: param
+      in: path
+      required: true
+      description: tunable_registry name
+      schema: {type: string, pattern: '^[a-z][a-z0-9_]*$', examples: [mister_engage_kpa]}
+    AlertId: {name: id, in: path, required: true, schema: {type: integer}}
+    SlotId: {name: slot_id, in: path, required: true, schema: {type: integer, minimum: 1, maximum: 65535}}
+    LineId: {name: line_id, in: path, required: true, schema: {$ref: '#/components/schemas/LineId'}}
+
+  responses:
+    Problem:
+      description: Error; see the Errors rule in the API description
+      content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}
+    Invalid:
+      description: Validation or refusal; code says why and nothing was stored or sent
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          example:
+            title: Out of range
+            status: 422
+            code: out_of_range
+            detail: Must be 0.50-2.50 kPa
+            retryable: false
+            field: value
+            min: 0.5
+            max: 2.5
+            current: 1.6
+    Accepted:
+      description: >-
+        Stored for the device writer: pending until sent (at most once), or failed if not sent within 2 min. Relay
+        edges and the line's irr_state show what happened.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Command'}}}
+
+  schemas:
+    # ------------------------------------------------------------ shared
+    Problem:
+      type: object
+      description: RFC 9457 problem details. The UI maps code to words and shows an unknown code raw.
+      required: [title, status, code, retryable]
+      properties:
+        type: {type: string, format: uri-reference, default: 'about:blank'}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string, description: In plain words}
+        code: {$ref: '#/components/schemas/ProblemCode'}
+        retryable: {type: boolean}
+        field: {type: string, description: 'Request field at fault, e.g. on_s'}
+        min: {type: [number, 'null']}
+        max: {type: [number, 'null']}
+        current: {type: [number, string, boolean, 'null'], description: Current stored or device value}
+        retry_after_s: {type: [integer, 'null'], description: 'When a retry may succeed (line_busy, manifold_busy), if known'}
+        result: {type: string, enum: [ha_failed, not_confirmed, timeout], description: 'API-20 only, with unavailable: Home Assistant failed the call, Lutron did not reach the state, or no answer within 12 s'}
+        request_id: {type: string, description: 'The request id (the Idempotency-Key on a write), as logged'}
+    ProblemCode:
+      type: string
+      description: 'Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only'
+      enum: [invalid_request, unauthenticated, forbidden, origin_mismatch, not_found, writes_disabled, query_timeout,
+        unavailable, window_too_large, unknown_target, read_only, out_of_range, manual, request_id_reused,
+        check_required, too_close, too_many_schedules, line_disabled, line_paused, line_faulted, not_schedule_member,
+        line_busy, manifold_busy, cap_reached]
+    Actor:
+      type: object
+      description: 'Who wrote (R4). system is the platform itself, for example the forecast action engine'
+      required: [source, name]
+      properties:
+        source: {type: string, pattern: '^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$', examples: [dashboard, iris, 'agent:steward', 'agent:admin']}
+        name: {type: string, description: 'Authentik username, iris, the agent name (admin for the admin MCP token) or forecast-engine'}
+    Freshness:
+      type: object
+      description: >-
+        How old a source is. A sensor source is stale when its age exceeds twice its cadence; the ingestor heartbeat
+        (cadence 60 s) after 180 s; a change-only source (equipment_state, irr_state) only while the controller is
+        offline; a source never seen is stale
+      required: [observed_at, age_s, stale]
+      properties:
+        observed_at: {type: [string, 'null'], format: date-time}
+        age_s: {type: [integer, 'null']}
+        cadence_s: {type: integer}
+        stale: {type: boolean}
+    Reading:
+      type: object
+      required: [value, observed_at]
+      properties:
+        value: {type: [number, 'null']}
+        observed_at: {type: [string, 'null'], format: date-time}
+        reason: {type: [string, 'null'], description: 'Why value is null, in words'}
+    TimedValue:
+      type: object
+      required: [at, value]
+      properties:
+        at: {type: string, format: date-time}
+        value: {type: [number, 'null']}
+    NullableNumbers: {type: array, items: {type: [number, 'null']}}
+    ReadbackState:
+      type: string
+      description: >-
+        Computed on every read (architecture §5.5); display only. held means the platform applies something else on
+        purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the
+        irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash;
+        before the engine firmware they stay requested.
+      enum: [requested, confirmed, not_confirmed, held, no_readback, overridden, released]
+    StateReason:
+      type: object
+      description: >-
+        Why a value is held or not confirmed, when the platform knows (architecture §5.5): clamped (a dispatcher
+        clamp; applied_value), experiment (an armed manifest serves the field), deferred (controller heap low),
+        push_failed (setpoint_changes.delivery_status after the request), writer_down (the ingestor heartbeat is older
+        than 180 s: "Ingestor not running since HH:MM"), controller_not_reporting (heartbeat fresh, newest climate row
+        older than 300 s: "Controller not reporting since HH:MM"), no_engine (an irrigation_site write stored before
+        the engine firmware: "applies with the irrigation firmware"; it stays requested) or no_match ("Sent HH:MM; no
+        matching readback yet"). since gives each HH:MM
+      required: [code]
+      properties:
+        code: {type: string, enum: [clamped, experiment, deferred, push_failed, writer_down, controller_not_reporting, no_engine, no_match]}
+        detail: {type: [string, 'null'], description: 'In words, e.g. the guard that clamped it or the push status'}
+        applied_value: {type: [number, 'null'], description: 'What the dispatcher sent instead, when clamped'}
+        since:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the reason began, null when not known. writer_down: the newest ingestor heartbeat.
+            controller_not_reporting: the newest climate row. no_match, push_failed and deferred: the push the request
+            went out in (the "Sent HH:MM" time). clamped: the clamp row. no_engine: the stored write
+    DesiredSetting:
+      type: object
+      description: The newest desired_state row for a setting and its readback state. value null means released.
+      required: [id, param, value, manual, state, actor, created_at]
+      properties:
+        id: {type: integer}
+        param: {type: string}
+        value: {type: [number, 'null'], description: Stored value after snapping}
+        snapped_from: {type: [number, 'null'], description: Submitted value when snapping changed it (write responses)}
+        manual: {type: boolean, description: Iris skips the setting while true}
+        manual_before: {type: [boolean, 'null'], description: The flag before this write (write responses)}
+        state: {$ref: '#/components/schemas/ReadbackState'}
+        state_reason: {anyOf: [{$ref: '#/components/schemas/StateReason'}, {type: 'null'}]}
+        confirmed_at: {type: [string, 'null'], format: date-time}
+        actor: {$ref: '#/components/schemas/Actor'}
+        reason: {type: [string, 'null'], maxLength: 500}
+        created_at: {type: string, format: date-time}
+    Series:
+      type: object
+      description: uPlot columns. A bucket with no data is null, never 0; count gives coverage.
+      required: [from, to, bucket_s, t, series, watermark, server_time]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        bucket_s: {type: integer, enum: [60, 300, 900, 3600, 10800, 86400]}
+        t: {type: array, items: {type: integer}, description: 'Bucket starts, epoch seconds'}
+        series: {type: object, additionalProperties: {$ref: '#/components/schemas/SeriesColumns'}, description: By metric key}
+        watermark: {type: [string, 'null'], format: date-time, description: Newest sample included}
+        server_time: {type: string, format: date-time}
+        gaps:
+          type: array
+          description: >-
+            The data_gaps rows (telemetry outages the ingestor recorded, kept with no retention) that overlap [from,
+            to), oldest first. A null run inside one is that outage; a null run with none has no known reason
+          items:
+            type: object
+            required: [start, end, reason]
+            properties:
+              start: {type: string, format: date-time}
+              end: {type: string, format: date-time}
+              reason: {type: [string, 'null'], description: 'As stored, e.g. ingestor_restart; the UI words it and shows an unknown one raw'}
+    SeriesColumns:
+      type: object
+      required: [avg, min, max, count, source]
+      properties:
+        avg: {$ref: '#/components/schemas/NullableNumbers'}
+        min: {$ref: '#/components/schemas/NullableNumbers'}
+        max: {$ref: '#/components/schemas/NullableNumbers'}
+        count: {type: array, items: {type: integer}}
+        source: {type: string, enum: [raw, daily_summary, scorecard, forecast], description: 'daily_summary: daily summaries, and the chart says so; forecast: weather_forecast, the newest issue per hour'}
+        retained_from: {type: [string, 'null'], format: date-time, description: 'Older buckets are beyond retention_days, not gaps'}
+        reason:
+          type: array
+          items: {type: [string, 'null']}
+          description: >-
+            daily.* keys only, one per bucket: why a null bucket is null ('band grade kept 3 days', the water day's
+            v_water_meter_daily quality, or 'no meter data'); null where the bucket has a value or no reason is known
+        issued_at: {type: [string, 'null'], format: date-time, description: 'forecast.temp_f, forecast.rh_pct and forecast.vpd_kpa only: the newest weather_forecast.fetched_at used; null when the window holds no forecast row'}
+    Page:
+      type: object
+      description: Cursor page; each list schema adds items
+      required: [next_cursor]
+      properties:
+        next_cursor: {type: [string, 'null'], description: Pass as cursor; null on the last page}
+
+    # ------------------------------------------------------------ session, now, graphs
+    Me:
+      type: object
+      required: [username, role, writes_enabled, source_revision]
+      properties:
+        username: {type: string}
+        display_name: {type: [string, 'null']}
+        role: {type: string, enum: [operator, viewer]}
+        writes_enabled: {type: boolean, description: Set by the BFF from DASHBOARD_WRITES_ENABLED (the operator API returns true)}
+        source_revision: {type: string, description: Operator API build commit}
+    SessionCreate:
+      type: object
+      required: [username, role]
+      properties:
+        username: {type: string, description: preferred_username}
+        display_name: {type: [string, 'null'], description: name claim}
+        role: {type: string, enum: [operator, viewer]}
+    SessionToken:
+      type: object
+      required: [token, expires_at]
+      properties:
+        token: {type: string, description: '32 random bytes, base64url; becomes __Host-verdify_session'}
+        expires_at: {type: string, format: date-time}
+    Readiness:
+      type: object
+      required: [status, source_revision]
+      properties:
+        status: {type: string, enum: [ready, not_ready]}
+        source_revision: {type: string}
+        operator_api: {type: string, enum: [reachable, unreachable], description: 'BFF only; reported, not gating'}
+        authentik: {type: string, enum: [reachable, unreachable], description: 'BFF only; reported, not gating'}
+    BandPosition:
+      type: object
+      required: [low, high, verdict]
+      properties:
+        low: {type: [number, 'null']}
+        high: {type: [number, 'null']}
+        verdict: {type: string, enum: [in, above, below, unavailable]}
+    Occupancy:
+      type: object
+      description: >-
+        Frigate occupancy as the ingestor pushes it to the controller, from Home Assistant's
+        binary_sensor.greenhouse_zone_person_occupancy polled every 300 s (the only occupancy input). occupied null
+        means unknown, and unknown never holds mist (D-IRP-10).
+      required: [occupied, seen_at]
+      properties:
+        occupied: {type: [boolean, 'null']}
+        seen_at: {type: [string, 'null'], format: date-time, description: Last person detection}
+        hold_enabled: {type: [boolean, 'null'], description: 'occupancy_inhibit; false means the occupancy mist hold is off'}
+    Leak:
+      type: object
+      description: >-
+        leak_detected: flow on the one site meter with every Verdify valve closed, so also the hose, sink or hydro.
+        It raises the leak alert ("Water flowing with every Verdify valve closed") and nothing else: nothing latches,
+        and the engine firmware forces nothing off (Round 2 #3, Q-05). Until that release the current firmware keeps
+        its fog, mister and drip interlock. The flow banner shows while alert_id is set and reads "Flow stopped at
+        HH:MM" once stopped_at is set, never an all clear
+      required: [active, alert_id, stopped_at]
+      properties:
+        active: {type: [boolean, 'null']}
+        since: {type: [string, 'null'], format: date-time}
+        flow_gpm: {type: [number, 'null'], description: 'Whole-gallon meter, so 0 or about 1 in practice'}
+        gal_last_10min: {type: [integer, 'null'], description: Whole gallons}
+        alert_id: {type: [integer, 'null'], description: 'The open leak_detected alert''s merged-row id (Alert.id); null when none is open'}
+        stopped_at: {type: [string, 'null'], format: date-time, description: 'When flow fell under 0.1 gal/min for two meter readings while that alert is open; null while flow continues'}
+    Controller:
+      type: object
+      description: ESP32 diagnostics; a reset of uptime_s confirms a restart
+      properties:
+        firmware_version: {type: [string, 'null']}
+        uptime_s: {type: [integer, 'null']}
+        reset_reason: {type: [string, 'null']}
+        heap_free_kb: {type: [number, 'null'], description: 'kB, as stored in diagnostics.heap_bytes'}
+        heap_largest_block_kb: {type: [number, 'null']}
+        rssi_dbm: {type: [number, 'null']}
+        observed_at: {type: [string, 'null'], format: date-time}
+    Now:
+      type: object
+      required: [server_time, indoor, outdoor, band, mode, iris, alerts, running, overrides, leak, freshness, writer]
+      properties:
+        server_time: {type: string, format: date-time}
+        indoor:
+          type: object
+          required: [temp_f, rh_pct, vpd_kpa]
+          properties:
+            temp_f: {$ref: '#/components/schemas/Reading'}
+            rh_pct: {$ref: '#/components/schemas/Reading'}
+            vpd_kpa: {$ref: '#/components/schemas/Reading'}
+        outdoor:
+          type: object
+          required: [temp_f, rh_pct]
+          properties:
+            temp_f: {$ref: '#/components/schemas/Reading'}
+            rh_pct: {$ref: '#/components/schemas/Reading'}
+        band:
+          type: object
+          description: >-
+            The band in force now: the dispatcher's newest band rows for zone house (DERIVED); rh_pct is null when
+            there is no RH band
+          required: [temp_f, vpd_kpa, rh_pct]
+          properties:
+            temp_f: {$ref: '#/components/schemas/BandPosition'}
+            vpd_kpa: {$ref: '#/components/schemas/BandPosition'}
+            rh_pct: {anyOf: [{$ref: '#/components/schemas/BandPosition'}, {type: 'null'}]}
+            observed_at: {type: [string, 'null'], format: date-time, description: 'ts of the newest house band rows, for the band''s age; null with no rows'}
+        mode:
+          type: object
+          required: [code]
+          properties:
+            code: {type: string, examples: [IDLE, SEALED_MIST, SAFETY_COOL]}
+            stage: {type: [string, 'null'], examples: [WATCH, FOG, S1, S2]}
+            reason: {type: [string, 'null'], description: mode_reason}
+            since: {type: [string, 'null'], format: date-time}
+        iris:
+          type: object
+          required: [plan_id, required_trigger]
+          properties:
+            plan_id: {type: [string, 'null'], description: Plan in force; null means band and defaults}
+            trigger: {type: [string, 'null']}
+            valid_until: {type: [string, 'null'], format: date-time}
+            required_trigger: {type: string, enum: [ok, late, missed, failed], description: 'Newest MIDNIGHT, SUNRISE or SUNSET trigger'}
+        alerts:
+          type: object
+          description: >-
+            The one open-alert count every surface shows (nav, Now, Activity, API-14, MCP alerts): the unacknowledged
+            (disposition open) v_open_alerts rows with repeats of one alert_type and zone counted once (a merged row
+            counts while any of its repeats is unacknowledged), by severity. It equals the rows with status open that
+            API-14 returns (verdify_services.alerts.open_count)
+          required: [open, critical, warning, info]
+          properties:
+            open: {type: integer}
+            critical: {type: integer}
+            warning: {type: integer}
+            info: {type: integer}
+        running:
+          type: array
+          description: Equipment commanded on now
+          items:
+            type: object
+            required: [equipment, since]
+            properties:
+              equipment: {type: string, examples: [heat1, mister_center]}
+              line_id: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
+              cause: {anyOf: [{$ref: '#/components/schemas/IrrigationCause'}, {type: 'null'}]}
+              since: {type: [string, 'null'], format: date-time}
+        overrides:
+          type: array
+          description: >-
+            Running bursts, from the controller's readback (fan_burst_active, fog_burst_active, vent_bypass_active),
+            never from the command alone
+          items:
+            type: object
+            required: [kind, since, ends_at]
+            properties:
+              kind: {type: string, enum: [fans, humidify, vent_bypass]}
+              since: {type: string, format: date-time, description: The readback's ON edge}
+              ends_at: {type: [string, 'null'], format: date-time, description: 'ON edge plus the command''s minutes; null for a push-button burst'}
+              held_reason: {type: [string, 'null'], description: 'Why the controller holds it off, e.g. from fog_block_reason'}
+        leak: {$ref: '#/components/schemas/Leak'}
+        freshness:
+          type: object
+          description: >-
+            ingestor is the heartbeat: one system_state row (ingestor_heartbeat) every 60 s from the ingestor's own
+            loop, stale after 180 s. Heartbeat stale: the ingestor is not running, and the controller keeps running on
+            its own. Heartbeat fresh and climate older than 300 s: the controller is not reporting
+          required: [climate, diagnostics, readback, ingestor]
+          properties:
+            climate: {$ref: '#/components/schemas/Freshness'}
+            diagnostics: {$ref: '#/components/schemas/Freshness'}
+            readback: {$ref: '#/components/schemas/Freshness'}
+            ingestor: {$ref: '#/components/schemas/Freshness'}
+        writer:
+          type: object
+          description: >-
+            Device writer health (Round 2 #1): the writer-health tile and the stuck-delivery banner. age_s is the
+            setpoints pipeline age (v_data_pipeline_health source setpoints: the newest setpoint push or device-reported
+            change). stuck is true while the setpoint_delivery_stuck alert is open. differing counts settings whose
+            effective value has differed from the newest readback for more than 10 min, leaving out held and clamped ones
+          required: [age_s, stuck, differing]
+          properties:
+            last_at: {type: [string, 'null'], format: date-time}
+            age_s: {type: [integer, 'null']}
+            stuck: {type: boolean}
+            differing: {type: integer}
+            oldest_since: {type: [string, 'null'], format: date-time}
+        controller: {$ref: '#/components/schemas/Controller'}
+    MetricDef:
+      type: object
+      required: [key, label, group, unit, cadence_s, retention_days, provenance, daily]
+      properties:
+        key: {type: string, examples: [climate.temp_avg, climate.vpd_avg, climate.flow_gpm, diagnostics.heap_free_kb]}
+        label: {type: string}
+        group: {type: string, examples: [house climate, zones, water and soil, light, outdoor, targets, controller, daily]}
+        unit: {type: string}
+        cadence_s: {type: integer}
+        retention_days: {type: integer, description: 'Raw retention: climate 365, diagnostics 180, setpoint_snapshot 90'}
+        provenance: {type: string, enum: [MEASURED, DERIVED, PLANNED, MANUAL, AI]}
+        zone: {type: [string, 'null']}
+        daily: {type: boolean, description: 'Has a daily_summary binding, used over 31 days and beyond raw retention'}
+        note: {type: [string, 'null']}
+    StateLanes:
+      type: object
+      required: [from, to, lanes]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        lanes:
+          type: array
+          items:
+            type: object
+            required: [equipment, group, intervals]
+            properties:
+              equipment: {type: string, examples: [fan1, mister_center, leak_detected]}
+              label: {type: string}
+              group: {type: string, enum: [climate, water, light, flag]}
+              line_id: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
+              intervals:
+                type: array
+                items:
+                  type: object
+                  required: [start, end, state]
+                  properties:
+                    start: {type: string, format: date-time}
+                    end: {type: string, format: date-time, description: Clamped to the window or now}
+                    state: {type: string, enum: ['on', 'off', unknown]}
+                    cause: {anyOf: [{$ref: '#/components/schemas/IrrigationCause'}, {type: 'null'}]}
+    BandTimeline:
+      type: object
+      description: One point per step_s
+      required: [from, to, step_s, t, band, crop]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        step_s: {type: integer, minimum: 300}
+        t: {type: array, items: {type: integer}, description: Epoch seconds}
+        band: {$ref: '#/components/schemas/BandColumns', description: 'In force (DERIVED band rows of the requested zone); null beyond 90 days'}
+        crop: {$ref: '#/components/schemas/BandColumns', description: 'Reconstructed from today''s anchors (API-06 says how per zone)'}
+    BandColumns:
+      type: object
+      required: [temp_low, temp_high, vpd_low, vpd_high]
+      properties:
+        temp_low: {$ref: '#/components/schemas/NullableNumbers'}
+        temp_high: {$ref: '#/components/schemas/NullableNumbers'}
+        vpd_low: {$ref: '#/components/schemas/NullableNumbers'}
+        vpd_high: {$ref: '#/components/schemas/NullableNumbers'}
+    BandPreview:
+      type: object
+      description: 'API-19: the band over one day as stored (current) and with the draft value (draft), one point per step_s'
+      required: [param, unit, day, step_s, t, current, draft]
+      properties:
+        param: {type: string}
+        unit: {type: string, examples: ['°F', kPa]}
+        day: {type: string, format: date, description: America/Denver day}
+        step_s: {type: integer, const: 600}
+        t: {type: array, items: {type: integer}, description: Epoch seconds}
+        current: {$ref: '#/components/schemas/BandCurve'}
+        draft: {$ref: '#/components/schemas/BandCurve'}
+    BandCurve:
+      type: object
+      required: [low, target, high]
+      properties:
+        low: {$ref: '#/components/schemas/NullableNumbers'}
+        target: {$ref: '#/components/schemas/NullableNumbers'}
+        high: {$ref: '#/components/schemas/NullableNumbers'}
+
+    # ------------------------------------------------------------ plan and settings
+    PlanRecord:
+      type: object
+      description: A plan_journal row; history rows omit detail
+      required: [plan_id, trigger, written_at]
+      properties:
+        plan_id: {type: string, examples: [iris-20261101-0702]}
+        trigger: {type: string, description: 'MIDNIGHT, SUNRISE, SOLAR_MAX, TRANSITION, SUNSET, WEEKLY, FORECAST_DEVIATION or MANUAL'}
+        written_at: {type: string, format: date-time}
+        valid_from: {type: [string, 'null'], format: date-time}
+        valid_until: {type: [string, 'null'], format: date-time}
+        status: {type: [string, 'null'], description: lifecycle_status}
+        hypothesis: {type: [string, 'null']}
+        experiment: {type: [string, 'null']}
+        expected_outcome: {type: [string, 'null']}
+        conditions_summary: {type: [string, 'null']}
+        outcome_score: {type: [number, 'null']}
+        lesson: {type: [string, 'null']}
+        detail: {type: object, description: 'hypothesis_structured and climate_intents as stored (stress windows, per-setting rationale)'}
+    PlannerTrigger:
+      type: object
+      description: One planner_trigger_ledger row
+      required: [trigger, required, expected_at, due_at, outcome]
+      properties:
+        trigger: {type: string}
+        required: {type: boolean, description: 'MIDNIGHT, SUNRISE and SUNSET are required'}
+        expected_at: {type: string, format: date-time, description: When the trigger fires}
+        due_at: {type: string, format: date-time, description: expected_at plus the SLA}
+        outcome:
+          type: string
+          description: The ledger status verbatim; the UI maps it to words (missed and wrong_action included)
+          enum: [expected, delivered, acked, plan_written, action_completed, neutral_fallback, wrong_action,
+            delivery_failed, timed_out, missed]
+        resolved_at: {type: [string, 'null'], format: date-time}
+        failure_class: {type: [string, 'null']}
+    PlanWaypoint:
+      type: object
+      required: [at, value, source, effective]
+      properties:
+        at: {type: string, format: date-time}
+        value: {type: [number, 'null']}
+        source: {type: string, enum: [iris, preemptive], description: 'preemptive is the forecast action engine, shown as "Forecast rule · system", never AI'}
+        effective: {type: boolean, description: 'false when a manual or newer desired row keeps it from applying (SUPERSEDED)'}
+    PlanLane:
+      type: object
+      required: [param, label, device, waypoints, desired, applied_from]
+      properties:
+        param: {type: string}
+        label: {type: string}
+        unit: {type: [string, 'null']}
+        device: {$ref: '#/components/schemas/Reading', description: Newest readback}
+        waypoints: {type: array, items: {$ref: '#/components/schemas/PlanWaypoint'}, description: Plan values to the horizon}
+        desired: {anyOf: [{$ref: '#/components/schemas/DesiredSetting'}, {type: 'null'}], description: 'Newest desired row; Iris skips it if manual'}
+        applied_from: {type: string, enum: [manual, desired, plan, band, default], description: 'Computed by verdify_services with the dispatcher''s rule'}
+    Plan:
+      type: object
+      required: [plan, lanes, manual_count, health]
+      properties:
+        plan: {anyOf: [{$ref: '#/components/schemas/PlanRecord'}, {type: 'null'}], description: Null when no plan is in force}
+        no_plan_since: {type: [string, 'null'], format: date-time, description: 'With no plan, band and defaults apply since then'}
+        lanes: {type: array, items: {$ref: '#/components/schemas/PlanLane'}}
+        manual_count: {type: integer}
+        health: {type: array, items: {$ref: '#/components/schemas/PlannerTrigger'}, description: 'planner_trigger_ledger: rows expected in the last 36 h and the expected rows ahead'}
+    Setting:
+      type: object
+      description: One tunable_registry row, or a read-only Band in force row, as the Settings screen shows it
+      required: [param, label, control_class, group, kind, writable, readback_via, readback, desired, plan, applied_from, state]
+      properties:
+        param: {type: string, examples: [mister_engage_kpa]}
+        label: {type: string, description: 'For a registry row, TunableDef.label (VD-29), filled from the setting''s entity name in firmware/greenhouse/tunables.yaml and drift-tested'}
+        control_class: {type: string, enum: [planner_policy, scheduled_policy, controller_safety, crop_band, irrigation_site, readback_context, retired]}
+        group:
+          type: string
+          enum: [planner_policy, scheduled_policy, controller_safety, crop_band, site_water_caps, read_only, band_in_force]
+          description: 'band_in_force is the "Band in force" group: the dispatcher''s DERIVED band rows (band_<zone>_<role>), house and per zone, read-only'
+        kind: {type: string, enum: [numeric, switch, enum]}
+        unit: {type: [string, 'null'], description: 'For a registry row, TunableDef.unit (VD-29), filled from the same firmware entity and drift-tested; null when the setting has no unit'}
+        min: {type: [number, 'null'], description: planner_effective_bounds (registry intersected with the firmware clamp)}
+        max: {type: [number, 'null']}
+        step: {type: [number, 'null'], description: 'The registry step (from tunables.yaml; equal to ENTITY_GRIDS for the 48 policy fields)'}
+        options:
+          type: array
+          description: Enum settings only
+          items: {type: object, required: [value, label], properties: {value: {type: number}, label: {type: string}}}
+        writable: {type: boolean, description: 'false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine)'}
+        read_only_reason: {type: [string, 'null'], examples: ['legacy wide limit; not the band while the controller runs its on-chip curve']}
+        readback_via:
+          type: string
+          enum: [cfg, entity, program, none]
+          description: 'cfg_* sensor, a native number, switch or equipment_state mirror, the irrigation program hash (irrigation_site), or none'
+        readback: {anyOf: [{$ref: '#/components/schemas/Reading'}, {type: 'null'}], description: 'Newest readback; for irrigation_site rows the value in the applied program'}
+        desired: {anyOf: [{$ref: '#/components/schemas/DesiredSetting'}, {type: 'null'}]}
+        plan:
+          anyOf:
+            - type: 'null'
+            - type: object
+              required: [value, plan_id, source, written_at, next]
+              properties:
+                value: {type: [number, 'null'], description: 'Plan value in force now, as stored (unsnapped)'}
+                plan_id: {type: string}
+                source: {type: string, enum: [iris, preemptive], description: 'preemptive is the forecast action engine'}
+                written_at: {type: string, format: date-time}
+                next: {anyOf: [{$ref: '#/components/schemas/PlanWaypoint'}, {type: 'null'}], description: 'Next planned change; effective false while a newer desired row holds it off'}
+        applied_from: {type: string, enum: [manual, desired, plan, band, default], description: What the dispatcher applies now}
+        state: {$ref: '#/components/schemas/ReadbackState', description: 'Of the newest write, else of the applied value against the readback'}
+    SettingWrite:
+      type: object
+      required: [value]
+      properties:
+        value: {type: number, description: 'Switches 0 or 1, enums the option value; snapped to step'}
+        manual:
+          type: boolean
+          default: true
+          description: 'Iris skips the setting while true. The dashboard default (R3); MCP set_setting defaults false. A write stores exactly the flag it carries'
+        reason: {type: string, maxLength: 500}
+    SettingHistory:
+      type: object
+      required: [param, from, to, desired, plan, readback]
+      properties:
+        param: {type: string}
+        unit: {type: [string, 'null']}
+        min: {type: [number, 'null']}
+        max: {type: [number, 'null']}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        desired: {type: array, items: {$ref: '#/components/schemas/DesiredSetting'}, description: 'Oldest first, from the row in force at from'}
+        plan: {type: array, items: {$ref: '#/components/schemas/PlanWaypoint'}, description: 'Iris and forecast-rule values in the window, future waypoints included, each with its source and effective, so API-12 alone draws the Graphs setting steps'}
+        readback: {type: array, items: {$ref: '#/components/schemas/TimedValue'}, description: cfg_* readback change points}
+
+    # ------------------------------------------------------------ equipment, alerts, activity
+    Equipment:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [equipment, label, group, state, observed_at]
+            properties:
+              equipment: {type: string, examples: [fan1, heat2, mister_center, grow_light_main]}
+              label: {type: string}
+              group: {type: string, enum: [climate, water, light]}
+              line_id: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
+              state:
+                type: string
+                enum: ['on', 'off', unknown]
+                description: >-
+                  The newest row while the controller is online; unknown only while it is offline or there is no row.
+                  For the vent, on means open; for the grow lights, the Lutron readback
+              since: {type: [string, 'null'], format: date-time, description: Start of the current run of equal states}
+              runtime_today_s: {type: [integer, 'null']}
+              cycles_today: {type: [integer, 'null'], description: From collapsed ON/OFF edges}
+              intent: {type: [string, 'null'], enum: ['on', 'off', unknown, null], description: "Grow lights only: the controller's intent (grow_light_main_intent, grow_light_grow_intent)"}
+              observed_at: {type: [string, 'null'], format: date-time}
+        mode_reason: {$ref: '#/components/schemas/ReasonState', description: Which branch chose the climate mode}
+        fog_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds fog (L11) off'}
+        moisture_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds the misters off'}
+    ReasonState:
+      type: object
+      description: The newest system_state row of one controller reason entity. The UI words the code and shows an unknown one raw
+      required: [code, since, observed_at]
+      properties:
+        code: {type: [string, 'null'], description: 'Null while the controller is not reporting, or with no row'}
+        since: {type: [string, 'null'], format: date-time, description: 'When the current value began, from the collapsed values; null while code is null'}
+        observed_at: {type: [string, 'null'], format: date-time, description: 'The newest row''s ts, kept while code is null'}
+    LightCommand:
+      type: object
+      description: 'API-20: a grow-light switch that Lutron confirmed. A failure is a 503 Problem with its result'
+      required: [light, state, result, activity_id]
+      properties:
+        light: {type: string, enum: [main, grow]}
+        state: {type: string, enum: ['on', 'off']}
+        result: {type: string, enum: [confirmed], description: setpoint-server saw Lutron reach the state}
+        activity_id: {type: integer, description: 'The activity_log row (light.on or light.off)'}
+    Alert:
+      type: object
+      description: One alert_log row, or one merged row for repeats of one alert_type and zone
+      required: [id, alert_type, category, severity, message, status, first_seen_at]
+      properties:
+        id: {type: integer, description: 'The oldest unresolved repeat''s id, stable while new repeats merge (a resolved merged row: its oldest repeat''s); API-15 and API-16 act on every repeat of its alert_type and zone'}
+        alert_type: {type: string, examples: [leak_detected, irrigation_fence_breach, irrigation_run_missed, irrigation_line_faulted, setpoint_unconfirmed]}
+        category: {type: string, examples: [water, system]}
+        severity: {type: string, enum: [critical, warning, info]}
+        message: {type: string}
+        zone: {type: [string, 'null']}
+        metric_value: {type: [number, 'null']}
+        threshold_value: {type: [number, 'null']}
+        details: {type: object, description: 'As stored, e.g. line_id or equipment'}
+        status: {type: string, enum: [open, acknowledged, resolved, false_positive, suppressed], description: 'disposition; a merged row is open while any of its repeats is unacknowledged'}
+        first_seen_at: {type: string, format: date-time}
+        last_seen_at: {type: [string, 'null'], format: date-time, description: Newest of the merged repeats}
+        count: {type: integer, minimum: 1, description: Repeats of this alert_type and zone merged into the row}
+        acknowledged_at: {type: [string, 'null'], format: date-time}
+        acknowledged_by: {type: [string, 'null'], description: 'Username, agent or Slack user'}
+        notes: {type: [string, 'null']}
+        resolved_at: {type: [string, 'null'], format: date-time}
+        resolved_by: {type: [string, 'null']}
+        resolution: {type: [string, 'null']}
+        runbook: {type: [string, 'null'], description: Markdown from slack_alert_runbooks}
+    AlertPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties: {items: {type: array, items: {$ref: '#/components/schemas/Alert'}}}
+    ActivityEntry:
+      type: object
+      required: [id, ts, actor, action, target]
+      properties:
+        id: {type: integer}
+        ts: {type: string, format: date-time}
+        actor: {$ref: '#/components/schemas/Actor'}
+        action: {type: string, examples: [setting.write, setting.release, plan.write, alert.ack, irrigation.schedule.update]}
+        target: {type: string, description: 'Param, plan id, alert id, line or slot id'}
+        detail:
+          type: object
+          description: 'Before and after, e.g. {"before": 1.6, "value": 1.55, "requested": 1.53, "manual": {"before": false, "after": true}}; a plan lists its changes; trigger_id when an agent gave one'
+        reason: {type: [string, 'null']}
+        state: {anyOf: [{$ref: '#/components/schemas/ReadbackState'}, {type: 'null'}], description: Readback outcome of a setting or program write}
+        confirmed_at: {type: [string, 'null'], format: date-time}
+        experiment_id: {type: [string, 'null'], format: uuid, description: 'Set when the write landed while an experiment was armed; nothing is refused'}
+        request_id: {type: [string, 'null'], format: uuid, description: The Idempotency-Key or MCP request_id}
+    ActivityPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties: {items: {type: array, items: {$ref: '#/components/schemas/ActivityEntry'}}}
+
+    # ------------------------------------------------------------ irrigation
+    LineId: {type: string, pattern: '^L(0[1-9]|1[01])$', description: L01-L11}
+    IrrigationCause: {type: string, enum: [vpd, schedule, run_now, feed, prewet, flush, fallback, unknown]}
+    RunOutcome:
+      type: string
+      description: >-
+        unknown: no outcome reached the platform (it aged out of irr_events while the ingestor was disconnected); a
+        gap, never missed, and it raises no alert. The controller never sends it
+      enum: [ok, short, stopped, preempted, skipped, missed, cap, unknown]
+    UsedOfMax:
+      type: object
+      required: [used, max]
+      properties:
+        used: {type: [number, 'null']}
+        max: {type: [number, 'null']}
+    NextRun:
+      type: object
+      required: [line_id, slot_id, start_at]
+      properties:
+        line_id: {$ref: '#/components/schemas/LineId'}
+        slot_id: {type: integer}
+        start_at: {type: string, format: date-time}
+        label: {type: [string, 'null']}
+        minutes: {type: [number, 'null'], description: Planned valve-open minutes}
+    ProgramSync:
+      type: object
+      description: The compiled program against the controller (irr_program_id); confirmed when the device hash matches
+      required: [state, desired_sha256, src]
+      properties:
+        state: {$ref: '#/components/schemas/ReadbackState'}
+        revision: {type: [integer, 'null'], description: Newest pushed revision}
+        desired_sha256: {type: string, description: compile_program() over the tables now}
+        applied_revision: {type: [integer, 'null']}
+        applied_hash: {type: [string, 'null'], description: First 16 hex of the applied sha256}
+        src: {type: [string, 'null'], enum: [nvs, rom, null], description: 'null before the engine firmware; rom = the built-in program'}
+        reason: {type: [string, 'null'], description: 'Why there is no program on the controller, e.g. engine not on controller'}
+        pushed_at: {type: [string, 'null'], format: date-time}
+        confirmed_at: {type: [string, 'null'], format: date-time}
+        reject_code: {type: [string, 'null']}
+        next_retry_at: {type: [string, 'null'], format: date-time, description: 'Retries after 1, 5 and 15 min'}
+    LineState:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, enum: [idle, running, waiting, blocked, paused, disabled, unknown]}
+        cause: {anyOf: [{$ref: '#/components/schemas/IrrigationCause'}, {type: 'null'}]}
+        slot_id: {type: [integer, 'null']}
+        reason: {type: [string, 'null'], description: 'Waiting or blocked reason in words, e.g. someone inside (Frigate)'}
+        ends_at: {type: [string, 'null'], format: date-time}
+        observed_at: {type: [string, 'null'], format: date-time, description: irr_state or relay edge}
+    IrrigationLine:
+      type: object
+      required: [line_id, name, zone, kind, reserved, enabled, check, daily_cap_min, paused_until, manual, state, sync]
+      properties:
+        line_id: {$ref: '#/components/schemas/LineId'}
+        name: {type: string, examples: [Drip • Wall]}
+        zone: {type: string, enum: [wall, center, south, west, supply, house], description: 'The line''s place: supply for L03, house for L11. Minutes by zone use fog for L11 and leave L03 out'}
+        kind: {type: string, enum: [drip, mister, fert_drip, fert_mister, master, fog]}
+        clean_partner: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
+        reserved: {type: boolean, description: 'True for L05 and L06 (Round 2b E): schedulable, no bring-up now; shown reserved while disabled'}
+        enabled: {type: boolean}
+        check:
+          description: 'The one-time physical check (D-IRP-07, D-IRP-08), recorded on the dashboard; null until someone records it'
+          anyOf:
+            - type: 'null'
+            - type: object
+              required: [checked_by, checked_at]
+              properties:
+                checked_by: {type: string}
+                checked_at: {type: string, format: date-time}
+                note: {type: [string, 'null'], maxLength: 500}
+        vpd_member: {type: [boolean, 'null'], description: 'Misters L04, L07 and L09 only; confirmed by the program hash'}
+        schedule_member: {type: [boolean, 'null'], description: Misters only; confirmed by the program hash}
+        vpd_source: {type: [string, 'null'], enum: [own, peer, house, null], description: 'Own probe, peer mean or house average (D-IRP-13)'}
+        daily_cap_min: {type: integer, description: 0 means none}
+        vpd_reserve_min: {type: [integer, 'null']}
+        paused_until: {type: [string, 'null'], format: date-time}
+        paused_by:
+          description: >-
+            Who set the current paused_until: the newest activity_log row with action irrigation.line.update, target
+            the line or all, whose detail sets paused_until. Null when the line is not paused
+          anyOf: [{$ref: '#/components/schemas/Actor'}, {type: 'null'}]
+        pause_reason: {type: [string, 'null'], maxLength: 500, description: 'That row''s reason; null when the line is not paused or none was given'}
+        fault: {type: [string, 'null'], enum: [backing_off, mister_fault, null], description: 'D-IRP-19 watchdog: a back-off, or a latch until midnight or a clear'}
+        fault_until: {type: [string, 'null'], format: date-time}
+        manual: {type: boolean, description: Iris skips this line while true}
+        manual_before: {type: [boolean, 'null'], description: The flag before this write (write responses)}
+        state: {$ref: '#/components/schemas/LineState'}
+        today:
+          type: object
+          properties:
+            minutes: {type: [number, 'null']}
+            pulses: {type: [integer, 'null']}
+            gal: {type: [integer, 'null'], description: Whole gallons}
+        next_run: {anyOf: [{$ref: '#/components/schemas/NextRun'}, {type: 'null'}]}
+        last_water:
+          description: >-
+            The newest run on the line that opened a valve: relay-edge runs, joined to their ledger row when there is
+            one; the run in progress and VPD episodes included
+          anyOf:
+            - type: 'null'
+            - type: object
+              required: [at, open_s, cause]
+              properties:
+                at: {type: string, format: date-time}
+                open_s: {type: integer}
+                pulses: {type: [integer, 'null']}
+                cause: {$ref: '#/components/schemas/IrrigationCause'}
+        last_outcome:
+          anyOf:
+            - type: 'null'
+            - type: object
+              required: [outcome, at]
+              properties:
+                outcome: {$ref: '#/components/schemas/RunOutcome'}
+                at: {type: string, format: date-time}
+                reason: {type: [string, 'null']}
+        sync: {$ref: '#/components/schemas/ReadbackState', description: This line's fields against the program hash}
+    Command:
+      type: object
+      description: >-
+        An irrigation_command row: pending until the ingestor marks it sent, just before it calls the device (sent at
+        most once), or failed when not sent within 2 min. Relay edges and irr_state show the outcome
+      required: [command_id, kind, line_id, status, actor, created_at]
+      properties:
+        command_id: {type: string, format: uuid}
+        kind: {type: string, enum: [run, stop, clear_fault, override]}
+        line_id: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$', description: Null means every line}
+        args: {type: object, description: The request body as stored}
+        status: {type: string, enum: [pending, sent, failed]}
+        actor: {$ref: '#/components/schemas/Actor'}
+        reason: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+        sent_at: {type: [string, 'null'], format: date-time}
+    IrrigationStatus:
+      type: object
+      required: [server_time, engine, program, lines, active_runs, today, limits, leak, occupancy, fallback_active, freshness]
+      properties:
+        server_time: {type: string, format: date-time}
+        engine: {type: boolean, description: 'The live controller connection has the irrigation engine (irr_command); false before the engine firmware'}
+        program: {$ref: '#/components/schemas/ProgramSync'}
+        lines: {type: array, items: {$ref: '#/components/schemas/IrrigationLine'}, description: L01-L11}
+        active_runs:
+          type: array
+          description: The run on each manifold
+          items:
+            type: object
+            required: [manifold, line_id, cause, started_at]
+            properties:
+              manifold: {type: string, enum: [drip, mister]}
+              line_id: {$ref: '#/components/schemas/LineId'}
+              cause: {$ref: '#/components/schemas/IrrigationCause'}
+              slot_id: {type: [integer, 'null']}
+              started_at: {type: string, format: date-time}
+              ends_at: {type: [string, 'null'], format: date-time}
+              pulses_done: {type: [integer, 'null']}
+              pulses_total: {type: [integer, 'null']}
+        today:
+          type: object
+          description: >-
+            Valve-open minutes today by zone: wall, center, south and west, and fog for L11's humidification. L03's
+            supply minutes are never in zone totals. Partial day
+          required: [date, zones]
+          properties:
+            date: {type: string, format: date}
+            zones: {type: object, additionalProperties: {type: [number, 'null']}}
+        limits:
+          type: object
+          description: Per-line duty and drip caps are on each line (today.minutes against daily_cap_min)
+          required: [saf4_gal, soft_budget_gal]
+          properties:
+            saf4_gal: {$ref: '#/components/schemas/UsedOfMax'}
+            soft_budget_gal: {$ref: '#/components/schemas/UsedOfMax'}
+        leak: {$ref: '#/components/schemas/Leak'}
+        occupancy: {$ref: '#/components/schemas/Occupancy'}
+        fallback_active: {type: boolean, description: 'degraded_only slots are running (D-IRP-12)'}
+        freshness: {$ref: '#/components/schemas/Freshness', description: irr_state (published on transitions)}
+    ScheduleDays:
+      type: array
+      description: The weekdays the schedule runs on
+      minItems: 1
+      uniqueItems: true
+      items: {type: string, enum: [mon, tue, wed, thu, fri, sat, sun]}
+    ScheduleStart:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, enum: [clock, sunrise, solar_noon, sunset]}
+        clock: {type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: Local HH:MM when kind is clock}
+        offset_min: {type: integer, minimum: -240, maximum: 240, default: 0, description: Solar kinds}
+    ScheduleInput:
+      type: object
+      description: 'Bounds per irrigation §4.3, checked per line kind on submit; values snap to whole seconds and minutes'
+      properties:
+        line_id: {type: string, pattern: '^L(0[124-9]|10)$', description: 'L01, L02, L04-L10 (not L03 or L11)'}
+        label: {type: string, maxLength: 60}
+        enabled: {type: boolean, default: true}
+        days: {$ref: '#/components/schemas/ScheduleDays'}
+        start: {$ref: '#/components/schemas/ScheduleStart'}
+        on_s: {type: integer, minimum: 10, maximum: 7200, description: 'Seconds per run or pulse; misters 10-90; fertilizer the feed'}
+        count: {type: integer, minimum: 1, maximum: 60, default: 1, description: 'Pulses in a mist window; drips use 1'}
+        gap_s: {type: integer, minimum: 0, maximum: 600, default: 0, description: 'Mister gap 30-600; drips 0'}
+        prewet_s: {type: integer, minimum: 0, maximum: 1800, default: 0, description: Fertilizer lines only}
+        flush_s: {type: integer, minimum: 0, maximum: 1800, default: 0, description: Fertilizer lines only}
+        degraded_only: {type: boolean, default: false, description: 'L04, L07, L09 only (D-IRP-12)'}
+        manual:
+          type: boolean
+          default: true
+          description: 'Iris skips the schedule while true. A REST create or edit that omits it stores true (the dashboard default, R3); MCP writes default false'
+        reason: {type: string, maxLength: 500}
+    ScheduleCreate:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleInput'
+        - required: [line_id, days, start, on_s]
+          properties:
+            manual: {type: boolean, default: true, description: 'Omitted on a REST create means true (the dashboard default); MCP creates default false'}
+    Schedule:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleInput'
+        - type: object
+          required: [slot_id, line_id, enabled, days, start, on_s, count, manual, sync, updated_by, updated_at]
+          properties:
+            slot_id: {type: integer, minimum: 1, maximum: 65535}
+            manual_before: {type: [boolean, 'null'], description: The flag before this write (write responses)}
+            sync: {$ref: '#/components/schemas/ReadbackState'}
+            updated_by: {$ref: '#/components/schemas/Actor'}
+            updated_at: {type: string, format: date-time}
+    Occurrence:
+      type: object
+      required: [slot_id, line_id, planned_start, status]
+      properties:
+        slot_id: {type: integer}
+        line_id: {$ref: '#/components/schemas/LineId'}
+        planned_start: {type: string, format: date-time}
+        status: {type: string, enum: [planned, skipped, blocked, running, done]}
+        outcome: {anyOf: [{$ref: '#/components/schemas/RunOutcome'}, {type: 'null'}], description: 'Set when done; unknown when no outcome reached the platform'}
+        reason: {type: [string, 'null'], description: 'Why skipped, blocked or missed, in words, e.g. line disabled. A pause reads ''line paused by <name>: <reason>'', the reason left out when none was given'}
+        run_id: {type: [string, 'null']}
+    ScheduleAgenda:
+      type: object
+      required: [schedules, occurrences, counts, bounds, solar]
+      properties:
+        schedules: {type: array, items: {$ref: '#/components/schemas/Schedule'}}
+        occurrences: {type: array, items: {$ref: '#/components/schemas/Occurrence'}, description: 'By planned start; the week view draws them per line and day'}
+        counts:
+          type: object
+          required: [schedules, max_schedules]
+          properties:
+            schedules: {type: integer}
+            max_schedules: {type: integer, const: 24}
+        bounds:
+          type: object
+          description: 'Per line kind (drip, mister, fert_drip, fert_mister), from verdify_schemas/irrigation.py, so editors and agents see the limits'
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: object
+              required: [min, max]
+              properties: {min: {type: number}, max: {type: number}}
+        solar:
+          type: array
+          description: Per local day in the window, from ingestor/solar.py, for previews
+          items:
+            type: object
+            required: [date, sunrise, solar_noon, sunset]
+            properties:
+              date: {type: string, format: date}
+              sunrise: {type: string, format: date-time}
+              solar_noon: {type: string, format: date-time}
+              sunset: {type: string, format: date-time}
+    RunRequest:
+      type: object
+      description: >-
+        Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters (schedule_member on): on_s,
+        count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and
+        flush_s. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min
+      properties:
+        minutes: {type: integer, minimum: 1, maximum: 120}
+        prewet_s: {type: integer, minimum: 0, maximum: 1800}
+        flush_s: {type: integer, minimum: 0, maximum: 1800}
+        on_s: {type: integer, minimum: 10, maximum: 90}
+        count: {type: integer, minimum: 1, maximum: 60}
+        gap_s: {type: integer, minimum: 30, maximum: 600}
+        reason: {type: string, maxLength: 500}
+    LineCommand:
+      type: object
+      description: Stop or clear-fault target; omit line_id for every line
+      properties:
+        line_id: {$ref: '#/components/schemas/LineId'}
+        reason: {type: string, maxLength: 500}
+    LineUpdate:
+      type: object
+      properties:
+        enabled: {type: boolean}
+        vpd_member: {type: boolean, description: 'L04, L07 and L09 only'}
+        schedule_member: {type: boolean, description: 'L04, L07 and L09 only; on for the first time needs the check'}
+        checked: {type: boolean, description: 'Dashboard only (MCP tools do not take it); records checked_by and checked_at'}
+        check_note: {type: string, maxLength: 500, description: Optional; dashboard only}
+        daily_cap_min: {type: integer, minimum: 0, maximum: 480}
+        vpd_reserve_min: {type: integer, minimum: 0, maximum: 480, description: At most daily_cap_min}
+        paused_until: {type: [string, 'null'], format: date-time, description: Null or now resumes; VPD misting carries on}
+        manual:
+          type: boolean
+          description: 'Iris skips the line while true. A REST definition edit (enabled, vpd_member, schedule_member, daily_cap_min or vpd_reserve_min) that omits it stores true (the dashboard default, R3); a body with none of those (only paused_until, the check or a reason) never changes it; MCP definition edits default false'
+        reason: {type: string, maxLength: 500}
+    OverrideRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, enum: [fans, humidify, vent_bypass, clear, restart]}
+        minutes: {type: integer, minimum: 1, maximum: 120, description: 'Needed for fans, humidify and vent_bypass'}
+        reason: {type: string, maxLength: 500}
+    MinutesReport:
+      type: object
+      description: A period with coverage no_data has no rows; draw a gap, never 0
+      required: [from, to, group_by, periods, rows]
+      properties:
+        from: {type: string, format: date}
+        to: {type: string, format: date}
+        group_by: {type: string, enum: [zone, line, cause]}
+        periods:
+          type: array
+          items:
+            type: object
+            required: [start, coverage]
+            properties:
+              start: {type: string, format: date}
+              coverage: {type: string, enum: [complete, partial, no_data], description: Today and outage days are partial}
+        rows:
+          type: array
+          description: Always split by cause and chemistry so charts can stack
+          items:
+            type: object
+            required: [period, group, cause, chemistry, minutes]
+            properties:
+              period: {type: string, format: date}
+              group: {type: string, description: 'Zone (wall, center, south, west, and fog for L11''s humidification), line id or cause. L03''s supply minutes appear only by line or cause, never in zone totals'}
+              cause: {$ref: '#/components/schemas/IrrigationCause'}
+              chemistry: {type: string, enum: [clean, fert]}
+              minutes: {type: number}
+              pulses: {type: [integer, 'null']}
+              gal: {type: [integer, 'null'], description: Whole gallons}
+    WaterUse:
+      type: object
+      description: 'API-21: daily water use in whole gallons. There is no rate and no flow flag'
+      required: [from, to, days]
+      properties:
+        from: {type: string, format: date}
+        to: {type: string, format: date, description: 'Inclusive local day: today, a partial day'}
+        days:
+          type: array
+          description: 'One per America/Denver day, oldest first. On a no_data day every value is null, never 0'
+          items:
+            type: object
+            required: [date, coverage, meter_gal, by_line, by_cause, no_valve_gal]
+            properties:
+              date: {type: string, format: date}
+              coverage: {type: string, enum: [complete, partial, no_data], description: 'From v_water_meter_daily quality: ok is complete; unavailable, or no row, is no_data; anything else is partial'}
+              meter_gal: {type: [integer, 'null'], description: 'The site meter''s day total (main_pulse)'}
+              by_line: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by line id'}
+              by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
+              no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
+    Run:
+      type: object
+      description: >-
+        One run: a drip run, a fertilizer stage or a mist episode, from relay edges joined to its irrigation_ledger
+        row. Listed once it has ended; the run in progress is in API-IRR-01
+      required: [run_id, line_id, zone, chemistry, cause, started_at, open_s, outcome]
+      properties:
+        run_id: {type: string}
+        line_id: {$ref: '#/components/schemas/LineId'}
+        zone: {type: string}
+        chemistry: {type: string, enum: [clean, fert]}
+        cause: {$ref: '#/components/schemas/IrrigationCause'}
+        slot_id: {type: [integer, 'null']}
+        schedule_label: {type: [string, 'null']}
+        command_id: {type: [string, 'null'], format: uuid, description: The run-now command that started it}
+        actor: {anyOf: [{$ref: '#/components/schemas/Actor'}, {type: 'null'}], description: Null when the controller started it}
+        started_at: {type: string, format: date-time}
+        ended_at: {type: [string, 'null'], format: date-time}
+        open_s: {type: integer, description: '0 for skipped, missed and cap occurrences'}
+        pulses: {type: [integer, 'null']}
+        gal: {type: [integer, 'null'], description: 'Whole gallons from the one site meter (it also counts the hose, sink and hydro); informational. 0 when the run moved no water; null without meter data'}
+        outcome: {$ref: '#/components/schemas/RunOutcome', description: 'From the ledger; unknown when its outcome never reached the platform. A run with no ledger row (a VPD episode, or a run before the engine firmware) reads ok'}
+        reason: {type: [string, 'null']}
+    RunPage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties: {items: {type: array, items: {$ref: '#/components/schemas/Run'}}}
