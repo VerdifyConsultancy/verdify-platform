@@ -375,7 +375,12 @@ def test_native_qualification_is_recorded():
         "with db/qualification/282-dashboard-login-fixture.sql and commit the fixture it writes before merging"
     )
     assert RECEIPT["exact_final_migration_sha256"] == c0.SUCCESSOR_282_SHA256
-    assert RECEIPT["before"] == RECEIPT["qualified_successor"] == RECEIPT["after_rollback"] == six.SUCCESSOR_282
+    # The measured successor is the file's literals. It need not equal "before": when 280 and 281
+    # are applied first inside the rolled-back session, production's live seals (before and
+    # after_rollback) are still older ones. test_measured_282_binds_qualified_281_and_keeps_its_seals
+    # proves that 282 moves no seal.
+    assert RECEIPT["qualified_successor"] == six.SUCCESSOR_282
+    assert RECEIPT["before"] == RECEIPT["after_rollback"]
     assert RECEIPT["final_migration_rollback_verified"] is True
     assert RECEIPT["inside_transaction_receipts_match"] is True
     assert RECEIPT["native_fixture_sha256"] == hashlib.sha256(NATIVE.read_bytes()).hexdigest()
