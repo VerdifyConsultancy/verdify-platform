@@ -52,6 +52,14 @@ export function isAiSource(source: string): boolean {
   return source === "iris" || (source.startsWith("agent:") && ACTOR_SOURCE_PATTERN.test(source));
 }
 
+/** `BandPosition.verdict`, API-02 `iris.required_trigger` and API-02 `overrides[].kind`, which Now words. */
+export type BandVerdict = Schemas["BandPosition"]["verdict"];
+export const BAND_VERDICTS = everyMember<BandVerdict>()(["in", "above", "below", "unavailable"]);
+export type RequiredTrigger = Schemas["Now"]["iris"]["required_trigger"];
+export const REQUIRED_TRIGGERS = everyMember<RequiredTrigger>()(["ok", "late", "missed", "failed"]);
+export type BurstKind = Schemas["Now"]["overrides"][number]["kind"];
+export const BURST_KINDS = everyMember<BurstKind>()(["fans", "humidify", "vent_bypass"]);
+
 /** `Setting.readback_via`, `Equipment` item `state` and `IrrigationLine.kind`, which the badges key on. */
 export type ReadbackVia = Schemas["Setting"]["readback_via"];
 export type EquipmentState = Schemas["Equipment"]["items"][number]["state"];

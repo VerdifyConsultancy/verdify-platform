@@ -64,7 +64,7 @@ no wizards and no screen exists only to confirm something.
 | Header tools | Role pill (OPERATOR or VIEWER), name (desktop), Sign out (a POST form) | API-01 | load, 60 s |
 | Fault banners, one at a time, worst first | "Dashboard API unavailable" after two failed polls in a row; nothing green shows while it is up. "Ingestor not running since 03:12. The controller keeps running on its own." while the ingestor heartbeat (`freshness.ingestor`, a `system_state` row every 60 s, Q-01) is older than 180 s. "Controller not reporting since 03:12. If it has power, it keeps running VPD misting, its caps and (with the irrigation firmware) its schedules" while the heartbeat is fresh and the newest `climate` row is older than 300 s; no page ever says "Controller offline". "Water flowing with every Verdify valve closed since 03:02 · 3 gal in 10 min: a leak, or the hose, sink or hydro in use. If no one is using water, close the spigot" while the `leak_detected` alert is open, with no Stop (no Verdify valve is open); once the meter reads under 0.1 gal/min twice it reads "Flow stopped at 03:20", never an all clear | API-02 `freshness`, `leak` and alerts | 15 s |
 | Warn banners | "Settings not reaching the controller since 06:10 (4 differ)" while `setpoint_delivery_stuck` is open (API-02 `writer.stuck`, VD-62; Round 2 #1); "Changes are switched off; reading still works" (`writes_enabled: false`) | API-02, API-01 | 15 s, 60 s |
-| Activity count | The one open-alert count (VD-55, VD-72): unacknowledged (disposition open) `v_open_alerts` rows, repeats of one `alert_type` and zone counted once, so it equals the unacknowledged rows Activity lists (API-02 `alerts.open`). It shows as text in the nav; Now's hero and Alerts tile, Activity and MCP use the same count | API-02 | 15 s |
+| Activity count | The one open-alert count (VD-55, VD-72): unacknowledged (disposition open) `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once, so it equals the unacknowledged rows Activity lists (API-02 `alerts.open`). It shows as text in the nav; Now's hero and Alerts tile, Activity and MCP use the same count | API-02 | 15 s |
 | Footer | "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗ | BFF `SOURCE_REVISION`, API-01 | load |
 | Toasts | After each write ([design system](design-system.md) §4.5); Stop's stays until dismissed | — | — |
 
@@ -223,6 +223,19 @@ Acceptance:
 5. Occupancy always shows: confirmed reads "Someone inside: misters wait (Frigate, 4 min ago)"; unknown reads
    "Occupancy unknown: misters may run".
 
+**As built (VD-09).** Where the build settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| The answer's stale row | "Waiting for fresh data" holds while API-02 marks the climate source stale, and also while an indoor reading is older than twice the climate cadence at the answer's `server_time`, or a reading with a band in force (temperature, VPD) has no value. In production the readings come from the newest climate row, so this is the same test; it also covers the `stale-data` fixture (climate fresh, readings 14 min old) and a probe that drops out of a fresh row. A missing RH with no RH band is not stale. Before API-02 first answers the sentence reads "Checking the greenhouse…" and claims nothing |
+| One API-02 request | Now reads the shell's API-02 poll; the shell polls under the same key the write hooks read, so Stop notes what runs from it and reads it every 5 s while it confirms, and an Acknowledge refetches the one count there. The answer's first row follows the newest read of that entry (the poll or a Stop's readback), and a 401 is the session-ended card, never "Can't reach the greenhouse data" |
+| VPD and RH beside the hero value | At 860 px and below, where their tiles move under "All readings", a line under the hero value reads "VPD 0.62 kPa · in band · RH 71.0% · no RH band" (verdicts hidden while the answer mutes them) |
+| Phones | 860 px and below throughout (§1.1): the hero keeps Mode, Iris, Water and Alerts 2-up, and a button marked wide (Stop all water and Acknowledge here) is full width. A tighter hero (1rem padding, a 2.75rem hero value, smaller tiles), tighter gaps and a 0.9rem minutes line keep Stop all water above the fold at 390 × 844, with water running and a two-line mode too (measured in Chrome on static renders of the fixtures; #1128's e2e measures it in CI); the static chips are 32 px tall, as they are not targets. Opening `/#data` on a phone (the ingestor banner's link) opens "All readings" at the Data tile |
+| Water card | DOM order is the title, the minutes line, the actions row (Stop all water for operators, "Water ›" for everyone), then the rest; above 860 px the actions row moves to the card's end, as drawn. Stop sits outside the card's error boundaries, so it renders in every state. Last water reads "misted Fri 14:20 (VPD)" for a mister and "Fri 08:31, 12 min" for a drip (times are the instant's own clock, so a Friday before the fall-back reads MDT) |
+| Tile values | A tile's value wraps rather than truncating, at every width, so the mode in words ("Sensor fault: equipment off") and the count by severity ("1 warning · 1 info") always read whole; a muted value (STALE) never turns the Iris tile amber. An age or reading the API lacks reads "—" with why ("writer — (no push on record)", "RH — (No outdoor RH in the last hour)") |
+| Line states before the irrigation firmware | The Water tile and the card's running line read Unknown only while an enabled line's state is unknown, or, with the firmware, while `irr_state` is stale. Before it no `irr_state` exists (a source never seen reads stale), and the relay states stand alone (irrigation §9) |
+| Needs someone | The top three keep API-14's order (severity, then age as the API sorts it: last seen, newest first), so they are the first unacknowledged rows Activity lists. A row acknowledged on the page stays in place for the visit, reading "Acknowledged by jason · 10:42"; the head and the answer follow the one count as API-02 refetches |
+
 ## 3. SCR-02 Graphs · `/graphs`
 
 **Purpose:** past, present and plan in one view: climate against the band, any measured signal, setting steps and
@@ -296,6 +309,24 @@ Acceptance:
 5. The tooltip shows each value, the band and the time with its offset, and wet-line intervals name their cause; a
    90-day window shows the lanes message and still renders the climate panels; a 400-day window labels the span past
    climate's 365 days "Daily summaries before …".
+
+As built (VD-10, #1130). Where the build settles a detail above, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Files | `dashboard/app/routes/graphs.tsx` and `graphs-scorecard.tsx` (the route file #1124 named, kept rather than renamed `graphs.scorecard.tsx`), `components/graphs/` (controls, metric picker, setting chooser, resolution line, scorecard table), `lib/graph-url.ts` (the URL and the window) and `lib/graph-reads.ts` (the page clock and the window reads) |
+| Controls | Row one is LinkedPanels' tools row: the range chips, the custom range (From, To, Show), "Reset zoom" while zoomed and "CSV of this window". Row two, "On charts:", holds the setting chips, the metric chips, "+ Setting", "+ Metric" and "Scorecard ›". Both pickers are native modal `<dialog>`s in the drawer's frame with a filter box |
+| Settings legend | The setting chips are the settings' legend: each reads "VPD · mister_engage_kpa" and links to `/settings?edit=<param>`; × takes it off. Removing one default names the other, so the URL keeps it; removing the last writes `set=` |
+| URL notices | A range, window, metric or setting the page cannot use is dropped from the view with a notice in words ("Removed unknown metric …", "Removed setting mister_pulse_gap_s: no chart in s", "Removed daily.water_gal: daily keys show on the scorecard"). The address bar is left as it was; every link on the page starts from the cleaned view. A climate key in `m` is always drawn and drops silently |
+| Window | A window of 400 local days can run 400 d 1 h across a net fall-back; each read then keeps its last 400 days, which moves only the start of a window whose buckets are whole days. The lanes rule counts the window without a chip's 12 h ahead, so a 31-day custom range that spans the fall-back (31 d 1 h) shows the lanes message, as API-05 would refuse it. An ISO time whose `+` offset reached the link unencoded (read as a space) counts as `+`, and links write it as `%2B`; a day that does not exist ("2026-02-30T08:00Z") is refused with the window's notice |
+| Empty | "No data in this window" shows when no panel, a picked metric's included, has a value in the window |
+| Polling | The page clock is the current minute. A window that reaches now moves with it every 60 s (every second minute while a read fails) while the tab is visible, and shows its previous answer until the next minute's arrives; a custom or exact window that reaches now keeps its x range, so its band and setting history poll every 60 s instead. Reads are keyed by their exact request, so a closed window reads once. The scorecard polls its 30-day reads every 60 s |
+| Eyebrow and line | The eyebrow spells the bucket out: "Temperature · °F · MEASURED · Band in force · one point per 5 minutes". STALE reads on the notes line under it (VD-06). The resolution line adds the year when the window leaves the current one, and reads "across N clock changes" when more than one falls inside |
+| Scorecard columns | Keyed by VD-56's registry keys (`daily.temp_in_band_pct`, `daily.vpd_in_band_pct`, `daily.time_in_band_day_pct`, `daily.time_in_band_night_pct`, `daily.water_gal`, `daily.iris_required_written`, `daily.iris_required_missed`, `daily.alerts_critical`, `_warning`, `_info`). A `daily` key API-03 lists beyond these follows as its own column; one it does not list reads "— not served"; a failed read "— couldn't load" with a Retry |
+| Scorecard rows | The date cell carries the day's length when it is not 24 h ("Sun, Nov 1 · 25 h") and "partial" for today and API-IRR-10's partial days. A complete minutes day with no watering in a zone is a true 0 |
+| Scorecard CSV | The same 15 columns; the date as YYYY-MM-DD with its note in parentheses ("2026-11-01 (25 h)"), each value as the number in its canonical unit, each missing value as "— <reason>" |
+| Chart types | `dashboard/app/charts/types.ts` re-exports the generated client's types (through `Lenient`), so a parsed response goes to a chart unchanged |
+| Fixture | `scorecard-30d` joins the registry. The fixture API's day buckets now start at America/Denver midnights, as VD-56's do, and a request that names a `daily.*` key is daily |
 
 ## 4. SCR-03 Plan · `/plan`
 
@@ -599,7 +630,7 @@ At 390 alerts come first, then the log; alert rows stack with full-width buttons
 
 | Panel | Shows | Data | Refresh |
 |---|---|---|---|
-| Open alerts | `v_open_alerts` rows nobody has acknowledged, by severity (critical, warning, info) then age: the plain title from the one words table (`leak_detected` reads "Water flowing with every Verdify valve closed", with "a leak, or the hose, sink or hydro in use" beneath), zone or line, first and last seen, how many times a repeat of the same type and zone was seen (repeats merge into one row, and a long-offline probe's alert resolves itself, VD-72), current value. Acknowledged ones collapse into "Acknowledged, still open (N)" with who acknowledged; "Show resolved in the last 24 h". Expanding a row (`/activity?alert=<id>`) shows every field, the runbook from `slack_alert_runbooks` when one exists, and "Open in Graphs": the ±2 h window with the climate panels and the equipment lanes, wet relays and the flow lanes included | API-14 | 15 s |
+| Open alerts | `v_open_alerts` rows nobody has acknowledged, by severity (critical, warning, info) then age: the plain title from the one words table (`leak_detected` reads "Water flowing with every Verdify valve closed", with "a leak, or the hose, sink or hydro in use" beneath), zone or line, first and last seen, how many times a repeat of the same type and sensor was seen (repeats merge into one row, and a long-offline probe's alert resolves itself, VD-72), current value. Acknowledged ones collapse into "Acknowledged, still open (N)" with who acknowledged; "Show resolved in the last 24 h". Expanding a row (`/activity?alert=<id>`) shows every field, the runbook from `slack_alert_runbooks` when one exists, and "Open in Graphs": the ±2 h window with the climate panels and the equipment lanes, wet relays and the flow lanes included | API-14 | 15 s |
 | Activity log | Time; actor and source ("Jason · dashboard", "iris" with AI, "steward · agent" with AI, "forecast-engine · system"); action in words; target; before → after, with "manual cleared" when a write took an item off manual; reason; readback outcome. An Iris plan is one entry with its changes in a disclosure; a change made while an experiment is armed carries the experiment's id. Filters for source, actor, action and target in the URL; Load older (cursor) | API-17 | 60 s |
 
 | Action (operator) | Operation | Feedback |
@@ -684,6 +715,18 @@ Acceptance:
 4. Restart sends one API-IRR-12 `{kind: "restart"}`; the fixture's uptime resets and `irr_program_id` returns
    `src=nvs` with the same hash after the reconnect.
 5. Viewers see the board and the lanes with no burst, clear or restart control.
+
+As built (VD-14, `dashboard/app/routes/equipment.tsx`), where the board settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Row | The API's label and state (ON, OFF or UNKNOWN; the vent OPEN or CLOSED) over one line of facts in words: "since 08:31 · on today 2 h 10 min · cycles 6 · reported 2 h ago" (the vent "open today"). A null since, time on or cycle count reads "—" |
+| Since | "HH:MM" on today's America/Denver day and "MM/DD HH:MM" before it, 24-hour, where the wireframe's "Fri 07:43" reads "10/30 07:43"; the full time is in the `title`. A known state whose run has not changed within API-13's 31-day edge window (#1167) has a null since and reads "since — (no change in 31 days)" |
+| Unknown | "UNKNOWN · last report 14 min ago" beside the name, and the facts read "since — · on today — · cycles —", because API-13 serves none of them while the state is unknown |
+| Grow lights | "OFF (controller) · Lutron OFF", with "▲ DIFFER" in an amber tag when both are known and differ; an unknown Lutron state reads "Lutron UNKNOWN · 11 min ago"; a null intent reads "— (controller)". A note in the Light card calls the Lutron state sensed and says since, time on and cycles follow it |
+| Omitted actuator | Its `equipment_state` key, with "—" and "no data", never a made-up name or OFF. An item outside the fixed list follows its group's fixed rows; an `_intent` key is never a row |
+| Errors | A failed API-13 read replaces the three groups with one "Couldn't load equipment." and Retry; a failed API-05 read shows "Couldn't load equipment lanes." and Retry in the lanes panel |
+| Lanes | The panel reads "Last 24 h" or "Last 72 h" with "Updated N s ago". Each 60 s read asks API-05 for the window ending at that moment on the server's clock (API-02's skew), and the lanes draw the window it answered for, on the sync key `verdify:equipment:<range>` |
 
 ## 9. SCR-08 Plants (Later) · `/plants`
 

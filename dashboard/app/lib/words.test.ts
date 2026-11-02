@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ALERT_SEVERITIES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES, TRIGGER_OUTCOMES } from "./vocab";
+import { ALERT_SEVERITIES, BAND_VERDICTS, BURST_KINDS, LINE_STATE_CODES, PROBLEM_CODES, REQUIRED_TRIGGERS, STATE_REASON_CODES, TRIGGER_OUTCOMES } from "./vocab";
 import { WORDS, hasWords, modeWords, words } from "./words";
 
 const repo = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
@@ -99,6 +99,49 @@ test("every alert type in ALERT_TYPES has words, the leak alert titled as the ba
   expect(words("alert_type", "leak_detected")).toBe("Water flowing with every Verdify valve closed");
 });
 
+/** The `equipment_state` keys `ingestor/entity_map.py` maps the controller's relays and switches to. */
+function entityMapEquipment(): string[] {
+  const source = repo("ingestor/entity_map.py");
+  return ["EQUIPMENT_BINARY_MAP", "EQUIPMENT_SWITCH_MAP"].flatMap((name) => {
+    const block = new RegExp(`^${name}: dict\\[str, str\\] = \\{([\\s\\S]*?)^\\}`, "m").exec(source);
+    if (!block) throw new Error(`no ${name} in ingestor/entity_map.py`);
+    return [...block[1].matchAll(/"[^"]+":\s*"([a-z0-9_]+)"/g)].map((match) => match[1]);
+  });
+}
+/** Architecture §7's fixed actuator list: the climate relays, the eleven wet relays, the Lutron readback and the controller's light switches. */
+const FIXED_ACTUATORS = [
+  "fan1", "fan2", "vent", "heat1", "heat2",
+  "drip_wall", "drip_wall_fert", "fert_master_valve", "mister_center", "drip_center", "drip_center_fert", "mister_south", "mister_south_fert",
+  "mister_west", "mister_west_fert", "fog",
+  "grow_light_main", "grow_light_grow", "grow_light_main_intent", "grow_light_grow_intent",
+];
+
+test("every actuator of the fixed list has its plain name, in screens SCR-01's words", () => {
+  // Every key but the Lutron readback (written by the Home Assistant sync, not the controller) is one entity_map.py maps.
+  const mapped = entityMapEquipment();
+  expect(FIXED_ACTUATORS.filter((key) => !mapped.includes(key))).toEqual(["grow_light_main", "grow_light_grow"]);
+  expectWorded("equipment", FIXED_ACTUATORS);
+  expect(Object.keys(WORDS.equipment).sort()).toEqual([...FIXED_ACTUATORS].sort());
+  expect(["fan1", "heat1", "heat2", "mister_center", "drip_wall"].map((key) => words("equipment", key))).toEqual(["Fan 1", "Heat 1 (electric)", "Heat 2 (gas)", "Center mister", "Wall drip"]);
+  expect(words("equipment", "pump")).toBe("pump");
+});
+
+test("every band verdict, required-trigger state and burst kind in the OpenAPI file has words", () => {
+  const verdicts = enumOf(SCHEMAS.BandPosition?.properties?.verdict);
+  const triggers = enumOf(SCHEMAS.Now?.properties?.iris?.properties?.required_trigger);
+  const bursts = enumOf((SCHEMAS.Now?.properties?.overrides as { items?: Schema } | undefined)?.items?.properties?.kind);
+  expectWorded("band_verdict", verdicts);
+  expectWorded("required_trigger", triggers);
+  expectWorded("burst", bursts);
+  expect([...BAND_VERDICTS].sort()).toEqual([...verdicts].sort());
+  expect([...REQUIRED_TRIGGERS].sort()).toEqual([...triggers].sort());
+  expect([...BURST_KINDS].sort()).toEqual([...bursts].sort());
+  expect(BAND_VERDICTS.map((verdict) => words("band_verdict", verdict))).toEqual(["in band", "above band", "below band", "band unavailable"]);
+  expect(REQUIRED_TRIGGERS.map((state) => words("required_trigger", state))).toEqual(["OK", "Late", "Missed", "Failed"]);
+  expect(words("burst", "fans")).toBe("Fans burst");
+  expect(words("mode", "UNKNOWN")).toBe("Mode unknown");
+});
+
 test("the table has words for every code gh_fog_block_reason publishes", () => {
   expect(FOG_BLOCK_REASONS).toHaveLength(14);
   expectWorded("fog_block_reason", FOG_BLOCK_REASONS);
@@ -145,4 +188,14 @@ test("an unknown code or family renders raw, prototype names included", () => {
   expect(words("toString", "valueOf")).toBe("valueOf");
   expect(hasWords("state_reason", "__proto__")).toBe(false);
   expect(hasWords("mode", "hasOwnProperty")).toBe(false);
+});
+
+test("the scorecard reasons: the water day's quality in words, and the reasons VD-56 sends in words already as sent", () => {
+  expect(["partial_day", "unavailable", "ledger_incomplete", "discontinuous", "incomplete"].map((code) => words("scorecard_reason", code))).toEqual([
+    "day not finished", "no meter readings", "meter totals not caught up", "meter readings broken up", "meter readings miss part of the day",
+  ]);
+  expectWorded("scorecard_reason", Object.keys(WORDS.scorecard_reason));
+  expect(words("scorecard_reason", "no meter data")).toBe("no meter data");
+  expect(words("scorecard_reason", "band grade kept 3 days")).toBe("band grade kept 3 days");
+  expect(words("scorecard_reason", "meter_offline")).toBe("meter_offline");
 });

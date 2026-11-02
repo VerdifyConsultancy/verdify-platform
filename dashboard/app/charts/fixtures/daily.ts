@@ -7,13 +7,14 @@
  */
 import { dateShift, localDayStart } from "../../lib/format";
 import type { Series } from "../types";
+import type { Writable } from "./uplot-mock";
 
 export const DAYS = 400;
 export const FIRST_DAY = "2025-09-28";
 export const CLIMATE_RETAINED_FROM = "2025-11-02T06:00:00Z";
 export const HEAP_RETAINED_FROM = "2026-05-06T06:00:00Z";
 
-export function dailySeries(): Series {
+export function dailySeries(): Writable<Series> {
   const t = Array.from({ length: DAYS }, (_, day) => Date.parse(localDayStart(dateShift(FIRST_DAY, day))) / 1000);
   const heapFrom = Date.parse(HEAP_RETAINED_FROM) / 1000;
   const temp = t.map((_, day) => Math.round((64 + 6 * Math.sin((day / 365) * 2 * Math.PI)) * 10) / 10);

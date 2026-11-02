@@ -4,6 +4,7 @@
  * engine-less greenhouse, the request log and what each named fixture serves. No database, MCP, Home Assistant or
  * device is involved; every time is relative to a pinned clock at 10:42 America/Denver.
  */
+import { readFileSync } from "node:fs";
 import request from "supertest";
 import { expect, test } from "vitest";
 import { createFixtureHandler, startFixtureServer } from "../../e2e/fixture-api.mjs";
@@ -197,13 +198,27 @@ test("the base, in-band, is the screens' SCR-01 greenhouse", () => {
   expect(set["API-21"].days.every((day: Body) => day.meter_gal === null || Number.isInteger(day.meter_gal))).toBe(true);
 });
 
+test("every equipment label the fixture serves is the API's: EQUIPMENT_LABELS in verdify_services/labels.py", () => {
+  const source = readFileSync(new URL("../../../verdify_services/labels.py", import.meta.url), "utf8");
+  const block = /EQUIPMENT_LABELS[^{]*\{([^}]*)\}/.exec(source)![1];
+  const labels = Object.fromEntries([...block.matchAll(/"([a-z0-9_]+)":\s*"([^"]+)"/g)].map((match) => [match[1], match[2]]));
+  expect(Object.keys(labels)).toHaveLength(21);
+  const set = fixture("in-band", { now: NOW });
+  const served = [...set["API-13"].items, ...set["API-05"].lanes].map((item: Body) => [item.equipment, item.label]);
+  expect(served.length).toBe(18 + 21);
+  for (const [equipment, label] of served) expect(label, String(equipment)).toBe(labels[String(equipment)]);
+});
+
 test("each named fixture serves what the table says", () => {
   const set = (name: string | string[]) => fixture(name, { now: NOW });
   expect(set("stale-data")["API-02"]).toMatchObject({ indoor: { temp_f: { observed_at: minutesAgo(14) } }, freshness: { ingestor: { stale: false }, climate: { stale: false } } });
   expect(set("ingestor-not-running")["API-02"].freshness).toMatchObject({ ingestor: { age_s: 240, stale: true }, climate: { age_s: 240, stale: true } });
   const quiet = set("controller-not-reporting");
   expect(quiet["API-02"]).toMatchObject({ freshness: { ingestor: { age_s: 30, stale: false }, climate: { age_s: 360, stale: true } }, alerts: { open: 0 } });
-  expect(quiet["API-13"].items.every((item: Body) => item.state === "unknown")).toBe(true);
+  // As API-13 serves it (VD-54): every state unknown with its age, no since, runtime or cycles, and the intent unknown.
+  expect(quiet["API-13"].items.every((item: Body) => item.state === "unknown" && typeof item.observed_at === "string")).toBe(true);
+  expect(quiet["API-13"].items.every((item: Body) => item.since === null && item.runtime_today_s === null && item.cycles_today === null)).toBe(true);
+  expect(quiet["API-13"].items.filter((item: Body) => item.group === "light").map((item: Body) => [item.intent, item.observed_at])).toEqual([["unknown", minutesAgo(12)], ["unknown", minutesAgo(12)]]);
   const merged = set("alerts-merged");
   const rows = merged["API-14"].items as Body[];
   expect(rows.some((row) => (row.count as number) > 1)).toBe(true);
@@ -245,9 +260,24 @@ test("each named fixture serves what the table says", () => {
   expect(rule["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s").plan).toMatchObject({ source: "iris", next: { source: "preemptive", value: 90 } });
   const lights = set("grow-lights-differ")["API-13"].items.find((item: Body) => item.equipment === "grow_light_grow");
   expect(lights).toMatchObject({ state: "off", intent: "on" });
+  // The base's Lutron rows are one Home Assistant poll old: known. Down, they are 11 min old: unknown, the intent kept.
+  expect(set("in-band")["API-13"].items.filter((item: Body) => item.group === "light").map((item: Body) => [item.state, item.observed_at])).toEqual([["off", minutesAgo(3)], ["off", minutesAgo(3)]]);
   expect(set("ha-down")["API-13"].items.filter((item: Body) => item.group === "light")).toEqual([
-    expect.objectContaining({ state: "unknown", observed_at: minutesAgo(11) }), expect.objectContaining({ state: "unknown", observed_at: minutesAgo(11) }),
+    expect.objectContaining({ state: "unknown", intent: "off", since: null, runtime_today_s: null, observed_at: minutesAgo(11) }),
+    expect.objectContaining({ state: "unknown", intent: "off", since: null, runtime_today_s: null, observed_at: minutesAgo(11) }),
   ]);
+  // Fan 1 has been off since an absolute time; lanes-unknown adds one unknown span to its lane, cut out of the off.
+  expect(set("in-band")["API-13"].items[0]).toMatchObject({ equipment: "fan1", state: "off", since: "2026-10-27T10:26:00.000Z" });
+  const lanes = (name: string) => (set(name)["API-05"].lanes as Body[]).filter((lane) => (lane.intervals as Body[]).some((span) => span.state === "unknown"));
+  expect(lanes("in-band")).toEqual([]);
+  expect(lanes("lanes-unknown")).toEqual([expect.objectContaining({
+    equipment: "fan1", label: "Fan 1",
+    intervals: [
+      { start: minutesAgo(24 * 60), end: "2026-11-02T09:10:00.000Z", state: "off", cause: null },
+      { start: "2026-11-02T09:10:00.000Z", end: "2026-11-02T09:40:00.000Z", state: "unknown", cause: null },
+      { start: "2026-11-02T09:40:00.000Z", end: minutesAgo(0), state: "off", cause: null },
+    ],
+  })]);
   // before-engine serves a site cap saved before the engine, requested with no_engine since that write.
   const engineless = set("before-engine");
   expect(engineless["API-09"].items.find((row: Body) => row.param === "mister_daily_volume_max_gal")).toMatchObject({
@@ -275,10 +305,38 @@ test("each named fixture serves what the table says", () => {
   expect(series.bucket_s).toBe(86_400);
   expect(Date.parse(series.to) - Date.parse(series.from)).toBe(400 * 86_400_000);
   for (const key of ["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"]) expect(series.series[key], key).toMatchObject({ source: "daily_summary", retained_from: new Date(NOW - 365 * 86_400_000).toISOString() });
+  // scorecard-30d: the scorecard's first API-04 request, 30 America/Denver day buckets with the 25-hour 2026-11-01,
+  // whole-day time in band every day but the day with no row, the day/night split for the last 3 days, and the gallons'
+  // reasons; API-IRR-10 covers the same 30 days with its outage day and today partial.
+  const scorecard = set("scorecard-30d");
+  const daily = scorecard["API-04"];
+  expect(daily).toMatchObject({ bucket_s: 86_400, from: "2026-10-04T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z" });
+  expect(daily.t).toHaveLength(30);
+  expect(daily.t.at(-1) - daily.t.at(-2)).toBe(25 * 3600);
+  expect(Object.keys(daily.series)).toHaveLength(8);
+  const water = daily.series["daily.water_gal"];
+  expect(water).toMatchObject({ source: "scorecard", retained_from: null });
+  expect(water.reason.filter(Boolean)).toEqual(["no meter data", "discontinuous", "partial_day"]);
+  expect(daily.series["daily.temp_in_band_pct"].avg.filter((value: number | null) => value === null)).toHaveLength(1);
+  expect(daily.series["daily.time_in_band_day_pct"].reason.filter(Boolean)).toHaveLength(26);
+  expect(scorecard["API-IRR-10"]).toMatchObject({ from: "2026-10-04", to: "2026-11-02" });
+  expect(scorecard["API-IRR-10"].periods.filter((period: Body) => period.coverage !== "complete")).toEqual([{ start: "2026-10-24", coverage: "no_data" }, { start: "2026-11-02", coverage: "partial" }]);
   const stuck = set("stuck-delivery");
   expect(stuck["API-02"].writer).toMatchObject({ stuck: true, differing: 4, oldest_since: "2026-11-02T13:10:00.000Z" });
   expect(stuck["API-14"].items).toEqual([expect.objectContaining({ alert_type: "setpoint_delivery_stuck" })]);
   expect(set("iris-unsnapped")["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s")).toMatchObject({ step: 30, plan: { value: 48.75 } });
+});
+
+test("Now's fixtures (#1129): too hot alone, a null RH, band rows with no time, and the occupancy states", () => {
+  const set = (name: string | string[]) => fixture(name, { now: NOW });
+  const hot = set("too-hot")["API-02"];
+  expect(hot).toMatchObject({ indoor: { temp_f: { value: 84.1, observed_at: minutesAgo(1 / 3) } }, band: { temp_f: { low: 62, high: 70, verdict: "above" } }, alerts: { open: 0 } });
+  expect(hot.freshness).toMatchObject({ ingestor: { stale: false }, climate: { stale: false } });
+  expect(set("rh-missing")["API-02"].indoor.rh_pct).toEqual({ value: null, observed_at: minutesAgo(1 / 3), reason: "No indoor RH" });
+  expect(set("band-age-unknown")["API-02"].band).toMatchObject({ temp_f: { low: 62, high: 70 }, observed_at: null });
+  expect(set("occupied")["API-IRR-01"].occupancy).toEqual({ occupied: true, seen_at: minutesAgo(4), hold_enabled: true });
+  expect(set("occupancy-unknown")["API-IRR-01"].occupancy).toEqual({ occupied: null, seen_at: null, hold_enabled: true });
+  expect(set("occupancy-hold-off")["API-IRR-01"].occupancy).toMatchObject({ hold_enabled: false });
 });
 
 test("fixture() reads requested-to-confirmed and flow-after-stop after their writes; the fixture API starts before them", () => {

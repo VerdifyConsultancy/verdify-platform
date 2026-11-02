@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { createRoutesStub, useLoaderData, useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
+import { FakeResizeObserver } from "../charts/fixtures/uplot-mock";
 import { REVISION } from "../../e2e/fixtures/world.mjs";
 import routes from "../routes";
 import Activity from "../routes/activity";
@@ -31,6 +32,9 @@ import { Badge } from "./badge";
 import { Button } from "./button";
 import { FreshnessDot } from "./freshness";
 import { text } from "./test-render";
+
+// Graphs (#1130) draws charts: uPlot is the chart tests' stand-in, and ResizeObserver is stubbed as a browser has it.
+vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
@@ -84,6 +88,7 @@ const nav = (label: string) => screen.getByRole("navigation", { name: label });
 
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date(NOW));
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -102,12 +107,16 @@ test("in band: the shell reads API-01 and API-02 once each, shows no banner, and
     expect(screen.getAllByRole("heading", { level: 1 }), path).toHaveLength(1);
     cleanup();
   }
+  requests = [];
   mount("/"); await advance(0);
-  expect(requests.slice(-2).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
+  // Now (#1129) reads the shell's API-02 poll, so one request serves both; it adds only its water and alert reads.
+  const shellReads = (path: string) => path === "/api/v1/me" || path === "/api/v1/now";
+  expect(requests.filter(shellReads).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
+  expect(requests.filter((path) => !shellReads(path)).sort()).toEqual(["/api/v1/alerts?status=open", "/api/v1/irrigation"]);
   // API-02 every 15 s, API-01 every 60 s: one poll each, never a second.
   requests = [];
   await advance(NOW_POLL_MS);
-  expect(requests).toEqual(["/api/v1/now"]);
+  expect(requests.filter(shellReads)).toEqual(["/api/v1/now"]);
   await advance(60_000 - NOW_POLL_MS);
   expect(requests.filter((path) => path === "/api/v1/me")).toHaveLength(1);
 });

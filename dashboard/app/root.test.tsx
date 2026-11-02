@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
+import { renderToString } from "react-dom/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { createRoutesStub, RouterContextProvider, UNSAFE_ErrorResponseImpl, type LoaderFunctionArgs } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
+import { ToastProvider } from "./components/toast";
 import { loader as authLoader, meta as authMeta } from "./routes/auth";
 import { loader as notFoundLoader } from "./routes/not-found";
 import { pageContext, type PageContext } from "./lib/page-context";
@@ -31,14 +34,16 @@ async function boundaryFor(thrown: unknown, rootData?: unknown) {
   return screen.findByRole("heading", { level: 1 });
 }
 
-test("Now renders only its page head, with no greenhouse data and no request", async () => {
+test("Now's server render is its loading state, with no greenhouse data and no request", () => {
   expect(meta()).toEqual([{ title: "Now · Verdify dashboard" }]);
   const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
-  const Stub = createRoutesStub([{ path: "/", Component: Now }]);
-  const { container } = render(<Stub initialEntries={["/"]} />);
-  expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Now");
-  expect(container.textContent).toBe("Verdify dashboardNowNot built yet.");
-  expect(container.querySelectorAll(".page-head")).toHaveLength(1);
+  const client = new QueryClient();
+  // Now (#1129) loads its data in the browser, under the shell's query client and toasts.
+  const Stub = createRoutesStub([{ path: "/", Component: () => <QueryClientProvider client={client}><ToastProvider><Now /></ToastProvider></QueryClientProvider> }]);
+  const html = renderToString(<Stub initialEntries={["/"]} />);
+  expect(html).toContain("Checking the greenhouse…");
+  expect(html.match(/<h1\b/g)).toHaveLength(1);
+  expect(html).not.toMatch(/All OK|64\.8|Nothing running|No open alerts|Nobody seen/);
   expect(fetch).not.toHaveBeenCalled();
 });
 
